@@ -1,0 +1,42 @@
+{
+  "name": "next-auth-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prettier:fix": "prettier --write ."
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "daisyui": "^2.51.6",
+    "escape-html": "^1.0.3",
+    "next": "12.2.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-hook-form": "^7.34.2",
+    "react-query": "^3.39.3",
+    "slate": "^0.82.0",
+    "zod": "^3.21.4"
+  },
+  "devDependencies": {
+    "@types/escape-html": "^1.0.2",
+    "@types/node": "18.7.6",
+    "@types/react": "18.0.17",
+    "@types/react-dom": "18.0.6",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^8.31.0",
+    "eslint-config-next": "^13.1.1",
+    "postcss": "^8.4.23",
+    "prettier": "^2.7.1",
+    "tailwindcss": "^3.3.2",
+    "typescript": "4.7.4"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "all"
+  }
+}

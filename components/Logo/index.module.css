@@ -1,0 +1,9 @@
+.logo {
+  width: 150px;
+  height: auto;
+  display: block;
+}
+
+.logo path {
+  fill: black;
+}
