@@ -58,11 +58,19 @@ type Email = {
   id:      string;
 }
 
-const Blocks: React.FC<{
+const BlocksComponent: React.FC<{
   blocks: FormExamn
+  callback: (data: any, {
+    onSuccess,
+    onError,
+  }: {
+    onSuccess: (data:any) => void
+    onError: (data:any) => void
+  }) => void
 }> = (props) => {
   const {
     blocks,
+    callback
   } = props;
 
   const hasBlocks = blocks && Array.isArray(blocks) && blocks.length > 0;
@@ -95,8 +103,9 @@ const Blocks: React.FC<{
             >
               {/*@ts-ignore*/}
               <Block
-                id={toKebabCase(blockName)}
                 {...block}
+                id={toKebabCase(blockName)}
+                callback={callback}
               />
             </VerticalPadding>
           );
@@ -109,4 +118,4 @@ const Blocks: React.FC<{
 
 };
 
-export default Blocks;
+export default BlocksComponent;

@@ -2,13 +2,9 @@ import React from 'react';
 import { UseFormRegister, FieldValues, FieldErrorsImpl } from 'react-hook-form';
 import { Error } from '../Error';
 import { Width } from '../Width';
+import { FromBlockFieldType } from '../../types';
 
-import classes from './index.module.scss';
-import { TextBlock } from '~/types/payload';
-
-type TextField = TextBlock
-
-export const Text: React.FC<TextField & {
+export const Text: React.FC<FromBlockFieldType & {
   register: UseFormRegister<FieldValues & any>;
   errors: Partial<FieldErrorsImpl<{
     [x: string]: any;
@@ -16,13 +12,13 @@ export const Text: React.FC<TextField & {
 }> = ({ name, label, width, register, required: requiredFromProps, errors }) => {
   return (
     <Width width={width}>
-      <div className={classes.wrap}>
-        <label htmlFor="name" className={classes.label}>
+      <div className="form-control">
+        <label htmlFor="name" className="form-label">
           {label}
         </label>
         <input
           type="text"
-          className={classes.input}
+          className="input input-bordered w-full max-w-xs "
           {...register(name, { required: requiredFromProps })}
         />
         {requiredFromProps && errors[name] && <Error />}

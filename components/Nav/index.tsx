@@ -4,30 +4,42 @@ import { useAuth } from '../Auth';
 import classes from './index.module.css';
 
 export const Nav: React.FC = () => {
+  
   const { user } = useAuth();
 
-  return (
-    <nav className={classes.nav}>
-      {user && (
-        <React.Fragment>
-          <Link href="/account">
+  if (user) {
+    return (
+      <>
+        <li>
+          <Link href="/dashboard/account">
             <a>Account</a>
           </Link>
-          <Link href="/logout">
+        </li>
+        <li>
+          <Link href="/auth/logout">
             <a>Logout</a>
           </Link>
-        </React.Fragment>
-      )}
-      {!user && (
-        <React.Fragment>
-          <Link href="/login">
-            <a>Login</a>
+        </li>
+      </>
+    )
+  }
+
+  if (!user) {
+    return (
+      <>
+        <li>
+          <Link href="/auth/login">
+            <a>Iniciar Sesión</a>
           </Link>
-          <Link href="/create-account">
-            <a>Create Account</a>
+        </li>
+        <li>
+          <Link href="/auth/create-account">
+            <a>Crear Cuenta</a>
           </Link>
-        </React.Fragment>
-      )}
-    </nav>
-  );
+        </li>
+      </>
+    )
+  }
+
+  return null;
 };

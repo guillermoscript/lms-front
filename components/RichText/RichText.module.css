@@ -1,0 +1,56 @@
+
+.rich-text h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text h5 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text h6 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.rich-text p {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.rich-text a {
+    color: #0070f3;
+    text-decoration: none;
+}
+
+.rich-text a:hover {
+    text-decoration: underline;
+}
+
+.rich-text img {
+    max-width: 100%;
+    display: block;
+}
+

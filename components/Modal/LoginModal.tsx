@@ -1,4 +1,5 @@
-import LoginComponent from "../Forms/Login";
+
+import LoginForm from "../Auth/LoginForm";
 import Modal, { RenderChildProps } from "./Modal";
 
 type LoginModalProps = {
@@ -7,7 +8,7 @@ type LoginModalProps = {
 
 export default function LoginModal({ onClose } : LoginModalProps) {
 
-    const renderChild = ({ onClose }: RenderChildProps) => <LoginComponent />;
+    const renderChild = ({ onClose }: RenderChildProps) => <LoginForm />;
 
     return (
         <Modal

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { CheckboxField } from 'payload-plugin-form-builder/dist/types';
 import { UseFormRegister, FieldErrorsImpl, FieldValues } from 'react-hook-form';
-import { Check } from '../../../icons/Check';
 import { Error } from '../Error';
 import { Width } from '../Width';
+import { FromBlockFieldType } from '../../types';
 
-import classes from './index.module.scss';
 
-export const Checkbox: React.FC<CheckboxField & {
+export const Checkbox: React.FC<FromBlockFieldType & {
   register: UseFormRegister<FieldValues & any>,
   setValue: any,
   getValues: any,
@@ -22,29 +20,32 @@ export const Checkbox: React.FC<CheckboxField & {
   return (
     <Width width={width}>
       <div
-        className={[
-          classes.checkbox,
-          checked && classes.checked
-        ].filter(Boolean).join(' ')}
+        className="form-control"
       >
-        <div className={classes.container}>
+        <div className="flex items-center space-x-2">
           <input
             type="checkbox"
             {...register(name, { required: requiredFromProps })}
             checked={isCheckboxChecked}
+            className='checkbox'
           />
           <button
             type="button"
+            className='btn btn-secondary'
             onClick={() => {
               setValue(name, !checked)
               setChecked(!checked)
             }}
           >
-            <span className={classes.input}>
-              <Check />
+            <span className="form-checkbox">
+              {checked ? (
+                "checked"
+              ) : (
+                "unchecked"
+              )}
             </span>
           </button>
-          <span className={classes.label}>{label}</span>
+          <span className="form-label">{label}</span>
         </div>
         {requiredFromProps && errors[name] && checked === false && <Error />}
       </div>

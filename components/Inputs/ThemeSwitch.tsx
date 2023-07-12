@@ -1,9 +1,13 @@
 import { useState } from "react";
 import useThemeChange from "../../utils/hooks/useThemeChange";
+import { useDarkMode } from "usehooks-ts";
+import { ThemeType } from "./ThemeSelect";
 
 export default function ThemeSwitch() {
 
-    const [theme, setTheme] = useState("winter");
+    
+    const { isDarkMode, toggle, enable, disable } = useDarkMode()
+    const [theme, setTheme] = useState<ThemeType>(isDarkMode ? 'night' : 'winter');
 
     useThemeChange(theme);
 
@@ -11,10 +15,15 @@ export default function ThemeSwitch() {
         <label className="swap-rotate swap">
             <input type="checkbox" 
                 onChange={() => {
+                    toggle();
                     if (theme === "winter") {
                         setTheme("night");
+                        localStorage.setItem("theme", "night");
+                        // disable();
                     } else {
                         setTheme("winter");
+                        localStorage.setItem("theme", "winter");
+                        // enable();
                     }
                 }}
             />

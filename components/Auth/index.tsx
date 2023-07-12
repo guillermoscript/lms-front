@@ -1,6 +1,9 @@
 import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { User } from '../../payload-types';
-import axios from 'axios';
+import payloadClient from '../../utils/axiosPayloadInstance';
+import { useRouter } from 'next/router';
+import { getCookies,getCookie, setCookie, deleteCookie } from 'cookies-next';
+import Cookies from 'js-cookie';
 
 type Login = (args: { email: string; password: string }) => Promise<void>;
 
@@ -13,54 +16,102 @@ type AuthContext = {
   login: Login;
 };
 
-const client = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_CMS_URL, 
-});
+export type LoginResponse = {
+  message: string
+  user: User
+  token: string
+  exp: number
+}
+
+export type RefreshTokenResponse = {
+  message: string
+  refreshedToken: string
+  exp: number
+  user: UserRefresh
+}
+
+export type UserRefresh = {
+  email: string
+  id: string
+  collection: string
+  roles: string[]
+}
+
 
 const Context = createContext({} as AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>();
+  const router = useRouter();
 
   const login = useCallback<Login>(async (args) => {
-    const res = await client.post('/api/users/login', args, {
-      // Make sure to include cookies with fetch
-      withCredentials: true,
-    });
+    try {
+      const res = await payloadClient.post<LoginResponse>('/api/users/login', args, {
+        // Make sure to include cookies with fetch
+        withCredentials: true,
+      });
 
-    if (res.status === 200) {
       setUser(res.data.user);
-    } else {
+      localStorage.setItem('token', res.data.token);
+    } catch (error) {
+      console.log(error)
       throw new Error('There was a problem while logging in.');
     }
   }, []);
 
   const logout = useCallback<Logout>(async () => {
-    const res = await client.post('/api/users/logout', {}, {
-      // Make sure to include cookies with fetch
-      withCredentials: true,
-    });
-    
-    if (res.status === 200) {
+    try {
+      const res = await payloadClient.post('/api/users/logout', {}, {
+        // Make sure to include cookies with fetch
+        withCredentials: true,
+      });  
       setUser(null);
-    } else {
+      // Cookies.remove('token');
+    } catch (error) {
+      console.log(error)
       throw new Error('There was a problem while logging out.');
     }
   }, []);
 
+  // const refresh = async () => {
+  //   try {
+  //     const res = await payloadClient.post<RefreshTokenResponse>('/api/users/refresh-token', {},{
+  //       // Make sure to include cookies with fetch
+  //       withCredentials: true,
+  //     });
+  //     setUser(prev => {
+  //       if (prev) {
+  //         return {
+  //           ...prev,
+  //           token: res.data.refreshedToken,
+  //         }
+  //       }
+  //       return null;
+  //     });
+  //     localStorage.setItem('token', res.data.refreshedToken);
+  //   } catch (error) {
+  //     // throw new Error('There was a problem while refreshing the token.'); 
+  //     console.log(error)
+  //     setUser(null);
+  //   }
+  // }
+
   // On mount, get user and set
   useEffect(() => {
     const fetchMe = async () => {
-      const result = await client.get('/api/users/me', {
-        // Make sure to include cookies with fetch
-        withCredentials: true,
-      })
-
-      if (result.status === 200) {
+      // console.log(getCookie('token'))
+      try {
+        const result = await payloadClient.get<LoginResponse>('/api/users/me', {
+          // Make sure to include cookies with fetch
+          withCredentials: true,
+        })
         setUser(result.data.user);
+      } catch (error) {
+        console.log(error)
+        // throw new Error('There was a problem while refreshing the token.');  
+        setUser(null);
       }
     };
-
     fetchMe();
   }, []);
 
@@ -81,3 +132,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 type UseAuth<T = User> = () => AuthContext;
 
 export const useAuth: UseAuth = () => useContext(Context);
+
+

@@ -1,19 +1,21 @@
+import Link from "next/link";
+
 export default function Footer() {
     return (
         <footer className="footer bg-base-300 p-10 text-base-content">
             <div>
-                <span className="footer-title">Services</span>
-                <a className="link-hover link">Branding</a>
-                <a className="link-hover link">Design</a>
-                <a className="link-hover link">Marketing</a>
-                <a className="link-hover link">Advertisement</a>
+                <span className="footer-title">Legal</span>
+                <Link href="/legal/privacy-policy">
+                    <a className="link-hover link">Politicas de privacidad</a>
+                </Link>
+                <Link href="/legal/cookies-policy">
+                    <a className="link-hover link">Politicas de cookies</a>
+                </Link>
             </div>
             <div>
                 <span className="footer-title">Company</span>
-                <a className="link-hover link">About us</a>
+                <a className="link-hover link">Quienes Somos</a>
                 <a className="link-hover link">Contact</a>
-                <a className="link-hover link">Jobs</a>
-                <a className="link-hover link">Press kit</a>
             </div>
             <div>
                 <span className="footer-title">Social</span>

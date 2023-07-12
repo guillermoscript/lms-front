@@ -22,8 +22,8 @@ export interface Config {
     subscriptions: Subscription;
     orders: Order;
     users: User;
-    forms: Form;
-    'form-submissions': FormSubmission;
+    examns: Examn;
+    'examns-submissions': ExamnsSubmission;
   };
   globals: {};
 }
@@ -31,17 +31,17 @@ export interface Course {
   id: string;
   name: string;
   description: string;
-  category?: string[] | Category[];
+  category: string[] | Category[];
   teacher?: string | User;
   lessons?: string[] | Lesson[];
-  reviews?: string[] | Review[];
   relatedCourses?: string[] | Course[];
+  completedBy?: string[] | User[];
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   isPublic?: boolean;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Category {
   id: string;
@@ -51,8 +51,8 @@ export interface Category {
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Media {
   id: string;
@@ -60,6 +60,8 @@ export interface Media {
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   slug?: string;
+  updatedAt: string;
+  createdAt: string;
   url?: string;
   filename: string;
   mimeType?: string;
@@ -92,8 +94,6 @@ export interface Media {
       filename?: string;
     };
   };
-  createdAt: string;
-  updatedAt: string;
 }
 export interface User {
   id: string;
@@ -105,21 +105,22 @@ export interface User {
   gender?: 'male' | 'female' | 'other';
   profilePicture?: string | Media;
   roles?: ('admin' | 'teacher' | 'editor' | 'user')[];
+  photo?: string | Media;
   slug?: string;
+  updatedAt: string;
+  createdAt: string;
   email?: string;
   resetPasswordToken?: string;
   resetPasswordExpiration?: string;
   loginAttempts?: number;
   lockUntil?: string;
-  createdAt: string;
-  updatedAt: string;
   password?: string;
 }
 export interface Lesson {
   id: string;
   name: string;
   description: string;
-  category?: string[] | Category[];
+  category: string[] | Category[];
   teacher?: string | User;
   content: {
     [k: string]: unknown;
@@ -131,40 +132,13 @@ export interface Lesson {
     }[];
     id?: string;
   }[];
-  comments?: string[] | Comment[];
-  completedBy?: string | User;
+  completedBy?: string[] | User[];
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   isPublic?: boolean;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
-}
-export interface Comment {
-  id: string;
-  comment?: string;
-  user?: string | User;
-  likes?: number;
-  dislikes?: number;
-  lesson?: string | Lesson;
-  replyTo?: string[] | Comment[];
-  createdBy?: string | User;
-  lastModifiedBy?: string | User;
-  slug?: string;
   createdAt: string;
-  updatedAt: string;
-}
-export interface Review {
-  id: string;
-  review?: string;
-  user?: string | User;
-  likes?: number;
-  dislikes?: number;
-  createdBy?: string | User;
-  lastModifiedBy?: string | User;
-  slug?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 export interface Currency {
   id: string;
@@ -172,18 +146,41 @@ export interface Currency {
   symbol: string;
   exchangeRate: number;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
-export interface Enrollment {
+export interface Comment {
   id: string;
-  student?: string | User;
-  products?: string | Product;
-  course?: string | Course;
-  status?: 'active' | 'inactive';
-  order?: string | Order;
-  createdAt: string;
+  comment: string;
+  user?: string | User;
+  likes?: number;
+  dislikes?: number;
+  commentable?:
+    | {
+        value: string | Product;
+        relationTo: 'products';
+      }
+    | {
+        value: string | Lesson;
+        relationTo: 'lessons';
+      }
+    | {
+        value: string | Course;
+        relationTo: 'courses';
+      }
+    | {
+        value: string | Comment;
+        relationTo: 'comments';
+      }
+    | {
+        value: string | Evaluation;
+        relationTo: 'evaluations';
+      };
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
+  slug?: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Product {
   id: string;
@@ -204,30 +201,31 @@ export interface Product {
     aceptedCurrency: 'Bs.' | 'USD';
     id?: string;
   }[];
-  productImage?: string | Media;
+  productImage: string | Media;
   relatedProducts?: string[] | Product[];
-  reviews?: string[] | Review[];
+  info: {
+    [k: string]: unknown;
+  }[];
   lastModifiedBy?: string | User;
   createdBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Plan {
   id: string;
   name: string;
   description: string;
   status?: 'active' | 'inactive';
-  category?: string[] | Category[];
+  category: string[] | Category[];
   courses?: string[] | Course[];
   subscriptions?: string[] | Subscription[];
-  reviews?: string[] | Review[];
   periodicity?: 'monthly' | 'bimonthly' | 'quarterly' | 'biannual' | 'annual' | 'custom';
   lastModifiedBy?: string | User;
   createdBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Subscription {
   id: string;
@@ -239,12 +237,13 @@ export interface Subscription {
   plan?: string | Plan;
   periodicity?: 'monthly' | 'bimonthly' | 'quarterly' | 'biannual' | 'annual' | 'custom';
   order?: string | Order;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Order {
   id: string;
-  status?: 'active' | 'inactive' | 'canceled' | 'pending';
+  amount: number;
+  status?: 'active' | 'inactive' | 'canceled' | 'pending' | 'finished' | 'refunded';
   type?: 'order' | 'renewal' | 'enrollment' | 'subscription';
   customer?: string | User;
   products?: string[] | Product[];
@@ -257,23 +256,23 @@ export interface Order {
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface PaymentMethod {
   id: string;
   paymentsOfUser?: string[] | User[];
   title: string;
-  paymentMethodType: 'zelle' | 'paypal' | 'pago-movil' | 'cash' | 'bank-transfer';
+  paymentMethodType: 'zelle' | 'paypal' | 'pagoMovil' | 'cash' | 'bankTransfer';
   zelle?: {
     zelleEmail?: string;
-    fullName?: string;
+    zelleName?: string;
   };
   paypal?: {
     paypalEmail?: string;
   };
   pagoMovil?: {
-    phoneNumber: string;
+    pagoMovilPhone: string;
     bank?:
       | 'banco-de-venezuela'
       | 'banco-mercantil'
@@ -292,7 +291,7 @@ export interface PaymentMethod {
       | 'banco-nacional-de-credito'
       | 'banco-venezolano-de-credito'
       | 'banesco';
-    idn: number;
+    pagoMovilIdn: string;
   };
   cash?: {
     cash?: string;
@@ -322,8 +321,8 @@ export interface PaymentMethod {
   };
   createdBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
 export interface Evaluation {
   id: string;
@@ -343,27 +342,25 @@ export interface Evaluation {
     content: {
       [k: string]: unknown;
     }[];
-    questions: {
-      question: {
-        [k: string]: unknown;
-      }[];
-      id?: string;
-    }[];
     formExamn: {
-      form: string | Form;
+      form: string | Examn;
       id?: string;
       blockName?: string;
       blockType: 'formBlock';
     }[];
+    timeToAnswer: number;
     id?: string;
   }[];
+  completedBy?: string[] | User[];
+  approvedBy?: string[] | User[];
+  reprovedBy?: string[] | User[];
   lastModifiedBy?: string | User;
   createdBy?: string | User;
   slug?: string;
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
-export interface Form {
+export interface Examn {
   id: string;
   title: string;
   fields?: (
@@ -478,17 +475,68 @@ export interface Form {
     }[];
     id?: string;
   }[];
-  createdAt: string;
   updatedAt: string;
+  createdAt: string;
 }
-export interface FormSubmission {
+export interface Enrollment {
   id: string;
-  form: string | Form;
+  student?: string | User;
+  products?: string | Product;
+  course?: string | Course;
+  status?: 'active' | 'inactive';
+  order?: string | Order;
+  updatedAt: string;
+  createdAt: string;
+}
+export interface Review {
+  id: string;
+  review?: string;
+  likes?: number;
+  dislikes?: number;
+  reviewable?:
+    | {
+        value: string | Product;
+        relationTo: 'products';
+      }
+    | {
+        value: string | Lesson;
+        relationTo: 'lessons';
+      }
+    | {
+        value: string | Course;
+        relationTo: 'courses';
+      }
+    | {
+        value: string | Comment;
+        relationTo: 'comments';
+      }
+    | {
+        value: string | Evaluation;
+        relationTo: 'evaluations';
+      };
+  rating?: '1' | '1.5' | '2' | '2.5' | '3' | '3.5' | '4' | '4.5' | '5';
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
+  slug?: string;
+  updatedAt: string;
+  createdAt: string;
+}
+export interface ExamnsSubmission {
+  id: string;
+  form: string | Examn;
   submissionData: {
     field: string;
     value: string;
     id?: string;
   }[];
-  createdAt: string;
+  evaluation?: string | Evaluation;
+  score?: number;
+  teacherComments?: {
+    [k: string]: unknown;
+  }[];
+  approved: 'approved' | 'rejected' | 'pending';
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
   updatedAt: string;
+  createdAt: string;
 }

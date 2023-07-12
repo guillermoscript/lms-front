@@ -1,7 +1,8 @@
 import React, { Fragment } from 'react';
 import escapeHTML from 'escape-html';
 import { Text } from 'slate';
-import { RichTextNode } from '.';
+import { RichTextNode, UploadRichText } from '.';
+import Image from 'next/image';
 
 export type Props = {
   content?: RichTextNode[];
@@ -9,6 +10,8 @@ export type Props = {
 
 const Serialize: React.FC<Props> = (props) => {
   const { content } = props;
+
+  // console.log(content)
 
   if (content) {
     return (
@@ -172,6 +175,20 @@ const Serialize: React.FC<Props> = (props) => {
                   </span>
                 );
 
+              case 'upload':
+
+                const imageValue = node.value as UploadRichText['value']
+                return (
+                  <span key={i}>
+                    <Image
+                      src={imageValue.url || ''}
+                      alt={imageValue.altText}
+                      width={imageValue.width}
+                      height={imageValue.height}
+                    />
+                    {/* <img src={imageValue.value.url || ''} alt={imageValue.value.altText} /> */}
+                  </span>
+                );
               default:
                 return (
                   <p key={i}>

@@ -1,10 +1,20 @@
 import { useState } from "react";
 import useThemeChange from "../../utils/hooks/useThemeChange";
+import { useDarkMode } from "usehooks-ts";
+
+const THEME_TYPES = {
+    NIGHT: 'night',
+    WINTER: 'winter',
+} as const;
+
+export type ThemeType = typeof THEME_TYPES[keyof typeof THEME_TYPES];
 
 export default function ThemeSelect() {
-    const [theme, setTheme] = useState("winter");
+    const { isDarkMode, toggle, enable, disable } = useDarkMode()
+    const [theme, setTheme] = useState<ThemeType>(isDarkMode ? 'night' : 'winter');
     const toggleTheme = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setTheme(e.target.value);
+        const theme = e.target.value as ThemeType;
+        setTheme(theme);
     };
     useThemeChange(theme);
     return (

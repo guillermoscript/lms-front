@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
-import useOnClickOutside from "~/utils/hooks/useOnClickOutside";
+import { useOnClickOutside } from "usehooks-ts";
+// import useOnClickOutside from "../../utils/hooks/useOnClickOutside";
 // import styles from "./css/Modal.module.css"
 
 export type RenderChildProps = {
@@ -22,12 +23,10 @@ function Modal({ onClose, renderChild }: ModalProps): JSX.Element {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-[#37394C80] ">
-      <div className="flex h-screen w-full flex-col items-center justify-center">
-        <div ref={menuRef}>
-          {renderChild({
-            onClose: handleClickOutside,
-          })}
-        </div>
+      <div ref={menuRef} className="flex h-screen w-full flex-col items-center justify-center">
+        {renderChild({
+          onClose: handleClickOutside,
+        })}
       </div>
     </div>
   );

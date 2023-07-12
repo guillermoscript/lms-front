@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react'
-import { buildInitialFormState } from './buildInitialFormState'
 import { fields } from './fields'
-import { Form as FormType } from 'payload-plugin-form-builder/dist/types'
-import RichText from '../../RichText'
+// import { Form as FormType } from 'payload-plugin-form-builder/dist/types'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/router'
+import { RichText } from '../../RichText'
+import { useAuth } from '../../Auth'
+import { Examn } from '../../../payload-types'
 
-import classes from './index.module.scss'
+// import classes from './index.module.scss'
 
 export type Value = unknown
 
@@ -22,7 +23,14 @@ export type FormBlockType = {
   blockName?: string
   blockType?: 'formBlock'
   enableIntro: boolean
-  form: FormType
+  form: Examn
+  callback: (data: Data, {
+    onSuccess,
+    onError,
+  }: {
+    onSuccess: (data:any) => void
+    onError: (data:any) => void
+  }) => void
   introContent?: {
     [k: string]: unknown
   }[]
@@ -36,6 +44,7 @@ export const FormBlock: React.FC<
   const {
     enableIntro,
     introContent,
+    callback,
     form: formFromProps,
     form: { id: formID, submitButtonLabel, confirmationType, redirect, confirmationMessage } = {},
   } = props
@@ -56,6 +65,7 @@ export const FormBlock: React.FC<
   const [hasSubmitted, setHasSubmitted] = useState<boolean>()
   const [error, setError] = useState<{ status?: string; message: string } | undefined>()
   const router = useRouter()
+  const { user } = useAuth()
 
   const onSubmit = useCallback(
     (data: Data) => {
@@ -74,49 +84,33 @@ export const FormBlock: React.FC<
           setIsLoading(true)
         }, 1000)
 
-        try {
-          const req = await fetch(`${process.env.NEXT_PUBLIC_CMS_URL}/api/form-submissions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              form: formID,
-              submissionData: dataToSend,
-            }),
-          })
-
-          const res = await req.json()
-
-          clearTimeout(loadingTimerID)
-
-          if (req.status >= 400) {
+        callback({
+          formID: formID,
+          submissionData: dataToSend,
+        },{
+          onSuccess: (data) => {
+            setIsLoading(false)
+            setHasSubmitted(true)
+            if (confirmationType === 'redirect' && redirect) {
+              const { url } = redirect
+  
+              const redirectUrl = url
+  
+              if (redirectUrl) router.push(redirectUrl)
+            }
+  
+            if (confirmationType === 'message' && confirmationMessage) {
+              setValue('confirmationMessage', confirmationMessage)
+            }  
+          },
+          onError: (err) => {
+            console.warn(err)
             setIsLoading(false)
             setError({
-              status: res.status,
-              message: res.errors?.[0]?.message || 'Internal Server Error',
+              message: 'Something went wrong.',
             })
-
-            return
           }
-
-          setIsLoading(false)
-          setHasSubmitted(true)
-
-          if (confirmationType === 'redirect' && redirect) {
-            const { url } = redirect
-
-            const redirectUrl = url
-
-            if (redirectUrl) router.push(redirectUrl)
-          }
-        } catch (err) {
-          console.warn(err)
-          setIsLoading(false)
-          setError({
-            message: 'Something went wrong.',
-          })
-        }
+        })
       }
 
       submitForm()
@@ -126,26 +120,26 @@ export const FormBlock: React.FC<
 
   return (
       <div
-        className={[
-          classes.form,
-          hasSubmitted && classes.hasSubmitted,
-        ].filter(Boolean).join(' ')}
+        className="form-block"
       >
         {enableIntro && introContent && !hasSubmitted && (
-          <RichText className={classes.intro} content={introContent} />
+          <RichText content={introContent} />
         )}
         {!isLoading && hasSubmitted && confirmationType === 'message' && (
-          <RichText className={classes.confirmationMessage} content={confirmationMessage} />
+          <RichText content={confirmationMessage as any} />
         )}
         {isLoading && !hasSubmitted && <p>Loading, please wait...</p>}
         {error && <div>{`${error.status || '500'}: ${error.message || ''}`}</div>}
         {!hasSubmitted && (
           <form id={formID} onSubmit={handleSubmit(onSubmit)}>
-            <div className={classes.fieldWrap}>
+            <div className="form-block__fields">
               {formFromProps &&
                 formFromProps.fields &&
                 formFromProps.fields.map((field, index) => {
-                  const Field: React.FC<any> = fields?.[field.blockType]
+
+                  // Not my code, but I think this is the problem
+                  // @ts-ignore
+                  const Field = fields?.[field.blockType]
                   if (Field) {
                     return (
                       <React.Fragment key={index}>
@@ -163,7 +157,8 @@ export const FormBlock: React.FC<
                   return null
                 })}
             </div>
-            <button 
+            <button
+              className='btn btn-primary'
               type="submit">{submitButtonLabel}</button>
           </form>
         )}
