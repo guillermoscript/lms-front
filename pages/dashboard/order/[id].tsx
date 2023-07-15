@@ -35,7 +35,9 @@ function OrderPage(props: OrderPageProps, ref: IndexPageRef) {
             <li className="step">Orden Completada</li>
           </ul>
           <div className="w-full mx-auto grid max-w-screen-2xl grid-cols-1 md:grid-cols-2">
-            <AdminPaymentMethods zelle={zelle} pagoMovil={pagoMovil} />
+            <div className='flex flex-col gap-3 p-4 bg-base-200'>
+              <AdminPaymentMethods zelle={zelle} pagoMovil={pagoMovil} />
+            </div>
             <div className="  bg-base-300 py-12 md:py-24">
               <div className="mx-auto max-w-lg px-4 lg:px-8">
                 <OrderForm orderId={data.id} user={user}/>
