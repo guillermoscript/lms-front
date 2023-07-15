@@ -25,7 +25,10 @@ export interface Config {
     examns: Examn;
     'examns-submissions': ExamnsSubmission;
   };
-  globals: {};
+  globals: {
+    'pago-movil': PagoMovil;
+    zelle: Zelle;
+  };
 }
 export interface Course {
   id: string;
@@ -539,4 +542,34 @@ export interface ExamnsSubmission {
   lastModifiedBy?: string | User;
   updatedAt: string;
   createdAt: string;
+}
+export interface PagoMovil {
+  id: string;
+  phone: string;
+  name: string;
+  cid: string;
+  bank?:
+    | 'banco-de-venezuela'
+    | 'banco-mercantil'
+    | 'banco-provincial'
+    | 'banco-bicentenario'
+    | 'banco-exterior'
+    | 'banco-occidental-de-descuento'
+    | 'banco-sofitasa'
+    | 'banco-plaza'
+    | 'banco-caroni'
+    | 'banco-activo'
+    | 'banco-del-tesoro'
+    | 'banco-agricola-de-venezuela'
+    | 'banco-de-la-fuerza-armada-nacional-bolivariana'
+    | 'banco-del-pueblo-soberano'
+    | 'banco-nacional-de-credito'
+    | 'banco-venezolano-de-credito'
+    | 'banesco';
+}
+export interface Zelle {
+  id: string;
+  email: string;
+  zelleHolder: string;
+  bank: string;
 }
