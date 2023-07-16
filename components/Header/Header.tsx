@@ -13,13 +13,16 @@ export default function Header() {
       <div className="flex-none">
         <ul className="menu menu-horizontal items-center px-1">
           <li>
-            <ThemeSwitch />
-          </li>
-          <li>
             <details>
               <summary>Menu</summary>
-              <Nav />
+              <ul className="p-2 bg-base-100">
+                <Nav />
+
+              </ul>
             </details>
+          </li>
+          <li>
+            <ThemeSwitch />
           </li>
         </ul>
       </div>
