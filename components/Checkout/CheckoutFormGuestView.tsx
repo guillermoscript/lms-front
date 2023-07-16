@@ -6,6 +6,7 @@ import { Product } from '../../payload-types';
 import { useRouter } from 'next/router';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { apiUrl } from '../../utils/env';
+import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
 
 export type GuestUserOrderData = {
   customer: {
@@ -144,12 +145,14 @@ export default function CheckoutFormGuestView({ productData }: CheckoutFormGuest
       <div className="col-span-6">
         <button
           type="submit"
+          disabled={mutation.isLoading}
           className="block w-full rounded-md bg-accent-content text-accent p-2.5 text-sm transition hover:shadow-lg"
         >
           Pagar
         </button>
       </div>
       {mutation.isError && <DaisyUiAlert type="error" message={"Algo salio mal"} />}
+      {mutation.isLoading && <LoadSpinner size='lg' />}
     </Form>
   );
 }
