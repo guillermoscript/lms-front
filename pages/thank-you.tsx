@@ -3,9 +3,13 @@ import Layout from '../components/Layout/Layout';
 import { CONTACT_EMAIL } from '../utils/constants';
 import { IndexPageRef } from '../utils/types/common';
 import { forwardRef } from 'react';
+import { useAuth } from '../components/Auth';
 
 
 function ThankYouPage(props: any, ref: IndexPageRef) {
+  
+  const  { user } = useAuth();
+
   return (
     <Layout>
         <div className="bg-base-300 p-6 md:mx-auto flex flex-col border border-base-200 rounded-md max-w-md md:my-20">
@@ -25,8 +29,10 @@ function ThankYouPage(props: any, ref: IndexPageRef) {
                 </a>
             </p>
             <div className="py-10 text-center">
-                <Link href="/auth/login">
-                    <a className="btn btn-primary">Ir a mi cuenta</a>
+                <Link href={ user ? '/dashboard/account' : '/auth/login' }>
+                    <a className="btn btn-primary">
+                      { user ? 'Ir a mi cuenta' : 'Iniciar sesión'}
+                    </a>
                 </Link>
             </div>
           </div>
