@@ -1,7 +1,11 @@
 import Image from 'next/image';
 import { Category, Course, Media, Plan, Product } from '../../payload-types';
 
-export default function CheckoutItem({ name, description, productPrice, productImage, productType }: Product) {
+type CheckoutItemProps = Product & {
+  children?: React.ReactNode;
+};
+
+export default function CheckoutItem({ name, description, productPrice, productImage, productType, children }: CheckoutItemProps) {
   const productImages = productImage as Media;
   const relation = productType?.relationTo;
   const categorysToChoose = {
@@ -81,6 +85,7 @@ export default function CheckoutItem({ name, description, productPrice, productI
             </ul>
           </div>
         </div>
+        {children}
       </div>
     </div>
   );

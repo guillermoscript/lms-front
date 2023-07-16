@@ -2,7 +2,7 @@ import payloadClient from '../../../utils/axiosPayloadInstance';
 import { PaymentMethods, pagoMovilSchema, zelleSchema } from '../../Checkout/CheckoutForm';
 import * as yup from 'yup';
 import { Form } from '../../Forms/SmartForm';
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { User } from '../../../payload-types';
 
 const postPaymentMethod = async (data: any) => {
@@ -19,6 +19,7 @@ const PaymentMethodsSchema = yup.object().shape({
 export default function AddPaymentMethodModal({ onClose, user }: { onClose: () => void, user: User }) {
 
     const mutation = useMutation(postPaymentMethod)
+    const queryClient = useQueryClient();
 
     function onSubmit(values: any) {
 
@@ -32,6 +33,7 @@ export default function AddPaymentMethodModal({ onClose, user }: { onClose: () =
         },
         {
             onSuccess: () => {
+                queryClient.invalidateQueries('userPaymentMethods');
                 onClose();
             },
             onError: () => {

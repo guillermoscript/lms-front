@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import SkeletonAcordion from '../Skeletons/SkeletonAcordion';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { PagoMovilUserOrderData, ZelleUserOrderData } from './CheckoutFormGuestView';
+import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
 
 type UserPaymentMethodsResponseSuccess = {
   paymentMethods: PaymentMethod[]
@@ -158,7 +159,10 @@ export default function CheckoutFormUserView({ productData, user }: CheckoutForm
         {mutation.isSuccess ? (
           <div className="my-4">
             <DaisyUiAlert type="success" message={"Orden creada"} />
-            </div>
+          </div>
+        ) : null}
+        {mutation.isLoading ? (
+          <LoadSpinner size='lg' />
         ) : null}
       </div>
     </Form>
