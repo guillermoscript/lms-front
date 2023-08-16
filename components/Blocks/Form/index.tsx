@@ -6,6 +6,7 @@ import { useRouter } from 'next/router'
 import { RichText } from '../../RichText'
 import { useAuth } from '../../Auth'
 import { Examn } from '../../../payload-types'
+import { LoadSpinner } from '../../Loaders/DaisyUiLoaders'
 
 // import classes from './index.module.scss'
 
@@ -157,9 +158,26 @@ export const FormBlock: React.FC<
                   return null
                 })}
             </div>
-            <button
-              className='btn btn-primary'
-              type="submit">{submitButtonLabel}</button>
+            {submitButtonLabel ? (
+              <div className='flex w-full justify-center items-center mt-4'>
+                <button
+                  className='btn btn-primary'
+                  disabled={isLoading}
+                  type="submit">{submitButtonLabel}</button>
+              </div>
+            ) : (
+              <div className='flex w-full justify-center items-center mt-4'>
+                <button
+                  className='btn btn-primary'
+                  disabled={isLoading}
+                  type="submit">Enviar</button>
+              </div>
+            )}
+          {isLoading && (
+            <div className='flex w-full justify-center items-center mt-4'>
+              <LoadSpinner size='lg' />
+            </div>
+          )}
           </form>
         )}
       </div>
