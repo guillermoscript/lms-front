@@ -6,6 +6,7 @@ import { useAuth } from '.';
 import Link from 'next/link';
 import { ROUTES } from '../../utils/constants';
 import { useRouter } from 'next/router';
+import googleStyle from './googleStyle.module.css';
 
 export const LoginSchema = yup.object().shape({
   email: yup.string().email('Debe ingresar un email válido').required('Debe ingresar un email'),
@@ -64,6 +65,9 @@ export default function LoginForm() {
         </Link>
       </p>
       {error && <ErrorAlert errorMessage={error} setErrorMessage={setError} />}
+      <a className={googleStyle['login-with-google-btn']} id="googleLink" href={`${process.env.NEXT_PUBLIC_CMS_URL}/google`} >
+        Sign in with Google
+      </a>
     </Form>
   );
 }
