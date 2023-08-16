@@ -11,6 +11,8 @@ import { useCountdown } from "usehooks-ts";
 export default function ExamnComponent({ data, handleFinishExamn, time, count }: any) {
     
     const mutation2 = useMutationMarkAsCompleted()
+    const mutation = useMutationSubmitExamn(handleSuccess)
+
     async function handleSuccess() {
         mutation2.mutate({
             id: data.id,
@@ -24,20 +26,10 @@ export default function ExamnComponent({ data, handleFinishExamn, time, count }:
             }
         })
     }
-
-    const mutation = useMutationSubmitExamn(handleSuccess)
-
     
     if (count === 0) {
-        return (
-            <>
-                <h1>
-                    Tiempo para iniciar el examen
-                </h1>
-            </>
-        )
+        return <h1>Tiempo para iniciar el examen</h1>;
     }
-
 
     return (
         <>
@@ -48,31 +40,6 @@ export default function ExamnComponent({ data, handleFinishExamn, time, count }:
             />
         </>
     )
-
-//     const [intervalValue, setIntervalValue] = useState<number>(1000)
-//   const [count, { startCountdown, stopCountdown, resetCountdown }] =
-//     useCountdown({
-//       countStart: 60,
-//       intervalMs: intervalValue,
-//     })
-
-//   const handleChangeIntervalValue = (event: ChangeEvent<HTMLInputElement>) => {
-//     setIntervalValue(Number(event.target.value))
-//   }
-//   return (
-//     <div>
-//       <p>Count: {count}</p>
-
-//       <input
-//         type="number"
-//         value={intervalValue}
-//         onChange={handleChangeIntervalValue}
-//       />
-//       <button onClick={startCountdown}>start</button>
-//       <button onClick={stopCountdown}>stop</button>
-//       <button onClick={resetCountdown}>reset</button>
-//     </div>
-//   )
 }
 
 function ExamnContent({ data, mutation }: any) {
