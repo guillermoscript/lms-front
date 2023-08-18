@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Evaluation, User } from '../../payload-types';
+import { Course, Evaluation, User } from '../../payload-types';
 import DashboardLayout from '../Dashboard/DashboardLayout';
 import DashboardNav from '../Dashboard/DashboardNav';
 import PageTransition from '../PageTransition';
@@ -13,9 +13,10 @@ type ExamnStatusProps = {
   exams: Evaluation[];
   user: User;
   children: React.ReactNode;
+  course: Course
 };
 
-export default function ExamnLayout({ ref, data, courseId, exams, user, children }: ExamnStatusProps) {
+export default function ExamnLayout({ ref, data, courseId, exams, user, children, course }: ExamnStatusProps) {
   return (
     <PageTransition ref={ref}>
       <DashboardLayout
@@ -28,7 +29,9 @@ export default function ExamnLayout({ ref, data, courseId, exams, user, children
           />
         }
       >
-        <ExamnHero data={data}>
+        <ExamnHero 
+          course={course}
+          data={data}>
           <div className="flex flex-col justify-center items-center">
             {children}
             <div className="flex flex-row justify-center items-center">
