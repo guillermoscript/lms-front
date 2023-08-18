@@ -17,7 +17,7 @@ import Link from 'next/link';
 
 type CoursesProps = {
   data: Course;
-  evaluations: PaginatedDocs<Evaluation>;
+  evaluations: Evaluation[];
 };
 
 function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
@@ -49,8 +49,8 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
   }
 
   const teacher = (data.teacher as User)?.firstName + ' ' + (data.teacher as User)?.lastName;
-  const exams = evaluations?.docs?.filter((value) => value.evaluationType === 'exam');
-  const homeworks = evaluations?.docs?.filter((value) => value.evaluationType === 'homework');
+  const exams = evaluations?.filter((value) => value.evaluationType === 'exam');
+  const homeworks = evaluations?.filter((value) => value.evaluationType === 'homework');
 
   return (
     <>
@@ -90,9 +90,7 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
           </div>
           <div className="flex flex-col gap-6 justify-center mb-6">
             <h4 className="text-xl font-bold">Estadisticas del curso</h4>
-            <CourseStats 
-              exams={exams as Evaluation[]}
-            course={data} userId={user?.id} />
+            <CourseStats exams={exams as Evaluation[]} course={data} userId={user?.id} />
           </div>
           {(data.lessons as Lesson[]).length > 0 && exams?.length > 0 && (
             <div className="flex flex-col gap-6 justify-center mb-6">
@@ -175,7 +173,7 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
                     examId: iterable.id,
                     reprovedBy: isReprovedByUser,
                   };
-                  
+
                   return (
                     <div className="collapse collapse-arrow bg-base-200 my-3" key={iterable.id}>
                       <input type="radio" name="my-accordion-2" />
@@ -249,37 +247,31 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
 export async function getServerSideProps({ query, req }: GetServerSidePropsContext) {
   const { id } = query;
 
-  try {
-    const response = await axios.get<Course>(apiUrl + '/api/enrollments/actives/' + id, {
+  const [course, courseError] = await tryCatch<AxiosResponse<Course>>(
+    axios.get<Course>(apiUrl + '/api/courses/' + id, {
       withCredentials: true,
       headers: {
         Authorization: `JWT ${req.cookies['payload-token']}`,
       },
-    });
+    }),
+  );
 
-    const [evaluations, evaluationsError] = await tryCatch<AxiosResponse<PaginatedDocs<Evaluation>>>(
-      axios.get(apiUrl + '/api/enrollments/course/' + id + '/evaluations', {
-        withCredentials: true,
-        headers: {
-          Authorization: `JWT ${req.cookies['payload-token']}`,
-        },
-      }),
-    );
-
+  if (courseError) {
     return {
-      props: {
-        data: response.data,
-        evaluations: evaluations ? evaluations.data : null,
-      }, // will be passed to the page component as props
-    };
-  } catch (error) {
-    console.log(error);
-    return {
-      props: {
-        data: null,
-      }, // will be passed to the page component as props
+      props: {},
+      redirect: {
+        destination: '/dashboard',
+        permanent: false,
+      },
     };
   }
+
+  return {
+    props: {
+      data: course ? course.data : null,
+      evaluations: course ? course.data.evaluations : null,
+    }, // will be passed to the page component as props
+  };
 }
 
 export default forwardRef(CoursesPage);

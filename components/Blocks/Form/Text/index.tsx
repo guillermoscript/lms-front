@@ -18,7 +18,7 @@ export const Text: React.FC<FromBlockFieldType & {
         </label>
         <input
           type="text"
-          className="input input-bordered w-full max-w-xs "
+          className="input input-bordered w-full xs:max-w-xs "
           {...register(name, { required: requiredFromProps })}
         />
         {requiredFromProps && errors[name] && <Error />}

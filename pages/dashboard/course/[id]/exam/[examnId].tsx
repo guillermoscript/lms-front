@@ -4,53 +4,46 @@ import { GetServerSidePropsContext } from 'next';
 import DashboardLayout from '../../../../../components/Dashboard/DashboardLayout';
 import PageTransition from '../../../../../components/PageTransition';
 import { Course, Evaluation, User } from '../../../../../payload-types';
-import { IndexPageRef, PaginatedDocs } from '../../../../../utils/types/common';
+import { IndexPageRef, UserMeResponse } from '../../../../../utils/types/common';
 import { useEffect, useState } from 'react';
 import tryCatch from '../../../../../utils/tryCatch';
 import DashboardNav from '../../../../../components/Dashboard/DashboardNav';
 import ExamnHero from '../../../../../components/Examn/ExamnHero';
 import { useAuth } from '../../../../../components/Auth';
-import ExamnScore from '../../../../../components/Examn/ExamnScore';
 import { apiUrl } from '../../../../../utils/env';
 import { useCountdown } from 'usehooks-ts';
-import Link from 'next/link';
 import ExamnComponent from '../../../../../components/Examn/ExamnComponent';
 import useBlockPrintScreen from '../../../../../utils/hooks/useBlockPrintScree';
+import ExamnLayout from '../../../../../components/Examn/ExamnLayout';
 
 type ExamnPageProps = {
   data: Evaluation;
-  evaluations: PaginatedDocs<Evaluation>;
+  evaluations: Evaluation[];
+  courseId: string;
+  course: Course;
 };
 
 function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
-  const { data, evaluations } = props;
+  const { data, evaluations, courseId, course } = props;
 
   const { user } = useAuth();
   const [examnStarted, setExamnStarted] = useState<boolean>(false);
+  const [windowState, setWindowState] = useState<boolean>(true);
 
   const now = dayjs();
   const endDate = dayjs(data.endDate);
   const timeLeft = endDate.diff(now, 'second');
+  const exams = evaluations?.filter((value) => value.evaluationType === 'exam');
 
-  const exams = evaluations?.docs?.filter((value) => value.evaluationType === 'exam');
-  // @ts-ignore
-  const isApprovedByUser = data.approvedBy ? data.approvedBy.find((value) => value.id === user?.id)
-      ? true
-      : false
-    : false;
-  // @ts-ignore
-  const isRepovredByUser = data.reprovedBy ? data.reprovedBy.find((value) => value.id === user?.id)
-      ? true
-      : false
-    : false;
-  // @ts-ignore
-  const isCompletedByUser = data.completedBy ? data.completedBy.find((value) => value.id === user?.id)
-      ? true
-      : false
-    : false;
-  // const isCompletedByUser = data?.completedBy?.includes(user?.id) ? true : false;
+  function isActionTakenByUser(data: any, user: any, action: string): boolean {
+    return data[action] ? data[action].find((value: any) => value.id === user?.id) ? true : false : false;
+  }
+  
+  const isApprovedByUser = isActionTakenByUser(data, user, 'approvedBy');
+  const isRepovredByUser = isActionTakenByUser(data, user, 'reprovedBy');
+  const isCompletedByUser = isActionTakenByUser(data, user, 'completedBy');
+
   const [isCompleted, setIsCompleted] = useState(isCompletedByUser);
-  const [examnFinished, setExamnFinished] = useState<boolean>(false);
 
   const getTimeOfExamn = () => {
     if (!data.exam) return 0;
@@ -65,16 +58,13 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
     countStart: getTimeOfExamn(),
     intervalMs: 1000,
   });
-  const [windowState, setWindowState] = useState<boolean>(true);
 
   const min = `${parseInt(`${count / 60}`)}:${count % 60}`;
-  const courseId = typeof data.course === 'string' ? data.course : data?.course?.id;
 
   console.log(isApprovedByUser, 'isApprovedByUser');
   console.log(isRepovredByUser, 'isRepovredByUser');
 
   function handleFinishExamn() {
-    setExamnFinished(true);
     setIsCompleted(true);
     stopCountdown();
   }
@@ -94,6 +84,7 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
     }
   }, [count]);
 
+  // visibilitychange
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -110,6 +101,15 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
 
   useBlockPrintScreen();
 
+  const examnLayoutProps = {
+    ref,
+    data,
+    courseId: courseId as string,
+    exams: exams as Evaluation[],
+    user: user as User,
+    course: course
+  };
+
   if (!data) {
     return (
       <PageTransition ref={ref}>
@@ -125,79 +125,26 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
 
   if (timeLeft <= 0) {
     return (
-      <ExamnStatus
-        ref={ref}
-        data={data}
-        courseId={courseId as string}
-        exams={exams as Evaluation[]}
-        user={user as User}
-      >
+      <ExamnLayout {...examnLayoutProps}>
         <h2 className="text-2xl font-bold">El examen ha finalizado</h2>
         <p>Si tienes alguna duda, contacta con tu profesor</p>
-      </ExamnStatus>
-    );
-  }
-
-  if (isRepovredByUser) {
-    return (
-      <ExamnStatus
-        ref={ref}
-        data={data}
-        courseId={courseId as string}
-        exams={exams as Evaluation[]}
-        user={user as User}
-      >
-        <h2 className="text-2xl font-bold">Lo sentimos, has reprobado el examen</h2>
-        <p>Si tienes alguna duda, contacta con tu profesor</p>
-      </ExamnStatus>
-    );
-  }
-
-  if (isApprovedByUser) {
-    return (
-      <ExamnStatus
-        ref={ref}
-        data={data}
-        courseId={courseId as string}
-        exams={exams as Evaluation[]}
-        user={user as User}
-      >
-        <h2 className="text-2xl font-bold">Felicidades has aprobado el examen</h2>
-        <p>Si tienes alguna duda, contacta con tu profesor</p>
-      </ExamnStatus>
-    );
-  }
-
-  if (isCompleted && timeLeft <= 0) {
-    return (
-      <ExamnStatus
-        ref={ref}
-        data={data}
-        courseId={courseId as string}
-        exams={exams as Evaluation[]}
-        user={user as User}
-      >
-        <h2 className="text-2xl font-bold">Has terminado el examen</h2>
-        <h4 className="text-2xl font-bold"> y la fecha de entrega ha finalizado</h4>
-        <p>Si tienes alguna duda, contacta con tu profesor</p>
-      </ExamnStatus>
+        {isRepovredByUser && <h2 className="text-2xl font-bold">Lo sentimos, has reprobado el examen</h2>}
+        {isApprovedByUser && <h2 className="text-2xl font-bold">Felicidades has aprobado el examen</h2>}
+      </ExamnLayout>
     );
   }
 
   if (isCompleted) {
     return (
-      <ExamnStatus
-        ref={ref}
-        data={data}
-        courseId={courseId as string}
-        exams={exams as Evaluation[]}
-        user={user as User}
-      >
+      <ExamnLayout {...examnLayoutProps}>
         <h2 className="text-2xl font-bold">Has terminado el examen</h2>
+        {timeLeft <= 0 && <h4 className="text-2xl font-bold"> y la fecha de entrega ha finalizado</h4>}
         <p>Si tienes alguna duda, contacta con tu profesor</p>
-      </ExamnStatus>
+      </ExamnLayout>
     );
   }
+
+  console.log(course.teacher, 'course')
 
   return (
     <PageTransition ref={ref}>
@@ -213,7 +160,9 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
       >
         {windowState ? (
           <>
-            <ExamnHero data={data}>
+            <ExamnHero 
+              course={course}
+              data={data}>
               <div className="flex flex-col justify-center items-center">
                 <p className="text-2xl font-bold my-4">
                   Tendras {data && data.exam && data.exam[0].timeToAnswer} minutos para realizar el examen
@@ -254,116 +203,50 @@ function ExamnPage(props: ExamnPageProps, ref: IndexPageRef) {
   );
 }
 
-type ExamnStatusProps = {
-  ref: any;
-  data: Evaluation;
-  courseId: string;
-  exams: Evaluation[];
-  user: User;
-  children: React.ReactNode;
-};
+export async function getServerSideProps({req, query}: GetServerSidePropsContext) {
+  const { examnId, id, } = query;
 
-function ExamnStatus({ ref, data, courseId, exams, user, children }: ExamnStatusProps) {
-  return (
-    <PageTransition ref={ref}>
-      <DashboardLayout
-        NavItems={
-          <DashboardNav
-            iterable={exams as Evaluation[]}
-            link={`/dashboard/course/${courseId}/exam`}
-            idOfParam="examnId"
-            iterableName="Examenes"
-          />
-        }
-      >
-        <ExamnHero data={data}>
-          <div className="flex flex-col justify-center items-center">
-            {children}
-            <div className="flex flex-row justify-center items-center">
-              <Link href={`/dashboard/course/${courseId}`}>
-                <a className="btn btn-primary mt-4">Volver al curso</a>
-              </Link>
-            </div>
-          </div>
-        </ExamnHero>
-        <ExamnScore createdBy={user?.id as string} evaluation={data.id} />
-      </DashboardLayout>
-    </PageTransition>
+  const [course, courseError] = await tryCatch<AxiosResponse<Course>>(
+    axios.get<Course>(apiUrl + '/api/courses/' + id, {
+      withCredentials: true,
+      headers: {
+        Authorization: `JWT ${req.cookies['payload-token']}`,
+      },
+    }),
   );
-}
 
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-  const { examnId, id } = context.query;
+  const [UserMeResponse, userError] = await tryCatch<AxiosResponse<UserMeResponse>>(
+    axios.get(apiUrl + '/api/users/me', {
+      withCredentials: true,
+      headers: {
+        Authorization: `JWT ${req.cookies['payload-token']}`,
+      },
+    }),
+  );
 
-  try {
-    // const response = await payloadClient.get('/api/evaluations/6458676b2b88103d5dea92c5', {
-    const [response, responseError] = await tryCatch<AxiosResponse<Evaluation>>(
-      axios.get(apiUrl + '/api/evaluations/' + examnId, {
-        // Make sure to include cookies with fetch
-        withCredentials: true,
-        headers: {
-          Authorization: `JWT ${context.req.cookies['payload-token']}`,
-        },
-      }),
-    );
-
-    const [courseEnrolled, courseEnrolledError] = await tryCatch<AxiosResponse<Course>>(
-      axios.get(apiUrl + '/api/enrollments/actives/' + id, {
-        withCredentials: true,
-        headers: {
-          Authorization: `JWT ${context.req.cookies['payload-token']}`,
-        },
-      }),
-    );
-
-    const courseId = typeof response?.data?.course === 'string' ? response?.data?.course : response?.data?.course?.id;
-
-    if (courseEnrolledError || responseError || courseEnrolled?.data.id !== courseId) {
-      return {
-        redirect: {
-          destination: '/auth/login',
-          permanent: false,
-        },
-      };
-    }
-
-    if (response?.data.exam?.length === 0) {
-      return {
-        redirect: {
-          destination: '/auth/login',
-          permanent: false,
-        },
-      };
-    }
-
-    const [evaluations, evaluationsError] = await tryCatch(
-      axios.get<PaginatedDocs<Evaluation>>(apiUrl + '/api/enrollments/course/' + id + '/evaluations', {
-        withCredentials: true,
-        headers: {
-          Authorization: `JWT ${context.req.cookies['payload-token']}`,
-        },
-      }),
-    );
-
-    if (evaluationsError) {
-      console.log(evaluationsError);
-    }
-
+  
+  if (courseError || userError) {
     return {
-      props: {
-        data: response?.data,
-        evaluations: evaluations?.data,
-        // courseEnrolled: courseEnrolled?.data,
-      }, // will be passed to the page component as props
-    };
-  } catch (error) {
-    console.log(error);
-    return {
-      props: {
-        data: null,
-      }, // will be passed to the page component as props
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      },
     };
   }
+
+  const evaluation = (course?.data?.evaluations as Evaluation[])?.find((value) => value.id === examnId);
+  const evaluations = course?.data?.evaluations;
+
+  console.log(course?.data.teacher, 'course?.data')
+
+  return {
+    props: {
+      data: evaluation,
+      course: course?.data,
+      evaluations: evaluations,
+      courseId: id,
+    },
+  };
 }
 
 export default ExamnPage;
