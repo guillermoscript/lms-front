@@ -3,16 +3,16 @@ import { Course, Evaluation, User } from "../../payload-types";
 
 type ExamnHeroProps = {
     data: Evaluation;
+    course: Course;
     children: React.ReactNode;
 }
 
-export default function ExamnHero({ data, children }: ExamnHeroProps) {
+export default function ExamnHero({ data, children, course }: ExamnHeroProps) {
 
-  const course = data.course as Course
-
+  console.log(course, 'course')
   const courseName = course?.name
-  const teacherFirstName = (course.teacher as User)?.firstName
-  const teacherLastName = (course.teacher as User)?.lastName
+  const teacherFirstName = (course?.teacher as User)?.firstName
+  const teacherLastName = (course?.teacher as User)?.lastName
 
     return (
         <div className="hero py-4 px-2 mb-4 bg-base-200 rounded shadow-2xl">
