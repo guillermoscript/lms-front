@@ -110,7 +110,7 @@ function LessonsPage(props: LessonsProps, ref: IndexPageRef) {
               completedBy={typeof data.completedBy === 'object' ? data.completedBy : []}
             />
           )}
-          {data?.resources?.length > 0 && (
+          {data?.resources &&  data?.resources.length > 0 && (
             <div className="flex flex-col">
               <h2 className="text-3xl font-bold py-4">Recursos</h2>
               <div className="flex flex-col">
@@ -170,7 +170,7 @@ export async function getServerSideProps({ query, req }: GetServerSidePropsConte
     };
   }
 
-  const lesson = course?.data?.lessons.find((lesson) => lesson.id === lessonId);
+  const lesson = (course?.data?.lessons as Lesson[])?.find((value) => value.id === lessonId);
   const lessons = course?.data?.lessons;
   const evaluations = course?.data?.evaluations;
 

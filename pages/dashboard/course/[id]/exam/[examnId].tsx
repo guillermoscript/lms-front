@@ -234,7 +234,7 @@ export async function getServerSideProps({req, query}: GetServerSidePropsContext
     };
   }
 
-  const evaluation = course?.data?.evaluations?.find((value) => value.id === examnId);
+  const evaluation = (course?.data?.evaluations as Evaluation[])?.find((value) => value.id === examnId);
   const evaluations = course?.data?.evaluations;
 
   console.log(course?.data.teacher, 'course?.data')

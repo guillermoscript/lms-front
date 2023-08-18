@@ -266,8 +266,6 @@ export async function getServerSideProps({ query, req }: GetServerSidePropsConte
     };
   }
 
-  console.log(course.data.lessons)
-
   return {
     props: {
       data: course ? course.data : null,
