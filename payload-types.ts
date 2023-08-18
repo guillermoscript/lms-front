@@ -39,6 +39,7 @@ export interface Course {
   category: string[] | Category[];
   teacher?: string | User;
   lessons?: string[] | Lesson[];
+  evaluations?: string[] | Evaluation[];
   relatedCourses?: string[] | Course[];
   completedBy?: string[] | User[];
   createdBy?: string | User;
@@ -150,6 +151,161 @@ export interface Lesson {
   lastModifiedBy?: string | User;
   isPublic?: boolean;
   slug?: string;
+  updatedAt: string;
+  createdAt: string;
+}
+export interface Evaluation {
+  id: string;
+  name: string;
+  description: string;
+  endDate: string;
+  maxScore: number;
+  score: number;
+  evaluationType: 'exam' | 'homework';
+  homework?: {
+    content: {
+      [k: string]: unknown;
+    }[];
+    id?: string;
+  }[];
+  exam?: {
+    content: {
+      [k: string]: unknown;
+    }[];
+    formExamn: {
+      form: string | Examn;
+      id?: string;
+      blockName?: string;
+      blockType: 'formBlock';
+    }[];
+    timeToAnswer: number;
+    id?: string;
+  }[];
+  order: number;
+  completedBy?: string[] | User[];
+  approvedBy?: string[] | User[];
+  reprovedBy?: string[] | User[];
+  lastModifiedBy?: string | User;
+  createdBy?: string | User;
+  slug?: string;
+  updatedAt: string;
+  createdAt: string;
+}
+export interface Examn {
+  id: string;
+  title: string;
+  fields?: (
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        defaultValue?: string;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'text';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        defaultValue?: string;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'textarea';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        defaultValue?: string;
+        options?: {
+          label: string;
+          value: string;
+          id?: string;
+        }[];
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'select';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'email';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'state';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'country';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        defaultValue?: number;
+        required?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'number';
+      }
+    | {
+        name: string;
+        label?: string;
+        width?: number;
+        required?: boolean;
+        defaultValue?: boolean;
+        id?: string;
+        blockName?: string;
+        blockType: 'checkbox';
+      }
+    | {
+        message?: {
+          [k: string]: unknown;
+        }[];
+        id?: string;
+        blockName?: string;
+        blockType: 'message';
+      }
+  )[];
+  submitButtonLabel?: string;
+  confirmationType?: 'message' | 'redirect';
+  confirmationMessage: {
+    [k: string]: unknown;
+  }[];
+  redirect?: {
+    url: string;
+  };
+  emails?: {
+    emailTo?: string;
+    cc?: string;
+    bcc?: string;
+    replyTo?: string;
+    emailFrom?: string;
+    subject: string;
+    message?: {
+      [k: string]: unknown;
+    }[];
+    id?: string;
+  }[];
   updatedAt: string;
   createdAt: string;
 }
@@ -334,162 +490,6 @@ export interface PaymentMethod {
   };
   createdBy?: string | User;
   slug?: string;
-  updatedAt: string;
-  createdAt: string;
-}
-export interface Evaluation {
-  id: string;
-  name: string;
-  description: string;
-  course?: string | Course;
-  endDate: string;
-  maxScore: number;
-  score: number;
-  evaluationType: 'exam' | 'homework';
-  homework?: {
-    content: {
-      [k: string]: unknown;
-    }[];
-    id?: string;
-  }[];
-  exam?: {
-    content: {
-      [k: string]: unknown;
-    }[];
-    formExamn: {
-      form: string | Examn;
-      id?: string;
-      blockName?: string;
-      blockType: 'formBlock';
-    }[];
-    timeToAnswer: number;
-    id?: string;
-  }[];
-  order: number;
-  completedBy?: string[] | User[];
-  approvedBy?: string[] | User[];
-  reprovedBy?: string[] | User[];
-  lastModifiedBy?: string | User;
-  createdBy?: string | User;
-  slug?: string;
-  updatedAt: string;
-  createdAt: string;
-}
-export interface Examn {
-  id: string;
-  title: string;
-  fields?: (
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        defaultValue?: string;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'text';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        defaultValue?: string;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'textarea';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        defaultValue?: string;
-        options?: {
-          label: string;
-          value: string;
-          id?: string;
-        }[];
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'select';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'email';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'state';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'country';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        defaultValue?: number;
-        required?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'number';
-      }
-    | {
-        name: string;
-        label?: string;
-        width?: number;
-        required?: boolean;
-        defaultValue?: boolean;
-        id?: string;
-        blockName?: string;
-        blockType: 'checkbox';
-      }
-    | {
-        message?: {
-          [k: string]: unknown;
-        }[];
-        id?: string;
-        blockName?: string;
-        blockType: 'message';
-      }
-  )[];
-  submitButtonLabel?: string;
-  confirmationType?: 'message' | 'redirect';
-  confirmationMessage: {
-    [k: string]: unknown;
-  }[];
-  redirect?: {
-    url: string;
-  };
-  emails?: {
-    emailTo?: string;
-    cc?: string;
-    bcc?: string;
-    replyTo?: string;
-    emailFrom?: string;
-    subject: string;
-    message?: {
-      [k: string]: unknown;
-    }[];
-    id?: string;
-  }[];
   updatedAt: string;
   createdAt: string;
 }
