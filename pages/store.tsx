@@ -43,13 +43,17 @@ function StorePage(props: StorePageProps , ref: IndexPageRef) {
                     <div className="mt-6">
                     <div className="join grid grid-cols-2 px-4">
                         {data.hasPrevPage && (
-                            <Link href={`/store?page=${data.prevPage}`}>
-                                <a className="join-item btn btn-outline">Prev</a>
+                            <Link 
+                                className="join-item btn btn-outline"
+                                href={`/store?page=${data.prevPage}`}>
+                                Prev
                             </Link>
                         )}
                         {data.hasNextPage && (
-                            <Link href={`/store?page=${data.nextPage}`}>
-                                <a className="join-item btn btn-outline">Next</a>
+                            <Link 
+                                className="join-item btn btn-outline"
+                                href={`/store?page=${data.nextPage}`}>
+                                Next
                             </Link>
                         )} 
                     </div>
