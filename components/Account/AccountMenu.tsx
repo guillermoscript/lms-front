@@ -12,31 +12,41 @@ export default function AccountMenu() {
       <div className="border-b border-gray-800">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <Link href="/dashboard/account">
-              <a className={router.pathname === '/dashboard/account' ? activeClass : inactiveClass}>Perfil</a>
+            <Link
+              className={router.pathname === '/dashboard/account' ? activeClass : inactiveClass}
+              href="/dashboard/account"
+            >
+              Perfil
             </Link>
-            <Link href="/dashboard/account/my-orders">
-              <a className={router.pathname === '/dashboard/account/my-orders' ? activeClass : inactiveClass}>Ordenes</a>
+            <Link
+              className={router.pathname === '/dashboard/account/my-orders' ? activeClass : inactiveClass}
+              href="/dashboard/account/my-orders"
+            >
+              Ordenes
             </Link>
-            <Link href="/dashboard/account/update-profile">
-              <a className={router.pathname === '/dashboard/account/update-profile' ? activeClass : inactiveClass}>
-                Actualizar perfil
-              </a>
+            <Link
+              className={router.pathname === '/dashboard/account/update-profile' ? activeClass : inactiveClass}
+              href="/dashboard/account/update-profile"
+            >
+              Actualizar perfil
             </Link>
-            <Link href="/dashboard/account/payment-methods">
-              <a className={router.pathname === '/dashboard/account/payment-methods' ? activeClass : inactiveClass}>
-                Mis métodos de pago
-              </a>
+            <Link
+              className={router.pathname === '/dashboard/account/payment-methods' ? activeClass : inactiveClass}
+              href="/dashboard/account/payment-methods"
+            >
+              Mis métodos de pago
             </Link>
-            <Link href="/dashboard/account/my-courses">
-              <a className={router.pathname === '/dashboard/account/my-courses' ? activeClass : inactiveClass}>
-                Mis cursos
-              </a>
+            <Link
+              className={router.pathname === '/dashboard/account/my-courses' ? activeClass : inactiveClass}
+              href="/dashboard/account/my-courses"
+            >
+              Mis cursos
             </Link>
-            <Link href="/dashboard/account/chat">
-              <a className={router.pathname === '/dashboard/account/chat' ? activeClass : inactiveClass}>
-                Chat
-              </a>
+            <Link
+              className={router.pathname === '/dashboard/account/chat' ? activeClass : inactiveClass}
+              href="/dashboard/account/chat"
+            >
+              Chat
             </Link>
           </nav>
         </div>

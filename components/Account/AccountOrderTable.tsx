@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+
 import GenericTable from '../Table/GenericTable';
 import axios from 'axios';
 import { PaginatedDocs } from '../../utils/types/common';
@@ -71,13 +71,15 @@ export default function OrderTable() {
   return (
     <>
       {query.isSuccess && query.data.docs.length === 0 && (
-        <>
+        <div className="flex flex-col gap-2 p-4">
           <h3 className="text-xl font-medium mb-4">No tienes ordenes</h3>
           <p>Puedes ir a la tienda</p>
-          <Link href="/store">
-              <a className="btn btn-accent mt-4">Ir a la tienda</a>
+          <Link 
+            className="btn btn-accent mt-4"
+            href="/store">
+              Ir a la tienda
           </Link>
-        </>
+        </div>
       )}
       {query.isSuccess && query.data.docs.length > 0 && (
         <GenericTable theads={['Id', 'Fecha', 'Estado', 'Total']}>
@@ -91,10 +93,12 @@ export default function OrderTable() {
                 <td className={statusOfOrder.className}>
                   {order.status === 'pending' ? (
                     <div className="tooltip" data-tip={statusOfOrder.tooltipText}>
-                      <Link href={`/dashboard/order/${order.id}`}>
-                        <a
-                          className="bg-accent-content text-accent hover:bg-accent hover:text-accent-content rounded transition duration-200 px-4 py-2"
-                        >{statusOfOrder.text}</a>
+                      <Link
+                      className="bg-accent-content text-accent hover:bg-accent hover:text-accent-content rounded transition duration-200 px-4 py-2"
+                        href={`/dashboard/order/${order.id}`}>
+                        
+                          
+                        {statusOfOrder.text}
                       </Link>
                     </div>
                   ) : (

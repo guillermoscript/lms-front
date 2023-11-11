@@ -5,9 +5,9 @@ import { useAuth } from '../Auth';
 import { User } from '../../payload-types';
 import { apiUrl } from '../../utils/env';
 import payloadClient from '../../utils/axiosPayloadInstance';
-import { useMutation } from 'react-query';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
+import { useMutation } from '@tanstack/react-query';
 
 const classNames = {
   container: 'relative w-full mb-3',
@@ -96,23 +96,21 @@ export default function AccountForm({ user }: AccountFormProps) {
   const inputs = userInfo(register, errors);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const photoMutation = useMutation(addImage, {
-    // onSuccess: (data) => {
-    //   console.log(data);
-    // },
-    // onError: (error) => {
-    //   console.log(error)
-    // }
+  const photoMutation = useMutation({
+    mutationFn: addImage,
   });
 
-  const mutation = useMutation(patchUser, {
-    onSuccess: (data) => {
-      // Update the user in auth state with new values
-      setUser(data);
-    },
-    onError: (error) => {
-      console.log(error)
-    }
+  const mutation = useMutation({
+    mutationFn: patchUser,
+    
+      onSuccess: (data) => {
+        // Update the user in auth state with new values
+        setUser(data);
+      },
+      onError: (error) => {
+        console.log(error)
+      }
+    
   });
 
   const onSubmit = (data: any) => {
@@ -181,11 +179,11 @@ export default function AccountForm({ user }: AccountFormProps) {
       </div>
 
       <button
-        disabled={mutation.isLoading || photoMutation.isLoading}
+        disabled={mutation.isPending || photoMutation.isPending}
         className='btn btn-accent' type="submit">
-          {mutation.isLoading ? 'Guardando...' : 'Guardar'}
+          {mutation.isPending ? 'Guardando...' : 'Guardar'}
       </button>
-      {mutation.isLoading || photoMutation.isLoading && (
+      {mutation.isPending || photoMutation.isPending && (
           <div className="flex justify-center mt-4">
             <LoadSpinner size='lg'  />
           </div>

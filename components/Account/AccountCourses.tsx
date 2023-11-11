@@ -1,4 +1,3 @@
-import { useQuery } from "react-query";
 import { Course, Enrollment, User } from "../../payload-types";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import { PaginatedDocs } from "../../utils/types/common";
@@ -45,8 +44,10 @@ export default function AccountCourses() {
                 <>
                     <h3 className="text-xl font-medium mb-4">No tienes cursos</h3>
                     <p>Puedes comprar cursos en la tienda</p>
-                    <Link href="/store">
-                        <a className="btn btn-accent mt-4">Ir a la tienda</a>
+                    <Link
+                        className="btn btn-accent mt-4"
+                        href="/store">
+                        Ir a la tienda
                     </Link>
                 </>
             )}
@@ -64,8 +65,10 @@ function MyCoursesList({ enrollments }: { enrollments: Enrollment }) {
             </div>
             <div className="collapse-content">
                 <p>{(enrollments?.course as Course)?.description}</p>
-                <Link href={`/dashboard/course/${(enrollments?.course as Course)?.id}`}>
-                    <a className="btn btn-primary mt-4">Ir al curso</a>
+                <Link 
+                    className="btn btn-primary mt-4"
+                    href={`/dashboard/course/${(enrollments?.course as Course)?.id}`}>
+                    Ir al curso
                 </Link>
             </div>
         </div>

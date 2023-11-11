@@ -1,4 +1,3 @@
-import { useQueryClient, useMutation, UseMutationResult } from 'react-query';
 import payloadClient from '../../utils/axiosPayloadInstance';
 import useKeypress from '../../utils/hooks/useKeyPress';
 import { venezuelanBanks } from '../../utils/venezuelaBanks';
@@ -49,7 +48,7 @@ export function MutationMessageStates({ mutation }: { mutation: any }) {
   return (
     <>
     {
-      mutation.isLoading && <div className="alert alert-info">Carg...</div>
+      mutation.isPending && <div className="alert alert-info">Carg...</div>
     }
 
     {
