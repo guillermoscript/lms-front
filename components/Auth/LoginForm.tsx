@@ -2,11 +2,12 @@ import * as yup from 'yup';
 import { Form } from '../Forms/SmartForm';
 import { useState } from 'react';
 import ErrorAlert from '../Errors/ErrorAlert';
-import { useAuth } from '.';
+
 import Link from 'next/link';
 import { ROUTES } from '../../utils/constants';
 import { useRouter } from 'next/router';
 import googleStyle from './googleStyle.module.css';
+import { useAuth } from '@/providers/Auth';'@/providers/Auth';
 
 export const LoginSchema = yup.object().shape({
   email: yup.string().email('Debe ingresar un email válido').required('Debe ingresar un email'),
@@ -48,20 +49,24 @@ export default function LoginForm() {
       <Form.Input name="email" displayName="Email" type="email" clasess={clasees} />
       <Form.Input name="password" displayName="Contraseña" type="password" clasess={clasees} />
       <div className="flex items-center justify-between">
-        <Link href={ROUTES.auth.forgotPassword}>
-          <a className="text-sm font-medium text-primary hover:underline dark:text-primary-500">
+        <Link
+          className="text-sm font-medium text-primary hover:underline dark:text-primary-500"
+          href={ROUTES.auth.forgotPassword}>
+          
             Olvidaste tu contraseña?
-          </a>
+          
         </Link>
       </div>
       <button className="btn btn-accent">Login</button>
       <p className="text-sm font-light text-gray-500 dark:text-gray-400">
         No tienes una cuenta?
-        <Link href={ROUTES.auth.register}>
-          <a  className="font-medium text-secondary hover:underline">
+        <Link 
+          className="font-medium text-secondary hover:underline"
+          href={ROUTES.auth.register}>
+          
             {' '}
             Registrate
-          </a>
+          
         </Link>
       </p>
       {error && <ErrorAlert errorMessage={error} setErrorMessage={setError} />}

@@ -5,8 +5,8 @@ import { apiUrl } from '../../../utils/env';
 import Layout from '../../../components/Layout/Layout';
 import PageTransition from '../../../components/PageTransition';
 import axios from 'axios';
-import { useMutation } from 'react-query';
 import { DaisyUiAlert } from '../../../components/Alert/DaisyUiAlerts';
+import { useMutation } from '@tanstack/react-query';
 
 type FormData = {
   email: string
@@ -26,7 +26,9 @@ const postPasswordReset = async (data: FormData) => {
 
 const RecoverPassword = (ref: any) => {
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
-  const mutation = useMutation(postPasswordReset);
+  const mutation = useMutation({
+    mutationFn: postPasswordReset,
+  });
 
   const onSubmit = async (data: FormData) => {
     mutation.mutate(data);

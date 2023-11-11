@@ -2,7 +2,7 @@ import React, { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useForm } from "react-hook-form";
 import { Input } from '../../../components/Input';
 import { useRouter } from 'next/router';
-import { useAuth } from '../../../components/Auth';
+import { useAuth } from '@/providers/Auth';'../../../components/Auth';
 import { apiUrl } from '../../../utils/env';
 import Layout from '../../../components/Layout/Layout';
 import PageTransition from '../../../components/PageTransition';

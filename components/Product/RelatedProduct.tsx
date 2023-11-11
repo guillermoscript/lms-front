@@ -20,10 +20,10 @@ export default function ReleatedProduct({ title, price, imgAlt, imgURL, productI
         <div>
           <h3 className="text-sm text-secondary">
             <Link href={`/product/${productId}`}>
-              <a>
+              
                 <span aria-hidden="true" className="absolute inset-0" />
                 {title}
-              </a>
+              
             </Link>
           </h3>
         </div>

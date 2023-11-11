@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from 'react-query';
 import { Form } from '../Forms/SmartForm';
 import { CheckoutFormProps, FormSchema, PaymentMethods, classNames } from './CheckoutForm';
 import payloadClient from '../../utils/axiosPayloadInstance';
@@ -9,6 +8,7 @@ import SkeletonAcordion from '../Skeletons/SkeletonAcordion';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { PagoMovilUserOrderData, ZelleUserOrderData } from './CheckoutFormGuestView';
 import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 type UserPaymentMethodsResponseSuccess = {
   paymentMethods: PaymentMethod[]
@@ -39,19 +39,20 @@ type CheckoutFormUserViewProps = Omit<CheckoutFormProps, 'user'> & {
 export default function CheckoutFormUserView({ productData, user }: CheckoutFormUserViewProps) {
   
   const { push } = useRouter();
-  const mutation = useMutation(postUserOrder, {
-    onSuccess: (data) => {
-      console.log(data);
-      push({
-        pathname: '/thank-you',
-        query: {
-          order: data.order.id,
-        },
-      });
-    },
-    onError: (error) => {
-      console.log(error);
-    },
+  const mutation = useMutation({
+    mutationFn: postUserOrder, 
+      onSuccess: (data) => {
+        console.log(data);
+        push({
+          pathname: '/thank-you',
+          query: {
+            order: data.order.id,
+          },
+        });
+      },
+      onError: (error) => {
+        console.log(error);
+      },
   });
   
   const onSubmit = (data: any) => {
@@ -101,7 +102,10 @@ export default function CheckoutFormUserView({ productData, user }: CheckoutForm
     }
   };
 
-  const queryPaymentMethods = useQuery(['userPaymentMethods'], () => getUserPaymentMethod({ userID: user.id }));
+  const queryPaymentMethods = useQuery({
+    queryKey: ['userPaymentMethods', user.id],
+    queryFn: () => getUserPaymentMethod({ userID: user.id }),
+  });
 
   if (queryPaymentMethods.isLoading) {
     return <SkeletonAcordion />
@@ -146,7 +150,7 @@ export default function CheckoutFormUserView({ productData, user }: CheckoutForm
       <div className="col-span-6">
         <button
           type="submit"
-          disabled={mutation.isLoading}
+          disabled={mutation.isPending}
           className="btn btn-accent w-full"
         >
           Pagar
@@ -161,7 +165,7 @@ export default function CheckoutFormUserView({ productData, user }: CheckoutForm
             <DaisyUiAlert type="success" message={"Orden creada"} />
           </div>
         ) : null}
-        {mutation.isLoading ? (
+        {mutation.isPending ? (
           <LoadSpinner size='lg' />
         ) : null}
       </div>

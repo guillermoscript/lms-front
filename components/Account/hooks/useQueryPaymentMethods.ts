@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { PaymentMethod } from "../../../payload-types";
 import payloadClient from "../../../utils/axiosPayloadInstance";
 import { apiUrl } from "../../../utils/env";
@@ -22,6 +22,9 @@ const getUserPaymentMethods = async () => {
 
 export default function useQueryPaymentMethods() {
 
-    const query = useQuery(['paymentMethods'], getUserPaymentMethods);
+    const query = useQuery({
+        queryKey: ['paymentMethods'], 
+        queryFn: getUserPaymentMethods,
+    });
     return query;
 }

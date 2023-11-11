@@ -3,7 +3,7 @@ import CheckoutForm from '../../../components/Checkout/CheckoutForm';
 import Layout from '../../../components/Layout/Layout';
 import { Order, PagoMovil, Product, User, Zelle } from '../../../payload-types';
 import CheckoutItem from '../../../components/Checkout/CheckoutItem';
-import { useAuth } from '../../../components/Auth';
+import { useAuth } from '@/providers/Auth';'../../../components/Auth';
 import { forwardRef } from 'react';
 import { IndexPageRef, UserMeResponse } from '../../../utils/types/common';
 import PageTransition from '../../../components/PageTransition';

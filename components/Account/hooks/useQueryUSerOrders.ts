@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Order } from "../../../payload-types";
 import payloadClient from "../../../utils/axiosPayloadInstance";
 import { PaginatedDocs } from "../../../utils/types/common";
@@ -22,6 +22,9 @@ const getUSerOrders = async () => {
 
 export default function useQueryUserOrders() {
     
-    const query = useQuery(['UserOrders'], getUSerOrders);
+    const query = useQuery({
+        queryKey: ['UserOrders'],
+        queryFn: getUSerOrders,
+    });
     return query;
 }

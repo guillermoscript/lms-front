@@ -15,8 +15,9 @@ export default function BreadCrumbs({ data }: BreadCrumbsProps) {
           return (
             <li key={index}>
               <Link 
+                className="text-secondary transition duration-75 focus:text-secondary-focus"
                 href={item.url}>
-                <a className="text-secondary transition duration-75 focus:text-secondary-focus">{item.name}</a>
+                {item.name}
               </Link>
             </li>
           );

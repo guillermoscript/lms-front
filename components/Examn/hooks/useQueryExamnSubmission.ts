@@ -1,8 +1,8 @@
-import { useQuery } from "react-query";
 import payloadClient from "../../../utils/axiosPayloadInstance";
 import qs from "qs";
 import { PaginatedDocs } from "../../../utils/types/common";
 import { ExamnsSubmission } from "../../../payload-types";
+import { useQuery } from "@tanstack/react-query";
 
 type ExamnSubmissionDto = {
     createdBy: string;
@@ -35,10 +35,9 @@ const getExamnSubmission = async ({
 }
 
 export default function useQueryExamnSubmission({ createdBy, evaluation }: ExamnSubmissionDto) {
-    return useQuery(["examn-submission"], () => getExamnSubmission({
-        createdBy,
-        evaluation
-    }), {
+    return useQuery({
+        queryKey: ["examn-submission"],
+        queryFn: () => getExamnSubmission({ createdBy, evaluation }),
         enabled: !!createdBy && !!evaluation,
     });
 }

@@ -4,7 +4,7 @@ import { fields } from './fields'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/router'
 import { RichText } from '../../RichText'
-import { useAuth } from '../../Auth'
+import { useAuth } from '@/providers/Auth';'../../Auth'
 import { Examn } from '../../../payload-types'
 import { LoadSpinner } from '../../Loaders/DaisyUiLoaders'
 

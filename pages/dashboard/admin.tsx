@@ -3,7 +3,7 @@ import DashboardLayout from "../../components/Dashboard/DashboardLayout";
 import PageTransition from "../../components/PageTransition";
 import { User, Order, Enrollment, Course } from "../../payload-types";
 import { GetServerSidePropsContext } from "next";
-import { useAuth } from "../../components/Auth";
+import { useAuth } from '@/providers/Auth';"../../components/Auth";
 import { IndexPageRef, PaginatedDocs } from "../../utils/types/common";
 import Line from "../../components/Charts/Line";
 import axios, { AxiosResponse } from "axios";

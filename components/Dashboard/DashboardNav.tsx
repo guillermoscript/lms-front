@@ -22,10 +22,12 @@ export default function DashboardNav({ iterable, idOfParam, link, iterableName }
                 {iterable?.map((value) => {                   
                     return (
                         <li key={value.id}>
-                            <Link href={`${link}/${value.id}`}>
-                                <a className={`group flex my-1 items-center rounded-lg p-2 text-base font-normal transition duration-75 hover:bg-secondary-content focus:bg-secondary-content ${idToCompare == value.id ? 'text-secondary-focus' : ''} text-ellipsis`}>
+                            <Link 
+                                className={`group flex my-1 items-center rounded-lg p-2 text-base font-normal transition duration-75 hover:bg-secondary-content focus:bg-secondary-content ${idToCompare == value.id ? 'text-secondary-focus' : ''} text-ellipsis`}
+                                href={`${link}/${value.id}`}>
+                                
                                     {value.name}
-                                </a>
+                                
                             </Link>
                         </li>
                     );

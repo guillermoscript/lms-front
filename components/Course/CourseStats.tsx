@@ -1,8 +1,8 @@
-import { useQuery } from "react-query";
 import { Course, Enrollment, Evaluation, Lesson } from "../../payload-types";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import SkeletonAcordion from "../Skeletons/SkeletonAcordion";
 import { PaginatedDocs } from "../../utils/types/common";
+import { useQuery } from "@tanstack/react-query";
 
 type CourseStatsProps = {
     course: Course;
@@ -42,7 +42,10 @@ function CourseTotalsExamns({totalExams}: {totalExams: number}) {
 }
 function CourseTotalsEnrollments({courseId}: {courseId: string}) {
 
-    const query = useQuery(['totalEnrollments', courseId], () => getTotalEnrollments(courseId))
+    const query = useQuery({
+        queryKey: ['totalEnrollments', courseId],
+        queryFn: () => getTotalEnrollments(courseId)
+    })
 
     if (query.isLoading) {
         return <SkeletonAcordion />

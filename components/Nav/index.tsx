@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
-import { useAuth } from '../Auth';
+import { useAuth } from '@/providers/Auth';'../Auth';
 import classes from './index.module.css';
 
 export const Nav: React.FC = () => {
@@ -12,12 +12,12 @@ export const Nav: React.FC = () => {
       <>
         <li>
           <Link href="/dashboard/account">
-            <a>Account</a>
+            Account
           </Link>
         </li>
         <li>
           <Link href="/auth/logout">
-            <a>Logout</a>
+            Logout
           </Link>
         </li>
       </>
@@ -29,12 +29,12 @@ export const Nav: React.FC = () => {
       <>
         <li>
           <Link href="/auth/login">
-            <a>Iniciar Sesión</a>
+            Iniciar Sesión
           </Link>
         </li>
         <li>
           <Link href="/auth/create-account">
-            <a>Crear Cuenta</a>
+            Crear Cuenta
           </Link>
         </li>
       </>

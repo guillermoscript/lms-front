@@ -3,7 +3,7 @@ import BlocksComponent, { FormExamn } from '../Blocks';
 import CountdownTimer from '../Countdown/Countdown';
 import { RichText } from '../RichText';
 import useMutationMarkAsCompleted from './hooks/useMutationMarkAsCompleted';
-import { useAuth } from '../Auth';
+import { useAuth } from '@/providers/Auth';'../Auth';
 import useMutationSubmitExamn from './hooks/useMutationSubmitExamn';
 import { useState } from 'react';
 

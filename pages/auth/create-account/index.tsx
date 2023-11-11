@@ -41,13 +41,11 @@ const CreateAccount = (ref: IndexPageRef) => {
                             <RegisterForm />
                             <p className="text-center text-sm  mt-2">
                               Ya tienes una cuenta?{' '}
-                              <Link href={ROUTES.auth.login}>
-                                <a
-                                  className="text-primary hover:text-primary-focus hover:underline"
-                                  title="Iniciar sesión"
-                                >
+                              <Link
+                                title="Iniciar sesión"
+                                className="text-primary hover:text-primary-focus hover:underline"
+                                href={ROUTES.auth.login}>
                                   Inicia sesión
-                                </a>
                               </Link>
                             </p>
                           </div>

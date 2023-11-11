@@ -32,12 +32,12 @@ export default function AccountNavBar() {
                     <ul>
                         {query.data?.docs?.map((enrollment) => (
                             <li key={enrollment.id} className="lis">
-                                <Link href={`/dashboard/course/${(enrollment?.course as Course)?.id}`}>
-                                    <a className="group flex items-center rounded-lg p-2 text-base font-normal transition duration-75 hover:bg-secondary-content">
-                                        <span className="text-secondary transition duration-75 focus:text-secondary-focus">
-                                            {(enrollment?.course as Course)?.name}
-                                        </span>
-                                    </a>
+                                <Link 
+                                    className="group flex items-center rounded-lg p-2 text-base font-normal transition duration-75 hover:bg-secondary-content"
+                                    href={`/dashboard/course/${(enrollment?.course as Course)?.id}`}>
+                                    <span className="text-secondary transition duration-75 focus:text-secondary-focus">
+                                        {(enrollment?.course as Course)?.name}
+                                    </span>
                                 </Link>
                             </li>
                         ))}
@@ -53,8 +53,10 @@ export default function AccountNavBar() {
             <>
                 <h3 className="text-xl font-medium mb-4">No tienes cursos</h3>
                 <p>Puedes comprar cursos en la tienda</p>
-                <Link href="/store">
-                    <a className="btn btn-accent mt-4">Ir a la tienda</a>
+                <Link
+                    className="btn btn-accent mt-4"
+                    href="/store">
+                    Ir a la tienda
                 </Link>
             </>
         )

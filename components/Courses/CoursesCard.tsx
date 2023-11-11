@@ -24,8 +24,10 @@ export default function CoursesCards({ src, alt, width, height, title, descripti
           className="rounded-t-lg" />
       </figure>
       <div className="card-body">
-        <Link href="/course/[id]" as={`/course/${title}`}>
-          <a className="card-title">{title}</a>
+        <Link
+          className="card-title"
+          href="/course/[id]" as={`/course/${title}`}>
+          {title}
         </Link>
         <p>{description}</p>
         {action}

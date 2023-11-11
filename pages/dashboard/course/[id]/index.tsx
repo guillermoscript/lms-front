@@ -7,7 +7,7 @@ import { Course, Evaluation, Lesson, User } from '../../../../payload-types';
 import DashboardLayout from '../../../../components/Dashboard/DashboardLayout';
 import DashboardNav from '../../../../components/Dashboard/DashboardNav';
 import tryCatch from '../../../../utils/tryCatch';
-import { useAuth } from '../../../../components/Auth';
+import { useAuth } from '@/providers/Auth';'../../../../components/Auth';
 import CourseStats from '../../../../components/Course/CourseStats';
 import { apiUrl } from '../../../../utils/env';
 import IterableAccordionSection, { IterableAccordion } from '../../../../components/Course/IteableAccordionSection';
@@ -197,9 +197,7 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
                       </h4>
                       <div className="collapse-content">
                         <Link href={`/dashboard/course/${data.id}/exam/${iterable.id}`}>
-                          <a>
                             <p className="text-lg mb-6 link link-accent">{iterable.description}</p>
-                          </a>
                         </Link>
                       </div>
                     </div>

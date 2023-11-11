@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { PaymentMethod, User } from '../../payload-types';
-import { useQuery } from 'react-query';
 import SkeletonTable from '../Skeletons/SkeletonTable';
 import { PaginatedDocs } from '../../utils/types/common';
 import GenericTable from '../Table/GenericTable';

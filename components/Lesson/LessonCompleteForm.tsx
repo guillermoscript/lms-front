@@ -1,9 +1,9 @@
 import { useState } from "react";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import { User } from "../../payload-types";
-import { useMutation } from "react-query";
 import MutationStatesUiController from "../Mutation/MutationStatesUiController";
 import useHideAfterXSeconds from "../../utils/hooks/useHideAfterXSeconds";
+import { useMutation } from "@tanstack/react-query";
 
 type LessonCompleteFormProps = {
     user: User;
@@ -21,7 +21,8 @@ export default function LessonCompleteForm({user, lessonId, completedBy}: Lesson
     const [completed, setCompleted] = useState<boolean>(false);
     const {showAlert, setShowAlert} = useHideAfterXSeconds(3000)
 
-    const mutation = useMutation(putMutationCompletedBy, {
+    const mutation = useMutation({
+        mutationFn: putMutationCompletedBy,
         onSuccess: (data, variables) => {
             console.log('useMutationUpdatePaymentMethod onSuccess', data);
             setShowAlert(true);

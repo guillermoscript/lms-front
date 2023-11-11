@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from 'react-query';
 import { FormSchema, PaymentMethods } from '../Checkout/CheckoutForm';
 import { UserPaymentMethods, getUserPaymentMethod } from '../Checkout/CheckoutFormUserView';
 import { useRouter } from 'next/router';
@@ -7,6 +6,7 @@ import { PaymentMethod, User } from '../../payload-types';
 import { Form } from '../Forms/SmartForm';
 import axios from 'axios';
 import { apiUrl } from '../../utils/env';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 const patchOrderUser = async (data: any) => {
 
@@ -36,13 +36,14 @@ type OrderFormProps = {
 export default function OrderForm({ user, orderId }: OrderFormProps) {
 
   const { push } = useRouter();
-  const mutation = useMutation(patchOrderUser, {
+  const mutation = useMutation({
+    mutationFn: patchOrderUser,
     onSuccess: (data) => {
       console.log(data);
       push({
         pathname: '/thank-you',
         query: {
-          order: data.doc.id,
+          order: data.order.id,
         },
       });
     },
@@ -63,7 +64,10 @@ export default function OrderForm({ user, orderId }: OrderFormProps) {
     mutation.mutate(orderData);
   };
 
-  const queryPaymentMethods = useQuery('userPaymentMethods', () => getUserPaymentMethod({ userID: user.id }));
+  const queryPaymentMethods = useQuery({
+    queryKey: ['userPaymentMethods'], 
+    queryFn: () => getUserPaymentMethod({ userID: user.id }),
+  });
 
   return (
     <Form schema={FormSchema} onSubmit={onSubmit} classes="grid grid-cols-6 gap-4">

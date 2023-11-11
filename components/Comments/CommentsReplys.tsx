@@ -1,4 +1,3 @@
-import { useQuery } from "react-query";
 import CommentReplyUserData, { CommentReplyUserDataProps } from "./CommentReplyUserData";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import { useState } from "react";
@@ -6,6 +5,7 @@ import SkeletonComments from "../Skeletons/SkeletonComments";
 import { PaginatedDocs } from "../../utils/types/common";
 import { Comment } from "../../payload-types";
 import Pagination from "../Pagination";
+import { useQuery } from "@tanstack/react-query";
 
 const getComments = async ({page, commentableId}: {page: number, commentableId: string}) => {
     const response = await payloadClient.get<PaginatedDocs<Comment>>(`/api/comments?where[commentable.value][equals]=${commentableId}&page=${page}`);
@@ -21,13 +21,12 @@ export default function CommentsReplys({ commentableId }: CommentReplysProps ) {
     const [page, setPage] = useState<number>(1);
 
     const query = useQuery({
-        queryKey: ['comments', {page, commentableId}],
-        queryFn: () => getComments({page, commentableId}),
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        keepPreviousData: true,
-    });
+      queryKey: ['comments', {page, commentableId}],
+      queryFn: () => getComments({page, commentableId}),
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+  });
 
     return (
         <div className="flex flex-col space-y-4">

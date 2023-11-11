@@ -1,4 +1,4 @@
-import { useQueryClient, useMutation } from "react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import payloadClient from "../../../utils/axiosPayloadInstance";
 import { MutationMessageStates } from "../AccountPaymentModal";
 
@@ -14,15 +14,19 @@ const deletePaymentMethod = async (paymentMethodId: string) => {
   
     const queryClient = useQueryClient();
   
-    const mutation = useMutation(deletePaymentMethod, {
-      onSuccess: (data, variables) => {
-        console.log('useMutationDeletePaymentMethod onSuccess', data);
-        queryClient.invalidateQueries('userPaymentMethods');
-        onClose();
-      },
-      onError: (error, variables) => {
-        console.log('useMutationDeletePaymentMethod onError', error);
-      },
+    const mutation = useMutation({
+      mutationFn: deletePaymentMethod, 
+        onSuccess: (data, variables) => {
+          console.log('useMutationDeletePaymentMethod onSuccess', data);
+          queryClient.invalidateQueries({
+            queryKey: ['userPaymentMethods']
+          });
+          onClose();
+        },
+        onError: (error, variables) => {
+          console.log('useMutationDeletePaymentMethod onError', error);
+        },
+      
     });
   
     return (

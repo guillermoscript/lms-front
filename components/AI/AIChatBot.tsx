@@ -37,6 +37,7 @@ export default function AIChatBot({ user }: AIChatBotProps) {
 
   const llm = useLLM({
     serviceUrl: "https://usellm.org/api/llm", // For testing only. Follow this guide to create your own service URL: https://usellm.org/docs/api-reference/create-llm-service
+    // serviceUrl: "/api/llm",
   });
 
   async function handleSend() {

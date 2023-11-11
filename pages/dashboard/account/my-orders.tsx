@@ -1,8 +1,5 @@
 import axios from "axios";
 import { GetServerSidePropsContext } from "next";
-import AccountHeader from "../../../components/Account/AccountHeader";
-import AccountMenu from "../../../components/Account/AccountMenu";
-import DashboardLayout from "../../../components/Dashboard/DashboardLayout";
 import { User } from "../../../payload-types";
 import { UserMeResponse } from "../../../utils/types/common";
 import OrderTable from "../../../components/Account/AccountOrderTable";

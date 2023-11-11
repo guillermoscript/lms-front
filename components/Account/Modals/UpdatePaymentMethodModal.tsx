@@ -1,4 +1,4 @@
-import { useQueryClient, useMutation } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import payloadClient from '../../../utils/axiosPayloadInstance';
 import { venezuelanBanks } from '../../../utils/venezuelaBanks';
 import {
@@ -50,15 +50,19 @@ export function UpdatePaymentMethodModal({
   const paymentMethodSelectedSchema = paymentMethods[paymentMethodSelected as keyof typeof paymentMethods];
   const queryClient = useQueryClient();
 
-  const mutation = useMutation(putPaymentMethod, {
-    onSuccess: (data, variables) => {
-      console.log('useMutationUpdatePaymentMethod onSuccess', data);
-      onClose();
-      queryClient.invalidateQueries('userPaymentMethods');
-    },
-    onError: (error, variables) => {
-      console.log('useMutationUpdatePaymentMethod onError', error);
-    },
+  const mutation = useMutation({
+    mutationFn: putPaymentMethod, 
+      onSuccess: (data, variables) => {
+        console.log('useMutationUpdatePaymentMethod onSuccess', data);
+        onClose();
+        queryClient.invalidateQueries({
+          queryKey: ['userPaymentMethods', paymentMethodId],
+        });
+      },
+      onError: (error, variables) => {
+        console.log('useMutationUpdatePaymentMethod onError', error);
+      },
+    
   });
 
   return (
@@ -93,7 +97,7 @@ export function UpdatePaymentMethodModal({
 
       <MutationMessageStates mutation={mutation} />
 
-      <button disabled={mutation.isLoading} className="btn btn-primary">
+      <button disabled={mutation.isPending} className="btn btn-primary">
         Guardar
       </button>
     </Form>

@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Form } from '../Forms/SmartForm';
 import * as yup from 'yup';
 import ErrorAlert from '../Errors/ErrorAlert';
-import { useAuth } from '.';
+import { useAuth } from '@/providers/Auth';'.';
 import { useRouter } from 'next/router';
 import { apiUrl } from '../../utils/env';
 import axios from 'axios';
-import { useMutation } from 'react-query';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
 import { ROUTES } from '../../utils/constants';
+import { useMutation } from '@tanstack/react-query';
 
 export const RegisterSchema = yup.object().shape({
   email: yup.string().email('Debe ingresar un email válido').required('Debe ingresar un email'),
@@ -40,13 +40,12 @@ export default function RegisterForm() {
   const { user } = useAuth();
   const { push } = useRouter();
 
-  const mutation = useMutation(postCreateUser, {
-    onSuccess: (data) => {
-      
-      push(ROUTES.auth.login);
-    },
-    onError: (error) => {
-      console.log(error);
+  const mutation = useMutation({
+    mutationFn: postCreateUser,
+    onSuccess: () => {
+      // setTimeout(() => {
+        push(ROUTES.dashboard.account);
+      // }, 2000);
     }
   });
 
@@ -70,13 +69,13 @@ export default function RegisterForm() {
 
       <div className="form-control my-6">
         <button
-          disabled={mutation.isLoading}
+          disabled={mutation.isPending}
           className="btn btn-accent">
           <span>
-            {mutation.isLoading ? 'Registrando...' : 'Registrarse'}
+            {mutation.isPending ? 'Registrando...' : 'Registrarse'}
           </span>
         </button>
-        {mutation.isLoading && (
+        {mutation.isPending && (
             <div className="flex justify-center mt-4">
               <LoadSpinner size='lg'  />
             </div>
