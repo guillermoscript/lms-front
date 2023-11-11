@@ -3,8 +3,15 @@ import type { AppProps } from 'next/app';
 import { AuthProvider } from '../components/Auth';
 import { AnimatePresence } from 'framer-motion'
 import '../styles/globals.css';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query'
 import { useRouter } from 'next/router';
+import { Toaster } from '@/components/ui/toaster';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +35,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
           </div>
         </div> */}
           <Component {...pageProps} />
+          <Toaster />
         </QueryClientProvider>
       </AnimatePresence>
     </AuthProvider>
