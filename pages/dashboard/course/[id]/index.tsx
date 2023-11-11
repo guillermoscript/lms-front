@@ -197,9 +197,7 @@ function CoursesPage(props: CoursesProps, ref: IndexPageRef) {
                       </h4>
                       <div className="collapse-content">
                         <Link href={`/dashboard/course/${data.id}/exam/${iterable.id}`}>
-                          <a>
                             <p className="text-lg mb-6 link link-accent">{iterable.description}</p>
-                          </a>
                         </Link>
                       </div>
                     </div>

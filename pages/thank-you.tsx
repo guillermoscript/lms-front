@@ -29,10 +29,12 @@ function ThankYouPage(props: any, ref: IndexPageRef) {
                 </a>
             </p>
             <div className="py-10 text-center">
-                <Link href={ user ? '/dashboard/account' : '/auth/login' }>
-                    <a className="btn btn-primary">
+                <Link 
+                  className="btn btn-primary"
+                  href={ user ? '/dashboard/account' : '/auth/login' }>
+                    
                       { user ? 'Ir a mi cuenta' : 'Iniciar sesión'}
-                    </a>
+                    
                 </Link>
             </div>
           </div>

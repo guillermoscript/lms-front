@@ -15,6 +15,7 @@ import { useCopyToClipboard } from 'usehooks-ts';
 import QAChatModal from '../../../../../components/AI/Modals/QAChatModal';
 import useBlockPrintScreen from '../../../../../utils/hooks/useBlockPrintScree';
 import ReactDOMServer from 'react-dom/server';
+import AIChatBotModal from '../../../../../components/AI/Modals/AIChatBotModal';
 
 type LessonsProps = {
   data: Lesson;
@@ -31,6 +32,7 @@ function LessonsPage(props: LessonsProps, ref: IndexPageRef) {
     (otherUser) => typeof otherUser === 'object' && otherUser.id === user.id,
   );
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [showChatModal, setShowChatModal] = useState<boolean>(false);
   const [value, copy] = useCopyToClipboard();
   function removeTags(str: string) {
     str = str.toString();
@@ -102,6 +104,14 @@ function LessonsPage(props: LessonsProps, ref: IndexPageRef) {
           >
             Preguntar al Profe-bot 🤖
           </button>
+          <button
+            onClick={() => {
+              setShowChatModal(true);
+            }}
+            className="btn btn-secondary"
+          >
+            Chatear con Profe-bot 🤖
+          </button>
 
           {!isCompletedByTheUser && (
             <LessonCompleteForm
@@ -135,6 +145,14 @@ function LessonsPage(props: LessonsProps, ref: IndexPageRef) {
               value={value as string}
             />
           )}
+          {showChatModal && (
+            <AIChatBotModal
+              onClose={() => {
+                setShowChatModal(false);
+              }}
+              user={user}
+            />
+          )}
         </DashboardLayout>
       </PageTransition>
     </>
@@ -161,7 +179,7 @@ export async function getServerSideProps({ query, req }: GetServerSidePropsConte
     }),
   );
 
-  if (courseError || userError) {
+  if (courseError || userError || !course || !UserMeResponse) {
     return {
       redirect: {
         destination: '/auth/login',
