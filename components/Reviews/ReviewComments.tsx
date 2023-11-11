@@ -1,4 +1,3 @@
-import { useQuery } from "react-query";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import { useState } from "react";
 import SkeletonComments from "../Skeletons/SkeletonComments";
@@ -6,6 +5,7 @@ import { PaginatedDocs } from "../../utils/types/common";
 import { Review, User } from "../../payload-types";
 import Pagination from "../Pagination";
 import dayjs from "dayjs";
+import { useQuery } from "@tanstack/react-query";
 
 const getComments = async ({page, reviewableId}: {page: number, reviewableId: string}) => {
     const response = await payloadClient.get<PaginatedDocs<Review>>(`/api/reviews?where[reviewable.value][equals]=${reviewableId}&page=${page}`);
@@ -26,7 +26,6 @@ export default function ReviewComments({ reviewableId }: ReviewReplysProps ) {
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
-        keepPreviousData: true,
     });
 
     return (

@@ -1,12 +1,12 @@
 import axios from 'axios';
 import { Form } from '../Forms/SmartForm';
 import { CheckoutFormGuestViewProps, GuestSchema, GuestSchemaType, PaymentMethods, formInputDataNewUser } from './CheckoutForm';
-import { useMutation } from 'react-query';
 import { Product } from '../../payload-types';
 import { useRouter } from 'next/router';
 import { DaisyUiAlert } from '../Alert/DaisyUiAlerts';
 import { apiUrl } from '../../utils/env';
 import { LoadSpinner } from '../Loaders/DaisyUiLoaders';
+import { useMutation } from '@tanstack/react-query';
 
 export type GuestUserOrderData = {
   customer: {
@@ -56,19 +56,21 @@ const postUserOrder = async (data: UserOrderDto) => {
 export default function CheckoutFormGuestView({ productData }: CheckoutFormGuestViewProps) {
   
   const { push } = useRouter();
-  const mutation = useMutation(postUserOrder, {
-    onSuccess: (data) => {
-      console.log(data);
-      push({
-        pathname: '/thank-you',
-        query: {
-          order: data.order.id,
-        },
-      });
-    },
-    onError: (error) => {
-      console.log(error);
-    },
+  const mutation = useMutation({
+    mutationFn: postUserOrder,
+      onSuccess: (data) => {
+        console.log(data);
+        push({
+          pathname: '/thank-you',
+          query: {
+            order: data.order.id,
+          },
+        });
+      },
+      onError: (error) => {
+        console.log(error);
+      },
+    
   });
 
   const onSubmit = (data: any) => {
@@ -145,14 +147,14 @@ export default function CheckoutFormGuestView({ productData }: CheckoutFormGuest
       <div className="col-span-6">
         <button
           type="submit"
-          disabled={mutation.isLoading}
+          disabled={mutation.isPending}
           className="block w-full rounded-md bg-accent-content text-accent p-2.5 text-sm transition hover:shadow-lg"
         >
           Pagar
         </button>
       </div>
       {mutation.isError && <DaisyUiAlert type="error" message={"Algo salio mal"} />}
-      {mutation.isLoading && <LoadSpinner size='lg' />}
+      {mutation.isPending && <LoadSpinner size='lg' />}
     </Form>
   );
 }

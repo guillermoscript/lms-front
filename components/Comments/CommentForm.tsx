@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from "react-query";
 import payloadClient from "../../utils/axiosPayloadInstance";
 import { useEffect, useState } from "react";
 import MutationStatesUiController from "../Mutation/MutationStatesUiController";
 import useHideAfterXSeconds from "../../utils/hooks/useHideAfterXSeconds";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type CommentFormProps = {
     commentableId: string;
@@ -26,17 +26,22 @@ export default function CommentForm({ commentableId, relationTo }: Omit<CommentF
     const {showAlert, setShowAlert} = useHideAfterXSeconds(3000)
 
     const [commentValue, setCommentValue] = useState<string>('');
-    const mutation = useMutation(postComment, {
-        onSuccess: (data) => {
-            console.log('useMutationPostComment onSuccess', data);
-            setCommentValue('');
-            queryClient.invalidateQueries('comments');
-            setShowAlert(true);
-        },
-        onError: (error) => {
-            console.log('useMutationPostComment onError', error);
-            setShowAlert(true);
-        }
+    const mutation = useMutation({
+        mutationFn: postComment,
+        
+            onSuccess: (data) => {
+                console.log('useMutationPostComment onSuccess', data);
+                setCommentValue('');
+                queryClient.invalidateQueries({
+                    queryKey: ['comments']
+                });
+                setShowAlert(true);
+            },
+            onError: (error) => {
+                console.log('useMutationPostComment onError', error);
+                setShowAlert(true);
+            }
+        
     });
     
     const queryClient = useQueryClient();
@@ -66,7 +71,7 @@ export default function CommentForm({ commentableId, relationTo }: Omit<CommentF
                 
             </div>
             <div className="flex justify-end">
-                <button disabled={mutation.isLoading} className="btn btn-primary">Enviar comentario</button>
+                <button disabled={mutation.isPending} className="btn btn-primary">Enviar comentario</button>
             </div>
             {showAlert && <MutationStatesUiController
                 errorText="Error al enviar el comentario."

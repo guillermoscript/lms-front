@@ -2,8 +2,8 @@ import payloadClient from '../../../utils/axiosPayloadInstance';
 import { PaymentMethods, pagoMovilSchema, zelleSchema } from '../../Checkout/CheckoutForm';
 import * as yup from 'yup';
 import { Form } from '../../Forms/SmartForm';
-import { useMutation, useQueryClient } from 'react-query';
 import { User } from '../../../payload-types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const postPaymentMethod = async (data: any) => {
     const response = await payloadClient.post('/api/payment-methods', data);
@@ -18,7 +18,9 @@ const PaymentMethodsSchema = yup.object().shape({
 
 export default function AddPaymentMethodModal({ onClose, user }: { onClose: () => void, user: User }) {
 
-    const mutation = useMutation(postPaymentMethod)
+    const mutation = useMutation({
+        mutationFn: postPaymentMethod,
+    })
     const queryClient = useQueryClient();
 
     function onSubmit(values: any) {
@@ -33,7 +35,9 @@ export default function AddPaymentMethodModal({ onClose, user }: { onClose: () =
         },
         {
             onSuccess: () => {
-                queryClient.invalidateQueries('userPaymentMethods');
+                queryClient.invalidateQueries({
+                    queryKey: ['userPaymentMethods', user.id]
+                });
                 onClose();
             },
             onError: () => {
@@ -58,15 +62,15 @@ export default function AddPaymentMethodModal({ onClose, user }: { onClose: () =
             />
             <PaymentMethods />
             <button 
-                disabled={mutation.isLoading || mutation.isSuccess}
+                disabled={mutation.isPending || mutation.isSuccess}
                 type="submit" className="btn btn-secondary col-span-6">
-                {mutation.isLoading ? 'Agregando...' : ''}
+                {mutation.isPending ? 'Agregando...' : ''}
                 {mutation.isSuccess && 'Agregado'}
-                {!mutation.isLoading && !mutation.isSuccess && 'Agregar'}
+                {!mutation.isPending && !mutation.isSuccess && 'Agregar'}
             </button>
             {mutation.isError && <div className="col-span-6 text-red-500">Ocurrion un error</div>}
             {mutation.isSuccess && <div className="col-span-6 text-green-500">Método de pago agregado</div>}
-            {mutation.isLoading && <div className="col-span-6 text-yellow-500">Agregando método de pago...</div>}
+            {mutation.isPending && <div className="col-span-6 text-yellow-500">Agregando método de pago...</div>}
         </Form>
     );
 }

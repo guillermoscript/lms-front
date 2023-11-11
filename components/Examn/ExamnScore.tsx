@@ -11,7 +11,6 @@ type ExamnScoreProps = {
 export default function ExamnScore({ createdBy, evaluation }: ExamnScoreProps) {
   const query = useQueryExamnSubmission({ createdBy, evaluation });
 
-  console.log(query.isSuccess ? query.data?.docs[0].submissionData : null);
   return (
     <div className="flex flex-col mb-4">
       <div className="flex flex-row flex-wrap">
@@ -19,11 +18,6 @@ export default function ExamnScore({ createdBy, evaluation }: ExamnScoreProps) {
         {query.isSuccess ? (
           query.data?.docs[0] ? (
             <ExamnReviewContent
-              // score={query.data?.docs[0]?.score || 'pendiente'}
-              // teacherComments={query.data?.docs[0].teacherComments}
-              // gptResponse={query.data?.docs[0].gptResponse as string}
-              // questions={query.data?.docs[0]?.form?.fields }
-              // answers={query.data?.docs[0].submissionData}
               data={query.data?.docs[0]}
             />
           ) : (
@@ -97,7 +91,7 @@ function ExamnReviewContent({ data }: { data: ExamnsSubmission }) {
       : 'text-green-500';
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-full">
       <div className="flex flex-col bg-base-200 rounded-lg shadow-md p-4">
         <h2 className="text-2xl font-bold mb-4">
           Calificación: <span className={scoreColor}>{score}</span>
@@ -118,25 +112,25 @@ function ExamnReviewContent({ data }: { data: ExamnsSubmission }) {
       </div>
       <div className="flex flex-col">
         {gptResponseParsed.examn.map((examn, index: number) => {
-          const questionsDefined = questions ? [index] : null;
-          const answersDefined = answers ? [index] : null;
+          const questionsDefined = questions ? questions[index] : null;
+          const answersDefined = answers ? answers[index] : null;
 
           return (
             <div key={index} className="flex flex-col bg-base-300 rounded-lg p-4 shadow-md my-4">
               <ul>
-                <li className="font-bold mb-2">Pregunta: {(questionsDefined as any)?.label}</li>
+                <li className="font-bold mb-2 text-lg">Pregunta: {(questionsDefined as any)?.label}</li>
                 <li className="mb-2">Tu Respuesta: {(answersDefined as any)?.value}</li>
                 <li className="mb-2">
                   Calificación:{' '}
                   <span
                     className={
-                      examn.score < 10 ? 'text-red-500' : examn.score < 15 ? 'text-yellow-500' : 'text-green-500'
+                      examn.score < 10 ? 'text-red-500' : examn.score < 15 ? 'text-yellow-500' : 'text-green-500' + ' font-bold text-lg'
                     }
                   >
                     {examn.score}
                   </span>
                 </li>
-                <li className="mb-2">Comentarios de Profebot: {examn.comment}</li>
+                <li className="mb-2">Comentarios de Profebot 🤖: {examn.comment}</li>
               </ul>
             </div>
           );

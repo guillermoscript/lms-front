@@ -5,11 +5,15 @@ export default function Footer() {
         <footer className="footer bg-base-300 p-10 text-base-content">
             <div>
                 <span className="footer-title">Legal</span>
-                <Link href="/legal/privacy-policy">
-                    <a className="link-hover link">Politicas de privacidad</a>
+                <Link 
+                    className="link-hover link"
+                href="/legal/privacy-policy">
+                    Politicas de privacidad
                 </Link>
-                <Link href="/legal/cookies-policy">
-                    <a className="link-hover link">Politicas de cookies</a>
+                <Link 
+                    className="link-hover link"
+                href="/legal/cookies-policy">
+                    Politicas de cookies
                 </Link>
             </div>
             <div>

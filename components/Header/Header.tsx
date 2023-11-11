@@ -6,8 +6,10 @@ export default function Header() {
   return (
     <div className="navbar bg-base-100">
       <div className="flex-1">
-        <Link href="/">
-          <a className="btn btn-ghost normal-case text-xl">LMS</a>
+        <Link
+          className="btn btn-ghost normal-case text-xl"
+          href="/">
+          LMS
         </Link>
       </div>
       <div className="flex-none">

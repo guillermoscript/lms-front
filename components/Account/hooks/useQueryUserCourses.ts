@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Enrollment } from "../../../payload-types";
 import payloadClient from "../../../utils/axiosPayloadInstance";
 import { PaginatedDocs } from "../../../utils/types/common";
@@ -23,6 +23,9 @@ const getUserCourses = async () => {
 
 export default function useQueryUserCourses() {
 
-    const query = useQuery(['enrollments'], getUserCourses);
+    const query = useQuery({
+        queryKey: ['enrollments'], 
+        queryFn: getUserCourses,
+    });
     return query;
 }

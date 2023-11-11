@@ -41,15 +41,16 @@ export default function Topbar() {
                                 ></path>
                             </svg>
                         </button>
-                        <Link href="/">
-                            <a 
-                                className="flex items-center text-xl font-bold lg:ml-2.5"
-                            >
+                        <Link
+                            className="flex items-center text-xl font-bold lg:ml-2.5"
+                            href="/">
+                            
+                            
                                 {/* <img src="https://demo.themesberg.com/windster/images/logo.svg" className="h-6 mr-2" alt="Windster Logo"> */}
                                 <span className="self-center whitespace-nowrap">
                                     LMS Dashboard
                                 </span>
-                            </a>
+                            
                         </Link>
                     </div>
                     <div className="flex items-center">

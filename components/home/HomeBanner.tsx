@@ -24,10 +24,12 @@ export default function HomeBanner() {
                     <p className="py-6">
                     En el centro de capacitacion profesional, nuestro objetivo es transformar la forma en que aprendes y adquieres conocimiento. Nuestra plataforma LMS líder en el mercado te ofrece una experiencia de aprendizaje revolucionaria, diseñada para potenciar tu crecimiento personal y profesional. 
                     </p>
-                    <Link href="/store">
-                        <a className="btn-primary btn">
+                    <Link
+                        className="btn-primary btn" 
+                        href="/store">
+                        
                             Ir a la tienda
-                        </a>
+                        
                     </Link>
                 </div>
             </div>

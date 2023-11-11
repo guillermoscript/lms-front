@@ -35,8 +35,10 @@ export default function ExamnLayout({ ref, data, courseId, exams, user, children
           <div className="flex flex-col justify-center items-center">
             {children}
             <div className="flex flex-row justify-center items-center">
-              <Link href={`/dashboard/course/${courseId}`}>
-                <a className="btn btn-primary mt-4">Volver al curso</a>
+              <Link
+                className="btn btn-primary mt-4"
+                href={`/dashboard/course/${courseId}`}>
+                Volver al curso
               </Link>
             </div>
           </div>

@@ -55,9 +55,9 @@ export function IterableAccordion({ iterable, iterableKeyValue, userId }: Iterab
       </h4>
       <div className="collapse-content">
         <Link href={`${iterableKeyValue.link}/${iterable.id}`}>
-          <a>
+          
             <p className="text-lg mb-6 link link-accent">{iterable.description}</p>
-          </a>
+          
         </Link>
       </div>
     </div>

@@ -39,10 +39,12 @@ export default function ProductInfo({ name, prices, description, info, productId
             </div>
           </div>
           <div className="mt-6">
-            <Link href={`/checkout/${productId}`}>
-              <a className="flex items-center justify-center btn btn-accent">
+            <Link
+              className="flex items-center justify-center btn btn-accent"
+              href={`/checkout/${productId}`}>
+              
                 Comprar
-              </a>
+              
             </Link>
           </div>
           {/* Reviews */}
