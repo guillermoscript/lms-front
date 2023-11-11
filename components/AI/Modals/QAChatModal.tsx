@@ -17,7 +17,9 @@ export default function QAChatModal({ onClose, value } : ModalProps) {
                 X
             </button>
         </div>
-        <QAChat value={value} /> 
+        <QAChat
+            //  value={value}
+        /> 
     </div>
     useKeypress('Escape', () => onClose());
 
