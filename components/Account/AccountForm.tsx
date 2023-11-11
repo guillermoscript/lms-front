@@ -1,7 +1,7 @@
 import { SubmitHandler, useForm } from 'react-hook-form';
 import InputGroup, { InputGroupProps } from '../Inputs/InputGroup';
 import { useCallback, useState } from 'react';
-import { useAuth } from '../Auth';
+import { useAuth } from '@/providers/Auth';'../Auth';
 import { User } from '../../payload-types';
 import { apiUrl } from '../../utils/env';
 import payloadClient from '../../utils/axiosPayloadInstance';

@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import tryCatch from '../../../../../utils/tryCatch';
 import DashboardNav from '../../../../../components/Dashboard/DashboardNav';
 import ExamnHero from '../../../../../components/Examn/ExamnHero';
-import { useAuth } from '../../../../../components/Auth';
+import { useAuth } from '@/providers/Auth';'../../../../../components/Auth';
 import { apiUrl } from '../../../../../utils/env';
 import { useCountdown } from 'usehooks-ts';
 import ExamnComponent from '../../../../../components/Examn/ExamnComponent';

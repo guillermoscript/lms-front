@@ -3,7 +3,7 @@ import Layout from '../components/Layout/Layout';
 import { CONTACT_EMAIL } from '../utils/constants';
 import { IndexPageRef } from '../utils/types/common';
 import { forwardRef } from 'react';
-import { useAuth } from '../components/Auth';
+import { useAuth } from '@/providers/Auth';'../components/Auth';
 
 
 function ThankYouPage(props: any, ref: IndexPageRef) {

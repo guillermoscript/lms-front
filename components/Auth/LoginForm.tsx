@@ -2,11 +2,12 @@ import * as yup from 'yup';
 import { Form } from '../Forms/SmartForm';
 import { useState } from 'react';
 import ErrorAlert from '../Errors/ErrorAlert';
-import { useAuth } from '.';
+
 import Link from 'next/link';
 import { ROUTES } from '../../utils/constants';
 import { useRouter } from 'next/router';
 import googleStyle from './googleStyle.module.css';
+import { useAuth } from '@/providers/Auth';'@/providers/Auth';
 
 export const LoginSchema = yup.object().shape({
   email: yup.string().email('Debe ingresar un email válido').required('Debe ingresar un email'),

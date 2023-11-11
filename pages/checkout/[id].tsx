@@ -4,7 +4,7 @@ import Layout from '../../components/Layout/Layout';
 import payloadClient from '../../utils/axiosPayloadInstance';
 import { PagoMovil, Product, User, Zelle } from '../../payload-types';
 import CheckoutItem from '../../components/Checkout/CheckoutItem';
-import { useAuth } from '../../components/Auth';
+import { useAuth } from '@/providers/Auth';'../../components/Auth';
 import { forwardRef } from 'react';
 import { IndexPageRef } from '../../utils/types/common';
 import PageTransition from '../../components/PageTransition';

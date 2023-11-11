@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Form } from '../Forms/SmartForm';
 import * as yup from 'yup';
 import ErrorAlert from '../Errors/ErrorAlert';
-import { useAuth } from '.';
+import { useAuth } from '@/providers/Auth';'.';
 import { useRouter } from 'next/router';
 import { apiUrl } from '../../utils/env';
 import axios from 'axios';

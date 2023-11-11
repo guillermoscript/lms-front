@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app';
 
-import { AuthProvider } from '../components/Auth';
+// import { AuthProvider } from '../components/Auth';
+import { AuthProvider } from '@/providers/Auth/index';
 import { AnimatePresence } from 'framer-motion'
 import '../styles/globals.css';
 import {
@@ -19,7 +20,11 @@ export default function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter()
 	const pageKey = router.asPath
   return (
-    <AuthProvider>
+    <AuthProvider
+			// To toggle between the REST and GraphQL APIs,
+			// change the `api` prop to either `rest` or `gql`
+			api="rest" // change this to `gql` to use the GraphQL API
+		>
       <AnimatePresence initial={false} mode="popLayout">
         <QueryClientProvider client={queryClient}>
           {/* <div className={classes.app}>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../../components/Auth";
+import { useAuth } from '@/providers/Auth';"../../../components/Auth";
 import classes from './index.module.css';
 import { useRouter } from "next/router";
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
-import { useAuth } from '../Auth';
+import { useAuth } from '@/providers/Auth';'../Auth';
 import classes from './index.module.css';
 
 export const Nav: React.FC = () => {
