@@ -8,6 +8,7 @@
 
 export interface Config {
   collections: {
+    chats: Chat;
     courses: Course;
     currencies: Currency;
     categories: Category;
@@ -15,15 +16,18 @@ export interface Config {
     enrollments: Enrollment;
     evaluations: Evaluation;
     medias: Media;
+    messages: Message;
     notifications: Notification;
     lessons: Lesson;
     'payment-methods': PaymentMethod;
     plans: Plan;
     products: Product;
+    prompts: Prompt;
     reviews: Review;
     subscriptions: Subscription;
     orders: Order;
     users: User;
+    'user-documents': UserDocument;
     examns: Examn;
     'examns-submissions': ExamnsSubmission;
   };
@@ -32,33 +36,41 @@ export interface Config {
     zelle: Zelle;
   };
 }
-export interface Course {
+export interface Chat {
   id: string;
   name: string;
-  description: string;
-  category: string[] | Category[];
-  teacher?: string | User;
-  lessons?: string[] | Lesson[];
-  evaluations?: string[] | Evaluation[];
-  relatedCourses?: string[] | Course[];
-  completedBy?: string[] | User[];
-  createdBy?: string | User;
-  lastModifiedBy?: string | User;
-  isPublic?: boolean;
-  slug?: string;
+  description?: string;
+  users?: string[] | User[];
+  type?: 'group' | 'private' | 'bot' | 'qa';
   updatedAt: string;
   createdAt: string;
 }
-export interface Category {
+export interface User {
   id: string;
-  name: string;
-  description: string;
-  image: string | Media;
-  createdBy?: string | User;
-  lastModifiedBy?: string | User;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address?: string;
+  birthDate?: string;
+  gender?: 'male' | 'female' | 'other';
+  roles?: ('admin' | 'teacher' | 'editor' | 'user')[];
+  photo?: string | Media;
+  sub?: string;
+  googleId?: string;
+  googleProfilePicture?: string;
+  googleAccessToken?: string;
+  score?: number;
   slug?: string;
   updatedAt: string;
   createdAt: string;
+  email: string;
+  resetPasswordToken?: string;
+  resetPasswordExpiration?: string;
+  salt?: string;
+  hash?: string;
+  loginAttempts?: number;
+  lockUntil?: string;
+  password?: string;
 }
 export interface Media {
   id: string;
@@ -101,32 +113,33 @@ export interface Media {
     };
   };
 }
-export interface User {
+export interface Course {
   id: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  address?: string;
-  birthDate?: string;
-  gender?: 'male' | 'female' | 'other';
-  roles?: ('admin' | 'teacher' | 'editor' | 'user')[];
-  photo?: string | Media;
-  sub?: string;
-  googleId?: string;
-  googleProfilePicture?: string;
-  googleAccessToken?: string;
-  score?: number;
+  name: string;
+  description: string;
+  category: string[] | Category[];
+  teacher?: string | User;
+  lessons?: string[] | Lesson[];
+  evaluations?: string[] | Evaluation[];
+  relatedCourses?: string[] | Course[];
+  completedBy?: string[] | User[];
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
+  isPublic?: boolean;
   slug?: string;
   updatedAt: string;
   createdAt: string;
-  email: string;
-  resetPasswordToken?: string;
-  resetPasswordExpiration?: string;
-  salt?: string;
-  hash?: string;
-  loginAttempts?: number;
-  lockUntil?: string;
-  password?: string;
+}
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  image: string | Media;
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
+  slug?: string;
+  updatedAt: string;
+  createdAt: string;
 }
 export interface Lesson {
   id: string;
@@ -147,9 +160,21 @@ export interface Lesson {
   completedBy?: string[] | User[];
   score?: number;
   order?: number;
+  prompt?: string | Prompt;
   createdBy?: string | User;
   lastModifiedBy?: string | User;
   isPublic?: boolean;
+  slug?: string;
+  updatedAt: string;
+  createdAt: string;
+}
+export interface Prompt {
+  id: string;
+  name: string;
+  prompt: string;
+  category: string[] | Category[];
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
   slug?: string;
   updatedAt: string;
   createdAt: string;
@@ -185,6 +210,7 @@ export interface Evaluation {
   completedBy?: string[] | User[];
   approvedBy?: string[] | User[];
   reprovedBy?: string[] | User[];
+  prompt?: string | Prompt;
   lastModifiedBy?: string | User;
   createdBy?: string | User;
   slug?: string;
@@ -503,6 +529,17 @@ export interface Enrollment {
   updatedAt: string;
   createdAt: string;
 }
+export interface Message {
+  id: string;
+  chat: string | Chat;
+  user: string | User;
+  type: 'text' | 'image' | 'audio' | 'ai';
+  ai?: string;
+  text?: string;
+  image?: string | Media;
+  updatedAt: string;
+  createdAt: string;
+}
 export interface Notification {
   id: string;
   recipient?: string | User;
@@ -559,6 +596,46 @@ export interface Review {
   slug?: string;
   updatedAt: string;
   createdAt: string;
+}
+export interface UserDocument {
+  id: string;
+  createdBy?: string | User;
+  lastModifiedBy?: string | User;
+  slug?: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string;
+  filename?: string;
+  mimeType?: string;
+  filesize?: number;
+  width?: number;
+  height?: number;
+  sizes?: {
+    thumbnail?: {
+      url?: string;
+      width?: number;
+      height?: number;
+      mimeType?: string;
+      filesize?: number;
+      filename?: string;
+    };
+    card?: {
+      url?: string;
+      width?: number;
+      height?: number;
+      mimeType?: string;
+      filesize?: number;
+      filename?: string;
+    };
+    tablet?: {
+      url?: string;
+      width?: number;
+      height?: number;
+      mimeType?: string;
+      filesize?: number;
+      filename?: string;
+    };
+  };
 }
 export interface ExamnsSubmission {
   id: string;
