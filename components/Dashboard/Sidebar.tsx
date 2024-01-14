@@ -1,47 +1,107 @@
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/utils";
+import { createClient } from "@/utils/supabase/server";
+import { FaceIcon } from "@radix-ui/react-icons";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { Separator } from "../ui/separator";
 
-type ListDashboardProps = {
-    NavItems?: React.ReactNode;
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+	children?: React.ReactNode;
 }
 
-export default function Sidebar({ NavItems }: ListDashboardProps) {
-    
-    return (
-        <aside
-            id="sidebar"
-            className="transition-width fixed left-0 top-0 z-20 flex hidden h-full w-64 flex-shrink-0 flex-col pt-16 duration-75 lg:flex"
-            aria-label="Sidebar"
-        >
-            <div className="relative flex min-h-0 flex-1 flex-col border-r border-primary bg-base-200 pt-0">
-                <div className="flex flex-1 flex-col overflow-y-auto pb-4 pt-5">
-                    <div className="flex-1 bg-base-200 px-3 menu">
-                        <ul className="menu bg-base-200 w-56 rounded-box">
-                            {NavItems ? NavItems : null}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </aside>
-    );
+export async function Sidebar({ className, children }: SidebarProps) {
+	
+	const cookieStore = cookies();
+	const supabase = createClient(cookieStore);
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	return (
+		<div className={cn("py-6 px-4 border-r border-neutral-300 hidden md:block overflow-y-auto", className)}>
+			<div className="flex flex-col gap-4">
+				
+					<Link
+						href="/dashboard/account"
+						className={buttonVariants({
+							variant: "outline",
+						})}
+					>
+						<h2 className="mb-2 px-4 text-lg font-semibold text-left tracking-tight">
+							Mis Cursos
+						</h2>
+						<FaceIcon />
+					</Link>
+					{user?.id && (
+						<FetchAndDisplaySideBarData
+							user={user}
+							tableName="courses"
+							selectQuery="*, course_enrollments ( id, user_id, course_id )"
+							eqQuery="course_enrollments.user_id"
+							hrefPrefix="/dashboard/courses/"
+						/>
+					)}
+				<Separator />
+				{/* <div className="px-3 py-2">
+					<h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+						Mis examenes
+					</h2>
+					{user?.id && (
+						<FetchAndDisplaySideBarData
+							user={user}
+							tableName="tests"
+							selectQuery="*, courses ( id, course_enrollments ( id, user_id, course_id ) )"
+							eqQuery="courses.course_enrollments.user_id"
+							hrefPrefix="/dashboard//"
+						/>
+					)}
+				</div> */}
+				{children}
+			</div>
+			
+		</div>
+	);
 }
+async function FetchAndDisplaySideBarData({
+	user,
+	tableName,
+	selectQuery,
+	eqQuery,
+	hrefPrefix,
+}: {
+	user: any;
+	tableName: string;
+	selectQuery: string;
+	eqQuery: string;
+	hrefPrefix: string;
+}) {
+	console.log(user);
 
+	const cookieStore = cookies();
+	const supabase = createClient(cookieStore);
+	const myEnrollments = await supabase
+		.from(tableName)
+		.select(selectQuery)
+		.eq(eqQuery, user.id)
+		.limit(5);
 
-function ListDashboard({ icon, title }: any) {
-    return (
-        <li>
-            <a
-                href="#"
-                className="group flex items-center rounded-lg p-2 text-base font-normal transition duration-75 hover:bg-secondary-content"
-            >
-                {/* <svg className="w-6 h-6 text-secod group-hover transition duration-75" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
-                <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
-                </svg> */}
-                {icon}
-                <span className="text-secondary transition duration-75 focus:text-secondary-focus">
-                    {title}
-                </span>
-            </a>
-        </li>
-    );
+	console.log(myEnrollments.data);
+
+	return (
+		<ul className="flex flex-col gap-2 items-start">
+			{myEnrollments.data?.map((course: any) => {
+				return (
+					<li key={course.id} className="flex items-center gap-2">
+						<Link
+							href={`${hrefPrefix}${course.id}`}
+							className={buttonVariants({ variant: "link" })}
+						>
+							{course.title}
+						</Link>
+					</li>
+				);
+			})}
+		</ul>
+	);
 }
