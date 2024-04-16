@@ -94,7 +94,8 @@ const InputField: React.FC<{
 							{field?.options?.map((option, optionIndex) => (
 								<div
 									className="flex gap-2 items-center"
-									key={option.id}>
+									key={option.id}
+								>
 									{option.label && (
 										<label>{option.label}</label>
 									)}
@@ -184,7 +185,6 @@ const InputField: React.FC<{
 							type="text"
 							placeholder="Enter question text"
 							className={inputClass}
-							
 						/>
 					</CardContent>
 					<CardFooter>
@@ -219,9 +219,6 @@ function TrueFalse({
 	index: number;
 }) {
 
-	const [isTrue, setIsTrue] = useState<boolean>(false);
-	const [inputText, setInputText] = useState<string>("");
-
 	return (
 		<Card key={index}>
 			<CardHeader>
@@ -240,7 +237,6 @@ function TrueFalse({
 					type="text"
 					placeholder="Enter question text"
 					className={inputClass}
-					
 				/>
 
 				<div className="flex flex-row gap-2 items-center">
@@ -251,7 +247,6 @@ function TrueFalse({
 					<input
 						{...register(`formFields[${index}].value`)}
 						type="checkbox"
-						
 					/>
 				</div>
 			</CardContent>
@@ -287,8 +282,20 @@ function MultipleChoises({
 					<CardTitle>Question #{index}</CardTitle>
 					<CardDescription>
 						<div className="flex flex-col items-start gap-2">
+							<label
+								htmlFor="questionText"
+								className="block text-sm font-medium text-gray-700"
+							>
+								Question:
+							</label>
+							<input
+								{...register(`formFields[${index}].label`)}
+								type="text"
+								placeholder="Enter question text"
+								className={inputClass}
+							/>
 							<div className="flex flex-col gap-2">
-								<p>Add question text</p>
+								<p>Add question option</p>
 								<input
 									className={inputClass}
 									value={inputType}
@@ -297,22 +304,22 @@ function MultipleChoises({
 									}
 									type="text"
 								/>
+								{/* ... handle errors */}
+								<Button
+									type="button"
+									onClick={() => {
+										appendOption({
+											label: inputType,
+											value: isCorrect,
+											correct: isCorrect,
+										});
+										setInputType("");
+										setIsCorrect(false);
+									}}
+								>
+									Add Option
+								</Button>
 							</div>
-							{/* ... handle errors */}
-							<Button
-								type="button"
-								onClick={() => {
-									appendOption({
-										label: inputType,
-										value: isCorrect,
-										correct: isCorrect,
-									});
-									setInputType("");
-									setIsCorrect(false);
-								}}
-							>
-								Add Option
-							</Button>
 						</div>
 					</CardDescription>
 				</CardHeader>
@@ -341,7 +348,6 @@ function MultipleChoises({
 											`formFields[${index}].options[${optionIndex}].value`
 										)}
 										type="checkbox"
-										
 									/>
 								</div>
 								{/* ... handle errors */}
@@ -362,3 +368,4 @@ function MultipleChoises({
 		</>
 	);
 }
+

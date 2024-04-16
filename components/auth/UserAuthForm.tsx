@@ -24,7 +24,7 @@ export default function UserAuthForm({
     });
 
     if (error) {
-      return redirect("/login?message=Could not authenticate user");
+      return redirect("/auth/login?message=Could not authenticate user");
     }
 
     return redirect("/");
@@ -49,10 +49,10 @@ export default function UserAuthForm({
 
     if (error) {
       console.log(error);
-      return redirect("/login?message=Could not authenticate user");
+      return redirect("/auth/login?message=Could not authenticate user");
     }
 
-    return redirect("/login?message=Check email to continue sign in process");
+    return redirect("/auth/login?message=Check email to continue sign in process");
   };
 
   return (
