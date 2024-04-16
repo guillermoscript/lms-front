@@ -1,4 +1,5 @@
 "use client";
+import { saveTest } from "@/actions/actions";
 import Form, { CheckBox, Input } from "./Form";
 import FormBuilder, { IFormField } from "./FormBuilder";
 import * as yup from "yup";
@@ -49,7 +50,7 @@ const initialFields: IFormField[] = [
 
 
 const teacherTestForm = yup.object().shape({
-	language: yup.string().required("Language is required"),
+	language: yup.array().required("Language is required"),
 	testName: yup.string().required("Test Name is required"),
 	testDescription: yup.string().required("Test Description is required"),
 	course: yup.string().required("Course is required"),
@@ -68,8 +69,23 @@ const classNames = {
 
 
 const TeacherTestForm: React.FC = () => {
-	function onSubmit(data: any) {
-		console.log(data);
+
+
+	async function onSubmit(data: any) {
+		
+		try {
+			const muation = fetch("/api/test", {
+				method: "POST",
+				body: JSON.stringify(data),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+			const res = (await muation).json();
+			console.log(res);
+		} catch (error) {
+			console.log(error);
+		}
 	}
 
 	return (
@@ -77,7 +93,7 @@ const TeacherTestForm: React.FC = () => {
 			<h1 className="text-2xl font-bold mb-4">Create Test Content</h1>
 			<Form
 				defaultValues={{
-					language: "",
+					language: [],
 					testName: "",
 					testDescription: "",
 					course: "",
@@ -85,12 +101,18 @@ const TeacherTestForm: React.FC = () => {
 					timeForTest: "",
 				}}
 				onSubmit={onSubmit}
+				// action={saveTest}
 				schema={teacherTestForm}
 				className="flex flex-col gap-3"
 			>
 				<CheckBox
 					name="language"
 					text="Language"
+					options={[
+						{ label: "EN", value: "en" },
+						{ label: "ES", value: "es" },
+						// Add more language options as needed
+					]}
 					clasess={classNames}
 				/>
 				<Input

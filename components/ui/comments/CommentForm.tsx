@@ -1,51 +1,76 @@
-// @ts-nocheck
+
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../button";
-import MDEditor from "@uiw/react-md-editor";
-import { useFormStatus } from "react-dom";
+
 import { writeComment } from "@/actions/actions";
+import { useFormState, useFormStatus } from "react-dom";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { ForwardRefEditor } from "../markdown/ForwardRefEditor";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../card";
+
 
 type CommentsProps = {
     entityId: number;
     entityType: string;
+	urlToRefresh: string;
 };
 
-const CommentForm = ({ entityId, entityType }: CommentsProps) => {
-	const [comment, setComment] = useState("");
-	const [error, setError] = useState(null);
-	return (
-		<form
-			className="p-4 rounded flex flex-col gap-4 "
-			action={async (formData) => {
-				if (!comment) {
-					return setError("Comment cannot be empty");
-				}
-				formData.append("entity_id", entityId.toString());
-				formData.append("entity_type", entityType);
-				formData.append("content", comment)
-				formData.append('content_type', 'markdown')
-				
-				const data = await writeComment(formData);
-				console.log(data);
-			}}
-		>
-			<MDEditor value={comment} onChange={setComment} />
-			<Button2 />
 
-			{error && <p>{error}</p>}
+const CommentForm = ({ entityId, entityType, urlToRefresh }: CommentsProps) => {
+	const [state, action] = useFormState(writeComment, {
+		status: "idle",
+		message: "",
+		error: null,
+	});
+	const { pending } = useFormStatus();
+	const [comment, setComment] = useState("");
+	const form = useForm({
+		defaultValues: {
+			comment: "",
+		},
+	});
+	
+	useEffect(() => {
+		if (state.status === "success") {
+			setComment("");
+		}
+	}
+	, [state.status]);
+
+	return (
+		<form className="w-full p-3 flex flex-col gap-4" action={action}>
+			<Card>
+				<CardContent>
+					<ForwardRefEditor
+						markdown={comment}
+						className="markdown-body"
+						onChange={(value) => setComment(value)}
+					/>
+				</CardContent>
+			</Card>
+
+			<input type="hidden" name="entity_id" value={entityId} />
+			<input type="hidden" name="entity_type" value={entityType} />
+			<input type="hidden" name="content" value={comment} />
+			<input type="hidden" name="content_type" value="markdown" />
+			<input type="hidden" name="refresh_url" value={urlToRefresh} />
+
+			<Button
+				type="submit"
+				className="disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full"
+				disabled={form.formState.isSubmitting || pending}
+			>
+				{form.formState.isSubmitting || pending
+					? "Submitting..."
+					: "Submit"}
+			</Button>
+
+			{state.error && <div className="text-red-600">{state.error}</div>}
 		</form>
 	);
 };
-
-function Button2() {
-	const { pending } = useFormStatus();
-
-	return (
-		<Button disabled={pending} className="disabled:opacity-50">
-			Submit
-		</Button>
-	);
-}
 
 export default CommentForm;
