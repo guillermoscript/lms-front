@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 263.4 70% 50.4%;
+  }
+}
+
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  /* border-bottom: 1px solid hsl(var(--border)); */
+  padding-bottom: 0.3em;
+}
+
+.markdown-body h1 { font-size: 2em; margin-top: 0; }
+.markdown-body h2 { font-size: 1.5em; }
+.markdown-body h3 { font-size: 1.17em; }
+.markdown-body h4 { font-size: 1em; }
+.markdown-body h5 { font-size: 0.83em; }
+.markdown-body h6 { font-size: 0.67em; }
+
+/* Paragraphs */
+.markdown-body p {
+  margin: 1em 0;
+}
+
+/* Links */
+.markdown-body a {
+  color: hsl(var(--primary));
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+/* Lists */
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 20px;
+  margin: 1em 0;
+}
+
+/* Blockquotes */
+.markdown-body blockquote {
+  border-left: 4px solid hsl(var(--muted));
+  padding: 0 20px;
+  color: hsl(var(--muted-foreground));
+  margin: 1em 0;
+}
+
+/* Code blocks */
+.markdown-body pre, 
+.markdown-body code {
+  font-family: monospace, monospace;
+  background-color: hsl(var(--input));
+  padding: 5px;
+}
+
+.markdown-body pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 10px;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  padding: 2px 4px;
+  font-size: 90%;
+  color: hsl(var(--primary));
+  word-wrap: break-word;
+}
+
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+/* Tables */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.markdown-body th, td {
+  border: 1px solid hsl(var(--border));
+  padding: 8px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  font-weight: bold;
+}
+
+.markdown-body td {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+/* Responsive Table */
+@media screen and (max-width: 760px) {
+  .markdown-body table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .markdown-body table thead {
+    display: none;
+  }
+
+  .markdown-body table tr {
+    display: block;
+    margin-bottom: 0.625em;
+  }
+
+  .markdown-body table td {
+    display: block;
+    text-align: right;
+    position: relative;
+    padding-left: 50%;
+  }
+
+  .markdown-body table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: bold;
+  }
+}
+
+/* Images */
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em 0;
+}
+
+/* Horizontal rules */
+.markdown-body hr {
+  border: 0;
+  height: 1px;
+  background: hsl(var(--border));
+  margin: 1em 0;
+}
+
+/* Apply the border-radius */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6,
+.markdown-body pre,
+.markdown-body code,
+.markdown-body blockquote,
+.markdown-body table,
+.markdown-body img,
+.markdown-body hr {
+  border-radius: var(--radius);
+}

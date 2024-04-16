@@ -1,25 +1,29 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server'
 
+import type { NextRequest } from 'next/server'
 
-const UserRoles = {
-    COMPANY_USER: "company_user",
-    FINANCIAL_USER: "organization_user",
-    PUBLIC_BODY_USER: "public_body_user",
-    ADMIN: "admin"
-};
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-const rolePath = {
-    [UserRoles.COMPANY_USER]: "dashboard/company",
-    [UserRoles.FINANCIAL_USER]: "dashboard/financial-institutions",
-    [UserRoles.PUBLIC_BODY_USER]: "dashboard/public-user",
-    [UserRoles.ADMIN]: "dashboard/admin/user-dashboard"
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // if user is signed in and the current path is / redirect the user to /account
+  if (user && req.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
+  // if user is not signed in and the current path is not / redirect the user to /
+  if (!user && req.nextUrl.pathname !== '/') {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  return res
 }
 
-
-export function middleware(request: NextRequest) {
-    // Assume a "Cookie:nextjs=fast" header to be present on the incoming request
-    // Getting cookies from the request using the `RequestCookies` API
-    
-    return NextResponse.next();
+export const config = {
+  matcher: ['/dashboard', '/checkout']
 }
