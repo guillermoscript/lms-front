@@ -21,8 +21,8 @@ export default async function CheckoutPage({ params }: { params: { productId: st
 				<h3 className="text-gray-700 text-2xl font-medium">Checkout</h3>
 				<p>
 					Checkout for {data?.name} for{" "}
-					{data?.products_pricing[0].price}{" "}
-					{data?.products_pricing[0].currency?.code}
+					{data?.products_pricing[0]?.price}{" "}
+					{data?.products_pricing[0]?.currency?.code}
 				</p>
 				<div className="flex flex-col justify-between gap-4 lg:flex-row mt-8">
 					<CheckoutCard 

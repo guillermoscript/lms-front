@@ -41,6 +41,8 @@ export default async function LayoutLessonId({
 		.eq('lesson_localizations.language_code', userProfile.data?.preferred_language || 'en')
 		.order("sequence", { ascending: true });
 
+		console.log(tests.data)
+
 	return (
 		<div className="min-h-full flex gap-4 w-full md:flex-row flex-col overflow-hidden justify-between ">
 			<Sidebar>
@@ -74,7 +76,7 @@ export default async function LayoutLessonId({
 								})}
 								href={`/dashboard/courses/${params.courseId}/tests/${test.id}`}
 							>
-								{test.test_localizations[0].title}
+								{test?.test_localizations[0]?.title}
 							</Link>
 						);
 					})}
