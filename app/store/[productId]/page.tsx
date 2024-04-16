@@ -81,7 +81,7 @@ export default async function ProductIdPage({params}: {params: {productId: strin
 					<div className="mt-4 lg:row-span-3 lg:mt-0">
 						<h2 className="sr-only">Product information</h2>
 						<p className="text-3xl tracking-tight">
-							{product?.products_pricing[0].price}{" "} {product?.products_pricing[0].currency?.code}
+							{product?.products_pricing[0]?.price}{" "} {product?.products_pricing[0]?.currency?.code}
 						</p>
 
 						{/* Reviews */}

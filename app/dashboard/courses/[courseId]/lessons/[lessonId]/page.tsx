@@ -158,7 +158,9 @@ export default async function PageLesson({
 				<h3 className="text-3xl font-semibold text-left tracking-tight">
 					Comments
 				</h3>
-				<Comment entityId={lesson.data?.id} entityType="lesson" />
+				<Comment 
+					urlToRefresh="/dashboard/courses/[courseId]/lessons/[lessonId]"
+					entityId={lesson.data?.id} entityType="lesson" />
 				<CommentBox lessonId={lesson.data?.id} />
 			</div>
 		</>
