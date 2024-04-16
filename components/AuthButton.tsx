@@ -20,7 +20,7 @@ export default async function AuthButton() {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
     await supabase.auth.signOut()
-    return redirect('/login')
+    return redirect('/auth/login')
   }
 
   return user ? (
@@ -40,7 +40,7 @@ export default async function AuthButton() {
     </div>
   ) : (
     <Link
-      href="/login"
+      href="/auth/login"
       className={buttonVariants({ variant: "outline" })}
     >
       Login
