@@ -57,7 +57,7 @@ export default function SignUpUserSteps() {
         <p>
           Head over to the{' '}
           <Link
-            href="/login"
+            href="/auth/login"
             className="font-bold hover:underline text-foreground/80"
           >
             Login

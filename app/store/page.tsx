@@ -48,8 +48,8 @@ export default async function StorePage() {
 									</p>
 								</div>
 								<p className="text-sm font-medium ">
-									{product.products_pricing[0].price}{" "}
-									{product.products_pricing[0].currency?.code}
+									{product.products_pricing[0]?.price}{" "}
+									{product.products_pricing[0]?.currency?.code}
 								</p>
 							</div>
 						</div>
