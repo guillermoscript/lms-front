@@ -1,13 +1,22 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { BookIcon, ClipboardIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function Dashboard({
 	params,
 }: {
 	params: { courseId: string };
 }) {
-
 	const cookieStore = cookies();
 	const supabase = createClient(cookieStore);
 	const {
@@ -21,181 +30,121 @@ export default async function Dashboard({
 		.single();
 
 	const lessonProgress = await supabase
-		.rpc('get_course_progress', {
+		.rpc("get_course_progress", {
 			course_id_arg: Number(course.data?.id),
 			user_id_arg: user?.id as string,
 		})
-		.single()
+		.single();
 
-		console.log(lessonProgress)
+	console.log(lessonProgress);
 
 	return (
-		<div className="flex-1 p-4 overflow-y-auto w-full flex flex-col gap-4">
-			<h1 className="text-3xl font-semibold text-left tracking-tight">
-				{course.data?.title}
-			</h1>
-
-			<h3 className="text-xl font-semibold text-left tracking-tight">
-				{course.data?.description}
-			</h3>
-
-			<div className="flex flex-wrap gap-4">
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Total progress
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">
-							{" "}
-							{lessonProgress?.data?.progress_percentage}%
+		<div className="grid grid-cols-1 gap-6">
+			<Card>
+				<CardHeader>
+					<CardTitle>{course.data?.title}</CardTitle>
+					<CardDescription>
+						{course.data?.description}
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Grid>
+						<Section title="Lessons">
+							<Card2
+								Icon={BookIcon}
+								title="Introduction to HTML"
+								description="Learn the basics of HTML and how to structure web pages."
+								href="/dashboard/courses/1/lessons/1"
+							/>
+							<Card2
+								Icon={BookIcon}
+								title="Intermediate CSS"
+								description="Dive deeper into CSS and learn how to style your web pages."
+								href="/dashboard/courses/1/lessons/2"
+							/>
+							<Card2
+								Icon={BookIcon}
+								title="JavaScript Fundamentals"
+								description="Learn the basics of JavaScript and how to add interactivity to your web pages."
+								href="/dashboard/courses/1/lessons/3"
+							/>
+						</Section>
+						<Section title="Tests">
+							<Card2
+								Icon={ClipboardIcon}
+								title="HTML and CSS Test"
+								description="Test your knowledge of HTML and CSS."
+								href="/dashboard/courses/1/tests/1"
+							/>
+							<Card2
+								Icon={ClipboardIcon}
+								title="JavaScript Fundamentals Test"
+								description="Test your understanding of JavaScript basics."
+								href="/dashboard/courses/1/tests/2"
+							/>
+						</Section>
+					</Grid>
+				</CardContent>
+				<CardFooter>
+					<div className="flex flex-col gap-3">
+						<div>
+							<h2 className="text-lg font-medium">
+								Course Overview
+							</h2>
+							<p className="text-sm text-gray-500 dark:text-gray-400">
+								This course is designed to provide a solid
+								foundation in web development. You'll learn how
+								to build responsive and accessible websites from
+								scratch, using HTML, CSS, and JavaScript. By the
+								end of the course, you'll have the skills to
+								create your own web applications.
+							</p>
 						</div>
-					</CardContent>
-				</Card>
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Total lessons
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-							<circle cx="9" cy="7" r="4" />
-							<path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">+{lessonProgress.data?.total_lessons}</div>
-					</CardContent>
-				</Card>
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Lessons completed
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<rect width="20" height="14" x="2" y="5" rx="2" />
-							<path d="M2 10h20" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">+{lessonProgress.data?.completed_lessons}</div>
-					</CardContent>
-				</Card>
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Test completed
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<rect width="20" height="14" x="2" y="5" rx="2" />
-							<path d="M2 10h20" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">+{lessonProgress.data?.tests_submitted}</div>
-					</CardContent>
-				</Card>
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Total Tests
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-							<circle cx="9" cy="7" r="4" />
-							<path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">+{lessonProgress.data?.total_tests}</div>
-					</CardContent>
-				</Card>
-				<Card
-					className="w-56"
-				>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Test approved
-						</CardTitle>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth="2"
-							className="h-4 w-4 text-muted-foreground"
-						>
-							<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-							<circle cx="9" cy="7" r="4" />
-							<path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-						</svg>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">+{lessonProgress.data?.tests_approved}</div>
-					</CardContent>
-				</Card>
-			</div>
+						<Button>Enroll Now</Button>
+					</div>
+				</CardFooter>
+			</Card>
 		</div>
 	);
 }
+
+// Grid.tsx
+const Grid = ({ children }:{
+	children: React.ReactNode;
+}) => (
+	<div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>
+);
+
+// Section.tsx
+const Section = ({ title, children }:{
+	title: string;
+	children: React.ReactNode;
+}) => (
+	<div>
+		<h2 className="text-lg font-medium mb-4">{title}</h2>
+		<div className="space-y-4">{children}</div>
+	</div>
+);
+
+// Card.tsx
+const Card2 = ({ Icon, title, description , href}:{
+	Icon: any;
+	title: string;
+	description: string;
+	href: string;
+}) => (
+	<div className="flex items-center gap-4 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg transition-all">
+		<div className="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800">
+			<Icon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+		</div>
+		<Link
+			href={href}
+			className="space-y-1"
+		>
+			<h3 className="text-sm font-medium">{title}</h3>
+			<p className="text-sm text-gray-500 dark:text-gray-400">
+				{description}
+			</p>
+		</Link>
+	</div>
+);

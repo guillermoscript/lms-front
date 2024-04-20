@@ -1,8 +1,7 @@
 import ProgressForm from "@/components/courses/ProgressForm";
-import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import Comment from "@/components/ui/comments/CommentForm";
+import CommentForm from "@/components/ui/comments/CommentForm";
 import CommentsList from "@/components/ui/comments/CommentsList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
@@ -154,15 +153,18 @@ export default async function PageLesson({
 					/>
 				</div>
 			</div>
-			<div className="p-2 overflow-y-auto flex-col md:w-1/4">
+			<div className="p-2  flex-col w-full">
 				<h3 className="text-3xl font-semibold text-left tracking-tight">
 					Comments
 				</h3>
-				<Comment 
+				<CommentForm
 					urlToRefresh="/dashboard/courses/[courseId]/lessons/[lessonId]"
-					entityId={lesson.data?.id} entityType="lesson" />
+					entityId={lesson.data?.id} 
+					entityType="lesson" 
+				/>
 				<CommentBox lessonId={lesson.data?.id} />
 			</div>
+			
 		</>
 	);
 }

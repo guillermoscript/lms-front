@@ -10,7 +10,7 @@ import {
 import AuthButton from "./AuthButton";
 import { DarkThemeToggle } from "./DarkThemeToggle";
 
-export default function Header({ children }: { children: React.ReactNode }) {
+export default function Header({ children }: { children?: React.ReactNode }) {
 	return (
 		<header className="container z-40 bg-background">
 			<div className="flex items-center justify-between py-6">
@@ -58,9 +58,7 @@ export default function Header({ children }: { children: React.ReactNode }) {
 						</Link>
 					</nav>
 					<Sheet>
-						<SheetTrigger
-              className="flex items-center space-x-2 md:hidden"
-            >
+						<SheetTrigger className="flex items-center space-x-2 md:hidden">
 							Open
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -89,12 +87,12 @@ export default function Header({ children }: { children: React.ReactNode }) {
 										</div>
 										<DarkThemeToggle />
 									</nav>
-                  {children}
+									{children}
 								</SheetDescription>
 							</SheetHeader>
 						</SheetContent>
 					</Sheet>
-        {children}
+					{children}
 				</div>
 				<nav className="hidden md:flex justify-center items-center">
 					<div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">

@@ -23,42 +23,38 @@ export default async function Dashboard() {
     courses ( * )
   `
 		)
-		.eq("user_id", user.id);
+		.eq("user_id", user?.id);
 
-	console.log(course);
 	return (
 		<>
-			<div className="min-h-full flex gap-4 w-full">
-				<Sidebar></Sidebar>
-				<main className="flex-1 p-8 overflow-y-auto w-full">
-					<h1 className="text-3xl pb-5 font-semibold text-left tracking-tight">
-						Mis cursos
-					</h1>
+			<main className="flex-1 p-8 overflow-y-auto w-full">
+				<h1 className="text-3xl pb-5 font-semibold text-left tracking-tight">
+					Mis cursos
+				</h1>
 
-					{course.data?.map((course) => {
-						return (
-							<Accordion type="single" collapsible>
-								<AccordionItem value="item-1">
-									<AccordionTrigger>
-										{course.courses.title}
-									</AccordionTrigger>
-									<AccordionContent>
-										<div className="flex flex-col gap-4">
-											<p>{course.courses.description}</p>
-											<Link
-												className="text-blue-500 hover:underline"
-												href={`/dashboard/courses/${course.courses.id}`}
-											>
-												Ver
-											</Link>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-							</Accordion>
-						);
-					})}
-				</main>
-			</div>
+				{course.data?.map((course) => {
+					return (
+						<Accordion type="single" collapsible>
+							<AccordionItem value="item-1">
+								<AccordionTrigger>
+									{course.courses.title}
+								</AccordionTrigger>
+								<AccordionContent>
+									<div className="flex flex-col gap-4">
+										<p>{course.courses.description}</p>
+										<Link
+											className="text-blue-500 hover:underline"
+											href={`/dashboard/courses/${course.courses.id}`}
+										>
+											Ver
+										</Link>
+									</div>
+								</AccordionContent>
+							</AccordionItem>
+						</Accordion>
+					);
+				})}
+			</main>
 		</>
 	);
 }

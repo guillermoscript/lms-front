@@ -1,23 +1,18 @@
-
 "use client";
 import React, { useEffect, useState } from "react";
 import { Button } from "../button";
 
 import { writeComment } from "@/actions/actions";
 import { useFormState, useFormStatus } from "react-dom";
-import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
-import * as yup from "yup";
 import { ForwardRefEditor } from "../markdown/ForwardRefEditor";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../card";
-
+import { Card, CardContent } from "@/components/ui/card";
 
 type CommentsProps = {
-    entityId: number;
-    entityType: string;
+	entityId: number;
+	entityType: string;
 	urlToRefresh: string;
 };
-
 
 const CommentForm = ({ entityId, entityType, urlToRefresh }: CommentsProps) => {
 	const [state, action] = useFormState(writeComment, {
@@ -25,20 +20,19 @@ const CommentForm = ({ entityId, entityType, urlToRefresh }: CommentsProps) => {
 		message: "",
 		error: null,
 	});
-	const { pending } = useFormStatus();
 	const [comment, setComment] = useState("");
 	const form = useForm({
 		defaultValues: {
 			comment: "",
 		},
 	});
-	
+
 	useEffect(() => {
+		console.log(state);
 		if (state.status === "success") {
 			setComment("");
 		}
-	}
-	, [state.status]);
+	}, [state.status]);
 
 	return (
 		<form className="w-full p-3 flex flex-col gap-4" action={action}>
@@ -58,19 +52,26 @@ const CommentForm = ({ entityId, entityType, urlToRefresh }: CommentsProps) => {
 			<input type="hidden" name="content_type" value="markdown" />
 			<input type="hidden" name="refresh_url" value={urlToRefresh} />
 
-			<Button
-				type="submit"
-				className="disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full"
-				disabled={form.formState.isSubmitting || pending}
-			>
-				{form.formState.isSubmitting || pending
-					? "Submitting..."
-					: "Submit"}
-			</Button>
+			<SubmitButton />
 
 			{state.error && <div className="text-red-600">{state.error}</div>}
 		</form>
 	);
 };
+
+function SubmitButton() {
+	const { pending } = useFormStatus();
+	return (
+		<>
+			<Button
+				type="submit"
+				className="disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full"
+				disabled={pending}
+			>
+				{pending ? "Submitting..." : "Submit"}
+			</Button>
+		</>
+	);
+}
 
 export default CommentForm;

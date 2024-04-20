@@ -18,7 +18,7 @@ export default function Error({
 	return (
 		<GenericError
 			retry={reset}
-			title="An error occurred"
+			title="An error loading the courses"
 			description="An unexpected error occurred. Please try again."
 		/>
 	);

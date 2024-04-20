@@ -7,12 +7,7 @@ export default function SkeletonDemo() {
 				<Skeleton className="h-96 w-full" />
 				<Skeleton className="h-72 w-full" />
 			</div>
-			<div className="space-y-2 md:w-1/4">
-				<Skeleton className="h-20 w-full" />
-				<Skeleton className="h-14 w-full" />
-				<Skeleton className="h-10 w-full" />
-				<Skeleton className="h-36 w-full" />
-			</div>
+
 		</div>
 	);
 }
