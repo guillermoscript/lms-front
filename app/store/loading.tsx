@@ -1,14 +1,23 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function Index() {
-    return (
-        <div className="flex flex-wrap justify-center items-center min-h-screen gap-2 min-w-[320px] md:min-w-[820px]">
-            <Skeleton className="h-56 w-[320px]" />
-            <Skeleton className="h-56 w-[320px]" />
-            <Skeleton className="h-56 w-[320px]" />
-            <Skeleton className="h-56 w-[320px]" />
-            <Skeleton className="h-56 w-[320px]" />
-            <Skeleton className="h-56 w-[320px]" />
+function LoadingCard() {
+	return (
+		<div className="flex flex-col space-y-3">
+			<Skeleton className="h-[125px] w-[250px] rounded-xl" />
+			<div className="space-y-2">
+				<Skeleton className="h-4 w-[250px]" />
+				<Skeleton className="h-4 w-[200px]" />
+			</div>
 		</div>
-    )
+	);
+}
+
+export default function Index() {
+
+	return (
+		<div className="flex min-h-screen p-4 space-y-4">
+
+			{[1, 2, 3, 4, 5, 6].map((item) => <LoadingCard key={item} />)}
+		</div>
+	)
 }

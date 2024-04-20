@@ -8,6 +8,8 @@ import remarkGfm from "remark-gfm";
 import Markdown from "react-markdown";
 import { Separator } from "@/components/ui/separator";
 import SubmitedAnswers from "@/components/courses/SubmitedAnswers";
+import ExamHeader from "@/components/courses/exams/ExamHeader";
+import QuestionSection from "@/components/courses/exams/QuestionSection";
 
 export default async function Dashboard({
 	params,
@@ -69,108 +71,151 @@ export default async function Dashboard({
 	console.log(testSubmissions);
 
 	return (
-		<div className="flex-1 p-4 overflow-y-auto w-full flex flex-col gap-4">
-			<div className="min-h-full flex gap-4 w-full  overflow-hidden justify-between ">
-				<div className="flex-1 p-4 overflow-y-auto w-full flex flex-col gap-4">
-					<h1 className="text-3xl font-semibold text-left tracking-tight">
-						{test.data?.test_localizations[0].title}
-					</h1>
-					<h2 className="text-xl text-left tracking-tight">
-						{test.data?.test_localizations[0].description}
+		// <div className="flex-1 p-4 overflow-y-auto w-full flex flex-col gap-4">
+		// 	<div className="min-h-full flex gap-4 w-full  overflow-hidden justify-between ">
+		// 		<div className="flex-1 p-4 overflow-y-auto w-full flex flex-col gap-4">
+		// 			<h1 className="text-3xl font-semibold text-left tracking-tight">
+		// 				{test.data?.test_localizations[0].title}
+		// 			</h1>
+		// 			<h2 className="text-xl text-left tracking-tight">
+		// 				{test.data?.test_localizations[0].description}
+		// 			</h2>
+		// 			<Separator />
+		// 			<div className="flex py-3 flex-col gap-4">
+		// 				{testSubmissions.data ? (
+		// 					<div className="flex flex-col gap-4">
+		// 						{testSubmissions.data.score ? (
+		// 							<div className="flex flex-col gap-4">
+		// 								<div className="flex gap-4 h-8">
+		// 									<h2 className="text-xl font-semibold text-left tracking-tight">
+		// 										{dayjs(
+		// 											testSubmissions.data
+		// 												.submitted_at
+		// 										).format("DD/MM/YYYY")}
+		// 									</h2>
+		// 									<Separator orientation="vertical" />
+		// 									<p className="text-lg font-semibold text-left tracking-tight">
+		// 										Calificación: {" "}
+		// 										{testSubmissions.data.score >=
+		// 										10 ? (
+		// 											<span className="text-green-500">
+		// 												{
+		// 													testSubmissions.data
+		// 														.score
+		// 												}
+		// 											</span>
+		// 										) : (
+		// 											<span className="text-red-500">
+		// 												{
+		// 													testSubmissions.data
+		// 														.score
+		// 												}
+		// 											</span>
+		// 										)}
+		// 									</p>
+		// 									<Separator orientation="vertical" />
+		// 									<p className="text-lg font-semibold text-left tracking-tight">
+		// 										Estado:{" "}
+		// 										{testSubmissions.data
+		// 											.is_approved ? (
+		// 											<span className="text-green-500">
+		// 												Aprobado
+		// 											</span>
+		// 										) : (
+		// 											<span className="text-red-500">
+		// 												Reprobado
+		// 											</span>
+		// 										)}
+		// 									</p>
+		// 								</div>
+		// 								{testSubmissions.data
+		// 									.teacher_review && (
+		// 									<div className="flex pt-4 flex-col gap-4">
+		// 										<h3 className="text-lg font-semibold text-left tracking-tight">
+		// 											comentario del profesor:{" "}
+		// 										</h3>
+		// 										<Markdown
+		// 											className={" markdown-body"}
+		// 											remarkPlugins={[remarkGfm]}
+		// 										>
+		// 											{
+		// 												testSubmissions.data
+		// 													.teacher_review
+		// 											}
+		// 										</Markdown>
+		// 									</div>
+		// 								)}
+		// 								<Separator />
+		// 								<SubmitedAnswers
+		// 									testId={params.testId}
+		// 								/>
+		// 							</div>
+		// 						) : (
+		// 							<>
+		// 								<h2 className="text-lg font-semibold text-left tracking-tight">
+		// 									Ya has realizado este examen. espera
+		// 									a que el profesor lo califique.
+		// 								</h2>
+		// 								<Separator />
+		// 								<SubmitedAnswers
+		// 									testId={params.testId}
+		// 								/>
+		// 							</>
+		// 						)}
+		// 					</div>
+		// 				) : (
+		// 					<TestForm
+		// 						test_id={test.data?.id}
+		// 						test_questions={test.data?.test_questions}
+		// 						course_id={params.courseId}
+		// 					/>
+		// 				)}
+		// 			</div>
+		// 		</div>
+		// 	</div>
+		// </div>
+
+		<>
+			<ExamHeader
+				title={test.data?.test_localizations[0].title}
+				description={test.data?.test_localizations[0].description}
+				timeRemaining={dayjs(test.data?.end_date).fromNow()}
+				dueDate={dayjs(test.data?.end_date).format("DD/MM/YYYY")}
+			/>
+			<QuestionSection
+				questions={test.data?.test_questions}
+				testId={test.data?.id}
+			/>
+			{testSubmissions.data ? (
+
+				test.data?.test_questions.map((question) => {
+					return (
+						<div className="flex flex-col gap-4">
+							<QuestionOption
+								question_type={question.question_type}
+								question_options={question?.question_options as any}
+								question={question}
+								register={register}
+								errors={errors}
+							/>
+						</div>
+					)
+				}
+				)
+			) : (
+				// <TestForm
+				// 	test_id={test.data?.id}
+				// 	test_questions={test.data?.test_questions}
+				// 	course_id={params.courseId}
+				// />
+				<>
+					<h2 className="text-lg font-semibold text-left tracking-tight">
+						Ya has realizado este examen. espera a que el profesor lo califique.
 					</h2>
 					<Separator />
-					<div className="flex py-3 flex-col gap-4">
-						{testSubmissions.data ? (
-							<div className="flex flex-col gap-4">
-								{testSubmissions.data.score ? (
-									<div className="flex flex-col gap-4">
-										<div className="flex gap-4 h-8">
-											<h2 className="text-xl font-semibold text-left tracking-tight">
-												{dayjs(
-													testSubmissions.data
-														.submitted_at
-												).format("DD/MM/YYYY")}
-											</h2>
-											<Separator orientation="vertical" />
-											<p className="text-lg font-semibold text-left tracking-tight">
-												Calificación: {" "}
-												{testSubmissions.data.score >=
-												10 ? (
-													<span className="text-green-500">
-														{
-															testSubmissions.data
-																.score
-														}
-													</span>
-												) : (
-													<span className="text-red-500">
-														{
-															testSubmissions.data
-																.score
-														}
-													</span>
-												)}
-											</p>
-											<Separator orientation="vertical" />
-											<p className="text-lg font-semibold text-left tracking-tight">
-												Estado:{" "}
-												{testSubmissions.data
-													.is_approved ? (
-													<span className="text-green-500">
-														Aprobado
-													</span>
-												) : (
-													<span className="text-red-500">
-														Reprobado
-													</span>
-												)}
-											</p>
-										</div>
-										{testSubmissions.data
-											.teacher_review && (
-											<div className="flex pt-4 flex-col gap-4">
-												<h3 className="text-lg font-semibold text-left tracking-tight">
-													comentario del profesor:{" "}
-												</h3>
-												<Markdown
-													className={" markdown-body"}
-													remarkPlugins={[remarkGfm]}
-												>
-													{
-														testSubmissions.data
-															.teacher_review
-													}
-												</Markdown>
-											</div>
-										)}
-										<Separator />
-										<SubmitedAnswers
-											testId={params.testId}
-										/>
-									</div>
-								) : (
-									<>
-										<h2 className="text-lg font-semibold text-left tracking-tight">
-											Ya has realizado este examen. espera
-											a que el profesor lo califique.
-										</h2>
-										<Separator />
-										<SubmitedAnswers
-											testId={params.testId}
-										/>
-									</>
-								)}
-							</div>
-						) : (
-							<TestForm
-								test_id={test.data?.id}
-								test_questions={test.data?.test_questions}
-								course_id={params.courseId}
-							/>
-						)}
-					</div>
-				</div>
-			</div>
-		</div>
+					<SubmitedAnswers testId={params.testId} />
+				</>
+			)}
+		</>
 	);
 }
