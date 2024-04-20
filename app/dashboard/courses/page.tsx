@@ -25,6 +25,8 @@ export default async function Dashboard() {
 		)
 		.eq("user_id", user?.id);
 
+		console.log(course);
+
 	return (
 		<>
 			<main className="flex-1 p-8 overflow-y-auto w-full">
