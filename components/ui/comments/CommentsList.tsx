@@ -24,7 +24,7 @@ export default async function CommentsList({
 		)
 		.eq("entity_id", where.entity_id)
 		.eq("entity_type", where.entity_type)
-		.order("id", { ascending: true });
+		.order("created_at", { ascending: false });
 	console.log(comments);
 
 	return (
