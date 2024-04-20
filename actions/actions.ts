@@ -4,6 +4,7 @@ import { Database } from "@/utils/supabase/supabase";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { Tables } from "@/utils/supabase/supabase";
+import { createResponse } from "@/utils/functions";
 
 
 export type ApiResponse<T> = {
@@ -13,19 +14,6 @@ export type ApiResponse<T> = {
 	error?: any;
 };
 
-function createResponse<T>(
-	status: "success" | "error" | "idle",
-	message: string,
-	data?: T,
-	error?: any
-): ApiResponse<T> {
-	return {
-		status,
-		message,
-		data,
-		error,
-	};
-}
 export const testActionSubmit = async (formData: FormData) => {
 
     const cookieStore = cookies();
