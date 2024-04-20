@@ -1,13 +1,14 @@
-import AuthButton from "@/components/AuthButton";
 import Header from "@/components/Header";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-    
 	return (
-        <div className="flex flex-col flex-1 w-full">
-            <Header>
-            </Header>
-            <div className="flex-1 p-8 overflow-y-auto">{children}</div>
-        </div>
+		<>
+			<Header />
+			<div className="w-full max-w-4xl mx-auto px-4 md:px-6 py-12 md:py-20">
+				<div className="grid md:grid-cols-2 gap-10 md:gap-16">
+					{children}
+				</div>
+			</div>
+		</>
 	);
 }
