@@ -1,5 +1,6 @@
 "use client"; // Error components must be Client Components
 
+import GenericError from "@/components/GenericError";
 import { useEffect } from "react";
 
 export default function Error({
@@ -15,16 +16,10 @@ export default function Error({
 	}, [error]);
 
 	return (
-		<div>
-			<h2>Something went wrong!</h2>
-			<button
-				onClick={
-					// Attempt to recover by trying to re-render the segment
-					() => reset()
-				}
-			>
-				Try again
-			</button>
-		</div>
+		<GenericError
+			retry={reset}
+			title="An error occurred"
+			description="An unexpected error occurred. Please try again."
+		/>
 	);
 }
