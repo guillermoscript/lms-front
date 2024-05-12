@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       comment_reactions: {
@@ -52,7 +52,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       comments: {
@@ -106,7 +106,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       course_categories: {
@@ -205,7 +205,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       course_purchases: {
@@ -255,7 +255,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       courses: {
@@ -335,7 +335,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "course_categories"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       currencies: {
@@ -434,7 +434,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       invoices: {
@@ -491,24 +491,27 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       lesson_localizations: {
         Row: {
           content: string | null
+          description: string | null
           language_code: Database["public"]["Enums"]["language_code"]
           lesson_id: number
           title: string
         }
         Insert: {
           content?: string | null
+          description?: string | null
           language_code: Database["public"]["Enums"]["language_code"]
           lesson_id: number
           title: string
         }
         Update: {
           content?: string | null
+          description?: string | null
           language_code?: Database["public"]["Enums"]["language_code"]
           lesson_id?: number
           title?: string
@@ -527,7 +530,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       lesson_progress: {
@@ -576,7 +579,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       lessons: {
@@ -587,6 +590,7 @@ export interface Database {
           embed: string | null
           id: number
           sequence: number
+          status: Database["public"]["Enums"]["course_status"] | null
           updated_at: string | null
           video_url: string | null
         }
@@ -597,6 +601,7 @@ export interface Database {
           embed?: string | null
           id?: number
           sequence: number
+          status?: Database["public"]["Enums"]["course_status"] | null
           updated_at?: string | null
           video_url?: string | null
         }
@@ -607,6 +612,7 @@ export interface Database {
           embed?: string | null
           id?: number
           sequence?: number
+          status?: Database["public"]["Enums"]["course_status"] | null
           updated_at?: string | null
           video_url?: string | null
         }
@@ -624,7 +630,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "user_progress_for_course"
             referencedColumns: ["course_id"]
-          }
+          },
         ]
       }
       plan_courses: {
@@ -661,7 +667,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       plans: {
@@ -693,7 +699,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       products: {
@@ -768,7 +774,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       profiles: {
@@ -835,7 +841,7 @@ export interface Database {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       question_option_localizations: {
@@ -868,7 +874,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "question_options"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       question_options: {
@@ -901,7 +907,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "vw_user_test_submissions"
             referencedColumns: ["question_id"]
-          }
+          },
         ]
       }
       related_courses: {
@@ -945,7 +951,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "user_progress_for_course"
             referencedColumns: ["course_id"]
-          }
+          },
         ]
       }
       related_lessons: {
@@ -975,7 +981,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       roles: {
@@ -1042,7 +1048,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "test_submissions"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       subscriptions: {
@@ -1142,7 +1148,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       supported_languages: {
@@ -1196,21 +1202,24 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "tests"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       test_question_localizations: {
         Row: {
+          id: number | null
           language_code: Database["public"]["Enums"]["language_code"]
           question_id: number
           question_text: string
         }
         Insert: {
+          id?: number | null
           language_code: Database["public"]["Enums"]["language_code"]
           question_id: number
           question_text: string
         }
         Update: {
+          id?: number | null
           language_code?: Database["public"]["Enums"]["language_code"]
           question_id?: number
           question_text?: string
@@ -1236,7 +1245,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "vw_user_test_submissions"
             referencedColumns: ["question_id"]
-          }
+          },
         ]
       }
       test_questions: {
@@ -1271,7 +1280,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "tests"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       test_submissions: {
@@ -1326,7 +1335,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       tests: {
@@ -1335,6 +1344,8 @@ export interface Database {
           created_at: string
           id: number
           retake_interval: unknown | null
+          sequence: number | null
+          status: Database["public"]["Enums"]["course_status"] | null
           time_for_test: number
         }
         Insert: {
@@ -1342,6 +1353,8 @@ export interface Database {
           created_at?: string
           id?: number
           retake_interval?: unknown | null
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["course_status"] | null
           time_for_test?: number
         }
         Update: {
@@ -1349,6 +1362,8 @@ export interface Database {
           created_at?: string
           id?: number
           retake_interval?: unknown | null
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["course_status"] | null
           time_for_test?: number
         }
         Relationships: [
@@ -1365,7 +1380,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "user_progress_for_course"
             referencedColumns: ["course_id"]
-          }
+          },
         ]
       }
       user_roles: {
@@ -1395,7 +1410,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }
@@ -1446,7 +1461,7 @@ export interface Database {
             isOneToOne: false
             referencedRelation: "user_progress_for_course"
             referencedColumns: ["user_id"]
-          }
+          },
         ]
       }
     }
@@ -1455,6 +1470,19 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      binary_quantize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
       check_role:
         | {
             Args: {
@@ -1865,6 +1893,48 @@ export interface Database {
         }
         Returns: string
       }
+      halfvec_avg: {
+        Args: {
+          "": number[]
+        }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
       hnswhandler: {
         Args: {
           "": unknown
@@ -1885,12 +1955,56 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      ivfflat_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
       ivfflathandler: {
         Args: {
           "": unknown
         }
         Returns: unknown
       }
+      l2_norm:
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+      l2_normalize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
       match_documents: {
         Args: {
           query_embedding: string
@@ -1914,18 +2028,43 @@ export interface Database {
         }
         Returns: string
       }
+      sparsevec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
       vector_avg: {
         Args: {
           "": number[]
         }
         Returns: string
       }
-      vector_dims: {
-        Args: {
-          "": string
-        }
-        Returns: number
-      }
+      vector_dims:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
       vector_norm: {
         Args: {
           "": string
@@ -2609,7 +2748,7 @@ export interface Database {
         | "zz"
       lesson_progress_status: "not_started" | "in_progress" | "completed"
       subscription_status: "inactive" | "active" | "upgraded"
-      user_question_type: "multiple_choice" | "true_false" | "fill_in"
+      user_question_type: "multiple_choices" | "true_false" | "fill_in"
       user_role: "admin" | "teacher" | "student"
     }
     CompositeTypes: {
@@ -2618,14 +2757,16 @@ export interface Database {
   }
 }
 
+type PublicSchema = Database[Extract<keyof Database, "public">]
+
 export type Tables<
   PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
       Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -2633,67 +2774,67 @@ export type Tables<
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-      Database["public"]["Views"])
-  ? (Database["public"]["Tables"] &
-      Database["public"]["Views"])[PublicTableNameOrOptions] extends {
-      Row: infer R
-    }
-    ? R
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+        PublicSchema["Views"])
+    ? (PublicSchema["Tables"] &
+        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never
 
 export type TablesInsert<
   PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-      Insert: infer I
-    }
-    ? I
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-      Update: infer U
-    }
-    ? U
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never
 
 export type Enums<
   PublicEnumNameOrOptions extends
-    | keyof Database["public"]["Enums"]
+    | keyof PublicSchema["Enums"]
     | { schema: keyof Database },
   EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
+    : never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
-  : never
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never
