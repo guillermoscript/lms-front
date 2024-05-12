@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import SubmitedAnswers from "@/components/courses/SubmitedAnswers";
 import ExamHeader from "@/components/courses/exams/ExamHeader";
 import QuestionSection from "@/components/courses/exams/QuestionSection";
+import ButtonSubmitDashbaord from "@/components/dashboard/ButtonSubmitDashbaord";
 
 export default async function Dashboard({
 	params,
@@ -207,7 +208,10 @@ export default async function Dashboard({
 				// 	test_id={test.data?.id}
 				// 	test_questions={test.data?.test_questions}
 				// 	course_id={params.courseId}
-				// />
+				// >
+
+				// <ButtonSubmitDashbaord />
+				// </TestForm>
 				<>
 					<h2 className="text-lg font-semibold text-left tracking-tight">
 						Ya has realizado este examen. espera a que el profesor lo califique.

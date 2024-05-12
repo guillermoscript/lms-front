@@ -8,12 +8,14 @@ import {
 import Link from "next/link";
 import { Button } from "../ui/button";
 import SidebarLink from "./SidebarLink";
+import { createClient } from "@/utils/supabase/server";
 
-const Sidebar = ({
+const Sidebar =({
 	children
 }: {
 	children?: React.ReactNode;
 }) => {
+
 	return (
 		<div className="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40">
 			<div className="flex h-full max-h-screen flex-col gap-2">

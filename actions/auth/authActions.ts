@@ -10,21 +10,35 @@ export const signIn = async (prevData: any, formData: FormData) => {
 
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     });
 
     if (error) {
         console.log(error);
-        return createResponse('error', 'Error submitting comment', null, error);
+        return createResponse('error', 'Error in sign in', null, error);
     }
 
-    redirect("/");
-    // return createResponse('success', 'Comment submitted successfully', null, null);
+    const userData = await supabase.from("user_roles").select("*").eq("user_id", data?.user?.id).single();
+
+    if (userData?.error) {
+        console
+        return createResponse('error', 'Error in sign in', null, userData.error);
+    }
+
+    const userRole = userData?.data.role_id;
+
+    if (userRole === 1) {
+        return redirect("/dashboard");
+    } else if (userRole === 2) {
+        return redirect("/dashboard/teacher");
+    }
+
+    return redirect("/");
+
 };
 
 
@@ -33,8 +47,7 @@ export const signUp = async (prevData: any, formData: FormData) => {
     const origin = headers().get("origin");
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createClient()
 
     const { error } = await supabase.auth.signUp({
         email,

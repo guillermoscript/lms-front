@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { DarkThemeToggle } from "../DarkThemeToggle";
+import AuthButton from "../AuthButton";
 
 export default function DashboardHeader() {
 	return (
@@ -61,11 +62,7 @@ export default function DashboardHeader() {
 							Account
 						</Link>
 					</DropdownMenuItem>
-					<DropdownMenuItem>Settings</DropdownMenuItem>
-					
-					<DropdownMenuItem>Support</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem>Logout</DropdownMenuItem>
+					<AuthButton />
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</header>

@@ -5,16 +5,17 @@ import { Database } from "@/utils/supabase/supabase";
 import { useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import SaveButtonForm from "../form/SaveButtonForm";
 
 export default function TestForm({
 	test_questions,
     test_id,
-	course_id
+	course_id,
+	children
 }: {
 	test_questions: Database["public"]["Tables"]["test_questions"]["Row"][];
     test_id: number
 	course_id: number
+	children?: React.ReactNode;
 }) {
 
     const { register, watch, formState: { errors, isValid, dirtyFields } } = useForm();
@@ -38,7 +39,9 @@ export default function TestForm({
 			<div className="flex flex-col gap-4 py-3">
 				{test_questions.map((question) => {
 					return (
-						<div className="flex flex-col gap-4">
+						<div
+							key={question.id}
+							className="flex flex-col gap-4">
 							<QuestionOption
 								question_type={question.question_type}
 								question_options={question?.question_options as any}
@@ -50,11 +53,7 @@ export default function TestForm({
 					);
 				})}
 			</div>
-			
-			<SaveButtonForm 
-				isValid={isValid}
-			/>
-			
+			{children}
 		</form>
 	);
 }

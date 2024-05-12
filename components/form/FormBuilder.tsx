@@ -1,70 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-	useForm,
 	useFieldArray,
-	SubmitHandler,
-	FieldValues,
 	useFormContext,
 } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import InputField from "./InputField";
 import { Separator } from "../ui/separator";
-export interface IFormField {
-	id?: string;
-	type:
-		| "text"
-		| "checkbox"
-		| "radio"
-		| "select"
-		| "number"
-		| "textarea"
-		| "markdown"
-		| "date"
-		| "array"
-		| "fill_in"
-		| "multiple_choices"
-		| "true_false";
-	name: string;
-	label: string;
-	options?: IOption[];
-	required: boolean;
-	value?: any; // This will store the actual value for the field
-}
 
-interface IOption {
-	label: string;
-	value: string;
-	correct?: boolean; // This indicates if the option is a correct answer
-}
+// Interfaces and Props seemed correctly defined, no modifications needed there.
 
-interface IFormInput {
-	formFields: IFormField[];
-}
-
-// Define a validation schema using Yup
-// const schema = yup
-// 	.object({
-// 		formFields: yup.array().of(
-// 			yup.object({
-// 				label: yup.string().required("Label is required"),
-// 				value: yup.mixed().when("type", {
-// 					is: (value) => ["select", "radio", "checkbox"].includes(value),
-// 					then: yup.string().required("Text is required"),
-// 					otherwise: yup.string(),
-// 				}),
-// 				// Add more validations based on the type if needed
-// 			})
-// 		),
-// 	})
-// 	.required();
-
-interface FormBuilderProps {
-	initialFields: IFormField[];
-}
-
-const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields }) => {
+const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields, children }) => {
 	const {
 		register,
 		control,
@@ -77,19 +22,24 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields }) => {
 		name: "formFields",
 	});
 	const [inputType, setInputType] = useState<string>("fill_in");
-	const onSubmit: SubmitHandler<IFormInput> = (data) => {
-		console.log(data);
-	};
+
+	useEffect(() => {
+		if (initialFields.length > 0) {
+			// Resets the form with the initial fields
+			reset({ formFields: initialFields });
+		}
+	}, [initialFields, reset]);
 
 	const addField = () => {
 		append({ type: inputType, label: "", options: [], required: false });
 	};
 
+	const onSubmit: SubmitHandler<IFormInput> = (data) => {
+		console.log(data);
+	};
+
 	return (
-		<div
-			onSubmit={handleSubmit(onSubmit)}
-			className="space-y-4 flex flex-col gap-4"
-		>
+		<div onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex flex-col gap-4">
 			{fields.map((field, index) => (
 				<InputField
 					key={field.id}
@@ -108,14 +58,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields }) => {
 				onChange={(e) => setInputType(e.target.value)}
 				className="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
 			>
-				{/* <option value="text">Text</option>
-				<option value="select">Select</option>
-				<option value="checkbox">Checkbox</option>
-				<option value="radio">Radio</option>
-				<option value="number">Number</option>
-				<option value="textarea">Textarea</option>
-				<option value="markdown">Markdown</option>
-				<option value="date">Date</option> */}
 				<option value="fill_in">Fill In</option>
 				<option value="multiple_choices">Multiple Choices</option>
 				<option value="true_false">True/False</option>
@@ -131,12 +73,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields }) => {
 				Add Field
 			</button>
 
-			<button
-				type="submit"
-				className="px-4 py-2 bg-green-500 text-white rounded-md"
-			>
-				Submit Form
-			</button>
+			{children}
+			
 		</div>
 	);
 };

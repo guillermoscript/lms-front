@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -19,13 +18,10 @@ export default function ResetPassword({
 		"use server";
 
 		const new_password = formData.get("password") as string;
-
-		const cookieStore = cookies();
-		const supabase = createClient(cookieStore);
+		const supabase = createClient();
 
 		const { data, error } =  await supabase.auth.updateUser({
             password: new_password
-            
         })
 
         
@@ -35,7 +31,7 @@ export default function ResetPassword({
 		}
 
 		return redirect(
-			"/auth/reset-password?message=Greate! Your password has been reset"
+			"/auth/reset-password?message=Great! Your password has been reset"
 		);
 	};
 
