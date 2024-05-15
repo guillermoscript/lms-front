@@ -32,7 +32,7 @@ export default async function CreateCoursePage() {
 
 	const rows = course.data?.map((course) => {
 		return {
-			id: course.id,
+			id: course.course_id,
 			title: course.title,
 			description: course.description,
 			status: course.status,
