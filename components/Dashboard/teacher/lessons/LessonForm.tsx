@@ -23,7 +23,6 @@ const selectClassNames = {
 // Schema for form validation
 const lessonSchema = yup.object({
 	title: yup.string().required("Title is required"),
-	description: yup.string().required("Description is required"),
 	sequence: yup
 		.number()
 		.required("Sequence is required")
@@ -33,7 +32,6 @@ const lessonSchema = yup.object({
 	embed: yup.string().nullable(),
 	content: yup.string().required("Content is required"),
 	status: yup.string().oneOf(["draft", "published", "archived"]).required(),
-	language: yup.string().required("Language is required"),
 });
 
 export type LessonSchemaType = yup.InferType<typeof lessonSchema>;
@@ -56,13 +54,11 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 	);
 	const defaultValues: LessonSchemaType = {
 		title: "",
-		description: "",
 		sequence: 0,
 		video_url: "",
 		embed: "",
 		content: "",
 		status: "draft",
-		language: "en",
 		...initialValues,
 	};
 
@@ -80,10 +76,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 					{isEditing ? "Edit" : "Create"} Lesson
 				</h1>
 				<Input type="text" name="title" displayName="Title" />
-				<div className="flex flex-col gap-4 md:min-h-800px">
-					<label htmlFor="description">Description</label>
-					<Textarea id="description" name="description" />
-				</div>
+			
 				<Input name="sequence" displayName="Sequence" type="number" />
 				<Input
 					type="text"
@@ -98,17 +91,6 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 						{ value: "draft", label: "Draft" },
 						{ value: "published", label: "Published" },
 						{ value: "archived", label: "Archived" },
-					]}
-					clasess={selectClassNames}
-				/>
-
-				<Select
-					name="language"
-					displayName="Language"
-					options={[
-						{ value: "en", label: "English" },
-						{ value: "es", label: "Spanish" },
-						{ value: "fr", label: "French" },
 					]}
 					clasess={selectClassNames}
 				/>
