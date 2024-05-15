@@ -27,14 +27,15 @@ const classNames = {
 };
 
 const validationSchema = yup.object().shape({
-	language: yup.array().of(yup.string()).required("Language is required"),
+	// language: yup.array().of(yup.string()).required("Language is required"),
+	language: yup.mixed().required("Language is required"),
 	testName: yup.string().required("Test Name is required"),
 	testDescription: yup.string().required("Test Description is required"),
 	course: yup.number().required("Course is required"),
 	retakeInterval: yup.string().required("Retake Interval is required"),
 	timeForTest: yup.number().required("Time for Test is required"),
-	questions: yup.mixed().required("Questions are required"),
-
+	questions: yup.mixed(),
+	sequence: yup.number().required("Sequence is required"),
 });
 
 type TestFormType = yup.InferType<typeof validationSchema>;
@@ -53,12 +54,14 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 
 	const initialValues: TestFormType = {
 		language: [],
+		// testName: "",
 		testName: "",
 		testDescription: "",
 		course: 0,
 		retakeInterval: "",
 		timeForTest: 0,
 		questions: [],
+		sequence: 0,
 		...defaultValues,
 	};
 
@@ -75,9 +78,10 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 	const handleSubmit = async (data: TestFormType) => {
 		setIsLoading(true);
 
-		const url = testId ? `/api/test/${testId}` : `/api/test`;
+		const url = `/api/test/`;
 		const method = testId ? "put" : "post";
 
+		// if test id is provided, it's an edit form, add the test id to the data
 		try {
 			const response = await axios[method](url, data);
 			const message = testId ? "Test Updated" : "Test Created";
@@ -94,7 +98,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 		}
 	};
 
-
+	console.log(formMethods.formState.errors);
 
 	return (
 		<div className="container mx-auto p-4">
@@ -107,7 +111,9 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 					className="space-y-4"
 				>
 					<CheckBox
+						// name="language"
 						name="language"
+						// text="Language"
 						text="Language"
 						options={[
 							{ label: "EN", value: "en" },
@@ -129,12 +135,18 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 						clasess={classNames}
 					/>
 					<Input
+						name="sequence"
+						displayName="Sequence"
+						type="number"
+						clasess={classNames}
+					/>
+					<Input
 						name="course"
 						displayName="Course"
 						type="number"
 						clasess={classNames}
 					/>
-					<Input
+					{/* <Input
 						name="retakeInterval"
 						displayName="Retake Interval"
 						type="text"
@@ -145,7 +157,10 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 						displayName="Time for Test"
 						type="number"
 						clasess={classNames}
-					/>
+					/> */}
+					{testId && (
+						<input type="hidden" name="testId" value={testId} />
+					)}
 					{/* <TestQuestions
 						test_questions={defaultValues.questions}
 					/> */}
@@ -157,7 +172,9 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<FormBuilder initialFields={[]}>
+							<FormBuilder
+								initialFields={defaultValues.questions}
+							>
 								<Button type="submit" disabled={isLoading}>
 									{isEditing ? "Update Test" : "Create Test"}
 								</Button>

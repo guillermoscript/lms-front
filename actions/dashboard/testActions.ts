@@ -35,7 +35,7 @@ interface Option {
 }
 
 interface FormField {
-    type: 'fill_in' | 'multiple_choices' | 'true_false';
+    type: 'free_text' | 'multiple_choices' | 'true_false';
     label: string;
     options?: Option[];
     required: boolean;
@@ -73,7 +73,7 @@ function validateTestInput(testInput: TestInput): boolean {
         throw new Error('Invalid retake interval format.');
     }
     for (const field of testInput.formFields) {
-        if (!['fill_in', 'multiple_choices', 'true_false'].includes(field.type)) {
+        if (!['free_text', 'multiple_choices', 'true_false'].includes(field.type)) {
             throw new Error(`Invalid question type: ${field.type}`);
         }
         if (field.type === 'multiple_choices' && (!field.options || !field.options.length)) {
