@@ -23,33 +23,28 @@ export default async function LessonPage({
 	const supabase = createClient();
 
 	const test = await supabase
-		.from("tests")
+		.from('exams')
 		.select(
 			`* ,
-            test_localizations (*), 
             courses (*),
-            test_questions(
+            exam_questions(
 				*,
-                test_question_localizations(*),
-				question_options(*,
-					question_option_localizations(*)
-				)
-            )
-        `
+				question_options(*)
+			)`
 		)
-		.eq("id", params.testId)
+		.eq("exam_id", params.testId)
 		.single();
 
 	if (test.error) {
 		console.log(test.error.message);
 	}
 
-	console.log(test.data?.test_questions)
+	console.log(test.data)
 	const {
 		multipleChoiceQuestions,
 		freeTextQuestions,
 		singleSelectQuestions,
-	} = categorizeQuestions(test.data?.test_questions);
+	} = categorizeQuestions(test.data?.exam_questions);
 
 	console.log(multipleChoiceQuestions)
 
@@ -87,14 +82,14 @@ export default async function LessonPage({
 						<BreadcrumbLink
 							href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
 						>
-							{test?.data?.test_localizations[0].title}
+							{test?.data?.title}
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
 			<div className="flex justify-between items-center w-full">
 				<h1 className="text-2xl font-semibold mb-4">
-					Test: {test?.data?.test_localizations[0]?.title}
+					Test: {test?.data?.title}
 				</h1>
 				<Link
 					href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`}
@@ -111,11 +106,6 @@ export default async function LessonPage({
 				Sequence: {test?.data?.sequence}
 			</h3>
 			<div className="space-y-4">
-				<h2 className="text-2xl font-bold">JavaScript Basics Test</h2>
-				<p className="text-gray-500 dark:text-gray-400">
-					This test will evaluate your understanding of JavaScript
-					fundamentals.
-				</p>
 				<>
 					{singleSelectQuestions.length > 0 && (
 						<div>
