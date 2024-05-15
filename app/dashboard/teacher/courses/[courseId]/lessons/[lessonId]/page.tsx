@@ -19,8 +19,8 @@ export default async function LessonPage({
 	const supabase = createClient();
 
 	const lesson = await supabase
-		.from("lessons")
-		.select(`*, lesson_localizations(*), courses(*)`)
+		.from('lessons')
+		.select(`*, courses(*)`)
 		.eq("id", params.lessonId)
 		.single();
 
@@ -64,14 +64,14 @@ export default async function LessonPage({
 						<BreadcrumbLink
 							href={`/dashboard/teacher/courses/${params.courseId}/${params.lessonId}`}
 						>
-							{lesson?.data?.lesson_localizations[0].title}
+							{lesson?.data?.title}
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
 			<div className="flex justify-between items-center w-full">
 				<h1 className="text-2xl font-semibold mb-4">
-					Lesson: {lesson?.data?.lesson_localizations[0].title}
+					Lesson: {lesson?.data?.title}
 				</h1>
 				<Link
 					href={`/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`}
@@ -105,11 +105,11 @@ export default async function LessonPage({
 				</>
 			)}
 
-			{lesson.data?.embed ? (
+			{lesson.data?.embed_code ? (
 				<div className="flex flex-col mb-10 gap-4">
 					<h3 className="text-lg font-semibold mt-4">Embeded Code</h3>
 					<iframe
-						src={lesson.data?.embed}
+						src={lesson.data?.embed_code}
 						style={{
 							width: "100%",
 							height: 600,
@@ -125,10 +125,8 @@ export default async function LessonPage({
 				</div>
 			) : null}
 
-			<p>{lesson?.data?.lesson_localizations[0]?.description}</p>
-
 			<Markdown className={` markdown-body`} remarkPlugins={[remarkGfm]}>
-				{lesson.data?.lesson_localizations[0].content}
+				{lesson.data?.content}
 			</Markdown>
 		</div>
 	);
