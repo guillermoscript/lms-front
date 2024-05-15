@@ -15,32 +15,25 @@ export async function editLessonsAction(prevDate: any, data: FormData) {
     const course_id = data.get("course_id") as string;
     const language = data.get("language") as string;
     const content = data.get("content") as string;
+    const embed = data.get("embed") as string;
 
 console.log(language)
     const supabase = createClient();
     const lessonData = await supabase
         .from("lessons")
         .update({
+            title: title,
+            content: content,
             video_url,
+            embed_code: embed,
             status: status,
             sequence: sequence,
             updated_at: new Date(),
         })
         .eq("id", lessonId);
 
-    const lessonLocalizationData = await supabase
-        .from("lesson_localizations")
-        .update({
-            title,
-            description,
-            content,
-            language_code: language,
-        })
-        .eq("lesson_id", lessonId)
-
-    if (lessonData.error || lessonLocalizationData.error) {
+    if (lessonData.error) {
         console.log(lessonData.error);
-        console.log(lessonLocalizationData.error)
         return createResponse("error", "Error updating lesson", null, "Error updating lesson");
     }
 
@@ -65,16 +58,14 @@ export async function createLessonsAction(prevDate: any, data: FormData) {
 
     
     const title = data.get("title") as string;
-    const description = data.get("description") as string;
     const sequence = data.get("sequence") as string;
     const status = data.get("status") as string;
     const video_url = data.get("video_url") as string;
     const course_id = data.get("course_id") as string;
-    const language = data.get("language") as string;
     const content = data.get("content") as string;
-
+    const embed_code = data.get("embed") as string;
     
-    const requiredFields = ["title", "description", "sequence", "status", "video_url", "course_id", "language", "content"];
+    const requiredFields = ["title", "sequence", "status", "video_url", "course_id", "language", "content"];
     const response = validateFields(data, requiredFields);
 
     if (response) {
@@ -85,7 +76,10 @@ export async function createLessonsAction(prevDate: any, data: FormData) {
     const lessonData = await supabase
         .from("lessons")
         .insert({
+            title: title,
+            content: content,
             video_url,
+            embed_code: embed_code,
             status: status,
             sequence: sequence,
             course_id: course_id,
@@ -98,28 +92,13 @@ export async function createLessonsAction(prevDate: any, data: FormData) {
         return createResponse("error", "Error creating lesson", null, "Error creating lesson");
     }
 
-    const lessonLocalizationData = await supabase
-        .from('lesson_localizations')
-        .insert({
-            title,
-            description,
-            content,
-            language_code: language,
-            lesson_id: lessonData.data[0].id,
-        })
-        
-
-    if (lessonData.error || lessonLocalizationData.error) {
-        console.log(lessonData.error);
-        console.log(lessonLocalizationData.error)
+    if (lessonData.error) {
         return createResponse("error", "Error updating lesson", null, "Error updating lesson");
     }
-
 
     console.log(lessonData.data)
 
     revalidatePath('/dashboard/teacher/courses/[courseId]/lessons', 'layout');
-    
     return createResponse("success", "Lesson created successfully", null, null);
 }
 
