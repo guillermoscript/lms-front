@@ -170,7 +170,7 @@ const InputField: React.FC<{
 					index={index}
 				/>
 			);
-		case "fill_in":
+		case "free_text":
 			return (
 				<Card key={field.id}>
 					<CardHeader>
@@ -339,6 +339,7 @@ function MultipleChoises({
 									placeholder={`Enter option ${
 										optionIndex + 1
 									}`}
+									value={optionField?.question_option_localizations && optionField?.question_option_localizations[0]?.option_text || optionField.label }
 									className={inputClass}
 								/>
 								<div className="flex flex-row gap-2">
@@ -347,6 +348,7 @@ function MultipleChoises({
 										{...register(
 											`formFields[${index}].options[${optionIndex}].value`
 										)}
+										
 										type="checkbox"
 									/>
 								</div>
