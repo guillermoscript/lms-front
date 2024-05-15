@@ -41,7 +41,7 @@ export default async function SubmitedAnswers({
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-4">
 				{submitedAnswers?.data.map((answer, index) => {
-					if (answer.question_type === "fill_in") {
+					if (answer.question_type === "free_text") {
 						return (
 							<>
 								<Card>
