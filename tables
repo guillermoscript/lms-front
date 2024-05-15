@@ -1,0 +1,453 @@
+create table
+  public.courses (
+    id bigserial,
+    product_id bigint null,
+    title text not null,
+    description text null,
+    thumbnail_url text null,
+    created_at timestamp with time zone not null default current_timestamp,
+    updated_at timestamp with time zone null,
+    published_at timestamp with time zone null,
+    deleted_at timestamp with time zone null,
+    author_id uuid null,
+    status public.course_status not null default 'draft'::course_status,
+    archived_at timestamp with time zone null,
+    tags text[] null,
+    category_id bigint null,
+    constraint courses_pkey primary key (id),
+    constraint courses_author_id_fkey foreign key (author_id) references auth.users (id),
+    constraint courses_product_id_fkey foreign key (product_id) references products (id),
+    constraint fk_category foreign key (category_id) references course_categories (id)
+  ) tablespace pg_default;
+  create table
+  public.comment_reactions (
+    id uuid not null,
+    comment_id uuid not null,
+    user_id uuid not null,
+    reaction_type character varying(255) not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    constraint comment_reactions_pkey primary key (id),
+    constraint comment_reactions_comment_id_user_id_reaction_type_key unique (comment_id, user_id, reaction_type),
+    constraint comment_reactions_comment_id_fkey foreign key (comment_id) references comments (id) on delete cascade,
+    constraint comment_reactions_user_id_fkey foreign key (user_id) references auth.users (id),
+    constraint comment_reactions_reaction_type_check check (
+      (
+        (reaction_type)::text = any (
+          array[
+            ('like'::character varying)::text,
+            ('love'::character varying)::text,
+            ('insightful'::character varying)::text,
+            ('curious'::character varying)::text
+          ]
+        )
+      )
+    )
+  ) tablespace pg_default;
+  create table
+  public.comments (
+    id uuid not null default gen_random_uuid (),
+    parent_id uuid null,
+    user_id uuid not null,
+    content text not null,
+    content_type character varying(255) not null,
+    entity_type character varying(255) not null,
+    entity_id bigint not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    updated_at timestamp with time zone null,
+    deleted_at timestamp with time zone null,
+    constraint comments_pkey primary key (id),
+    constraint comments_parent_id_fkey foreign key (parent_id) references comments (id) on delete cascade,
+    constraint comments_user_id_fkey foreign key (user_id) references profiles (id),
+    constraint comments_content_type_check check (
+      (
+        (content_type)::text = any (
+          array[
+            ('markdown'::character varying)::text,
+            ('text'::character varying)::text
+          ]
+        )
+      )
+    ),
+    constraint comments_entity_type_check check (
+      (
+        (entity_type)::text = any (
+          array[
+            ('course'::character varying)::text,
+            ('lesson'::character varying)::text,
+            ('test'::character varying)::text
+          ]
+        )
+      )
+    )
+  ) tablespace pg_default;
+  create table
+  public.course_categories (
+    id bigserial,
+    name text not null,
+    description text null,
+    created_at timestamp with time zone not null default current_timestamp,
+    updated_at timestamp with time zone null,
+    deleted_at timestamp with time zone null,
+    constraint course_categories_pkey primary key (id),
+    constraint course_categories_name_key unique (name)
+  ) tablespace pg_default;
+  create table
+  public.course_enrollments (
+    id bigserial,
+    course_id bigint null,
+    user_id uuid null,
+    enrolled_at timestamp with time zone not null default current_timestamp,
+    progress integer null default 0,
+    completed_at timestamp with time zone null,
+    deleted_at timestamp with time zone null,
+    status public.enrollment_status not null default 'active'::enrollment_status,
+    last_accessed_lesson_id bigint null,
+    constraint course_enrollments_pkey primary key (id),
+    constraint course_enrollments_course_id_fkey foreign key (course_id) references courses (id),
+    constraint course_enrollments_last_accessed_lesson_id_fkey foreign key (last_accessed_lesson_id) references lessons (id),
+    constraint course_enrollments_user_id_fkey foreign key (user_id) references auth.users (id)
+  ) tablespace pg_default;
+  create table
+  public.course_purchases (
+    id bigserial,
+    user_id uuid null,
+    course_id bigint null,
+    purchased_at timestamp with time zone not null default current_timestamp,
+    constraint course_purchases_pkey primary key (id),
+    constraint course_purchases_course_id_fkey foreign key (course_id) references courses (id),
+    constraint course_purchases_user_id_fkey foreign key (user_id) references auth.users (id)
+  ) tablespace pg_default;
+  create table
+  public.currencies (
+    id bigserial,
+    code character(3) not null,
+    name text not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    constraint currencies_pkey primary key (id)
+  ) tablespace pg_default;
+  create table
+  public.invoice_line_items (
+    id bigserial,
+    invoice_id integer not null,
+    product_id bigint not null,
+    line_amount integer not null default 0,
+    vat_amount integer not null default 0,
+    vat_percentage integer not null default 0,
+    unit_price numeric(12, 2) not null default 0,
+    quantity numeric(12, 2) not null default 1,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    constraint invoice_line_items_pkey primary key (id),
+    constraint invoice_line_items_invoice_id_fkey foreign key (invoice_id) references invoices (id) on delete cascade,
+    constraint invoice_line_items_product_id_fkey foreign key (product_id) references products (id) on delete restrict
+  ) tablespace pg_default;
+  create table
+  public.invoices (
+    id bigserial,
+    status public.invoice_status not null default 'unpaid'::invoice_status,
+    invoice_number integer generated always as identity,
+    customer_id uuid not null,
+    country character varying(2) not null,
+    currency bigint not null,
+    invoice_date timestamp with time zone not null default now(),
+    due_date timestamp with time zone not null,
+    paid_at timestamp with time zone null,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    constraint invoices_pkey primary key (id),
+    constraint invoices_invoice_number_key unique (invoice_number),
+    constraint invoices_currency_fkey foreign key (currency) references currencies (id) on delete restrict,
+    constraint invoices_customer_id_fkey foreign key (customer_id) references profiles (id) on delete restrict
+  ) tablespace pg_default;
+
+create trigger after_invoice_paid
+after
+update of status on invoices for each row when (
+  old.status is distinct from new.status
+  and new.status = 'paid'::invoice_status
+)
+execute function process_purchase ();
+create table
+  public.lesson_localizations (
+    lesson_id bigint not null,
+    language_code public.language_code not null,
+    title text not null,
+    content text null,
+    description text null,
+    constraint fk_lesson_localization_language foreign key (language_code) references supported_languages (code),
+    constraint fk_lesson_localization_lesson foreign key (lesson_id) references lessons (id) on delete cascade
+  ) tablespace pg_default;
+  create table
+  public.lesson_progress (
+    id bigserial,
+    user_id uuid null,
+    lesson_id bigint null,
+    progress_status public.lesson_progress_status not null,
+    started_at timestamp with time zone null,
+    completed_at timestamp with time zone null,
+    constraint lesson_progress_pkey primary key (id),
+    constraint lesson_progress_lesson_id_fkey foreign key (lesson_id) references lessons (id),
+    constraint lesson_progress_user_id_fkey foreign key (user_id) references auth.users (id)
+  ) tablespace pg_default;
+  create table
+  public.lessons (
+    id bigserial,
+    course_id bigint null,
+    video_url text null,
+    sequence integer not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    updated_at timestamp with time zone null,
+    deleted_at timestamp with time zone null,
+    embed text null,
+    status public.course_status null default 'draft'::course_status,
+    constraint lessons_pkey primary key (id),
+    constraint unique_lesson_sequence unique (course_id, sequence),
+    constraint lessons_course_id_fkey foreign key (course_id) references courses (id)
+  ) tablespace pg_default;
+  create table
+  public.plan_courses (
+    plan_id bigint not null,
+    course_id bigint not null,
+    constraint plan_courses_pkey primary key (plan_id, course_id),
+    constraint fk_course foreign key (course_id) references courses (id) on delete restrict,
+    constraint fk_plan foreign key (plan_id) references plans (id) on delete cascade
+  ) tablespace pg_default;
+  create table
+  public.plans (
+    id bigserial,
+    product_id bigint not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    billing_interval interval not null default '1 year'::interval,
+    constraint plans_pkey primary key (id),
+    constraint plans_product_id_fkey foreign key (product_id) references products (id) on delete restrict
+  ) tablespace pg_default;
+  create table
+  public.products (
+    id bigserial,
+    name character varying(255) not null,
+    description character varying(1000) null,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    is_subscription boolean not null default false,
+    constraint products_pkey primary key (id)
+  ) tablespace pg_default;
+  create table
+  public.products_pricing (
+    id bigserial,
+    product_id bigint not null,
+    from_date date not null,
+    to_date date not null,
+    price integer not null,
+    currency bigint not null,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    constraint products_pricing_pkey primary key (id),
+    constraint products_pricing_currency_fkey foreign key (currency) references currencies (id) on delete restrict,
+    constraint products_pricing_product_id_fkey foreign key (product_id) references products (id) on delete cascade,
+    constraint unique_price_in_interval exclude using gist (
+      product_id
+      with
+        =,
+        currency
+      with
+        =,
+        daterange (from_date, to_date, '[]'::text)
+      with
+        &&
+    )
+    where
+      ((deleted_at is null))
+  ) tablespace pg_default;
+  create table
+  public.profiles (
+    id uuid not null,
+    updated_at timestamp with time zone null,
+    username text null,
+    full_name text null,
+    avatar_url text null,
+    website text null,
+    bio text null,
+    currency_id bigint null,
+    "stripeCustomerID" text null,
+    preferred_language public.language_code null default 'en'::language_code,
+    constraint profiles_pkey primary key (id),
+    constraint profiles_username_key unique (username),
+    constraint profiles_currency_id_fkey foreign key (currency_id) references currencies (id),
+    constraint profiles_id_fkey foreign key (id) references auth.users (id) on delete cascade,
+    constraint username_length check ((char_length(username) >= 3))
+  ) tablespace pg_default;
+  create table
+  public.question_option_localizations (
+    option_id bigint not null,
+    language_code public.language_code not null,
+    option_text text not null,
+    constraint fk_option_localization_language foreign key (language_code) references supported_languages (code),
+    constraint fk_option_localization_option foreign key (option_id) references question_options (id) on delete cascade
+  ) tablespace pg_default;
+  create table
+  public.question_options (
+    id bigserial,
+    question_id bigint null,
+    is_correct boolean not null default false,
+    constraint question_options_pkey primary key (id),
+    constraint question_options_question_id_fkey foreign key (question_id) references test_questions (id)
+  ) tablespace pg_default;
+  create table
+  public.related_courses (
+    course_id bigint not null,
+    related_course_id bigint not null,
+    constraint related_courses_pkey primary key (course_id, related_course_id),
+    constraint related_courses_course_id_fkey foreign key (course_id) references courses (id),
+    constraint related_courses_related_course_id_fkey foreign key (related_course_id) references courses (id)
+  ) tablespace pg_default;
+  create table
+  public.related_lessons (
+    lesson_id bigint not null,
+    related_lesson_id bigint not null,
+    constraint related_lessons_pkey primary key (lesson_id, related_lesson_id),
+    constraint related_lessons_lesson_id_fkey foreign key (lesson_id) references lessons (id),
+    constraint related_lessons_related_lesson_id_fkey foreign key (related_lesson_id) references lessons (id)
+  ) tablespace pg_default;
+  create table
+  public.roles (
+    id bigint generated by default as identity,
+    created_at timestamp with time zone not null default now(),
+    role public.user_role not null,
+    constraint roles_pkey primary key (id),
+    constraint roles_role_key unique (role)
+  ) tablespace pg_default;
+  create table
+  public.submission_answers (
+    id bigserial,
+    submission_id bigint null,
+    question_id bigint null,
+    given_answer text null,
+    is_correct boolean null,
+    teacher_comment text null,
+    constraint submission_answers_pkey primary key (id),
+    constraint submission_answers_question_id_fkey foreign key (question_id) references test_questions (id),
+    constraint submission_answers_submission_id_fkey foreign key (submission_id) references test_submissions (id)
+  ) tablespace pg_default;
+  create table
+  public.subscriptions (
+    id bigserial,
+    status public.subscription_status not null,
+    customer_id uuid not null,
+    plan_id bigint not null,
+    invoice_id bigint not null,
+    starts_at timestamp with time zone not null default current_timestamp,
+    ends_at timestamp with time zone null,
+    renewed_at timestamp with time zone null,
+    renewed_subscription_id bigint null,
+    downgraded_at timestamp with time zone null,
+    downgraded_to_plan_id bigint null,
+    upgraded_at timestamp with time zone null,
+    upgraded_to_plan_id bigint null,
+    cancelled_at timestamp with time zone null,
+    created_at timestamp with time zone not null default current_timestamp,
+    deleted_at timestamp with time zone null,
+    constraint subscriptions_pkey primary key (id),
+    constraint subscriptions_downgraded_to_plan_id_fkey foreign key (downgraded_to_plan_id) references plans (id),
+    constraint subscriptions_invoice_id_fkey foreign key (invoice_id) references invoices (id),
+    constraint subscriptions_plan_id_fkey foreign key (plan_id) references plans (id),
+    constraint subscriptions_renewed_subscription_id_fkey foreign key (renewed_subscription_id) references subscriptions (id),
+    constraint subscriptions_upgraded_to_plan_id_fkey foreign key (upgraded_to_plan_id) references plans (id),
+    constraint subscriptions_customer_id_fkey foreign key (customer_id) references profiles (id),
+    constraint unique_subscription_in_interval exclude using gist (
+      customer_id
+      with
+        =,
+        tstzrange (starts_at, ends_at, '[]'::text)
+      with
+        &&
+    )
+    where
+      (
+        (
+          (deleted_at is null)
+          and (status = 'active'::subscription_status)
+        )
+      )
+  ) tablespace pg_default;
+  create table
+  public.supported_languages (
+    created_at timestamp with time zone not null default now(),
+    name text not null,
+    code public.language_code not null default 'en'::language_code,
+    constraint supported_languages_pkey primary key (code),
+    constraint supported_languages_code_key unique (code)
+  ) tablespace pg_default;
+  create table
+  public.test_localizations (
+    test_id bigint not null,
+    language_code public.language_code not null,
+    title text not null,
+    description text null,
+    constraint fk_test_localization_language foreign key (language_code) references supported_languages (code),
+    constraint fk_test_localization_test foreign key (test_id) references tests (id) on delete cascade
+  ) tablespace pg_default;
+  create table
+  public.test_question_localizations (
+    question_id bigint not null,
+    language_code public.language_code not null,
+    question_text text not null,
+    id bigint null,
+    constraint test_question_localizations_id_key unique (id),
+    constraint fk_question_localization_language foreign key (language_code) references supported_languages (code),
+    constraint fk_question_localization_question foreign key (question_id) references test_questions (id) on delete cascade
+  ) tablespace pg_default;
+  create table
+  public.test_questions (
+    id bigserial,
+    test_id bigint null,
+    question_type public.user_question_type null,
+    created_at timestamp with time zone not null default current_timestamp,
+    constraint test_questions_pkey primary key (id),
+    constraint test_questions_test_id_fkey foreign key (test_id) references tests (id)
+  ) tablespace pg_default;
+  create table
+  public.test_submissions (
+    id bigserial,
+    user_id uuid null,
+    test_id bigint null,
+    submitted_at timestamp with time zone not null default current_timestamp,
+    score real null,
+    is_latest boolean null default true,
+    teacher_review text null,
+    is_approved boolean null default false,
+    constraint test_submissions_pkey primary key (id),
+    constraint test_submissions_test_id_fkey foreign key (test_id) references tests (id),
+    constraint test_submissions_user_id_fkey foreign key (user_id) references auth.users (id),
+    constraint test_submissions_score_check check (
+      (
+        (score >= (0)::double precision)
+        and (score <= (20)::double precision)
+      )
+    )
+  ) tablespace pg_default;
+
+create trigger set_is_approved before insert
+or
+update on test_submissions for each row
+execute function update_is_approved ();
+create table
+  public.tests (
+    id bigserial,
+    course_id bigint null,
+    created_at timestamp with time zone not null default current_timestamp,
+    retake_interval interval null,
+    time_for_test smallint not null default '20'::smallint,
+    sequence bigint null,
+    status public.course_status null default 'draft'::course_status,
+    constraint tests_pkey primary key (id),
+    constraint tests_course_id_fkey foreign key (course_id) references courses (id)
+  ) tablespace pg_default;
+  create table
+  public.user_roles (
+    profile_id uuid not null,
+    role_id bigint not null,
+    constraint user_roles_pkey primary key (profile_id, role_id),
+    constraint fk_profile foreign key (profile_id) references profiles (id) on delete cascade,
+    constraint fk_role foreign key (role_id) references roles (id) on delete cascade
+  ) tablespace pg_default;
