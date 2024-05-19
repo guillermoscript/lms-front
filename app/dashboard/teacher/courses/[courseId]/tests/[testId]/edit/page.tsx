@@ -44,6 +44,7 @@ export default async function EditTestPage({
 			label: question.question_text,
 			options: question.question_options,
 			required: false,
+			questionId: question.question_id,
 		}
     })
 
@@ -100,8 +101,10 @@ export default async function EditTestPage({
                         testName: test?.data?.title,
                         testDescription: test?.data?.description,
                         course: test?.data?.course_id,
-                        // retakeInterval: test?.data?.retake_interval,
-                        // timeForTest: test?.data?.time_for_test,
+                        // retakeInterval: test?.data?.duration,
+                        duration: test?.data?.duration,
+						exam_date: test?.data?.exam_date,
+						sequence: test?.data?.sequence,
                         questions: fieldsForQuestions,
                     }}
                 />
