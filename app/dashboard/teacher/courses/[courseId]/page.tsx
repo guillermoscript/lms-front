@@ -24,18 +24,8 @@ export default async function CreateCourseLessonPage({
 
 	const course = await supabase
 		.from("courses")
-		.select(
-			`* , 
-    lessons ( 
-        * , 
-        lesson_localizations( * )
-    ), 
-    tests (
-         * ,
-        test_localizations (*)
-    )`
-		)
-		.eq("id", params.courseId)
+		.select(`*, lessons(*), exams(*)`)
+		.eq("course_id", params.courseId)
 		.single();
 
 	if (course.error) {
@@ -47,26 +37,28 @@ export default async function CreateCourseLessonPage({
 	const lessonRow = course.data?.lessons?.map((lesson) => {
 		return {
 			id: lesson.id,
-			title: lesson.lesson_localizations[0]?.title,
-			description: lesson.lesson_localizations[0]?.description,
+			title: lesson.title,
+			content: lesson.content,
 			sequence: lesson.sequence,
-			date: dayjs(lesson.created_at).format("DD/MM/YYYY"),
 			courseId: lesson.course_id,
+			created_at: dayjs(lesson.created_at).format("DD/MM/YYYY"),
 		};
 	});
 
-	const testRow = course.data?.tests?.map((test) => {
+	const testRow = course.data?.exams?.map((test) => {
 		return {
-			id: test.id,
-			title: test.test_localizations[0]?.title,
-			description: test.test_localizations[0]?.description,
-			sequence: test.sequence,
-			date: dayjs(test.created_at).format("DD/MM/YYYY"),
+			title: test.title,
+			id: test.exam_id,
+			duration: test.duration,
 			courseId: test.course_id,
+			exam_date: test.exam_date,
+			created_at: test.created_at,
+			updated_at: test.updated_at,
+			description: test.description,
 		};
 	});
 
-	console.log(testRow);
+	// console.log(testRow);
 
 	return (
 		<div className="flex-1 p-8 overflow-y-auto w-full space-y-4">

@@ -1,6 +1,6 @@
 "use client";
-import Form, { CheckBox, Input } from "./Form";
-import FormBuilder, { IFormField } from "./FormBuilder";
+import { Input, Select } from "./Form";
+import FormBuilder from "./FormBuilder";
 import * as yup from "yup";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
@@ -16,7 +16,6 @@ import { FormProvider, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import axios from "axios";
-import TestQuestions from "../dashboard/teacher/test/TestQuestions";
 
 
 const classNames = {
@@ -26,15 +25,32 @@ const classNames = {
 	container: "mb-4 flex flex-col gap-4",
 };
 
+const questionsSchema = yup.array().of(
+	yup.object().shape({
+		type: yup.string().required("Type is required"),
+		label: yup.string().required("Label is required"),
+		options: yup.array().of(
+			yup.object().shape({
+				label: yup.string(),
+				value: yup.string(),
+				correct: yup.boolean(),
+			})
+		),
+		required: yup.boolean().required("Required is required"),
+		value: yup.string()
+	})
+)
+
 const validationSchema = yup.object().shape({
-	language: yup.array().of(yup.string()).required("Language is required"),
 	testName: yup.string().required("Test Name is required"),
 	testDescription: yup.string().required("Test Description is required"),
 	course: yup.number().required("Course is required"),
-	retakeInterval: yup.string().required("Retake Interval is required"),
-	timeForTest: yup.number().required("Time for Test is required"),
-	questions: yup.mixed().required("Questions are required"),
-
+	exam_date: yup.string().required("Exam Date is required"),
+	duration: yup.number().required("Time for Test is required"),
+	questions: questionsSchema,
+	status: yup.string().required("Status is required"),
+	sequence: yup.number().required("Sequence is required"),
+	formFields: questionsSchema,
 });
 
 type TestFormType = yup.InferType<typeof validationSchema>;
@@ -52,13 +68,15 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 	const isEditing = !!testId;
 
 	const initialValues: TestFormType = {
-		language: [],
+		// testName: "",
 		testName: "",
 		testDescription: "",
 		course: 0,
-		retakeInterval: "",
-		timeForTest: 0,
+		exam_date: "",
+		duration: 0,
+		status: "draft",
 		questions: [],
+		sequence: 0,
 		...defaultValues,
 	};
 
@@ -69,19 +87,41 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 
 
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const {toast} = useToast();
+	const { toast } = useToast();
 
 	const handleSubmit = async (data: TestFormType) => {
 		setIsLoading(true);
 
-		const url = testId ? `/api/test/${testId}` : `/api/test`;
+		const url = `/api/test/`;
 		const method = testId ? "put" : "post";
+		const updateField = (data as any)?.formFields?.map((field: any) => {
+			if (field?.type === "true_false") {
+				return { 
+					...field,
+					options: [{
+						label: field.label,
+						value: field?.value,
+						correct: field?.value
+					}]
+				}
+			}
+			return field
+		});
 
+		const finalData = {
+			...data,
+			formFields: updateField,
+			...(
+				testId
+					&& { exam_id: Number(testId)}
+			)
+		}
+
+		// if test id is provided, it's an edit form, add the test id to the data
 		try {
-			const response = await axios[method](url, data);
+			const response = await axios[method](url, finalData);
 			const message = testId ? "Test Updated" : "Test Created";
-			toast({ title: message });
+			toast({ title: message, description: response.data.message });
 		} catch (error) {
 			console.error("Error submitting the form", error);
 			toast({
@@ -94,7 +134,9 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 		}
 	};
 
-
+	console.log(
+		formMethods.formState.errors,
+	)
 
 	return (
 		<div className="container mx-auto p-4">
@@ -106,16 +148,6 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 					onSubmit={formMethods.handleSubmit(handleSubmit)}
 					className="space-y-4"
 				>
-					<CheckBox
-						name="language"
-						text="Language"
-						options={[
-							{ label: "EN", value: "en" },
-							{ label: "ES", value: "es" },
-							// Add more language options as needed
-						]}
-						clasess={classNames}
-					/>
 					<Input
 						name="testName"
 						displayName="Test Name"
@@ -129,26 +161,39 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 						clasess={classNames}
 					/>
 					<Input
+						name="sequence"
+						displayName="Sequence"
+						type="number"
+						clasess={classNames}
+					/>
+					<Input
 						name="course"
 						displayName="Course"
 						type="number"
 						clasess={classNames}
 					/>
 					<Input
-						name="retakeInterval"
-						displayName="Retake Interval"
-						type="text"
+						name="exam_date"
+						displayName="Exam Date"
+						type="date"
 						clasess={classNames}
 					/>
 					<Input
-						name="timeForTest"
-						displayName="Time for Test"
+						name="duration"
+						displayName="Duration (in minutes)"
 						type="number"
 						clasess={classNames}
 					/>
-					{/* <TestQuestions
-						test_questions={defaultValues.questions}
-					/> */}
+					<Select
+						name="status"
+						displayName="Status"
+						options={[
+							{ value: "draft", label: "Draft" },
+							{ value: "published", label: "Published" },
+							{ value: "archived", label: "Archived" },
+						]}
+						clasess={classNames}
+					/>
 					<Card>
 						<CardHeader>
 							<CardTitle>Test Questions</CardTitle>
@@ -157,7 +202,9 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<FormBuilder initialFields={[]}>
+							<FormBuilder
+								initialFields={defaultValues.questions}
+							>
 								<Button type="submit" disabled={isLoading}>
 									{isEditing ? "Update Test" : "Create Test"}
 								</Button>
@@ -167,13 +214,13 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
 				</form>
 			</FormProvider>
 
-			{error && (
+			{/* {error && (
 				<div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
 					<div className="bg-white p-4 rounded shadow-lg">
 						{error}
 					</div>
 				</div>
-			)}
+			)} */}
 		</div>
 	);
 };

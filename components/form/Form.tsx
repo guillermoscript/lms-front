@@ -56,24 +56,6 @@ export default function Form<
 					{children}
 				</form>
 			)}
-			
-			{/* {action && (
-				<form
-					noValidate
-					action={async (formData) => {
-						
-						try {
-							const data = await action(json);
-							console.log(data);
-						} catch (error) {
-							console.log(error);
-						}
-					}}
-					className={className}
-				>
-					{children}
-				</form>
-			)} */}
 		</FormProvider>
 	);
 }
@@ -103,9 +85,11 @@ export function Select({ name, displayName, clasess, options }: SelectProps) {
 		<div className={clasess.container}>
 			<label className={clasess.label} htmlFor={name}>
 				<span className="block">{displayName}</span>
+			</label>
 				<select
 					{...register(name)}
 					disabled={isSubmitting}
+					id={name}
 					className={`${clasess.input} ${
 						isValid ? "select-success" : ""
 					} ${errors[name as string] ? "select-error" : ""}`}
@@ -117,7 +101,6 @@ export function Select({ name, displayName, clasess, options }: SelectProps) {
 						</option>
 					))}
 				</select>
-			</label>
 			{errors[name as string] && (
 				<p className={clasess.error}>
 					{errors[name as string]?.message as string}

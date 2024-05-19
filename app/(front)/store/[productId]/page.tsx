@@ -1,36 +1,26 @@
+import CheckoutCard from "@/components/checkout/CheckoutCard";
 import CourseCard from "@/components/store/product/CourseCard";
 import ImageContainer from "@/components/store/product/ImageContainer";
 import ReviewCard from "@/components/store/product/ReviewCard";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
 import { CheckIcon } from "lucide-react";
-import { cookies } from "next/headers";
-import Image from "next/image";
-import Link from "next/link";
 
 export default async function ProductIdPage({
 	params,
 }: {
 	params: { productId: string };
 }) {
-	const cookieStore = cookies();
-	const supabase = createClient(cookieStore);
+	const supabase = createClient();
 
 	const data = await supabase
 		.from("products")
-		.select(
-			`
-        id,
-        name,
-        description,
-        products_pricing ( id, price, currency ( code ) )
-		plans ( id, name, description )
-    `
-		)
-		.eq("id", params.productId)
+		.select(`*`)
+		.eq("product_id", params.productId)
 		.single();
 
-	console.log(data);
+	if (data.error) throw new Error(data.error.message);
+
 	const product = data.data;
 
 	return (
@@ -38,9 +28,6 @@ export default async function ProductIdPage({
 			<div className="grid md:grid-cols-2 gap-10 md:gap-16">
 				<div className="flex flex-col gap-6">
 					<div>
-						<div className="inline-block rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium dark:bg-gray-800">
-							LMS Plan
-						</div>
 						<h1 className="text-3xl md:text-4xl font-bold tracking-tight">
 							{product?.name}
 						</h1>
@@ -50,26 +37,49 @@ export default async function ProductIdPage({
 					</div>
 					<div className="flex items-center gap-4">
 						<div className="text-4xl font-bold">
-							{product?.products_pricing[0]?.price}{" "}
-							{product?.products_pricing[0]?.currency?.code}
-						</div>
-						{/* TODO AKI PONER LA PERIODICIDAD */}
-						<div className="text-gray-500 dark:text-gray-400 text-lg">
-							/ /Month
+							{product?.price} $
 						</div>
 					</div>
-					<ul className="grid gap-2">
-						<li className="flex items-center gap-2">
-							<CheckIcon className="h-5 w-5 text-primary" />
-							<span>Unlimited access to all courses</span>
-						</li>
-						{/* more list items */}
-					</ul>
-					<Link 
-						className={buttonVariants({variants: 'default'})}
-						href={`/checkout/${product?.id}`}>
-						Subscribe Now
-					</Link>
+					{/* 
+						<ul className="grid gap-2">
+							<li className="flex items-center gap-2">
+								<CheckIcon className="h-5 w-5 text-primary" />
+								<span>Unlimited access to all courses</span>
+							</li>
+						</ul>
+					 */}
+					<CheckoutCard
+						callback={async (data) => {
+							'use server'
+							console.log(data);
+							if (data.radio === "card") {
+								try {
+									const data = await fetch(
+										"/stripe/checkout",
+										{
+											method: "POST",
+											headers: {
+												"Content-Type":
+													"application/json",
+											},
+											body: JSON.stringify({
+												productId: params.productId,
+											}),
+										}
+									);
+									const response = await data.json();
+									console.log(response);
+									window.location.href = response.url;
+								} catch (error) {
+									console.log(error);
+								}
+							} else if (data.radio === "binance") {
+								console.log("binance");
+							} else if (data.radio === "paypal") {
+								console.log("paypal");
+							}
+						}}
+					/>
 				</div>
 				<div className="grid gap-6">
 					<ImageContainer

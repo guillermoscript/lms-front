@@ -1,19 +1,10 @@
-import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 
 export default async function StorePage() {
-	const cookieStore = cookies();
-	const supabase = createClient(cookieStore);
 
-	const info = await supabase.from("products").select(`
-        id,
-        name,
-        description,
-        products_pricing ( id, price, currency ( code ) )
-    `);
-
-	console.log(info.data);
+	const supabase = createClient();
+	const info = await supabase.from("products").select(`*`);
 
 	return (
 		<div className="min-h-full">
@@ -24,7 +15,7 @@ export default async function StorePage() {
 
 				<div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
 					{info.data?.map((product) => (
-						<div key={product.id} className="group relative">
+						<div key={product.product_id} className="group relative">
 							<div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-md lg:aspect-none group-hover:opacity-75 lg:h-80">
 								<img
 									src="/img/product-page-01-related-product-01.jpg"
@@ -35,7 +26,7 @@ export default async function StorePage() {
 							<div className="mt-4 flex justify-between">
 								<div>
 									<h3 className="text-sm ">
-										<Link href={`/store/${product.id}`}>
+										<Link href={`/store/${product.product_id}`}>
 											<span
 												aria-hidden="true"
 												className="absolute inset-0"
@@ -48,8 +39,9 @@ export default async function StorePage() {
 									</p>
 								</div>
 								<p className="text-sm font-medium ">
-									{product.products_pricing[0]?.price}{" "}
-									{product.products_pricing[0]?.currency?.code}
+									{/* {product.products_pricing[0]?.price}{" "}
+									{product.products_pricing[0]?.currency?.code} */}
+									{product.price} $
 								</p>
 							</div>
 						</div>

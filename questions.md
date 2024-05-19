@@ -572,13 +572,13 @@ CREATE TABLE IF NOT EXISTS test_questions (
   id BIGSERIAL PRIMARY KEY,
   test_id BIGINT REFERENCES tests(id),
   question_text TEXT NOT NULL,
-  question_type user_question_type, -- 'multiple_choice', 'true_false', 'fill_in'
+  question_type user_question_type, -- 'multiple_choice', 'true_false', 'free_text'
   correct_answer TEXT,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Define an ENUM for different question types
-CREATE TYPE user_question_type AS ENUM ('multiple_choice', 'true_false', 'fill_in');
+CREATE TYPE user_question_type AS ENUM ('multiple_choice', 'true_false', 'free_text');
 
 CREATE TABLE IF NOT EXISTS test_submissions (
   id BIGSERIAL PRIMARY KEY,
@@ -612,7 +612,7 @@ The update statement will depend on how you structure your answers and grading l
 
 **Implementing the Logic for Different Question Types:**
 
-11. As you have different question types, you will have to implement logic for grading them, which can be simple boolean checks for `true_false` type, comparison to a stored correct answer for `multiple_choice`, or text pattern checks for `fill_in` question types.
+11. As you have different question types, you will have to implement logic for grading them, which can be simple boolean checks for `true_false` type, comparison to a stored correct answer for `multiple_choice`, or text pattern checks for `free_text` question types.
 
 **Example of RLS Policy for Teacher Access:**
 

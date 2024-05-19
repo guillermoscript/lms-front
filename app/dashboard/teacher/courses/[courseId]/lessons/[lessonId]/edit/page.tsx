@@ -15,19 +15,18 @@ export default async function EditLessonPage({
 }: {
 	params: { courseId: string; lessonId: string };
 }) {
-
-    const supabase = createClient();
+	const supabase = createClient();
 	const lesson = await supabase
 		.from("lessons")
-		.select(`*, lesson_localizations(*), courses(*)`)
+		.select(`*, courses(*)`)
 		.eq("id", params.lessonId)
 		.single();
 
 	if (lesson.error) {
 		console.log(lesson.error.message);
 	}
-        console.log(params)
-        console.log(lesson)
+	console.log(params);
+	console.log(lesson);
 	return (
 		<>
 			<Breadcrumb>
@@ -62,29 +61,27 @@ export default async function EditLessonPage({
 						<BreadcrumbLink
 							href={`/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`}
 						>
-							{lesson?.data?.lesson_localizations[0].title}
+							{lesson?.data?.title}
 						</BreadcrumbLink>
 					</BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink>Edit</BreadcrumbLink>
-                    </BreadcrumbItem>
+					<BreadcrumbSeparator />
+					<BreadcrumbItem>
+						<BreadcrumbLink>Edit</BreadcrumbLink>
+					</BreadcrumbItem>
 				</BreadcrumbList>
 			</Breadcrumb>
 
 			<LessonForm
-                params={params}
-                initialValues={{
-					title: lesson?.data?.lesson_localizations[0]?.title,
-					description: lesson?.data?.lesson_localizations[0]?.description,
+				params={params}
+				initialValues={{
+					title: lesson?.data?.title,
 					sequence: lesson?.data?.sequence,
 					video_url: lesson?.data?.video_url,
-					embed: lesson?.data?.embed,
+					embed: lesson?.data?.embed_code,
 					status: lesson?.data?.status,
-					content: lesson?.data?.lesson_localizations[0].content,
+					content: lesson?.data?.ontent,
 				}}
-            />
+			/>
 		</>
 	);
 }
-

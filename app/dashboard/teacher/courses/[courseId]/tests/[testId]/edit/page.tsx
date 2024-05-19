@@ -19,18 +19,16 @@ export default async function EditTestPage({
 	const supabase = createClient();
 
 	const test = await supabase
-		.from("tests")
+		.from('exams')
 		.select(
 			`* ,
-            test_localizations (*), 
             courses (*),
-            test_questions(
+            exam_questions(
 				*,
-                test_question_localizations(*)
-            )
-        `
+				question_options(*)
+			)`
 		)
-		.eq("id", params.testId)
+		.eq("exam_id", params.testId)
 		.single();
 
 	if (test.error) {
@@ -39,26 +37,18 @@ export default async function EditTestPage({
 
     console.log(test.data)
 
-    // const fieldsForQuestions = test.data?.test_questions?.map((question) => {
-    //     if (question.question_type === "multiple_choice") {
-    //         return {
-    //             question: question.test_question_localizations[0].question_text,
-    //             questionType: question.question_type,
-    //             options: question.question_options.map((option) => {
-    //                 return {
-    //                     option: option.question_option_localizations[0].option,
-    //                     isCorrect: option.is_correct
-    //                 }
-    //             })
-    //         }
-    //     }
-    //     return {
-    //         question: question.test_question_localizations[0].question_text,
-    //         questionType: question.question_type
-    //     }
-    // })
+	console.log(test.data?.exam_questions)
+    const fieldsForQuestions = test.data?.exam_questions?.map((question) => {
+		return {
+			type: question.question_type,
+			label: question.question_text,
+			options: question.question_options,
+			required: false,
+			questionId: question.question_id,
+		}
+    })
 
-    // console.log(fieldsForQuestions)
+    console.log(fieldsForQuestions)
 
 	return (
 		<div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
@@ -94,7 +84,7 @@ export default async function EditTestPage({
 						<BreadcrumbLink
 							href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
 						>
-							{test?.data?.test_localizations[0].title}
+							{test?.data?.title}
 						</BreadcrumbLink>
 					</BreadcrumbItem>
                     <BreadcrumbSeparator />
@@ -107,13 +97,15 @@ export default async function EditTestPage({
 				<TeacherTestForm 
                     testId={params.testId}
                     defaultValues={{
-                        language: test?.data?.test_localizations[0]?.language_code,
-                        testName: test?.data?.test_localizations[0].title,
-                        testDescription: test?.data?.test_localizations[0]?.description,
+                        
+                        testName: test?.data?.title,
+                        testDescription: test?.data?.description,
                         course: test?.data?.course_id,
-                        retakeInterval: test?.data?.retake_interval,
-                        timeForTest: test?.data?.time_for_test,
-                        // questions: 
+                        // retakeInterval: test?.data?.duration,
+                        duration: test?.data?.duration,
+						exam_date: test?.data?.exam_date,
+						sequence: test?.data?.sequence,
+                        questions: fieldsForQuestions,
                     }}
                 />
 			</div>

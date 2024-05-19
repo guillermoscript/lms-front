@@ -1,7 +1,0 @@
-question_id,language_code,question_text
-1,en,Which language is known as the mother of all programming languages?
-2,en,What does "var" stand for in JavaScript?
-3,en,Is JavaScript a compiled language?
-4,en,Explain the concept of inheritance in OOP.
-5,en,Is HTML a programming language?
-get_user_submited_tests

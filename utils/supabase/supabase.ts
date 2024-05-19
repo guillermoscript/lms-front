@@ -9,109 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      comment_reactions: {
+      assignments: {
         Row: {
-          comment_id: string
-          created_at: string
-          id: string
-          reaction_type: string
-          user_id: string
+          assignment_id: number
+          course_id: number
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          title: string
         }
         Insert: {
-          comment_id: string
-          created_at?: string
-          id: string
-          reaction_type: string
-          user_id: string
+          assignment_id?: number
+          course_id: number
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          title: string
         }
         Update: {
-          comment_id?: string
-          created_at?: string
-          id?: string
-          reaction_type?: string
-          user_id?: string
+          assignment_id?: number
+          course_id?: number
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "comment_reactions_comment_id_fkey"
-            columns: ["comment_id"]
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comment_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "comment_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comments: {
-        Row: {
-          content: string
-          content_type: string
-          created_at: string
-          deleted_at: string | null
-          entity_id: number
-          entity_type: string
-          id: string
-          parent_id: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          content: string
-          content_type: string
-          created_at?: string
-          deleted_at?: string | null
-          entity_id: number
-          entity_type: string
-          id?: string
-          parent_id?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          content?: string
-          content_type?: string
-          created_at?: string
-          deleted_at?: string | null
-          entity_id?: number
-          entity_type?: string
-          id?: string
-          parent_id?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
           },
         ]
       }
       course_categories: {
         Row: {
-          created_at: string
+          created_at: string | null
           deleted_at: string | null
           description: string | null
           id: number
@@ -119,7 +54,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           deleted_at?: string | null
           description?: string | null
           id?: number
@@ -127,7 +62,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           deleted_at?: string | null
           description?: string | null
           id?: number
@@ -136,140 +71,17 @@ export type Database = {
         }
         Relationships: []
       }
-      course_enrollments: {
-        Row: {
-          completed_at: string | null
-          course_id: number | null
-          deleted_at: string | null
-          enrolled_at: string
-          id: number
-          last_accessed_lesson_id: number | null
-          progress: number | null
-          status: Database["public"]["Enums"]["enrollment_status"]
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          course_id?: number | null
-          deleted_at?: string | null
-          enrolled_at?: string
-          id?: number
-          last_accessed_lesson_id?: number | null
-          progress?: number | null
-          status?: Database["public"]["Enums"]["enrollment_status"]
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          course_id?: number | null
-          deleted_at?: string | null
-          enrolled_at?: string
-          id?: number
-          last_accessed_lesson_id?: number | null
-          progress?: number | null
-          status?: Database["public"]["Enums"]["enrollment_status"]
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_enrollments_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_enrollments_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "course_enrollments_last_accessed_lesson_id_fkey"
-            columns: ["last_accessed_lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_enrollments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "course_enrollments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      course_purchases: {
-        Row: {
-          course_id: number | null
-          id: number
-          purchased_at: string
-          user_id: string | null
-        }
-        Insert: {
-          course_id?: number | null
-          id?: number
-          purchased_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          course_id?: number | null
-          id?: number
-          purchased_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_purchases_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_purchases_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "course_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "course_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       courses: {
         Row: {
           archived_at: string | null
           author_id: string | null
           category_id: number | null
-          created_at: string
+          course_id: number
+          created_at: string | null
           deleted_at: string | null
           description: string | null
-          id: number
-          product_id: number | null
           published_at: string | null
-          status: Database["public"]["Enums"]["course_status"]
+          status: string
           tags: string[] | null
           thumbnail_url: string | null
           title: string
@@ -279,13 +91,12 @@ export type Database = {
           archived_at?: string | null
           author_id?: string | null
           category_id?: number | null
-          created_at?: string
+          course_id?: number
+          created_at?: string | null
           deleted_at?: string | null
           description?: string | null
-          id?: number
-          product_id?: number | null
           published_at?: string | null
-          status?: Database["public"]["Enums"]["course_status"]
+          status?: string
           tags?: string[] | null
           thumbnail_url?: string | null
           title: string
@@ -295,13 +106,12 @@ export type Database = {
           archived_at?: string | null
           author_id?: string | null
           category_id?: number | null
-          created_at?: string
+          course_id?: number
+          created_at?: string | null
           deleted_at?: string | null
           description?: string | null
-          id?: number
-          product_id?: number | null
           published_at?: string | null
-          status?: Database["public"]["Enums"]["course_status"]
+          status?: string
           tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
@@ -312,25 +122,11 @@ export type Database = {
             foreignKeyName: "courses_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "courses_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "courses_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_category"
+            foreignKeyName: "courses_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "course_categories"
@@ -341,240 +137,70 @@ export type Database = {
       currencies: {
         Row: {
           code: string
-          created_at: string
           id: number
           name: string
         }
         Insert: {
           code: string
-          created_at?: string
           id?: number
           name: string
         }
         Update: {
           code?: string
-          created_at?: string
           id?: number
           name?: string
         }
         Relationships: []
       }
-      documents: {
+      enrollments: {
         Row: {
-          content: string | null
-          created_at: string | null
-          embedding: string | null
-          id: number
-          metadata: Json | null
+          course_id: number
+          enrollment_date: string | null
+          enrollment_id: number
+          product_id: number | null
+          subscription_id: number | null
+          user_id: string
         }
         Insert: {
-          content?: string | null
-          created_at?: string | null
-          embedding?: string | null
-          id?: number
-          metadata?: Json | null
+          course_id: number
+          enrollment_date?: string | null
+          enrollment_id?: number
+          product_id?: number | null
+          subscription_id?: number | null
+          user_id: string
         }
         Update: {
-          content?: string | null
-          created_at?: string | null
-          embedding?: string | null
-          id?: number
-          metadata?: Json | null
-        }
-        Relationships: []
-      }
-      invoice_line_items: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          id: number
-          invoice_id: number
-          line_amount: number
-          product_id: number
-          quantity: number
-          unit_price: number
-          vat_amount: number
-          vat_percentage: number
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          invoice_id: number
-          line_amount?: number
-          product_id: number
-          quantity?: number
-          unit_price?: number
-          vat_amount?: number
-          vat_percentage?: number
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          invoice_id?: number
-          line_amount?: number
-          product_id?: number
-          quantity?: number
-          unit_price?: number
-          vat_amount?: number
-          vat_percentage?: number
+          course_id?: number
+          enrollment_date?: string | null
+          enrollment_id?: number
+          product_id?: number | null
+          subscription_id?: number | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_line_items_invoice_id_fkey"
-            columns: ["invoice_id"]
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
           },
           {
-            foreignKeyName: "invoice_line_items_product_id_fkey"
+            foreignKeyName: "enrollments_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["id"]
+            referencedColumns: ["product_id"]
           },
-        ]
-      }
-      invoices: {
-        Row: {
-          country: string
-          created_at: string
-          currency: number
-          customer_id: string
-          deleted_at: string | null
-          due_date: string
-          id: number
-          invoice_date: string
-          invoice_number: number
-          paid_at: string | null
-          status: Database["public"]["Enums"]["invoice_status"]
-        }
-        Insert: {
-          country: string
-          created_at?: string
-          currency: number
-          customer_id: string
-          deleted_at?: string | null
-          due_date: string
-          id?: number
-          invoice_date?: string
-          invoice_number?: never
-          paid_at?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-        }
-        Update: {
-          country?: string
-          created_at?: string
-          currency?: number
-          customer_id?: string
-          deleted_at?: string | null
-          due_date?: string
-          id?: number
-          invoice_date?: string
-          invoice_number?: never
-          paid_at?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-        }
-        Relationships: [
           {
-            foreignKeyName: "invoices_currency_fkey"
-            columns: ["currency"]
+            foreignKeyName: "enrollments_subscription_id_fkey"
+            columns: ["subscription_id"]
             isOneToOne: false
-            referencedRelation: "currencies"
-            referencedColumns: ["id"]
+            referencedRelation: "subscriptions"
+            referencedColumns: ["subscription_id"]
           },
           {
-            foreignKeyName: "invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lesson_localizations: {
-        Row: {
-          content: string | null
-          description: string | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          lesson_id: number
-          title: string
-        }
-        Insert: {
-          content?: string | null
-          description?: string | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          lesson_id: number
-          title: string
-        }
-        Update: {
-          content?: string | null
-          description?: string | null
-          language_code?: Database["public"]["Enums"]["language_code"]
-          lesson_id?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lesson_localization_language"
-            columns: ["language_code"]
-            isOneToOne: false
-            referencedRelation: "supported_languages"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "fk_lesson_localization_lesson"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lesson_progress: {
-        Row: {
-          completed_at: string | null
-          id: number
-          lesson_id: number | null
-          progress_status: Database["public"]["Enums"]["lesson_progress_status"]
-          started_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          id?: number
-          lesson_id?: number | null
-          progress_status: Database["public"]["Enums"]["lesson_progress_status"]
-          started_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          id?: number
-          lesson_id?: number | null
-          progress_status?: Database["public"]["Enums"]["lesson_progress_status"]
-          started_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lesson_progress_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lesson_progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "lesson_progress_user_id_fkey"
+            foreignKeyName: "enrollments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -582,37 +208,298 @@ export type Database = {
           },
         ]
       }
+      exam_answers: {
+        Row: {
+          answer_id: number
+          answer_text: string | null
+          feedback: string | null
+          is_correct: boolean | null
+          question_id: number
+          submission_id: number
+        }
+        Insert: {
+          answer_id?: number
+          answer_text?: string | null
+          feedback?: string | null
+          is_correct?: boolean | null
+          question_id: number
+          submission_id: number
+        }
+        Update: {
+          answer_id?: number
+          answer_text?: string | null
+          feedback?: string | null
+          is_correct?: boolean | null
+          question_id?: number
+          submission_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "exam_questions"
+            referencedColumns: ["question_id"]
+          },
+          {
+            foreignKeyName: "exam_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "exam_submissions"
+            referencedColumns: ["submission_id"]
+          },
+        ]
+      }
+      exam_questions: {
+        Row: {
+          exam_id: number
+          question_id: number
+          question_text: string
+          question_type: string
+        }
+        Insert: {
+          exam_id: number
+          question_id?: number
+          question_text: string
+          question_type: string
+        }
+        Update: {
+          exam_id?: number
+          question_id?: number
+          question_text?: string
+          question_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+        ]
+      }
+      exam_scores: {
+        Row: {
+          evaluated_at: string | null
+          exam_id: number
+          feedback: string | null
+          score: number | null
+          score_id: number
+          student_id: string
+          submission_id: number
+        }
+        Insert: {
+          evaluated_at?: string | null
+          exam_id: number
+          feedback?: string | null
+          score?: number | null
+          score_id?: number
+          student_id: string
+          submission_id: number
+        }
+        Update: {
+          evaluated_at?: string | null
+          exam_id?: number
+          feedback?: string | null
+          score?: number | null
+          score_id?: number
+          student_id?: string
+          submission_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_scores_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_scores_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_scores_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "exam_submissions"
+            referencedColumns: ["submission_id"]
+          },
+        ]
+      }
+      exam_submissions: {
+        Row: {
+          exam_id: number
+          student_id: string
+          submission_date: string | null
+          submission_id: number
+        }
+        Insert: {
+          exam_id: number
+          student_id: string
+          submission_date?: string | null
+          submission_id?: number
+        }
+        Update: {
+          exam_id?: number
+          student_id?: string
+          submission_date?: string | null
+          submission_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_submissions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          course_id: number
+          created_at: string | null
+          description: string | null
+          duration: number
+          exam_date: string
+          exam_id: number
+          sequence: number | null
+          status: Database["public"]["Enums"]["status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: number
+          created_at?: string | null
+          description?: string | null
+          duration: number
+          exam_date: string
+          exam_id?: number
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: number
+          created_at?: string | null
+          description?: string | null
+          duration?: number
+          exam_date?: string
+          exam_id?: number
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      grades: {
+        Row: {
+          course_id: number
+          feedback: string | null
+          grade: number | null
+          grade_id: number
+          graded_at: string | null
+          student_id: string
+          submission_id: number | null
+        }
+        Insert: {
+          course_id: number
+          feedback?: string | null
+          grade?: number | null
+          grade_id?: number
+          graded_at?: string | null
+          student_id: string
+          submission_id?: number | null
+        }
+        Update: {
+          course_id?: number
+          feedback?: string | null
+          grade?: number | null
+          grade_id?: number
+          graded_at?: string | null
+          student_id?: string
+          submission_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grades_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grades_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "exam_submissions"
+            referencedColumns: ["submission_id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
+          content: string | null
           course_id: number | null
-          created_at: string
-          deleted_at: string | null
-          embed: string | null
+          created_at: string | null
+          embed_code: string | null
           id: number
-          sequence: number
-          status: Database["public"]["Enums"]["course_status"] | null
+          sequence: number | null
+          status: Database["public"]["Enums"]["status"] | null
+          title: string | null
           updated_at: string | null
           video_url: string | null
         }
         Insert: {
+          content?: string | null
           course_id?: number | null
-          created_at?: string
-          deleted_at?: string | null
-          embed?: string | null
-          id?: number
-          sequence: number
-          status?: Database["public"]["Enums"]["course_status"] | null
+          created_at?: string | null
+          embed_code?: string | null
+          id?: never
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["status"] | null
+          title?: string | null
           updated_at?: string | null
           video_url?: string | null
         }
         Update: {
+          content?: string | null
           course_id?: number | null
-          created_at?: string
-          deleted_at?: string | null
-          embed?: string | null
-          id?: number
-          sequence?: number
-          status?: Database["public"]["Enums"]["course_status"] | null
+          created_at?: string | null
+          embed_code?: string | null
+          id?: never
+          sequence?: number | null
+          status?: Database["public"]["Enums"]["status"] | null
+          title?: string | null
           updated_at?: string | null
           video_url?: string | null
         }
@@ -622,16 +509,24 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
             referencedColumns: ["course_id"]
           },
         ]
+      }
+      permissions: {
+        Row: {
+          permission_id: number
+          permission_name: string
+        }
+        Insert: {
+          permission_id?: number
+          permission_name: string
+        }
+        Update: {
+          permission_id?: number
+          permission_name?: string
+        }
+        Relationships: []
       }
       plan_courses: {
         Row: {
@@ -648,175 +543,136 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_course"
+            foreignKeyName: "plan_courses_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_course"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
             referencedColumns: ["course_id"]
           },
           {
-            foreignKeyName: "fk_plan"
+            foreignKeyName: "plan_courses_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
-            referencedColumns: ["id"]
+            referencedColumns: ["plan_id"]
           },
         ]
       }
       plans: {
         Row: {
-          billing_interval: unknown
-          created_at: string
-          deleted_at: string | null
-          id: number
+          created_at: string | null
+          description: string | null
+          duration_in_days: number
+          plan_id: number
+          plan_name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_in_days: number
+          plan_id?: number
+          plan_name: string
+          price: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_in_days?: number
+          plan_id?: number
+          plan_name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      product_courses: {
+        Row: {
+          course_id: number
           product_id: number
         }
         Insert: {
-          billing_interval?: unknown
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
+          course_id: number
           product_id: number
         }
         Update: {
-          billing_interval?: unknown
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
+          course_id?: number
           product_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "plans_product_id_fkey"
+            foreignKeyName: "fk_product"
             columns: ["product_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "products"
-            referencedColumns: ["id"]
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
           },
         ]
       }
       products: {
         Row: {
-          created_at: string
-          deleted_at: string | null
+          created_at: string | null
           description: string | null
-          id: number
-          is_subscription: boolean
           name: string
+          price: number
+          product_id: number
         }
         Insert: {
-          created_at?: string
-          deleted_at?: string | null
+          created_at?: string | null
           description?: string | null
-          id?: number
-          is_subscription?: boolean
           name: string
+          price: number
+          product_id?: number
         }
         Update: {
-          created_at?: string
-          deleted_at?: string | null
+          created_at?: string | null
           description?: string | null
-          id?: number
-          is_subscription?: boolean
           name?: string
-        }
-        Relationships: []
-      }
-      products_pricing: {
-        Row: {
-          created_at: string
-          currency: number
-          deleted_at: string | null
-          from_date: string
-          id: number
-          price: number
-          product_id: number
-          to_date: string
-        }
-        Insert: {
-          created_at?: string
-          currency: number
-          deleted_at?: string | null
-          from_date: string
-          id?: number
-          price: number
-          product_id: number
-          to_date: string
-        }
-        Update: {
-          created_at?: string
-          currency?: number
-          deleted_at?: string | null
-          from_date?: string
-          id?: number
           price?: number
           product_id?: number
-          to_date?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_pricing_currency_fkey"
-            columns: ["currency"]
-            isOneToOne: false
-            referencedRelation: "currencies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_pricing_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
           avatar_url: string | null
           bio: string | null
+          created_at: string | null
           currency_id: number | null
           full_name: string | null
           id: string
-          preferred_language:
-            | Database["public"]["Enums"]["language_code"]
-            | null
+          stripe_customer_id: string | null
           stripeCustomerID: string | null
-          updated_at: string | null
           username: string | null
           website: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          created_at?: string | null
           currency_id?: number | null
           full_name?: string | null
           id: string
-          preferred_language?:
-            | Database["public"]["Enums"]["language_code"]
-            | null
+          stripe_customer_id?: string | null
           stripeCustomerID?: string | null
-          updated_at?: string | null
           username?: string | null
           website?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          created_at?: string | null
           currency_id?: number | null
           full_name?: string | null
           id?: string
-          preferred_language?:
-            | Database["public"]["Enums"]["language_code"]
-            | null
+          stripe_customer_id?: string | null
           stripeCustomerID?: string | null
-          updated_at?: string | null
           username?: string | null
           website?: string | null
         }
@@ -832,505 +688,159 @@ export type Database = {
             foreignKeyName: "profiles_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      question_option_localizations: {
-        Row: {
-          language_code: Database["public"]["Enums"]["language_code"]
-          option_id: number
-          option_text: string
-        }
-        Insert: {
-          language_code: Database["public"]["Enums"]["language_code"]
-          option_id: number
-          option_text: string
-        }
-        Update: {
-          language_code?: Database["public"]["Enums"]["language_code"]
-          option_id?: number
-          option_text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_option_localization_language"
-            columns: ["language_code"]
-            isOneToOne: false
-            referencedRelation: "supported_languages"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "fk_option_localization_option"
-            columns: ["option_id"]
-            isOneToOne: false
-            referencedRelation: "question_options"
             referencedColumns: ["id"]
           },
         ]
       }
       question_options: {
         Row: {
-          id: number
           is_correct: boolean
-          question_id: number | null
+          option_id: number
+          option_text: string
+          question_id: number
         }
         Insert: {
-          id?: number
           is_correct?: boolean
-          question_id?: number | null
+          option_id?: number
+          option_text: string
+          question_id: number
         }
         Update: {
-          id?: number
           is_correct?: boolean
-          question_id?: number | null
+          option_id?: number
+          option_text?: string
+          question_id?: number
         }
         Relationships: [
           {
             foreignKeyName: "question_options_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "test_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "question_options_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "vw_user_test_submissions"
+            referencedRelation: "exam_questions"
             referencedColumns: ["question_id"]
           },
         ]
       }
-      related_courses: {
+      role_permissions: {
         Row: {
-          course_id: number
-          related_course_id: number
+          permission_id: number
+          role_id: number
         }
         Insert: {
-          course_id: number
-          related_course_id: number
+          permission_id: number
+          role_id: number
         }
         Update: {
-          course_id?: number
-          related_course_id?: number
+          permission_id?: number
+          role_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "related_courses_course_id_fkey"
-            columns: ["course_id"]
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
             isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
+            referencedRelation: "permissions"
+            referencedColumns: ["permission_id"]
           },
           {
-            foreignKeyName: "related_courses_course_id_fkey"
-            columns: ["course_id"]
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "related_courses_related_course_id_fkey"
-            columns: ["related_course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_courses_related_course_id_fkey"
-            columns: ["related_course_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["course_id"]
-          },
-        ]
-      }
-      related_lessons: {
-        Row: {
-          lesson_id: number
-          related_lesson_id: number
-        }
-        Insert: {
-          lesson_id: number
-          related_lesson_id: number
-        }
-        Update: {
-          lesson_id?: number
-          related_lesson_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "related_lessons_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_lessons_related_lesson_id_fkey"
-            columns: ["related_lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
+            referencedRelation: "roles"
+            referencedColumns: ["role_id"]
           },
         ]
       }
       roles: {
         Row: {
-          created_at: string
-          id: number
-          role: Database["public"]["Enums"]["user_role"]
+          role_id: number
+          role_name: string
         }
         Insert: {
-          created_at?: string
-          id?: number
-          role: Database["public"]["Enums"]["user_role"]
+          role_id?: number
+          role_name: string
         }
         Update: {
-          created_at?: string
-          id?: number
-          role?: Database["public"]["Enums"]["user_role"]
+          role_id?: number
+          role_name?: string
         }
         Relationships: []
       }
-      submission_answers: {
+      submissions: {
         Row: {
-          given_answer: string | null
-          id: number
-          is_correct: boolean | null
-          question_id: number | null
-          submission_id: number | null
-          teacher_comment: string | null
+          assignment_id: number
+          file_path: string | null
+          student_id: string
+          submission_date: string | null
+          submission_id: number
         }
         Insert: {
-          given_answer?: string | null
-          id?: number
-          is_correct?: boolean | null
-          question_id?: number | null
-          submission_id?: number | null
-          teacher_comment?: string | null
+          assignment_id: number
+          file_path?: string | null
+          student_id: string
+          submission_date?: string | null
+          submission_id?: number
         }
         Update: {
-          given_answer?: string | null
-          id?: number
-          is_correct?: boolean | null
-          question_id?: number | null
-          submission_id?: number | null
-          teacher_comment?: string | null
+          assignment_id?: number
+          file_path?: string | null
+          student_id?: string
+          submission_date?: string | null
+          submission_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "submission_answers_question_id_fkey"
-            columns: ["question_id"]
+            foreignKeyName: "submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
             isOneToOne: false
-            referencedRelation: "test_questions"
-            referencedColumns: ["id"]
+            referencedRelation: "assignments"
+            referencedColumns: ["assignment_id"]
           },
           {
-            foreignKeyName: "submission_answers_question_id_fkey"
-            columns: ["question_id"]
+            foreignKeyName: "submissions_student_id_fkey"
+            columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "vw_user_test_submissions"
-            referencedColumns: ["question_id"]
-          },
-          {
-            foreignKeyName: "submission_answers_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "test_submissions"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
       subscriptions: {
         Row: {
-          cancelled_at: string | null
-          created_at: string
-          customer_id: string
-          deleted_at: string | null
-          downgraded_at: string | null
-          downgraded_to_plan_id: number | null
-          ends_at: string | null
-          id: number
-          invoice_id: number
+          end_date: string
           plan_id: number
-          renewed_at: string | null
-          renewed_subscription_id: number | null
-          starts_at: string
-          status: Database["public"]["Enums"]["subscription_status"]
-          upgraded_at: string | null
-          upgraded_to_plan_id: number | null
+          start_date: string
+          subscription_id: number
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          user_id: string
         }
         Insert: {
-          cancelled_at?: string | null
-          created_at?: string
-          customer_id: string
-          deleted_at?: string | null
-          downgraded_at?: string | null
-          downgraded_to_plan_id?: number | null
-          ends_at?: string | null
-          id?: number
-          invoice_id: number
+          end_date: string
           plan_id: number
-          renewed_at?: string | null
-          renewed_subscription_id?: number | null
-          starts_at?: string
-          status: Database["public"]["Enums"]["subscription_status"]
-          upgraded_at?: string | null
-          upgraded_to_plan_id?: number | null
+          start_date?: string
+          subscription_id?: number
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          user_id: string
         }
         Update: {
-          cancelled_at?: string | null
-          created_at?: string
-          customer_id?: string
-          deleted_at?: string | null
-          downgraded_at?: string | null
-          downgraded_to_plan_id?: number | null
-          ends_at?: string | null
-          id?: number
-          invoice_id?: number
+          end_date?: string
           plan_id?: number
-          renewed_at?: string | null
-          renewed_subscription_id?: number | null
-          starts_at?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          upgraded_at?: string | null
-          upgraded_to_plan_id?: number | null
+          start_date?: string
+          subscription_id?: number
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "subscriptions_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_downgraded_to_plan_id_fkey"
-            columns: ["downgraded_to_plan_id"]
-            isOneToOne: false
-            referencedRelation: "plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "subscriptions_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
-            referencedColumns: ["id"]
+            referencedColumns: ["plan_id"]
           },
           {
-            foreignKeyName: "subscriptions_renewed_subscription_id_fkey"
-            columns: ["renewed_subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_upgraded_to_plan_id_fkey"
-            columns: ["upgraded_to_plan_id"]
-            isOneToOne: false
-            referencedRelation: "plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      supported_languages: {
-        Row: {
-          code: Database["public"]["Enums"]["language_code"]
-          created_at: string
-          name: string
-        }
-        Insert: {
-          code?: Database["public"]["Enums"]["language_code"]
-          created_at?: string
-          name: string
-        }
-        Update: {
-          code?: Database["public"]["Enums"]["language_code"]
-          created_at?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      test_localizations: {
-        Row: {
-          description: string | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          test_id: number
-          title: string
-        }
-        Insert: {
-          description?: string | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          test_id: number
-          title: string
-        }
-        Update: {
-          description?: string | null
-          language_code?: Database["public"]["Enums"]["language_code"]
-          test_id?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_test_localization_language"
-            columns: ["language_code"]
-            isOneToOne: false
-            referencedRelation: "supported_languages"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "fk_test_localization_test"
-            columns: ["test_id"]
-            isOneToOne: false
-            referencedRelation: "tests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      test_question_localizations: {
-        Row: {
-          id: number | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          question_id: number
-          question_text: string
-        }
-        Insert: {
-          id?: number | null
-          language_code: Database["public"]["Enums"]["language_code"]
-          question_id: number
-          question_text: string
-        }
-        Update: {
-          id?: number | null
-          language_code?: Database["public"]["Enums"]["language_code"]
-          question_id?: number
-          question_text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_question_localization_language"
-            columns: ["language_code"]
-            isOneToOne: false
-            referencedRelation: "supported_languages"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "fk_question_localization_question"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "test_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_question_localization_question"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "vw_user_test_submissions"
-            referencedColumns: ["question_id"]
-          },
-        ]
-      }
-      test_questions: {
-        Row: {
-          created_at: string
-          id: number
-          question_type:
-            | Database["public"]["Enums"]["user_question_type"]
-            | null
-          test_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          question_type?:
-            | Database["public"]["Enums"]["user_question_type"]
-            | null
-          test_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          question_type?:
-            | Database["public"]["Enums"]["user_question_type"]
-            | null
-          test_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "test_questions_test_id_fkey"
-            columns: ["test_id"]
-            isOneToOne: false
-            referencedRelation: "tests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      test_submissions: {
-        Row: {
-          id: number
-          is_approved: boolean | null
-          is_latest: boolean | null
-          score: number | null
-          submitted_at: string
-          teacher_review: string | null
-          test_id: number | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: number
-          is_approved?: boolean | null
-          is_latest?: boolean | null
-          score?: number | null
-          submitted_at?: string
-          teacher_review?: string | null
-          test_id?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: number
-          is_approved?: boolean | null
-          is_latest?: boolean | null
-          score?: number | null
-          submitted_at?: string
-          teacher_review?: string | null
-          test_id?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "test_submissions_test_id_fkey"
-            columns: ["test_id"]
-            isOneToOne: false
-            referencedRelation: "tests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "test_submissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "test_submissions_user_id_fkey"
+            foreignKeyName: "subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -1338,1418 +848,129 @@ export type Database = {
           },
         ]
       }
-      tests: {
+      transactions: {
         Row: {
-          course_id: number | null
-          created_at: string
-          id: number
-          retake_interval: unknown | null
-          sequence: number | null
-          status: Database["public"]["Enums"]["course_status"] | null
-          time_for_test: number
+          amount: number
+          payment_method: string | null
+          plan_id: number | null
+          product_id: number | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          transaction_date: string
+          transaction_id: number
+          user_id: string
         }
         Insert: {
-          course_id?: number | null
-          created_at?: string
-          id?: number
-          retake_interval?: unknown | null
-          sequence?: number | null
-          status?: Database["public"]["Enums"]["course_status"] | null
-          time_for_test?: number
+          amount: number
+          payment_method?: string | null
+          plan_id?: number | null
+          product_id?: number | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date?: string
+          transaction_id?: number
+          user_id: string
         }
         Update: {
-          course_id?: number | null
-          created_at?: string
-          id?: number
-          retake_interval?: unknown | null
-          sequence?: number | null
-          status?: Database["public"]["Enums"]["course_status"] | null
-          time_for_test?: number
+          amount?: number
+          payment_method?: string | null
+          plan_id?: number | null
+          product_id?: number | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date?: string
+          transaction_id?: number
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "tests_course_id_fkey"
-            columns: ["course_id"]
+            foreignKeyName: "transactions_plan_id_fkey"
+            columns: ["plan_id"]
             isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
+            referencedRelation: "plans"
+            referencedColumns: ["plan_id"]
           },
           {
-            foreignKeyName: "tests_course_id_fkey"
-            columns: ["course_id"]
+            foreignKeyName: "transactions_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["course_id"]
+            referencedRelation: "products"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
       user_roles: {
         Row: {
-          profile_id: string
           role_id: number
+          user_id: string
         }
         Insert: {
-          profile_id: string
           role_id: number
+          user_id: string
         }
         Update: {
-          profile_id?: string
           role_id?: number
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "fk_profile"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_role"
+            foreignKeyName: "user_roles_role_id_fkey"
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["role_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      user_progress_for_course: {
-        Row: {
-          completed_lessons: number | null
-          course_id: number | null
-          progress_percentage: number | null
-          total_lessons: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-      vw_user_test_submissions: {
-        Row: {
-          given_answer: string | null
-          is_approved: boolean | null
-          is_correct: boolean | null
-          option_text: string | null
-          question_id: number | null
-          question_text: string | null
-          question_type:
-            | Database["public"]["Enums"]["user_question_type"]
-            | null
-          submitted_at: string | null
-          test_id: number | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "test_submissions_test_id_fkey"
-            columns: ["test_id"]
-            isOneToOne: false
-            referencedRelation: "tests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "test_submissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "test_submissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_progress_for_course"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      auth_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      binary_quantize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      check_role:
-        | {
-            Args: {
-              user_id: string
-              role_to_check: Database["public"]["Enums"]["user_role"]
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              user_id: string
-              role_to_check: string
-            }
-            Returns: boolean
-          }
-      check_user_permission: {
-        Args: {
-          user_id: string
-          permission: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: boolean
-      }
-      delete_claim: {
-        Args: {
-          uid: string
-          claim: string
-        }
-        Returns: string
-      }
-      gbt_bit_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_bool_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_bool_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_bpchar_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_bytea_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_cash_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_cash_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_date_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_date_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_decompress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_enum_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_enum_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_float4_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_float4_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_float8_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_float8_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_inet_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int2_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int2_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int4_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int4_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int8_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_int8_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_intv_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_intv_decompress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_intv_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_macad_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_macad_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_macad8_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_macad8_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_numeric_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_oid_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_oid_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_text_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_time_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_time_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_timetz_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_ts_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_ts_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_tstz_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_uuid_compress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_uuid_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_var_decompress: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbt_var_fetch: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey_var_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey_var_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey16_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey16_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey2_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey2_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey32_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey32_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey4_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey4_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey8_in: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      gbtreekey8_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      get_claim: {
-        Args: {
-          uid: string
-          claim: string
-        }
-        Returns: Json
-      }
-      get_claims: {
-        Args: {
-          uid: string
-        }
-        Returns: Json
-      }
-      get_course_progress: {
-        Args: {
-          course_id_arg: number
-          user_id_arg: string
-        }
-        Returns: {
-          user_id: string
-          course_id: number
-          completed_lessons: number
-          total_lessons: number
-          progress_percentage: number
-          total_tests: number
-          tests_submitted: number
-          tests_approved: number
-        }[]
-      }
-      get_my_claim: {
-        Args: {
-          claim: string
-        }
-        Returns: Json
-      }
-      get_my_claims: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_user_role: {
-        Args: {
-          user_id: string
-        }
-        Returns: string
-      }
-      halfvec_avg: {
-        Args: {
-          "": number[]
-        }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: {
-          "": unknown
-        }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_or_teacher: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
-      is_claims_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      l2_norm:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-      l2_normalize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-      match_documents: {
-        Args: {
-          query_embedding: string
-          match_count?: number
-          filter?: Json
-          match_threshold?: number
-        }
-        Returns: {
-          id: number
-          content: string
-          metadata: Json
-          embedding: Json
-          similarity: number
-        }[]
-      }
-      set_claim: {
-        Args: {
-          uid: string
-          claim: string
-          value: Json
-        }
-        Returns: string
-      }
-      sparsevec_out: {
-        Args: {
-          "": unknown
-        }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: {
-          "": unknown
-        }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
-        Returns: number
-      }
-      vector_avg: {
-        Args: {
-          "": number[]
-        }
-        Returns: string
-      }
-      vector_dims:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-      vector_norm: {
-        Args: {
-          "": string
-        }
-        Returns: number
-      }
-      vector_out: {
+      cancel_subscription: {
         Args: {
-          "": string
+          _user_id: string
+          _plan_id: number
         }
-        Returns: unknown
+        Returns: undefined
       }
-      vector_send: {
+      enroll_user: {
         Args: {
-          "": string
+          _user_id: string
+          _product_id: number
         }
-        Returns: string
+        Returns: undefined
       }
-      vector_typmod_in: {
+      handle_new_subscription: {
         Args: {
-          "": unknown[]
+          _user_id: string
+          _plan_id: number
+          _transaction_id: number
+          _start_date?: string
         }
-        Returns: number
+        Returns: undefined
       }
     }
     Enums: {
-      course_status: "draft" | "published" | "archived"
-      enrollment_status: "active" | "completed" | "inactive"
-      invoice_status: "draft" | "unpaid" | "paid" | "pending"
-      language_code:
-        | "aa"
-        | "ab"
-        | "ac"
-        | "ad"
-        | "ae"
-        | "af"
-        | "ag"
-        | "ah"
-        | "ai"
-        | "aj"
-        | "ak"
-        | "al"
-        | "am"
-        | "an"
-        | "ao"
-        | "ap"
-        | "aq"
-        | "ar"
-        | "as"
-        | "at"
-        | "au"
-        | "av"
-        | "aw"
-        | "ax"
-        | "ay"
-        | "azba"
-        | "bb"
-        | "bc"
-        | "bd"
-        | "be"
-        | "bf"
-        | "bg"
-        | "bh"
-        | "bi"
-        | "bj"
-        | "bk"
-        | "bl"
-        | "bm"
-        | "bn"
-        | "bo"
-        | "bp"
-        | "bq"
-        | "br"
-        | "bs"
-        | "bt"
-        | "bu"
-        | "bv"
-        | "bw"
-        | "bx"
-        | "by"
-        | "bzca"
-        | "cb"
-        | "cc"
-        | "cd"
-        | "ce"
-        | "cf"
-        | "cg"
-        | "ch"
-        | "ci"
-        | "cj"
-        | "ck"
-        | "cl"
-        | "cm"
-        | "cn"
-        | "co"
-        | "cp"
-        | "cq"
-        | "cr"
-        | "cs"
-        | "ct"
-        | "cu"
-        | "cv"
-        | "cw"
-        | "cx"
-        | "cy"
-        | "czda"
-        | "db"
-        | "dc"
-        | "dd"
-        | "de"
-        | "df"
-        | "dg"
-        | "dh"
-        | "di"
-        | "dj"
-        | "dk"
-        | "dl"
-        | "dm"
-        | "dn"
-        | "do"
-        | "dp"
-        | "dq"
-        | "dr"
-        | "ds"
-        | "dt"
-        | "du"
-        | "dv"
-        | "dw"
-        | "dx"
-        | "dy"
-        | "dzea"
-        | "eb"
-        | "ec"
-        | "ed"
-        | "ee"
-        | "ef"
-        | "eg"
-        | "eh"
-        | "ei"
-        | "ej"
-        | "ek"
-        | "el"
-        | "em"
-        | "en"
-        | "eo"
-        | "ep"
-        | "eq"
-        | "er"
-        | "es"
-        | "et"
-        | "eu"
-        | "ev"
-        | "ew"
-        | "ex"
-        | "ey"
-        | "ezfa"
-        | "fb"
-        | "fc"
-        | "fd"
-        | "fe"
-        | "ff"
-        | "fg"
-        | "fh"
-        | "fi"
-        | "fj"
-        | "fk"
-        | "fl"
-        | "fm"
-        | "fn"
-        | "fo"
-        | "fp"
-        | "fq"
-        | "fr"
-        | "fs"
-        | "ft"
-        | "fu"
-        | "fv"
-        | "fw"
-        | "fx"
-        | "fy"
-        | "fzga"
-        | "gb"
-        | "gc"
-        | "gd"
-        | "ge"
-        | "gf"
-        | "gg"
-        | "gh"
-        | "gi"
-        | "gj"
-        | "gk"
-        | "gl"
-        | "gm"
-        | "gn"
-        | "go"
-        | "gp"
-        | "gq"
-        | "gr"
-        | "gs"
-        | "gt"
-        | "gu"
-        | "gv"
-        | "gw"
-        | "gx"
-        | "gy"
-        | "gzha"
-        | "hb"
-        | "hc"
-        | "hd"
-        | "he"
-        | "hf"
-        | "hg"
-        | "hh"
-        | "hi"
-        | "hj"
-        | "hk"
-        | "hl"
-        | "hm"
-        | "hn"
-        | "ho"
-        | "hp"
-        | "hq"
-        | "hr"
-        | "hs"
-        | "ht"
-        | "hu"
-        | "hv"
-        | "hw"
-        | "hx"
-        | "hy"
-        | "hzia"
-        | "ib"
-        | "ic"
-        | "id"
-        | "ie"
-        | "if"
-        | "ig"
-        | "ih"
-        | "ii"
-        | "ij"
-        | "ik"
-        | "il"
-        | "im"
-        | "in"
-        | "io"
-        | "ip"
-        | "iq"
-        | "ir"
-        | "is"
-        | "it"
-        | "iu"
-        | "iv"
-        | "iw"
-        | "ix"
-        | "iy"
-        | "izja"
-        | "jb"
-        | "jc"
-        | "jd"
-        | "je"
-        | "jf"
-        | "jg"
-        | "jh"
-        | "ji"
-        | "jj"
-        | "jk"
-        | "jl"
-        | "jm"
-        | "jn"
-        | "jo"
-        | "jp"
-        | "jq"
-        | "jr"
-        | "js"
-        | "jt"
-        | "ju"
-        | "jv"
-        | "jw"
-        | "jx"
-        | "jy"
-        | "jzka"
-        | "kb"
-        | "kc"
-        | "kd"
-        | "ke"
-        | "kf"
-        | "kg"
-        | "kh"
-        | "ki"
-        | "kj"
-        | "kk"
-        | "kl"
-        | "km"
-        | "kn"
-        | "ko"
-        | "kp"
-        | "kq"
-        | "kr"
-        | "ks"
-        | "kt"
-        | "ku"
-        | "kv"
-        | "kw"
-        | "kx"
-        | "ky"
-        | "kzla"
-        | "lb"
-        | "lc"
-        | "ld"
-        | "le"
-        | "lf"
-        | "lg"
-        | "lh"
-        | "li"
-        | "lj"
-        | "lk"
-        | "ll"
-        | "lm"
-        | "ln"
-        | "lo"
-        | "lp"
-        | "lq"
-        | "lr"
-        | "ls"
-        | "lt"
-        | "lu"
-        | "lv"
-        | "lw"
-        | "lx"
-        | "ly"
-        | "lzma"
-        | "mb"
-        | "mc"
-        | "md"
-        | "me"
-        | "mf"
-        | "mg"
-        | "mh"
-        | "mi"
-        | "mj"
-        | "mk"
-        | "ml"
-        | "mm"
-        | "mn"
-        | "mo"
-        | "mp"
-        | "mq"
-        | "mr"
-        | "ms"
-        | "mt"
-        | "mu"
-        | "mv"
-        | "mw"
-        | "mx"
-        | "my"
-        | "mzna"
-        | "nb"
-        | "nc"
-        | "nd"
-        | "ne"
-        | "nf"
-        | "ng"
-        | "nh"
-        | "ni"
-        | "nj"
-        | "nk"
-        | "nl"
-        | "nm"
-        | "nn"
-        | "no"
-        | "np"
-        | "nq"
-        | "nr"
-        | "ns"
-        | "nt"
-        | "nu"
-        | "nv"
-        | "nw"
-        | "nx"
-        | "ny"
-        | "nzoa"
-        | "ob"
-        | "oc"
-        | "od"
-        | "oe"
-        | "of"
-        | "og"
-        | "oh"
-        | "oi"
-        | "oj"
-        | "ok"
-        | "ol"
-        | "om"
-        | "on"
-        | "oo"
-        | "op"
-        | "oq"
-        | "or"
-        | "os"
-        | "ot"
-        | "ou"
-        | "ov"
-        | "ow"
-        | "ox"
-        | "oy"
-        | "ozpa"
-        | "pb"
-        | "pc"
-        | "pd"
-        | "pe"
-        | "pf"
-        | "pg"
-        | "ph"
-        | "pi"
-        | "pj"
-        | "pk"
-        | "pl"
-        | "pm"
-        | "pn"
-        | "po"
-        | "pp"
-        | "pq"
-        | "pr"
-        | "ps"
-        | "pt"
-        | "pu"
-        | "pv"
-        | "pw"
-        | "px"
-        | "py"
-        | "pzqa"
-        | "qb"
-        | "qc"
-        | "qd"
-        | "qe"
-        | "qf"
-        | "qg"
-        | "qh"
-        | "qi"
-        | "qj"
-        | "qk"
-        | "ql"
-        | "qm"
-        | "qn"
-        | "qo"
-        | "qp"
-        | "qq"
-        | "qr"
-        | "qs"
-        | "qt"
-        | "qu"
-        | "qv"
-        | "qw"
-        | "qx"
-        | "qy"
-        | "qzra"
-        | "rb"
-        | "rc"
-        | "rd"
-        | "re"
-        | "rf"
-        | "rg"
-        | "rh"
-        | "ri"
-        | "rj"
-        | "rk"
-        | "rl"
-        | "rm"
-        | "rn"
-        | "ro"
-        | "rp"
-        | "rq"
-        | "rr"
-        | "rs"
-        | "rt"
-        | "ru"
-        | "rv"
-        | "rw"
-        | "rx"
-        | "ry"
-        | "rzsa"
-        | "sb"
-        | "sc"
-        | "sd"
-        | "se"
-        | "sf"
-        | "sg"
-        | "sh"
-        | "si"
-        | "sj"
-        | "sk"
-        | "sl"
-        | "sm"
-        | "sn"
-        | "so"
-        | "sp"
-        | "sq"
-        | "sr"
-        | "ss"
-        | "st"
-        | "su"
-        | "sv"
-        | "sw"
-        | "sx"
-        | "sy"
-        | "szta"
-        | "tb"
-        | "tc"
-        | "td"
-        | "te"
-        | "tf"
-        | "tg"
-        | "th"
-        | "ti"
-        | "tj"
-        | "tk"
-        | "tl"
-        | "tm"
-        | "tn"
-        | "to"
-        | "tp"
-        | "tq"
-        | "tr"
-        | "ts"
-        | "tt"
-        | "tu"
-        | "tv"
-        | "tw"
-        | "tx"
-        | "ty"
-        | "tzua"
-        | "ub"
-        | "uc"
-        | "ud"
-        | "ue"
-        | "uf"
-        | "ug"
-        | "uh"
-        | "ui"
-        | "uj"
-        | "uk"
-        | "ul"
-        | "um"
-        | "un"
-        | "uo"
-        | "up"
-        | "uq"
-        | "ur"
-        | "us"
-        | "ut"
-        | "uu"
-        | "uv"
-        | "uw"
-        | "ux"
-        | "uy"
-        | "uzva"
-        | "vb"
-        | "vc"
-        | "vd"
-        | "ve"
-        | "vf"
-        | "vg"
-        | "vh"
-        | "vi"
-        | "vj"
-        | "vk"
-        | "vl"
-        | "vm"
-        | "vn"
-        | "vo"
-        | "vp"
-        | "vq"
-        | "vr"
-        | "vs"
-        | "vt"
-        | "vu"
-        | "vv"
-        | "vw"
-        | "vx"
-        | "vy"
-        | "vzwa"
-        | "wb"
-        | "wc"
-        | "wd"
-        | "we"
-        | "wf"
-        | "wg"
-        | "wh"
-        | "wi"
-        | "wj"
-        | "wk"
-        | "wl"
-        | "wm"
-        | "wn"
-        | "wo"
-        | "wp"
-        | "wq"
-        | "wr"
-        | "ws"
-        | "wt"
-        | "wu"
-        | "wv"
-        | "ww"
-        | "wx"
-        | "wy"
-        | "wzxa"
-        | "xb"
-        | "xc"
-        | "xd"
-        | "xe"
-        | "xf"
-        | "xg"
-        | "xh"
-        | "xi"
-        | "xj"
-        | "xk"
-        | "xl"
-        | "xm"
-        | "xn"
-        | "xo"
-        | "xp"
-        | "xq"
-        | "xr"
-        | "xs"
-        | "xt"
-        | "xu"
-        | "xv"
-        | "xw"
-        | "xx"
-        | "xy"
-        | "xzya"
-        | "yb"
-        | "yc"
-        | "yd"
-        | "ye"
-        | "yf"
-        | "yg"
-        | "yh"
-        | "yi"
-        | "yj"
-        | "yk"
-        | "yl"
-        | "ym"
-        | "yn"
-        | "yo"
-        | "yp"
-        | "yq"
-        | "yr"
-        | "ys"
-        | "yt"
-        | "yu"
-        | "yv"
-        | "yw"
-        | "yx"
-        | "yy"
-        | "yzza"
-        | "zb"
-        | "zc"
-        | "zd"
-        | "ze"
-        | "zf"
-        | "zg"
-        | "zh"
-        | "zi"
-        | "zj"
-        | "zk"
-        | "zl"
-        | "zm"
-        | "zn"
-        | "zo"
-        | "zp"
-        | "zq"
-        | "zr"
-        | "zs"
-        | "zt"
-        | "zu"
-        | "zv"
-        | "zw"
-        | "zx"
-        | "zy"
-        | "zz"
-      lesson_progress_status: "not_started" | "in_progress" | "completed"
-      subscription_status: "inactive" | "active" | "upgraded"
-      user_question_type: "multiple_choices" | "true_false" | "fill_in"
-      user_role: "admin" | "teacher" | "student"
+      status: "published" | "draft" | "archived"
+      subscription_status: "active" | "canceled" | "expired" | "renewed"
+      transaction_status:
+        | "pending"
+        | "successfull"
+        | "failed"
+        | "archived"
+        | "canceled"
     }
     CompositeTypes: {
       [_ in never]: never

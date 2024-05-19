@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import { Stripe } from "stripe";
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -13,8 +12,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOKS_ENDPOINT_SECRET!;
 export async function POST(req: Request) {
     const payload = await req.text();
     const signature = req.headers.get("stripe-signature");
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     let event: Stripe.Event | null = null;
     try {
@@ -34,15 +32,32 @@ export async function POST(req: Request) {
                 const stripeCustomerID = event.data.object.customer
                 const productId = event.data.object.metadata?.productId
                 const invoiceId = event.data.object.metadata?.invoiceId
+                const planId = event.data.object.metadata?.planId
 
-                console.log(stripeCustomerID, '<----------- stripeCustomerID')
-                console.log(productId, '<----------- productId')
+                if (productId) {
 
-                // update invoice and set it to paid
-                const update = await supabase.from('invoices').update({ status: 'paid' }).match({ id: invoiceId })
+                    console.log(stripeCustomerID, '<----------- stripeCustomerID')
+                    console.log(productId, '<----------- productId')
 
-                console.log(update, '<----------- update')
+                    // update invoice and set it to paid
+                    const update = await supabase.from('transactions').update({ status: 'successfull' }).match({ id: invoiceId })
 
+                    console.log(update, '<----------- update')
+
+                    break;
+                } else if (planId) {
+                        
+                        console.log(stripeCustomerID, '<----------- stripeCustomerID')
+                        console.log(planId, '<----------- planId')
+    
+                        // update invoice and set it to paid
+                        const update = await supabase.from('transactions').update({ status: 'successfull' }).match({ id: invoiceId })
+                        
+    
+                        console.log(update, '<----------- update')
+    
+                        break;
+                    }
                 break;
             case "payment_intent.payment_failed":
                 // handle other type of stripe events

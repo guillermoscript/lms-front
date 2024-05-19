@@ -98,7 +98,7 @@ function QuestionOption({
 		);
 	}
 
-	if (question_type === "fill_in") {
+	if (question_type === "free_text") {
 		
 		return (
 			<div className="flex flex-col gap-4">

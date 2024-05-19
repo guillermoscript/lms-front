@@ -150,7 +150,7 @@ const InputField: React.FC<{
 					</button>
 				</div>
 			);
-		case "multiple_choices":
+		case "multiple_choice":
 			return (
 				<MultipleChoises
 					optionFields={optionFields}
@@ -170,7 +170,7 @@ const InputField: React.FC<{
 					index={index}
 				/>
 			);
-		case "fill_in":
+		case "free_text":
 			return (
 				<Card key={field.id}>
 					<CardHeader>
@@ -219,6 +219,10 @@ function TrueFalse({
 	index: number;
 }) {
 
+	console.log(optionFields)
+
+	const [isCorrect, setIsCorrect] = useState<boolean>(optionFields[0]?.is_correct || false);
+
 	return (
 		<Card key={index}>
 			<CardHeader>
@@ -247,6 +251,8 @@ function TrueFalse({
 					<input
 						{...register(`formFields[${index}].value`)}
 						type="checkbox"
+						checked={isCorrect}
+						onChange={() => setIsCorrect(!isCorrect)}
 					/>
 				</div>
 			</CardContent>
@@ -274,6 +280,8 @@ function MultipleChoises({
 }) {
 	const [inputType, setInputType] = useState<string>("");
 	const [isCorrect, setIsCorrect] = useState<boolean>(false);
+
+	console.log(optionFields)
 
 	return (
 		<>
@@ -324,35 +332,16 @@ function MultipleChoises({
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					{optionFields.map((optionField, optionIndex) => {
-						console.log(optionField);
+				{optionFields.map((optionField, optionIndex) => {
 						return (
-							<div
-								className="flex flex-col gap-2 items-start"
+							<MultipleChoisesOptions
+								optionField={optionField}
+								optionIndex={optionIndex}
+								index={index}
 								key={optionField.id}
-							>
-								<input
-									{...register(
-										`formFields[${index}].options[${optionIndex}].label`
-									)}
-									type="text"
-									placeholder={`Enter option ${
-										optionIndex + 1
-									}`}
-									className={inputClass}
-								/>
-								<div className="flex flex-row gap-2">
-									<label>Is correct?</label>
-									<input
-										{...register(
-											`formFields[${index}].options[${optionIndex}].value`
-										)}
-										type="checkbox"
-									/>
-								</div>
-								{/* ... handle errors */}
-							</div>
-						);
+								register={register}
+							/>
+						)
 					})}
 				</CardContent>
 				<CardFooter>
@@ -369,3 +358,50 @@ function MultipleChoises({
 	);
 }
 
+function MultipleChoisesOptions({
+	optionField,
+	optionIndex,
+	index,
+	register,
+}: {
+	optionField: any;
+	optionIndex: number;
+	index: number;
+	register: any;
+}) {
+	console.log(optionField);
+	const [inputType, setInputType] = useState<string>(optionField.option_text);
+	const [isCorrect, setIsCorrect] = useState<boolean>(optionField.is_correct);
+	return (
+		<div
+			className="flex flex-col gap-2 items-start"
+			key={optionField.id}
+		>
+			<input
+				{...register(
+					`formFields[${index}].options[${optionIndex}].label`
+				)}
+				type="text"
+				placeholder={`Enter option ${
+					optionIndex + 1
+				}`}
+				value={inputType}
+				onChange={(e) => setInputType(e.target.value)}
+				className={inputClass}
+			/>
+			<div className="flex flex-row gap-2">
+				<label>Is correct?</label>
+				<input
+					{...register(
+						`formFields[${index}].options[${optionIndex}].value`
+					)}
+					
+					type="checkbox"
+					checked={isCorrect}
+					onChange={() => setIsCorrect(!isCorrect)}
+				/>
+			</div>
+			{/* ... handle errors */}
+		</div>
+	);
+}

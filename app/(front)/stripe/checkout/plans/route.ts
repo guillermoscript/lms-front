@@ -1,5 +1,4 @@
 import Stripe from 'stripe'
-import { cookies } from 'next/headers'
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import dayjs from 'dayjs'
@@ -13,29 +12,19 @@ export async function POST(req: NextRequest) {
 
     console.log(body, '<----------- body')
 
-    const { productId } = body
+    const { planId } = body
 
     console.log(body, '<----------- body')
 
     if (!stripe) {        
         return new Response('Internal server error', { status: 500 })
     }
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
 
-    // Check if we have a session
-    const {
-        data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-        return new Response('Unauthorized', { status: 401 })
+    if (!planId) {
+        return new Response('Missing plan ID', { status: 400 })
     }
 
-
-    if (!productId) {
-        return new Response('Missing product ID', { status: 400 })
-    }
+    const supabase = createClient()
 
     const fullUser = await supabase.auth.getUser()
 
@@ -48,7 +37,7 @@ export async function POST(req: NextRequest) {
     const profile = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', fullUser?.data.user?.id)
+        .eq('id', fullUser?.data?.user?.id)
         .single()
 
     try {
@@ -76,47 +65,31 @@ export async function POST(req: NextRequest) {
                 console.log(update, '<----------- update')
         }
 
-        // const { total, currencySymbol, product } = await getProductData({
-        //     payload,
-        //     productId,
-        // })
+        const planData = await supabase.from('plans').select(`*`).eq('plan_id', planId).single()
 
-        const productData = await supabase.from('products').select(`*, products_pricing ( id, price, currency ( code, id ) )`).eq('id', productId).single()
+        console.log(planData, '<----------- planData')
 
-        console.log(productData, '<----------- productData')
-
-        // console.log(total, '<----------- total')
-
-
-        const invoice = await supabase.from('invoices').insert({
-            customer_id: fullUser?.data.user?.id,
+        const transaction = await supabase.from('transactions').insert({
+            user_id: fullUser?.data.user?.id as any, 
             status: 'pending',
-            country: 'US',
-            currency: productData.data?.products_pricing[0].currency?.id,
+            currency: 'usd',
+            plan_id: planId,
             due_date: dayjs().add(1, 'week').toDate(),
         }).select('*').single()
 
-        console.log(invoice, '<----------- invoice')
+        console.log(transaction, '<----------- invoice')
 
-        const invoiceLineItem = await supabase.from('invoice_line_items').insert({
-            invoice_id: invoice.data?.id,
-            product_id: productId,
-            quantity: 1,
-            line_amount: productData.data?.products_pricing[0].price,
-        }).single()
-
-        console.log(invoiceLineItem, '<----------- invoiceLineItem')
-
+        
         const session = await stripe.checkout.sessions.create({
             line_items: [
                 {
                     price_data: {
-                        currency: productData.data?.products_pricing[0].currency?.code,
+                        currency: 'usd',
                         product_data: {
-                            name: productData.data?.name as string,
-                            description: productData.data?.description as string,
+                            name: planData.data?.plan_name as string,
+                            description: planData.data?.description as string,
                         },
-                        unit_amount: productData.data?.products_pricing[0].price * 100,
+                        unit_amount: planData?.data?.price * 100,
                     },
                     quantity: 1,
                 },
@@ -129,23 +102,10 @@ export async function POST(req: NextRequest) {
             success_url: `${process.env.NEXT_PUBLIC_DOMAIN_URL}/checkout/success`,
             cancel_url: `${process.env.NEXT_PUBLIC_DOMAIN_URL}/checkout/cancel`,
             metadata: {
-                productId: productId,
-                invoiceId: invoice.data?.id as number,
+                planId: planId,
+                invoiceId: transaction.data?.transaction_id as number,
             },
         });
-
-        // add payment method to user
-        // const paymentMethod = await payload.create<'payment-methods'>({
-        //     collection: 'payment-methods',
-        //     data: {
-        //         title: 'Stripe card',
-        //         paymentMethodType: 'stripe',
-        //         paymentsOfUser: typeof user === 'string' ? user : user?.id,
-        //         default: true,
-        //     },
-        // })
-
-        console.log(session, '<----------- session')
 
         return new Response(JSON.stringify({ 
             id: session.id,

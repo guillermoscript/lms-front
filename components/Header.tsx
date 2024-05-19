@@ -12,8 +12,8 @@ import { DarkThemeToggle } from "./DarkThemeToggle";
 
 export default function Header({ children }: { children?: React.ReactNode }) {
 	return (
-		<header className="container z-40 bg-background">
-			<div className="flex items-center justify-between py-6">
+		<header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+			<div className="flex items-center justify-between py-1 px-4">
 				<div className="flex gap-6 md:gap-10">
 					<a
 						className="hidden items-center space-x-2 md:flex"
@@ -38,18 +38,13 @@ export default function Header({ children }: { children?: React.ReactNode }) {
 						</span>
 					</a>
 					<nav className="hidden gap-6 md:flex">
-						<a
+					
+						<Link
 							className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-							href="/#features"
+							href="/plans"
 						>
-							Features
-						</a>
-						<a
-							className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-							href="/pricing"
-						>
-							Pricing
-						</a>
+							Plans
+						</Link>
 						<Link
 							className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
 							href="/store"

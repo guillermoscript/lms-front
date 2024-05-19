@@ -17,7 +17,7 @@ export default async function TestFormPage({
 	const course = await supabase
 		.from("courses")
 		.select(`*`)
-		.eq("id", params.courseId)
+		.eq("course_id", params.courseId)
 		.single();
 
 	if (course.error) {
