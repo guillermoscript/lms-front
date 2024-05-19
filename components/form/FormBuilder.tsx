@@ -7,6 +7,11 @@ import {
 import InputField from "./InputField";
 import { Separator } from "../ui/separator";
 
+type FormBuilderProps = {
+	initialFields?: any[];
+	children?: React.ReactNode;
+};
+
 const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields, children }) => {
 	const {
 		register,
@@ -22,7 +27,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields, children }) =>
 	const [inputType, setInputType] = useState<string>("free_text");
 
 	useEffect(() => {
-		if (initialFields.length > 0) {
+		if (initialFields?.length > 0) {
 			// Resets the form with the initial fields
 			reset({ formFields: initialFields });
 		}
@@ -59,7 +64,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ initialFields, children }) =>
 				className="block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
 			>
 				<option value="free_text">Fill In</option>
-				<option value="multiple_choices">Multiple Choices</option>
+				<option value="multiple_choice">Multiple Choices</option>
 				<option value="true_false">True/False</option>
 			</select>
 
