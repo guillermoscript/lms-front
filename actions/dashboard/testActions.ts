@@ -15,9 +15,9 @@ export async function deleteTestAction(data: {
 
     const supabase = createClient();
     const lessonData = await supabase
-        .from('tests')
+        .from('exams')
         .delete()
-        .eq("id", testId);
+        .eq('exam_id', testId)
 
     if (lessonData.error) {
         console.log(lessonData.error);
@@ -35,7 +35,7 @@ interface Option {
 }
 
 interface FormField {
-    type: 'free_text' | 'multiple_choices' | 'true_false';
+    type: 'free_text' | 'multiple_choice' | 'true_false';
     label: string;
     options?: Option[];
     required: boolean;
@@ -73,10 +73,10 @@ function validateTestInput(testInput: TestInput): boolean {
         throw new Error('Invalid retake interval format.');
     }
     for (const field of testInput.formFields) {
-        if (!['free_text', 'multiple_choices', 'true_false'].includes(field.type)) {
+        if (!['free_text', 'multiple_choice', 'true_false'].includes(field.type)) {
             throw new Error(`Invalid question type: ${field.type}`);
         }
-        if (field.type === 'multiple_choices' && (!field.options || !field.options.length)) {
+        if (field.type === 'multiple_choice' && (!field.options || !field.options.length)) {
             throw new Error('Options must be provided for multiple choice questions.');
         }
     }
@@ -137,8 +137,8 @@ async function handleTest(testInput: TestInput, testId?: string) {
             if (error) throw new Error(`Error inserting question localization: ${error.message}`);
         }
 
-        // Handle options for 'multiple_choices' questions
-        if (formField.type === 'multiple_choices' && formField.options) {
+        // Handle options for 'multiple_choice' questions
+        if (formField.type === 'multiple_choice' && formField.options) {
             for (const option of formField.options) {
                 const questionOptionData = {
                     question_id: question.data?.id,
