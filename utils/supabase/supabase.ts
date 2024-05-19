@@ -619,18 +619,21 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          name: string
           price: number
           product_id: number
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          name: string
           price: number
           product_id?: number
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          name?: string
           price?: number
           product_id?: number
         }
@@ -642,8 +645,10 @@ export type Database = {
           bio: string | null
           created_at: string | null
           currency_id: number | null
+          full_name: string | null
           id: string
           stripe_customer_id: string | null
+          stripeCustomerID: string | null
           username: string | null
           website: string | null
         }
@@ -652,8 +657,10 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          full_name?: string | null
           id: string
           stripe_customer_id?: string | null
+          stripeCustomerID?: string | null
           username?: string | null
           website?: string | null
         }
@@ -662,8 +669,10 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
+          stripeCustomerID?: string | null
           username?: string | null
           website?: string | null
         }
@@ -803,6 +812,7 @@ export type Database = {
           plan_id: number
           start_date: string
           subscription_id: number
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
           user_id: string
         }
         Insert: {
@@ -810,6 +820,7 @@ export type Database = {
           plan_id: number
           start_date?: string
           subscription_id?: number
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
           user_id: string
         }
         Update: {
@@ -817,6 +828,7 @@ export type Database = {
           plan_id?: number
           start_date?: string
           subscription_id?: number
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
           user_id?: string
         }
         Relationships: [
@@ -842,7 +854,7 @@ export type Database = {
           payment_method: string | null
           plan_id: number | null
           product_id: number | null
-          status: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
           transaction_date: string
           transaction_id: number
           user_id: string
@@ -852,7 +864,7 @@ export type Database = {
           payment_method?: string | null
           plan_id?: number | null
           product_id?: number | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
           transaction_id?: number
           user_id: string
@@ -862,7 +874,7 @@ export type Database = {
           payment_method?: string | null
           plan_id?: number | null
           product_id?: number | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
           transaction_date?: string
           transaction_id?: number
           user_id?: string
@@ -926,16 +938,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_subscription: {
+        Args: {
+          _user_id: string
+          _plan_id: number
+        }
+        Returns: undefined
+      }
       enroll_user: {
         Args: {
           _user_id: string
-          _course_id: number
+          _product_id: number
+        }
+        Returns: undefined
+      }
+      handle_new_subscription: {
+        Args: {
+          _user_id: string
+          _plan_id: number
+          _transaction_id: number
+          _start_date?: string
         }
         Returns: undefined
       }
     }
     Enums: {
       status: "published" | "draft" | "archived"
+      subscription_status: "active" | "canceled" | "expired" | "renewed"
+      transaction_status:
+        | "pending"
+        | "successfull"
+        | "failed"
+        | "archived"
+        | "canceled"
     }
     CompositeTypes: {
       [_ in never]: never
