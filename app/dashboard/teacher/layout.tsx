@@ -1,8 +1,3 @@
-/**
- * v0 by Vercel.
- * @see https://v0.dev/t/aeJzZVIZhlF
- * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
- */
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/dashboard/Sidebar";
 
