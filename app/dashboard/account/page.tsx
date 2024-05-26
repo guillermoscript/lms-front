@@ -1,5 +1,3 @@
-import { updateProfile } from "@/actions/actions";
-import SaveButtonForm from "@/components/form/SaveButtonForm";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -13,13 +11,16 @@ import { BarChart, Link } from "lucide-react";
 import { cookies } from "next/headers";
 
 export default async function Dashboard() {
-	const cookieStore = cookies();
-	const supabase = createClient(cookieStore);
+	const supabase = createClient();
 	const {
 		data: { user },
+		error
 	} = await supabase.auth.getUser();
 
-	console.log(user);
+
+	if (error) {
+		throw new Error(error.message);
+	}
 
 	const userProfile = await supabase
 		.from("profiles")
@@ -27,7 +28,6 @@ export default async function Dashboard() {
 		.eq("id", user?.id)
 		.single();
 
-	console.log(userProfile.data);
 
 	return (
 		<>
@@ -47,7 +47,7 @@ export default async function Dashboard() {
 							<span className="text-gray-500 dark:text-gray-400">
 								Email:
 							</span>
-							<p>{userProfile.data?.email}</p>
+							<p>{user?.email}</p>
 						</div>
 						<div className="grid grid-cols-[100px_1fr] items-center gap-4">
 							<span className="text-gray-500 dark:text-gray-400">
