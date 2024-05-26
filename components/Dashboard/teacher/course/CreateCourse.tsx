@@ -3,17 +3,17 @@ import { createCourseAction } from "@/actions/dashboard/courseActions";
 import { Input, Select } from "@/components/form/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useFormState } from "react-dom";
-import { FormProvider, set, useForm } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import * as yup from "yup";
 import ButtonSubmitDashbaord from "../../ButtonSubmitDashbaord";
 import StateMessages from "../../StateMessages";
 import SelectStatus from "../../SelectStatus";
-import SelectSupabaseField from "../../SelectSupabaseField";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { selectClassNames } from "@/utils/const";
 import { Tables } from "@/utils/supabase/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+
 const courseSchema = yup.object().shape({
 	title: yup.string().required(),
 	description: yup.string().required(),
