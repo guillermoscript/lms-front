@@ -11,7 +11,7 @@ export default function ViewMarkdown({
 	}
     return (
         <Markdown
-            className={'rich-text w-full'}
+            className={'rich-text markdown-body w-full'}
             remarkPlugins={[remarkGfm]}>{markdown}</Markdown>
     )
 }
