@@ -20,6 +20,7 @@ function categorizeQuestions(questions: any[]) {
                 acc.freeTextQuestions.push({
                     ...processedQuestion,
                     placeholder: "Enter your answer",
+                    id: `ft-${question.question_id}`,
                 });
                 break;
             case "true_false":
