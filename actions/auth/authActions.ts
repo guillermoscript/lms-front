@@ -19,14 +19,14 @@ export const signIn = async (prevData: any, formData: FormData) => {
 
     if (error) {
         console.log(error);
-        return createResponse('error', 'Error in sign in', null, error);
+        return createResponse('error', 'Invalid credentials', null, 'Invalid credentials');
     }
 
     const userData = await supabase.from("user_roles").select("*").eq("user_id", data?.user?.id).single();
 
     if (userData?.error) {
         console
-        return createResponse('error', 'Error in sign in', null, userData.error);
+        return createResponse('error', 'Error in sign in', null, userData.error.message);
     }
 
     const userRole = userData?.data.role_id;
