@@ -11,6 +11,8 @@ export default function UserLoginForm() {
 		error: null,
 	});
 
+	console.log(state);
+
 	return (
 		<div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
 			<Link
@@ -61,7 +63,7 @@ export default function UserLoginForm() {
 				<SubmitButton />
 				{state.error && (
 					<p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-						{state.error}
+						{state.message}
 					</p>
 				)}
 			</form>
