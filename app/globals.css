@@ -60,6 +60,7 @@
   }
 }
 
+
 /* Headings */
 .markdown-body h1,
 .markdown-body h2,
@@ -67,29 +68,55 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  /* border-bottom: 1px solid hsl(var(--border)); */
-  padding-bottom: 0.3em;
+  padding-bottom: 0.5em;
+  margin-bottom: 1em;
+  line-height: 1.2;
 }
 
-.markdown-body h1 { font-size: 2em; margin-top: 0; }
-.markdown-body h2 { font-size: 1.5em; }
-.markdown-body h3 { font-size: 1.17em; }
-.markdown-body h4 { font-size: 1em; }
-.markdown-body h5 { font-size: 0.83em; }
-.markdown-body h6 { font-size: 0.67em; }
+.markdown-body h1 {
+  font-size: 2rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.5rem;
+}
+
+.markdown-body h3 {
+  font-size: 1.2rem;
+}
+
+.markdown-body h4 {
+  font-size: 1em;
+}
+
+.markdown-body h5 {
+  font-size: 0.8rem;
+}
+
+.markdown-body h6 {
+  font-size: 0.7rem;
+  font-weight: bold;
+}
 
 /* Paragraphs */
 .markdown-body p {
   margin: 1em 0;
+  line-height: 1.5;
 }
 
 /* Links */
 .markdown-body a {
   color: hsl(var(--primary));
+  text-decoration: none;
 }
 
 .markdown-body a:hover {
-  text-decoration: underline;
+  color: hsl(var(--primary-hover));
+}
+
+.markdown-body a:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
 /* Lists */
@@ -97,37 +124,62 @@
 .markdown-body ol {
   padding-left: 20px;
   margin: 1em 0;
+  list-style-type: none;
+}
+
+.markdown-body ul li,
+.markdown-body ol li {
+  position: relative;
+  padding-left: 1.25em;
+  line-height: 1.5;
+}
+
+.markdown-body ul li::before,
+.markdown-body ol li::before {
+  content: none;
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background-color: hsl(var(--muted));
+}
+
+.markdown-body ol li::before {
+  background-color: hsl(var(--primary));
 }
 
 /* Blockquotes */
 .markdown-body blockquote {
-  border-left: 4px solid hsl(var(--muted));
-  padding: 0 20px;
+  border-left: 5px solid hsl(var(--muted));
+  padding: 0 2em;
   color: hsl(var(--muted-foreground));
   margin: 1em 0;
+  font-style: italic;
 }
 
 /* Code blocks */
 .markdown-body pre, 
 .markdown-body code {
-  font-family: monospace, monospace;
-  background-color: hsl(var(--input));
-  padding: 5px;
+  font-family: Consolas, Monaco, monospace;
+  background-color: hsl(var(--code));
+  color: hsl(var(--text-light));
+  padding: 10px;
 }
 
 .markdown-body pre {
   white-space: pre-wrap;
   word-wrap: break-word;
-  padding: 10px;
   margin: 1em 0;
   overflow-x: auto;
+  border-radius: var(--radius);
 }
 
 .markdown-body code {
   padding: 2px 4px;
-  font-size: 90%;
-  color: hsl(var(--primary));
-  word-wrap: break-word;
+  font-size: 0.9rem;
 }
 
 /* Tables */
@@ -135,94 +187,10 @@
   border-collapse: collapse;
   width: 100%;
   margin: 1em 0;
-}
-/* Tables */
-.markdown-body table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
+  border-radius: var(--radius);
 }
 
 .markdown-body th, td {
-  border: 1px solid hsl(var(--border));
-  padding: 8px;
+  padding: 8px 16px;
   text-align: left;
-}
-
-.markdown-body th {
-  background-color: hsl(var(--secondary));
-  color: hsl(var(--secondary-foreground));
-  font-weight: bold;
-}
-
-.markdown-body td {
-  background-color: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-}
-
-/* Responsive Table */
-@media screen and (max-width: 760px) {
-  .markdown-body table {
-    display: block;
-    overflow-x: auto;
-  }
-
-  .markdown-body table thead {
-    display: none;
-  }
-
-  .markdown-body table tr {
-    display: block;
-    margin-bottom: 0.625em;
-  }
-
-  .markdown-body table td {
-    display: block;
-    text-align: right;
-    position: relative;
-    padding-left: 50%;
-  }
-
-  .markdown-body table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 10px;
-    width: 45%;
-    padding-right: 10px;
-    white-space: nowrap;
-    text-align: left;
-    font-weight: bold;
-  }
-}
-
-/* Images */
-.markdown-body img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 1em 0;
-}
-
-/* Horizontal rules */
-.markdown-body hr {
-  border: 0;
-  height: 1px;
-  background: hsl(var(--border));
-  margin: 1em 0;
-}
-
-/* Apply the border-radius */
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4,
-.markdown-body h5,
-.markdown-body h6,
-.markdown-body pre,
-.markdown-body code,
-.markdown-body blockquote,
-.markdown-body table,
-.markdown-body img,
-.markdown-body hr {
-  border-radius: var(--radius);
 }
