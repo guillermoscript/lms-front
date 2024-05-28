@@ -6,6 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/google": "^0.0.15",
     "@ai-sdk/openai": "^0.0.14",
     "@hookform/resolvers": "^3.3.4",
     "@mdxeditor/editor": "^2.20.4",
