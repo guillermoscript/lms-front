@@ -182,7 +182,11 @@ function Content({ lessonData }: { lessonData: any }) {
 				<h3 className="text-2xl font-bold">Summary</h3>
 				<p>Summary of the lesson</p>
 			</div>
-			<TaksMessages />
+			<TaksMessages
+				systemPrompt={
+					lessonData.data.systemPrompt
+				}
+			/>
 		</div>
 	);
 }
