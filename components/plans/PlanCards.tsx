@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckIcon } from "lucide-react";
 import { cn } from "@/utils";
 import Link from "next/link";
+import ViewMarkdown from "../ui/markdown/ViewMarkdown";
 
 type PlanCardProps = {
 	title: string;
 	description: string;
-	features: string[];
+	features: string;
 	price: number;
 	oldPrice?: number;
 	isPopular?: boolean;
@@ -49,14 +49,7 @@ const PlanCard = ({
 				<p className="text-gray-500 dark:text-gray-400">
 					{description}
 				</p>
-				<ul className="space-y-2 text-sm">
-					{features.map((feature, index) => (
-						<li key={index} className="flex items-center">
-							<CheckIcon className="mr-2 h-4 w-4 fill-primary animate-bounce" />
-							{feature}
-						</li>
-					))}
-				</ul>
+				<ViewMarkdown 	markdown={features} />
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<span

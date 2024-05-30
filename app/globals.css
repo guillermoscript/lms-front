@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
  
+ 
+
+
 
 @layer base {
   :root {
@@ -26,7 +29,6 @@
     --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
   }
- 
   .dark {
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
@@ -48,17 +50,12 @@
     --input: 215 27.9% 16.9%;
     --ring: 263.4 70% 50.4%;
   }
+
+  body {
+      @apply bg-background text-foreground;
+  }
 }
 
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
 
 /* Headings */
 .markdown-body h1,
@@ -67,162 +64,98 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  /* border-bottom: 1px solid hsl(var(--border)); */
-  padding-bottom: 0.3em;
+  @apply pb-2 mb-4 leading-tight;
 }
 
-.markdown-body h1 { font-size: 2em; margin-top: 0; }
-.markdown-body h2 { font-size: 1.5em; }
-.markdown-body h3 { font-size: 1.17em; }
-.markdown-body h4 { font-size: 1em; }
-.markdown-body h5 { font-size: 0.83em; }
-.markdown-body h6 { font-size: 0.67em; }
+.markdown-body h1 {
+  @apply text-4xl font-bold;
+}
+
+.markdown-body h2 {
+  @apply text-3xl font-semibold;
+}
+
+.markdown-body h3 {
+  @apply text-2xl font-medium;
+}
+
+.markdown-body h4 {
+  @apply text-xl font-medium;
+}
+
+.markdown-body h5 {
+  @apply text-lg font-medium;
+}
+
+.markdown-body h6 {
+  @apply text-base font-bold;
+
+}
 
 /* Paragraphs */
 .markdown-body p {
-  margin: 1em 0;
+  @apply my-4 leading-7;
 }
 
 /* Links */
 .markdown-body a {
-  color: hsl(var(--primary));
+  @apply text-primary no-underline;
 }
 
 .markdown-body a:hover {
-  text-decoration: underline;
+  @apply underline;
+}
+
+.markdown-body a:focus {
+  @apply outline-none ring-2 ring-primary ring-offset-2;
 }
 
 /* Lists */
 .markdown-body ul,
 .markdown-body ol {
-  padding-left: 20px;
-  margin: 1em 0;
+  @apply pl-5 my-4 list-inside;
+}
+
+.markdown-body ul li,
+.markdown-body ol li {
+  @apply relative pl-3 leading-6;
+  list-style-position: inside;
+}
+
+.markdown-body ul li::before {
+  @apply absolute left-0 top-[calc(0.8em)] bg-primary w-2 h-2 rounded-full;
+  content: '';
+}
+
+.markdown-body ol li::before {
+  background-color: hsl(var(--primary));
 }
 
 /* Blockquotes */
 .markdown-body blockquote {
-  border-left: 4px solid hsl(var(--muted));
-  padding: 0 20px;
-  color: hsl(var(--muted-foreground));
-  margin: 1em 0;
+  @apply border-l-4 border-muted pl-4 text-muted-foreground italic my-4;
 }
 
 /* Code blocks */
-.markdown-body pre, 
+.markdown-body pre,
 .markdown-body code {
-  font-family: monospace, monospace;
-  background-color: hsl(var(--input));
-  padding: 5px;
+  @apply font-mono bg-muted  p-2;
 }
 
 .markdown-body pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  padding: 10px;
-  margin: 1em 0;
-  overflow-x: auto;
+  @apply whitespace-pre-wrap break-words my-4 overflow-x-auto rounded;
 }
 
 .markdown-body code {
-  padding: 2px 4px;
-  font-size: 90%;
-  color: hsl(var(--primary));
-  word-wrap: break-word;
+  @apply px-1 py-0.5 text-sm bg-muted;
 }
 
 /* Tables */
 .markdown-body table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
-}
-/* Tables */
-.markdown-body table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
+  @apply table-auto w-full my-4 rounded;
 }
 
-.markdown-body th, td {
-  border: 1px solid hsl(var(--border));
-  padding: 8px;
-  text-align: left;
-}
-
-.markdown-body th {
-  background-color: hsl(var(--secondary));
-  color: hsl(var(--secondary-foreground));
-  font-weight: bold;
-}
-
+.markdown-body th,
 .markdown-body td {
-  background-color: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-}
-
-/* Responsive Table */
-@media screen and (max-width: 760px) {
-  .markdown-body table {
-    display: block;
-    overflow-x: auto;
-  }
-
-  .markdown-body table thead {
-    display: none;
-  }
-
-  .markdown-body table tr {
-    display: block;
-    margin-bottom: 0.625em;
-  }
-
-  .markdown-body table td {
-    display: block;
-    text-align: right;
-    position: relative;
-    padding-left: 50%;
-  }
-
-  .markdown-body table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 10px;
-    width: 45%;
-    padding-right: 10px;
-    white-space: nowrap;
-    text-align: left;
-    font-weight: bold;
-  }
-}
-
-/* Images */
-.markdown-body img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 1em 0;
-}
-
-/* Horizontal rules */
-.markdown-body hr {
-  border: 0;
-  height: 1px;
-  background: hsl(var(--border));
-  margin: 1em 0;
-}
-
-/* Apply the border-radius */
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4,
-.markdown-body h5,
-.markdown-body h6,
-.markdown-body pre,
-.markdown-body code,
-.markdown-body blockquote,
-.markdown-body table,
-.markdown-body img,
-.markdown-body hr {
-  border-radius: var(--radius);
+  @apply px-4 py-2 border border-border text-left;
 }

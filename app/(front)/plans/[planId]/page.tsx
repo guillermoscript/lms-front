@@ -76,7 +76,7 @@ export default async function PlansCheckoutPage({
                     />
 				</div>
 				<CheckoutImages 
-                    img1src="/img/placeholder.svg"
+                    img1src={data?.thumbnail}
 					img2src="/img/placeholder.svg"
 					img3src="/img/placeholder.svg"
                 />

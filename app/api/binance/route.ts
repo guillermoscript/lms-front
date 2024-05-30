@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import axios from 'axios';
-import { cookies } from 'next/headers'
 import { type NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
@@ -65,8 +64,7 @@ export async function POST(req: NextRequest) {
 
     console.log(body, '<----------- body')
 
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     // Check if we have a session
     const {

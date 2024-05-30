@@ -466,15 +466,105 @@ export type Database = {
           },
         ]
       }
+      lesson_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: number
+          lesson_id: number
+          parent_comment_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: never
+          lesson_id: number
+          parent_comment_id?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: never
+          lesson_id?: number
+          parent_comment_id?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_comments_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_completions: {
+        Row: {
+          completed_at: string | null
+          id: number
+          lesson_id: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: never
+          lesson_id: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: never
+          lesson_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_completions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           content: string | null
           course_id: number | null
           created_at: string | null
+          description: string | null
           embed_code: string | null
           id: number
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
+          systemPrompt: string | null
           title: string | null
           updated_at: string | null
           video_url: string | null
@@ -483,10 +573,12 @@ export type Database = {
           content?: string | null
           course_id?: number | null
           created_at?: string | null
+          description?: string | null
           embed_code?: string | null
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
+          systemPrompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -495,10 +587,12 @@ export type Database = {
           content?: string | null
           course_id?: number | null
           created_at?: string | null
+          description?: string | null
           embed_code?: string | null
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
+          systemPrompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -563,25 +657,31 @@ export type Database = {
           created_at: string | null
           description: string | null
           duration_in_days: number
+          features: string | null
           plan_id: number
           plan_name: string
           price: number
+          thumbnail: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           duration_in_days: number
+          features?: string | null
           plan_id?: number
           plan_name: string
           price: number
+          thumbnail?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           duration_in_days?: number
+          features?: string | null
           plan_id?: number
           plan_name?: string
           price?: number
+          thumbnail?: string | null
         }
         Relationships: []
       }
@@ -945,6 +1045,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_exam_submission: {
+        Args: {
+          p_student_id: string
+          p_exam_id: number
+          p_answers: Json
+        }
+        Returns: undefined
+      }
       enroll_user: {
         Args: {
           _user_id: string
@@ -958,6 +1066,17 @@ export type Database = {
           _plan_id: number
           _transaction_id: number
           _start_date?: string
+        }
+        Returns: undefined
+      }
+      save_exam_feedback: {
+        Args: {
+          p_submission_id: number
+          p_exam_id: number
+          p_student_id: string
+          p_answers: Json
+          p_overall_feedback: string
+          p_score: number
         }
         Returns: undefined
       }
