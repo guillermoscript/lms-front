@@ -564,6 +564,7 @@ export type Database = {
           id: number
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
+          systemPrompt: string | null
           title: string | null
           updated_at: string | null
           video_url: string | null
@@ -577,6 +578,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
+          systemPrompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -590,6 +592,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
+          systemPrompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -654,25 +657,31 @@ export type Database = {
           created_at: string | null
           description: string | null
           duration_in_days: number
+          features: string | null
           plan_id: number
           plan_name: string
           price: number
+          thumbnail: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           duration_in_days: number
+          features?: string | null
           plan_id?: number
           plan_name: string
           price: number
+          thumbnail?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           duration_in_days?: number
+          features?: string | null
           plan_id?: number
           plan_name?: string
           price?: number
+          thumbnail?: string | null
         }
         Relationships: []
       }
