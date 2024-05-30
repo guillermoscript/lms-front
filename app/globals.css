@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
  
+ 
+
+
 
 @layer base {
   :root {
@@ -26,7 +29,6 @@
     --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
   }
- 
   .dark {
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
@@ -48,15 +50,9 @@
     --input: 215 27.9% 16.9%;
     --ring: 263.4 70% 50.4%;
   }
-}
 
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground;
+      @apply bg-background text-foreground;
   }
 }
 
@@ -68,83 +64,67 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  padding-bottom: 0.5em;
-  margin-bottom: 1em;
-  line-height: 1.2;
+  @apply pb-2 mb-4 leading-tight;
 }
 
 .markdown-body h1 {
-  font-size: 2rem;
+  @apply text-4xl font-bold;
 }
 
 .markdown-body h2 {
-  font-size: 1.5rem;
+  @apply text-3xl font-semibold;
 }
 
 .markdown-body h3 {
-  font-size: 1.2rem;
+  @apply text-2xl font-medium;
 }
 
 .markdown-body h4 {
-  font-size: 1em;
+  @apply text-xl font-medium;
 }
 
 .markdown-body h5 {
-  font-size: 0.8rem;
+  @apply text-lg font-medium;
 }
 
 .markdown-body h6 {
-  font-size: 0.7rem;
-  font-weight: bold;
+  @apply text-base font-bold;
+
 }
 
 /* Paragraphs */
 .markdown-body p {
-  margin: 1em 0;
-  line-height: 1.5;
+  @apply my-4 leading-7;
 }
 
 /* Links */
 .markdown-body a {
-  color: hsl(var(--primary));
-  text-decoration: none;
+  @apply text-primary no-underline;
 }
 
 .markdown-body a:hover {
-  color: hsl(var(--primary-hover));
+  @apply underline;
 }
 
 .markdown-body a:focus {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
+  @apply outline-none ring-2 ring-primary ring-offset-2;
 }
 
 /* Lists */
 .markdown-body ul,
 .markdown-body ol {
-  padding-left: 20px;
-  margin: 1em 0;
-  list-style-type: none;
+  @apply pl-5 my-4 list-inside;
 }
 
 .markdown-body ul li,
 .markdown-body ol li {
-  position: relative;
-  padding-left: 1.25em;
-  line-height: 1.5;
+  @apply relative pl-3 leading-6;
+  list-style-position: inside;
 }
 
-.markdown-body ul li::before,
-.markdown-body ol li::before {
-  content: none;
-  display: block;
-  position: absolute;
-  left: 0;
-  top: 0.5em;
-  width: 0.5em;
-  height: 0.5em;
-  border-radius: 50%;
-  background-color: hsl(var(--muted));
+.markdown-body ul li::before {
+  @apply absolute left-0 top-[calc(0.8em)] bg-primary w-2 h-2 rounded-full;
+  content: '';
 }
 
 .markdown-body ol li::before {
@@ -153,44 +133,29 @@
 
 /* Blockquotes */
 .markdown-body blockquote {
-  border-left: 5px solid hsl(var(--muted));
-  padding: 0 2em;
-  color: hsl(var(--muted-foreground));
-  margin: 1em 0;
-  font-style: italic;
+  @apply border-l-4 border-muted pl-4 text-muted-foreground italic my-4;
 }
 
 /* Code blocks */
-.markdown-body pre, 
+.markdown-body pre,
 .markdown-body code {
-  font-family: Consolas, Monaco, monospace;
-  background-color: hsl(var(--code));
-  color: hsl(var(--text-light));
-  padding: 10px;
+  @apply font-mono bg-muted  p-2;
 }
 
 .markdown-body pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 1em 0;
-  overflow-x: auto;
-  border-radius: var(--radius);
+  @apply whitespace-pre-wrap break-words my-4 overflow-x-auto rounded;
 }
 
 .markdown-body code {
-  padding: 2px 4px;
-  font-size: 0.9rem;
+  @apply px-1 py-0.5 text-sm bg-muted;
 }
 
 /* Tables */
 .markdown-body table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
-  border-radius: var(--radius);
+  @apply table-auto w-full my-4 rounded;
 }
 
-.markdown-body th, td {
-  padding: 8px 16px;
-  text-align: left;
+.markdown-body th,
+.markdown-body td {
+  @apply px-4 py-2 border border-border text-left;
 }
