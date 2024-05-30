@@ -14,7 +14,7 @@ export default async function PlanPage() {
 
 	console.log(plans);
 
-	const [starter, pro, enterprise] = plans.data;
+	const [month, yearly, quarterly] = plans.data;
 
 	return (
 		<section className="w-full py-12 md:py-24 lg:py-32 ">
@@ -31,42 +31,30 @@ export default async function PlanPage() {
 				{/* <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-6 sm:grid-cols-3"> */}
 				<div className="mx-auto flex flex-col gap-6 sm:flex-row sm:justify-center sm:gap-6">
 					<PlanCard
-						title="Starter"
-						description="Perfect for individuals and small teams."
-						features={[
-							"Up to 5 users",
-							"5GB storage",
-							"Basic features",
-						]}
-						price={9}
+						title={month.plan_name}
+						description={month.description}
+						features={month.features}
+						price={month.price}
 						buttonVariant="secondary"
-						planId={starter.plan_id}
+						planId={month.plan_id}
 					/>
 					<PlanCard
-						title="Pro"
-						description="Ideal for growing teams and businesses."
-						features={[
-							"Up to 25 users",
-							"50GB storage",
-							"Advanced features",
-						]}
-						price={29}
-						oldPrice={39}
+						title={yearly.plan_name}
+						description={yearly.description}
+						features={yearly.features}
+						price={yearly.price}
+						oldPrice={400}
 						isPopular
 						buttonVariant="default"
-						planId={pro.plan_id}
+						planId={quarterly.plan_id}
 					/>
-					{/* <PlanCard
-						title="Enterprise"
-						description="Tailored for large teams and organizations."
-						features={[
-							"Unlimited users",
-							"Unlimited storage",
-							"Enterprise features",
-						]}
-						price={99}
+					<PlanCard
+						title={quarterly.plan_name}
+						description={quarterly.description}
+						features={quarterly.features}
+						price={quarterly.price}
 						buttonVariant="secondary"
-					/> */}
+					/>
 				</div>
 				<div className="mt-12 space-y-4 text-center">
 					<p className="text-gray-500 dark:text-gray-400">
