@@ -3,7 +3,7 @@ import ViewMarkdown from "@/components/ui/markdown/ViewMarkdown";
 import { Tables } from "@/utils/supabase/supabase";
 import CommentEditor from "../student/course/lessons/CommentEditor";
 
-export default function SidebarComments({
+export default function CommentsSections({
 	lesson_id,
 	lesson_comments,
 }: {
@@ -15,7 +15,7 @@ export default function SidebarComments({
 			{lesson_comments?.map((comment) => (
 				<CommentCard
 					key={comment.id}
-					name={comment.name}
+					name={"test"}
 					comment={comment.content}
 				/>
 			))}
