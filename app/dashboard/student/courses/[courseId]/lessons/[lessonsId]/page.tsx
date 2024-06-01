@@ -1,4 +1,4 @@
-import SidebarComments from "@/components/dashboard/Common/SidebarComments";
+import CommentsSections from "@/components/dashboard/Common/CommentsSections";
 import LessonPage from "@/components/dashboard/student/course/lessons/LessonPage";
 import TaksMessages from "@/components/dashboard/student/course/lessons/TaksMessages";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ export default async function StudentLessonPage({
 		<>
 			<LessonPage
 				sideBar={
-					<SidebarComments
+					<CommentsSections
 						lesson_id={lessonData.data.id}
 						lesson_comments={lessonData.data.lesson_comments}
 					/>
