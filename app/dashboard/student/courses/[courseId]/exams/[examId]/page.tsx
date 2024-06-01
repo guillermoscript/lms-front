@@ -1,7 +1,7 @@
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
-import ExamsSubmissionForm from '@/components/dashboard/student/ExamSubmissionForm'
+import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
 import {
     Breadcrumb,
     BreadcrumbItem,

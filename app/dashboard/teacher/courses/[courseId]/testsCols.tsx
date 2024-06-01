@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
-import DeleteTestAlert from '@/components/dashboard/teacher/test/DeleteTestAlert'
+import DeleteTestAlert from '@/components/dashboards/teacher/test/DeleteTestAlert'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,

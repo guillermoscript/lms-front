@@ -1,7 +1,7 @@
 // @ts-nocheck
 import dayjs from 'dayjs'
 
-import CreateCourse from '@/components/dashboard/teacher/course/CreateCourse'
+import CreateCourse from '@/components/dashboards/teacher/course/CreateCourse'
 import {
     Breadcrumb,
     BreadcrumbItem,

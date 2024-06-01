@@ -1,10 +1,10 @@
 // @ts-nocheck
 import Link from 'next/link'
 
-import { FreeTextQuestionRead } from '@/components/dashboard/teacher/test/FreeTextQuestion'
-import { MultipleChoiceQuestionRead } from '@/components/dashboard/teacher/test/MultipleChoiceQuestion'
-import { SingleSelectQuestionRead } from '@/components/dashboard/teacher/test/SingleSelectQuestion'
-import categorizeQuestions from '@/components/dashboard/teacher/test/utils/categorizeQuestions'
+import { FreeTextQuestionRead } from '@/components/dashboards/teacher/test/FreeTextQuestion'
+import { MultipleChoiceQuestionRead } from '@/components/dashboards/teacher/test/MultipleChoiceQuestion'
+import { SingleSelectQuestionRead } from '@/components/dashboards/teacher/test/SingleSelectQuestion'
+import categorizeQuestions from '@/components/dashboards/teacher/test/utils/categorizeQuestions'
 import {
     Breadcrumb,
     BreadcrumbItem,

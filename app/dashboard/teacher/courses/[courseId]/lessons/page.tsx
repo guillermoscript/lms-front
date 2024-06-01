@@ -1,4 +1,4 @@
-import LessonForm from '@/components/dashboard/teacher/lessons/LessonForm'
+import LessonForm from '@/components/dashboards/teacher/lessons/LessonForm'
 import {
     Breadcrumb,
     BreadcrumbItem,

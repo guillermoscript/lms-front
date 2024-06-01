@@ -2,7 +2,7 @@
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
-import TestSubmissionReview from '@/components/dashboard/teacher/test/TestSubmissionReview'
+import TestSubmissionReview from '@/components/dashboards/teacher/test/TestSubmissionReview'
 import {
     Breadcrumb,
     BreadcrumbItem,

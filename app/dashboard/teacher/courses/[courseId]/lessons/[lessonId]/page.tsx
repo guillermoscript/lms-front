@@ -2,9 +2,9 @@ import Link from 'next/link'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-import CommentsSections from '@/components/dashboard/Common/CommentsSections'
-import LessonPage from '@/components/dashboard/student/course/lessons/LessonPage'
-import TaskMessages from '@/components/dashboard/student/course/lessons/TaksMessages'
+import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import TaskMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import {
     Breadcrumb,
     BreadcrumbItem,

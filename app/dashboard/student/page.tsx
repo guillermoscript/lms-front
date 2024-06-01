@@ -1,5 +1,5 @@
 // @ts-nocheck
-import CourseCard from '@/components/dashboard/student/course/CourseCard'
+import CourseCard from '@/components/dashboards/student/course/CourseCard'
 import {
     Breadcrumb,
     BreadcrumbItem,

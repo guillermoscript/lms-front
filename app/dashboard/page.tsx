@@ -1,8 +1,8 @@
-import CourseCards from '@/components/dashboard/cards/CourseCards'
-import NewsCards from '@/components/dashboard/cards/NewsCards'
-import TestCards from '@/components/dashboard/cards/TestsCards'
-import DashboardHeader from '@/components/dashboard/DashboardHeader'
-import Sidebar from '@/components/dashboard/Sidebar'
+import CourseCards from '@/components/dashboards/cards/CourseCards'
+import NewsCards from '@/components/dashboards/cards/NewsCards'
+import TestCards from '@/components/dashboards/cards/TestsCards'
+import DashboardHeader from '@/components/dashboards/DashboardHeader'
+import Sidebar from '@/components/dashboards/Sidebar'
 
 export default async function Dashboard () {
     return (

@@ -1,8 +1,8 @@
 import { Link } from 'lucide-react'
 
-import CommentsSections from '@/components/dashboard/Common/CommentsSections'
-import LessonPage from '@/components/dashboard/student/course/lessons/LessonPage'
-import TaksMessages from '@/components/dashboard/student/course/lessons/TaksMessages'
+import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
 import {
     Breadcrumb,
