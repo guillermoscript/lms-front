@@ -12,6 +12,7 @@ import { useFormState } from "react-dom";
 import StateMessages from "../../StateMessages";
 import { ForwardRefEditor } from "@/components/ui/markdown/ForwardRefEditor";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 
 const selectClassNames = {
 	container: "  flex flex-col form-control gap-3 relative",
@@ -32,6 +33,7 @@ const lessonSchema = yup.object({
 	embed: yup.string().nullable(),
 	content: yup.string().required("Content is required"),
 	status: yup.string().oneOf(["draft", "published", "archived"]).required(),
+	systemPrompt: yup.string(),
 });
 
 export type LessonSchemaType = yup.InferType<typeof lessonSchema>;
@@ -68,6 +70,9 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 	});
 
 	const contentWatch = formMethods.watch("content");
+	const systemPromptWatch = formMethods.watch("systemPrompt");
+
+	console.log(systemPromptWatch)
 
 	return (
 		<FormProvider {...formMethods}>
@@ -101,6 +106,17 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 					onChange={(value) => formMethods.setValue("content", value)}
 				/>
 				<input type="hidden" name="content" value={contentWatch} />
+
+				<Separator />
+				
+				<ForwardRefEditor
+					markdown={systemPromptWatch}
+					className="markdown-body"
+					onChange={(value) => formMethods.setValue("systemPrompt", value)}
+				/>
+				<input type="hidden" name="systemPrompt" value={systemPromptWatch} />
+
+
 				<input type="hidden" name="course_id" value={courseId} />
 				<input type="hidden" name="lessonId" value={lessonId} />
 				<ButtonSubmitDashbaord />
