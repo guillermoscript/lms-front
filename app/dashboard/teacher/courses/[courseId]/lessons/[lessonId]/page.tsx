@@ -1,3 +1,6 @@
+import SidebarComments from "@/components/dashboard/Common/SidebarComments";
+import LessonPage from "@/components/dashboard/student/course/lessons/LessonPage";
+import TaskMessages from "@/components/dashboard/student/course/lessons/TaksMessages";
 import {
 	Breadcrumb,
 	BreadcrumbList,
@@ -6,12 +9,13 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-export default async function LessonPage({
+export default async function TeacherLessonPage({
 	params,
 }: {
 	params: { courseId: string; lessonId: string };
@@ -19,19 +23,31 @@ export default async function LessonPage({
 	const supabase = createClient();
 
 	const lesson = await supabase
-		.from('lessons')
-		.select(`*, courses(*)`)
+		.from("lessons")
+		.select(`*, 
+			courses(*),
+			lesson_comments(*,
+				profiles(*)
+			)
+		`)
 		.eq("id", params.lessonId)
 		.single();
 
 	if (lesson.error) {
 		console.log(lesson.error.message);
+		throw new Error(lesson.error.message);
 	}
 
-	console.log(lesson.data);
-
 	return (
-		<div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
+		<LessonPage
+			sideBar={
+				<SidebarComments
+					lesson_id={lesson?.data?.id}
+					lesson_comments={lesson?.data?.lesson_comments}
+				/>
+			}
+		>
+			<div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
 			<Breadcrumb>
 				<BreadcrumbList>
 					<BreadcrumbItem>
@@ -88,9 +104,11 @@ export default async function LessonPage({
 				Sequence: {lesson?.data?.sequence}
 			</h3>
 
+			<Separator />
+
 			{lesson.data?.video_url && (
 				<>
-					<h3 className="text-lg font-semibold mt-4">
+					<h3 className="text-xl font-semibold mt-4">
 						Youtube Video
 					</h3>
 					<iframe
@@ -102,12 +120,13 @@ export default async function LessonPage({
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 						allowFullScreen
 					></iframe>
+					<Separator />
 				</>
 			)}
 
 			{lesson.data?.embed_code ? (
 				<div className="flex flex-col mb-10 gap-4">
-					<h3 className="text-lg font-semibold mt-4">Embeded Code</h3>
+					<h3 className="text-xl font-semibold mt-4">Embeded Code</h3>
 					<iframe
 						src={lesson.data?.embed_code}
 						style={{
@@ -122,12 +141,42 @@ export default async function LessonPage({
 						sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
 						className="resize "
 					/>
+					<Separator />
 				</div>
 			) : null}
 
+			<div className="flex flex-col mb-10 gap-4">
+				<h3 className="text-xl font-semibold mt-4">Content</h3>
+				<Markdown
+					className={` markdown-body`}
+					remarkPlugins={[remarkGfm]}
+				>
+					{lesson.data?.content}
+				</Markdown>
+			</div>
+
+			<Separator />
+
+			<h3 className="text-xl font-semibold mt-4">System Prompt</h3>
+
 			<Markdown className={` markdown-body`} remarkPlugins={[remarkGfm]}>
-				{lesson.data?.content}
+				{lesson.data?.system_prompt}
 			</Markdown>
+
+			<Separator />
+
+			<h3 className="text-xl font-semibold mt-4">
+				Try the chat sandbox
+			</h3>
+
+			<div className="flex flex-col gap-4 rounded border p-4">
+				<TaskMessages
+					systemPrompt={lesson.data?.system_prompt}
+				/>
+			</div>
+
 		</div>
+		</LessonPage>
+		
 	);
 }
