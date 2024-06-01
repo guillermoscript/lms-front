@@ -16,6 +16,7 @@ export async function editLessonsAction(prevDate: any, data: FormData) {
     const language = data.get("language") as string;
     const content = data.get("content") as string;
     const embed = data.get("embed") as string;
+    const system_prompt = data.get("systemPrompt") as string;
 
 console.log(language)
     const supabase = createClient();
@@ -29,6 +30,7 @@ console.log(language)
             status: status,
             sequence: sequence,
             updated_at: new Date(),
+            system_prompt: system_prompt
         })
         .eq("id", lessonId);
 
