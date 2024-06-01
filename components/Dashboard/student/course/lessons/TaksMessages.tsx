@@ -1,11 +1,19 @@
 "use client";
 
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ForwardRefEditor } from "@/components/ui/markdown/ForwardRefEditor";
 import ViewMarkdown from "@/components/ui/markdown/ViewMarkdown";
 import { cn } from "@/utils";
 import { useChat } from "ai/react";
-import { Copy, Pen } from "lucide-react";
+import { ArrowUp, Copy, Pen } from "lucide-react";
 import { useEffect } from "react";
 
 const Message = ({
@@ -19,8 +27,7 @@ const Message = ({
 	time: string;
 	isUser: boolean;
 }) => {
-
-	if (sender !== 'user' && sender !== 'assistant') {
+	if (sender !== "user" && sender !== "assistant") {
 		return null;
 	}
 
@@ -83,13 +90,17 @@ const ChatInput = ({
 	handleSubmit,
 	handleInputChange,
 	input,
+	isLoading,
+	stop,
 }: {
 	handleSubmit: (e: any) => void;
 	input: string;
 	handleInputChange: (e: any) => void;
+	isLoading: boolean;
+	stop: () => void;
 }) => {
 	return (
-		<form onSubmit={handleSubmit} className="p-4 flex ">
+		<form onSubmit={handleSubmit} className="p-4 flex gap-2 ">
 			{/* <ForwardRefEditor
 				className="flex-1 p-2 rounded-l-lg"
 				placeholder="Send a message"
@@ -103,19 +114,63 @@ const ChatInput = ({
 				placeholder="Send a message"
 				onChange={handleInputChange}
 				value={input}
+				disabled={isLoading}
 			/>
-			<Button>Send</Button>
+			{isLoading ? (
+				<Button type="button" onClick={stop} className="rounded-r-lg">
+					Stop
+				</Button>
+			) : (
+				<Button type="submit" className="rounded-r-lg">
+					Send
+				</Button>
+			)}
 		</form>
 	);
 };
 
+function BasicQuestionsCards({
+	promptTitle,
+	promptContent,
+}: {
+	promptTitle: string;
+	promptContent: string;
+}) {
+	return (
+		<Card className="cursor-pointer hover:shadow-lg">
+			<CardHeader>
+				<CardTitle>{promptTitle}</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p className="text-sm text-gray-500">{promptContent}</p>
+			</CardContent>
+			<CardFooter className="flex justify-between items-center">
+				<p>Card Footer</p>
+				<ArrowUp />
+			</CardFooter>
+		</Card>
+	);
+}
+
 export default function TaskMessages({
 	systemPrompt,
+	defaultQuestions
 }: {
 	systemPrompt: string;
+	defaultQuestions?: Array<{
+		promptTitle: string;
+		promptContent: string;
+	}>;
 }) {
-	const { messages, input, handleInputChange, handleSubmit, setMessages } =
-		useChat();
+	const {
+		messages,
+		input,
+		handleInputChange,
+		handleSubmit,
+		setMessages,
+		isLoading,
+		stop,
+	} = useChat();
 	useChat();
 
 	useEffect(() => {
@@ -131,10 +186,23 @@ export default function TaskMessages({
 	return (
 		<div className="min-h-screen flex flex-col">
 			<ChatWindow messages={messages} />
+			{messages.length > 1 ? null : (
+				<div className="flex gap-4 p-4 overflow-x-auto w-full">
+					{defaultQuestions?.map((question, index) => (
+						<BasicQuestionsCards
+							key={index}
+							promptTitle={question.promptTitle}
+							promptContent={question.promptContent}
+						/>
+					))}
+				</div>
+			)}
 			<ChatInput
 				handleSubmit={handleSubmit}
 				input={input}
+				stop={stop}
 				handleInputChange={handleInputChange}
+				isLoading={isLoading}
 			/>
 		</div>
 	);
