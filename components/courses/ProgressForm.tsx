@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/select";
 import { Database } from "@/utils/supabase/supabase";
 import { useState } from "react";
-import SaveButtonForm from "../form/SaveButtonForm";
 import { useToast } from "../ui/use-toast";
+import ButtonSubmitDashbaord from "../dashboard/ButtonSubmitDashbaord";
+
 type ProgressFormProps = {
 	lessonId: number;
     progressStatus: Database["public"]["Tables"]["lesson_progress"]["Row"]['progress_status']
@@ -70,7 +71,7 @@ export default  function ProgressForm({ lessonId, progressStatus }: ProgressForm
                     }
 				</SelectContent>
 			</Select>
-            <SaveButtonForm />
+            <ButtonSubmitDashbaord />
 		</form>
 	);
 }
