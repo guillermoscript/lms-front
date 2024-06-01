@@ -1,1 +1,3 @@
-echo hola
+npm run lint
+npm run build
+git add .
