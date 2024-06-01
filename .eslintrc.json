@@ -12,6 +12,7 @@
         "standard-with-typescript",
         "plugin:react/jsx-runtime",
         "plugin:@typescript-eslint/recommended"
+        // ,"prettier"
     ],
     "parserOptions": {
         "ecmaVersion": "latest",
@@ -26,13 +27,29 @@
         "etc",
         "unused-imports",
         "simple-import-sort"
+        // ,"prettier",
     ],
     "rules": {
+        "indent": ["off", 4],
+        "@typescript-eslint/indent" : ["error", 4],
+        "prettier/prettier": "off",
+        "@next/next/no-img-element": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "@typescript-eslint/no-redeclare": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
+        "react/jsx-indent-props": [
+                "off",
+            4
+        ],
         "no-tabs": "off",
         "no-mixed-spaces-and-tabs": "off",
         "react/prop-types": "off",
-        "simple-import-sort/imports": "off",
-        "simple-import-sort/exports": "off",
+        "react/jsx-indent": [
+            "off",
+            4
+        ],
+        "simple-import-sort/imports": "error",
+        "simple-import-sort/exports": "error",
         "@typescript-eslint/explicit-function-return-type": "off",
         "@typescript-eslint/naming-convention": "off",
         "@typescript-eslint/strict-boolean-expressions": "off",
@@ -50,14 +67,6 @@
         "react/jsx-key": "off",
         "@typescript-eslint/consistent-type-assertions": "off",
         "@typescript-eslint/no-throw-literal": "off",
-        "react/jsx-indent": [
-            "error",
-            2
-        ],
-        "react/jsx-indent-props": [
-            "error",
-            2
-        ],
         "react/jsx-closing-bracket-location": [
             "error",
             "tag-aligned"
@@ -85,7 +94,10 @@
             {
                 "allowBoolean": true
             }
-        ]
+        ],
+        "react-hooks/exhaustive-deps": "off",
+        "unused-imports/no-unused-imports": "error"
+
     },
     "overrides": [
         {

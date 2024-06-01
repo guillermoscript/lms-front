@@ -17,7 +17,6 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
     "forceConsistentCasingInFileNames": false,
     "noEmit": true,
     "esModuleInterop": true,
@@ -27,6 +26,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "strict": false,
+    "noImplicitAny": false,
     "plugins": [
       {
         "name": "next"
@@ -39,7 +40,8 @@
     "**/*.tsx",
     "pages/_document.js",
     "next.config.mjs",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "prettier.config.mjs"
   ],
   "exclude": [
     "node_modules",

@@ -1,101 +1,102 @@
 'use client'
+import React from 'react'
+
+import { Checkbox } from '@/components/ui/checkbox'
 import { FormField } from '@/components/ui/form'
 import { Label } from '@/components/ui/label'
-import React from 'react'
-import { Checkbox } from '@/components/ui/checkbox'
 
 interface Option {
-  id: string
+    id: string
 
-  text: string
+    text: string
 }
 
 interface Question {
-  id: string
+    id: string
 
-  label: string
+    label: string
 
-  options: Option[]
+    options: Option[]
 }
 
 interface Props {
-  questions: Question[]
+    questions: Question[]
 
-  form: any
+    form: any
 }
 
 const MultipleChoiceQuestion: React.FC<Props> = ({ questions, form }) => {
-  return (
-    <div className="space-y-2 mt-2">
-      {questions?.map((question) => (
-        <div className="space-y-2" key={question.id}>
-          <Label htmlFor={question.id}>{question.label}</Label>
+    return (
+        <div className="space-y-2 mt-2">
+            {questions?.map((question) => (
+                <div className="space-y-2" key={question.id}>
+                    <Label htmlFor={question.id}>{question.label}</Label>
 
-          {question.options.map((option) => (
-            <FormField
-              key={option.id}
-              control={form.control}
-              name={`${question.id}`}
-              render={({ field }) => {
+                    {question.options.map((option) => (
+                        <FormField
+                            key={option.id}
+                            control={form.control}
+                            name={`${question.id}`}
+                            render={({ field }) => {
 							  return (
-  <div className="flex items-center gap-2">
-    <Checkbox
-      checked={field.value.includes(
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            checked={field.value.includes(
 											  option.id
-      )}
-      onCheckedChange={(checked) => {
+                                            )}
+                                            onCheckedChange={(checked) => {
 											  let newValue =
 													form.getValues(
-														`${question.id}`
+													    `${question.id}`
 													) || []
 
-        if (checked) {
+                                                if (checked) {
 											    newValue.push(option.id)
-        } else {
+                                                } else {
 											    newValue = newValue.filter(
 											      (val: any) => val !== option.id
 											    )
 											  }
 
 											  form.setValue(
-													`${question.id}`,
-													newValue
+                                                    `${question.id}`,
+                                                    newValue
 											  )
-      }}
-    />
+                                            }}
+                                        />
 
-    <Label>{option.text}</Label>
-  </div>
+                                        <Label>{option.text}</Label>
+                                    </div>
 							  )
-              }}
-            />
-          ))}
+                            }}
+                        />
+                    ))}
+                </div>
+            ))}
         </div>
-      ))}
-    </div>
-  )
+    )
 }
 
 export const MultipleChoiceQuestionRead: React.FC<Props> = ({ questions }) => {
-  return (
-    <div className="space-y-2 mt-2">
-      {questions?.map((question) => (
-        <div className="space-y-2" key={question.id}>
-          <Label htmlFor={question.id}>{question.label}</Label>
-          {question.options.map((option) => (
-            <div
-              key={option.id}
-              className="flex items-center gap-2"
-            >
-              <Checkbox id={question.id} defaultChecked={false} />
+    return (
+        <div className="space-y-2 mt-2">
+            {questions?.map((question) => (
+                <div className="space-y-2" key={question.id}>
+                    <Label htmlFor={question.id}>{question.label}</Label>
+                    {question.options.map((option) => (
+                        <div
+                            key={option.id}
+                            className="flex items-center gap-2"
+                        >
+                            <Checkbox id={question.id} defaultChecked={false} />
 
-              <Label>{option.text}</Label>
-            </div>
-          ))}
+                            <Label>{option.text}</Label>
+                        </div>
+                    ))}
+                </div>
+            ))}
         </div>
-      ))}
-    </div>
-  )
+    )
 }
 
 export default MultipleChoiceQuestion

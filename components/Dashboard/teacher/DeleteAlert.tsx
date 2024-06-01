@@ -1,61 +1,61 @@
 'use client'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 
 export default function DeleteAlert ({
-  itemId,
-  itemType,
-  deleteAction
+    itemId,
+    itemType,
+    deleteAction
 }: {
-  itemId: string
-  itemType: string
-  deleteAction: (id: string) => Promise<any>
+    itemId: string
+    itemType: string
+    deleteAction: (id: string) => Promise<any>
 }) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger>
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger>
         Delete {itemType}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
             Are you absolutely sure?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
             This action cannot be undone. This will permanently
             delete the {itemType}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            asChild
-          >
-            <Button
-              variant={'destructive'}
-              onClick={async () => {
-                const response = await deleteAction(itemId)
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        asChild
+                    >
+                        <Button
+                            variant={'destructive'}
+                            onClick={async () => {
+                                const response = await deleteAction(itemId)
 
-                if (response.error) {
-                  console.log(response)
-                }
-              }}
-            >
+                                if (response.error) {
+                                    console.log(response)
+                                }
+                            }}
+                        >
               Delete
-            </Button>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
+                        </Button>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
 }

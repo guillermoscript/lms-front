@@ -31,8 +31,8 @@ export async function createCourseAction (prevDate: any, data: FormData) {
     description,
     status: 'draft',
     author_id,
-    created_at: new Date() as string,
-    updated_at: new Date()
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }])
 
   if (courseData.error) {
