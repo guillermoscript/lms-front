@@ -79,7 +79,8 @@ export default async function EditLessonPage({
 					video_url: lesson?.data?.video_url,
 					embed: lesson?.data?.embed_code,
 					status: lesson?.data?.status,
-					content: lesson?.data?.ontent,
+					content: lesson?.data?.content,
+					systemPrompt: lesson?.data?.system_prompt,
 				}}
 			/>
 		</>
