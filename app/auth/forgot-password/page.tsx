@@ -19,7 +19,7 @@ export default function ForgotPassword ({
     const email = formData.get('email') as string
 
     const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = createClient()
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'http://localhost:3000/auth/reset-password'

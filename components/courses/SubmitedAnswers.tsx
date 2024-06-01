@@ -18,7 +18,7 @@ export default async function SubmitedAnswers ({
   testId
 }: SubmitedAnswersProps) {
   const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = createClient()
 
   const submitedAnswers = await supabase
     .from('vw_user_test_submissions')

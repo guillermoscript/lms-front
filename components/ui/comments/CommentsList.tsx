@@ -13,7 +13,7 @@ export default async function CommentsList ({
   }
 }) {
   const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = createClient()
 
   const comments = await supabase
     .from('comments')

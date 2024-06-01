@@ -16,7 +16,7 @@ export default async function OrdersPage () {
 
 async function OrderTable () {
   const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = createClient()
 
   const orders = await supabase.from('invoices').select(` 
         id,
