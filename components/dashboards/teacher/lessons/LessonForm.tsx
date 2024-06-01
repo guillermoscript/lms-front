@@ -9,6 +9,13 @@ import {
     editLessonsAction
 } from '@/actions/dashboard/lessonsAction'
 import { Input, Select } from '@/components/form/Form'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
+} from '@/components/ui/card'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import { Separator } from '@/components/ui/separator'
 
@@ -18,18 +25,15 @@ import StateMessages from '../../StateMessages'
 const selectClassNames = {
     container: '  flex flex-col form-control gap-3 relative',
     label: 'text-sm  font-medium text-neutral-600',
-    input: 'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+    input:
+    'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
     error: 'pt-2 text-destructive absolute top-full left-0 text-xs'
 }
 
 // Schema for form validation
 const lessonSchema = yup.object({
     title: yup.string().required('Title is required'),
-    sequence: yup
-        .number()
-        .required('Sequence is required')
-        .positive()
-        .integer(),
+    sequence: yup.number().required('Sequence is required').positive().integer(),
     video_url: yup.string().url().nullable(),
     embed: yup.string().nullable(),
     content: yup.string().required('Content is required'),
@@ -62,7 +66,15 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
         embed: '',
         content: '',
         status: 'draft',
-        ...initialValues
+        ...(initialValues || {
+            title: '',
+            sequence: 0,
+            video_url: '',
+            embed: '',
+            content: '',
+            status: 'draft',
+            systemPrompt: ''
+        })
     }
 
     const formMethods = useForm<LessonSchemaType>({
@@ -84,38 +96,55 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                 <Input type="text" name="title" displayName="Title" />
 
                 <Input name="sequence" displayName="Sequence" type="number" />
-                <Input
-                    type="text"
-                    name="video_url"
-                    displayName="YouTube Video URL"
-                />
+                <Input type="text" name="video_url" displayName="YouTube Video URL" />
                 <Input type="text" name="embed" displayName="Embed Code" />
                 <Select
                     name="status"
                     displayName="Status"
                     options={[
-					  { value: 'draft', label: 'Draft' },
-					  { value: 'published', label: 'Published' },
-					  { value: 'archived', label: 'Archived' }
+                        { value: 'draft', label: 'Draft' },
+                        { value: 'published', label: 'Published' },
+                        { value: 'archived', label: 'Archived' }
                     ]}
                     clasess={selectClassNames}
                 />
 
-                <ForwardRefEditor
-                    markdown={contentWatch}
-                    className="markdown-body"
-                    onChange={(value) => formMethods.setValue('content', value)}
-                />
-                <input type="hidden" name="content" value={contentWatch} />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Content of lessons</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ForwardRefEditor
+                            markdown={contentWatch}
+                            className="markdown-body"
+                            onChange={(value) => formMethods.setValue('content', value)}
+                        />
+                        <input type="hidden" name="content" value={contentWatch} />
+                    </CardContent>
+                </Card>
 
                 <Separator />
 
-                <ForwardRefEditor
-                    markdown={systemPromptWatch}
-                    className="markdown-body"
-                    onChange={(value) => formMethods.setValue('systemPrompt', value)}
-                />
-                <input type="hidden" name="systemPrompt" value={systemPromptWatch} />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>System Prompt</CardTitle>
+                        <CardDescription>
+              This is the prompt that the AI will use to generate responses.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ForwardRefEditor
+                            markdown={systemPromptWatch}
+                            className="markdown-body"
+                            onChange={(value) => formMethods.setValue('systemPrompt', value)}
+                        />
+                        <input
+                            type="hidden"
+                            name="systemPrompt"
+                            value={systemPromptWatch}
+                        />
+                    </CardContent>
+                </Card>
 
                 <input type="hidden" name="course_id" value={courseId} />
                 <input type="hidden" name="lessonId" value={lessonId} />

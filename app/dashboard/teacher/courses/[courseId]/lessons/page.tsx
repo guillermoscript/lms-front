@@ -19,13 +19,13 @@ export default async function CreateLessonPage ({
     const course = await supabase
         .from('courses')
         .select('*')
-        .eq('id', params.courseId)
+        .eq('course_id', params.courseId)
         .single()
 
     if (course.error != null) {
         console.log(course.error.message)
+        throw new Error(course.error.message)
     }
-    console.log(params)
     console.log(course)
     return (
         <>
