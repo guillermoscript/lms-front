@@ -44,6 +44,32 @@ export type Database = {
           },
         ]
       }
+      chats: {
+        Row: {
+          chat_id: number
+          created_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id?: number
+          created_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_categories: {
         Row: {
           created_at: string | null
@@ -554,6 +580,42 @@ export type Database = {
           },
         ]
       }
+      lesson_passed: {
+        Row: {
+          id: number
+          lesson_id: number
+          passed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: never
+          lesson_id: number
+          passed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: never
+          lesson_id?: number
+          passed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_passed_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_passed_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           content: string | null
@@ -564,7 +626,7 @@ export type Database = {
           id: number
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
-          system_prompt: string | null
+          summary: string | null
           title: string | null
           updated_at: string | null
           video_url: string | null
@@ -578,7 +640,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
-          system_prompt?: string | null
+          summary?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -592,7 +654,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
-          system_prompt?: string | null
+          summary?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -604,6 +666,102 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      lessons_ai_task_messages: {
+        Row: {
+          created_at: string
+          id: number
+          message: string | null
+          sender: Database["public"]["Enums"]["ai_sender_type"] | null
+          status: Database["public"]["Enums"]["review_status"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          message?: string | null
+          sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          status?: Database["public"]["Enums"]["review_status"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          message?: string | null
+          sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          status?: Database["public"]["Enums"]["review_status"] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_ai_task_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons_ai_tasks: {
+        Row: {
+          created_at: string
+          id: number
+          lesson_id: number | null
+          system_prompt: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          lesson_id?: number | null
+          system_prompt?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          lesson_id?: number | null
+          system_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_ai_tasks_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          chat_id: number | null
+          created_at: string
+          id: number
+          message: string | null
+          sender: string | null
+        }
+        Insert: {
+          chat_id?: number | null
+          created_at?: string
+          id?: number
+          message?: string | null
+          sender?: string | null
+        }
+        Update: {
+          chat_id?: number | null
+          created_at?: string
+          id?: number
+          message?: string | null
+          sender?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["chat_id"]
           },
         ]
       }
@@ -819,6 +977,89 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exam_questions"
             referencedColumns: ["question_id"]
+          },
+        ]
+      }
+      review_comments: {
+        Row: {
+          comment_text: string
+          created_at: string | null
+          id: number
+          review_id: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string | null
+          id?: never
+          review_id: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string | null
+          id?: never
+          review_id?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_comments_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          created_at: string | null
+          entity_id: number
+          entity_type: string
+          id: number
+          rating: number
+          review_text: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: number
+          entity_type: string
+          id?: never
+          rating: number
+          review_text?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: number
+          entity_type?: string
+          id?: never
+          rating?: number
+          review_text?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1082,6 +1323,14 @@ export type Database = {
       }
     }
     Enums: {
+      ai_sender_type:
+        | "system"
+        | "user"
+        | "assistant"
+        | "function"
+        | "data"
+        | "tool"
+      review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
       transaction_status:

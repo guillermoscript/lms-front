@@ -18,7 +18,7 @@ export default async function EditLessonPage ({
     const supabase = createClient()
     const lesson = await supabase
         .from('lessons')
-        .select('*, courses(*)')
+        .select('*, courses(*),lessons_ai_tasks(*)')
         .eq('id', params.lessonId)
         .single()
 
@@ -80,7 +80,7 @@ export default async function EditLessonPage ({
                     embed: lesson?.data?.embed_code,
                     status: lesson?.data?.status,
                     content: lesson?.data?.content,
-                    systemPrompt: lesson?.data?.system_prompt
+                    systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt
                 }}
             />
         </>

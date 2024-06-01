@@ -27,7 +27,8 @@ export default async function StudentLessonPage ({
             courses(*),
 			lesson_comments(*,
 				profiles(*)
-			)
+			),
+      lessons_ai_tasks(*)
         `
         )
         .eq('id', params.lessonsId)
