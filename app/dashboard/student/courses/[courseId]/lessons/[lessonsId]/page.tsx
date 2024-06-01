@@ -1,7 +1,6 @@
-import CommentEditor from "@/components/dashboard/student/course/lessons/CommentEditor";
+import SidebarComments from "@/components/dashboard/Common/SidebarComments";
 import LessonPage from "@/components/dashboard/student/course/lessons/LessonPage";
 import TaksMessages from "@/components/dashboard/student/course/lessons/TaksMessages";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
 	Breadcrumb,
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import ViewMarkdown from "@/components/ui/markdown/ViewMarkdown";
 import { createClient } from "@/utils/supabase/server";
-import { Tables } from "@/utils/supabase/supabase";
 import { Link } from "lucide-react";
 
 export default async function StudentLessonPage({
@@ -44,7 +42,7 @@ export default async function StudentLessonPage({
 		<>
 			<LessonPage
 				sideBar={
-					<SidebarContent
+					<SidebarComments
 						lesson_id={lessonData.data.id}
 						lesson_comments={lessonData.data.lesson_comments}
 					/>
@@ -55,29 +53,6 @@ export default async function StudentLessonPage({
 	);
 }
 
-function SidebarContent({
-	lesson_id,
-	lesson_comments,
-}: {
-	lesson_id: number;
-	lesson_comments: Tables<"lesson_comments">[];
-}) {
-	return (
-		<div className="flex flex-col gap-4">
-			{lesson_comments?.map((comment) => (
-				<CommentCard
-					key={comment.id}
-					name={comment.name}
-					comment={comment.content}
-				/>
-			))}
-			<div className="mt-4">
-				<h3 className="text-lg font-medium">Add a Comment</h3>
-				<CommentEditor lesson_id={lesson_id} />
-			</div>
-		</div>
-	);
-}
 
 function Content({ lessonData }: { lessonData: any }) {
 	return (
@@ -190,27 +165,6 @@ function Content({ lessonData }: { lessonData: any }) {
 		</div>
 	);
 }
-
-const CommentCard = ({ name, comment }: {
-	name: string;
-	comment: string;
-}) => (
-	<div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-		<div className="flex items-start gap-4">
-			<Avatar>
-				<AvatarImage
-					src="https://github.com/shadcn.png"
-					alt="@shadcn"
-				/>
-				<AvatarFallback>CN</AvatarFallback>
-			</Avatar>
-			<div>
-				<h4 className="font-medium">{name}</h4>
-				<ViewMarkdown markdown={comment} />
-			</div>
-		</div>
-	</div>
-);
 
 const ResourceCard = ({ title, description }) => (
 	<div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
