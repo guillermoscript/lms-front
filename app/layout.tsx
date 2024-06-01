@@ -1,6 +1,6 @@
 import { GeistSans } from 'geist/font/sans'
 import './globals.css'
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 
 const defaultUrl = process.env.VERCEL_URL
@@ -10,18 +10,18 @@ const defaultUrl = process.env.VERCEL_URL
 export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: 'Next.js and Supabase Starter Kit',
-  description: 'The fastest way to build apps with Next.js and Supabase',
+  description: 'The fastest way to build apps with Next.js and Supabase'
 }
 
-export default function RootLayout({
-  children,
+export default function RootLayout ({
+  children
 }: {
   children: React.ReactNode
 }) {
-  
   return (
-    <html lang="en" 
-    className={GeistSans.className}>
+    <html lang="en"
+      className={GeistSans.className}
+    >
       <body>
         <main className="min-h-screen flex flex-col items-center w-full">
           <ThemeProvider
@@ -30,8 +30,8 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-          {children}
-          <Toaster />
+            {children}
+            <Toaster />
           </ThemeProvider>
         </main>
       </body>

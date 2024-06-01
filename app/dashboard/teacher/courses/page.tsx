@@ -1,90 +1,90 @@
-import { DataTable } from "@/components/ui/Table/data-table";
-import { createClient } from "@/utils/supabase/server";
-import { courseCols } from "./courseCols";
-import dayjs from "dayjs";
+import { DataTable } from '@/components/ui/Table/data-table'
+import { createClient } from '@/utils/supabase/server'
+import { courseCols } from './courseCols'
+import dayjs from 'dayjs'
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import CreateCourse from "@/components/dashboard/teacher/course/CreateCourse";
-import { Button } from "@/components/ui/button";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
+import CreateCourse from '@/components/dashboard/teacher/course/CreateCourse'
+import { Button } from '@/components/ui/button'
 import {
-	Breadcrumb,
-	BreadcrumbList,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-export default async function CreateCoursePage() {
-	const supabase = createClient();
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb'
+export default async function CreateCoursePage () {
+  const supabase = createClient()
 
-	const course = await supabase.from("courses").select("*");
+  const course = await supabase.from('courses').select('*')
 
-	if (course.error) {
-		console.log(course.error.message);
-	}
+  if (course.error != null) {
+    console.log(course.error.message)
+  }
 
-	console.log(course.data);
+  console.log(course.data)
 
-	const rows = course.data?.map((course) => {
-		return {
-			id: course.course_id,
-			title: course.title,
-			description: course.description,
-			status: course.status,
-			date: dayjs(course.created_at).format("DD/MM/YYYY"),
-		};
-	});
+  const rows = course.data?.map((course) => {
+    return {
+      id: course.course_id,
+      title: course.title,
+      description: course.description,
+      status: course.status,
+      date: dayjs(course.created_at).format('DD/MM/YYYY')
+    }
+  })
 
-	return (
-		<div className=" flex-1 p-8 overflow-y-auto w-full space-y-4">
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink href="/dashboard">
-							Dashboard
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink href="/dashboard/teacher">
-							Teacher
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					<BreadcrumbSeparator />
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							className="text-primary-500 dark:text-primary-400"
-							href="/dashboard/teacher/courses"
-						>
-							Courses
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
-			<h1 className="text-2xl font-semibold mb-4">
-				List And Create course page
-			</h1>
-			<Dialog>
-				<DialogTrigger asChild>
-					<Button>Create a new course</Button>
-				</DialogTrigger>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Create a new course</DialogTitle>
-						<DialogDescription>
-							Fill in the form below to create a new course
-						</DialogDescription>
-					</DialogHeader>
-					<CreateCourse />
-				</DialogContent>
-			</Dialog>
+  return (
+    <div className=" flex-1 p-8 overflow-y-auto w-full space-y-4">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/teacher">
+              Teacher
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              className="text-primary-500 dark:text-primary-400"
+              href="/dashboard/teacher/courses"
+            >
+              Courses
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+      <h1 className="text-2xl font-semibold mb-4">
+        List And Create course page
+      </h1>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button>Create a new course</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a new course</DialogTitle>
+            <DialogDescription>
+              Fill in the form below to create a new course
+            </DialogDescription>
+          </DialogHeader>
+          <CreateCourse />
+        </DialogContent>
+      </Dialog>
 
-			<DataTable columns={courseCols} data={rows} />
-		</div>
-	);
+      <DataTable columns={courseCols} data={rows} />
+    </div>
+  )
 }

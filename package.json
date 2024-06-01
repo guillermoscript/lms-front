@@ -4,7 +4,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --fix --quiet",
+    "lint": "next lint --quiet --fix",
     "lint:degub": "next lint --quiet"
   },
   "dependencies": {

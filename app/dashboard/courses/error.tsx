@@ -1,25 +1,25 @@
-"use client"; // Error components must be Client Components
+'use client' // Error components must be Client Components
 
-import GenericError from "@/components/GenericError";
-import { useEffect } from "react";
+import GenericError from '@/components/GenericError'
+import { useEffect } from 'react'
 
-export default function Error({
-	error,
-	reset,
+export default function Error ({
+  error,
+  reset
 }: {
-	error: Error & { digest?: string };
-	reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
-	useEffect(() => {
-		// Log the error to an error reporting service
-		console.error(error);
-	}, [error]);
+  useEffect(() => {
+    // Log the error to an error reporting service
+    console.error(error)
+  }, [error])
 
-	return (
-		<GenericError
-			retry={reset}
-			title="An error loading the courses"
-			description="An unexpected error occurred. Please try again."
-		/>
-	);
+  return (
+    <GenericError
+      retry={reset}
+      title="An error loading the courses"
+      description="An unexpected error occurred. Please try again."
+    />
+  )
 }

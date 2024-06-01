@@ -1,93 +1,111 @@
 {
-  "env": {
-      "browser": true,
-      "es2021": true,
-      "node": true
-  },
-  "parser": "@typescript-eslint/parser",
-  "extends": [
-      "next",
-      "next/core-web-vitals",
-      "plugin:react/recommended",
-      "standard-with-typescript",
-      "plugin:react/jsx-runtime",
-      "plugin:@typescript-eslint/recommended"
-  ],
-  "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module",
-      "project": [
-          "./tsconfig.json"
-      ]
-  },
-  "plugins": [
-      "react",
-      "@typescript-eslint",
-      "etc",
-      "unused-imports",
-      "simple-import-sort"
-  ],
-  "rules": {
-      "react/prop-types": "off",
-      "simple-import-sort/imports": "error",
-      "simple-import-sort/exports": "error",
-      "@typescript-eslint/explicit-function-return-type": "off",
-      "react/jsx-indent": [
-          "error",
-          2
-      ],
-      "react/jsx-indent-props": [
-          "error",
-          2
-      ],
-      "react/jsx-closing-bracket-location": [
-          "error",
-          "tag-aligned"
-      ],
-      "react/jsx-wrap-multilines": [
-          "error",
-          {
-              "declaration": "parens",
-              "assignment": "parens",
-              "return": "parens-new-line",
-              "arrow": "parens",
-              "condition": "ignore",
-              "logical": "ignore",
-              "prop": "ignore"
-          }
-      ],
-      "@typescript-eslint/no-misused-promises": [
-          "error",
-          {
-              "checksVoidReturn": false
-          }
-      ],
-      "@typescript-eslint/restrict-template-expressions": [
-          "error",
-          {
-              "allowBoolean": true
-          }
-      ]
-  },
-  "overrides": [
-      {
-          "files": [
-              "*.spec.ts"
-          ],
-          "rules": {
-              "@typescript-eslint/ban-ts-comment": "off",
-              "@typescript-eslint/prefer-ts-expect-error": "off"
-          }
-      },
-      {
-          "files": [
-              "cypress/**"
-          ],
-          "rules": {
-              "@typescript-eslint/triple-slash-reference": "off",
-              "@typescript-eslint/ban-ts-comment": "off",
-              "@typescript-eslint/prefer-ts-expect-error": "off"
-          }
-      }
-  ]
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "parser": "@typescript-eslint/parser",
+    "extends": [
+        "next",
+        "next/core-web-vitals",
+        "plugin:react/recommended",
+        "standard-with-typescript",
+        "plugin:react/jsx-runtime",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module",
+        "project": [
+            "./tsconfig.json"
+        ]
+    },
+    "plugins": [
+        "react",
+        "@typescript-eslint",
+        "etc",
+        "unused-imports",
+        "simple-import-sort"
+    ],
+    "rules": {
+        "no-tabs": "off",
+        "no-mixed-spaces-and-tabs": "off",
+        "react/prop-types": "off",
+        "simple-import-sort/imports": "off",
+        "simple-import-sort/exports": "off",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/naming-convention": "off",
+        "@typescript-eslint/strict-boolean-expressions": "off",
+        "@typescript-eslint/no-floating-promise": "off",
+        "@typescript-eslint/restrict-plus-operands": "off",
+        "@typescript-eslint/prefer-optional-chain": "off",
+        "react/no-children-prop": "off",
+        "@typescript-eslint/prefer-nullish-coalescing": "off",
+        "no-case-declarations": "off",
+        "multiline-ternary": "off",
+        "@typescript-eslint/no-unused-expressions": "off",
+        "react/no-unescaped-entities": "off",
+        "react/jsx-no-undef": "off",
+        "@typescript-eslint/no-floating-promises": "off",
+        "react/jsx-key": "off",
+        "@typescript-eslint/consistent-type-assertions": "off",
+        "@typescript-eslint/no-throw-literal": "off",
+        "react/jsx-indent": [
+            "error",
+            2
+        ],
+        "react/jsx-indent-props": [
+            "error",
+            2
+        ],
+        "react/jsx-closing-bracket-location": [
+            "error",
+            "tag-aligned"
+        ],
+        "react/jsx-wrap-multilines": [
+            "error",
+            {
+                "declaration": "parens",
+                "assignment": "parens",
+                "return": "parens-new-line",
+                "arrow": "parens",
+                "condition": "ignore",
+                "logical": "ignore",
+                "prop": "ignore"
+            }
+        ],
+        "@typescript-eslint/no-misused-promises": [
+            "off",
+            {
+                "checksVoidReturn": false
+            }
+        ],
+        "@typescript-eslint/restrict-template-expressions": [
+            "off",
+            {
+                "allowBoolean": true
+            }
+        ]
+    },
+    "overrides": [
+        {
+            "files": [
+                "*.spec.ts"
+            ],
+            "rules": {
+                "@typescript-eslint/ban-ts-comment": "off",
+                "@typescript-eslint/prefer-ts-expect-error": "off"
+            }
+        },
+        {
+            "files": [
+                "cypress/**"
+            ],
+            "rules": {
+                "@typescript-eslint/triple-slash-reference": "off",
+                "@typescript-eslint/ban-ts-comment": "off",
+                "@typescript-eslint/prefer-ts-expect-error": "off"
+            }
+        }
+    ]
 }

@@ -1,39 +1,39 @@
-import TestSubmissionReview from "@/components/dashboard/teacher/test/TestSubmissionReview";
+import TestSubmissionReview from '@/components/dashboard/teacher/test/TestSubmissionReview'
 import {
-	Breadcrumb,
-	BreadcrumbList,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { createClient } from "@/utils/supabase/server";
-import { ClockIcon } from "lucide-react";
-import { redirect } from "next/navigation";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb'
+import { createClient } from '@/utils/supabase/server'
+import { ClockIcon } from 'lucide-react'
+import { redirect } from 'next/navigation'
 
-export default async function ReviewStudentExamSubmission({
-	params,
+export default async function ReviewStudentExamSubmission ({
+  params
 }: {
-	params: {
-		courseId: string;
+  params: {
+    courseId: string
 
-		testId: string;
+    testId: string
 
-		submissionId: string;
-	};
+    submissionId: string
+  }
 }) {
-	const supabase = createClient();
+  const supabase = createClient()
 
-	const userData = await supabase.auth.getUser();
+  const userData = await supabase.auth.getUser()
 
-	if (userData.error) {
-		return redirect("/auth/login");
-	}
+  if (userData.error != null) {
+    return redirect('/auth/login')
+  }
 
-	const { data: examData, error: examError } = await supabase
+  const { data: examData, error: examError } = await supabase
 
-		.from("exam_submissions")
+    .from('exam_submissions')
 
-		.select(`
+    .select(`
             submission_id,
             student_id,
             submission_date,
@@ -66,104 +66,104 @@ export default async function ReviewStudentExamSubmission({
                 )
             )
         `)
-		.eq("exam_id", params.testId)
-		.eq("submission_id", params.submissionId)
-		.single();
+    .eq('exam_id', params.testId)
+    .eq('submission_id', params.submissionId)
+    .single()
 
-	if (examError) {
-		console.log(examError.message);
-		return redirect("/dashboard/student/courses");
-	}
+  if (examError != null) {
+    console.log(examError.message)
+    return redirect('/dashboard/student/courses')
+  }
 
-    console.log(examData)
+  console.log(examData)
 
-    const { exams } = examData
-	return (
-		<>
-			<Breadcrumb>
-				<BreadcrumbList>
-					<BreadcrumbItem>
-						<BreadcrumbLink href="/dashboard">
-							Dashboard
-						</BreadcrumbLink>
-					</BreadcrumbItem>
+  const { exams } = examData
+  return (
+    <>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-					<BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-					<BreadcrumbItem>
-						<BreadcrumbLink href="/dashboard/teacher">
-							Teacher
-						</BreadcrumbLink>
-					</BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/teacher">
+              Teacher
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-					<BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							href={`/dashboard/teacher/courses/${params.courseId}`}
-						>
-							Courses
-						</BreadcrumbLink>
-					</BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href={`/dashboard/teacher/courses/${params.courseId}`}
+            >
+              Courses
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-					<BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							href={`/dashboard/teacher/courses/${params.courseId}/tests`}
-						>
-							Exams
-						</BreadcrumbLink>
-					</BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href={`/dashboard/teacher/courses/${params.courseId}/tests`}
+            >
+              Exams
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-					<BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
-						>
-							{exams?.title}
-						</BreadcrumbLink>
-					</BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
+            >
+              {exams?.title}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-					<BreadcrumbSeparator />
+          <BreadcrumbSeparator />
 
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/review/${params.submissionId}`}
-						>
-							Review
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-				</BreadcrumbList>
-			</Breadcrumb>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/review/${params.submissionId}`}
+            >
+              Review
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-			<div className="grid gap-8">
-				<div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950">
-					<h1 className="text-3xl font-bold">
-						{exams?.title} Exam Review
-					</h1>
+      <div className="grid gap-8">
+        <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950">
+          <h1 className="text-3xl font-bold">
+            {exams?.title} Exam Review
+          </h1>
 
-					<p className="text-gray-500 dark:text-gray-400">
-						{exams?.description}
-					</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {exams?.description}
+          </p>
 
-					<div className="mt-4 flex items-center gap-4">
-						<ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <div className="mt-4 flex items-center gap-4">
+            <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
 
-						<span className="text-sm text-gray-500 dark:text-gray-400">
-							Duration: {exams?.duration} minutes
-						</span>
-					</div>
-				</div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Duration: {exams?.duration} minutes
+            </span>
+          </div>
+        </div>
 
-				<TestSubmissionReview
-					exam_answers={examData.exam_answers}
-					exams={exams}
-                    submissionId={params.submissionId}
-                    studentId={examData.student_id}
-				/>
-			</div>
-		</>
-	);
+        <TestSubmissionReview
+          exam_answers={examData.exam_answers}
+          exams={exams}
+          submissionId={params.submissionId}
+          studentId={examData.student_id}
+        />
+      </div>
+    </>
+  )
 }
