@@ -564,7 +564,7 @@ export type Database = {
           id: number
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
-          systemPrompt: string | null
+          system_prompt: string | null
           title: string | null
           updated_at: string | null
           video_url: string | null
@@ -578,7 +578,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
-          systemPrompt?: string | null
+          system_prompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
@@ -592,7 +592,7 @@ export type Database = {
           id?: never
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
-          systemPrompt?: string | null
+          system_prompt?: string | null
           title?: string | null
           updated_at?: string | null
           video_url?: string | null
