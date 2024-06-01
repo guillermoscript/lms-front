@@ -30,7 +30,8 @@ export default async function TeacherLessonPage ({
 			courses(*),
 			lesson_comments(*,
 				profiles(*)
-			)
+			),
+            lessons_ai_tasks(*)
 		`
         )
         .eq('id', params.lessonId)
@@ -168,7 +169,7 @@ export default async function TeacherLessonPage ({
                     className={' markdown-body'}
                     remarkPlugins={[remarkGfm]}
                 >
-                    {lesson.data?.system_prompt}
+                    {lesson.data?.lessons_ai_tasks[0].system_prompt}
                 </Markdown>
 
                 <Separator />
@@ -178,7 +179,7 @@ export default async function TeacherLessonPage ({
                 </h3>
 
                 <div className="flex flex-col gap-4 rounded border p-4">
-                    <TaskMessages systemPrompt={lesson.data?.system_prompt} />
+                    <TaskMessages systemPrompt={lesson.data?.lessons_ai_tasks[0].system_prompt} />
                 </div>
             </div>
         </LessonPage>
