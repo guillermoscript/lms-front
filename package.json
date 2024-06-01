@@ -5,7 +5,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint --quiet --fix",
-    "lint:degub": "next lint --quiet"
+    "lint:degub": "next lint --quiet",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/google": "^0.0.15",
