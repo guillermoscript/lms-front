@@ -4,6 +4,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
+import DeleteCourseAlert from '@/components/dashboards/teacher/course/DeleteCourseAlert'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -14,7 +15,7 @@ import {
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
 interface Course {
-    id: bigint | number
+    id: number
     title: string
     description: string
     status: string
@@ -69,6 +70,9 @@ export const courseCols: Array<ColumnDef<Course>> = [
                                 Ver detalles
                             </Link>
                         </DropdownMenuLabel>
+                        <DeleteCourseAlert
+                            courseId={rowData.id}
+                        />
                     </DropdownMenuContent>
                 </DropdownMenu>
             )

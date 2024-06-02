@@ -63,7 +63,9 @@ export default async function TestFormPage ({
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
-            <TeacherTestForm />
+            <TeacherTestForm
+                courseId={params.courseId}
+            />
         </div>
     )
 }

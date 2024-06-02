@@ -43,7 +43,6 @@ const questionsSchema = yup.array().of(
 const validationSchema = yup.object().shape({
     testName: yup.string().required('Test Name is required'),
     testDescription: yup.string().required('Test Description is required'),
-    course: yup.number().required('Course is required'),
     exam_date: yup.string().required('Exam Date is required'),
     duration: yup.number().required('Time for Test is required'),
     questions: questionsSchema,
@@ -57,11 +56,13 @@ type TestFormType = yup.InferType<typeof validationSchema>
 interface TestFormProps {
     defaultValues?: Partial<TestFormType>
     testId?: string // Optional: if provided, it's an edit form
+    courseId: string
 }
 
 const TeacherTestForm: React.FC<TestFormProps> = ({
     defaultValues = {},
-    testId
+    testId,
+    courseId
 }) => {
     const isEditing = !!testId
 
@@ -69,7 +70,6 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
     // testName: "",
         testName: '',
         testDescription: '',
-        course: 0,
         exam_date: '',
         duration: 0,
         status: 'draft',
@@ -108,6 +108,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
         const finalData = {
             ...data,
             formFields: updateField,
+            course: courseId,
             ...(
                 testId &&
 					{ exam_id: Number(testId) }
@@ -164,12 +165,6 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                         clasess={classNames}
                     />
                     <Input
-                        name="course"
-                        displayName="Course"
-                        type="number"
-                        clasess={classNames}
-                    />
-                    <Input
                         name="exam_date"
                         displayName="Exam Date"
                         type="date"
@@ -210,14 +205,6 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                     </Card>
                 </form>
             </FormProvider>
-
-            {/* {error && (
-				<div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
-					<div className="bg-white p-4 rounded shadow-lg">
-						{error}
-					</div>
-				</div>
-			)} */}
         </div>
     )
 }
