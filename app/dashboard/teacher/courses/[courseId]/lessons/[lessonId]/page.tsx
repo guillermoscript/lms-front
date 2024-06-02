@@ -107,6 +107,9 @@ export default async function TeacherLessonPage ({
                 <h3 className="text-lg font-semibold mt-4">
                   Sequence: {lesson?.data?.sequence}
                 </h3>
+                <p>
+                    {lesson?.data?.description}
+                </p>
 
                 <Separator />
 
@@ -175,7 +178,7 @@ export default async function TeacherLessonPage ({
                 <Separator />
 
                 <h3 className="text-xl font-semibold mt-4">
-                  Try the chat sandbox
+                    Try the chat sandbox
                 </h3>
 
                 <div className="flex flex-col gap-4 rounded border p-4">

@@ -80,6 +80,7 @@ export default async function EditLessonPage ({
                     embed: lesson?.data?.embed_code,
                     status: lesson?.data?.status,
                     content: lesson?.data?.content,
+                    description: lesson?.data?.description,
                     systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt
                 }}
             />
