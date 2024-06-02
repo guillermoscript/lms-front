@@ -12,13 +12,10 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const sequence = data.get('sequence') as string
     const status = data.get('status') as string
     const video_url = data.get('video_url') as string
-    const course_id = data.get('course_id') as string
-    const language = data.get('language') as string
     const content = data.get('content') as string
     const embed = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
 
-    console.log(language)
     const supabase = createClient()
     const lessonData = await supabase
         .from('lessons')
@@ -27,10 +24,10 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
             content,
             video_url,
             embed_code: embed,
+            description,
             status: status as any,
             sequence: parseFloat(sequence),
-            updated_at: new Date().toISOString(),
-            system_prompt
+            updated_at: new Date().toISOString()
         })
         .eq('id', lessonId)
 
@@ -39,6 +36,15 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
         return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
     }
     console.log(lessonData.data)
+
+    if (system_prompt) {
+        const lessonAiAssignmentData = await supabase
+            .from('lessons_ai_tasks')
+            .update({
+                system_prompt
+            })
+            .eq('lesson_id', lessonId)
+    }
 
     revalidatePath('/dashboard/teacher/courses/[courseId]/lessons/[lessonId]', 'layout')
     return createResponse('success', 'Lesson updated successfully', null, null)
@@ -62,8 +68,10 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const course_id = data.get('course_id') as string
     const content = data.get('content') as string
     const embed_code = data.get('embed') as string
+    const system_prompt = data.get('systemPrompt') as string
+    const description = data.get('description') as string
 
-    const requiredFields = ['title', 'sequence', 'status', 'video_url', 'course_id', 'language', 'content']
+    const requiredFields = ['title', 'sequence', 'status', 'video_url', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
 
     if (response) {
@@ -80,16 +88,26 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             video_url,
             embed_code,
             status,
+            description,
             sequence,
             course_id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-        }).select('id')
+        }).select('id').single()
 
     if (lessonData.error) {
         console.log(lessonData.error)
         return createResponse('error', 'Error creating lesson', null, 'Error creating lesson')
     }
+
+    const lessonAiAssignmentData = await supabase
+        .from('lessons_ai_tasks')
+        .insert({
+            lesson_id: lessonData.data.id,
+            system_prompt
+        })
+
+    console.log(lessonAiAssignmentData.error)
 
     console.log(lessonData.data)
 
