@@ -1,8 +1,7 @@
-import { Link } from 'lucide-react'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import HelpMessages from '@/components/dashboards/student/course/lessons/HelpMessage'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
-import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
 import {
     Breadcrumb,
@@ -13,6 +12,11 @@ import {
 } from '@/components/ui/breadcrumb'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
+import { Tables } from '@/utils/supabase/supabase'
+
+// Force the page to be dynamic and allow streaming responses up to 30 seconds
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 export default async function StudentLessonPage ({
     params
@@ -28,7 +32,7 @@ export default async function StudentLessonPage ({
 			lesson_comments(*,
 				profiles(*)
 			),
-      lessons_ai_tasks(*)
+            lessons_ai_tasks(*)
         `
         )
         .eq('id', params.lessonsId)
@@ -49,21 +53,33 @@ export default async function StudentLessonPage ({
                         lesson_comments={lessonData.data.lesson_comments}
                     />
                 }
-                children={<Content lessonData={lessonData} />}
+                children={
+                    <Content
+                        lessonData={lessonData.data}
+                        courseData={lessonData.data.courses}
+                        lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
+                    />
+                }
             />
         </>
     )
 }
 
-function Content ({ lessonData }: { lessonData: any }) {
+function Content ({
+    lessonData,
+    courseData,
+    lessonsAiTasks
+}: {
+    lessonData: Tables<'lessons'>
+    courseData: Tables<'courses'>
+    lessonsAiTasks: Tables<'lessons_ai_tasks'>
+}) {
     return (
         <div className="flex flex-col gap-8 w-full">
             <Breadcrumb>
                 <BreadcrumbList>
                     <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
+                        <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
@@ -71,7 +87,7 @@ function Content ({ lessonData }: { lessonData: any }) {
                             className="text-primary-500 dark:text-primary-400"
                             href="/dashboard/student"
                         >
-                            Student
+              Student
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
@@ -80,43 +96,43 @@ function Content ({ lessonData }: { lessonData: any }) {
                             className="text-primary-500 dark:text-primary-400"
                             href="/dashboard/student/courses"
                         >
-                            Courses
+              Courses
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink
                             className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.data.course_id}`}
+                            href={`/dashboard/student/courses/${lessonData.course_id}`}
                         >
-                            {lessonData.data.courses?.title}
+                            {courseData?.title}
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink
                             className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.data.course_id}/lessons/`}
+                            href={`/dashboard/student/courses/${lessonData.course_id}/lessons/`}
                         >
-                            Lessons
+              Lessons
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink
                             className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.data.course_id}`}
+                            href={`/dashboard/student/courses/${lessonData.course_id}`}
                         >
-                            {lessonData.data.title}
+                            {lessonData.title}
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink
                             className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.data.course_id}/lessons/${lessonData.data.id}`}
+                            href={`/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`}
                         >
-                            {lessonData.data.title}
+                            {lessonData.title}
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                 </BreadcrumbList>
@@ -124,26 +140,22 @@ function Content ({ lessonData }: { lessonData: any }) {
             <div className="flex flex-col gap-8 w-full">
                 <div>
                     <div className="flex items-center justify-between">
-                        <h1 className="text-3xl font-bold">
-                            {lessonData.data.title}
-                        </h1>
-                        <Badge variant="default">
-                          Lesson # {lessonData.data.sequence}
-                        </Badge>
+                        <h1 className="text-3xl font-bold">{lessonData.title}</h1>
+                        <Badge variant="default">Lesson # {lessonData.sequence}</Badge>
                     </div>
                     <p className="text-gray-500 dark:text-gray-400">
-                        {lessonData.data.description}
+                        {lessonData.description}
                     </p>
                 </div>
 
-                {lessonData.data.video_url && (
+                {lessonData.video_url && (
                     <>
                         <h2 className="text-2xl font-bold">Video</h2>
 
                         <iframe
                             width={'100%'}
                             height={'500'}
-                            src={lessonData.data.video_url}
+                            src={lessonData.video_url}
                             title="YouTube video player"
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -153,48 +165,28 @@ function Content ({ lessonData }: { lessonData: any }) {
                     </>
                 )}
                 <div className="prose dark:prose-invert max-w-none">
-                    <ViewMarkdown markdown={lessonData.data.content} />
+                    <ViewMarkdown markdown={lessonData.content} />
                 </div>
-                <h3 className="text-2xl font-bold">Summary</h3>
-                <p>Summary of the lesson</p>
+                {lessonData.summary && (
+                    <div className="mt-8">
+                        <h3 className="text-2xl font-bold">Summary</h3>
+                        <ViewMarkdown markdown={lessonData.summary} />
+                    </div>
+                )}
             </div>
-            <TaksMessages systemPrompt={lessonData.data.systemPrompt} />
+            {lessonsAiTasks.system_prompt && (
+                <>
+                    <h3 className="text-xl font-semibold mt-4">Try the chat sandbox</h3>
+                    <div className="flex flex-col gap-4 rounded border p-4">
+                        {/* <TaksMessages systemPrompt={lessonsAiTasks.system_prompt} /> */}
+                        <HelpMessages />
+                    </div>
+                </>
+            )}
+            {/* <LessonNavigationButtons
+                courseId={lessonData.course_id}
+                lessonId={lessonData.id}
+            /> */}
         </div>
     )
 }
-
-const ResourceCard = ({ title, description }) => (
-    <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-        <h3 className="text-lg font-bold">{title}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-            {description}
-        </p>
-        <div className="mt-2">
-            <Link className="text-blue-600 underline" href="#">
-                View Resource
-            </Link>
-        </div>
-    </div>
-)
-
-const ReviewCard = ({ rating, review, reviewer, date }) => (
-    <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-                {/* Add logic to render stars based on rating */}
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-                {rating} / 5
-            </p>
-        </div>
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            {review}
-        </p>
-        <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-                Reviewed by {reviewer}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{date}</p>
-        </div>
-    </div>
-)
