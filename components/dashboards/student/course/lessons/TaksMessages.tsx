@@ -2,7 +2,6 @@
 
 import { useChat } from 'ai/react'
 import { ArrowUp, Copy, Pen } from 'lucide-react'
-import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -172,17 +171,15 @@ export default function TaskMessages ({
         isLoading,
         stop
     } = useChat()
-    useChat()
-
-    useEffect(() => {
-        setMessages([
+    useChat({
+        initialMessages: [
             {
                 role: 'system',
                 id: '1',
                 content: systemPrompt
             }
-        ])
-    }, [])
+        ]
+    })
 
     return (
         <div className="min-h-screen flex flex-col">
