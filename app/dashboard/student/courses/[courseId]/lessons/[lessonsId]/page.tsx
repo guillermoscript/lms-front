@@ -1,7 +1,8 @@
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
-import HelpMessages from '@/components/dashboards/student/course/lessons/HelpMessage'
+import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
 import {
     Breadcrumb,
@@ -24,25 +25,38 @@ export default async function StudentLessonPage ({
     params: { lessonsId: string, courseId: string }
 }) {
     const supabase = createClient()
+    const user = await supabase.auth.getUser()
     const lessonData = await supabase
         .from('lessons')
-        .select(
-            `*,
+        .select(`*,
             courses(*),
 			lesson_comments(*,
 				profiles(*)
 			),
-            lessons_ai_tasks(*)
-        `
-        )
+            lessons_ai_tasks(*),
+            lessons_ai_task_messages(*)
+        `)
         .eq('id', params.lessonsId)
         .single()
 
-    if (lessonData.error != null) {
+    // TODO - finish the completion of the lesson
+    const lessonCompletion = await supabase
+        .from('lesson_completions')
+        .select('id')
+        .eq('user_id', user.data.user.id)
+        .eq('lesson_id', lessonData.data.id)
+        .single()
+
+    if (lessonData.error) {
+        console.log(lessonData.error)
         throw new Error(lessonData.error.message)
     }
 
-    console.log(lessonData)
+    const isLessonAiTaskCompleted = lessonCompletion?.data?.id
+
+    console.log(isLessonAiTaskCompleted)
+
+    console.log(lessonData.data.lessons_ai_tasks)
 
     return (
         <>
@@ -53,14 +67,15 @@ export default async function StudentLessonPage ({
                         lesson_comments={lessonData.data.lesson_comments}
                     />
                 }
-                children={
-                    <Content
-                        lessonData={lessonData.data}
-                        courseData={lessonData.data.courses}
-                        lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
-                    />
-                }
-            />
+            >
+                <Content
+                    lessonData={lessonData.data}
+                    courseData={lessonData.data.courses}
+                    lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
+                    lessonsAiTasksMessages={lessonData.data.lessons_ai_task_messages}
+                    isLessonAiTaskCompleted={!!isLessonAiTaskCompleted}
+                />
+            </LessonPage>
         </>
     )
 }
@@ -68,11 +83,15 @@ export default async function StudentLessonPage ({
 function Content ({
     lessonData,
     courseData,
-    lessonsAiTasks
+    lessonsAiTasks,
+    lessonsAiTasksMessages,
+    isLessonAiTaskCompleted
 }: {
     lessonData: Tables<'lessons'>
     courseData: Tables<'courses'>
     lessonsAiTasks: Tables<'lessons_ai_tasks'>
+    lessonsAiTasksMessages: Array<Tables<'lessons_ai_task_messages'>>
+    isLessonAiTaskCompleted?: boolean
 }) {
     return (
         <div className="flex flex-col gap-8 w-full">
@@ -178,15 +197,19 @@ function Content ({
                 <>
                     <h3 className="text-xl font-semibold mt-4">Try the chat sandbox</h3>
                     <div className="flex flex-col gap-4 rounded border p-4">
-                        {/* <TaksMessages systemPrompt={lessonsAiTasks.system_prompt} /> */}
-                        <HelpMessages />
+                        <TaksMessages
+                            lessonId={lessonData.id}
+                            systemPrompt={lessonsAiTasks.system_prompt}
+                            initialMessages={lessonsAiTasksMessages}
+                            isLessonAiTaskCompleted={isLessonAiTaskCompleted}
+                        />
                     </div>
                 </>
             )}
-            {/* <LessonNavigationButtons
+            <LessonNavigationButtons
                 courseId={lessonData.course_id}
                 lessonId={lessonData.id}
-            /> */}
+            />
         </div>
     )
 }
