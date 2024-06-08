@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
-import TaskMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
+import TaskMessageSandbox from '@/components/dashboards/teacher/lessons/TaskMessageSandbox'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -181,9 +181,9 @@ export default async function TeacherLessonPage ({
                     Try the chat sandbox
                 </h3>
 
-                <div className="flex flex-col gap-4 rounded border p-4">
-                    <TaskMessages systemPrompt={lesson.data?.lessons_ai_tasks[0].system_prompt} />
-                </div>
+                <TaskMessageSandbox
+                    systemPrompt={lesson.data?.lessons_ai_tasks[0].system_prompt}
+                />
             </div>
         </LessonPage>
     )
