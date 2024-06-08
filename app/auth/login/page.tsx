@@ -21,7 +21,7 @@ export default function Login ({
                 </div>
                 <UserLoginForm />
                 {searchParams.message && (
-                    <p className="text-center text-red-500 text-sm">
+                    <p className="text-center text-sm text-primary">
                         {searchParams.message}
                     </p>
                 )}

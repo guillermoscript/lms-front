@@ -139,7 +139,7 @@
 /* Code blocks */
 .markdown-body pre,
 .markdown-body code {
-  @apply font-mono bg-muted  p-2;
+  @apply font-mono  p-2;
 }
 
 .markdown-body pre {

@@ -673,28 +673,35 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          lesson_id: number | null
           message: string | null
           sender: Database["public"]["Enums"]["ai_sender_type"] | null
-          status: Database["public"]["Enums"]["review_status"] | null
           user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: number
+          lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
-          status?: Database["public"]["Enums"]["review_status"] | null
           user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: number
+          lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
-          status?: Database["public"]["Enums"]["review_status"] | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lessons_ai_task_messages_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lessons_ai_task_messages_user_id_fkey"
             columns: ["user_id"]

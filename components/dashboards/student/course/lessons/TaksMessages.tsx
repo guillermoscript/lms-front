@@ -1,212 +1,122 @@
 'use client'
-
+import { nanoid } from 'ai'
 import { useChat } from 'ai/react'
-import { ArrowUp, Copy, Pen } from 'lucide-react'
-import { useEffect } from 'react'
+import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle
-} from '@/components/ui/card'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { cn } from '@/utils'
+import { ChatInput, ChatWindow, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
+import { useToast } from '@/components/ui/use-toast'
+import { createClient } from '@/utils/supabase/client'
 
-const Message = ({
-    message,
-    sender,
-    time,
-    isUser
-}: {
-    message: string
-    sender: string
-    time: string
-    isUser: boolean
-}) => {
-    if (sender !== 'user' && sender !== 'assistant') {
-        return null
-    }
-
-    return (
-        <div
-            className={cn(
-			  'flex w-full border-b p-1 mb-4',
-			  isUser ? 'justify-end ' : 'justify-start'
-            )}
-        >
-            <div className="flex items-end w-full">
-                {!isUser && (
-                    <img
-                        src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
-                        alt="profile"
-                        className="max-w-[28px] object-cover rounded-full mr-4"
-                    />
-                )}
-
-                <div className="flex flex-col w-full px-4 py-2 rounded-lg relative">
-                    <div className="font-bold mb-1 capitalize">
-                        {sender}{' '}
-                        <span className="text-xs text-gray-400 ml-2">
-                            {time}
-                        </span>
-                    </div>
-
-                    <ViewMarkdown markdown={message} />
-
-                    {isUser && (
-                        <div className="flex mt-2 space-x-2 ">
-                            <Pen className="cursor-pointer" />
-
-                            <Copy className="cursor-pointer" />
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-const ChatWindow = ({ messages }: { messages: any[] }) => {
-    return (
-        <div className="flex-1 overflow-y-auto p-4 ">
-            {messages.map((msg, index) => (
-                <Message
-                    key={index}
-                    message={msg.content}
-                    sender={msg.role}
-                    time={msg.time}
-                    isUser={msg.role === 'user'}
-                />
-            ))}
-        </div>
-    )
-}
-
-const ChatInput = ({
-    handleSubmit,
-    handleInputChange,
-    input,
-    isLoading,
-    stop
-}: {
-    handleSubmit: (e: any) => void
-    input: string
-    handleInputChange: (e: any) => void
-    isLoading: boolean
-    stop: () => void
-}) => {
-    return (
-        <form onSubmit={handleSubmit} className="p-4 flex gap-2 ">
-            {/* <ForwardRefEditor
-				className="flex-1 p-2 rounded-l-lg"
-				placeholder="Send a message"
-				markdown={message}
-				onChange={(value) => setMessage(value)}
-				onKeyDown={(e) => e.key === "Enter" && handleSend()}
-			/> */}
-            <input
-                type="text"
-                className="flex-1 p-2 border rounded-l-lg"
-                placeholder="Send a message"
-                onChange={handleInputChange}
-                value={input}
-                disabled={isLoading}
-            />
-            {isLoading
-                ? (
-                    <Button type="button" onClick={stop} className="rounded-r-lg">
-            Stop
-                    </Button>
-                )
-                : (
-                    <Button type="submit" className="rounded-r-lg">
-            Send
-                    </Button>
-                )}
-        </form>
-    )
-}
-
-function BasicQuestionsCards ({
-    promptTitle,
-    promptContent
-}: {
-    promptTitle: string
-    promptContent: string
-}) {
-    return (
-        <Card className="cursor-pointer hover:shadow-lg">
-            <CardHeader>
-                <CardTitle>{promptTitle}</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-sm text-gray-500">{promptContent}</p>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-                <p>Card Footer</p>
-                <ArrowUp />
-            </CardFooter>
-        </Card>
-    )
-}
-
-export default function TaskMessages ({
+// Custom Hook for Chat logic
+function useChatLogic (
     systemPrompt,
-    defaultQuestions
-}: {
-    systemPrompt: string
-    defaultQuestions?: Array<{
-        promptTitle: string
-        promptContent: string
-    }>
-}) {
-    const {
+    lessonId,
+    initialMessages,
+    isLessonAiTaskCompleted
+) {
+    const { toast } = useToast()
+    const [show, setShow] = useState<boolean>(!isLessonAiTaskCompleted)
+
+    const { messages, input, handleInputChange, stop, append, isLoading } =
+    useChat({
+        api: '/api/lessons/chat/student',
+        maxAutomaticRoundtrips: 5,
+        body: { lessonId },
+        initialMessages: [
+            { role: 'assistant', content: systemPrompt, id: nanoid() },
+            ...initialMessages.map((msg) => ({
+                role: msg.sender,
+                content: msg.message,
+                id: nanoid()
+            }))
+        ],
+        onError (error) {
+            console.log(error)
+            toast({
+                title: 'Error',
+                description: error.message,
+                variant: 'destructive'
+            })
+        },
+        async onToolCall ({ toolCall }) {
+            if (toolCall.toolName === 'makeUserAssigmentCompleted') {
+                setShow(false)
+            }
+        }
+    })
+
+    return {
         messages,
         input,
         handleInputChange,
-        handleSubmit,
-        setMessages,
+        stop,
+        append,
         isLoading,
-        stop
-    } = useChat()
-    useChat()
+        show,
+        setShow
+    }
+}
 
-    useEffect(() => {
-        setMessages([
-            {
-                role: 'system',
-                id: '1',
-                content: systemPrompt
-            }
-        ])
-    }, [])
+// Function to add message to database (can be reused)
+async function addMessageToDatabase (message, lessonId) {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+    } else {
+        const id = userData.data.user.id
+        const messageData = await supabase.from('lessons_ai_task_messages').insert({
+            user_id: id,
+            message: message.content,
+            sender: message.role as 'assistant' | 'user',
+            lesson_id: lessonId
+        })
+        if (messageData.error) {
+            console.log('Error adding message to the database', messageData.error)
+        }
+        console.log('Message added to the database', messageData)
+    }
+}
+
+// Main Component
+export default function TaskMessages ({
+    systemPrompt,
+    lessonId,
+    initialMessages,
+    isLessonAiTaskCompleted
+}: {
+    systemPrompt: string
+    lessonId: number
+    initialMessages: any[]
+    isLessonAiTaskCompleted: boolean
+}) {
+    const { messages, stop, append, isLoading, show } =
+    useChatLogic(
+        systemPrompt,
+        lessonId,
+        initialMessages,
+        isLessonAiTaskCompleted
+    )
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <>
+            {isLessonAiTaskCompleted && (
+                <SuccessMessage
+                    status='success'
+                    message='Assignment marked as completed.'
+                />
+            )}
             <ChatWindow messages={messages} />
-            {messages.length > 1
-                ? null
-                : (
-                    <div className="flex gap-4 p-4 overflow-x-auto w-full">
-                        {defaultQuestions?.map((question, index) => (
-                            <BasicQuestionsCards
-                                key={index}
-                                promptTitle={question.promptTitle}
-                                promptContent={question.promptContent}
-                            />
-                        ))}
-                    </div>
-                )}
-            <ChatInput
-                handleSubmit={handleSubmit}
-                input={input}
-                stop={stop}
-                handleInputChange={handleInputChange}
-                isLoading={isLoading}
-            />
-        </div>
+            {show && (
+                <ChatInput
+                    isLoading={isLoading}
+                    stop={stop}
+                    callbackFunction={async (message) => {
+                        await addMessageToDatabase(message, lessonId)
+                        append(message)
+                    }}
+                />
+            )}
+        </>
     )
 }

@@ -5,6 +5,8 @@ import { useFormState, useFormStatus } from 'react-dom'
 import { signUp } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
 
+import PasswordComponent from './PasswordComponent'
+
 export default function UserSignupForm () {
     const [state, action] = useFormState(signUp, {
         status: 'idle',
@@ -51,14 +53,7 @@ export default function UserSignupForm () {
                 <label className="text-md" htmlFor="password">
           Password
                 </label>
-                <input
-                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    pattern=".{8,}"
-                    required
-                />
+                <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
                     <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">

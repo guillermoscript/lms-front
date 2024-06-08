@@ -1,5 +1,6 @@
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
+import { Suspense } from 'react'
 import { useFormState } from 'react-dom'
 import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
@@ -88,8 +89,6 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
     const contentWatch = formMethods.watch('content')
     const systemPromptWatch = formMethods.watch('systemPrompt')
 
-    console.log(systemPromptWatch)
-
     return (
         <FormProvider {...formMethods}>
             <form action={action} className="space-y-4">
@@ -118,12 +117,23 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                         <CardTitle>Content of lessons</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ForwardRefEditor
-                            markdown={contentWatch}
-                            className="markdown-body"
-                            onChange={(value) => formMethods.setValue('content', value)}
-                        />
-                        <input type="hidden" name="content" value={contentWatch} />
+                        <Suspense fallback={
+                            <div>Loading...</div>
+                        }
+                        >
+                            <ForwardRefEditor
+                                markdown={contentWatch}
+                                className="markdown-body"
+                                onChange={(value) => {
+                                    console.log(value)
+                                    formMethods.setValue('content', value)
+                                }}
+                                onError={(error) => {
+                                    console.log('Error in editor content', error)
+                                }}
+                            />
+                            <input type="hidden" name="content" value={contentWatch} />
+                        </Suspense>
                     </CardContent>
                 </Card>
 
@@ -137,16 +147,24 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ForwardRefEditor
-                            markdown={systemPromptWatch}
-                            className="markdown-body"
-                            onChange={(value) => formMethods.setValue('systemPrompt', value)}
-                        />
-                        <input
-                            type="hidden"
-                            name="systemPrompt"
-                            value={systemPromptWatch}
-                        />
+                        <Suspense fallback={
+                            <div>Loading...</div>
+                        }
+                        >
+                            <ForwardRefEditor
+                                markdown={systemPromptWatch}
+                                className="markdown-body"
+                                onChange={(value) => formMethods.setValue('systemPrompt', value)}
+                                onError={(error) => {
+                                    console.log('Error in editor system prompt', error)
+                                }}
+                            />
+                            <input
+                                type="hidden"
+                                name="systemPrompt"
+                                value={systemPromptWatch}
+                            />
+                        </Suspense>
                     </CardContent>
                 </Card>
 

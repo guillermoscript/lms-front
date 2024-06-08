@@ -18,7 +18,7 @@ export const signIn = async (prevData: any, formData: FormData) => {
 
     if (error) {
         console.log(error)
-        return createResponse('error', 'Invalid credentials', null, 'Invalid credentials')
+        return createResponse('error', 'Invalid credentials', null, error.message)
     }
 
     const userData = await supabase.from('user_roles').select('*').eq('user_id', data?.user?.id).single()
