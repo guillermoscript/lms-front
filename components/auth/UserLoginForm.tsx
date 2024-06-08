@@ -1,10 +1,11 @@
 'use client'
-import { EyeIcon, EyeOffIcon, Link } from 'lucide-react'
-import { useState } from 'react'
+import { Link } from 'lucide-react'
 import { useFormState, useFormStatus } from 'react-dom'
 
 import { signIn } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
+
+import PasswordComponent from './PasswordComponent'
 
 export default function UserLoginForm () {
     const [state, action] = useFormState(signIn, {
@@ -12,9 +13,6 @@ export default function UserLoginForm () {
         message: '',
         error: null
     })
-    const [showPassword, setShowPassword] = useState(false) // Add useState hook
-
-    console.log(state)
 
     return (
         <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
@@ -36,7 +34,7 @@ export default function UserLoginForm () {
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>{' '}
-                Back
+        Back
             </Link>
 
             <form
@@ -44,7 +42,7 @@ export default function UserLoginForm () {
                 action={action}
             >
                 <label className="text-md" htmlFor="email">
-                    Email
+          Email
                 </label>
                 <input
                     className="rounded-md px-4 py-2 bg-inherit border mb-6"
@@ -53,34 +51,9 @@ export default function UserLoginForm () {
                     required
                 />
                 <label className="text-md" htmlFor="password">
-                    Password
+          Password
                 </label>
-                <div className="relative">
-                    <input
-                        className="rounded-md px-4 py-2 bg-inherit border mb-6 pr-12"
-                        type={showPassword ? 'text' : 'password'} // Use showPassword state to toggle input type
-                        name="password"
-                        placeholder="••••••••"
-                        // pattern=".{8,}"
-                        required
-                    />
-                    { !showPassword
-                        ? (
-                            <EyeIcon
-                                className="absolute top-1/2 right-4 transform -translate-y-1/2 top-[22px]"
-                                onClick={() => setShowPassword(!showPassword)}
-                            />
-                        )
-                        : (
-                            <EyeOffIcon
-                                className="absolute top-1/2 right-4 transform -translate-y-1/2 top-[22px]"
-                                onClick={() => setShowPassword(!showPassword)}
-                            />
-                        )
-
-                    }
-
-                </div>
+                <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
                     <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
