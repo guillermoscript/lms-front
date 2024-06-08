@@ -59,7 +59,7 @@ export default function TaskMessageSandbox ({
 
     return (
         <>
-            <div className="flex flex-col gap-4 rounded border p-4">
+            <div className="flex flex-col gap-4 rounded border p-4 w-full">
                 <ChatWindow messages={messages} />
             </div>
             {!isLessonAiTaskCompleted && (
