@@ -1,4 +1,13 @@
+import dayjs from 'dayjs'
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
+} from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tables } from '@/utils/supabase/supabase'
 
@@ -18,30 +27,54 @@ export default function CommentsSections ({
                     key={comment.id}
                     name={'test'}
                     comment={comment.content}
+                    date={dayjs(comment.created_at).format('DD/MM/YYYY: HH:mm')}
                 />
             ))}
-            <div className="mt-4">
-                <h3 className="text-lg font-medium">Add a Comment</h3>
-                <CommentEditor lesson_id={lesson_id} />
-            </div>
+            <Card>
+                <CardHeader>
+                    <Avatar>
+                        <AvatarImage src="/img/favicon.png" alt="profile" />
+                        <AvatarFallback>
+                            {'test'[0]}
+                        </AvatarFallback>
+                    </Avatar>
+                    <CardTitle className="text-lg font-medium">Add a Comment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CommentEditor lesson_id={lesson_id} />
+                </CardContent>
+            </Card>
         </div>
     )
 }
 
-const CommentCard = ({ name, comment }: { name: string, comment: string }) => (
-    <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-        <div className="flex items-start gap-4">
-            <Avatar>
-                <AvatarImage
-                    src="https://github.com/shadcn.png"
-                    alt="@shadcn"
-                />
-                <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
-            <div>
-                <h4 className="font-medium">{name}</h4>
-                <ViewMarkdown markdown={comment} />
-            </div>
-        </div>
-    </div>
-)
+const CommentCard = ({
+    name,
+    comment,
+    date
+}: {
+    name: string
+    comment: string
+    date: string
+}) => {
+    return (
+        <Card>
+            <CardHeader>
+                <Avatar>
+                    <AvatarImage src="/img/favicon.png" alt="profile" />
+                    <AvatarFallback>{name[0]}</AvatarFallback>
+                </Avatar>
+                <CardTitle className="text-lg font-medium">{name}</CardTitle>
+                <CardDescription className="text-xs text-gray-400">
+                    {date}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2"></div>
+                    <ViewMarkdown markdown={comment} />
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
