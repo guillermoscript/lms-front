@@ -102,7 +102,7 @@ const ChatWindow = ({ messages }: { messages: MessageType[] }) => {
                         key={index}
                         message={msg.content}
                         sender={msg.role}
-                        time={msg?.createdAt.toDateString()}
+                        time={msg?.createdAt?.toDateString()}
                         isUser={msg.role === 'user'}
                         toolInvocations={msg.toolInvocations}
                     />

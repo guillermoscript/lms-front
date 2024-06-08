@@ -3,7 +3,7 @@ import { nanoid } from 'ai'
 import { useChat } from 'ai/react'
 import { useState } from 'react'
 
-import { ChatInput, ChatWindow } from '@/components/dashboards/Common/chat/chat'
+import { ChatInput, ChatWindow, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import { useToast } from '@/components/ui/use-toast'
 import { createClient } from '@/utils/supabase/client'
 
@@ -100,6 +100,12 @@ export default function TaskMessages ({
 
     return (
         <>
+            {isLessonAiTaskCompleted && (
+                <SuccessMessage
+                    status='success'
+                    message='Assignment marked as completed.'
+                />
+            )}
             <ChatWindow messages={messages} />
             {show && (
                 <ChatInput
