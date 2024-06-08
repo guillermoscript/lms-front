@@ -87,7 +87,9 @@ export default function InitializedMDXEditor ({
                 markdownShortcutPlugin(),
                 toolbarPlugin({
                     toolbarContents: () => (
-                        <>
+                        <div
+                            className='flex gap-2 flex-wrap items-center justify-center w-full'
+                        >
                             <BlockTypeSelect />
                             <BoldItalicUnderlineToggles />
                             <Separator />
@@ -118,7 +120,7 @@ export default function InitializedMDXEditor ({
                                     }
                                 ]}
                             />
-                        </>
+                        </div>
                     )
                 })
             ]}
