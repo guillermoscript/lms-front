@@ -160,24 +160,6 @@ export type Database = {
           },
         ]
       }
-      currencies: {
-        Row: {
-          code: string
-          id: number
-          name: string
-        }
-        Insert: {
-          code: string
-          id?: number
-          name: string
-        }
-        Update: {
-          code?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
       enrollments: {
         Row: {
           course_id: number
@@ -820,6 +802,7 @@ export type Database = {
       plans: {
         Row: {
           created_at: string | null
+          currency: Database["public"]["Enums"]["currency_type"] | null
           description: string | null
           duration_in_days: number
           features: string | null
@@ -830,6 +813,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
           duration_in_days: number
           features?: string | null
@@ -840,6 +824,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
           duration_in_days?: number
           features?: string | null
@@ -883,6 +868,7 @@ export type Database = {
       products: {
         Row: {
           created_at: string | null
+          currency: Database["public"]["Enums"]["currency_type"] | null
           description: string | null
           name: string
           price: number
@@ -890,6 +876,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
           name: string
           price: number
@@ -897,6 +884,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
           name?: string
           price?: number
@@ -942,13 +930,6 @@ export type Database = {
           website?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "profiles_currency_id_fkey"
-            columns: ["currency_id"]
-            isOneToOne: false
-            referencedRelation: "currencies"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "profiles_id_fkey"
             columns: ["id"]
@@ -1199,6 +1180,7 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          currency: Database["public"]["Enums"]["currency_type"] | null
           payment_method: string | null
           plan_id: number | null
           product_id: number | null
@@ -1209,6 +1191,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           payment_method?: string | null
           plan_id?: number | null
           product_id?: number | null
@@ -1219,6 +1202,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          currency?: Database["public"]["Enums"]["currency_type"] | null
           payment_method?: string | null
           plan_id?: number | null
           product_id?: number | null
@@ -1340,6 +1324,7 @@ export type Database = {
         | "data"
         | "tool"
       app_role: "admin" | "moderator" | "teacher" | "student"
+      currency_type: "usd" | "eur"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
