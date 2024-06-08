@@ -4,7 +4,6 @@ import '@mdxeditor/editor/style.css'
 
 import {
     ChangeCodeMirrorLanguage,
-    CodeBlockEditorDescriptor,
     codeMirrorPlugin,
     ConditionalContents,
     InsertCodeBlock,
@@ -37,24 +36,6 @@ const {
     InsertTable,
     Separator
 } = await import('@mdxeditor/editor')
-
-const PlainTextCodeEditorDescriptor: CodeBlockEditorDescriptor = {
-    match: () => true,
-    priority: 0,
-    Editor: (props) => {
-        const cb = useCodeBlockEditorContext()
-        return (
-            <div onKeyDown={(e) => e.nativeEvent.stopImmediatePropagation()}>
-                <textarea
-                    rows={3}
-                    cols={20}
-                    defaultValue={props.code}
-                    onChange={(e) => cb.setCode(e.target.value)}
-                />
-            </div>
-        )
-    }
-}
 
 const defaultSnippetContent = `
 export default function App() {
@@ -91,14 +72,11 @@ export default function InitializedMDXEditor ({
     return (
         <MDXEditor
             plugins={[
-                //   codeBlockPlugin({
-                //     codeBlockEditorDescriptors: [PlainTextCodeEditorDescriptor]
-                //     }),
                 // the default code block language to insert when the user clicks the "insert code block" button
                 codeBlockPlugin({ defaultCodeBlockLanguage: 'js' }),
                 sandpackPlugin({ sandpackConfig: simpleSandpackConfig }),
                 codeMirrorPlugin({
-                    codeBlockLanguages: { js: 'JavaScript', css: 'CSS', html: 'HTML', python: 'Python' }
+                    codeBlockLanguages: { js: 'JavaScript', css: 'CSS', html: 'HTML', python: 'Python', java: 'Java' }
                 }),
                 headingsPlugin(),
                 listsPlugin(),
