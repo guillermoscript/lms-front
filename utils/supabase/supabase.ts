@@ -1253,25 +1253,21 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          role_id: number
+          id: number
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          role_id: number
+          id?: number
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          role_id?: number
+          id?: number
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "user_roles_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["role_id"]
-          },
           {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
@@ -1300,6 +1296,12 @@ export type Database = {
           p_answers: Json
         }
         Returns: undefined
+      }
+      custom_access_token_hook: {
+        Args: {
+          event: Json
+        }
+        Returns: Json
       }
       enroll_user: {
         Args: {
@@ -1337,6 +1339,7 @@ export type Database = {
         | "function"
         | "data"
         | "tool"
+      app_role: "admin" | "moderator" | "teacher" | "student"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
