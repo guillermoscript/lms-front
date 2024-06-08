@@ -15,7 +15,7 @@ export default function PasswordComponent () {
                 required
             />
             <button
-                className=''
+                type='button'
                 onClick={() => setShowPassword(!showPassword)}
             >
                 {!showPassword ? (
