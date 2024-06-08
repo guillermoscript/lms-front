@@ -3,11 +3,12 @@
 
 import { Message as MessageType, nanoid, ToolInvocation } from 'ai'
 import { CheckCircle, Copy, Pen } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/utils'
 
 const Message = ({
@@ -134,17 +135,23 @@ const ChatInput = ({
                 })
                 setMessage('')
             }}
-            className="py-4 flex gap-2 flex-col "
+            className="py-4 flex gap-2 flex-col w-full"
         >
-            <ForwardRefEditor
-                className={cn(
-                    'flex-1 p-2 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-                    isLoading ? 'cursor-not-allowed' : 'cursor-text'
-                )}
-                placeholder="Chat with the AI assistant"
-                markdown={message}
-                onChange={(value) => setMessage(value)}
-            />
+            <Suspense fallback={
+                <Skeleton className="w-full h-12" />
+            }
+            >
+
+                <ForwardRefEditor
+                    className={cn(
+                        'flex-1 p-2 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full',
+                        isLoading ? 'cursor-not-allowed' : 'cursor-text'
+                    )}
+                    placeholder="Chat with the AI assistant"
+                    markdown={message}
+                    onChange={(value) => setMessage(value)}
+                />
+            </Suspense>
             <input type="hidden" value={message} />
             {isLoading ? (
                 <Button type="button" onClick={stop} className="rounded-r-lg">
