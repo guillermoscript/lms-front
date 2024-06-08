@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { Clock } from 'lucide-react'
+import { CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 
 import {
@@ -9,6 +8,7 @@ import {
     BreadcrumbList,
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
+import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentCourseLessonsPage ({
@@ -22,15 +22,13 @@ export default async function StudentCourseLessonsPage ({
 
     const lessons = await supabase
         .from('lessons')
-        .select('*,courses(*)')
+        .select('*,courses(*),lesson_completions(*)')
         .eq('course_id', params.courseId)
         .order('sequence')
 
     if (lessons.error != null) {
         throw new Error(lessons.error.message)
     }
-
-    console.log(lessons)
 
     return (
         <>
@@ -96,11 +94,23 @@ export default async function StudentCourseLessonsPage ({
                                 number={lesson.sequence}
                                 title={lesson.title}
                                 description={lesson.description}
-                                status="Not Started"
-                                action="Start"
-                                Icon={Clock}
-                                courseId={parseFloat(lesson.course_id)}
-                                lessonId={parseFloat(lesson.id)}
+                                status={
+                                    lesson.lesson_completions.length > 0
+                                        ? 'Completed'
+                                        : 'Not Started'
+                                }
+                                action={
+                                    lesson.lesson_completions.length > 0
+                                        ? 'Review'
+                                        : 'Start'
+                                }
+                                Icon={
+                                    lesson.lesson_completions.length > 0
+                                        ? CheckCircle
+                                        : Clock
+                                }
+                                courseId={(lesson.course_id)}
+                                lessonId={(lesson.id)}
                             />
                         )
                     })}
@@ -126,15 +136,15 @@ function LessonCard ({
     status: string
     action: string
     Icon: React.FC<React.SVGProps<SVGSVGElement>>
-    courseId: string
-    lessonId: string
+    courseId: number
+    lessonId: number
 }) {
     return (
         <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{number}</span>
-                    <Icon className="w-5 h-5 text-green-500" />
+                    <Icon className={cn('w-5 h-5', status === 'Completed' && 'text-green-500')} />
                 </div>
                 <div>
                     <h3 className="text-lg font-medium">{title}</h3>

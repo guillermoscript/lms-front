@@ -60,7 +60,7 @@ export async function deleteCourseAction (data: {
     const courseData = await supabase
         .from('courses')
         .delete()
-        .eq('id', courseId)
+        .eq('course_id', courseId)
 
     if (courseData.error) {
         console.log(courseData.error)

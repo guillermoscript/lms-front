@@ -8,7 +8,9 @@ import {
 } from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
+// Force the page to be dynamic and allow streaming responses up to 30 seconds
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 export default async function EditLessonPage ({
     params

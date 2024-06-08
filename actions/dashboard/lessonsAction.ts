@@ -44,6 +44,11 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
                 system_prompt
             })
             .eq('lesson_id', lessonId)
+
+        if (lessonAiAssignmentData.error) {
+            console.log(lessonAiAssignmentData.error)
+            return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
+        }
     }
 
     revalidatePath('/dashboard/teacher/courses/[courseId]/lessons/[lessonId]', 'layout')

@@ -6,6 +6,7 @@ import {
     ResizablePanel,
     ResizablePanelGroup
 } from '@/components/ui/resizable'
+import { Separator } from '@/components/ui/separator'
 export default function LessonPage ({
     children,
     sideBar
@@ -35,6 +36,10 @@ export default function LessonPage ({
     return (
         <div className="flex flex-col gap-4">
             {children}
+            <Separator className='my-4' />
+            <h3 className="text-lg font-semibold">
+                    Comments
+            </h3>
             {sideBar}
         </div>
     )
