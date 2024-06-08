@@ -4,7 +4,9 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { createResponse } from '@/utils/functions'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
+import { Tables } from '@/utils/supabase/supabase'
 
 export const signIn = async (prevData: any, formData: FormData) => {
     const email = formData.get('email') as string
@@ -21,24 +23,30 @@ export const signIn = async (prevData: any, formData: FormData) => {
         return createResponse('error', 'Invalid credentials', null, error.message)
     }
 
-    const userData = await supabase.from('user_roles').select('*').eq('user_id', data?.user?.id).single()
+    const userRole = await getServerUserRole()
 
-    if (userData?.error) {
-        console
-        return createResponse('error', 'Error in sign in', null, userData.error.message)
-    }
-
-    const userRole = userData?.data.role_id
+    console.log('User role:', userRole)
 
     // forgive me for the following code
-    // TODO: refactor this
-    if (userRole === 37) {
-        return redirect('/dashboard')
-    } else if (userRole === 38) {
+    const [
+        admin,
+        teacher,
+        student
+    ] = [
+        'admin',
+        'teacher',
+        'student'
+    ] as Array<Tables<'user_roles'>['role']>
+
+    if (userRole === admin) {
+        return redirect('/dashboard/admin')
+    } else if (userRole === teacher) {
         return redirect('/dashboard/teacher')
-    } else if (userRole === 39) {
+    } else if (userRole === student) {
         return redirect('/dashboard/student')
     }
+
+    redirect('/')
 }
 
 export const signUp = async (prevData: any, formData: FormData) => {

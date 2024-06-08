@@ -22,11 +22,6 @@ export async function createCourseAction (prevDate: any, data: FormData) {
 
     const author_id = userData.data.user.id
 
-    // get current user role
-    const roleData = await supabase.from('user_roles').select('*').eq('profile_id', author_id).single()
-
-    console.log(roleData)
-
     const courseData = await supabase.from('courses').insert([{
         title,
         description,
