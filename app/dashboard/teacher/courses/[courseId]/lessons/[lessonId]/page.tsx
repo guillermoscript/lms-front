@@ -38,7 +38,6 @@ export default async function TeacherLessonPage ({
         .single()
 
     if (lesson.error != null) {
-        console.log(lesson.error.message)
         throw new Error(lesson.error.message)
     }
 

@@ -27,7 +27,7 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
     const userRole = await getServerUserRole()
 
     if (coursesContent.error) {
-        console.log(coursesContent.error)
+        throw new Error(coursesContent.error.message)
     }
 
     return (
@@ -89,12 +89,6 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                             </MenubarMenu>
                         ))}
                     </Menubar>
-                    {/* <SidebarLink
-                        icon={LayoutGridIcon}
-                        text="Courses"
-                        href="/dashboard/courses"
-                        active
-                    /> */}
                     {children}
                 </nav>
             </div>

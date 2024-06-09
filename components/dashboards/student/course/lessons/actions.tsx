@@ -1,7 +1,6 @@
 'use server'
 
 import { google } from '@ai-sdk/google'
-// import { openai } from '@ai-sdk/openai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import { nanoid } from 'nanoid'
 import { ReactNode } from 'react'
@@ -26,7 +25,6 @@ export async function continueConversation (
     const history = getMutableAIState()
 
     const result = await streamUI({
-        // model: openai('gpt-3.5-turbo'),
         model: google('models/gemini-pro'),
         messages: [...history.get(), { role: 'user', content: input }],
         system: `# You are an expert teacher in python.

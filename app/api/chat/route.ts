@@ -6,8 +6,6 @@ export async function POST (req: Request) {
 
     const result = await streamText({
         model: google('models/gemini-pro'),
-        // model: ollama('llama3'),
-        // model: openai('gpt-4o'),
         messages,
         temperature: 0
     })

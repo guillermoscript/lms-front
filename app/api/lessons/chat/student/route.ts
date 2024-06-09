@@ -16,10 +16,8 @@ export async function POST (req: Request) {
             messages, lessonId
         } = await req.json()
         const supabase = createClient()
-        console.log(lessonId)
 
         const result = await streamText({
-            // model: openai('gpt-4-turbo'),
             model: google('models/gemini-pro'),
             onFinish: async (event) => {
                 const userData = await supabase.auth.getUser()
@@ -35,12 +33,6 @@ export async function POST (req: Request) {
                             sender: 'assistant', // 'student' or 'assistant
                             lesson_id: lessonId
                         })
-
-                    if (message.error) {
-                        console.log(message.error)
-                    }
-
-                    console.log('Message added to the database', message)
                 }
             },
             // model: ollama('llama3'),
@@ -65,7 +57,6 @@ export async function POST (req: Request) {
                             })
 
                             if (task.error) {
-                                console.log(task.error)
                                 return {
                                     status: 'error',
                                     message: 'Error marking the assignment as completed.'
@@ -85,7 +76,6 @@ export async function POST (req: Request) {
         // Respond with the stream
         return result.toAIStreamResponse()
     } catch (error) {
-        console.error(error)
         return new Response('Error', { status: 500 })
     }
 }
