@@ -186,14 +186,14 @@ function Content ({
                 <div className="prose dark:prose-invert max-w-none">
                     <ViewMarkdown markdown={lessonData.content} />
                 </div>
-                {lessonData.summary && (
+                {lessonData?.summary && (
                     <div className="mt-8">
                         <h3 className="text-2xl font-bold">Summary</h3>
                         <ViewMarkdown markdown={lessonData.summary} />
                     </div>
                 )}
             </div>
-            {lessonsAiTasks.system_prompt && (
+            {lessonsAiTasks?.system_prompt && (
                 <>
                     <h3 className="text-xl font-semibold mt-4">Try the chat sandbox</h3>
                     <div className="flex flex-col gap-4 rounded border p-4">
