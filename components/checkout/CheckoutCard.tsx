@@ -29,7 +29,7 @@ export default function CheckoutCard ({ callback }: CheckoutCardProps) {
 
     async function onSubmit (data: formValues) {
         try {
-            callback(data)
+            await callback(data)
         } catch (error) {
             console.log(error)
         }
@@ -102,6 +102,7 @@ export default function CheckoutCard ({ callback }: CheckoutCardProps) {
                     <Button
                         className="w-full"
                         type="submit"
+                        disabled={form.formState.isSubmitting}
                     >
             Buy Now
                     </Button>
