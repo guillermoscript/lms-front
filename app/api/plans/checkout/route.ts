@@ -1,4 +1,3 @@
-import dayjs from 'dayjs'
 import { type NextRequest } from 'next/server'
 import Stripe from 'stripe'
 
@@ -77,13 +76,14 @@ export async function POST (req: NextRequest) {
             .insert({
                 amount: planData?.data?.price,
                 user_id: fullUser?.data.user?.id as any,
-                status: 'pending',
                 currency: 'usd',
-                plan_id: planId,
-                due_date: dayjs().add(1, 'week').toDate()
+                status: 'pending',
+                plan_id: planId
             })
             .select('*')
             .single()
+
+        console.log(transaction, '<----------- transaction')
 
         console.log(transaction, '<----------- invoice')
 

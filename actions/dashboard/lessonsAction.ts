@@ -32,10 +32,8 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
         .eq('id', lessonId)
 
     if (lessonData.error) {
-        console.log(lessonData.error)
         return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
     }
-    console.log(lessonData.data)
 
     if (system_prompt) {
         const lessonAiAssignmentData = await supabase
@@ -46,7 +44,6 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
             .eq('lesson_id', lessonId)
 
         if (lessonAiAssignmentData.error) {
-            console.log(lessonAiAssignmentData.error)
             return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
         }
     }
@@ -101,7 +98,6 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
         }).select('id').single()
 
     if (lessonData.error) {
-        console.log(lessonData.error)
         return createResponse('error', 'Error creating lesson', null, 'Error creating lesson')
     }
 
@@ -111,10 +107,6 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             lesson_id: lessonData.data.id,
             system_prompt
         })
-
-    console.log(lessonAiAssignmentData.error)
-
-    console.log(lessonData.data)
 
     revalidatePath('/dashboard/teacher/courses/[courseId]/lessons', 'layout')
     return createResponse('success', 'Lesson created successfully', null, null)
@@ -136,7 +128,6 @@ export async function deleteLessonsAction (data: {
         .eq('id', lessonId)
 
     if (lessonData.error) {
-        console.log(lessonData.error)
         return createResponse('error', 'Error deleting lesson', null, 'Error deleting lesson')
     }
 

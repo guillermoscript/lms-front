@@ -75,7 +75,7 @@ function SubmitButton () {
                 disabled={pending}
                 variant={'secondary'}
             >
-                {pending ? 'Submitting...' : 'Login'}
+                {pending ? 'Submitting...' : 'Submit'}
             </Button>
         </>
     )

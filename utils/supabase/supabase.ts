@@ -1142,6 +1142,7 @@ export type Database = {
           start_date: string
           subscription_id: number
           subscription_status: Database["public"]["Enums"]["subscription_status"]
+          transaction_id: number
           user_id: string
         }
         Insert: {
@@ -1150,6 +1151,7 @@ export type Database = {
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          transaction_id: number
           user_id: string
         }
         Update: {
@@ -1158,6 +1160,7 @@ export type Database = {
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          transaction_id?: number
           user_id?: string
         }
         Relationships: [
@@ -1167,6 +1170,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "subscriptions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["transaction_id"]
           },
           {
             foreignKeyName: "subscriptions_user_id_fkey"
@@ -1330,7 +1340,7 @@ export type Database = {
       subscription_status: "active" | "canceled" | "expired" | "renewed"
       transaction_status:
         | "pending"
-        | "successfull"
+        | "successful"
         | "failed"
         | "archived"
         | "canceled"

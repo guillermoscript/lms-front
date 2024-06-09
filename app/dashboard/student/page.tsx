@@ -20,10 +20,14 @@ export default async function CoursesStudentPage () {
     const userCourses = await supabase
         .from('enrollments')
         .select(
-            `*
-		,course:course_id(*,lessons(*), exams(*))
-	`
-        )
+            `*,
+            course:course_id(*,lessons(*), exams(*))
+	    `)
+        .eq('user_id', user.data.user.id)
+
+    const userSubscriptions = await supabase
+        .from('subscriptions')
+        .select('*')
         .eq('user_id', user.data.user.id)
 
     console.log(userCourses)
@@ -31,6 +35,12 @@ export default async function CoursesStudentPage () {
     if (userCourses.error != null) {
         throw new Error(userCourses.error.message)
     }
+
+    if (userSubscriptions.error != null) {
+        throw new Error(userSubscriptions.error.message)
+    }
+
+    console.log(userSubscriptions.data)
 
     return (
         <>
@@ -79,10 +89,36 @@ export default async function CoursesStudentPage () {
                         })}
                     </div>
                 </div>
+            ) : userSubscriptions?.data?.length > 0 ? (
+                <div className="p-4 flex flex-col gap-4">
+                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                        Your Subscriptions
+                    </h2>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                        {userSubscriptions.data.map((subscription) => {
+                            return (
+                                <>
+                                    <CourseCard
+                                        title={subscription.title}
+                                        progress={75}
+                                        totalLessons={10}
+                                        completedLessons={2}
+                                        completedTests={5}
+                                        totalTests={5}
+                                        approvedTests={4}
+                                        courseId={subscription.course_id}
+                                    />
+                                </>
+                            )
+                        })}
+                    </div>
+                </div>
             ) : (
-                <p className="text-center text-gray-600 dark:text-gray-400">
-                    You have not enrolled in any courses yet.
-                </p>
+                <div className="p-4 flex flex-col gap-4">
+                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                        No Courses or Subscriptions
+                    </h2>
+                </div>
             )}
         </>
     )

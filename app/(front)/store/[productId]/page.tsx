@@ -1,5 +1,5 @@
 
-import CheckoutCard from '@/components/checkout/CheckoutCard'
+import CheckoutProduct from '@/components/store/CheckoutProduct'
 import CourseCard from '@/components/store/product/CourseCard'
 import ImageContainer from '@/components/store/product/ImageContainer'
 import ReviewCard from '@/components/store/product/ReviewCard'
@@ -47,37 +47,8 @@ export default async function ProductIdPage ({
 							</li>
 						</ul>
 					 */}
-                    <CheckoutCard
-                        callback={async (data) => {
-                            'use server'
-                            console.log(data)
-                            if (data.radio === 'card') {
-                                try {
-                                    const data = await fetch(
-                                        '/stripe/checkout',
-                                        {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type':
-                                                    'application/json'
-                                            },
-                                            body: JSON.stringify({
-                                                productId: params.productId
-                                            })
-                                        }
-                                    )
-                                    const response = await data.json()
-                                    console.log(response)
-                                    window.location.href = response.url
-                                } catch (error) {
-                                    console.log(error)
-                                }
-                            } else if (data.radio === 'binance') {
-                                console.log('binance')
-                            } else if (data.radio === 'paypal') {
-                                console.log('paypal')
-                            }
-                        }}
+                    <CheckoutProduct
+                        params={params}
                     />
                 </div>
                 <div className="grid gap-6">

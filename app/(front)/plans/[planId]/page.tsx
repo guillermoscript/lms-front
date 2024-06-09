@@ -1,5 +1,5 @@
-import CheckoutCard from '@/components/checkout/CheckoutCard'
 import CheckoutImages from '@/components/checkout/CheckoutImages'
+import CheckoutPlan from '@/components/plans/CheckoutPlan'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function PlansCheckoutPage ({
@@ -41,37 +41,8 @@ export default async function PlansCheckoutPage ({
                           /month
                         </div>
                     </div>
-                    <CheckoutCard
-                        callback={async (data) => {
-                            'use server'
-                            console.log(data)
-                            if (data.radio === 'card') {
-                                try {
-                                    const data = await fetch(
-                                        '/stripe/checkout/plans',
-                                        {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type':
-                                                    'application/json'
-                                            },
-                                            body: JSON.stringify({
-                                                productId: params.planId
-                                            })
-                                        }
-                                    )
-                                    const response = await data.json()
-                                    console.log(response)
-                                    window.location.href = response.url
-                                } catch (error) {
-                                    console.log(error)
-                                }
-                            } else if (data.radio === 'binance') {
-                                console.log('binance')
-                            } else if (data.radio === 'paypal') {
-                                console.log('paypal')
-                            }
-                        }}
+                    <CheckoutPlan
+                        params={params}
                     />
                 </div>
                 <CheckoutImages

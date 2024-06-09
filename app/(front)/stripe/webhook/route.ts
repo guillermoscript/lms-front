@@ -49,8 +49,8 @@ export async function POST (req: Request) {
                     // update invoice and set it to paid
                     const update = await supabase
                         .from('transactions')
-                        .update({ status: 'successfull' })
-                        .match({ id: invoiceId })
+                        .update({ status: 'successful' })
+                        .eq('transaction_id', invoiceId)
 
                     console.log(update, '<----------- update')
 
@@ -65,8 +65,8 @@ export async function POST (req: Request) {
                     // update invoice and set it to paid
                     const update = await supabase
                         .from('transactions')
-                        .update({ status: 'successfull' })
-                        .match({ id: invoiceId })
+                        .update({ status: 'successful' })
+                        .eq('transaction_id', invoiceId)
 
                     console.log(update, '<----------- update')
 
