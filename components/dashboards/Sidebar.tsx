@@ -13,6 +13,7 @@ import {
     MenubarSubTrigger,
     MenubarTrigger
 } from '@/components/ui/menubar'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 
 import { Button } from '../ui/button'
@@ -22,6 +23,8 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
     const supabase = createClient()
 
     const coursesContent = await supabase.from('courses').select('course_id, title, lessons(id, title), exams(exam_id,title)')
+
+    const userRole = await getServerUserRole()
 
     if (coursesContent.error) {
         console.log(coursesContent.error)
@@ -59,7 +62,7 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                                         </MenubarSubTrigger>
                                         <MenubarSubContent>
                                             {course.lessons.map((lesson) => (
-                                                <Link key={lesson.id} href={`/dashboard/courses/${course.course_id}/lessons/${lesson.id}`}>
+                                                <Link key={lesson.id} href={`/dashboard/${userRole}/courses/${course.course_id}/lessons/${lesson.id}`}>
                                                     <MenubarItem>
                                                         {lesson.title}
                                                     </MenubarItem>
@@ -74,7 +77,7 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                                         </MenubarSubTrigger>
                                         <MenubarSubContent>
                                             {course.exams.map((exam) => (
-                                                <Link key={exam.exam_id} href={`/dashboard/courses/${course.course_id}/exams/${exam.exam_id}`}>
+                                                <Link key={exam.exam_id} href={`/dashboard/${userRole}/courses/${course.course_id}/exams/${exam.exam_id}`}>
                                                     <MenubarItem>
                                                         {exam.title}
                                                     </MenubarItem>
