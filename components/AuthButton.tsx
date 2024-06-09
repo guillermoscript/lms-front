@@ -3,16 +3,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { Button, buttonVariants } from '@/components/ui/button'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function AuthButton () {
-    const cookieStore = cookies()
-    const supabase = createClient()
-
-    const {
-        data: { user }
-    } = await supabase.auth.getUser()
-
     const signOut = async () => {
         'use server'
 
@@ -22,7 +16,9 @@ export default async function AuthButton () {
         return redirect('/auth/login')
     }
 
-    return (user != null)
+    const userRola = await getServerUserRole()
+
+    return (userRola != null)
         ? (
             <div className="flex items-center gap-4">
                 <form action={signOut}>
@@ -30,7 +26,7 @@ export default async function AuthButton () {
             Logout
                     </Button>
                 </form>
-                <Link href="/dashboard">
+                <Link href={`/dashboard/${userRola}`}>
                     <Button
                         variant={'link'}
                     >
