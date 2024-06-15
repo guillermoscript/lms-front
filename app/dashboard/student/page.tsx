@@ -1,5 +1,5 @@
-// @ts-nocheck
 import CourseCard from '@/components/dashboards/student/course/CourseCard'
+import EnrollButton from '@/components/dashboards/student/course/EnrollButton'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -30,8 +30,6 @@ export default async function CoursesStudentPage () {
         .select('*')
         .eq('user_id', user.data.user.id)
 
-    console.log(userCourses)
-
     if (userCourses.error != null) {
         throw new Error(userCourses.error.message)
     }
@@ -39,8 +37,6 @@ export default async function CoursesStudentPage () {
     if (userSubscriptions.error != null) {
         throw new Error(userSubscriptions.error.message)
     }
-
-    console.log(userSubscriptions.data)
 
     return (
         <>
@@ -63,24 +59,36 @@ export default async function CoursesStudentPage () {
                 </BreadcrumbList>
             </Breadcrumb>
 
-            {userCourses?.data?.length > 0 ? (
+            {userSubscriptions?.data?.length > 0 ? (
                 <div className="p-4 flex flex-col gap-4">
                     <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                        Your Courses
+                   Your Courses
+                    </h2>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                        <AllCoursesCard
+                            userId={user.data.user.id}
+                            supabase={supabase}
+                        />
+                    </div>
+                </div>
+            ) : userCourses?.data?.length > 0 ? (
+                <div className="p-4 flex flex-col gap-4">
+                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                    Your Courses
                     </h2>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
                         {userCourses.data.map((course) => {
                             return (
                                 <>
                                     <CourseCard
-                                        title={course.course.title}
+                                        title={(course.course as any)?.title}
                                         progress={75}
                                         totalLessons={
-                                            course.course.lessons.length
+                                            (course.course as any)?.lessons?.length
                                         }
                                         completedLessons={18}
                                         completedTests={5}
-                                        totalTests={course.course.exams.length}
+                                        totalTests={(course.course as any)?.exams.length}
                                         approvedTests={4}
                                         courseId={course.course_id}
                                     />
@@ -89,30 +97,7 @@ export default async function CoursesStudentPage () {
                         })}
                     </div>
                 </div>
-            ) : userSubscriptions?.data?.length > 0 ? (
-                <div className="p-4 flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                        Your Subscriptions
-                    </h2>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
-                        {userSubscriptions.data.map((subscription) => {
-                            return (
-                                <>
-                                    <CourseCard
-                                        title={subscription.title}
-                                        progress={75}
-                                        totalLessons={10}
-                                        completedLessons={2}
-                                        completedTests={5}
-                                        totalTests={5}
-                                        approvedTests={4}
-                                        courseId={subscription.course_id}
-                                    />
-                                </>
-                            )
-                        })}
-                    </div>
-                </div>
+
             ) : (
                 <div className="p-4 flex flex-col gap-4">
                     <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
@@ -121,5 +106,49 @@ export default async function CoursesStudentPage () {
                 </div>
             )}
         </>
+    )
+}
+
+async function AllCoursesCard ({
+    supabase,
+    userId
+}: {
+    supabase: any
+    userId: string
+}) {
+    const allCourses = await supabase
+        .from('courses')
+        .select('*, lessons(*), exams(*), enrollments(*)')
+        .eq('status', 'published')
+        .eq('enrollments.user_id', userId)
+
+    if (allCourses.error != null) {
+        throw new Error(allCourses.error.message)
+    }
+
+    return allCourses.data.map((course) => {
+        return (
+            <>
+                <CourseCard
+                    title={course.title}
+                    progress={75}
+                    totalLessons={course.lessons.length}
+                    completedLessons={18}
+                    completedTests={5}
+                    totalTests={course.exams.length}
+                    approvedTests={4}
+                    courseId={course.course_id}
+                >
+                    {
+                        course.enrollments.length === 0 ? (
+                            <EnrollButton
+                                courseId={course.course_id}
+                            />
+                        ) : null
+                    }
+                </CourseCard>
+            </>
+        )
+    }
     )
 }
