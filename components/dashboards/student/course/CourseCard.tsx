@@ -12,7 +12,8 @@ const CourseCard = ({
     completedTests,
     totalTests,
     approvedTests,
-    courseId
+    courseId,
+    children
 }: {
     title: string
     progress: number
@@ -22,6 +23,7 @@ const CourseCard = ({
     totalTests: number
     approvedTests: number
     courseId: number
+    children?: React.ReactNode
 }) => (
     <Card>
         <CardHeader>
@@ -82,6 +84,7 @@ const CourseCard = ({
                 >
           View Exams
                 </Link>
+                {children}
             </div>
         </CardContent>
     </Card>
