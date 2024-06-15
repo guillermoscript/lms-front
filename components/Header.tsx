@@ -1,3 +1,4 @@
+import { Menu } from 'lucide-react'
 import Link from 'next/link'
 
 import {
@@ -36,7 +37,7 @@ export default function Header ({ children }: { children?: React.ReactNode }) {
                             <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
                         </svg>
                         <span className="hidden font-bold sm:inline-block">
-              Taxonomy
+                LMS
                         </span>
                     </a>
                     <nav className="hidden gap-6 md:flex">
@@ -45,37 +46,23 @@ export default function Header ({ children }: { children?: React.ReactNode }) {
                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/plans"
                         >
-              Plans
+                Plans
                         </Link>
                         <Link
                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/store"
                         >
-              Store
+                Store
                         </Link>
                     </nav>
                     <Sheet>
-                        <SheetTrigger className="flex items-center space-x-2 md:hidden">
-              Open
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width={24}
-                                height={24}
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-command"
-                            >
-                                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
-                            </svg>
+                        <SheetTrigger className="flex items-center space-x-2 md:hidden p-3">
+                            <Menu className="h-6 w-6" />
                         </SheetTrigger>
                         <SheetContent>
                             <SheetHeader>
                                 <SheetTitle>
-                  Are you sure absolutely sure?
+                LMS Academy
                                 </SheetTitle>
                                 <SheetDescription>
                                     <nav className="flex justify-center items-center">
