@@ -27,8 +27,6 @@ export default async function CoursesStudentPage () {
         )
         .eq('user_id', user.data.user.id)
 
-    console.log(userCourses)
-
     if (userCourses.error != null) {
         throw new Error(userCourses.error.message)
     }
