@@ -19,11 +19,17 @@ export default async function StudentCourseLessonsPage ({
     }
 }) {
     const supabase = createClient()
+    const user = await supabase.auth.getUser()
+
+    if (user.error != null) {
+        throw new Error(user.error.message)
+    }
 
     const lessons = await supabase
         .from('lessons')
         .select('*,courses(*),lesson_completions(*)')
         .eq('course_id', params.courseId)
+        .eq('lesson_completions.user_id', user.data.user.id)
         .order('sequence')
 
     if (lessons.error != null) {
