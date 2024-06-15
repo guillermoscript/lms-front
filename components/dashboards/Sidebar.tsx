@@ -1,5 +1,5 @@
 
-import { BookIcon, HomeIcon } from 'lucide-react'
+import { BookIcon, HomeIcon, User } from 'lucide-react'
 import Link from 'next/link'
 
 import {
@@ -45,7 +45,8 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                 </div>
                 <nav className="flex-1 overflow-auto py-2 px-4 text-sm font-medium">
                     {/* Links */}
-                    <SidebarLink icon={HomeIcon} text="Dashboard" href="/dashboard" />
+                    <SidebarLink icon={HomeIcon} text="Dashboard" href={`/dashboard/${userRole}`} />
+                    <SidebarLink icon={User} text="Account" href="/dashboard/account" />
                     <Menubar
                         className="flex flex-col gap-2 h-auto justify-start w-fit bg-transparent border-none px-4 py-2 items-start"
                         aria-label="Main"
