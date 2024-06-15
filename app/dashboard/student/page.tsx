@@ -64,7 +64,7 @@ export default async function CoursesStudentPage () {
                     <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
                    Your Courses
                     </h2>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         <AllCoursesCard
                             userId={user.data.user.id}
                             supabase={supabase}
@@ -76,7 +76,7 @@ export default async function CoursesStudentPage () {
                     <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
                     Your Courses
                     </h2>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {userCourses.data.map((course) => {
                             return (
                                 <>
