@@ -26,6 +26,11 @@ export default async function StudentLessonPage ({
 }) {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
+
+    if (user.error != null) {
+        throw new Error(user.error.message)
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .select(`*,
@@ -37,6 +42,7 @@ export default async function StudentLessonPage ({
             lessons_ai_task_messages(*)
         `)
         .eq('id', params.lessonsId)
+        .eq('lessons_ai_task_messages.user_id', user.data.user.id)
         .single()
 
     // TODO - finish the completion of the lesson
@@ -53,10 +59,6 @@ export default async function StudentLessonPage ({
     }
 
     const isLessonAiTaskCompleted = lessonCompletion?.data?.id
-
-    console.log(isLessonAiTaskCompleted)
-
-    console.log(lessonData.data.lessons_ai_tasks)
 
     return (
         <>

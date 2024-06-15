@@ -30,7 +30,7 @@ export default async function StudentExamCoursePage ({
     const userData = await supabase.auth.getUser()
 
     if (userData.error != null) {
-        return redirect('/auth/login')
+        throw new Error(userData.error.message)
     }
 
     const examData = await supabase

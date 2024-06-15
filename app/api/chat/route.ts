@@ -5,7 +5,7 @@ export async function POST (req: Request) {
     const { messages } = await req.json()
 
     const result = await streamText({
-        model: google('models/gemini-pro'),
+        model: google('models/gemini-1.5-flash-latest'),
         messages,
         temperature: 0
     })
