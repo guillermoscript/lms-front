@@ -20,7 +20,7 @@ export default function Error ({
         <GenericError
             retry={reset}
             title="An error occurred"
-            description="An unexpected error occurred. Please try again."
+            description={error.message}
         />
     )
 }
