@@ -2,14 +2,17 @@
 import dayjs from 'dayjs'
 import { CheckIcon } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function SubscriptionsPage () {
     const supabase = createClient()
+    const user = await supabase.auth.getUser()
 
     const subscriptions = await supabase
         .from('subscriptions')
         .select('*, plans(*)')
+        .eq('user_id', user.data.user.id)
         .single()
 
     if (subscriptions.error != null) {
@@ -19,7 +22,7 @@ export default async function SubscriptionsPage () {
     return (
         <div className='flex flex-col gap-8'>
             <h1 className="text-2xl font-bold">Subscriptions</h1>
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950 hover:scale-105 transition-transform duration-300 ease-in-out">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 <div className="space-y-4">
                     <h3 className="text-2xl font-bold">
                         {subscriptions.data.plans?.plan_name}
@@ -50,6 +53,11 @@ export default async function SubscriptionsPage () {
                         </span>
 
                     </div>
+                    <Button
+                        variant='secondary'
+                    >
+                        Renew subscription
+                    </Button>
                 </div>
             </div>
         </div>
