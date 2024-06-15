@@ -1137,30 +1137,57 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          cancel_at: string
+          cancel_at_period_end: boolean | null
+          canceled_at: string | null
+          created: string
+          current_period_end: string
+          current_period_start: string
           end_date: string
+          ended_at: string | null
           plan_id: number
           start_date: string
           subscription_id: number
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           transaction_id: number
+          trial_end: string | null
+          trial_start: string | null
           user_id: string
         }
         Insert: {
+          cancel_at?: string
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created?: string
+          current_period_end?: string
+          current_period_start?: string
           end_date: string
+          ended_at?: string | null
           plan_id: number
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           transaction_id: number
+          trial_end?: string | null
+          trial_start?: string | null
           user_id: string
         }
         Update: {
+          cancel_at?: string
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created?: string
+          current_period_end?: string
+          current_period_start?: string
           end_date?: string
+          ended_at?: string | null
           plan_id?: number
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           transaction_id?: number
+          trial_end?: string | null
+          trial_start?: string | null
           user_id?: string
         }
         Relationships: [
