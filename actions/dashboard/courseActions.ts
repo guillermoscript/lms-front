@@ -65,3 +65,47 @@ export async function deleteCourseAction (data: {
     revalidatePath('/dashboard/teacher/courses', 'layout')
     return createResponse('success', 'Course deleted successfully', null, null)
 }
+
+export async function enrollUserToCourseAction ({
+    courseId
+}: {
+    courseId: number
+}) {
+    if (!courseId) {
+        return createResponse('error', 'Something went wrong', null, 'Course id is required')
+    }
+
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return createResponse('error', 'User not found', null, null)
+    }
+
+    const userSubscription = await supabase
+        .from('subscriptions')
+        .select('subscription_id')
+        .eq('user_id', userData.data.user.id)
+        .single()
+
+    if (userSubscription.error) {
+        return createResponse('error', 'Error getting user subscription', null, userSubscription.error.message)
+    }
+
+    console.log(userSubscription.data)
+
+    const enrollmentData = await supabase.from('enrollments').insert([{
+        course_id: courseId,
+        subscription_id: userSubscription.data.subscription_id,
+        user_id: userData.data.user.id,
+        enrollment_date: new Date().toISOString()
+    }])
+
+    if (enrollmentData.error) {
+        console.log(enrollmentData.error)
+        return createResponse('error', 'Error enrolling user to course', null, enrollmentData.error.message)
+    }
+
+    revalidatePath('/dashboard/student/courses', 'layout')
+    return createResponse('success', 'User enrolled to course successfully', null, null)
+}
