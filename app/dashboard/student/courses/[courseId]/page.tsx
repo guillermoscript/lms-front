@@ -20,18 +20,43 @@ export default async function CourseStudentPage ({
     params: { courseId: string }
 }) {
     const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error != null) {
+        return redirect('/auth/login')
+    }
 
     const courseData = await supabase
         .from('courses')
         .select(
             `*,
-		lessons(*),
+		lessons(*, lesson_completions(*)),
 		exams(*,
-			exam_scores(*)
+			exam_submissions(
+				submission_id,
+				student_id,
+				submission_date,
+				exam_answers(
+					answer_id,
+					question_id,
+					answer_text,
+					is_correct,
+					feedback
+				),
+				exam_scores (
+					score_id,
+					score
+                )
+            )
 		)
 	`
         )
         .eq('course_id', params.courseId)
+        .eq('status', 'published')
+        // .eq('lessons.status', 'published')
+        // .eq('exams.status', 'published')
+        .eq('lessons.lesson_completions.user_id', userData.data.user.id)
+        .eq('exams.exam_submissions.student_id', userData.data.user.id)
         .single()
 
     if (courseData.error != null) {
@@ -106,7 +131,9 @@ export default async function CourseStudentPage ({
                                                 title={lesson.title}
                                                 lessonNumber={lesson.sequence}
                                                 description={lesson.description}
-                                                status={lesson.status}
+                                                status={lesson.lesson_completions.length > 0
+                                                    ? 'Completed'
+                                                    : 'Not Started'}
                                                 courseId={
                                                     courseData.data.course_id
                                                 }
@@ -129,8 +156,16 @@ export default async function CourseStudentPage ({
                                                 title={exam.title}
                                                 examNumber={exam.sequence}
                                                 description={exam.description}
-                                                status={exam.status}
-                                                grade={100}
+                                                status={ exam.exam_submissions.length > 0
+                                                    ? exam.exam_submissions[0].exam_scores
+                                                        .length > 0
+                                                        ? 'Completed'
+                                                        : 'In Progress'
+                                                    : 'Not Started'}
+                                                grade={exam.exam_submissions.length > 0
+                                                    ? exam?.exam_submissions[0]
+                                                        ?.exam_scores[0]?.score
+                                                    : 'N/A'}
                                                 courseId={
                                                     courseData.data.course_id
                                                 }
@@ -232,7 +267,7 @@ const ExamCard = ({
             </p>
             <div className="mt-2">
                 <div className="flex items-center justify-between">
-                    <p>Grade: {grade}%</p>
+                    <p>Grade: {grade}</p>
                     <Link
                         className={buttonVariants({ variant: 'link' })}
                         href={`/dashboard/student/courses/${courseId}/exams/${examId}`}
