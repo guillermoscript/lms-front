@@ -1,6 +1,6 @@
-import { BarChart, Link } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+
 import {
     Card,
     CardContent,
@@ -27,6 +27,17 @@ export default async function Dashboard () {
         .eq('id', user?.id)
         .single()
 
+    const userSubscriptions = await supabase
+        .from('subscriptions')
+        .select('*, plans(*)')
+        .eq('user_id', user?.id)
+        .single()
+
+    const userTransactions = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user?.id)
+
     return (
         <>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -36,72 +47,62 @@ export default async function Dashboard () {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                            <span className="text-gray-500 dark:text-gray-400">
-                                Name:
-                            </span>
+                            <span className="text-gray-500 dark:text-gray-400">Name:</span>
                             <p>{userProfile.data?.full_name}</p>
                         </div>
                         <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                            <span className="text-gray-500 dark:text-gray-400">
-                                Email:
-                            </span>
+                            <span className="text-gray-500 dark:text-gray-400">Email:</span>
                             <p>{user?.email}</p>
                         </div>
-                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                            <span className="text-gray-500 dark:text-gray-400">
-                                Password:
-                            </span>
-                            <div>
-                                <Button size="sm" variant="outline">
-                                  Change Password
-                                </Button>
-                            </div>
-                        </div>
                     </CardContent>
                     <CardFooter>
-                        <Button variant="secondary">Edit Profile</Button>
+                        <Link
+                            href="/dashboard/account/profile"
+                            className="text-blue-600 underline"
+                        >
+                Edit Profile
+                        </Link>
                     </CardFooter>
                 </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Lesson Progress</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-bold">75%</p>
-                                <p className="text-gray-500 dark:text-gray-400">
-                                  Lessons Completed
-                                </p>
+                {userSubscriptions.data != null && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Subscriptions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col gap-4 justify-between">
+                                <div>
+                                    <p className="text-gray-500 dark:text-gray-400">
+                        Subscription ID
+                                    </p>
+                                    <p className="text-2xl font-bold">
+                                        {userSubscriptions.data.subscription_id}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500 dark:text-gray-400">
+                                        {userSubscriptions.data.plans?.plan_name}
+                                    </p>
+                                    <p className="text-2xl font-bold">
+                                        {userSubscriptions.data.plans?.price.toLocaleString(
+                                            'en-US',
+                                            {
+                                                style: 'currency',
+                                                currency: 'USD'
+                                            }
+                                        )}
+                                    </p>
+                                </div>
+                                <Link
+                                    className="text-blue-600 underline"
+                                    href="/dashboard/account/subscriptions"
+                                >
+                    View Subscriptions
+                                </Link>
                             </div>
-                            <BarChart className="w-[100px] aspect-square" />
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Subscription</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-bold">Pro</p>
-                                <p className="text-gray-500 dark:text-gray-400">
-                                  Subscription Plan
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">$9.99</p>
-                                <p className="text-gray-500 dark:text-gray-400">
-                                  per month
-                                </p>
-                            </div>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button variant="outline">Manage Subscription</Button>
-                    </CardFooter>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
                 <Card>
                     <CardHeader>
                         <CardTitle>Orders</CardTitle>
@@ -109,13 +110,18 @@ export default async function Dashboard () {
                     <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-2xl font-bold">12</p>
+                                <p className="text-2xl font-bold">
+                                    {userTransactions.data.length}
+                                </p>
                                 <p className="text-gray-500 dark:text-gray-400">
-                                  Total Orders
+                    Total Orders
                                 </p>
                             </div>
-                            <Link className="text-blue-600 underline" href="#">
-                                View Orders
+                            <Link
+                                className="text-blue-600 underline"
+                                href="/dashboard/account/orders"
+                            >
+                  View Orders
                             </Link>
                         </div>
                     </CardContent>
