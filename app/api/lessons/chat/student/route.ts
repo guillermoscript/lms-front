@@ -18,7 +18,7 @@ export async function POST (req: Request) {
         const supabase = createClient()
 
         const result = await streamText({
-            model: google('models/gemini-pro'),
+            model: google('models/gemini-1.5-flash-latest'),
             onFinish: async (event) => {
                 const userData = await supabase.auth.getUser()
                 if (userData.error) {
