@@ -23,8 +23,16 @@ export default async function CoursesPageLayout ({
         .eq('user_id', user.data.user.id)
         .eq('course_id', Number(params.courseId))
 
+    const userSubscriptions = await supabase
+        .from('subscriptions')
+        .select('subscription_id')
+        .eq('user_id', user.data.user.id)
+
     if (isUserEnrolled.error != null) {
         if (isUserEnrolled.error.code === 'PGRST116') {
+            if (userSubscriptions.error != null || userSubscriptions.data.length === 0) {
+                throw new Error(userSubscriptions?.error?.message || 'You are not authorized to view this page.')
+            }
             return (
                 <EnrollCard courseId={Number(params.courseId)} />
             )
@@ -33,6 +41,9 @@ export default async function CoursesPageLayout ({
     }
 
     if (isUserEnrolled.data.length === 0) {
+        if (userSubscriptions.error != null || userSubscriptions.data.length === 0) {
+            throw new Error(userSubscriptions?.error?.message || 'You are not authorized to view this page.')
+        }
         return (
             <EnrollCard courseId={Number(params.courseId)} />
         )
