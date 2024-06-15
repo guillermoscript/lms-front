@@ -22,12 +22,8 @@ export default async function CoursesLayout ({
         .select('subscription_id')
         .eq('user_id', user.data.user.id)
 
-    if (userCourses.error != null) {
-        throw new Error(userCourses.error.message)
-    }
-
-    if (userSubscriptions.error != null) {
-        throw new Error(userSubscriptions.error.message)
+    if (userCourses.error != null || userSubscriptions.error != null) {
+        throw new Error(userCourses.error.message || userSubscriptions.error.message)
     }
 
     return (
