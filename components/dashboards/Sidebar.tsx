@@ -17,6 +17,7 @@ import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 
 import { Button } from '../ui/button'
+import { Separator } from '../ui/separator'
 import SidebarLink from './SidebarLink'
 
 async function Sidebar ({ children }: { children?: React.ReactNode }) {
@@ -45,8 +46,15 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                 </div>
                 <nav className="flex-1 overflow-auto py-2 px-4 text-sm font-medium">
                     {/* Links */}
+                    <p className='text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 my-3'>
+                        Main
+                    </p>
                     <SidebarLink icon={HomeIcon} text="Dashboard" href={`/dashboard/${userRole}`} />
                     <SidebarLink icon={User} text="Account" href="/dashboard/account" />
+                    <Separator />
+                    <p className='text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 my-3'>
+                        Courses
+                    </p>
                     <Menubar
                         className="flex flex-col gap-2 h-auto justify-start w-fit bg-transparent border-none px-4 py-2 items-start"
                         aria-label="Main"
