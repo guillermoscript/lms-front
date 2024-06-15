@@ -21,6 +21,7 @@ export default async function CoursesLayout ({
         .from('subscriptions')
         .select('subscription_id')
         .eq('user_id', user.data.user.id)
+        .eq('subscription_status', 'active')
 
     if (userCourses.error != null || userSubscriptions.error != null) {
         throw new Error(userCourses.error.message || userSubscriptions.error.message)
