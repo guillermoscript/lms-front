@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { BarChart } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
 import {
@@ -11,7 +10,7 @@ import {
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function CourseStudentPage ({
@@ -63,8 +62,6 @@ export default async function CourseStudentPage ({
         throw new Error(courseData.error.message)
     }
 
-    console.log(courseData)
-
     return (
         <>
             <Breadcrumb>
@@ -98,24 +95,23 @@ export default async function CourseStudentPage ({
                 <Card className="h-full">
                     <CardHeader>
                         <CardTitle>{courseData.data.title}</CardTitle>
+                        {courseData.data.description && (
+                            <CardDescription>
+                                {courseData.data.description}
+                            </CardDescription>
+                        )}
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div>
                                 <h3 className="text-xl font-bold mb-4">
-                                  Course Overview
+                                    Course Overview
                                 </h3>
-                                <div className="grid grid-cols-[1fr_1fr] gap-4">
-                                    {/* {courseData.data.stats.map((stat) => (
-										<CourseStats
-											title={stat.title}
-											value={stat.value}
-										/>
-									))} */}
-                                </div>
-                                <div className="mt-6">
-                                    <BarChart className="w-full aspect-[4/1]" />
-                                </div>
+                                <img
+                                    src={courseData.data.thumbnail_url}
+                                    alt="Course Image"
+                                    className="rounded-md object-cover"
+                                />
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold mb-4">
@@ -132,8 +128,8 @@ export default async function CourseStudentPage ({
                                                 lessonNumber={lesson.sequence}
                                                 description={lesson.description}
                                                 status={lesson.lesson_completions.length > 0
-                                                    ? 'Completed'
-                                                    : 'Not Started'}
+                                                    ? 'default'
+                                                    : 'outline'}
                                                 courseId={
                                                     courseData.data.course_id
                                                 }
@@ -159,9 +155,9 @@ export default async function CourseStudentPage ({
                                                 status={ exam.exam_submissions.length > 0
                                                     ? exam.exam_submissions[0].exam_scores
                                                         .length > 0
-                                                        ? 'Completed'
-                                                        : 'In Progress'
-                                                    : 'Not Started'}
+                                                        ? 'default'
+                                                        : 'secondary'
+                                                    : 'outline'}
                                                 grade={exam.exam_submissions.length > 0
                                                     ? exam?.exam_submissions[0]
                                                         ?.exam_scores[0]?.score
@@ -200,7 +196,7 @@ const LessonCard = ({
     title: string
     lessonNumber: number
     description: string
-    status: string
+    status: 'default' | 'destructive' | 'outline' | 'secondary'
     courseId: number
     lessonId: number
 }) => (
@@ -213,7 +209,9 @@ const LessonCard = ({
                 </p>
             </div>
             <div>
-                <Badge variant={status}>{status}</Badge>
+                <Badge variant={status}>
+                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                </Badge>
             </div>
         </div>
         <div className="mt-4">
@@ -244,8 +242,8 @@ const ExamCard = ({
     title: string
     examNumber: number
     description: string
-    status: string
-    grade: number
+    status: 'default' | 'destructive' | 'outline' | 'secondary'
+    grade: number | string
     courseId: number
     examId: number
 }) => (
@@ -258,7 +256,9 @@ const ExamCard = ({
                 </p>
             </div>
             <div>
-                <Badge variant={status}>{status}</Badge>
+                <Badge variant={status}>
+                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                </Badge>
             </div>
         </div>
         <div className="mt-4">
