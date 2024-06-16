@@ -1,8 +1,9 @@
-import { BarChart } from 'lucide-react'
+import { BookOpenTextIcon, PencilLineIcon } from 'lucide-react'
 import Link from 'next/link'
 
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/utils'
 
 const CourseCard = ({
     title,
@@ -13,9 +14,12 @@ const CourseCard = ({
     totalTests,
     approvedTests,
     courseId,
-    children
+    children,
+    img,
+    description
 }: {
     title: string
+    description?: string
     progress: number
     totalLessons: number
     completedLessons: number
@@ -24,13 +28,48 @@ const CourseCard = ({
     approvedTests: number
     courseId: number
     children?: React.ReactNode
+    img: string
 }) => (
     <Card>
         <CardHeader>
             <CardTitle>{title}</CardTitle>
+            {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
-        <CardContent>
-            <div className="flex items-center justify-between">
+        <CardContent
+            className='p-4'
+        >
+            <Link
+                className="p-4 flex justify-center w-full"
+                href={`/dashboard/student/courses/${courseId}`}
+            >
+                <img src={img}
+                    alt='Course Image' className="rounded-md object-cover"
+                />
+            </Link>
+            <div className="flex justify-center gap-4">
+                <Link
+                    className={cn(
+                        buttonVariants({ variant: 'default' }),
+                        'flex items-center justify-center gap-2'
+                    )}
+                    href={`/dashboard/student/courses/${courseId}/lessons`}
+                >
+                    <BookOpenTextIcon className="h-6 w-6" />
+            View Lessons
+                </Link>
+                <Link
+                    className={cn(
+                        buttonVariants({ variant: 'secondary' }),
+                        'flex items-center justify-center gap-2'
+                    )}
+                    href={`/dashboard/student/courses/${courseId}/exams`}
+                >
+                    <PencilLineIcon className="h-6 w-6" />
+            View Exams
+                </Link>
+                {children}
+            </div>
+            {/* <div className="flex items-center justify-between">
                 <div>
                     <p className="text-2xl font-bold">{progress}%</p>
                     <p className="text-gray-500 dark:text-gray-400">
@@ -70,22 +109,7 @@ const CourseCard = ({
             Tests Approved
                     </p>
                 </div>
-            </div>
-            <div className="mt-6">
-                <Link
-                    className={buttonVariants({ variant: 'link' })}
-                    href={`/dashboard/student/courses/${courseId}/lessons`}
-                >
-          View Lessons
-                </Link>
-                <Link
-                    className={buttonVariants({ variant: 'link' })}
-                    href={`/dashboard/student/courses/${courseId}/exams`}
-                >
-          View Exams
-                </Link>
-                {children}
-            </div>
+            </div> */}
         </CardContent>
     </Card>
 )
