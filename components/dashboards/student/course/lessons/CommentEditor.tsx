@@ -58,7 +58,7 @@ export default function CommentEditor ({
     return (
         <>
             <form
-                className="w-full p-3 flex flex-col gap-4"
+                className="w-full p-3 flex flex-col gap-4 border border-gray-200 rounded-md shadow-sm"
                 onSubmit={handleFormSubmit}
             >
                 <ForwardRefEditor
