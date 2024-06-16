@@ -8,6 +8,7 @@ import {
     CardHeader,
     CardTitle
 } from '@/components/ui/card'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function Dashboard () {
@@ -38,6 +39,8 @@ export default async function Dashboard () {
         .select('*')
         .eq('user_id', user?.id)
 
+    const userRole = await getServerUserRole()
+
     return (
         <>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -57,7 +60,7 @@ export default async function Dashboard () {
                     </CardContent>
                     <CardFooter>
                         <Link
-                            href="/dashboard/account/profile"
+                            href={`/dashboard/${userRole}/account/edit`}
                             className="text-blue-600 underline"
                         >
                 Edit Profile
@@ -95,7 +98,7 @@ export default async function Dashboard () {
                                 </div>
                                 <Link
                                     className="text-blue-600 underline"
-                                    href="/dashboard/account/subscriptions"
+                                    href={`/dashboard/${userRole}/account/subscriptions`}
                                 >
                     View Subscriptions
                                 </Link>
@@ -119,9 +122,9 @@ export default async function Dashboard () {
                             </div>
                             <Link
                                 className="text-blue-600 underline"
-                                href="/dashboard/account/orders"
+                                href={`/dashboard/${userRole}/account/orders`}
                             >
-                  View Orders
+                    View Orders
                             </Link>
                         </div>
                     </CardContent>
