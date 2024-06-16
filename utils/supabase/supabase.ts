@@ -166,6 +166,7 @@ export type Database = {
           enrollment_date: string | null
           enrollment_id: number
           product_id: number | null
+          status: Database["public"]["Enums"]["enrollement_status"] | null
           subscription_id: number | null
           user_id: string
         }
@@ -174,6 +175,7 @@ export type Database = {
           enrollment_date?: string | null
           enrollment_id?: number
           product_id?: number | null
+          status?: Database["public"]["Enums"]["enrollement_status"] | null
           subscription_id?: number | null
           user_id: string
         }
@@ -182,6 +184,7 @@ export type Database = {
           enrollment_date?: string | null
           enrollment_id?: number
           product_id?: number | null
+          status?: Database["public"]["Enums"]["enrollement_status"] | null
           subscription_id?: number | null
           user_id?: string
         }
@@ -754,6 +757,41 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          message: string
+          notification_id: number
+          notification_type: string
+          read: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          message: string
+          notification_id?: number
+          notification_type: string
+          read?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          message?: string
+          notification_id?: number
+          notification_type?: string
+          read?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           permission_id: number
@@ -1318,6 +1356,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_notification: {
+        Args: {
+          _user_id: string
+          _notification_type: string
+          _message: string
+        }
+        Returns: undefined
+      }
+      create_transaction_for_renewal: {
+        Args: {
+          sub_id: number
+          usr_id: string
+          pln_id: number
+        }
+        Returns: number
+      }
       custom_access_token_hook: {
         Args: {
           event: Json
@@ -1338,6 +1392,21 @@ export type Database = {
           _transaction_id: number
           _start_date?: string
         }
+        Returns: undefined
+      }
+      identify_subscriptions_due_for_renewal: {
+        Args: {
+          renewal_period: unknown
+        }
+        Returns: {
+          user_id: string
+          subscription_id: number
+          plan_id: number
+          end_date: string
+        }[]
+      }
+      notify_users_for_renewal: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       save_exam_feedback: {
@@ -1362,6 +1431,7 @@ export type Database = {
         | "tool"
       app_role: "admin" | "moderator" | "teacher" | "student"
       currency_type: "usd" | "eur"
+      enrollement_status: "active" | "disabled"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
