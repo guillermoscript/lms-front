@@ -1,9 +1,9 @@
 import DashboardHeader from '@/components/dashboards/DashboardHeader'
 import Sidebar from '@/components/dashboards/Sidebar'
 
-export default function Layout ({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout ({ children }: { children: React.ReactNode }) {
     return (
-        <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
+        <div className="grid min-h-screen w-full lg:grid-cols-[56px_1fr]">
             <Sidebar />
             <div className="flex flex-col">
                 <DashboardHeader />

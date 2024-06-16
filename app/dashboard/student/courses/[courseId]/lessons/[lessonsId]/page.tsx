@@ -1,7 +1,10 @@
 
+import { Suspense } from 'react'
+
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import LessonsTimeLine from '@/components/dashboards/student/course/lessons/LessonsTimeLine'
 import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,9 +12,11 @@ import {
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
+    BreadcrumbPage,
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
@@ -64,10 +69,26 @@ export default async function StudentLessonPage ({
         <>
             <LessonPage
                 sideBar={
-                    <CommentsSections
-                        lesson_id={lessonData.data.id}
-                        lesson_comments={lessonData.data.lesson_comments}
-                    />
+                    <Tabs defaultValue="comments" className="w-full">
+                        <TabsList>
+                            <TabsTrigger value="comments">Comments</TabsTrigger>
+                            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="comments">
+                            <Suspense fallback={<div>Loading...</div>}>
+                                <CommentsSections
+                                    lesson_id={lessonData.data.id}
+                                    lesson_comments={lessonData.data.lesson_comments}
+                                />
+                            </Suspense>
+                        </TabsContent>
+                        <TabsContent value="timeline">
+                            <LessonsTimeLine
+                                courseId={Number(params.courseId)}
+                                lessonId={Number(params.lessonsId)}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 }
             >
                 <Content
@@ -149,12 +170,9 @@ function Content ({
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`}
-                        >
+                        <BreadcrumbPage >
                             {lessonData.title}
-                        </BreadcrumbLink>
+                        </BreadcrumbPage>
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>

@@ -1,10 +1,14 @@
 import {
     Pagination,
     PaginationContent,
+    PaginationEllipsis,
     PaginationItem,
-    PaginationLink
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious
 } from '@/components/ui/pagination'
 import { createClient } from '@/utils/supabase/server'
+
 export default async function LessonNavigationButtons ({
     courseId,
     lessonId
@@ -19,10 +23,19 @@ export default async function LessonNavigationButtons ({
         .eq('course_id', courseId)
         .order('sequence', { ascending: true })
 
+    const currentIndex = lessons.data.findIndex(lesson => lesson.id === lessonId)
+    const hasNext = currentIndex < lessons.data.length - 1
+    const hasPrevious = currentIndex > 0
+
     return (
         <Pagination>
             <PaginationContent>
-                {lessons.data.map((lesson, index) => (
+                {hasPrevious && (
+                    <PaginationItem>
+                        <PaginationPrevious href={`/dashboard/student/courses/${courseId}/lessons/${lessons.data[currentIndex - 1].id}`} />
+                    </PaginationItem>
+                )}
+                {lessons.data.slice(0, 5).map((lesson, index) => (
                     <PaginationItem key={index}>
                         <PaginationLink
                             href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
@@ -32,6 +45,16 @@ export default async function LessonNavigationButtons ({
                         </PaginationLink>
                     </PaginationItem>
                 ))}
+                {lessons.data.length > 5 && (
+                    <PaginationItem>
+                        <PaginationEllipsis />
+                    </PaginationItem>
+                )}
+                {hasNext && (
+                    <PaginationItem>
+                        <PaginationNext href={`/dashboard/student/courses/${courseId}/lessons/${lessons.data[currentIndex + 1].id}`} />
+                    </PaginationItem>
+                )}
             </PaginationContent>
         </Pagination>
     )

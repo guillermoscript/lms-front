@@ -1,19 +1,12 @@
 import { BookIcon, SearchIcon } from 'lucide-react'
 import Link from 'next/link'
 
-import { Button } from '@/components/ui/button'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+import { DarkThemeToggle } from '@/components/DarkThemeToggle'
+import { CommandDialogComponent } from '@/components/dashboards/Common/CommandDialogComponent'
+import Notifications from '@/components/dashboards/Common/Notifications'
 import { Input } from '@/components/ui/input'
 
-import AuthButton from '../AuthButton'
-import { DarkThemeToggle } from '../DarkThemeToggle'
+import ProfileDropdown from './Common/ProfileDropdown'
 
 export default function DashboardHeader () {
     return (
@@ -24,49 +17,23 @@ export default function DashboardHeader () {
             </Link>
             <div className="w-full flex-1">
                 <form>
-                    <div className="relative">
+                    <div className="relative md:w-2/3 lg:w-1/3">
                         <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+
                         <Input
-                            className="w-full bg-white shadow-none appearance-none pl-8 md:w-2/3 lg:w-1/3 dark:bg-gray-950"
+                            className="w-full bg-white shadow-none appearance-none pl-8  dark:bg-gray-950"
                             placeholder="Search lessons, courses, or students..."
                             type="search"
                         />
+                        <div className="absolute right-2.5 top-2.5">
+                            <CommandDialogComponent />
+                        </div>
                     </div>
                 </form>
             </div>
+            <Notifications />
             <DarkThemeToggle />
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        className="rounded-full border border-gray-200 w-8 h-8 dark:border-gray-800"
-                        size="icon"
-                        variant="ghost"
-                    >
-                        <img
-                            alt="Avatar"
-                            className="rounded-full"
-                            height="32"
-                            src="/placeholder.svg"
-                            style={{
-							  aspectRatio: '32/32',
-							  objectFit: 'cover'
-                            }}
-                            width="32"
-                        />
-                        <span className="sr-only">Toggle user menu</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                        <Link href="/dashboard/account">
-              Account
-                        </Link>
-                    </DropdownMenuItem>
-                    <AuthButton />
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <ProfileDropdown />
         </header>
     )
 }

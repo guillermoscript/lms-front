@@ -27,6 +27,7 @@ export default async function CoursesPageLayout ({
         .from('subscriptions')
         .select('subscription_id')
         .eq('user_id', user.data.user.id)
+        .eq('subscription_status', 'active')
 
     if (isUserEnrolled.error != null) {
         if (isUserEnrolled.error.code === 'PGRST116') {

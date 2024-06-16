@@ -1,3 +1,5 @@
+import { BookTextIcon } from 'lucide-react'
+
 import CourseCard from '@/components/dashboards/student/course/CourseCard'
 import EnrollButton from '@/components/dashboards/student/course/EnrollButton'
 import {
@@ -61,10 +63,13 @@ export default async function CoursesStudentPage () {
 
             {userSubscriptions?.data?.length > 0 ? (
                 <div className="p-4 flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                   Your Courses
-                    </h2>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                    <div className="flex items-center gap-2">
+                        <BookTextIcon className='h-6 w-6' />
+                        <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                    Your Courses
+                        </h2>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         <AllCoursesCard
                             userId={user.data.user.id}
                             supabase={supabase}
@@ -73,10 +78,13 @@ export default async function CoursesStudentPage () {
                 </div>
             ) : userCourses?.data?.length > 0 ? (
                 <div className="p-4 flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                    <div className="flex items-center gap-2">
+                        <BookTextIcon className='h-6 w-6' />
+                        <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
                     Your Courses
-                    </h2>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 shadow-md">
+                        </h2>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {userCourses.data.map((course) => {
                             return (
                                 <>
@@ -86,8 +94,10 @@ export default async function CoursesStudentPage () {
                                         totalLessons={
                                             (course.course as any)?.lessons?.length
                                         }
+                                        img={(course.course as any)?.thumbnail_url}
                                         completedLessons={18}
                                         completedTests={5}
+                                        description={(course.course as any)?.description}
                                         totalTests={(course.course as any)?.exams.length}
                                         approvedTests={4}
                                         courseId={course.course_id}
@@ -132,12 +142,14 @@ async function AllCoursesCard ({
                 <CourseCard
                     title={course.title}
                     progress={75}
+                    description={course.description}
                     totalLessons={course.lessons.length}
                     completedLessons={18}
                     completedTests={5}
                     totalTests={course.exams.length}
                     approvedTests={4}
                     courseId={course.course_id}
+                    img={course.thumbnail_url}
                 >
                     {
                         course.enrollments.length === 0 ? (

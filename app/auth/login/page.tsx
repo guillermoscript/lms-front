@@ -31,11 +31,14 @@ export default function Login ({
                 >
                     Forgot your password?
                 </Link>
+                <p className="text-center text-sm text-muted-foreground">
+                    Don't have an account?
+                </p>
                 <Link
                     href="/auth/signup"
                     className={buttonVariants({ variant: 'secondary' })}
                 >
-                    Don't have an account? Sign up
+                    Sign up
                 </Link>
             </div>
         </>

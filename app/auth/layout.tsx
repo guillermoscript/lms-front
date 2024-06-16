@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 
 import Header from '@/components/Header'
@@ -15,28 +14,12 @@ export default function LoginLayout ({
             <Header>
                 <></>
             </Header>
-            <div className="md:hidden">
-                <Image
-                    src="/examples/authentication-light.png"
-                    width={1280}
-                    height={843}
-                    alt="Authentication"
-                    className="block dark:hidden"
-                />
-                <Image
-                    src="/examples/authentication-dark.png"
-                    width={1280}
-                    height={843}
-                    alt="Authentication"
-                    className="hidden dark:block"
-                />
-            </div>
-            <div className="container relative hidden h-[800px] flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+            <div className="container relative min-h-screen flex-col py-8 items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
                 <Link
                     href="/examples/authentication"
                     className={cn(
                         buttonVariants({ variant: 'ghost' }),
-                        'absolute right-4 top-4 md:right-8 md:top-8'
+                        'absolute right-4 top-4 md:right-8 md:top-8 hidden md:flex'
                     )}
                 >
                     Login
@@ -56,7 +39,7 @@ export default function LoginLayout ({
                         >
                             <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
                         </svg>
-                        Acme Inc
+                        LMS Inc
                     </div>
                     <div className="relative z-20 mt-auto">
                         <blockquote className="space-y-2">

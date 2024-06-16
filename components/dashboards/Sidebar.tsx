@@ -1,99 +1,45 @@
-
-import { BookIcon, HomeIcon } from 'lucide-react'
+'use server'
+import { HomeIcon, Settings, User2Icon } from 'lucide-react'
 import Link from 'next/link'
 
-import {
-    Menubar,
-    MenubarContent,
-    MenubarItem,
-    MenubarMenu,
-    MenubarSeparator,
-    MenubarSub,
-    MenubarSubContent,
-    MenubarSubTrigger,
-    MenubarTrigger
-} from '@/components/ui/menubar'
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
-import { createClient } from '@/utils/supabase/server'
 
-import { Button } from '../ui/button'
-import SidebarLink from './SidebarLink'
-
-async function Sidebar ({ children }: { children?: React.ReactNode }) {
-    const supabase = createClient()
-
-    const coursesContent = await supabase.from('courses').select('course_id, title, lessons(id, title), exams(exam_id,title)')
-
+async function Sidebar () {
     const userRole = await getServerUserRole()
-
-    if (coursesContent.error) {
-        throw new Error(coursesContent.error.message)
-    }
 
     return (
         <div className="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40">
-            <div className="flex h-full max-h-screen flex-col gap-2">
-                <div className="flex h-[60px] items-center border-b px-6">
-                    <Link className="flex items-center gap-2 font-semibold" href="#">
-                        <BookIcon className="h-6 w-6" />
-                        <span>LMS Academy</span>
-                    </Link>
-                    <Button className="ml-auto h-8 w-8" size="icon" variant="outline">
-                        <BookIcon className="h-4 w-4" />
-                        <span className="sr-only">Toggle notifications</span>
-                    </Button>
-                </div>
-                <nav className="flex-1 overflow-auto py-2 px-4 text-sm font-medium">
-                    {/* Links */}
-                    <SidebarLink icon={HomeIcon} text="Dashboard" href="/dashboard" />
-                    <Menubar
-                        className="flex flex-col gap-2 h-auto justify-start w-fit bg-transparent border-none px-4 py-2 items-start"
-                        aria-label="Main"
-                    >
-                        {coursesContent.data.map((course) => (
-                            <MenubarMenu key={course.course_id}>
-                                <MenubarTrigger>
-                                    {course.title}
-                                </MenubarTrigger>
-                                <MenubarContent>
-                                    <MenubarSub>
-                                        <MenubarSubTrigger>
-                Lessons
-                                        </MenubarSubTrigger>
-                                        <MenubarSubContent>
-                                            {course.lessons.map((lesson) => (
-                                                <Link key={lesson.id} href={`/dashboard/${userRole}/courses/${course.course_id}/lessons/${lesson.id}`}>
-                                                    <MenubarItem>
-                                                        {lesson.title}
-                                                    </MenubarItem>
-                                                </Link>
-                                            ))}
-                                        </MenubarSubContent>
-                                    </MenubarSub>
-                                    <MenubarSeparator />
-                                    <MenubarSub>
-                                        <MenubarSubTrigger>
-                Exams
-                                        </MenubarSubTrigger>
-                                        <MenubarSubContent>
-                                            {course.exams.map((exam) => (
-                                                <Link key={exam.exam_id} href={`/dashboard/${userRole}/courses/${course.course_id}/exams/${exam.exam_id}`}>
-                                                    <MenubarItem>
-                                                        {exam.title}
-                                                    </MenubarItem>
-                                                </Link>
-                                            ))}
-                                        </MenubarSubContent>
-                                    </MenubarSub>
-                                </MenubarContent>
-                            </MenubarMenu>
-                        ))}
-                    </Menubar>
-                    {children}
+            <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+                <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+                    <NavLink
+                        href={`/dashboard/${userRole}`}
+                        icon={<HomeIcon className="h-5 w-5" />}
+                        label="Acme Inc"
+                    />
+                    <NavLink
+                        href={`/dashboard/${userRole}/account`}
+                        icon={<User2Icon className="h-5 w-5" />}
+                        label="Acme Inc"
+                    />
                 </nav>
-            </div>
+                <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
+                    <NavLink
+                        href="#"
+                        icon={<Settings className="h-5 w-5" />}
+                        label="Settings"
+                    />
+                </nav>
+            </aside>
         </div>
     )
 }
 
 export default Sidebar
+
+// Define a single NavLink component that can be reused
+const NavLink = ({ href, icon, label }) => (
+    <Link className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8" href={href} data-state="closed">
+        {icon}
+        <span className="sr-only">{label}</span>
+    </Link>
+)
