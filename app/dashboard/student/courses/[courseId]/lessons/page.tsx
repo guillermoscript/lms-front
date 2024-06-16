@@ -6,6 +6,7 @@ import {
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
+    BreadcrumbPage,
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import { cn } from '@/utils'
@@ -74,12 +75,9 @@ export default async function StudentCourseLessonsPage ({
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessons.data[0].course_id}/lessons`}
-                        >
+                        <BreadcrumbPage>
                             Lessons
-                        </BreadcrumbLink>
+                        </BreadcrumbPage>
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
