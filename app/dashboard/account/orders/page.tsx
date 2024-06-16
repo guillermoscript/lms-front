@@ -70,14 +70,10 @@ export default async function OrdersPage () {
                     </CardContent>
                 </Card>
             </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <DataTable columns={orderCols} data={orderData as any} />
-                </CardContent>
-            </Card>
+            <h4 className="text-2xl font-bold mt-8">
+                Orders
+            </h4>
+            <DataTable columns={orderCols} data={orderData as any} />
         </>
     )
 }
