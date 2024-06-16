@@ -45,7 +45,10 @@ export default function CancelSunscriptionForm ({
                 }
             }}
         >
-            <Button variant="destructive">
+            <Button
+                disabled={loading}
+                variant="destructive"
+            >
                 {loading ? 'Cancelling subscription...' : 'Cancel subscription'}
             </Button>
         </form>
