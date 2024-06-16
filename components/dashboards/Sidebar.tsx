@@ -61,7 +61,9 @@ async function Sidebar ({ children }: { children?: React.ReactNode }) {
                     >
                         {coursesContent.data.map((course) => (
                             <MenubarMenu key={course.course_id}>
-                                <MenubarTrigger>
+                                <MenubarTrigger
+                                    className=' ml-0'
+                                >
                                     {course.title}
                                 </MenubarTrigger>
                                 <MenubarContent>
