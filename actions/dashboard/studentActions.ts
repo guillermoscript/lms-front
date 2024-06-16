@@ -34,3 +34,29 @@ export async function studentSubmitLessonComment (state: {
     revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
     return createResponse('success', 'Lesson updated successfully', null, null)
 }
+
+export async function cancelSubscription ({
+    userId,
+    planId
+}: {
+    userId: string
+    planId: number
+}) {
+    console.log('Cancel subscription')
+    const supabase = createClient()
+    const cancelSubscription = await supabase
+        .rpc('cancel_subscription', {
+            _user_id: userId,
+            _plan_id: planId
+        })
+
+    if (cancelSubscription.error != null) {
+        console.log(cancelSubscription.error)
+        return createResponse('error', 'Error cancelling subscription', null, 'Error cancelling subscription')
+    }
+
+    console.log(cancelSubscription)
+
+    revalidatePath('/dashboard/student/account/subscriptions', 'layout')
+    return createResponse('success', 'Subscription cancelled successfully', null, null)
+}
