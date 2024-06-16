@@ -24,12 +24,14 @@ export default async function CoursesLayout ({
         .eq('subscription_status', 'active')
 
     if (userCourses.error != null || userSubscriptions.error != null) {
-        throw new Error(userCourses.error.message || userSubscriptions.error.message)
+        throw new Error(
+            userCourses.error.message || userSubscriptions.error.message
+        )
     }
 
-    return (
-        <>
-            {children}
-        </>
-    )
+    if (userCourses.data.length === 0 || userSubscriptions.data.length === 0) {
+        throw new Error('You are not authorized to view this page.')
+    }
+
+    return <>{children}</>
 }
