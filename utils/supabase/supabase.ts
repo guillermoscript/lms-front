@@ -70,6 +70,84 @@ export type Database = {
           },
         ]
       }
+      comment_flags: {
+        Row: {
+          comment_id: number
+          created_at: string | null
+          id: number
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: number
+          created_at?: string | null
+          id?: never
+          reason: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: number
+          created_at?: string | null
+          id?: never
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_flags_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_reactions: {
+        Row: {
+          comment_id: number
+          created_at: string | null
+          id: number
+          reaction_type: Database["public"]["Enums"]["reactions"]
+          user_id: string
+        }
+        Insert: {
+          comment_id: number
+          created_at?: string | null
+          id?: never
+          reaction_type?: Database["public"]["Enums"]["reactions"]
+          user_id: string
+        }
+        Update: {
+          comment_id?: number
+          created_at?: string | null
+          id?: never
+          reaction_type?: Database["public"]["Enums"]["reactions"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_categories: {
         Row: {
           created_at: string | null
@@ -1432,6 +1510,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "teacher" | "student"
       currency_type: "usd" | "eur"
       enrollement_status: "active" | "disabled"
+      reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
