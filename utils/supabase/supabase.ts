@@ -185,7 +185,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           published_at: string | null
-          status: string
+          status: Database["public"]["Enums"]["status"]
           tags: string[] | null
           thumbnail_url: string | null
           title: string
@@ -200,7 +200,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           published_at?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["status"]
           tags?: string[] | null
           thumbnail_url?: string | null
           title: string
@@ -215,7 +215,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           published_at?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["status"]
           tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
