@@ -1,7 +1,7 @@
 'use client'
 import { User } from '@supabase/supabase-js'
 import dayjs from 'dayjs'
-import { Edit3, Flag, Meh, Reply, Smile, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { Edit3, Flag, Reply } from 'lucide-react'
 import { useState } from 'react'
 
 import { addReactionToComment } from '@/actions/dashboard/studentActions'
@@ -14,6 +14,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { reactionTypes } from '@/utils/const'
 import { Tables } from '@/utils/supabase/supabase'
 
 const ReactionButton = ({ type, icon: Icon, count, onClick }) => (
@@ -55,17 +56,6 @@ const CommentCard = ({
 
     const toggleReplies = () => setShowReplies(!showReplies)
     const toggleEdit = () => setIsEditing(!isEditing)
-
-    const reactionTypes: Array<{
-        type: Tables<'comment_reactions'>['reaction_type']
-        icon: any
-        color: string
-    }> = [
-        { type: 'like', icon: ThumbsUp, color: 'text-blue-500' },
-        { type: 'funny', icon: Smile, color: 'text-yellow-500' },
-        { type: 'boring', icon: Meh, color: '' },
-        { type: 'dislike', icon: ThumbsDown, color: 'text-red-500' }
-    ]
 
     async function AddReaction (reaction: Tables<'comment_reactions'>['reaction_type']) {
         try {
