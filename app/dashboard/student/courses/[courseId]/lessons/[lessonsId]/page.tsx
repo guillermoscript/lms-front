@@ -41,7 +41,8 @@ export default async function StudentLessonPage ({
         .select(`*,
             courses(*),
 			lesson_comments(*,
-				profiles(*)
+				profiles(*),
+                comment_reactions(*)
 			),
             lessons_ai_tasks(*),
             lessons_ai_task_messages(*)
