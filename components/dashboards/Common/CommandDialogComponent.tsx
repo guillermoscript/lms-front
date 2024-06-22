@@ -1,14 +1,14 @@
 'use client'
 
 import {
+    Bell,
     Calculator,
-    Calendar,
     CreditCard,
-    Settings,
     Smile,
     User
 } from 'lucide-react'
-import * as React from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 import {
     CommandDialog,
@@ -17,14 +17,21 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
-    CommandSeparator,
-    CommandShortcut
+    CommandSeparator
 } from '@/components/ui/command'
+import { useToast } from '@/components/ui/use-toast'
+import { createClient } from '@/utils/supabase/client'
+import { getClientUserRole } from '@/utils/supabase/getClientUserRole'
 
 export function CommandDialogComponent () {
-    const [open, setOpen] = React.useState(false)
+    const [open, setOpen] = useState(false)
+    const [userRole, setUserRole] = useState('' as string)
+    const [loading, setLoading] = useState(false)
+    const { toast } = useToast()
+    const [courses, setCourses] = useState([])
+    const [lessons, setLessons] = useState([])
 
-    React.useEffect(() => {
+    useEffect(() => {
         const down = (e: KeyboardEvent) => {
             if (e.key === 'j' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -35,6 +42,45 @@ export function CommandDialogComponent () {
         document.addEventListener('keydown', down)
         return () => document.removeEventListener('keydown', down)
     }, [])
+
+    useEffect(() => {
+        async function fetchUserRole () {
+            const response = await getClientUserRole()
+            setUserRole(response)
+        }
+
+        fetchUserRole()
+    }, [])
+
+    useEffect(() => {
+        async function fetchCourses () {
+            setLoading(true)
+            try {
+                const supabase = createClient()
+                const { data: courses, error } = await supabase.from('courses').select('*').limit(5)
+
+                if (error) {
+                    console.error(error)
+                    return null
+                }
+
+                setCourses(courses)
+            } catch (error) {
+                toast({
+                    title: 'Error fetching courses',
+                    description: error.message,
+                    variant: 'destructive'
+                })
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchCourses()
+    }
+    , [userRole])
+
+    console.log(courses)
 
     return (
         <>
@@ -49,8 +95,13 @@ export function CommandDialogComponent () {
                     <CommandEmpty>No results found.</CommandEmpty>
                     <CommandGroup heading="Suggestions">
                         <CommandItem>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            <span>Calendar</span>
+                            <Link
+                                className='flex items-center gap-2'
+                                href="/dashboard/notifications"
+                            >
+                                <Bell className="mr-2 h-4 w-4" />
+                                <span>Notifications</span>
+                            </Link>
                         </CommandItem>
                         <CommandItem>
                             <Smile className="mr-2 h-4 w-4" />
@@ -64,21 +115,41 @@ export function CommandDialogComponent () {
                     <CommandSeparator />
                     <CommandGroup heading="Settings">
                         <CommandItem>
-                            <User className="mr-2 h-4 w-4" />
-                            <span>Profile</span>
-                            <CommandShortcut>⌘P</CommandShortcut>
+                            <Link
+                                className='flex items-center gap-2'
+                                href={`/dashboard/${userRole}/profile`}
+                            >
+                                <User className="mr-2 h-4 w-4" />
+                                <span>Profile</span>
+                            </Link>
                         </CommandItem>
                         <CommandItem>
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            <span>Billing</span>
-                            <CommandShortcut>⌘B</CommandShortcut>
-                        </CommandItem>
-                        <CommandItem>
-                            <Settings className="mr-2 h-4 w-4" />
-                            <span>Settings</span>
-                            <CommandShortcut>⌘S</CommandShortcut>
+                            <Link
+                                className='flex items-center gap-2'
+                                href={`/dashboard/${userRole}/profile`}
+                            >
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                <span>Billing</span>
+                            </Link>
                         </CommandItem>
                     </CommandGroup>
+                    <CommandGroup heading="Courses">
+                        {loading
+                            ? <>Loading...</>
+                            : courses.map((course: any) => (
+                                <CommandItem key={course.course_id}>
+                                    <Link
+                                        className='flex items-center gap-2'
+                                        href={`/dashboard/${userRole}/courses/${course.course_id}`}
+                                    >
+                                        <span>{course.title}</span>
+                                    </Link>
+                                </CommandItem>
+                            ))
+                        }
+
+                    </CommandGroup>
+
                 </CommandList>
             </CommandDialog>
         </>
