@@ -23,13 +23,13 @@ export default async function CoursesLayout ({
         .eq('user_id', user.data.user.id)
         .eq('subscription_status', 'active')
 
-    if (userCourses.error != null || userSubscriptions.error != null) {
+    if (userSubscriptions.error != null && userCourses.error != null) {
         throw new Error(
-            userCourses.error.message || userSubscriptions.error.message
+            'Something went wrong while fetching your courses and subscriptions.'
         )
     }
 
-    if (userCourses.data.length === 0 || userSubscriptions.data.length === 0) {
+    if (userSubscriptions.data.length === 0 && userCourses.data.length === 0) {
         throw new Error('You are not authorized to view this page.')
     }
 
