@@ -10,7 +10,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
+
+import NotificationsReadButton from './NotificationsReadButton'
 
 export default async function Notifications () {
     const supabase = createClient()
@@ -40,7 +43,13 @@ export default async function Notifications () {
                 ) : (
                     notifications.map((notification) => (
                         <DropdownMenuItem key={notification.notification_id}>
-                            {notification.message}
+                            <NotificationsReadButton
+                                notification={notification}
+                            >
+                                <ViewMarkdown
+                                    markdown={notification.shrot_message}
+                                />
+                            </NotificationsReadButton>
                         </DropdownMenuItem>
                     ))
                 )}
