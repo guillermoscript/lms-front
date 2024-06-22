@@ -3,10 +3,10 @@ import Link from 'next/link'
 
 import { DarkThemeToggle } from '@/components/DarkThemeToggle'
 import { CommandDialogComponent } from '@/components/dashboards/Common/CommandDialogComponent'
-import Notifications from '@/components/dashboards/Common/Notifications'
 import { Input } from '@/components/ui/input'
 
 import ProfileDropdown from './Common/ProfileDropdown'
+import Notifications from './notifications/Notifications'
 
 export default function DashboardHeader () {
     return (
