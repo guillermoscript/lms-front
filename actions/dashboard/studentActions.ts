@@ -10,6 +10,7 @@ import { Tables } from '@/utils/supabase/supabase'
 export async function studentSubmitLessonComment (state: {
     comment: string
     lesson_id: number
+    course_id: number
     parent_comment_id?: number
 }) {
     const supabase = createClient()
@@ -48,7 +49,7 @@ export async function studentSubmitLessonComment (state: {
         const notificationInsert = await supabase.from('notifications').insert({
             user_id: parentComment.data.user_id,
             message: `${state.comment}`,
-            link: `/dashboard/student/courses/${state.lesson_id}/lessons/${state.lesson_id}`,
+            link: `/dashboard/student/courses/${state.course_id}/lessons/${state.lesson_id}`,
             shrot_message: `**${userData.data.user?.email}** replied to your comment.`,
             created_at: new Date().toISOString(),
             notification_type: 'comment_reply'
