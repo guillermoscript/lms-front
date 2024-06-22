@@ -46,6 +46,7 @@ export default async function TeacherLessonPage ({
             sideBar={
                 <CommentsSections
                     lesson_id={lesson?.data?.id}
+                    course_id={lesson?.data?.courses?.course_id}
                     lesson_comments={lesson?.data?.lesson_comments}
                 />
             }

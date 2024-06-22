@@ -78,6 +78,7 @@ export default async function StudentLessonPage ({
                         <TabsContent value="comments">
                             <Suspense fallback={<div>Loading...</div>}>
                                 <CommentsSections
+                                    course_id={Number(params.courseId)}
                                     lesson_id={lessonData.data.id}
                                     lesson_comments={lessonData.data.lesson_comments}
                                 />

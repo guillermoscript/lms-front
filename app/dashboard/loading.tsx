@@ -30,10 +30,6 @@ export default function Component () {
             </div>
             <div className="flex flex-col">
                 <main className="flex-1 p-4 md:p-6">
-                    <div className="flex items-center">
-                        <Skeleton className="h-6 w-40 rounded-md" />
-                        <Skeleton className="h-8 w-20 ml-auto rounded-md" />
-                    </div>
                     <div className="mt-4 border rounded-lg shadow-sm">
                         <Skeleton className="h-[200px] w-full rounded-t-lg" />
                         <div className="p-4 md:p-6">
