@@ -42,14 +42,14 @@ export default async function NotificationsPage ({ searchParams }: {
         <>
             <div className="flex justify-between items-center px-8 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-          Notifications
+            Notifications
                 </h1>
                 <button className="text-lg text-blue-500">Settings</button>
             </div>
             <div className="grid md:grid-cols-3 grid-cols-1 gap-4 mt-4 px-8">
                 <aside className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                     <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            Filter by type
+              Filter by type
                     </h2>
                     <NotificationSidebarFilter />
                 </aside>
@@ -75,8 +75,17 @@ export default async function NotificationsPage ({ searchParams }: {
                                             <span>Like</span>
                                         </button> */}
                                         <NotificationsReadButton notification={notification}>
-                                            <Eye className="h-5 w-5" />
-                                            <span>View</span>
+                                            {notification.read ? (
+                                                <>
+                                                    <Eye className="h-5 w-5" />
+                                                    <span>Viewed</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Eye className="h-5 w-5" />
+                                                    <span>View</span>
+                                                </>
+                                            )}
                                         </NotificationsReadButton>
                                     </div>
                                 </div>
