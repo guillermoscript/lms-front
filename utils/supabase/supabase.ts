@@ -838,26 +838,38 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          link: string | null
           message: string
           notification_id: number
-          notification_type: string
+          notification_type:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read: boolean
+          shrot_message: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          link?: string | null
           message: string
           notification_id?: number
-          notification_type: string
+          notification_type?:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read?: boolean
+          shrot_message?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          link?: string | null
           message?: string
           notification_id?: number
-          notification_type?: string
+          notification_type?:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read?: boolean
+          shrot_message?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1510,6 +1522,11 @@ export type Database = {
       app_role: "admin" | "moderator" | "teacher" | "student"
       currency_type: "usd" | "eur"
       enrollement_status: "active" | "disabled"
+      notification_types:
+        | "comment_reply"
+        | "comment"
+        | "exam_review"
+        | "order_renewal"
       reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"

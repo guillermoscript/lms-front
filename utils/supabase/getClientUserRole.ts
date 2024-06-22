@@ -1,9 +1,10 @@
+'use client'
 import { jwtDecode } from 'jwt-decode'
 
-import { createClient as ServerClient } from './server'
+import { createClient } from './client'
 
-export async function getServerUserRole () {
-    const supabase = ServerClient()
+export async function getClientUserRole () {
+    const supabase = createClient()
     const userData = await supabase.auth.getSession()
 
     if (userData.error) {

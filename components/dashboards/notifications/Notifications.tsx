@@ -10,27 +10,37 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
+
+import NotificationsReadButton from './NotificationsReadButton'
 
 export default async function Notifications () {
     const supabase = createClient()
 
-    const { data: notifications, error } = await supabase.from('notifications').select('*').limit(5)
+    const { data: notifications, error } = await supabase.from('notifications').select('*').limit(5).order('created_at', { ascending: false })
 
     if (error) {
         console.error(error)
         return null
     }
 
+    const filteredNotifications = notifications.filter((notification) => !notification.read)
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
-                    className="rounded-full border border-gray-200 w-8 h-8 dark:border-gray-800"
+                    className="rounded-full relative border border-gray-200 w-8 h-8 dark:border-gray-800"
                     size="icon"
                     variant="ghost"
                 >
                     <Bell className="h-6 w-6" />
+                    {filteredNotifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full px-1">
+                            {filteredNotifications.length}
+                        </span>
+                    )}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -40,7 +50,13 @@ export default async function Notifications () {
                 ) : (
                     notifications.map((notification) => (
                         <DropdownMenuItem key={notification.notification_id}>
-                            {notification.message}
+                            <NotificationsReadButton
+                                notification={notification}
+                            >
+                                <ViewMarkdown
+                                    markdown={notification.shrot_message}
+                                />
+                            </NotificationsReadButton>
                         </DropdownMenuItem>
                     ))
                 )}
