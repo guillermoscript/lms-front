@@ -25,15 +25,22 @@ export default async function Notifications () {
         return null
     }
 
+    const filteredNotifications = notifications.filter((notification) => !notification.read)
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
-                    className="rounded-full border border-gray-200 w-8 h-8 dark:border-gray-800"
+                    className="rounded-full relative border border-gray-200 w-8 h-8 dark:border-gray-800"
                     size="icon"
                     variant="ghost"
                 >
                     <Bell className="h-6 w-6" />
+                    {filteredNotifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full px-1">
+                            {filteredNotifications.length}
+                        </span>
+                    )}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
