@@ -198,10 +198,9 @@ export function CheckBox ({ name, text, clasess, options }: CheckBoxProps) {
     )
 }
 
-interface InputProps {
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     name: string
     displayName: string
-    type: string
     placeholder?: string
     clasess?: {
         label?: string
