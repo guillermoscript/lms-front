@@ -4,6 +4,7 @@
     "dev": "next dev",
     "build": "next build --no-lint",
     "start": "next start",
+    "preview": "next build && next start",
     "lint": "next lint --quiet --fix",
     "lint:degub": "next lint --quiet",
     "prepare": "husky"
