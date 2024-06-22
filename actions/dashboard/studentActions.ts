@@ -16,7 +16,7 @@ export async function studentSubmitLessonComment (state: {
     const userData = await supabase.auth.getUser()
 
     if (userData.error) {
-        return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
+        return createResponse('error', 'Error no user found', null, 'Error no user found')
     }
 
     const studentId = userData.data.user?.id
@@ -30,7 +30,33 @@ export async function studentSubmitLessonComment (state: {
     })
 
     if (commentInsert.error) {
-        return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
+        return createResponse('error', 'Error creating comment', null, 'Error creating comment')
+    }
+
+    // if comment is a reply, then add a new notification for the parent comment owner
+    if (state.parent_comment_id) {
+        const parentComment = await supabase
+            .from('lesson_comments')
+            .select('user_id')
+            .eq('id', state.parent_comment_id)
+            .single()
+
+        if (parentComment.error) {
+            return createResponse('error', 'Error searching for parent comment', null, 'Error searching for parent comment')
+        }
+
+        const notificationInsert = await supabase.from('notifications').insert({
+            user_id: parentComment.data.user_id,
+            message: `${state.comment}`,
+            link: `/dashboard/student/courses/${state.lesson_id}/lessons/${state.lesson_id}`,
+            shrot_message: `**${userData.data.user?.email}** replied to your comment.`,
+            created_at: new Date().toISOString(),
+            notification_type: 'comment_reply'
+        })
+
+        if (notificationInsert.error) {
+            return createResponse('error', 'Error updating lesson', null, 'Error updating lesson')
+        }
     }
 
     revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
