@@ -15,7 +15,7 @@ export async function POST (req: Request) {
         } = await req.json()
 
         const result = await streamText({
-            model: google('models/gemini-1.5-flash-latest'),
+            model: google('models/gemini-1.5-pro-latest'),
             messages: convertToCoreMessages(messages),
             tools: {
                 // server-side tool with execute function:

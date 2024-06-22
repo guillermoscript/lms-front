@@ -21,7 +21,7 @@ const courseSchema = yup.object().shape({
     title: yup.string().required(),
     description: yup.string().required(),
     status: yup.string().required().oneOf(['draft', 'published', 'archived']),
-    product_id: yup.number().optional(),
+    product_id: yup.optional(),
     thumbnail: yup.string().optional(),
     tags: yup.string().optional(),
     category_id: yup.number().optional()
@@ -50,11 +50,9 @@ export default function CreateCourse () {
     const getItems = async (table: string, callback: (data: any) => void) => {
         try {
             setLoading(true)
-            const { data, error, status } = await supabase
-                .from(table)
-                .select('*')
+            const { data, error, status } = await supabase.from(table).select('*')
 
-            if ((error != null) && status !== 406) {
+            if (error != null && status !== 406) {
                 console.log(error)
                 throw error
             }
@@ -79,10 +77,7 @@ export default function CreateCourse () {
         <>
             <h1 className="text-2xl font-semibold">Create a new course</h1>
             <FormProvider {...methods}>
-                <form
-                    action={action}
-                    className="flex flex-col gap-4 md:min-h-800px"
-                >
+                <form action={action} className="flex flex-col gap-4 md:min-h-800px">
                     <div className="flex items-center gap-3 ">
                         <Input name="title" displayName="Title*" type="text" />
                         <Input
@@ -92,54 +87,39 @@ export default function CreateCourse () {
                         />
                     </div>
                     <div className="flex items-center gap-3 ">
-                        <Input
-                            name="thumbnail"
-                            displayName="Thumbnail"
-                            type="text"
-                        />
+                        <Input name="thumbnail" displayName="Thumbnail" type="text" />
                         <Input name="tags" displayName="Tags" type="text" />
                     </div>
 
-                    {loading
-                        ? (
-                            <>
-                                <Skeleton
-                                    className="h-10 w-full"
-                                />
-                                <Skeleton
-                                    className="h-10 w-full"
-                                />
-
-                            </>
-                        )
-                        : (
-                            <>
-                                <Select
-                                    clasess={selectClassNames}
-                                    options={categories.map(
-								  (
-								    category: Tables<'course_categories'>
-								  ) => ({
-								    value: category.id.toString(),
-								    label: category.name
-                                        })
-                                    )}
-                                    name="category_id"
-                                    displayName="Category ID"
-                                />
-                                <Select
-                                    clasess={selectClassNames}
-                                    options={products.map(
-								  (product: Tables<'products'>) => ({
-								    value: product.product_id.toString(),
-								    label: product.name
-                                        })
-                                    )}
-                                    name="product_id"
-                                    displayName="Product ID"
-                                />
-                            </>
-                        )}
+                    {loading ? (
+                        <>
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                        </>
+                    ) : (
+                        <>
+                            <Select
+                                clasess={selectClassNames}
+                                options={categories.map(
+                                    (category: Tables<'course_categories'>) => ({
+                                        value: category.id.toString(),
+                                        label: category.name
+                                    })
+                                )}
+                                name="category_id"
+                                displayName="Category ID"
+                            />
+                            <Select
+                                clasess={selectClassNames}
+                                options={products.map((product: Tables<'products'>) => ({
+                                    value: product.product_id.toString(),
+                                    label: product.name
+                                }))}
+                                name="product_id"
+                                displayName="Product ID"
+                            />
+                        </>
+                    )}
                     <SelectStatus control={methods.control} />
 
                     <ButtonSubmitDashbaord />

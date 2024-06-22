@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { updateUserProfileSchema } from '@/components/dashboards/student/account/EditProfileForm'
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
+import { Tables } from '@/utils/supabase/supabase'
 
 export async function studentSubmitLessonComment (state: {
     comment: string
@@ -89,4 +90,92 @@ export async function updateUserProfile ({
 
     revalidatePath('/dashboard/student/account/profile', 'layout')
     return createResponse('success', 'Profile updated successfully', null, null)
+}
+
+export async function addReactionToComment ({
+    commentId,
+    reactionType,
+    isReactionPresent
+}: {
+    commentId: number
+    reactionType: Tables<'comment_reactions'>['reaction_type']
+    isReactionPresent: Tables<'comment_reactions'>
+}) {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return createResponse('error', 'Error user not found', null, 'Error user not found')
+    }
+
+    if (isReactionPresent) {
+        // check if the reaction is the same as the one present
+        // if it is, delete the reaction else update the reaction
+        const selectedReaction = isReactionPresent.reaction_type
+        if (selectedReaction === reactionType) {
+            const reactionDelete = await supabase
+                .from('comment_reactions')
+                .delete()
+                .eq('id', isReactionPresent.id)
+
+            if (reactionDelete.error) {
+                return createResponse('error', 'Error deleting reaction', null, 'Error deleting reaction')
+            }
+
+            revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
+            return createResponse('success', 'Reaction deleted successfully', null, null)
+        } else {
+            const reactionUpdate = await supabase
+                .from('comment_reactions')
+                .update({
+                    reaction_type: reactionType
+                })
+                .eq('id', isReactionPresent.id)
+
+            if (reactionUpdate.error) {
+                return createResponse('error', 'Error updating reaction', null, 'Error updating reaction')
+            }
+
+            revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
+            return createResponse('success', 'Reaction updated successfully', null, null)
+        }
+    }
+
+    const studentId = userData.data.user?.id
+
+    const reactionInsert = await supabase.from('comment_reactions').insert({
+        user_id: studentId,
+        comment_id: commentId,
+        reaction_type: reactionType
+    })
+
+    if (reactionInsert.error) {
+        return createResponse('error', 'Error adding reaction', null, 'Error adding reaction')
+    }
+
+    revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
+    return createResponse('success', 'Reaction added successfully', null, null)
+}
+
+export async function updateComment ({
+    commentId,
+    content
+}: {
+    commentId: number
+    content: string
+}) {
+    const supabase = createClient()
+    const commentUpdate = await supabase
+        .from('lesson_comments')
+        .update({
+            content
+        })
+        .eq('id', commentId)
+
+    if (commentUpdate.error) {
+        return createResponse('error', 'Error updating comment', null, 'Error updating comment')
+    }
+
+    revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
+    return createResponse('success', 'Comment updated successfully', null, null)
 }

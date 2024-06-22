@@ -2,36 +2,32 @@
 
 import { useState } from 'react'
 
-import { studentSubmitLessonComment } from '@/actions/dashboard/studentActions'
+import { studentSubmitLessonComment, updateComment } from '@/actions/dashboard/studentActions'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import { useToast } from '@/components/ui/use-toast'
 
 export default function CommentEditor ({
     lesson_id,
-    parent_comment_id
+    parent_comment_id,
+    comment_id,
+    callback
 }: {
     lesson_id: number
     parent_comment_id?: number
+    comment_id?: number
+    callback?: () => void
 }) {
     const [commentState, setComment] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
 
-    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
+    const submitComment = async () => {
+        const payload = comment_id ? { content: commentState, commentId: comment_id } : { comment: commentState, lesson_id, parent_comment_id }
+        const action = comment_id ? updateComment : studentSubmitLessonComment
 
-        if (!commentState) {
-            return
-        }
-
-        setIsLoading(true)
         try {
-            const response = await studentSubmitLessonComment({
-                comment: commentState,
-                lesson_id,
-                parent_comment_id
-            })
+            const response = await action(payload as any)
 
             if (response.status === 'success') {
                 setComment('')
@@ -42,17 +38,28 @@ export default function CommentEditor ({
                     variant: 'destructive'
                 })
             }
+            callback && callback()
         } catch (error) {
-            console.log(error)
+            console.error(error)
             toast({
                 title: 'Error',
-                description:
-					'An error occurred while submitting comment. Please try again.',
+                description: 'An error occurred while submitting comment. Please try again.',
                 variant: 'destructive'
             })
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+
+        if (!commentState) {
+            return
+        }
+
+        setIsLoading(true)
+        await submitComment()
     }
 
     return (
