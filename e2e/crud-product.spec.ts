@@ -11,6 +11,8 @@ test('crud product', async ({ page }) => {
 
     await loginAdmin(page)
 
+    await page.pause()
+
     // TODO: Crear 1 product
     // TODO: 1.1
 
