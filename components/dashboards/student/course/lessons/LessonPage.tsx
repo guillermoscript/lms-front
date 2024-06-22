@@ -25,7 +25,7 @@ export default function LessonPage ({
                 <ResizableHandle withHandle />
                 <ResizablePanel
                     defaultSize={25}
-                    className="bg-gray-50 dark:bg-gray-800 p-4 overflow-y-auto rounded"
+                    className="bg-gray-50 dark:bg-gray-800 p-4 overflow-y-auto rounded-lg "
                 >
                     {sideBar}
                 </ResizablePanel>
