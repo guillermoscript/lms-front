@@ -48,6 +48,7 @@ export default async function TeacherLessonPage ({
                 <CommentsSections
                     lesson_id={lesson?.data?.id}
                     lesson_comments={lesson?.data?.lesson_comments}
+                    course_id={+params.courseId}
                 />
             }
         >

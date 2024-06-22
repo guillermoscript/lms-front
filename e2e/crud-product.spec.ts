@@ -1,23 +1,26 @@
-import { test } from "@playwright/test";
+import { test } from '@playwright/test'
 
-import { loginAdmin } from "./components/login-admin";
-import { url } from "./utils/url";
+import { loginAdmin } from './components/login-admin'
+import { setSystemTheme } from './components/set-system-theme'
+import { url } from './utils/url'
 
-test("crud product", async ({ page }) => {
-  await page.goto(url);
+test('crud product', async ({ page }) => {
+    await page.goto(url)
 
-  await loginAdmin(page);
+    await setSystemTheme(page)
 
-  // TODO: Crear 1 product
-  // TODO: 1.1
+    await loginAdmin(page)
 
-  // TODO: Crear 3 product
+    // TODO: Crear 1 product
+    // TODO: 1.1
 
-  // TODO: View list product
+    // TODO: Crear 3 product
 
-  // TODO: Edit first product
+    // TODO: View list product
 
-  // TODO: Delete first product
+    // TODO: Edit first product
 
-  // TODO: Delete all product
-});
+    // TODO: Delete first product
+
+    // TODO: Delete all product
+})
