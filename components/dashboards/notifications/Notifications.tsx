@@ -18,7 +18,14 @@ import NotificationsReadButton from './NotificationsReadButton'
 export default async function Notifications () {
     const supabase = createClient()
 
-    const { data: notifications, error } = await supabase.from('notifications').select('*').limit(5).order('created_at', { ascending: false })
+    const userData = await supabase.auth.getUser()
+
+    const { data: notifications, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .limit(5)
+        .eq('user_id', userData?.data.user.id)
+        .order('created_at', { ascending: false })
 
     if (error) {
         console.error(error)
