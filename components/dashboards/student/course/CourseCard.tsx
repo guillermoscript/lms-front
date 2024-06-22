@@ -46,7 +46,7 @@ const CourseCard = ({
                     alt='Course Image' className="rounded-md object-cover"
                 />
             </Link>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-4">
                 <Link
                     className={cn(
                         buttonVariants({ variant: 'default' }),
