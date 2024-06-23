@@ -15,7 +15,7 @@ const ChatAccordion = ({ chatType, userRole, chats }) => (
         <AccordionItem className='w-full' value={`item-${chatType}`}>
             <AccordionTrigger>{chatType.replace('_', ' ')}</AccordionTrigger>
             <AccordionContent>
-                <ul className='w-full flex flex-col gap-3'>
+                <ul className='w-full flex flex-col gap-3 overflow-auto'>
                     {chats.map((chat: Tables<'chats'>) => (
                         <li
                             className='w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis'
