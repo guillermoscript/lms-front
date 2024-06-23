@@ -21,7 +21,7 @@ const courseSchema = yup.object().shape({
     title: yup.string().required(),
     description: yup.string().required(),
     status: yup.string().required().oneOf(['draft', 'published', 'archived']),
-    product_id: yup.optional(),
+    product_id: yup.number(),
     thumbnail: yup.string().optional(),
     tags: yup.string().optional(),
     category_id: yup.number().optional()

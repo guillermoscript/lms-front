@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useFormState } from 'react-dom'

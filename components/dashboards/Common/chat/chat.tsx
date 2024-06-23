@@ -2,7 +2,7 @@
 // UI Components
 
 import { Message as MessageType, nanoid, ToolInvocation } from 'ai'
-import { CheckCircle, Copy, Pen } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { Suspense, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,28 @@ import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/utils'
+
+const ToolInvocationMessage = ({
+    toolInvocations
+}: {
+    toolInvocations?: ToolInvocation[]
+}) => {
+    return (
+        <>
+            {toolInvocations?.map(
+                (toolInvocation: ToolInvocation) =>
+                    'result' in toolInvocation &&
+                    toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
+                        <SuccessMessage
+                            key={toolInvocation.toolCallId}
+                            status={toolInvocation.result.status}
+                            message={toolInvocation.result.message}
+                        />
+                    )
+            )}
+        </>
+    )
+}
 
 const Message = ({
     message,
@@ -22,7 +44,7 @@ const Message = ({
     sender: string
     time?: string
     isUser: boolean
-    toolInvocations?: any[]
+    toolInvocations?: ToolInvocation[]
 }) => {
     if (sender !== 'user' && sender !== 'assistant') {
         return null
@@ -47,23 +69,13 @@ const Message = ({
                         {sender} <span className="text-xs text-gray-400 ml-2">{time}</span>
                     </div>
                     {!toolInvocations && <ViewMarkdown markdown={message} />}
-                    {toolInvocations?.map(
-                        (toolInvocation: ToolInvocation) =>
-                            'result' in toolInvocation &&
-              toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
-                                <SuccessMessage
-                                    key={toolInvocation.toolCallId}
-                                    status={toolInvocation.result.status}
-                                    message={toolInvocation.result.message}
-                                />
-                            )
-                    )}
-                    {isUser && (
+                    <ToolInvocationMessage toolInvocations={toolInvocations} />
+                    {/* {isUser && (
                         <div className="flex mt-2 space-x-2 ">
                             <Pen className="cursor-pointer" />
                             <Copy className="cursor-pointer" />
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
         </div>
@@ -90,11 +102,11 @@ const SuccessMessage = ({
     )
 }
 
-const ChatWindow = ({ messages }: { messages: MessageType[] }) => {
+const ChatWindow = ({ messages, isLoading }: { messages: MessageType[], isLoading: boolean }) => {
     return (
         <div className="flex-1 overflow-y-auto p-4 ">
             {messages.map((msg, index) => {
-                if (index === 0) {
+                if (msg.role === 'system') {
                     return null
                 }
                 return (
@@ -108,6 +120,21 @@ const ChatWindow = ({ messages }: { messages: MessageType[] }) => {
                     />
                 )
             })}
+            {isLoading && (
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-6 rounded mr-14" />
+                    <div className="grid grid-cols-3 gap-4">
+                        <Skeleton className="h-6 rounded col-span-2" />
+                        <Skeleton className="h-6 rounded col-span-1" />
+                    </div>
+                    <div className="grid grid-cols-4 gap-4">
+                        <Skeleton className="h-6 rounded col-span-1" />
+                        <Skeleton className="h-6 rounded col-span-2" />
+                        <Skeleton className="h-6 rounded col-span-1 mr-4" />
+                    </div>
+                    <Skeleton className="h-6 rounded" />
+                </div>
+            )}
         </div>
     )
 }
@@ -144,7 +171,7 @@ const ChatInput = ({
 
                 <ForwardRefEditor
                     className={cn(
-                        'flex-1 p-2 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full',
+                        'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
                         isLoading ? 'cursor-not-allowed' : 'cursor-text'
                     )}
                     placeholder="Chat with the AI assistant"
@@ -154,7 +181,10 @@ const ChatInput = ({
             </Suspense>
             <input type="hidden" value={message} />
             {isLoading ? (
-                <Button type="button" onClick={stop} className="rounded-r-lg">
+                <Button type="button" onClick={stop}
+                    variant='outline'
+                    className="rounded-r-lg"
+                >
           Stop
                 </Button>
             ) : (
