@@ -27,9 +27,6 @@ export default async function FreeChatPage ({
     return (
 
         <>
-            <h1 className="text-2xl font-semibold text-gray-800">
-                Free Chat
-            </h1>
             <div className='flex flex-col gap-4 overflow-y-auto h-[calc(100vh-4rem)]'>
 
                 <FreeChat
