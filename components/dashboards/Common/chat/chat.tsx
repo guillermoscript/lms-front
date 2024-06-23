@@ -171,7 +171,7 @@ const ChatInput = ({
 
                 <ForwardRefEditor
                     className={cn(
-                        'flex-1 p-2 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
+                        'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
                         isLoading ? 'cursor-not-allowed' : 'cursor-text'
                     )}
                     placeholder="Chat with the AI assistant"
