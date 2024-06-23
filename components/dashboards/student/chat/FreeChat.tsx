@@ -32,8 +32,6 @@ export default function FreeChat ({
         }
     })
 
-    console.log(chatIdState)
-
     return (
         <>
             {messages.length <= 1 && (
