@@ -1,6 +1,7 @@
 
 'use server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
@@ -15,6 +16,7 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const content = data.get('content') as string
     const embed = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
+    const course_id = data.get('course_id') as string
 
     const supabase = createClient()
     const lessonData = await supabase
@@ -48,8 +50,7 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
         }
     }
 
-    revalidatePath('/dashboard/teacher/courses/[courseId]/lessons/[lessonId]', 'layout')
-    return createResponse('success', 'Lesson updated successfully', null, null)
+    redirect(`/dashboard/teacher/courses/${course_id}/lessons/${lessonId}`)
 }
 
 function validateFields (data: FormData, fields: string[]) {
@@ -108,8 +109,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             system_prompt
         })
 
-    revalidatePath('/dashboard/teacher/courses/[courseId]/lessons', 'layout')
-    return createResponse('success', 'Lesson created successfully', null, null)
+    redirect(`/dashboard/teacher/courses/${course_id}/lessons/${lessonData.data.id}`)
 }
 
 export async function deleteLessonsAction (data: {
