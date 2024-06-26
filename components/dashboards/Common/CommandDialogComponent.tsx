@@ -80,8 +80,6 @@ export function CommandDialogComponent () {
     }
     , [userRole])
 
-    console.log(courses)
-
     return (
         <>
             <div className="text-sm text-muted-foreground">
