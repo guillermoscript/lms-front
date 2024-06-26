@@ -42,9 +42,24 @@ async function Sidebar () {
 export default Sidebar
 
 // Define a single NavLink component that can be reused
-const NavLink = ({ href, icon, label }) => (
-    <Link className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8" href={href} data-state="closed">
+export const NavLink = ({
+    href,
+    icon,
+    label,
+    children
+}: {
+    href: string
+    icon: React.ReactNode
+    label?: string
+    children?: React.ReactNode
+}) => (
+    <Link
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+        href={href}
+        data-state="closed"
+    >
         {icon}
-        <span className="sr-only">{label}</span>
+        {label && <span className="sr-only">{label}</span>}
+        {children}
     </Link>
 )
