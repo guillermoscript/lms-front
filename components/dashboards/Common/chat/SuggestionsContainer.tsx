@@ -54,8 +54,7 @@ const SuggestionsContainer = ({ suggestions, onSuggestionClick }: {
 }) => (
     <div
         className={cn(
-            'relative w-full flex gap-2 snap-x snap-mandatory overflow-x-auto tabs',
-            'md:snap-none svelte-1w57jp9'
+            'relative w-full flex flex-wrap gap-2 snap-x snap-mandatory overflow-x-auto '
         )}
         id="suggestions-container"
     >
