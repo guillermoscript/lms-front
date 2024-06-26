@@ -16,19 +16,28 @@ const ChatAccordion = ({ chatType, userRole, chats }) => (
             <AccordionTrigger>{chatType.replace('_', ' ')}</AccordionTrigger>
             <AccordionContent>
                 <ul className='w-full flex flex-col gap-3 overflow-auto'>
-                    {chats.map((chat: Tables<'chats'>) => (
-                        <li
-                            className='w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis'
-                            key={chat.chat_id}
-                        >
-                            <Link href={`/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`}>
-                                {chat.title}
-                            </Link>
-                            <p className='text-sm text-gray-500 dark:text-gray-400'>
-                                {dayjs(chat.created_at).format('MMM D, YYYY')}
-                            </p>
-                        </li>
-                    ))}
+                    {chats.map((chat: Tables<'chats'>) => {
+                        const types = {
+                            free_chat: 'free-chat',
+                            qna: 'qa',
+                            exam_prep: 'exam-prep',
+                            course_chat: 'study-material'
+                        }
+
+                        return (
+                            <li
+                                className='w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis'
+                                key={chat.chat_id}
+                            >
+                                <Link href={`/dashboard/${userRole}/chat/${chat.chat_id}/${types[chatType]}`}>
+                                    {chat.title}
+                                </Link>
+                                <p className='text-sm text-gray-500 dark:text-gray-400'>
+                                    {dayjs(chat.created_at).format('MMM D, YYYY')}
+                                </p>
+                            </li>
+                        )
+                    })}
                 </ul>
             </AccordionContent>
         </AccordionItem>
