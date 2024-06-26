@@ -15,7 +15,7 @@ export default async function ChatPage () {
     return (
         <>
             <div className="flex flex-col gap-4 w-full mb-8">
-                <h1 className="text-2xl font-semibold text-gray-800">
+                <h1 className="text-2xl font-semibold">
                 Select a chat or start a new one
                 </h1>
                 <div className="flex flex-wrap gap-4 w-full">
