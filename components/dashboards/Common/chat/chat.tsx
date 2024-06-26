@@ -1,7 +1,7 @@
 
 // UI Components
 
-import { Message as MessageType, nanoid, ToolInvocation } from 'ai'
+import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
 import { Suspense, useState } from 'react'
 
@@ -38,13 +38,15 @@ const Message = ({
     sender,
     time,
     isUser,
-    toolInvocations
+    toolInvocations,
+    children
 }: {
-    message: string
+    message?: string
     sender: string
     time?: string
     isUser: boolean
     toolInvocations?: ToolInvocation[]
+    children?: React.ReactNode
 }) => {
     if (sender !== 'user' && sender !== 'assistant') {
         return null
@@ -57,18 +59,19 @@ const Message = ({
             )}
         >
             <div className="flex items-end w-full">
-                {!isUser && (
-                    <img
-                        src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
-                        alt="profile"
-                        className="max-w-[28px] object-cover rounded-full mr-4"
-                    />
-                )}
-                <div className="flex flex-col w-full px-4 py-2 rounded-lg relative">
+                <div className="flex flex-col w-full px-1 md:px-4 py-2 rounded-lg relative">
+                    {!isUser && (
+                        <img
+                            src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
+                            alt="profile"
+                            className="max-w-[28px] object-cover rounded-full mr-4"
+                        />
+                    )}
                     <div className="font-bold mb-1 capitalize">
                         {sender} <span className="text-xs text-gray-400 ml-2">{time}</span>
                     </div>
                     {!toolInvocations && <ViewMarkdown markdown={message} />}
+                    {!toolInvocations && children}
                     <ToolInvocationMessage toolInvocations={toolInvocations} />
                     {/* {isUser && (
                         <div className="flex mt-2 space-x-2 ">
@@ -145,7 +148,7 @@ const ChatInput = ({
     callbackFunction
 }: {
     isLoading: boolean
-    stop: () => void
+    stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
 }) => {
     const [message, setMessage] = useState<string>('')
@@ -158,7 +161,7 @@ const ChatInput = ({
                     content: message,
                     role: 'user',
                     createdAt: new Date(),
-                    id: nanoid()
+                    id: generateId()
                 })
                 setMessage('')
             }}
