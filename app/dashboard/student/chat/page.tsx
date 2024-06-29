@@ -47,9 +47,7 @@ export default async function ChatPage () {
                     </HoverCard>
                 </div>
             </div>
-            <FreeChat>
-
-            </FreeChat>
+            <FreeChat />
         </>
     )
 }
