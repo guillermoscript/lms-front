@@ -1,11 +1,16 @@
 'use client'
+import { Check, CheckCircle, XCircleIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { ExamPrepAnwser } from '@/actions/dashboard/ExamPreparationActions'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
-import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import { FreeTextQuestion, MultipleChoiceQuestion as typeMultipleChoiceQuestion, SingleSelectQuestion as typeSingleSelectQuestion } from '@/utils/types'
 
 export default function ExamPrepAiComponent ({
@@ -19,18 +24,19 @@ export default function ExamPrepAiComponent ({
 }) {
     const form = useForm()
     const [feedback, setFeedback] = useState<Array<{ question: string, feedback: string }>>([])
+    const [score, setScore] = useState<number>(0)
+    const [overallFeedback, setOverallFeedback] = useState<string>('')
+    const isLoading = form.formState.isSubmitting
 
     async function onSubmit (data: any) {
         const submission: Record<string, any> = {}
 
         // Single Select Questions
         singleSelectQuestions.forEach(question => {
-            const answerTrue = data[`${question.id}-true`]
-            const answerFalse = data[`${question.id}-false`]
-            if (answerTrue || answerFalse) {
+            if (data[question.id]) {
                 submission[question.id] = {
                     question: question.text,
-                    answer: answerTrue ? 'True' : 'False'
+                    answer: data[question.id]
                 }
             }
         })
@@ -52,18 +58,22 @@ export default function ExamPrepAiComponent ({
                     if (!submission[question.id]) {
                         submission[question.id] = {
                             question: question.label,
-                            answers: []
+                            answers: [],
+                            questionOptions: question.options.map(o => o.text)
                         }
                     }
                     submission[question.id].answers.push(option.text)
                 }
             })
         })
-
         try {
+            console.log(submission)
             const response = await ExamPrepAnwser(submission)
+            console.log(response)
 
-            setFeedback(response.questionAndAnswerFeedback)
+            setFeedback(response?.questionAndAnswerFeedback)
+            setScore(response.grade)
+            setOverallFeedback(response.overallFeedback)
         } catch (error) {
             console.error(error)
         }
@@ -72,100 +82,162 @@ export default function ExamPrepAiComponent ({
     return (
         <>
             <Form {...form}>
+                {score > 0 && (
+                    <Alert
+                        className='my-4'
+                        variant={score >= 10 && score <= 15 ? 'warning' : score < 10 ? 'destructive' : 'success'}
+                    >
+                        {
+                            score >= 10 && score <= 15 ? (
+                                <Check className='w-6 h-6 text-yellow-500' />
+                            ) : score < 10 ? (
+                                <XCircleIcon className='w-6 h-6 text-destructive' />
+                            ) : (
+                                <CheckCircle className='w-6 h-6 text-green-500' />
+                            )
+                        }
+                        <AlertTitle>
+                            Your score is {score}
+                        </AlertTitle>
+                        <AlertDescription>
+                            This is based on a scale of 0 to 20 and is calculated based on the correctness of your answers.
+                            You can review your answers below.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                {overallFeedback.length > 0 && (
+                    <Card className='my-4'>
+                        <CardHeader>
+                            <CardTitle>Overall Feedback</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {overallFeedback}
+                        </CardContent>
+                    </Card>
+                )}
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-                    {singleSelectQuestions.length > 0 && (
-                        <div className="flex flex-col gap-4">
-                            <h3 className="text-lg font-semibold">True or False</h3>
+                    {singleSelectQuestions.length > 0 && singleSelectQuestions.map(question => (
+                        <Card key={question.id}>
+                            <CardHeader>
+                                <CardTitle>True or False</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4">
 
-                            {singleSelectQuestions.map(question => (
-                                <div className='flex flex-col gap-2' key={question.id}>
-                                    <h4 className="text-sm font-semibold">{question.text}</h4>
-
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="radio"
-                                            id={`${question.id}-true`}
-                                            value={`${question.id}-true`}
-                                            name={question.id}
-                                            {...form.register(`${question.id}-true`)}
-                                        />
-                                        <label htmlFor={`${question.id}-true`}>True</label>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="radio"
-                                            id={`${question.id}-false`}
-                                            value={`${question.id}-false`}
-                                            name={question.id}
-                                            {...form.register(`${question.id}-false`)}
-                                        />
-                                        <label htmlFor={`${question.id}-false`}>False</label>
-                                    </div>
-
-                                    {feedback.find(f => f.question === question.text) && (
-                                        <div className="text-sm text-red-500 mt-2">
-                                            {feedback.find(f => f.question === question.text)?.feedback}
+                                {isLoading ? (
+                                    <>
+                                        <Skeleton className="h-4 w-1/4" />
+                                        <Skeleton className="h-4 w-1/4" />
+                                    </>
+                                ) : (
+                                    <>
+                                        <h4 className="text-sm font-semibold">{question.text}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                disabled={feedback.length > 0}
+                                                type="radio" id={`${question.id}-true`} value="True" name={question.id} {...form.register(`${question.id}`)}
+                                            />
+                                            <label htmlFor={`${question.id}-true`}>True</label>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <Separator className="my-4" />
-
-                    {freeTextQuestions.length > 0 && (
-                        <div className="flex flex-col gap-4">
-                            <h3 className="text-lg font-semibold">Fill in the Blank</h3>
-
-                            {freeTextQuestions.map(question => (
-                                <div className="flex flex-col gap-2" key={question.id}>
-                                    <label htmlFor={question.id}>{question.label}</label>
-                                    <input type="text" id={question.id} {...form.register(question.id)} />
-
-                                    {feedback.find(f => f.question === question.label) && (
-                                        <div className="text-sm text-red-500 mt-2">
-                                            {feedback.find(f => f.question === question.label)?.feedback}
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                disabled={feedback.length > 0}
+                                                type="radio" id={`${question.id}-false`} value="False" name={question.id} {...form.register(`${question.id}`)}
+                                            />
+                                            <label htmlFor={`${question.id}-false`}>False</label>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                    </>
+                                )}
+                            </CardContent>
+                            {feedback.length > 0 && (
+                                <CardFooter className="flex flex-col gap-4 items-start">
+                                    <CardTitle>Feedback</CardTitle>
+                                    <CardDescription>
+                                        {feedback.find(f => f.question === question.text)?.feedback}
+                                    </CardDescription>
+                                </CardFooter>
+                            )}
+                        </Card>
+                    ))}
 
-                    <Separator className="my-4" />
+                    {freeTextQuestions.length > 0 && freeTextQuestions.map(question => (
+                        <Card key={question.id}>
+                            <CardHeader>
+                                <CardTitle>Fill in the Blank</CardTitle>
+                            </CardHeader>
+                            <CardContent
+                                className="flex flex-col gap-4"
+                            >
+                                {
+                                    isLoading ? (
+                                        <>
+                                            <Skeleton className="h-6 w-1/2 " />
+                                            <Skeleton className="h-6 w-2/3" />
+                                            <Skeleton className="h-6 w-1/3" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Label htmlFor={question.id}>{question.label}</Label>
+                                            <Textarea
+                                                disabled={feedback.length > 0}
 
-                    {multipleChoiceQuestions.length > 0 && (
-                        <div className="flex flex-col gap-4">
-                            <h3 className="text-lg font-semibold">Multiple Choice</h3>
+                                                id={question.id} {...form.register(question.id)}
+                                            />
+                                        </>
+                                    )
+                                }
+                            </CardContent>
+                            {feedback.length > 0 && (
+                                <CardFooter
+                                    className="flex flex-col gap-4 items-start"
+                                >
+                                    <CardTitle>Feedback</CardTitle>
+                                    <CardDescription>
+                                        {feedback.find(f => f.question === question.label)?.feedback}
+                                    </CardDescription>
+                                </CardFooter>
+                            )}
+                        </Card>
+                    ))}
 
-                            {multipleChoiceQuestions.map(question => (
-                                <div className="flex flex-col gap-2" key={question.id}>
-                                    <h4 className="text-sm font-semibold">{question.label}</h4>
-
-                                    {question.options.map(option => (
+                    {multipleChoiceQuestions.length > 0 && multipleChoiceQuestions.map(question => (
+                        <Card key={question.id}>
+                            <CardHeader>
+                                <CardTitle>Multiple Choice</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-2">
+                                <h4 className="text-sm font-semibold">{question.label}</h4>
+                                {isLoading ? (
+                                    question.options.map(option => (
+                                        <Skeleton key={option.id} className="h-4 w-1/3" />
+                                    ))
+                                ) : (
+                                    question.options.map(option => (
                                         <div className="flex items-center gap-2" key={option.id}>
                                             <input
-                                                type="checkbox"
-                                                id={option.id}
-                                                value={option.id}
-                                                {...form.register(option.id)}
+                                                disabled={feedback.length > 0}
+                                                type="checkbox" id={option.id} value={option.id} {...form.register(option.id)}
                                             />
                                             <label htmlFor={option.id}>{option.text}</label>
                                         </div>
-                                    ))}
+                                    ))
+                                )}
+                            </CardContent>
+                            {feedback.length > 0 && (
+                                <CardFooter className="flex flex-col gap-4 items-start">
+                                    <CardTitle>Feedback</CardTitle>
+                                    <CardDescription>
+                                        {feedback.find(f => f.question === question.label)?.feedback}
+                                    </CardDescription>
+                                </CardFooter>
+                            )}
+                        </Card>
+                    ))}
 
-                                    {feedback.find(f => f.question === question.label) && (
-                                        <div className="text-sm text-red-500 mt-2">
-                                            {feedback.find(f => f.question === question.label)?.feedback}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">Submit</Button>
+                    {
+                        feedback.length === 0 && (
+                            <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">Submit</Button>
+                        )
+                    }
                 </form>
             </Form>
         </>
