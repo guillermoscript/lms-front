@@ -22,20 +22,21 @@ export interface ClientMessage {
 export async function continueConversation (
     input: string
 ): Promise<ClientMessage> {
-    'use server'
-
     const history = getMutableAIState()
+
+    console.log(history.get())
 
     const result = await streamUI({
         model: google('models/gemini-1.5-pro-latest'),
         // model: openai('gpt-4o'),
         messages: [...history.get(), { role: 'user', content: input }],
-        temperature: 0,
+        temperature: 0.3,
 
         text: ({ content, done }) => {
             if (done) {
                 history.done((messages: ServerMessage[]) => [
                     ...messages,
+                    { role: 'user', content: input },
                     { role: 'assistant', content }
                 ])
             }
@@ -52,7 +53,13 @@ export async function continueConversation (
                 parameters: z.object({
                     singleSelectQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
-                        text: z.string().describe('The question to ask the user')
+                        text: z.string().describe('The label of the question'),
+                        options: z.array(
+                            z.object({
+                                id: z.string().describe('The id of the option'),
+                                text: z.string().describe('The text of the option, could be true or false')
+                            })
+                        ).describe('The options of the question, could be true or false')
                     })),
                     multipleChoiceQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
@@ -63,6 +70,8 @@ export async function continueConversation (
                                 text: z.string().describe('The text of the option')
                             })
                         )
+                    }).refine((value) => value.id !== undefined, {
+                        message: 'Each multiple choice question must have an id.'
                     })),
                     freeTextQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
@@ -70,22 +79,26 @@ export async function continueConversation (
                         placeholder: z.string().describe('The place holder of the question')
                     }))
                 }),
-                generate: async ({
+                generate: async function * ({
                     singleSelectQuestion,
                     multipleChoiceQuestion,
                     freeTextQuestion
-                }) => {
+                }) {
                     console.log(singleSelectQuestion)
 
                     console.log(multipleChoiceQuestion)
 
                     console.log(freeTextQuestion)
 
+                    yield <div>Loading...</div> // [!code highlight:5]
+                    await new Promise(resolve => setTimeout(resolve, 3000))
+
                     history.done((messages: ServerMessage[]) => [
                         ...messages,
                         {
-                            role: 'assistant',
-                            content: 'Showing the form to the user'
+                            role: 'function',
+                            name: 'showExamnForm',
+                            content: JSON.stringify({ singleSelectQuestion, multipleChoiceQuestion, freeTextQuestion })
                         }
                     ])
 
@@ -98,8 +111,17 @@ export async function continueConversation (
                     )
                 }
             }
+        },
+        onFinish (event) {
+            console.log('onFinish',
+                event
+            )
+
+            console.log('onFinish', history.get())
         }
     })
+
+    console.log(result.value)
 
     return {
         id: generateId(),
@@ -125,32 +147,24 @@ export const AI = createAI<ServerMessage[], ClientMessage[]>({
 
 type Root = Record<string | number, {
     question: string
-    answer: string | string[]
+    answer: string
+    questionOptions?: string[]
+    answers?: string[]
 }>
 
 export async function ExamPrepAnwser (data: Root) {
-    console.log(data)
+    const content = `The student anwsered the following questions: ${Object.values(data).map((item) => item.question).join(', ')}
+                ${Object.values(data).map((item) => {
+        if (Array.isArray(item.answers)) {
+            console.log(item.answers)
+            console.log(item.questionOptions)
+            return 'Answer: ' + item.answers.join(', ') + ` Options: ${item.questionOptions.join(', ')}`
+        } else {
+            return `Answer: ${item.answer}`
+        }
+    }).join(', ')}`
 
-    // const { text } = await generateText({
-    //     model: google('models/gemini-1.5-pro-latest'),
-    //     system: `You are a teacher and you must give feedback and a grade to the student based on the exam he took. The exam was about the following questions: ${Object.values(data).map((item) => item.question).join(', ')}`,
-    //     messages: [
-    //         {
-    //             role: 'user',
-    //             content: `The student anwsered the following questions: ${Object.values(data).map((item) => item.question).join(', ')}
-    //             ${Object.values(data).map((item) => {
-    //     if (Array.isArray(item.answer)) {
-    //         return item.answer.map((answer) => `Answer: ${answer}`).join(', ')
-    //     } else {
-    //         return `Answer: ${item.answer}`
-    //     }
-    // }).join(', ')}
-    //             `
-    //         }
-    //     ]
-    // })
-
-    // console.log(text)
+    console.log(content)
 
     const { object } = await generateObject({
         model: google('models/gemini-1.5-pro-latest'),
@@ -158,15 +172,7 @@ export async function ExamPrepAnwser (data: Root) {
         messages: [
             {
                 role: 'user',
-                content: `The student anwsered the following questions: ${Object.values(data).map((item) => item.question).join(', ')}
-                ${Object.values(data).map((item) => {
-        if (Array.isArray(item.answer)) {
-            return item.answer.map((answer) => `Answer: ${answer}`).join(', ')
-        } else {
-            return `Answer: ${item.answer}`
-        }
-    }).join(', ')}
-                `
+                content
             }
         ],
         schema: z.object({
@@ -174,7 +180,8 @@ export async function ExamPrepAnwser (data: Root) {
             questionAndAnswerFeedback: z.array(z.object({
                 question: z.string().describe('The question'),
                 feedback: z.string().describe('The feedback for the question of the student')
-            })).describe('The feedback for each question and answer the student gave in the exam')
+            })).describe('The feedback for each question and answer the student gave in the exam'),
+            overallFeedback: z.string().describe('The overall feedback for the student in the exam')
         })
     })
 
