@@ -13,6 +13,7 @@ export default function ExamPrepChat () {
     const [conversation, setConversation] = useUIState()
     const { continueConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
+    const [stop, setStop] = useState(false)
 
     return (
         <div>
@@ -75,8 +76,10 @@ export default function ExamPrepChat () {
 
             <ChatInput
                 isLoading={isLoading}
-                stop={stop}
+                stop={() => setStop(true)}
                 callbackFunction={async (input) => {
+                    if (stop) return
+
                     setIsLoading(true)
                     setConversation((currentConversation: ClientMessage[]) => [
                         ...currentConversation,
