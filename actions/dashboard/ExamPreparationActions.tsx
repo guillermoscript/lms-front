@@ -1,3 +1,4 @@
+'use server'
 import 'server-only'
 
 import { google } from '@ai-sdk/google'
@@ -24,8 +25,6 @@ export interface ClientMessage {
 export async function continueConversation (
     input: string
 ): Promise<ClientMessage> {
-    'use server'
-
     const history = getMutableAIState()
 
     console.log(history.get())
@@ -115,20 +114,10 @@ export async function continueConversation (
                     multipleChoiceQuestion,
                     freeTextQuestion
                 }) {
-                    console.log(singleSelectQuestion)
-
-                    console.log(multipleChoiceQuestion)
-
-                    console.log(freeTextQuestion)
-
                     yield <div>Loading...</div> // [!code highlight:5]
                     await new Promise(resolve => setTimeout(resolve, 300))
 
                     const toolCallId = generateId()
-
-                    console.log(history.get())
-
-                    console.log(toolCallId)
 
                     history.done((messages: ServerMessage[]) => [
                         ...messages,
@@ -194,12 +183,6 @@ export async function continueConversation (
                     overallFeedback,
                     questionAndAnswerFeedback
                 }) {
-                    console.log(score)
-
-                    console.log(overallFeedback)
-
-                    console.log(questionAndAnswerFeedback)
-
                     yield <div>Loading...</div> // [!code highlight:5]
                     await new Promise(resolve => setTimeout(resolve, 300))
 
