@@ -1,10 +1,12 @@
-'use server'
+import 'server-only'
+
 import { google } from '@ai-sdk/google'
 import { generateId, generateObject } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import { ReactNode } from 'react'
 import { z } from 'zod'
 
+import ExamFeedbackCard from '@/components/dashboards/student/chat/ExamFeedbackCard'
 import ExamPrepAiComponent from '@/components/dashboards/student/chat/ExamPrepAiComponent'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 
@@ -22,15 +24,44 @@ export interface ClientMessage {
 export async function continueConversation (
     input: string
 ): Promise<ClientMessage> {
+    'use server'
+
     const history = getMutableAIState()
 
     console.log(history.get())
+
+    console.log(input)
+    // Update the AI state with the new user message.
+    history.update((messages: ServerMessage[]) => [
+        ...messages,
+        { role: 'user', content: input }
+    ])
 
     const result = await streamUI({
         model: google('models/gemini-1.5-pro-latest'),
         // model: openai('gpt-4o'),
         messages: [...history.get(), { role: 'user', content: input }],
         temperature: 0.3,
+        // initial: (<div className="group relative flex items-start md:-ml-12">
+        //     <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+        //         <Facebook className="w-6 h-6" />
+        //     </div>
+        //     <div className="ml-4 h-[24px] flex flex-row items-center flex-1 space-y-2 overflow-hidden px-1">
+        //         <Loader className="w-4 h-4 text-primary animate-spin" />
+        //     </div>
+        // </div>),
+        // system: `\
+        //     You are a teacher and you must give feedback and a grade to the student based on the exam he took
+        //     You and the user can discuss the exam and the student's performance
+
+        //     Messages inside [] means that it's a UI element or a user event. For example:
+        //     - [showExamnForm] means that the user will see an exam form and fill it out
+        //     - [showExamnResult] means that the user will see the result of the exam he took
+
+        //     If the user requests a exam form, call \`showExamnForm\` to show the form.
+
+        //     Besides that, you can also chat with users
+        // `,
 
         text: ({ content, done }) => {
             if (done) {
@@ -91,22 +122,130 @@ export async function continueConversation (
                     console.log(freeTextQuestion)
 
                     yield <div>Loading...</div> // [!code highlight:5]
-                    await new Promise(resolve => setTimeout(resolve, 3000))
+                    await new Promise(resolve => setTimeout(resolve, 300))
+
+                    const toolCallId = generateId()
+
+                    console.log(history.get())
+
+                    console.log(toolCallId)
 
                     history.done((messages: ServerMessage[]) => [
                         ...messages,
                         {
-                            role: 'function',
-                            name: 'showExamnForm',
-                            content: JSON.stringify({ singleSelectQuestion, multipleChoiceQuestion, freeTextQuestion })
+                            id: generateId(),
+                            role: 'assistant',
+                            content: [
+                                {
+                                    type: 'tool-call',
+                                    toolName: 'showExamnForm',
+                                    toolCallId,
+                                    args: {
+                                        singleSelectQuestion,
+                                        multipleChoiceQuestion,
+                                        freeTextQuestion
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            id: generateId(),
+                            role: 'tool',
+                            content: [
+                                {
+                                    type: 'tool-result',
+                                    toolName: 'showExamnForm',
+                                    toolCallId,
+                                    result: {
+                                        singleSelectQuestion,
+                                        multipleChoiceQuestion,
+                                        freeTextQuestion
+                                    }
+                                }
+                            ]
                         }
                     ])
+
+                    console.log(history.get())
 
                     return (
                         <ExamPrepAiComponent
                             singleSelectQuestions={singleSelectQuestion}
                             multipleChoiceQuestions={multipleChoiceQuestion}
                             freeTextQuestions={freeTextQuestion}
+                        />
+                    )
+                }
+            },
+            showExamnResult: {
+                description: 'Show the user the result of the exam he took',
+                parameters: z.object({
+                    score: z.number().int().min(1).max(20).describe('The grade of the student in the exam with a scale from 1 to 20'),
+                    overallFeedback: z.string().describe('The overall feedback for the student in the exam, if the student did well or not'),
+                    questionAndAnswerFeedback: z.array(z.object({
+                        question: z.string().describe('The question'),
+                        answer: z.string().describe('The answer the student gave'),
+                        correctAnswer: z.string().describe('The correct answer of the question'),
+                        feedback: z.string().describe('The feedback for the question and answer the student gave in the exam')
+                    }))
+                }),
+                generate: async function * ({
+                    score,
+                    overallFeedback,
+                    questionAndAnswerFeedback
+                }) {
+                    console.log(score)
+
+                    console.log(overallFeedback)
+
+                    console.log(questionAndAnswerFeedback)
+
+                    yield <div>Loading...</div> // [!code highlight:5]
+                    await new Promise(resolve => setTimeout(resolve, 300))
+
+                    const toolCallId = generateId()
+
+                    history.done((messages: ServerMessage[]) => [
+                        ...messages,
+                        {
+                            id: generateId(),
+                            role: 'assistant',
+                            content: [
+                                {
+                                    type: 'tool-call',
+                                    toolName: 'showExamnResult',
+                                    toolCallId,
+                                    args: {
+                                        score,
+                                        overallFeedback,
+                                        questionAndAnswerFeedback
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            id: generateId(),
+                            role: 'tool',
+                            content: [
+                                {
+                                    type: 'tool-result',
+                                    toolName: 'showExamnResult',
+                                    toolCallId,
+                                    result: {
+                                        score,
+                                        overallFeedback,
+                                        questionAndAnswerFeedback
+                                    }
+                                }
+                            ]
+                        }
+                    ])
+
+                    return (
+                        <ExamFeedbackCard
+                            score={score}
+                            overallFeedback={overallFeedback}
+                            questionAndAnswerFeedback={questionAndAnswerFeedback}
                         />
                     )
                 }
