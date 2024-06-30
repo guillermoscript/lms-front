@@ -1,12 +1,10 @@
 'use client'
-import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { Check, CheckCircle, XCircleIcon } from 'lucide-react'
+import { useActions, useUIState } from 'ai/rsc'
 import { ReactNode, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,13 +21,9 @@ export default function ExamPrepAiComponent ({
     multipleChoiceQuestions: typeMultipleChoiceQuestion[]
 }) {
     const form = useForm()
-    const [feedback, setFeedback] = useState<Array<{ question: string, feedback: string }>>([])
-    const [score, setScore] = useState<number>(0)
-    const [overallFeedback, setOverallFeedback] = useState<string>('')
     const isLoading = form.formState.isSubmitting
     const { continueConversation } = useActions()
     const [_, setMessages] = useUIState()
-    const [aiState, setAIState] = useAIState()
     const [isFinished, setIsFinished] = useState<boolean>(false)
 
     async function onSubmit (data: any) {
@@ -80,8 +74,6 @@ export default function ExamPrepAiComponent ({
                 ${Object.values(submission)
         .map((item) => {
             if (Array.isArray(item.answers)) {
-                console.log(item.answers)
-                console.log(item.questionOptions)
                 return (
                     'Answer: ' +
                         item.answers.join(', ') +
@@ -92,8 +84,6 @@ export default function ExamPrepAiComponent ({
             }
         })
         .join(', ')}`
-
-            // setAIState()
 
             const { display } = await continueConversation(content)
 
@@ -113,39 +103,6 @@ export default function ExamPrepAiComponent ({
     return (
         <>
             <Form {...form}>
-                {score > 0 && (
-                    <Alert
-                        className='my-4'
-                        variant={score >= 10 && score <= 15 ? 'warning' : score < 10 ? 'destructive' : 'success'}
-                    >
-                        {
-                            score >= 10 && score <= 15 ? (
-                                <Check className='w-6 h-6 text-yellow-500' />
-                            ) : score < 10 ? (
-                                <XCircleIcon className='w-6 h-6 text-destructive' />
-                            ) : (
-                                <CheckCircle className='w-6 h-6 text-green-500' />
-                            )
-                        }
-                        <AlertTitle>
-                            Your score is {score}
-                        </AlertTitle>
-                        <AlertDescription>
-                            This is based on a scale of 0 to 20 and is calculated based on the correctness of your answers.
-                            You can review your answers below.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                {overallFeedback.length > 0 && (
-                    <Card className='my-4'>
-                        <CardHeader>
-                            <CardTitle>Overall Feedback</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {overallFeedback}
-                        </CardContent>
-                    </Card>
-                )}
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                     {singleSelectQuestions.length > 0 && singleSelectQuestions.map(question => (
                         <Card key={question.id}>
@@ -153,40 +110,24 @@ export default function ExamPrepAiComponent ({
                                 <CardTitle>True or False</CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-4">
-
-                                {isLoading ? (
-                                    <>
-                                        <Skeleton className="h-4 w-1/4" />
-                                        <Skeleton className="h-4 w-1/4" />
-                                    </>
-                                ) : (
-                                    <>
-                                        <h4 className="text-sm font-semibold">{question.text}</h4>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                disabled={feedback.length > 0}
-                                                type="radio" id={`${question.id}-true`} value="True" name={question.id} {...form.register(`${question.id}`)}
-                                            />
-                                            <label htmlFor={`${question.id}-true`}>True</label>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                disabled={feedback.length > 0}
-                                                type="radio" id={`${question.id}-false`} value="False" name={question.id} {...form.register(`${question.id}`)}
-                                            />
-                                            <label htmlFor={`${question.id}-false`}>False</label>
-                                        </div>
-                                    </>
-                                )}
+                                <>
+                                    <h4 className="text-sm font-semibold">{question.text}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            disabled={isFinished}
+                                            type="radio" id={`${question.id}-true`} value="True" name={question.id} {...form.register(`${question.id}`)}
+                                        />
+                                        <label htmlFor={`${question.id}-true`}>True</label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            disabled={isFinished}
+                                            type="radio" id={`${question.id}-false`} value="False" name={question.id} {...form.register(`${question.id}`)}
+                                        />
+                                        <label htmlFor={`${question.id}-false`}>False</label>
+                                    </div>
+                                </>
                             </CardContent>
-                            {feedback.length > 0 && (
-                                <CardFooter className="flex flex-col gap-4 items-start">
-                                    <CardTitle>Feedback</CardTitle>
-                                    <CardDescription>
-                                        {feedback.find(f => f.question === question.text)?.feedback}
-                                    </CardDescription>
-                                </CardFooter>
-                            )}
                         </Card>
                     ))}
 
@@ -198,35 +139,14 @@ export default function ExamPrepAiComponent ({
                             <CardContent
                                 className="flex flex-col gap-4"
                             >
-                                {
-                                    isLoading ? (
-                                        <>
-                                            <Skeleton className="h-6 w-1/2 " />
-                                            <Skeleton className="h-6 w-2/3" />
-                                            <Skeleton className="h-6 w-1/3" />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Label htmlFor={question.id}>{question.label}</Label>
-                                            <Textarea
-                                                disabled={feedback.length > 0}
+                                <Label htmlFor={question.id}>{question.label}</Label>
+                                <Textarea
+                                    disabled={isFinished}
 
-                                                id={question.id} {...form.register(question.id)}
-                                            />
-                                        </>
-                                    )
-                                }
+                                    id={question.id} {...form.register(question.id)}
+                                />
+
                             </CardContent>
-                            {feedback.length > 0 && (
-                                <CardFooter
-                                    className="flex flex-col gap-4 items-start"
-                                >
-                                    <CardTitle>Feedback</CardTitle>
-                                    <CardDescription>
-                                        {feedback.find(f => f.question === question.label)?.feedback}
-                                    </CardDescription>
-                                </CardFooter>
-                            )}
                         </Card>
                     ))}
 
@@ -237,30 +157,16 @@ export default function ExamPrepAiComponent ({
                             </CardHeader>
                             <CardContent className="flex flex-col gap-2">
                                 <h4 className="text-sm font-semibold">{question.label}</h4>
-                                {isLoading ? (
-                                    question.options.map(option => (
-                                        <Skeleton key={option.id} className="h-4 w-1/3" />
-                                    ))
-                                ) : (
-                                    question.options.map(option => (
-                                        <div className="flex items-center gap-2" key={option.id}>
-                                            <input
-                                                disabled={feedback.length > 0}
-                                                type="checkbox" id={option.id} value={option.id} {...form.register(option.id)}
-                                            />
-                                            <label htmlFor={option.id}>{option.text}</label>
-                                        </div>
-                                    ))
-                                )}
+                                {question.options.map(option => (
+                                    <div className="flex items-center gap-2" key={option.id}>
+                                        <input
+                                            disabled={isFinished}
+                                            type="checkbox" id={option.id} value={option.id} {...form.register(option.id)}
+                                        />
+                                        <label htmlFor={option.id}>{option.text}</label>
+                                    </div>
+                                ))}
                             </CardContent>
-                            {feedback.length > 0 && (
-                                <CardFooter className="flex flex-col gap-4 items-start">
-                                    <CardTitle>Feedback</CardTitle>
-                                    <CardDescription>
-                                        {feedback.find(f => f.question === question.label)?.feedback}
-                                    </CardDescription>
-                                </CardFooter>
-                            )}
                         </Card>
                     ))}
 
@@ -269,6 +175,22 @@ export default function ExamPrepAiComponent ({
                             <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">Submit</Button>
                         )
                     }
+
+                    {isLoading && (
+                        <div className="space-y-2 w-full">
+                            <Skeleton className="h-6 rounded mr-14" />
+                            <div className="grid grid-cols-3 gap-4">
+                                <Skeleton className="h-6 rounded col-span-2" />
+                                <Skeleton className="h-6 rounded col-span-1" />
+                            </div>
+                            <div className="grid grid-cols-4 gap-4">
+                                <Skeleton className="h-6 rounded col-span-1" />
+                                <Skeleton className="h-6 rounded col-span-2" />
+                                <Skeleton className="h-6 rounded col-span-1 mr-4" />
+                            </div>
+                            <Skeleton className="h-6 rounded" />
+                        </div>
+                    )}
                 </form>
             </Form>
         </>
