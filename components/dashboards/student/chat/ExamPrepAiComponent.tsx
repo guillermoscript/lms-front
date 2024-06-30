@@ -1,9 +1,9 @@
 'use client'
+import { useActions, useAIState, useUIState } from 'ai/rsc'
 import { Check, CheckCircle, XCircleIcon } from 'lucide-react'
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { ExamPrepAnwser } from '@/actions/dashboard/ExamPreparationActions'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +27,10 @@ export default function ExamPrepAiComponent ({
     const [score, setScore] = useState<number>(0)
     const [overallFeedback, setOverallFeedback] = useState<string>('')
     const isLoading = form.formState.isSubmitting
+    const { continueConversation } = useActions()
+    const [_, setMessages] = useUIState()
+    const [aiState, setAIState] = useAIState()
+    const [isFinished, setIsFinished] = useState<boolean>(false)
 
     async function onSubmit (data: any) {
         const submission: Record<string, any> = {}
@@ -66,14 +70,41 @@ export default function ExamPrepAiComponent ({
                 }
             })
         })
-        try {
-            console.log(submission)
-            const response = await ExamPrepAnwser(submission)
-            console.log(response)
 
-            setFeedback(response?.questionAndAnswerFeedback)
-            setScore(response.grade)
-            setOverallFeedback(response.overallFeedback)
+        try {
+            const content = `The student anwsered the following questions: ${Object.values(
+                submission
+            )
+                .map((item) => item.question)
+                .join(', ')}
+                ${Object.values(submission)
+        .map((item) => {
+            if (Array.isArray(item.answers)) {
+                console.log(item.answers)
+                console.log(item.questionOptions)
+                return (
+                    'Answer: ' +
+                        item.answers.join(', ') +
+                        ` Options: ${item.questionOptions.join(', ')}`
+                )
+            } else {
+                return `Answer: ${item.answer}`
+            }
+        })
+        .join(', ')}`
+
+            // setAIState()
+
+            const { display } = await continueConversation(content)
+
+            setMessages((messages: ReactNode[]) => {
+                console.log('messages', messages)
+                return [...messages, {
+                    role: 'user',
+                    display
+                }]
+            })
+            setIsFinished(true)
         } catch (error) {
             console.error(error)
         }
@@ -234,7 +265,7 @@ export default function ExamPrepAiComponent ({
                     ))}
 
                     {
-                        feedback.length === 0 && (
+                        !isFinished && (
                             <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">Submit</Button>
                         )
                     }
