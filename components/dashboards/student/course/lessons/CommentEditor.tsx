@@ -11,10 +11,12 @@ export default function CommentEditor ({
     lesson_id,
     parent_comment_id,
     comment_id,
+    course_id,
     callback
 }: {
     lesson_id: number
     parent_comment_id?: number
+    course_id: number
     comment_id?: number
     callback?: () => void
 }) {
@@ -23,7 +25,7 @@ export default function CommentEditor ({
     const { toast } = useToast()
 
     const submitComment = async () => {
-        const payload = comment_id ? { content: commentState, commentId: comment_id } : { comment: commentState, lesson_id, parent_comment_id }
+        const payload = comment_id ? { content: commentState, commentId: comment_id } : { comment: commentState, lesson_id, parent_comment_id, course_id }
         const action = comment_id ? updateComment : studentSubmitLessonComment
 
         try {
@@ -65,7 +67,7 @@ export default function CommentEditor ({
     return (
         <>
             <form
-                className="w-full p-3 flex flex-col gap-4 border border-gray-200 rounded-md shadow-sm"
+                className="w-full p-3 flex flex-col gap-4 border border-gray-200 rounded-md shadow-sm comment-editor"
                 onSubmit={handleFormSubmit}
             >
                 <ForwardRefEditor

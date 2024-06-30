@@ -47,17 +47,23 @@ export type Database = {
       chats: {
         Row: {
           chat_id: number
+          chat_type: Database["public"]["Enums"]["chat_types"] | null
           created_at: string | null
+          title: string
           user_id: string
         }
         Insert: {
           chat_id?: number
+          chat_type?: Database["public"]["Enums"]["chat_types"] | null
           created_at?: string | null
+          title: string
           user_id: string
         }
         Update: {
           chat_id?: number
+          chat_type?: Database["public"]["Enums"]["chat_types"] | null
           created_at?: string | null
+          title?: string
           user_id?: string
         }
         Relationships: [
@@ -805,25 +811,25 @@ export type Database = {
       }
       messages: {
         Row: {
-          chat_id: number | null
+          chat_id: number
           created_at: string
           id: number
           message: string | null
-          sender: string | null
+          sender: Database["public"]["Enums"]["ai_sender_type"] | null
         }
         Insert: {
-          chat_id?: number | null
+          chat_id: number
           created_at?: string
           id?: number
           message?: string | null
-          sender?: string | null
+          sender?: Database["public"]["Enums"]["ai_sender_type"] | null
         }
         Update: {
-          chat_id?: number | null
+          chat_id?: number
           created_at?: string
           id?: number
           message?: string | null
-          sender?: string | null
+          sender?: Database["public"]["Enums"]["ai_sender_type"] | null
         }
         Relationships: [
           {
@@ -838,26 +844,38 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          link: string | null
           message: string
           notification_id: number
-          notification_type: string
+          notification_type:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read: boolean
+          shrot_message: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          link?: string | null
           message: string
           notification_id?: number
-          notification_type: string
+          notification_type?:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read?: boolean
+          shrot_message?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          link?: string | null
           message?: string
           notification_id?: number
-          notification_type?: string
+          notification_type?:
+            | Database["public"]["Enums"]["notification_types"]
+            | null
           read?: boolean
+          shrot_message?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1508,8 +1526,14 @@ export type Database = {
         | "data"
         | "tool"
       app_role: "admin" | "moderator" | "teacher" | "student"
+      chat_types: "free_chat" | "q&a" | "exam_prep" | "course_convo"
       currency_type: "usd" | "eur"
       enrollement_status: "active" | "disabled"
+      notification_types:
+        | "comment_reply"
+        | "comment"
+        | "exam_review"
+        | "order_renewal"
       reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
       status: "published" | "draft" | "archived"

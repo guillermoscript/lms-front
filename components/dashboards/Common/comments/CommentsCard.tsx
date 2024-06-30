@@ -37,7 +37,8 @@ const CommentCard = ({
     isReactionPresent,
     allComments,
     profiles,
-    currentUser
+    currentUser,
+    course_id
 }: {
     comment: Tables<'lesson_comments'>
     name: string
@@ -49,6 +50,7 @@ const CommentCard = ({
     allComments: any[]
     profiles: Array<Tables<'profiles'>>
     currentUser: User
+    course_id: number
 }) => {
     const [showReplies, setShowReplies] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -124,6 +126,7 @@ const CommentCard = ({
                         <CommentEditor
                             lesson_id={comment.lesson_id}
                             comment_id={comment.id}
+                            course_id={course_id}
                             parent_comment_id={comment.parent_comment_id}
                             callback={() => setIsEditing(false)}
                         />
@@ -133,7 +136,10 @@ const CommentCard = ({
                 {showReplies && (
                     <div className="ml-1 mt-2">
                         <div className="flex flex-col gap-4">
-                            <CommentEditor lesson_id={comment.lesson_id} parent_comment_id={comment.id} callback={() => { setShowReplies(false) }} />
+                            <CommentEditor
+                                course_id={course_id}
+                                lesson_id={comment.lesson_id} parent_comment_id={comment.id} callback={() => { setShowReplies(false) }}
+                            />
                             <Button variant="destructive" onClick={toggleReplies}>Cancel</Button>
                         </div>
                     </div>
@@ -190,6 +196,7 @@ const CommentCard = ({
                                         <CommentCard
                                             key={reply.id}
                                             comment={reply}
+                                            course_id={course_id}
                                             name={replyUser?.full_name || 'Unknown'}
                                             avatar={replyUser?.avatar_url || '/img/favicon.png'}
                                             date={dayjs(reply.created_at).format('DD/MM/YYYY: HH:mm')}

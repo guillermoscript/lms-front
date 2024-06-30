@@ -8,7 +8,13 @@ import CommentCard from './comments/CommentsCard'
 
 export default async function CommentsSections ({
     lesson_id,
+    course_id,
     lesson_comments
+}: {
+    lesson_id: number
+    course_id: number
+    lesson_comments: any[]
+
 }) {
     const supabase = createClient()
     const usersIds = lesson_comments.map((comment) => comment.user_id)
@@ -47,6 +53,7 @@ export default async function CommentsSections ({
                             allComments={lesson_comments}
                             profiles={profiles.data} // Pass profiles data here
                             currentUser={currentUser.data.user}
+                            course_id={course_id}
                         />
                     )
                 })}
@@ -56,7 +63,10 @@ export default async function CommentsSections ({
                     <CardTitle className="text-lg font-medium">Add a Comment</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <CommentEditor lesson_id={lesson_id} />
+                    <CommentEditor
+                        course_id={course_id}
+                        lesson_id={lesson_id}
+                    />
                 </CardContent>
             </Card>
         </div>

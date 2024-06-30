@@ -16,7 +16,7 @@ export default async function BigSidebar ({ userRole }: { userRole: Tables<'user
     }
 
     return (
-        <div className="flex h-full max-h-screen flex-col gap-2">
+        <div className="flex h-full max-h-screen flex-col gap-2 bg-gray-100/40 rounded-lg">
             <nav className="flex-1 overflow-auto py-2 px-4 text-sm font-medium">
 
                 <div className='flex items-center gap-2'>

@@ -106,7 +106,10 @@ export default function TaskMessages ({
                     message='Assignment marked as completed.'
                 />
             )}
-            <ChatWindow messages={messages} />
+            <ChatWindow
+                isLoading={isLoading}
+                messages={messages}
+            />
             {show && (
                 <ChatInput
                     isLoading={isLoading}

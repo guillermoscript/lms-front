@@ -1,5 +1,5 @@
 'use server'
-import { HomeIcon, Settings, User2Icon } from 'lucide-react'
+import { HomeIcon, MessageCircle, Settings, User2Icon } from 'lucide-react'
 import Link from 'next/link'
 
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
@@ -14,12 +14,17 @@ async function Sidebar () {
                     <NavLink
                         href={`/dashboard/${userRole}`}
                         icon={<HomeIcon className="h-5 w-5" />}
-                        label="Acme Inc"
+                        label="Home"
                     />
                     <NavLink
                         href={`/dashboard/${userRole}/account`}
                         icon={<User2Icon className="h-5 w-5" />}
-                        label="Acme Inc"
+                        label="Account"
+                    />
+                    <NavLink
+                        href={`/dashboard/${userRole}/chat`}
+                        icon={<MessageCircle className="h-5 w-5" />}
+                        label="Chat"
                     />
                 </nav>
                 <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
