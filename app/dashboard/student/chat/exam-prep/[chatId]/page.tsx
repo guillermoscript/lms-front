@@ -10,22 +10,9 @@ export default async function ExamnChatIdPage ({
         chatId: string
     }
 }) {
-    // const supabase = createClient()
-
-    // const messagesData = await supabase
-    //     .from('messages')
-    //     .select('*')
-    //     // .eq('chat_id', Number(params.chatId))
-    //     .order('created_at', { ascending: true })
-
-    // if (messagesData.error) {
-    //     console.log(messagesData.error)
-    //     throw new Error('Error fetching messages')
-    // }
-
     return (
-        <>
-            <ExamPrepChat />
-        </>
+        <ExamPrepChat
+            chatId={Number(params.chatId)}
+        />
     )
 }
