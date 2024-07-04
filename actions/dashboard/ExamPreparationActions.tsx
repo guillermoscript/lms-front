@@ -2,14 +2,17 @@
 import 'server-only'
 
 import { google } from '@ai-sdk/google'
-import { generateId, generateObject } from 'ai'
+import { CoreMessage, generateId, generateObject } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
+import { Facebook, Loader } from 'lucide-react'
 import { ReactNode } from 'react'
 import { z } from 'zod'
 
+import Message from '@/components/dashboards/Common/chat/Message'
 import ExamFeedbackCard from '@/components/dashboards/student/chat/ExamFeedbackCard'
 import ExamPrepAiComponent from '@/components/dashboards/student/chat/ExamPrepAiComponent'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { createClient } from '@/utils/supabase/server'
 
 export interface ServerMessage {
     role: 'user' | 'assistant'
@@ -25,50 +28,82 @@ export interface ClientMessage {
 export async function continueConversation (
     input: string
 ): Promise<ClientMessage> {
-    const history = getMutableAIState()
+    const aiState = getMutableAIState<typeof AI>()
 
-    console.log(history.get())
+    console.log(aiState.get())
+    const supabase = createClient()
 
     console.log(input)
+
     // Update the AI state with the new user message.
-    history.update((messages: ServerMessage[]) => [
-        ...messages,
-        { role: 'user', content: input }
-    ])
+    aiState.update({
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: generateId(),
+                role: 'user',
+                content: input
+            }
+        ]
+    })
 
     const result = await streamUI({
         model: google('models/gemini-1.5-pro-latest'),
         // model: openai('gpt-4o'),
-        messages: [...history.get(), { role: 'user', content: input }],
+        messages: [
+            ...aiState.get().messages.map((message: any) => ({
+                role: message.role,
+                content: message.content,
+                name: message.name
+            }))
+        ],
         temperature: 0.3,
-        // initial: (<div className="group relative flex items-start md:-ml-12">
-        //     <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
-        //         <Facebook className="w-6 h-6" />
-        //     </div>
-        //     <div className="ml-4 h-[24px] flex flex-row items-center flex-1 space-y-2 overflow-hidden px-1">
-        //         <Loader className="w-4 h-4 text-primary animate-spin" />
-        //     </div>
-        // </div>),
-        // system: `\
-        //     You are a teacher and you must give feedback and a grade to the student based on the exam he took
-        //     You and the user can discuss the exam and the student's performance
+        initial: (<div className="group relative flex items-start md:-ml-12">
+            <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+                <Facebook className="w-6 h-6" />
+            </div>
+            <div className="ml-4 h-[24px] flex flex-row items-center flex-1 space-y-2 overflow-hidden px-1">
+                <Loader className="w-4 h-4 text-primary animate-spin" />
+            </div>
+        </div>),
+        system: `\
+            You are a teacher and you must give feedback and a grade to the student based on the exam he took
+            You and the user can discuss the exam and the student's performance
 
-        //     Messages inside [] means that it's a UI element or a user event. For example:
-        //     - [showExamnForm] means that the user will see an exam form and fill it out
-        //     - [showExamnResult] means that the user will see the result of the exam he took
+            Messages inside [] means that it's a UI element or a user event. For example:
+            - [showExamnForm] means that the user will see an exam form and fill it out
+            - [showExamnResult] means that the user will see the result of the exam he took
 
-        //     If the user requests a exam form, call \`showExamnForm\` to show the form.
+            If the user requests a exam, call \`showExamnForm\` to show the exam form.
 
-        //     Besides that, you can also chat with users
-        // `,
-
-        text: ({ content, done }) => {
+            Besides that, you can also chat with users
+        `,
+        text: async function * ({ content, done }) {
             if (done) {
-                history.done((messages: ServerMessage[]) => [
-                    ...messages,
-                    { role: 'user', content: input },
-                    { role: 'assistant', content }
-                ])
+                aiState.done({
+                    ...aiState.get(),
+                    messages: [
+                        ...aiState.get().messages,
+                        {
+                            id: generateId(),
+                            role: 'assistant',
+                            content
+                        }
+                    ]
+                })
+                console.log(aiState.get())
+
+                yield <div>Loading...</div> // [!code highlight:5]
+
+                const aiMessageInsert = await supabase.from('messages').insert({
+                    chat_id: +aiState.get().chatId,
+                    message: content,
+                    sender: 'assistant',
+                    created_at: new Date().toISOString()
+                })
+
+                console.log(aiMessageInsert)
             }
 
             console.log(content)
@@ -114,33 +149,55 @@ export async function continueConversation (
                     multipleChoiceQuestion,
                     freeTextQuestion
                 }) {
-                    yield <div>Loading...</div> // [!code highlight:5]
-                    await new Promise(resolve => setTimeout(resolve, 300))
-
                     const toolCallId = generateId()
 
-                    history.done((messages: ServerMessage[]) => [
-                        ...messages,
-                        {
-                            id: generateId(),
-                            role: 'assistant',
-                            content: [
-                                {
-                                    type: 'tool-call',
-                                    toolName: 'showExamnForm',
-                                    toolCallId,
-                                    args: {
-                                        singleSelectQuestion,
-                                        multipleChoiceQuestion,
-                                        freeTextQuestion
+                    console.log(aiState.get())
+
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: generateId(),
+                                role: 'assistant',
+                                content: [
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'showExamnForm',
+                                        toolCallId,
+                                        args: {
+                                            singleSelectQuestion,
+                                            multipleChoiceQuestion,
+                                            freeTextQuestion
+                                        }
                                     }
-                                }
-                            ]
-                        },
+                                ]
+                            },
+                            {
+                                id: generateId(),
+                                role: 'tool',
+                                content: [
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'showExamnForm',
+                                        toolCallId,
+                                        result: {
+                                            singleSelectQuestion,
+                                            multipleChoiceQuestion,
+                                            freeTextQuestion
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+
+                    yield <div>Loading...</div>
+
+                    const aiMessageInsert = await supabase.from('messages').insert(
                         {
-                            id: generateId(),
-                            role: 'tool',
-                            content: [
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify(
                                 {
                                     type: 'tool-result',
                                     toolName: 'showExamnForm',
@@ -151,11 +208,15 @@ export async function continueConversation (
                                         freeTextQuestion
                                     }
                                 }
-                            ]
+                            ),
+                            sender: 'tool',
+                            created_at: new Date().toISOString()
                         }
-                    ])
+                    )
 
-                    console.log(history.get())
+                    console.log(aiMessageInsert)
+
+                    console.log(aiState.get())
 
                     return (
                         <ExamPrepAiComponent
@@ -183,33 +244,57 @@ export async function continueConversation (
                     overallFeedback,
                     questionAndAnswerFeedback
                 }) {
-                    yield <div>Loading...</div> // [!code highlight:5]
-                    await new Promise(resolve => setTimeout(resolve, 300))
-
                     const toolCallId = generateId()
 
-                    history.done((messages: ServerMessage[]) => [
-                        ...messages,
-                        {
-                            id: generateId(),
-                            role: 'assistant',
-                            content: [
-                                {
-                                    type: 'tool-call',
-                                    toolName: 'showExamnResult',
-                                    toolCallId,
-                                    args: {
-                                        score,
-                                        overallFeedback,
-                                        questionAndAnswerFeedback
+                    console.log(aiState.get())
+
+                    console.log(input)
+
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: generateId(),
+                                role: 'assistant',
+                                content: [
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'showExamnResult',
+                                        toolCallId,
+                                        args: {
+                                            score,
+                                            overallFeedback,
+                                            questionAndAnswerFeedback
+                                        }
                                     }
-                                }
-                            ]
-                        },
+                                ]
+                            },
+                            {
+                                id: generateId(),
+                                role: 'tool',
+                                content: [
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'showExamnResult',
+                                        toolCallId,
+                                        result: {
+                                            score,
+                                            overallFeedback,
+                                            questionAndAnswerFeedback
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+
+                    yield <div>Loading...</div>
+
+                    const aiMessageInsert = await supabase.from('messages').insert(
                         {
-                            id: generateId(),
-                            role: 'tool',
-                            content: [
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify(
                                 {
                                     type: 'tool-result',
                                     toolName: 'showExamnResult',
@@ -220,9 +305,15 @@ export async function continueConversation (
                                         questionAndAnswerFeedback
                                     }
                                 }
-                            ]
+                            ),
+                            sender: 'tool',
+                            created_at: new Date().toISOString()
                         }
-                    ])
+                    )
+
+                    console.log(aiMessageInsert)
+
+                    console.log(aiState.get())
 
                     return (
                         <ExamFeedbackCard
@@ -233,17 +324,8 @@ export async function continueConversation (
                     )
                 }
             }
-        },
-        onFinish (event) {
-            console.log('onFinish',
-                event
-            )
-
-            console.log('onFinish', history.get())
         }
     })
-
-    console.log(result.value)
 
     return {
         id: generateId(),
@@ -252,19 +334,66 @@ export async function continueConversation (
     }
 }
 
-export const AI = createAI<ServerMessage[], ClientMessage[]>({
+export type Message = CoreMessage & {
+    id: string
+}
+export interface AIState {
+    chatId: string
+    messages: Message[]
+}
+
+export type UIState = Array<{
+    id: string
+    display: React.ReactNode
+}>
+
+export const AI = createAI<AIState, UIState>({
     actions: {
         continueConversation
     },
-    // onGetUIState (...args) {
-    //     console.log('onGetUIState', args)
-    // },
-    // onSetAIState ({ key, state, done }) {
-    //     console.log('onSetAIState', key, state, done)
-    // },
+    // onGetUIState: async () => {
+    //     'use server'
 
-    initialAIState: [],
-    initialUIState: []
+    //     const supabase = createClient()
+    //     const userData = await supabase.auth.getUser()
+
+    //     if (userData.error) {
+    //         return
+    //     }
+
+    //     const aiState = getAIState()
+    //     console.log(aiState)
+
+    //     const messagesData = await supabase
+    //         .from('chats')
+    //         .select('*, messages(*)')
+    //         .eq('chat_id', Number(aiState.chatId))
+    //         .order('created_at', { ascending: true })
+    //         .single()
+
+    //     if (messagesData.error) {
+    //         console.log(messagesData.error)
+    //         throw new Error('Error fetching messages')
+    //     }
+
+    //     console.log(messagesData.data.messages.length)
+
+    //     console.log(aiState.messages.length)
+
+    //     if (messagesData.data.messages.length === aiState.messages.length) {
+    //         return
+    //     }
+
+    //     if (aiState) {
+    //         console.log(aiState)
+    //         const uiState = await getUIStateFromAIState(aiState)
+
+    //         console.log(uiState)
+    //         return uiState
+    //     }
+    // },
+    initialUIState: [],
+    initialAIState: { chatId: generateId(), messages: [] }
 })
 
 type Root = Record<string | number, {
@@ -308,4 +437,90 @@ export async function ExamPrepAnwser (data: Root) {
     })
 
     return object
+}
+const renderFunctions = {
+    tool: (tool) => {
+        switch (tool.toolName) {
+            case 'showExamnForm':
+                return (
+                    <Message
+                        sender={'assistant'}
+                        time={new Date().toDateString()}
+                        isUser={false}
+                    >
+                        <ExamPrepAiComponent
+                            singleSelectQuestions={tool.result.singleSelectQuestion}
+                            multipleChoiceQuestions={tool.result.multipleChoiceQuestion}
+                            freeTextQuestions={tool.result.freeTextQuestion}
+                        />
+                    </Message>
+                )
+            case 'showExamnResult':
+                return (
+                    <Message
+                        sender={'assistant'}
+                        time={new Date().toDateString()}
+                        isUser={false}
+                    >
+                        <ExamFeedbackCard
+                            score={tool.result.score}
+                            overallFeedback={tool.result.overallFeedback}
+                            questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
+                        />
+                    </Message>
+                )
+            default:
+                return null
+        }
+    },
+    user: (message) => {
+        return (
+            <Message
+                sender={message.role}
+                time={new Date().toDateString()}
+                isUser={message.role === 'user'}
+            >
+                <ViewMarkdown markdown={message.content} />
+            </Message>
+        )
+    },
+    assistant: (message) => {
+        console.log(message)
+        return (
+            typeof message.content === 'string' ? (
+                <Message
+                    sender={message.role}
+                    time={new Date().toDateString()}
+                    isUser={message.role === 'user'}
+                >
+                    <ViewMarkdown markdown={message.content} />
+                </Message>
+            ) : null
+        )
+    }
+}
+export const getUIStateFromAIState = (aiState) => {
+    let mesg
+    if (Array.isArray(aiState)) {
+        mesg = aiState
+    } else {
+        mesg = aiState.messages
+    }
+    const val = mesg
+        .filter((message) => message.role !== 'system')
+        .map(message => {
+            const renderFunction = renderFunctions[message.role]
+
+            if (message.role === 'tool') {
+                if (Array.isArray(message.content)) {
+                    return message.content.map(renderFunction)
+                } else {
+                    const parsedContent = JSON.parse(message.content)
+                    console.log(parsedContent)
+                    return renderFunctions[message.role](parsedContent)
+                }
+            }
+            return renderFunction(message)
+        })
+    return val
 }
