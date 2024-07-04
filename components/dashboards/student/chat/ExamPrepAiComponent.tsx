@@ -83,7 +83,9 @@ export default function ExamPrepAiComponent ({
                 return `Answer: ${item.answer}`
             }
         })
-        .join(', ')}`
+        .join(', ')}.
+            this is the object: ${JSON.stringify(submission)}
+        `
 
             const { display } = await continueConversation(content)
 
