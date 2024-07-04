@@ -1,5 +1,6 @@
 // Force the page to be dynamic and allow streaming responses up to 30 seconds
 
+import ExamLink from '@/components/dashboards/student/chat/ExamLink'
 import FreeChat from '@/components/dashboards/student/chat/FreeChat'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -31,12 +32,7 @@ export default async function ChatPage () {
                         </HoverCardTrigger>
                         <HoverCardContent>Ask the AI any question</HoverCardContent>
                     </HoverCard>
-                    <HoverCard>
-                        <HoverCardTrigger asChild>
-                            <Badge variant="outline">Exam Preparation</Badge>
-                        </HoverCardTrigger>
-                        <HoverCardContent>Prepare for your exams</HoverCardContent>
-                    </HoverCard>
+                    <ExamLink />
                     <HoverCard>
                         <HoverCardTrigger asChild>
                             <Badge variant="outline">Course Chat</Badge>
