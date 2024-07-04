@@ -1,9 +1,8 @@
-
 // UI Components
 
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
@@ -21,7 +20,7 @@ const ToolInvocationMessage = ({
             {toolInvocations?.map(
                 (toolInvocation: ToolInvocation) =>
                     'result' in toolInvocation &&
-                    toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
+          toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
                         <SuccessMessage
                             key={toolInvocation.toolCallId}
                             status={toolInvocation.result.status}
@@ -105,7 +104,13 @@ const SuccessMessage = ({
     )
 }
 
-const ChatWindow = ({ messages, isLoading }: { messages: MessageType[], isLoading: boolean }) => {
+const ChatWindow = ({
+    messages,
+    isLoading
+}: {
+    messages: MessageType[]
+    isLoading: boolean
+}) => {
     return (
         <div className="flex-1 overflow-y-auto p-4 ">
             {messages.map((msg, index) => {
@@ -167,25 +172,21 @@ const ChatInput = ({
             }}
             className="py-4 flex gap-2 flex-col w-full"
         >
-            <Suspense fallback={
-                <Skeleton className="w-full h-12" />
-            }
-            >
-
-                <ForwardRefEditor
-                    className={cn(
-                        'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
-                        isLoading ? 'cursor-not-allowed' : 'cursor-text'
-                    )}
-                    placeholder="Chat with the AI assistant"
-                    markdown={message}
-                    onChange={(value) => setMessage(value)}
-                />
-            </Suspense>
+            <ForwardRefEditor
+                className={cn(
+                    'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
+                    isLoading ? 'cursor-not-allowed' : 'cursor-text'
+                )}
+                placeholder="Chat with the AI assistant"
+                markdown={message}
+                onChange={(value) => setMessage(value)}
+            />
             <input type="hidden" value={message} />
             {isLoading ? (
-                <Button type="button" onClick={stop}
-                    variant='outline'
+                <Button
+                    type="button"
+                    onClick={stop}
+                    variant="outline"
                     className="rounded-r-lg"
                 >
           Stop
