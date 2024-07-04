@@ -1,30 +1,54 @@
-import { AI } from '@/actions/dashboard/ExamPreparationActions'
+import { AI, getUIStateFromAIState, Message } from '@/actions/dashboard/ExamPreparationActions'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function ExamPrepChatIdLayout ({
-    children,
-    params
+export default async function ExamnChatIdPageLayout ({
+    params,
+    children
 }: {
-    children: React.ReactNode
     params: {
         chatId: string
     }
+    children: React.ReactNode
 }) {
     const supabase = createClient()
 
-    const chatData = await supabase
+    const messagesData = await supabase
         .from('chats')
         .select('*, messages(*)')
-        .eq('id', Number(params.chatId))
+        .eq('chat_id', Number(params.chatId))
+        .order('created_at', { foreignTable: 'messages', ascending: true })
+        .single()
 
-    if (chatData.error) {
-        console.log(chatData.error)
-        throw new Error('Error fetching chat data')
+    if (messagesData.error) {
+        console.log(messagesData.error)
+        throw new Error('Error fetching messages')
     }
 
+    const messages = messagesData.data.messages.map(data => {
+        if (data.sender === 'tool') {
+            return {
+                role: data.sender,
+                id: data.id,
+                content: [
+                    JSON.parse(data.message)
+                ] // Add a default value for the 'content' property
+            }
+        }
+        return {
+            role: data.sender,
+            id: data.id,
+            content: data.message // Add a default value for the 'content' property
+        }
+    }) as unknown as Message[]
+
+    const uiState = messages.length === 0 ? [] : await getUIStateFromAIState(messages)
+
     return (
-        <>
-            <AI>{children}</AI>
-        </>
+        <AI
+            initialUIState={uiState}
+            initialAIState={{ chatId: (params.chatId), messages }}
+        >
+            {children}
+        </AI>
     )
 }
