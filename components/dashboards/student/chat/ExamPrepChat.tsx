@@ -3,13 +3,21 @@ import { generateId } from 'ai'
 import { useActions, useUIState } from 'ai/rsc'
 import { useState } from 'react'
 
+import { studentInsertChatMessage } from '@/actions/dashboard/chatActions'
 import { ClientMessage } from '@/actions/dashboard/ExamPreparationActions'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { ChatInput, Message } from '../../Common/chat/chat'
+import { ChatInput } from '../../Common/chat/chat'
+import Message from '../../Common/chat/Message'
 import SuggestionsContainer from '../../Common/chat/SuggestionsContainer'
 
-export default function ExamPrepChat () {
+export default function ExamPrepChat ({
+    children,
+    chatId
+}: {
+    children?: React.ReactNode
+    chatId?: number
+}) {
     const [conversation, setConversation] = useUIState()
     const { continueConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
@@ -39,24 +47,39 @@ export default function ExamPrepChat () {
                     ]}
                     onSuggestionClick={async (suggestion) => {
                         setIsLoading(true)
+
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            { id: generateId(), role: 'user', display: suggestion }
+                        ])
+
                         const message = await continueConversation(suggestion)
-                        setConversation([message])
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            message
+                        ])
                         setIsLoading(false)
                     }}
                 />
             )}
 
             <div className="flex-1 overflow-y-auto p-4 ">
-                {conversation.map((message: ClientMessage) => (
-                    <Message
-                        key={message.id}
-                        sender={message.role}
-                        time={new Date().toDateString()}
-                        isUser={message.role === 'user'}
-                    >
-                        {message.display}
-                    </Message>
-                ))}
+                {conversation.map(async (message: ClientMessage) => {
+                    console.log(conversation)
+                    if (message.id) {
+                        return (
+                            <Message
+                                key={message.id}
+                                sender={message.role}
+                                time={new Date().toDateString()}
+                                isUser={message.role === 'user'}
+                            >
+                                {message.display}
+                            </Message>
+                        )
+                    }
+                    return message
+                })}
                 {isLoading && (
                     <div className="space-y-2 w-full">
                         <Skeleton className="h-6 rounded mr-14" />
@@ -73,7 +96,6 @@ export default function ExamPrepChat () {
                     </div>
                 )}
             </div>
-
             <ChatInput
                 isLoading={isLoading}
                 stop={() => setStop(true)}
@@ -81,6 +103,14 @@ export default function ExamPrepChat () {
                     if (stop) return
 
                     setIsLoading(true)
+
+                    if (chatId) {
+                        const inserUserMessage = await studentInsertChatMessage({
+                            chatId,
+                            message: input.content
+                        })
+                        console.log(inserUserMessage)
+                    }
                     setConversation((currentConversation: ClientMessage[]) => [
                         ...currentConversation,
                         { id: generateId(), role: 'user', display: input.content }
