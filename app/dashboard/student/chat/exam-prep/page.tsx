@@ -1,3 +1,5 @@
+
+import { AI } from '@/actions/dashboard/ExamPreparationActions'
 import ExamPrepChat from '@/components/dashboards/student/chat/ExamPrepChat'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +21,9 @@ export default async function ExamChatPage () {
 
     return (
         <>
-            <ExamPrepChat />
+            <AI initialAIState={{ chatId: '', messages: [] }}>
+                <ExamPrepChat />
+            </AI>
         </>
     )
 }
