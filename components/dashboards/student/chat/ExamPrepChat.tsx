@@ -1,10 +1,11 @@
 'use client'
 import { generateId } from 'ai'
-import { useActions, useUIState } from 'ai/rsc'
-import { useState } from 'react'
+import { useActions, useAIState, useUIState } from 'ai/rsc'
+import { useEffect, useState } from 'react'
 
 import { studentInsertChatMessage } from '@/actions/dashboard/chatActions'
-import { ClientMessage } from '@/actions/dashboard/ExamPreparationActions'
+import { AI, ClientMessage, UIState } from '@/actions/dashboard/ExamPreparationActions'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { ChatInput } from '../../Common/chat/chat'
@@ -18,10 +19,23 @@ export default function ExamPrepChat ({
     children?: React.ReactNode
     chatId?: number
 }) {
-    const [conversation, setConversation] = useUIState()
+    const [conversation, setConversation] = useUIState<typeof AI>()
     const { continueConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
     const [stop, setStop] = useState(false)
+    const [aiState] = useAIState()
+    const lastMessage = aiState.messages ? aiState.messages[aiState.messages.length - 1] : null
+    const [hideInput, setHideInput] = useState<boolean>(false)
+
+    useEffect(() => {
+        if (!lastMessage) return
+        if (lastMessage.role === 'tool') {
+            const [toolCalled] = lastMessage.content
+            const isShowExamnForm = toolCalled.toolName === 'showExamnForm'
+            setHideInput(isShowExamnForm)
+        }
+    }
+    , [lastMessage])
 
     return (
         <div>
@@ -32,17 +46,17 @@ export default function ExamPrepChat ({
                         {
                             title: 'help me creating a basic python examn form',
                             description:
-                'This will help you to create a basic python exam form'
+                  'This will help you to create a basic python exam form'
                         },
                         {
                             title: 'help me creating a basic Javascipt examn form',
                             description:
-                'This will help you to create a basic Javascript exam form'
+                  'This will help you to create a basic Javascript exam form'
                         },
                         {
                             title: 'help me creating a basic HTML examn form',
                             description:
-                'This will help you to create a basic HTML exam form'
+                  'This will help you to create a basic HTML exam form'
                         }
                     ]}
                     onSuggestionClick={async (suggestion) => {
@@ -50,7 +64,20 @@ export default function ExamPrepChat ({
 
                         setConversation((currentConversation: ClientMessage[]) => [
                             ...currentConversation,
-                            { id: generateId(), role: 'user', display: suggestion }
+                            {
+                                id: generateId(),
+                                role: 'user',
+                                display: (
+
+                                    <Message
+                                        sender={message.role}
+                                        time={new Date().toDateString()}
+                                        isUser={true}
+                                    >
+                                        <ViewMarkdown markdown={message.content} />
+                                    </Message>
+                                )
+                            }
                         ])
 
                         const message = await continueConversation(suggestion)
@@ -64,22 +91,14 @@ export default function ExamPrepChat ({
             )}
 
             <div className="flex-1 overflow-y-auto p-4 ">
-                {conversation.map(async (message: ClientMessage) => {
-                    console.log(conversation)
-                    if (message.id) {
-                        return (
-                            <Message
-                                key={message.id}
-                                sender={message.role}
-                                time={new Date().toDateString()}
-                                isUser={message.role === 'user'}
-                            >
-                                {message.display}
-                            </Message>
-                        )
-                    }
-                    return message
-                })}
+                {conversation.length ? (
+                    <ChatList messages={conversation} />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <p className="text-gray-400">No messages yet</p>
+                    </div>
+                )}
+
                 {isLoading && (
                     <div className="space-y-2 w-full">
                         <Skeleton className="h-6 rounded mr-14" />
@@ -96,35 +115,69 @@ export default function ExamPrepChat ({
                     </div>
                 )}
             </div>
-            <ChatInput
-                isLoading={isLoading}
-                stop={() => setStop(true)}
-                callbackFunction={async (input) => {
-                    if (stop) return
+            {!hideInput && (
+                <ChatInput
+                    isLoading={isLoading}
+                    stop={() => setStop(true)}
+                    callbackFunction={async (input) => {
+                        if (stop) return
 
-                    setIsLoading(true)
+                        setIsLoading(true)
 
-                    if (chatId) {
-                        const inserUserMessage = await studentInsertChatMessage({
-                            chatId,
-                            message: input.content
-                        })
-                        console.log(inserUserMessage)
-                    }
-                    setConversation((currentConversation: ClientMessage[]) => [
-                        ...currentConversation,
-                        { id: generateId(), role: 'user', display: input.content }
-                    ])
+                        if (chatId) {
+                            const inserUserMessage = await studentInsertChatMessage({
+                                chatId,
+                                message: input.content
+                            })
+                            console.log(inserUserMessage)
+                        }
 
-                    const message = await continueConversation(input.content)
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            {
+                                id: generateId(),
+                                role: 'user',
+                                display: (
+                                    <Message
+                                        sender={'user'}
+                                        time={new Date().toDateString()}
+                                        isUser={true}
+                                    >
+                                        <ViewMarkdown markdown={input.content} />
+                                    </Message>
+                                )
+                            }
+                        ])
 
-                    setConversation((currentConversation: ClientMessage[]) => [
-                        ...currentConversation,
-                        message
-                    ])
-                    setIsLoading(false)
-                }}
-            />
+                        const message = await continueConversation(input.content)
+
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            message
+                        ])
+                        setIsLoading(false)
+                    }}
+                />
+            )}
         </div>
+    )
+}
+interface ChatList {
+    messages: UIState
+}
+
+function ChatList ({ messages }: ChatList) {
+    if (!messages.length) {
+        return null
+    }
+
+    return (
+        <>
+            {messages.map((message, index) => (
+                <div key={index} className="flex flex-col gap-2">
+                    {message.display}
+                </div>
+            ))}
+        </>
     )
 }
