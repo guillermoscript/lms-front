@@ -1,5 +1,7 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
@@ -77,7 +79,7 @@ export async function studentUpdateChatTitle (state: {
         return createResponse('error', 'Error updating chat', null, 'Error updating chat')
     }
 
-    // revalidatePath('/dashboard/student/chat/', 'layout')
+    revalidatePath('/dashboard/student/chat/', 'layout')
     return createResponse('success', 'Chat updated successfully', null, null)
 }
 
@@ -154,4 +156,23 @@ export async function studentSubmitMessage (state: {
     }
 
     return createResponse('success', 'Message sent successfully', null, null)
+}
+
+export async function deleteChat (state: {
+    chatId: number
+}) {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return createResponse('error', 'Error no user found', null, 'Error no user found')
+    }
+
+    const chatDelete = await supabase.from('chats').delete().eq('chat_id', state.chatId)
+
+    if (chatDelete.error) {
+        return createResponse('error', 'Error deleting chat', null, 'Error deleting chat')
+    }
+
+    return createResponse('success', 'Chat deleted successfully', null, null)
 }
