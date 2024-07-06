@@ -4,11 +4,12 @@ import 'server-only'
 import { google } from '@ai-sdk/google'
 import { CoreMessage, generateId, generateObject } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
-import { Facebook, Loader } from 'lucide-react'
+import dayjs from 'dayjs'
 import { ReactNode } from 'react'
 import { z } from 'zod'
 
 import Message from '@/components/dashboards/Common/chat/Message'
+import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
 import ExamFeedbackCard from '@/components/dashboards/student/chat/ExamFeedbackCard'
 import ExamPrepAiComponent from '@/components/dashboards/student/chat/ExamPrepAiComponent'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
@@ -30,10 +31,7 @@ export async function continueConversation (
 ): Promise<ClientMessage> {
     const aiState = getMutableAIState<typeof AI>()
 
-    console.log(aiState.get())
     const supabase = createClient()
-
-    console.log(input)
 
     // Update the AI state with the new user message.
     aiState.update({
@@ -59,14 +57,7 @@ export async function continueConversation (
             }))
         ],
         temperature: 0.3,
-        initial: (<div className="group relative flex items-start md:-ml-12">
-            <div className="flex size-[24px] shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
-                <Facebook className="w-6 h-6" />
-            </div>
-            <div className="ml-4 h-[24px] flex flex-row items-center flex-1 space-y-2 overflow-hidden px-1">
-                <Loader className="w-4 h-4 text-primary animate-spin" />
-            </div>
-        </div>),
+        initial: (<ChatLoadingSkeleton />),
         system: `\
             You are a teacher and you must give feedback and a grade to the student based on the exam he took
             You and the user can discuss the exam and the student's performance
@@ -92,9 +83,8 @@ export async function continueConversation (
                         }
                     ]
                 })
-                console.log(aiState.get())
 
-                yield <div>Loading...</div> // [!code highlight:5]
+                yield <ChatLoadingSkeleton />
 
                 const aiMessageInsert = await supabase.from('messages').insert({
                     chat_id: +aiState.get().chatId,
@@ -105,8 +95,6 @@ export async function continueConversation (
 
                 console.log(aiMessageInsert)
             }
-
-            console.log(content)
 
             return (
                 <ViewMarkdown markdown={content}/>
@@ -140,8 +128,8 @@ export async function continueConversation (
                     })),
                     freeTextQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
-                        label: z.string().describe('The question text for the user to answer'),
-                        placeholder: z.string().describe('The place holder of the question')
+                        label: z.string().describe('The question text for the user to answer')
+                        // placeholder: z.string().describe('The place holder of the question')
                     }))
                 }),
                 generate: async function * ({
@@ -150,8 +138,6 @@ export async function continueConversation (
                     freeTextQuestion
                 }) {
                     const toolCallId = generateId()
-
-                    console.log(aiState.get())
 
                     aiState.done({
                         ...aiState.get(),
@@ -192,12 +178,29 @@ export async function continueConversation (
                         ]
                     })
 
-                    yield <div>Loading...</div>
+                    yield <ChatLoadingSkeleton />
 
-                    const aiMessageInsert = await supabase.from('messages').insert(
+                    const aiMessageInsert = await supabase.from('messages').insert([
                         {
                             chat_id: +aiState.get().chatId,
-                            message: JSON.stringify(
+                            message: JSON.stringify([
+                                {
+                                    type: 'tool-call',
+                                    toolName: 'showExamnForm',
+                                    toolCallId,
+                                    result: {
+                                        singleSelectQuestion,
+                                        multipleChoiceQuestion,
+                                        freeTextQuestion
+                                    }
+                                }
+                            ]),
+                            sender: 'assistant',
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify([
                                 {
                                     type: 'tool-result',
                                     toolName: 'showExamnForm',
@@ -208,20 +211,20 @@ export async function continueConversation (
                                         freeTextQuestion
                                     }
                                 }
-                            ),
+                            ]),
                             sender: 'tool',
                             created_at: new Date().toISOString()
                         }
-                    )
 
-                    console.log(aiMessageInsert)
-
-                    console.log(aiState.get())
+                    ])
 
                     return (
                         <ExamPrepAiComponent
+                            // @ts-expect-error
                             singleSelectQuestions={singleSelectQuestion}
+                            // @ts-expect-error
                             multipleChoiceQuestions={multipleChoiceQuestion}
+                            // @ts-expect-error
                             freeTextQuestions={freeTextQuestion}
                         />
                     )
@@ -246,10 +249,6 @@ export async function continueConversation (
                 }) {
                     const toolCallId = generateId()
 
-                    console.log(aiState.get())
-
-                    console.log(input)
-
                     aiState.done({
                         ...aiState.get(),
                         messages: [
@@ -289,12 +288,29 @@ export async function continueConversation (
                         ]
                     })
 
-                    yield <div>Loading...</div>
+                    yield <ChatLoadingSkeleton />
 
-                    const aiMessageInsert = await supabase.from('messages').insert(
+                    const aiMessageInsert = await supabase.from('messages').insert([
                         {
                             chat_id: +aiState.get().chatId,
-                            message: JSON.stringify(
+                            message: JSON.stringify([
+                                {
+                                    type: 'tool-call',
+                                    toolName: 'showExamnResult',
+                                    toolCallId,
+                                    result: {
+                                        score,
+                                        overallFeedback,
+                                        questionAndAnswerFeedback
+                                    }
+                                }
+                            ]),
+                            sender: 'assistant',
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify([
                                 {
                                     type: 'tool-result',
                                     toolName: 'showExamnResult',
@@ -305,20 +321,17 @@ export async function continueConversation (
                                         questionAndAnswerFeedback
                                     }
                                 }
-                            ),
+                            ]),
                             sender: 'tool',
                             created_at: new Date().toISOString()
                         }
-                    )
-
-                    console.log(aiMessageInsert)
-
-                    console.log(aiState.get())
+                    ])
 
                     return (
                         <ExamFeedbackCard
                             score={score}
                             overallFeedback={overallFeedback}
+                            // @ts-expect-error
                             questionAndAnswerFeedback={questionAndAnswerFeedback}
                         />
                     )
@@ -351,47 +364,6 @@ export const AI = createAI<AIState, UIState>({
     actions: {
         continueConversation
     },
-    // onGetUIState: async () => {
-    //     'use server'
-
-    //     const supabase = createClient()
-    //     const userData = await supabase.auth.getUser()
-
-    //     if (userData.error) {
-    //         return
-    //     }
-
-    //     const aiState = getAIState()
-    //     console.log(aiState)
-
-    //     const messagesData = await supabase
-    //         .from('chats')
-    //         .select('*, messages(*)')
-    //         .eq('chat_id', Number(aiState.chatId))
-    //         .order('created_at', { ascending: true })
-    //         .single()
-
-    //     if (messagesData.error) {
-    //         console.log(messagesData.error)
-    //         throw new Error('Error fetching messages')
-    //     }
-
-    //     console.log(messagesData.data.messages.length)
-
-    //     console.log(aiState.messages.length)
-
-    //     if (messagesData.data.messages.length === aiState.messages.length) {
-    //         return
-    //     }
-
-    //     if (aiState) {
-    //         console.log(aiState)
-    //         const uiState = await getUIStateFromAIState(aiState)
-
-    //         console.log(uiState)
-    //         return uiState
-    //     }
-    // },
     initialUIState: [],
     initialAIState: { chatId: generateId(), messages: [] }
 })
@@ -438,89 +410,75 @@ export async function ExamPrepAnwser (data: Root) {
 
     return object
 }
-const renderFunctions = {
-    tool: (tool) => {
-        switch (tool.toolName) {
-            case 'showExamnForm':
-                return (
-                    <Message
-                        sender={'assistant'}
-                        time={new Date().toDateString()}
-                        isUser={false}
-                    >
-                        <ExamPrepAiComponent
-                            singleSelectQuestions={tool.result.singleSelectQuestion}
-                            multipleChoiceQuestions={tool.result.multipleChoiceQuestion}
-                            freeTextQuestions={tool.result.freeTextQuestion}
-                        />
-                    </Message>
-                )
-            case 'showExamnResult':
-                return (
-                    <Message
-                        sender={'assistant'}
-                        time={new Date().toDateString()}
-                        isUser={false}
-                    >
-                        <ExamFeedbackCard
-                            score={tool.result.score}
-                            overallFeedback={tool.result.overallFeedback}
-                            questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
-                        />
-                    </Message>
-                )
-            default:
-                return null
-        }
-    },
-    user: (message) => {
-        return (
-            <Message
-                sender={message.role}
-                time={new Date().toDateString()}
-                isUser={message.role === 'user'}
-            >
-                <ViewMarkdown markdown={message.content} />
-            </Message>
-        )
-    },
-    assistant: (message) => {
-        console.log(message)
-        return (
-            typeof message.content === 'string' ? (
-                <Message
-                    sender={message.role}
-                    time={new Date().toDateString()}
-                    isUser={message.role === 'user'}
-                >
-                    <ViewMarkdown markdown={message.content} />
-                </Message>
-            ) : null
-        )
-    }
-}
-export const getUIStateFromAIState = (aiState) => {
-    let mesg
-    if (Array.isArray(aiState)) {
-        mesg = aiState
-    } else {
-        mesg = aiState.messages
-    }
-    const val = mesg
-        .filter((message) => message.role !== 'system')
-        .map(message => {
-            const renderFunction = renderFunctions[message.role]
 
-            if (message.role === 'tool') {
-                if (Array.isArray(message.content)) {
-                    return message.content.map(renderFunction)
-                } else {
-                    const parsedContent = JSON.parse(message.content)
-                    console.log(parsedContent)
-                    return renderFunctions[message.role](parsedContent)
-                }
-            }
-            return renderFunction(message)
-        })
-    return val
+export interface Chat extends Record<string, any> {
+    id: string
+    createdAt: Date
+    messages: Message[]
+}
+
+export const getUIStateFromAIState = (aiState: Chat) => {
+    return aiState.messages
+        .filter(message => message.role !== 'system')
+        .map((message, index) => ({
+            id: `${aiState.chatId}-${index}`,
+            display:
+
+          message.role === 'tool' ? (
+              message.content.map(tool => {
+                  // find if the next message is a showExamnResult
+                  // @ts-expect-error
+                  const isNextMessageAShowExamnResult = aiState?.messages[index + 1] ? aiState?.messages[index + 1].content[0]?.toolName === 'showExamnResult' : false
+                  return tool.toolName === 'showExamnForm' ? (
+                      <Message
+                          sender={'assistant'}
+                          time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                          isUser={false}
+                      >
+                          <ExamPrepAiComponent
+                              // @ts-expect-error
+                              singleSelectQuestions={tool.result.singleSelectQuestion}
+                              // @ts-expect-error
+                              multipleChoiceQuestions={tool.result.multipleChoiceQuestion}
+                              // @ts-expect-error
+                              freeTextQuestions={tool.result.freeTextQuestion}
+                              hideSubmit={isNextMessageAShowExamnResult}
+                          />
+                      </Message>
+                  ) : tool.toolName === 'showExamnResult' ? (
+                      <Message
+                          sender={'assistant'}
+                          time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                          isUser={false}
+                      >
+                          <ExamFeedbackCard
+                              // @ts-expect-error
+                              score={tool.result.score}
+                              // @ts-expect-error
+                              overallFeedback={tool.result.overallFeedback}
+                              // @ts-expect-error
+                              questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
+                          />
+                      </Message>
+                  ) : null
+              })
+          ) : message.role === 'user' && typeof message.content === 'string' ? (
+              <Message
+                  sender={message.role}
+                  time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                  isUser={true}
+              >
+                  <ViewMarkdown markdown={message.content} />
+              </Message>
+          ) : message.role === 'assistant' &&
+            typeof message.content === 'string' ? (
+                  <Message
+                      sender={message.role}
+                      time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                      isUser={false}
+                  >
+                      <ViewMarkdown markdown={message.content} />
+                  </Message>
+              ) : null
+        }))
 }
