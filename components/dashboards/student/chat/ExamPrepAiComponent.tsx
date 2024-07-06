@@ -1,8 +1,10 @@
 'use client'
+import { generateId } from 'ai'
 import { useActions, useUIState } from 'ai/rsc'
-import { ReactNode, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import { AI } from '@/actions/dashboard/ExamPreparationActions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
@@ -14,17 +16,19 @@ import { FreeTextQuestion, MultipleChoiceQuestion as typeMultipleChoiceQuestion,
 export default function ExamPrepAiComponent ({
     singleSelectQuestions,
     freeTextQuestions,
-    multipleChoiceQuestions
+    multipleChoiceQuestions,
+    hideSubmit
 }: {
     singleSelectQuestions: typeSingleSelectQuestion[]
     freeTextQuestions: FreeTextQuestion[]
     multipleChoiceQuestions: typeMultipleChoiceQuestion[]
+    hideSubmit?: boolean
 }) {
     const form = useForm()
     const isLoading = form.formState.isSubmitting
     const { continueConversation } = useActions()
-    const [_, setMessages] = useUIState()
-    const [isFinished, setIsFinished] = useState<boolean>(false)
+    const [_, setMessages] = useUIState<typeof AI>()
+    const [isFinished, setIsFinished] = useState<boolean>(hideSubmit || false)
 
     async function onSubmit (data: any) {
         const submission: Record<string, any> = {}
@@ -65,6 +69,8 @@ export default function ExamPrepAiComponent ({
             })
         })
 
+        console.log(submission)
+
         try {
             const content = `The student anwsered the following questions: ${Object.values(
                 submission
@@ -87,12 +93,18 @@ export default function ExamPrepAiComponent ({
             this is the object: ${JSON.stringify(submission)}
         `
 
+            // const messageInserted = await insertChatMessage({
+            //     chatId: aiState.chatId,
+            //     message: content,
+            //     sender: 'tool'
+            // })
+
             const { display } = await continueConversation(content)
 
-            setMessages((messages: ReactNode[]) => {
+            setMessages((messages) => {
                 console.log('messages', messages)
                 return [...messages, {
-                    role: 'user',
+                    id: generateId(),
                     display
                 }]
             })
