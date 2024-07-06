@@ -93,12 +93,6 @@ export default function ExamPrepAiComponent ({
             this is the object: ${JSON.stringify(submission)}
         `
 
-            // const messageInserted = await insertChatMessage({
-            //     chatId: aiState.chatId,
-            //     message: content,
-            //     sender: 'tool'
-            // })
-
             const { display } = await continueConversation(content)
 
             setMessages((messages) => {
