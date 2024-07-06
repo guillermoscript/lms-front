@@ -31,7 +31,7 @@ export default function ExamLink () {
                                 })
 
                                 if (response.status === 'success') {
-                                    router.push(`/dashboard/student/chat/exam-prep/${response.data.chat_id}`)
+                                    router.push(`/dashboard/student/chat/${response.data.chat_id}/exam-prep`)
                                 }
                             } catch (error) {
                                 console.error(error)
@@ -43,7 +43,9 @@ export default function ExamLink () {
                     >Prepare for exams</Button>
                 )}
             </HoverCardTrigger>
-            <HoverCardContent>Prepare for your exams</HoverCardContent>
+            <HoverCardContent>
+                This is where you can prepare for your exams, the AI will create Forms for you to fill out and get feedback on your answers.
+            </HoverCardContent>
         </HoverCard>
     )
 }
