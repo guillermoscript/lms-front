@@ -1,44 +1,44 @@
-import dayjs from 'dayjs'
-import Link from 'next/link'
 
+import ChatSidebarItem from '@/components/dashboards/student/chat/ChatSidebarItem'
 import {
     Accordion,
     AccordionContent,
     AccordionItem,
     AccordionTrigger
 } from '@/components/ui/accordion'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
 const ChatAccordion = ({ chatType, userRole, chats }) => (
     <Accordion className='w-full' type="single" collapsible>
         <AccordionItem className='w-full' value={`item-${chatType}`}>
-            <AccordionTrigger>{chatType.replace('_', ' ')}</AccordionTrigger>
+            <AccordionTrigger
+                className='w-full text-lg font-semibold capitalize'
+            >{chatType.replace('_', ' ')}</AccordionTrigger>
             <AccordionContent>
-                <ul className='w-full flex flex-col gap-3 overflow-auto'>
-                    {chats.map((chat: Tables<'chats'>) => {
-                        const types = {
-                            free_chat: 'free-chat',
-                            qna: 'qa',
-                            exam_prep: 'exam-prep',
-                            course_chat: 'study-material'
-                        }
+                <ScrollArea className="h-[calc(100vh-4rem)]  w-full rounded-md border p-4">
 
-                        return (
-                            <li
-                                className='w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis'
-                                key={chat.chat_id}
-                            >
-                                <Link href={`/dashboard/${userRole}/chat/${chat.chat_id}/${types[chatType]}`}>
-                                    {chat.title}
-                                </Link>
-                                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                                    {dayjs(chat.created_at).format('MMM D, YYYY')}
-                                </p>
-                            </li>
-                        )
-                    })}
-                </ul>
+                    <ul className='w-full flex flex-col gap-3'>
+                        {chats.map((chat: Tables<'chats'>) => {
+                            const types = {
+                                free_chat: 'free-chat',
+                                qna: 'qa',
+                                exam_prep: 'exam-prep',
+                                course_chat: 'study-material'
+                            }
+
+                            return (
+                                <ChatSidebarItem
+                                    key={chat.chat_id}
+                                    chat={chat}
+                                    chatType={types[chatType]}
+                                    userRole={userRole}
+                                />
+                            )
+                        })}
+                    </ul>
+                </ScrollArea>
             </AccordionContent>
         </AccordionItem>
     </Accordion>
@@ -61,9 +61,7 @@ export default async function StudentChatSidebar ({ userRole }) {
 
     const chatTypes = {
         free_chat: chats.data.filter(chat => chat.chat_type === 'free_chat'),
-        qna: chats.data.filter(chat => chat.chat_type === 'q&a'),
-        exam_prep: chats.data.filter(chat => chat.chat_type === 'exam_prep'),
-        course_chat: chats.data.filter(chat => chat.chat_type === 'course_convo')
+        exam_prep: chats.data.filter(chat => chat.chat_type === 'exam_prep')
     }
 
     return (
