@@ -478,8 +478,8 @@ export async function continueConversation (
                             isUser={false}
                         >
                             <ExamnSuggestions
+                                // @ts-expect-error
                                 suggestions={suggestions}
-                            // onSuggestionClick={(title) => console.log(title)}
                             />
                         </Message>
                     )
