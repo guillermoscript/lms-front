@@ -5,11 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function ExamFeedbackCard ({
-    score,
-    overallFeedback,
-    questionAndAnswerFeedback
-}: {
+interface ExamFeedbackCardProps {
     score: number
     overallFeedback: string
     questionAndAnswerFeedback: Array<{
@@ -18,7 +14,13 @@ export default function ExamFeedbackCard ({
         correctAnswer: string
         feedback: string
     }>
-}) {
+}
+
+export default function ExamFeedbackCard ({
+    score,
+    overallFeedback,
+    questionAndAnswerFeedback
+}: ExamFeedbackCardProps) {
     return (
         <div className='flex flex-col gap-4 w-full'>
             <Alert
