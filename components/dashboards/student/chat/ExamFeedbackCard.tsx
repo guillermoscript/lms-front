@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface ExamFeedbackCardProps {
-    score: number
-    overallFeedback: string
+    score?: number
+    overallFeedback?: string
     questionAndAnswerFeedback: Array<{
         question: string
         answer: string
@@ -24,20 +24,22 @@ export default function ExamFeedbackCard ({
     return (
         <div className='flex flex-col gap-4 w-full'>
             <Alert
-                className='my-4'
+                className='my-4 p-2'
                 variant={score >= 10 && score <= 15 ? 'warning' : score < 10 ? 'destructive' : 'success'}
             >
                 {score >= 10 && score <= 15 ? (
-                    <Check className='w-6 h-6 text-yellow-500' />
+                    <Check className='w-4 h-4 text-yellow-500' />
                 ) : score < 10 ? (
-                    <XCircleIcon className='w-6 h-6 text-destructive' />
+                    <XCircleIcon className='w-4 h-4 text-destructive' />
                 ) : (
-                    <CheckCircle className='w-6 h-6 text-green-500' />
+                    <CheckCircle className='w-4 h-4 text-green-500' />
                 )}
-                <AlertTitle>
-                            Your score is {score}
-                </AlertTitle>
-                <AlertDescription>
+                {score && (
+                    <AlertTitle className='text-lg'>
+                 Your score is {score}
+                    </AlertTitle>
+                )}
+                <AlertDescription >
                     {overallFeedback}
                 </AlertDescription>
             </Alert>
