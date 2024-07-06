@@ -11,6 +11,7 @@ import { z } from 'zod'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
 import ExamFeedbackCard from '@/components/dashboards/student/chat/ExamFeedbackCard'
+import ExamnSuggestions from '@/components/dashboards/student/chat/ExamnSuggestions'
 import ExamPrepAiComponent from '@/components/dashboards/student/chat/ExamPrepAiComponent'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
@@ -57,7 +58,15 @@ export async function continueConversation (
             }))
         ],
         temperature: 0.3,
-        initial: (<ChatLoadingSkeleton />),
+        initial: (
+            <Message
+                sender={'assistant'}
+                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                isUser={false}
+            >
+                <ChatLoadingSkeleton />
+            </Message>
+        ),
         system: `\
             You are a teacher and you must give feedback and a grade to the student based on the exam he took
             You and the user can discuss the exam and the student's performance
@@ -97,7 +106,13 @@ export async function continueConversation (
             }
 
             return (
-                <ViewMarkdown markdown={content}/>
+                <Message
+                    sender={'assistant'}
+                    time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                    isUser={false}
+                >
+                    <ViewMarkdown markdown={content}/>
+                </Message>
             )
         },
         tools: {
@@ -178,7 +193,16 @@ export async function continueConversation (
                         ]
                     })
 
-                    yield <ChatLoadingSkeleton />
+                    yield (
+                        <Message
+                            sender={'assistant'}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+
+                            <ChatLoadingSkeleton />
+                        </Message>
+                    )
 
                     const aiMessageInsert = await supabase.from('messages').insert([
                         {
@@ -219,14 +243,20 @@ export async function continueConversation (
                     ])
 
                     return (
-                        <ExamPrepAiComponent
+                        <Message
+                            sender={'assistant'}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+                            <ExamPrepAiComponent
                             // @ts-expect-error
-                            singleSelectQuestions={singleSelectQuestion}
-                            // @ts-expect-error
-                            multipleChoiceQuestions={multipleChoiceQuestion}
-                            // @ts-expect-error
-                            freeTextQuestions={freeTextQuestion}
-                        />
+                                singleSelectQuestions={singleSelectQuestion}
+                                // @ts-expect-error
+                                multipleChoiceQuestions={multipleChoiceQuestion}
+                                // @ts-expect-error
+                                freeTextQuestions={freeTextQuestion}
+                            />
+                        </Message>
                     )
                 }
             },
@@ -288,7 +318,16 @@ export async function continueConversation (
                         ]
                     })
 
-                    yield <ChatLoadingSkeleton />
+                    yield (
+                        <Message
+                            sender={'assistant'}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+
+                            <ChatLoadingSkeleton />
+                        </Message>
+                    )
 
                     const aiMessageInsert = await supabase.from('messages').insert([
                         {
@@ -328,12 +367,121 @@ export async function continueConversation (
                     ])
 
                     return (
-                        <ExamFeedbackCard
-                            score={score}
-                            overallFeedback={overallFeedback}
-                            // @ts-expect-error
-                            questionAndAnswerFeedback={questionAndAnswerFeedback}
-                        />
+                        <Message
+                            sender={'assistant'}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+                            <ExamFeedbackCard
+                                score={score}
+                                overallFeedback={overallFeedback}
+                                // @ts-expect-error
+                                questionAndAnswerFeedback={questionAndAnswerFeedback}
+                            />
+                        </Message>
+                    )
+                }
+            },
+            examnsSuggestions: {
+                description: 'Show the user suggestions for posisble examns he can take',
+                parameters: z.object({
+                    suggestions: z.array(z.object({
+                        title: z.string().describe('The title of the suggestion'),
+                        description: z.string().describe('The description of the suggestion'),
+                        content: z.string().describe('The content of the suggestion'),
+                        difficulty: z.string().describe('The difficulty of the examn')
+                    }))
+                }),
+                generate: async function * ({
+                    suggestions
+                }) {
+                    const toolCallId = generateId()
+
+                    console.log(suggestions)
+
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: generateId(),
+                                role: 'assistant',
+                                content: [
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'examnsSuggestions',
+                                        toolCallId,
+                                        args: {
+                                            suggestions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                id: generateId(),
+                                role: 'tool',
+                                content: [
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'examnsSuggestions',
+                                        toolCallId,
+                                        result: {
+                                            suggestions
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+
+                    yield <ChatLoadingSkeleton />
+
+                    const aiMessageInsert = await supabase.from('messages').insert([
+                        {
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify([
+                                {
+                                    type: 'tool-call',
+                                    toolName: 'examnsSuggestions',
+                                    toolCallId,
+                                    result: {
+                                        suggestions
+                                    }
+                                }
+                            ]),
+                            sender: 'assistant',
+                            created_at: new Date().toISOString()
+                        },
+                        {
+                            chat_id: +aiState.get().chatId,
+                            message: JSON.stringify([
+                                {
+                                    type: 'tool-result',
+                                    toolName: 'examnsSuggestions',
+                                    toolCallId,
+                                    result: {
+                                        suggestions
+                                    }
+                                }
+                            ]),
+                            sender: 'tool',
+                            created_at: new Date().toISOString()
+                        }
+                    ])
+
+                    console.log(suggestions)
+
+                    return (
+                        <Message
+                            sender={'assistant'}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+                            <ExamnSuggestions
+                                suggestions={suggestions}
+                            // onSuggestionClick={(title) => console.log(title)}
+                            />
+                        </Message>
                     )
                 }
             }
@@ -458,6 +606,19 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                               overallFeedback={tool.result.overallFeedback}
                               // @ts-expect-error
                               questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
+                          />
+                      </Message>
+                  ) : tool.toolName === 'examnsSuggestions' ? (
+                      <Message
+                          sender={'assistant'}
+                          time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                          isUser={false}
+                      >
+                          <ExamnSuggestions
+                              // @ts-expect-error
+                              suggestions={tool.result.suggestions}
+                              //   onSuggestionClick={(title) => console.log(title)}
+                              disabled={true}
                           />
                       </Message>
                   ) : null
