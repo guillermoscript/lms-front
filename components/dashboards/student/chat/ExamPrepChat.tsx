@@ -1,11 +1,12 @@
 'use client'
 import { generateId } from 'ai'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
 import { AI, ClientMessage, UIState } from '@/actions/dashboard/ExamPreparationActions'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 import { ChatInput } from '../../Common/chat/chat'
 import Message from '../../Common/chat/Message'
@@ -24,6 +25,7 @@ export default function ExamPrepChat ({
     const [aiState] = useAIState()
     const lastMessage = aiState.messages ? aiState.messages[aiState.messages.length - 1] : null
     const [hideInput, setHideInput] = useState<boolean>(false)
+    const scrollRef = useRef(null)
 
     useEffect(() => {
         if (!lastMessage) return
@@ -35,60 +37,71 @@ export default function ExamPrepChat ({
     }
     , [lastMessage])
 
+    useEffect(() => {
+        if (scrollRef.current) {
+            const scroll = scrollRef.current
+            scroll.scrollTop = scroll.scrollHeight
+        }
+    }, [conversation]) // Dependency array includes conversation to trigger effect on update
+
     return (
-        <div>
-            <h1 className="text-2xl font-bold p-4">Exam Preparation Chat</h1>
+        <div >
             {conversation.length === 0 && (
-                <SuggestionsContainer
-                    suggestions={[
-                        {
-                            title: 'help me creating a basic python examn form',
-                            description:
-                  'This will help you to create a basic python exam form'
-                        },
-                        {
-                            title: 'help me creating a basic Javascipt examn form',
-                            description:
-                  'This will help you to create a basic Javascript exam form'
-                        },
-                        {
-                            title: 'help me creating a basic HTML examn form',
-                            description:
-                  'This will help you to create a basic HTML exam form'
-                        }
-                    ]}
-                    onSuggestionClick={async (suggestion) => {
-                        setIsLoading(true)
-
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
+                <>
+                    <h1 className="text-2xl font-bold p-4">Exam Preparation Chat</h1>
+                    <SuggestionsContainer
+                        suggestions={[
                             {
-                                id: generateId(),
-                                role: 'user',
-                                display: (
-
-                                    <Message
-                                        sender={message.role}
-                                        time={new Date().toDateString()}
-                                        isUser={true}
-                                    >
-                                        <ViewMarkdown markdown={message.content} />
-                                    </Message>
-                                )
+                                title: 'help me creating a basic python examn form',
+                                description:
+                  'This will help you to create a basic python exam form'
+                            },
+                            {
+                                title: 'help me creating a basic Javascipt examn form',
+                                description:
+                  'This will help you to create a basic Javascript exam form'
+                            },
+                            {
+                                title: 'help me creating a basic HTML examn form',
+                                description:
+                  'This will help you to create a basic HTML exam form'
                             }
-                        ])
+                        ]}
+                        onSuggestionClick={async (suggestion) => {
+                            setIsLoading(true)
 
-                        const message = await continueConversation(suggestion)
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            message
-                        ])
-                        setIsLoading(false)
-                    }}
-                />
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+
+                                        <Message
+                                            sender={message.role}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown markdown={message.content} />
+                                        </Message>
+                                    )
+                                }
+                            ])
+
+                            const message = await continueConversation(suggestion)
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                message
+                            ])
+                            setIsLoading(false)
+                        }}
+                    />
+                </>
             )}
-
-            <div className="flex-1 overflow-y-auto p-4 ">
+            <ScrollArea
+                ref={scrollRef} // Add this line
+                className="flex-1 w-full rounded-md border p-4 lg:h-[calc(100vh-8rem)] h-[calc(100vh-4rem)]"
+            >
                 {conversation.length ? (
                     <ChatList messages={conversation} />
                 ) : (
@@ -107,60 +120,64 @@ export default function ExamPrepChat ({
                 {isLoading && (
                     <ChatLoadingSkeleton />
                 )}
-            </div>
+
+                <div className="w-full h-px" />
+            </ScrollArea>
             {!hideInput && (
-                <ChatInput
-                    isLoading={isLoading}
-                    stop={() => setStop(true)}
-                    callbackFunction={async (input) => {
-                        if (stop) return
+                <>
+                    <ChatInput
+                        isLoading={isLoading}
+                        stop={() => setStop(true)}
+                        callbackFunction={async (input) => {
+                            if (stop) return
 
-                        setIsLoading(true)
+                            setIsLoading(true)
 
-                        if (aiState.messages.length === 0 && chatId) {
-                            console.log('First message')
-                            const message = await studentUpdateChatTitle({
-                                chatId,
-                                title: input.content
-                            })
+                            if (aiState.messages.length === 0 && chatId) {
+                                console.log('First message')
+                                const message = await studentUpdateChatTitle({
+                                    chatId,
+                                    title: input.content
+                                })
 
-                            console.log(message)
-                        }
-
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            {
-                                id: generateId(),
-                                role: 'user',
-                                display: (
-                                    <Message
-                                        sender={'user'}
-                                        time={new Date().toDateString()}
-                                        isUser={true}
-                                    >
-                                        <ViewMarkdown markdown={input.content} />
-                                    </Message>
-                                )
+                                console.log(message)
                             }
-                        ])
 
-                        if (chatId) {
-                            const inserUserMessage = await studentInsertChatMessage({
-                                chatId,
-                                message: input.content
-                            })
-                            console.log(inserUserMessage)
-                        }
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+                                        <Message
+                                            sender={'user'}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown markdown={input.content} />
+                                        </Message>
+                                    )
+                                }
+                            ])
 
-                        const message = await continueConversation(input.content)
+                            if (chatId) {
+                                const inserUserMessage = await studentInsertChatMessage({
+                                    chatId,
+                                    message: input.content
+                                })
+                                console.log(inserUserMessage)
+                            }
 
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            message
-                        ])
-                        setIsLoading(false)
-                    }}
-                />
+                            const message = await continueConversation(input.content)
+
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                message
+                            ])
+                            setIsLoading(false)
+                        }}
+                    />
+                </>
             )}
         </div>
     )
@@ -176,11 +193,14 @@ function ChatList ({ messages }: ChatList) {
 
     return (
         <>
-            {messages.map((message, index) => (
-                <div key={index} className="flex flex-col gap-2">
-                    {message.display}
-                </div>
-            ))}
+            <div className="relative">
+
+                {messages.map((message, index) => (
+                    <div key={index} className="flex flex-col gap-2">
+                        {message.display}
+                    </div>
+                ))}
+            </div>
         </>
     )
 }
