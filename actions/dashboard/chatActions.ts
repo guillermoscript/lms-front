@@ -31,7 +31,7 @@ export async function studentCreateNewChat (state: {
     }
 
     // return chat id
-    // revalidatePath('/dashboard/student/chat/', 'layout')
+    revalidatePath('/dashboard/student/chat/', 'layout')
     return createResponse('success', 'Chat created successfully', chatInsert.data, null)
 }
 
