@@ -6,19 +6,6 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 export default async function ExamChatPage () {
-    // const supabase = createClient()
-
-    // const messagesData = await supabase
-    //     .from('messages')
-    //     .select('*')
-    //     // .eq('chat_id', Number(params.chatId))
-    //     .order('created_at', { ascending: true })
-
-    // if (messagesData.error) {
-    //     console.log(messagesData.error)
-    //     throw new Error('Error fetching messages')
-    // }
-
     return (
         <>
             <AI initialAIState={{ chatId: '', messages: [] }}>
