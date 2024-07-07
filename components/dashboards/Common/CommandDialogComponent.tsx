@@ -1,14 +1,12 @@
 'use client'
 
 import {
-    Bell,
-    Calculator,
     CreditCard,
-    Smile,
     User
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
     CommandDialog,
@@ -16,10 +14,8 @@ import {
     CommandGroup,
     CommandInput,
     CommandItem,
-    CommandList,
-    CommandSeparator
+    CommandList
 } from '@/components/ui/command'
-import { useToast } from '@/components/ui/use-toast'
 import { createClient } from '@/utils/supabase/client'
 import { getClientUserRole } from '@/utils/supabase/getClientUserRole'
 
@@ -27,7 +23,6 @@ export function CommandDialogComponent () {
     const [open, setOpen] = useState(false)
     const [userRole, setUserRole] = useState('' as string)
     const [loading, setLoading] = useState(false)
-    const { toast } = useToast()
     const [courses, setCourses] = useState([])
     const [lessons, setLessons] = useState([])
 
@@ -66,11 +61,7 @@ export function CommandDialogComponent () {
 
                 setCourses(courses)
             } catch (error) {
-                toast({
-                    title: 'Error fetching courses',
-                    description: error.message,
-                    variant: 'destructive'
-                })
+                toast.error('Error fetching courses')
             } finally {
                 setLoading(false)
             }
@@ -91,26 +82,6 @@ export function CommandDialogComponent () {
                 <CommandInput placeholder="Type a command or search..." />
                 <CommandList>
                     <CommandEmpty>No results found.</CommandEmpty>
-                    <CommandGroup heading="Suggestions">
-                        <CommandItem>
-                            <Link
-                                className='flex items-center gap-2'
-                                href="/dashboard/notifications"
-                            >
-                                <Bell className="mr-2 h-4 w-4" />
-                                <span>Notifications</span>
-                            </Link>
-                        </CommandItem>
-                        <CommandItem>
-                            <Smile className="mr-2 h-4 w-4" />
-                            <span>Search Emoji</span>
-                        </CommandItem>
-                        <CommandItem>
-                            <Calculator className="mr-2 h-4 w-4" />
-                            <span>Calculator</span>
-                        </CommandItem>
-                    </CommandGroup>
-                    <CommandSeparator />
                     <CommandGroup heading="Settings">
                         <CommandItem>
                             <Link
