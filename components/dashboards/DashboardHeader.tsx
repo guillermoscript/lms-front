@@ -62,6 +62,7 @@ export default async function DashboardHeader () {
                             <MessageCircleIcon className="h-6 w-6" />
                             <span>Chat</span>
                         </Link>
+                        <DarkThemeToggle />
                     </div>
 
                 </SheetContent>
