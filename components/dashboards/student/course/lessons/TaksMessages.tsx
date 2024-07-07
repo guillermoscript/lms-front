@@ -1,5 +1,5 @@
 'use client'
-import { nanoid } from 'ai'
+import { generateId } from 'ai'
 import { useChat } from 'ai/react'
 import { useState } from 'react'
 
@@ -23,11 +23,11 @@ function useChatLogic (
         maxAutomaticRoundtrips: 5,
         body: { lessonId },
         initialMessages: [
-            { role: 'assistant', content: systemPrompt, id: nanoid() },
+            { role: 'system', content: systemPrompt, id: generateId() },
             ...initialMessages.map((msg) => ({
                 role: msg.sender,
                 content: msg.message,
-                id: nanoid()
+                id: generateId()
             }))
         ],
         onError (error) {
