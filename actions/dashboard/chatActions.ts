@@ -174,5 +174,6 @@ export async function deleteChat (state: {
         return createResponse('error', 'Error deleting chat', null, 'Error deleting chat')
     }
 
+    revalidatePath('/dashboard/student/chat/', 'layout')
     return createResponse('success', 'Chat deleted successfully', null, null)
 }
