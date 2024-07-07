@@ -196,7 +196,18 @@ const ChatInput = ({
           Send
                 </Button>
             )}
+            <DisclaimerForUser />
         </form>
+    )
+}
+
+function DisclaimerForUser () {
+    return (
+        <div className="flex-1 flex items-center justify-center my-4">
+            <p className="text-sm">
+                LLMs can make mistakes. Verify important information.
+            </p>
+        </div>
     )
 }
 
