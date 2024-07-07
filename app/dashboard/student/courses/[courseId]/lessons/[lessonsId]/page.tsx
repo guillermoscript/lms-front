@@ -20,6 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
+export const metadata = {
+    title: 'Student Lesson Page',
+    description: 'View and track your progress through the lesson.'
+}
+
 // Force the page to be dynamic and allow streaming responses up to 30 seconds
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30

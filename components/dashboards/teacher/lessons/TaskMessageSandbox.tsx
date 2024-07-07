@@ -1,5 +1,5 @@
 'use client'
-import { nanoid } from 'ai'
+import { generateId } from 'ai'
 import { useChat } from 'ai/react'
 import { useState } from 'react'
 
@@ -19,7 +19,7 @@ function useChatLogic (systemPrompt: string) {
         api: '/api/lessons/chat/teacher',
         maxAutomaticRoundtrips: 5,
         initialMessages: [
-            { role: 'assistant', content: systemPrompt, id: nanoid() }
+            { role: 'system', content: systemPrompt, id: generateId() }
         ],
         onError (error) {
             console.log(error)

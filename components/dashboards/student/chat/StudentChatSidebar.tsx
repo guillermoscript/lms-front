@@ -1,39 +1,22 @@
-import dayjs from 'dayjs'
-import Link from 'next/link'
+import { CaretSortIcon } from '@radix-ui/react-icons'
 
+import ChatSidebarItem from '@/components/dashboards/student/chat/ChatSidebarItem'
 import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger
-} from '@/components/ui/accordion'
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger
+} from '@/components/ui/collapsible'
+import {
+    Command,
+    CommandEmpty,
+    CommandInput,
+    CommandItem,
+    CommandList
+} from '@/components/ui/command'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
-const ChatAccordion = ({ chatType, userRole, chats }) => (
-    <Accordion className='w-full' type="single" collapsible>
-        <AccordionItem className='w-full' value={`item-${chatType}`}>
-            <AccordionTrigger>{chatType.replace('_', ' ')}</AccordionTrigger>
-            <AccordionContent>
-                <ul className='w-full flex flex-col gap-3 overflow-auto'>
-                    {chats.map((chat: Tables<'chats'>) => (
-                        <li
-                            className='w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis'
-                            key={chat.chat_id}
-                        >
-                            <Link href={`/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`}>
-                                {chat.title}
-                            </Link>
-                            <p className='text-sm text-gray-500 dark:text-gray-400'>
-                                {dayjs(chat.created_at).format('MMM D, YYYY')}
-                            </p>
-                        </li>
-                    ))}
-                </ul>
-            </AccordionContent>
-        </AccordionItem>
-    </Accordion>
-)
+import StudentCreateNewChat from './StudentCreateNewChat'
 
 export default async function StudentChatSidebar ({ userRole }) {
     const supabase = createClient()
@@ -51,17 +34,63 @@ export default async function StudentChatSidebar ({ userRole }) {
     }
 
     const chatTypes = {
-        free_chat: chats.data.filter(chat => chat.chat_type === 'free_chat'),
-        qna: chats.data.filter(chat => chat.chat_type === 'q&a'),
-        exam_prep: chats.data.filter(chat => chat.chat_type === 'exam_prep'),
-        course_chat: chats.data.filter(chat => chat.chat_type === 'course_convo')
+        free_chat: chats.data.filter((chat) => chat.chat_type === 'free_chat'),
+        exam_prep: chats.data.filter((chat) => chat.chat_type === 'exam_prep')
     }
 
     return (
-        <nav className="flex flex-col gap-2 h-auto justify-start w-full border-none px-4 py-2 items-start bg-gray-100/40 dark:bg-gray-800/40">
-            {Object.entries(chatTypes).map(([type, chats]) => (
-                <ChatAccordion key={type} chatType={type} userRole={userRole} chats={chats} />
-            ))}
+        <nav className="flex flex-col gap-2 h-auto justify-start w-full border-none items-start ">
+            <Command
+                className='bg-gray-100/40 dark:bg-gray-800/40 border rounded-lg w-full'
+            >
+                <CommandInput placeholder="Type to search..." />
+                <CommandList className="w-full p-2 max-h-[calc(100vh-4rem)] overflow-y-auto ">
+                    <CommandEmpty>No results found.</CommandEmpty>
+                    <CommandItem asChild>
+                        <StudentCreateNewChat />
+                    </CommandItem>
+                    {Object.entries(chatTypes).map(([type, chats]) => {
+                        return (
+                            <Collapsible
+                                defaultOpen={true}
+                                className="w-full"
+                            >
+                                <CollapsibleTrigger
+                                    className="w-full text-md font-semibold capitalize flex items-center justify-between p-2 px-2 rounded-lg my-2 hover:bg-opacity-10 dark:hover:bg-opacity-10 hover:bg-gray-400 dark:hover:bg-gray-200"
+                                >
+                                    <p>
+                                        {type.replace('_', ' ')}
+                                    </p>
+                                    <CaretSortIcon className="h-4 w-4" />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent
+                                    className='border-y border-gray-400 dark:border-gray-200'
+                                >
+                                    {chats.map((chat: Tables<'chats'>) => {
+                                        const types = {
+                                            free_chat: 'free-chat',
+                                            qna: 'qa',
+                                            exam_prep: 'exam-prep',
+                                            course_chat: 'study-material'
+                                        }
+
+                                        return (
+                                            <CommandItem value={chat.chat_id.toString()}>
+                                                <ChatSidebarItem
+                                                    key={chat.chat_id}
+                                                    chat={chat}
+                                                    chatType={types[type]}
+                                                    userRole={userRole}
+                                                />
+                                            </CommandItem>
+                                        )
+                                    })}
+                                </CollapsibleContent>
+                            </Collapsible>
+                        )
+                    })}
+                </CommandList>
+            </Command>
         </nav>
     )
 }

@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js'
 import dayjs from 'dayjs'
 import { Edit3, Flag, Reply } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { addReactionToComment } from '@/actions/dashboard/studentActions'
 import CommentEditor from '@/components/dashboards/student/course/lessons/CommentEditor'
@@ -13,7 +14,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
-import { useToast } from '@/components/ui/use-toast'
 import { reactionTypes } from '@/utils/const'
 import { Tables } from '@/utils/supabase/supabase'
 
@@ -54,7 +54,6 @@ const CommentCard = ({
 }) => {
     const [showReplies, setShowReplies] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
-    const { toast } = useToast()
 
     const toggleReplies = () => setShowReplies(!showReplies)
     const toggleEdit = () => setIsEditing(!isEditing)
@@ -75,15 +74,10 @@ const CommentCard = ({
               : response.message,
                 variant: response.status === 'success' ? null : 'destructive'
             }
-            toast(toastMessage as any)
+            toast.success(toastMessage as any)
         } catch (error) {
             console.error(error)
-            toast({
-                title: 'Error',
-                description:
-          'An error occurred while adding reaction. Please try again.',
-                variant: 'destructive'
-            })
+            toast.error('An error occurred while adding reaction. Please try again.')
         }
     }
 

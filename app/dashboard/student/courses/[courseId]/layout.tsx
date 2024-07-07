@@ -2,6 +2,11 @@
 import EnrollCard from '@/components/dashboards/student/course/EnrollCard'
 import { createClient } from '@/utils/supabase/server'
 
+export const metadata = {
+    title: 'Courses Page Layout',
+    description: 'Courses page layout for student'
+}
+
 export default async function CoursesPageLayout ({
     children,
     params

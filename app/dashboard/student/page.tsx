@@ -1,7 +1,7 @@
 import { BookTextIcon } from 'lucide-react'
 
+import AllCoursesCard from '@/components/dashboards/student/course/AllCoursesCard'
 import CourseCard from '@/components/dashboards/student/course/CourseCard'
-import EnrollButton from '@/components/dashboards/student/course/EnrollButton'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -14,10 +14,6 @@ import { createClient } from '@/utils/supabase/server'
 export default async function CoursesStudentPage () {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
-
-    if (user.error != null) {
-        throw new Error(user.error.message)
-    }
 
     const userCourses = await supabase
         .from('enrollments')
@@ -116,51 +112,5 @@ export default async function CoursesStudentPage () {
                 </div>
             )}
         </>
-    )
-}
-
-async function AllCoursesCard ({
-    supabase,
-    userId
-}: {
-    supabase: any
-    userId: string
-}) {
-    const allCourses = await supabase
-        .from('courses')
-        .select('*, lessons(*), exams(*), enrollments(*)')
-        .eq('status', 'published')
-        .eq('enrollments.user_id', userId)
-
-    if (allCourses.error != null) {
-        throw new Error(allCourses.error.message)
-    }
-
-    return allCourses.data.map((course) => {
-        return (
-            <>
-                <CourseCard
-                    title={course.title}
-                    progress={75}
-                    description={course.description}
-                    totalLessons={course.lessons.length}
-                    completedLessons={18}
-                    completedTests={5}
-                    totalTests={course.exams.length}
-                    approvedTests={4}
-                    courseId={course.course_id}
-                    img={course.thumbnail_url}
-                >
-                    {
-                        course.enrollments.length === 0 ? (
-                            <EnrollButton
-                                courseId={course.course_id}
-                            />
-                        ) : null
-                    }
-                </CourseCard>
-            </>
-        )
-    }
     )
 }

@@ -12,6 +12,11 @@ import {
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
+export const metadata = {
+    title: 'Student Course Lessons',
+    description: 'View and track your progress through the course lessons.'
+}
+
 export default async function StudentCourseLessonsPage ({
     params
 }: {

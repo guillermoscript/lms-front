@@ -24,7 +24,7 @@ export default async function CoursesLayout ({
 
     return (
         <div className='flex flex-col gap-4 p-4'>
-            <h1 className="text-2xl font-semibold text-gray-800">
+            <h1 className="text-2xl font-semibold">
                 {chatData.data.title}
             </h1>
             {children}
