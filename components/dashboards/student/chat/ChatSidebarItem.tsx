@@ -3,6 +3,7 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import dayjs from 'dayjs'
 import { Check, CircleSlashedIcon, MoreHorizontalIcon, Trash } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
 import { deleteChat, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
@@ -24,6 +25,7 @@ import {
     PopoverTrigger
 } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/utils'
 
 export default function ChatSidebarItem ({
     chat,
@@ -40,11 +42,12 @@ export default function ChatSidebarItem ({
 }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isUpdate, setIsUpdate] = useState(false)
+    const router = usePathname()
 
     const chatId = Number(chat.chat_id)
     if (isLoading) {
         return (
-            <div className="w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis">
+            <div className="w-full p-2 rounded-lg overflow-hidden text-ellipsis">
                 <Skeleton className="w-full h-8" />
             </div>
         )
@@ -97,11 +100,14 @@ export default function ChatSidebarItem ({
 
     return (
         <li
-            className="w-full hover:text-gray-900 hover:bg-gray-200 dark:hover:text-gray-50 dark:hover:bg-gray-700 p-2 rounded-lg overflow-hidden text-ellipsis"
+            className="w-full p-2 rounded-lg overflow-hidden text-ellipsis"
             key={chat.chat_id}
         >
             <Link
-                className="text-md font-semibold text-gray-900 dark:text-gray-50 capitalize"
+                className={cn(
+                    'text-md font-semibold text-gray-900 dark:text-gray-50 capitalize hover:underline',
+                    router === `/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}` ? 'dark:text-primary text-primary' : ''
+                )}
                 href={`/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`}
             >
                 {chat.title}
@@ -114,10 +120,16 @@ export default function ChatSidebarItem ({
                     <PopoverTrigger>
                         <MoreHorizontalIcon className="h-5 w-5" />
                     </PopoverTrigger>
-                    <PopoverContent className="flex gap-4 p-2 w-fit">
+                    <PopoverContent className="flex flex-col gap-4 p-3 w-fit">
                         <AlertDialog>
-                            <AlertDialogTrigger>
+                            <AlertDialogTrigger
+                                className='flex gap-2 items-center'
+                            >
                                 <Trash className="h-5 w-5" />
+
+                                <p>
+                    Delete
+                                </p>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -145,11 +157,20 @@ export default function ChatSidebarItem ({
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
-                        <UpdateIcon
-
+                        <button
                             onClick={() => setIsUpdate(true)}
-                            className="h-5 w-5"
-                        />
+
+                            className="flex gap-2 items-center"
+                        >
+
+                            <UpdateIcon
+
+                                className="h-5 w-5"
+                            />
+                            <p>
+                Update
+                            </p>
+                        </button>
                     </PopoverContent>
                 </Popover>
             </div>
