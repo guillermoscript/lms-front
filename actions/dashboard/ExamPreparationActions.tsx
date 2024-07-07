@@ -74,10 +74,12 @@ export async function continueConversation (
             Messages inside [] means that it's a UI element or a user event. For example:
             - [showExamnForm] means that the user will see an exam form and fill it out
             - [showExamnResult] means that the user will see the result of the exam he took
+            - [examnsSuggestions] means that the user will see suggestions for exams he can take
 
-            If the user requests a exam, call \`showExamnForm\` to show the exam form.
+            If the user requests a exam or quiz, call \`showExamnForm\` to show the exam form. after an exan is taken, call \`showExamnResult\` to show the result of the exam.
+            As a teacher, if the user ask for an exam but is vague, you can suggest exams to the user by calling \`examnsSuggestions\` or if the user is asking for suggestions.
 
-            Besides that, you can also chat with users
+            Besides that, you can also chat with users about possible topics for exams, or any other topic you want to discuss with the user that goes along with the exam preparation as this is a exam preparation chat.
         `,
         text: async function * ({ content, done }) {
             if (done) {
@@ -144,15 +146,31 @@ export async function continueConversation (
                     freeTextQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
                         label: z.string().describe('The question text for the user to answer')
-                        // placeholder: z.string().describe('The place holder of the question')
+                    })),
+                    matchingTextQuestions: z.array(z.object({
+                        id: z.string().describe('The id of the question'),
+                        leftColumn: z.array(z.object({
+                            id: z.string().describe('The id of the left column item'),
+                            text: z.string().describe('The text in the left column')
+                        })),
+                        rightColumn: z.array(z.object({
+                            id: z.string().describe('The id of the right column item'),
+                            text: z.string().describe('The text in the right column'),
+                            matchedWith: z.string().describe('The id of the matching left column item')
+                        }))
+                    }).refine((value) => value.id !== undefined, {
+                        message: 'Each matching text question must have an id.'
                     }))
                 }),
                 generate: async function * ({
                     singleSelectQuestion,
                     multipleChoiceQuestion,
-                    freeTextQuestion
+                    freeTextQuestion,
+                    matchingTextQuestions
                 }) {
                     const toolCallId = generateId()
+
+                    console.log(matchingTextQuestions)
 
                     aiState.done({
                         ...aiState.get(),
@@ -169,7 +187,8 @@ export async function continueConversation (
                                         args: {
                                             singleSelectQuestion,
                                             multipleChoiceQuestion,
-                                            freeTextQuestion
+                                            freeTextQuestion,
+                                            matchingTextQuestions
                                         }
                                     }
                                 ]
@@ -185,7 +204,8 @@ export async function continueConversation (
                                         result: {
                                             singleSelectQuestion,
                                             multipleChoiceQuestion,
-                                            freeTextQuestion
+                                            freeTextQuestion,
+                                            matchingTextQuestions
                                         }
                                     }
                                 ]
@@ -215,7 +235,8 @@ export async function continueConversation (
                                     result: {
                                         singleSelectQuestion,
                                         multipleChoiceQuestion,
-                                        freeTextQuestion
+                                        freeTextQuestion,
+                                        matchingTextQuestions
                                     }
                                 }
                             ]),
@@ -232,7 +253,8 @@ export async function continueConversation (
                                     result: {
                                         singleSelectQuestion,
                                         multipleChoiceQuestion,
-                                        freeTextQuestion
+                                        freeTextQuestion,
+                                        matchingTextQuestions
                                     }
                                 }
                             ]),
@@ -255,6 +277,8 @@ export async function continueConversation (
                                 multipleChoiceQuestions={multipleChoiceQuestion}
                                 // @ts-expect-error
                                 freeTextQuestions={freeTextQuestion}
+                                // @ts-expect-error
+                                matchingTextQuestions={matchingTextQuestions}
                             />
                         </Message>
                     )
@@ -263,13 +287,13 @@ export async function continueConversation (
             showExamnResult: {
                 description: 'Show the user the result of the exam he took',
                 parameters: z.object({
-                    score: z.number().int().min(1).max(20).describe('The grade of the student in the exam with a scale from 1 to 20'),
+                    score: z.number().int().describe('The grade of the student in the exam with a scale from 0 to 20'),
                     overallFeedback: z.string().describe('The overall feedback for the student in the exam, if the student did well or not'),
                     questionAndAnswerFeedback: z.array(z.object({
-                        question: z.string().describe('The question'),
+                        question: z.string().describe('The original question'),
                         answer: z.string().describe('The answer the student gave'),
                         correctAnswer: z.string().describe('The correct answer of the question'),
-                        feedback: z.string().describe('The feedback for the question and answer the student gave in the exam')
+                        feedback: z.string().describe('The feedback for the question the student gave')
                     }))
                 }),
                 generate: async function * ({
@@ -317,6 +341,8 @@ export async function continueConversation (
                             }
                         ]
                     })
+
+                    console.log(questionAndAnswerFeedback)
 
                     yield (
                         <Message
@@ -383,7 +409,7 @@ export async function continueConversation (
                 }
             },
             examnsSuggestions: {
-                description: 'Show the user suggestions for posisble examns he can take',
+                description: 'Show the user suggestions for exams he can take',
                 parameters: z.object({
                     suggestions: z.array(z.object({
                         title: z.string().describe('The title of the suggestion'),
@@ -590,6 +616,8 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                               multipleChoiceQuestions={tool.result.multipleChoiceQuestion}
                               // @ts-expect-error
                               freeTextQuestions={tool.result.freeTextQuestion}
+                              // @ts-expect-error
+                              matchingTextQuestions={tool.result.matchingTextQuestions}
                               hideSubmit={isNextMessageAShowExamnResult}
                           />
                       </Message>
