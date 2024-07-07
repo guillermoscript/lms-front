@@ -1,8 +1,9 @@
 // UI Components
 
+import { MDXEditorMethods } from '@mdxeditor/editor'
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
@@ -157,6 +158,7 @@ const ChatInput = ({
     callbackFunction: (MessageType: MessageType) => void
 }) => {
     const [message, setMessage] = useState<string>('')
+    const ref = useRef<MDXEditorMethods>(null)
 
     return (
         <form
@@ -169,6 +171,7 @@ const ChatInput = ({
                     id: generateId()
                 })
                 setMessage('')
+                ref.current?.setMarkdown('')
             }}
             className="py-4 flex gap-2 flex-col w-full"
         >
@@ -180,6 +183,7 @@ const ChatInput = ({
                 placeholder="Chat with the AI assistant"
                 markdown={message}
                 onChange={(value) => setMessage(value)}
+                ref={ref}
             />
             <input type="hidden" value={message} />
             {isLoading ? (
