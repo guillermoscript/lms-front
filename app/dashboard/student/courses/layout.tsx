@@ -1,5 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
 
+export const metadata = {
+    title: 'Courses Layout',
+    description: 'Layout for courses'
+}
+
 export default async function CoursesLayout ({
     children
 }: {
