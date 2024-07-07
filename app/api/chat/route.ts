@@ -23,10 +23,6 @@ export async function POST (req: Request) {
         async onFinish (event) {
             const lastUserMessage = messages[messages.length - 1]
 
-            console.log(messages)
-
-            console.log(lastUserMessage)
-
             const chat_id = chatId ?? (await supabase.from('chats').select('chat_id').eq('title', lastUserMessage.content).single()).data.chat_id
 
             console.log(chat_id)
@@ -50,8 +46,6 @@ export async function POST (req: Request) {
             if (messageInsert.error) {
                 console.log('Error creating message', messageInsert.error)
             }
-
-            console.log('Message sent successfully')
         }
     })
 
