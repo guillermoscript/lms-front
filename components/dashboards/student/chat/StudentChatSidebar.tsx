@@ -16,6 +16,8 @@ import {
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
+import StudentCreateNewChat from './StudentCreateNewChat'
+
 export default async function StudentChatSidebar ({ userRole }) {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
@@ -42,9 +44,11 @@ export default async function StudentChatSidebar ({ userRole }) {
                 className='bg-gray-100/40 dark:bg-gray-800/40 border rounded-lg w-full'
             >
                 <CommandInput placeholder="Type to search..." />
-                <CommandList className="w-full px-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                <CommandList className="w-full p-2 max-h-[calc(100vh-4rem)] overflow-y-auto ">
                     <CommandEmpty>No results found.</CommandEmpty>
-
+                    <CommandItem asChild>
+                        <StudentCreateNewChat />
+                    </CommandItem>
                     {Object.entries(chatTypes).map(([type, chats]) => {
                         return (
                             <Collapsible
