@@ -5,23 +5,40 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { AI } from '@/actions/dashboard/ExamPreparationActions'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/utils'
 import { FreeTextQuestion, MultipleChoiceQuestion as typeMultipleChoiceQuestion, SingleSelectQuestion as typeSingleSelectQuestion } from '@/utils/types'
+
+import ChatLoadingSkeleton from './ChatLoadingSkeleton'
+
+interface MatchingTextQuestion {
+    id: string
+    leftColumn: Array<{
+        id: string
+        text: string
+    }>
+    rightColumn: Array<{
+        id: string
+        text: string
+        matchedWith: string
+    }>
+}
 
 export default function ExamPrepAiComponent ({
     singleSelectQuestions,
     freeTextQuestions,
     multipleChoiceQuestions,
+    matchingTextQuestions,
     hideSubmit
 }: {
     singleSelectQuestions: typeSingleSelectQuestion[]
     freeTextQuestions: FreeTextQuestion[]
     multipleChoiceQuestions: typeMultipleChoiceQuestion[]
+    matchingTextQuestions?: MatchingTextQuestion[]
     hideSubmit?: boolean
 }) {
     const form = useForm()
@@ -33,11 +50,14 @@ export default function ExamPrepAiComponent ({
     async function onSubmit (data: any) {
         const submission: Record<string, any> = {}
 
+        console.log('data', data)
+
         // Single Select Questions
         singleSelectQuestions.forEach(question => {
             if (data[question.id]) {
                 submission[question.id] = {
                     question: question.text,
+                    type: 'Single Select',
                     answer: data[question.id]
                 }
             }
@@ -48,6 +68,7 @@ export default function ExamPrepAiComponent ({
             if (data[question.id]) {
                 submission[question.id] = {
                     question: question.label,
+                    type: 'Free Text',
                     answer: data[question.id]
                 }
             }
@@ -55,44 +76,74 @@ export default function ExamPrepAiComponent ({
 
         // Multiple Choice Questions
         multipleChoiceQuestions.forEach(question => {
-            question.options.forEach(option => {
-                if (data[option.id]) {
-                    if (!submission[question.id]) {
-                        submission[question.id] = {
-                            question: question.label,
-                            answers: [],
-                            questionOptions: question.options.map(o => o.text)
-                        }
-                    }
-                    submission[question.id].answers.push(option.text)
+            const selectedOptions = data[question.id] || []
+            if (selectedOptions.length > 0) {
+                submission[question.id] = {
+                    question: question.label,
+                    type: 'Multiple Choice',
+                    answers: selectedOptions.map((optionId: string) => {
+                        const option = question.options.find(opt => opt.id === optionId)
+                        return option ? option.text : 'Unknown Option'
+                    })
+                }
+            }
+        })
+
+        // Matching Text Questions
+        matchingTextQuestions?.forEach(question => {
+            const answers: Record<string, string> = {}
+            const correctAnswers: Record<string, string> = {}
+            question.leftColumn.forEach(leftItem => {
+                const rightItem = question.rightColumn.find(item => item.id === data[leftItem.id])
+                if (rightItem) {
+                    answers[leftItem.text] = rightItem.text
+                    correctAnswers[leftItem.text] = question.rightColumn.find(item => item.matchedWith === leftItem.id)?.text || ''
                 }
             })
+            submission[question.id] = {
+                question: question.id,
+                type: 'Matching Text',
+                userAnswers: answers,
+                correctAnswers
+            }
         })
 
         console.log(submission)
 
-        try {
-            const content = `The student anwsered the following questions: ${Object.values(
-                submission
-            )
-                .map((item) => item.question)
-                .join(', ')}
-                ${Object.values(submission)
+        const content = `The student answered the following questions:
+
+    ${Object.values(submission)
         .map((item) => {
-            if (Array.isArray(item.answers)) {
-                return (
-                    'Answer: ' +
-                        item.answers.join(', ') +
-                        ` Options: ${item.questionOptions.join(', ')}`
-                )
+            if (item.type === 'Matching Text') {
+                return `
+        Question Type: Matching Text
+        Question ID: ${item.question}
+        User Answers: ${JSON.stringify(item.userAnswers, null, 2)}
+        Correct Answers: ${JSON.stringify(item.correctAnswers, null, 2)}
+        `
+            } else if (item.type === 'Multiple Choice') {
+                return `
+        Question Type: Multiple Choice
+        Question: ${item.question}
+        User Answers: ${JSON.stringify(item.answers, null, 2)}
+        `
             } else {
-                return `Answer: ${item.answer}`
+                return `
+        Question Type: ${item.type}
+        Question: ${item.question}
+        User Answer: ${item.answer}
+        `
             }
         })
-        .join(', ')}.
-            this is the object: ${JSON.stringify(submission)}
+        .join('')}.
+        This is the object of the user submission: ${JSON.stringify(submission, null, 2)}
+
+        [showExamnResult, please call the function \`showExamnResult\` with the user submission object as the argument.]
         `
 
+        console.log(content)
+
+        try {
             const { display } = await continueConversation(content)
 
             setMessages((messages) => {
@@ -103,6 +154,7 @@ export default function ExamPrepAiComponent ({
                 }]
             })
             setIsFinished(true)
+            console.log(content)
         } catch (error) {
             console.error(error)
         }
@@ -111,96 +163,258 @@ export default function ExamPrepAiComponent ({
     return (
         <>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-                    {singleSelectQuestions.length > 0 && singleSelectQuestions.map(question => (
-                        <Card key={question.id}>
-                            <CardHeader>
-                                <CardTitle>True or False</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-4">
-                                <>
-                                    <h4 className="text-sm font-semibold">{question.text}</h4>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            disabled={isFinished}
-                                            type="radio" id={`${question.id}-true`} value="True" name={question.id} {...form.register(`${question.id}`)}
-                                        />
-                                        <label htmlFor={`${question.id}-true`}>True</label>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            disabled={isFinished}
-                                            type="radio" id={`${question.id}-false`} value="False" name={question.id} {...form.register(`${question.id}`)}
-                                        />
-                                        <label htmlFor={`${question.id}-false`}>False</label>
-                                    </div>
-                                </>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 my-4">
+                    {singleSelectQuestions.length > 0 && singleSelectQuestions.map(question => {
+                        return <TrueFalseQuestion key={question.id} question={question} isFinished={isFinished} form={form} />
+                    })}
 
-                    {freeTextQuestions.length > 0 && freeTextQuestions.map(question => (
-                        <Card key={question.id}>
-                            <CardHeader>
-                                <CardTitle>Fill in the Blank</CardTitle>
-                            </CardHeader>
-                            <CardContent
-                                className="flex flex-col gap-4"
-                            >
-                                <Label htmlFor={question.id}>{question.label}</Label>
-                                <Textarea
-                                    disabled={isFinished}
+                    {freeTextQuestions.length > 0 && freeTextQuestions.map(question => {
+                        return <FreeTextQuestionComponent key={question.id} question={question} isFinished={isFinished} form={form} />
+                    })}
 
-                                    id={question.id} {...form.register(question.id)}
-                                />
+                    {multipleChoiceQuestions.length > 0 && multipleChoiceQuestions.map(question => {
+                        return <MultipleChoiceQuestionComponent key={question.id} question={question} isFinished={isFinished} form={form} />
+                    })}
 
-                            </CardContent>
-                        </Card>
-                    ))}
-
-                    {multipleChoiceQuestions.length > 0 && multipleChoiceQuestions.map(question => (
-                        <Card key={question.id}>
-                            <CardHeader>
-                                <CardTitle>Multiple Choice</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-2">
-                                <h4 className="text-sm font-semibold">{question.label}</h4>
-                                {question.options.map(option => (
-                                    <div className="flex items-center gap-2" key={option.id}>
-                                        <input
-                                            disabled={isFinished}
-                                            type="checkbox" id={option.id} value={option.id} {...form.register(option.id)}
-                                        />
-                                        <label htmlFor={option.id}>{option.text}</label>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {matchingTextQuestions?.length > 0 && matchingTextQuestions.map(question => {
+                        return <MatchingTextQuestionComponent key={question.id} question={question} isFinished={isFinished} form={form} />
+                    })}
 
                     {
                         !isFinished && (
-                            <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">Submit</Button>
+                            <Button disabled={form.formState.isSubmitting} variant='secondary' type="submit">
+                                {isLoading ? 'Submitting...' : 'Submit'}
+                            </Button>
                         )
                     }
 
                     {isLoading && (
-                        <div className="space-y-2 w-full">
-                            <Skeleton className="h-6 rounded mr-14" />
-                            <div className="grid grid-cols-3 gap-4">
-                                <Skeleton className="h-6 rounded col-span-2" />
-                                <Skeleton className="h-6 rounded col-span-1" />
-                            </div>
-                            <div className="grid grid-cols-4 gap-4">
-                                <Skeleton className="h-6 rounded col-span-1" />
-                                <Skeleton className="h-6 rounded col-span-2" />
-                                <Skeleton className="h-6 rounded col-span-1 mr-4" />
-                            </div>
-                            <Skeleton className="h-6 rounded" />
-                        </div>
+                        <ChatLoadingSkeleton />
                     )}
                 </form>
             </Form>
         </>
+    )
+}
+
+function TrueFalseQuestion ({ question, isFinished, form }: { question: typeSingleSelectQuestion, isFinished: boolean, form: any }) {
+    return (
+        <Card key={question.id}>
+            <CardHeader>
+                <CardTitle>True or False</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                <>
+                    <h4 className="text-sm font-semibold">{question.text}</h4>
+                    <div className="flex items-center gap-2">
+                        <input
+                            disabled={isFinished}
+                            type="radio" id={`${question.id}-true`} value="True" name={question.id} {...form.register(`${question.id}`)}
+                        />
+                        <label htmlFor={`${question.id}-true`}>True</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            disabled={isFinished}
+                            type="radio" id={`${question.id}-false`} value="False" name={question.id} {...form.register(`${question.id}`)}
+                        />
+                        <label htmlFor={`${question.id}-false`}>False</label>
+                    </div>
+                </>
+            </CardContent>
+        </Card>
+    )
+}
+
+function FreeTextQuestionComponent ({ question, isFinished, form }: { question: FreeTextQuestion, isFinished: boolean, form: any }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Free Text</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                <Label htmlFor={question.id}>{question.label}</Label>
+                <Textarea
+                    disabled={isFinished}
+                    id={question.id} {...form.register(question.id)}
+                />
+            </CardContent>
+        </Card>
+    )
+}
+
+function MultipleChoiceQuestionComponent ({ question, isFinished, form }: { question: typeMultipleChoiceQuestion, isFinished: boolean, form: any }) {
+    const [selectedOptions, setSelectedOptions] = useState<string[]>([])
+
+    const handleOptionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const optionValue = event.target.value
+        setSelectedOptions(prevSelectedOptions => {
+            if (prevSelectedOptions.includes(optionValue)) {
+                const newSelections = prevSelectedOptions.filter(option => option !== optionValue)
+                form.setValue(question.id, newSelections)
+                return newSelections
+            } else {
+                const newSelections = [...prevSelectedOptions, optionValue]
+                form.setValue(question.id, newSelections)
+                return newSelections
+            }
+        })
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{question.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+                {question.options.map(option => (
+                    <div key={option.id} className="flex items-center gap-2">
+                        <input
+                            disabled={isFinished}
+                            type="checkbox"
+                            id={`${question.id}-${option.id}`}
+                            value={option.id}
+                            name={question.id}
+                            checked={selectedOptions.includes(option.id)}
+                            onChange={handleOptionChange}
+                        />
+                        <label htmlFor={`${question.id}-${option.id}`}>{option.text}</label>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    )
+}
+
+interface ColumnItem {
+    id: string
+    text: string
+}
+
+function MatchingTextQuestionComponent ({ question, isFinished, form }: { question: MatchingTextQuestion, isFinished: boolean, form: any }) {
+    const [selectedLeft, setSelectedLeft] = useState<ColumnItem | null>(null)
+    const [matchedPairs, setMatchedPairs] = useState<Record<string, string>>({})
+    const [reverseMatchedPairs, setReverseMatchedPairs] = useState<Record<string, string>>({})
+
+    const handleLeftClick = (leftItem: ColumnItem): void => {
+        if (selectedLeft?.id === leftItem.id) {
+            setSelectedLeft(null)
+        } else {
+            setSelectedLeft(leftItem)
+        }
+    }
+
+    const handleRightClick = (rightItem: ColumnItem): void => {
+        if (selectedLeft) {
+            const newPairs = { ...matchedPairs, [selectedLeft.id]: rightItem.id }
+            const newReversePairs = { ...reverseMatchedPairs, [rightItem.id]: selectedLeft.id }
+            setMatchedPairs(newPairs)
+            setReverseMatchedPairs(newReversePairs)
+            setSelectedLeft(null)
+            form.setValue(selectedLeft.id, rightItem.id)
+        }
+    }
+
+    const handleDeselect = (leftId: string): void => {
+        const rightId = matchedPairs[leftId]
+        const newPairs = { ...matchedPairs }
+        const newReversePairs = { ...reverseMatchedPairs }
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete newPairs[leftId]
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete newReversePairs[rightId]
+        setMatchedPairs(newPairs)
+        setReverseMatchedPairs(newReversePairs)
+        form.setValue(leftId, '')
+    }
+
+    const getBackgroundColor = (item: ColumnItem, column: 'left' | 'right'): string => {
+        if (column === 'left' && selectedLeft && selectedLeft.id === item.id) {
+            return buttonVariants({ variant: 'default' })
+        }
+        if (column === 'left' && matchedPairs[item.id]) {
+            return buttonVariants({ variant: 'secondary' })
+        }
+        if (column === 'right' && reverseMatchedPairs[item.id]) {
+            return buttonVariants({ variant: 'secondary' })
+        }
+        if (column === 'right' && selectedLeft && reverseMatchedPairs[item.id]) {
+            return buttonVariants({ variant: 'default' })
+        }
+        return buttonVariants({ variant: 'outline' })
+    }
+
+    const isItemDisabled = (item: ColumnItem, column: 'left' | 'right'): boolean => {
+        if (column === 'right' && reverseMatchedPairs[item.id]) {
+            return true
+        }
+        if (column === 'left' && matchedPairs[item.id]) {
+            return true
+        }
+        return false
+    }
+
+    const isMatched = (leftId: string, rightId: string): boolean => matchedPairs[leftId] === rightId
+
+    return (
+        <div className="space-y-4">
+            <h2 className="text-xl font-bold mb-4">
+            Matching Text Question
+            </h2>
+            <div className="grid grid-cols-2 gap-8">
+                <div className="flex flex-col gap-4">
+                    {question.leftColumn.map((item) => (
+                        <div
+                            key={item.id}
+                            className={cn(
+                                isItemDisabled(item, 'left') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                getBackgroundColor(item, 'left'),
+                                'flex gap-4 items-center justify-between py-4 h-12'
+                            )}
+                            onClick={() => {
+                                if (isFinished) return
+                                !isItemDisabled(item, 'left') && handleLeftClick(item)
+                            }}
+                        >
+                            <span>{item.text}</span>
+                            {matchedPairs[item.id] && (
+                                <Button
+                                    variant='destructive'
+                                    onClick={() => handleDeselect(item.id)}
+                                    disabled={isFinished}
+                                >
+                    Cancel
+                                </Button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <div className="flex flex-col gap-4">
+                    {question.rightColumn.map((item) => (
+                        <div
+                            key={item.id}
+                            className={cn(
+                                isItemDisabled(item, 'right') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                getBackgroundColor(item, 'right'),
+                                'flex gap-4 items-center justify-between py-4 h-12'
+                            )}
+                            onClick={() => !isItemDisabled(item, 'right') && handleRightClick(item)}
+                        >
+                            <span>{item.text}</span>
+                            {Object.keys(matchedPairs).map((leftId) => (
+                                isMatched(leftId, item.id) && (
+                                    <span key={item.id} className="ml-2 text-lg">{' (Matched)'}</span>
+                                )
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {selectedLeft && (
+                <div className="text-center mt-4 text-gray-700">
+                    <p>Selected: {selectedLeft.text}</p>
+                </div>
+            )}
+        </div>
     )
 }
