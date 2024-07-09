@@ -31,7 +31,7 @@ export default function ExamPrepChat ({
         if (!lastMessage) return
         if (lastMessage.role === 'tool') {
             const [toolCalled] = lastMessage.content
-            const isShowExamnForm = toolCalled.toolName === 'showExamnForm'
+            const isShowExamnForm = toolCalled.toolName === 'showExamForm'
             setHideInput(isShowExamnForm)
         }
     }
@@ -52,17 +52,17 @@ export default function ExamPrepChat ({
                     <SuggestionsContainer
                         suggestions={[
                             {
-                                title: 'help me creating a basic python examn form',
+                                title: 'help me creating a basic python exam form',
                                 description:
                   'This will help you to create a basic python exam form'
                             },
                             {
-                                title: 'help me creating a basic Javascipt examn form',
+                                title: 'help me creating a basic Javascipt exam form',
                                 description:
                   'This will help you to create a basic Javascript exam form'
                             },
                             {
-                                title: 'help me creating a basic HTML examn form',
+                                title: 'help me creating a basic HTML exam form',
                                 description:
                   'This will help you to create a basic HTML exam form'
                             }
@@ -100,19 +100,19 @@ export default function ExamPrepChat ({
             )}
             <ScrollArea
                 ref={scrollRef} // Add this line
-                className="flex-1 w-full rounded-md border p-4 lg:h-[calc(100vh-8rem)] h-[calc(100vh-4rem)]"
+                className="flex-1 w-full p-1 lg:h-[calc(100vh-8rem)] h-[calc(100vh-0.5rem)]"
             >
                 {conversation.length ? (
                     <ChatList messages={conversation} />
                 ) : (
                     <div className="flex-1 flex items-center justify-center my-4">
                         <p className="text-gray-400">
-                            Please write a message with the examn you want, like "help me creating a basic
+                            Please write a message with the exam you want, like "help me creating a basic
                             <span
                                 className="text-gray-600 font-semibold"
                             >
                             [Exam Subject]
-                            </span> examn form for me please"
+                            </span> exam form for me please"
                         </p>
                     </div>
                 )}
@@ -128,6 +128,7 @@ export default function ExamPrepChat ({
                     <ChatInput
                         isLoading={isLoading}
                         stop={() => setStop(true)}
+                        isTemplatePresent={true}
                         callbackFunction={async (input) => {
                             if (stop) return
 
