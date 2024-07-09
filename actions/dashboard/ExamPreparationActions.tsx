@@ -72,12 +72,12 @@ export async function continueConversation (
             You and the user can discuss the exam and the student's performance
 
             Messages inside [] means that it's a UI element or a user event. For example:
-            - [showExamnForm] means that the user will see an exam form and fill it out
-            - [showExamnResult] means that the user will see the result of the exam he took
-            - [examnsSuggestions] means that the user will see suggestions for exams he can take
+            - [showExamForm] means that the user will see an exam form and fill it out
+            - [showExamResult] means that the user will see the result of the exam he took
+            - [examsSuggestions] means that the user will see suggestions for exams he can take
 
-            If the user requests a exam or quiz, call \`showExamnForm\` to show the exam form. after an exan is taken, call \`showExamnResult\` to show the result of the exam.
-            As a teacher, if the user ask for an exam but is vague, you can suggest exams to the user by calling \`examnsSuggestions\` or if the user is asking for suggestions.
+            If the user requests a exam or quiz, call \`showExamForm\` to show the exam form. after an exan is taken, call \`showExamResult\` to show the result of the exam.
+            As a teacher, if the user ask for an exam but is vague, you can suggest exams to the user by calling \`examsSuggestions\` or if the user is asking for suggestions.
 
             Besides that, you can also chat with users about possible topics for exams, or any other topic you want to discuss with the user that goes along with the exam preparation as this is a exam preparation chat.
         `,
@@ -118,7 +118,7 @@ export async function continueConversation (
             )
         },
         tools: {
-            showExamnForm: {
+            showExamForm: {
                 description: 'Show the user an exam form to fill out for an exam preparationn, this form will be sent to the user and he will anwser it',
                 parameters: z.object({
                     singleSelectQuestion: z.array(z.object({
@@ -182,7 +182,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-call',
-                                        toolName: 'showExamnForm',
+                                        toolName: 'showExamForm',
                                         toolCallId,
                                         args: {
                                             singleSelectQuestion,
@@ -199,7 +199,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-result',
-                                        toolName: 'showExamnForm',
+                                        toolName: 'showExamForm',
                                         toolCallId,
                                         result: {
                                             singleSelectQuestion,
@@ -230,7 +230,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-call',
-                                    toolName: 'showExamnForm',
+                                    toolName: 'showExamForm',
                                     toolCallId,
                                     result: {
                                         singleSelectQuestion,
@@ -248,7 +248,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-result',
-                                    toolName: 'showExamnForm',
+                                    toolName: 'showExamForm',
                                     toolCallId,
                                     result: {
                                         singleSelectQuestion,
@@ -284,7 +284,7 @@ export async function continueConversation (
                     )
                 }
             },
-            showExamnResult: {
+            showExamResult: {
                 description: 'Show the user the result of the exam he took',
                 parameters: z.object({
                     score: z.number().int().describe('The grade of the student in the exam with a scale from 0 to 20'),
@@ -313,7 +313,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-call',
-                                        toolName: 'showExamnResult',
+                                        toolName: 'showExamResult',
                                         toolCallId,
                                         args: {
                                             score,
@@ -329,7 +329,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-result',
-                                        toolName: 'showExamnResult',
+                                        toolName: 'showExamResult',
                                         toolCallId,
                                         result: {
                                             score,
@@ -361,7 +361,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-call',
-                                    toolName: 'showExamnResult',
+                                    toolName: 'showExamResult',
                                     toolCallId,
                                     result: {
                                         score,
@@ -378,7 +378,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-result',
-                                    toolName: 'showExamnResult',
+                                    toolName: 'showExamResult',
                                     toolCallId,
                                     result: {
                                         score,
@@ -408,14 +408,14 @@ export async function continueConversation (
                     )
                 }
             },
-            examnsSuggestions: {
-                description: 'Show the user suggestions for exams he can take',
+            examsSuggestions: {
+                description: 'Show the user suggestions for exams forms he can take',
                 parameters: z.object({
                     suggestions: z.array(z.object({
-                        title: z.string().describe('The title of the suggestion'),
-                        description: z.string().describe('The description of the suggestion'),
-                        content: z.string().describe('The content of the suggestion'),
-                        difficulty: z.string().describe('The difficulty of the examn')
+                        title: z.string().describe('The title of the suggestion for the exam'),
+                        description: z.string().describe('The description of the suggestion for the exam'),
+                        content: z.string().describe('The content of the suggestion for the exam'),
+                        difficulty: z.string().describe('The difficulty of the exam')
                     }))
                 }),
                 generate: async function * ({
@@ -435,7 +435,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-call',
-                                        toolName: 'examnsSuggestions',
+                                        toolName: 'examsSuggestions',
                                         toolCallId,
                                         args: {
                                             suggestions
@@ -449,7 +449,7 @@ export async function continueConversation (
                                 content: [
                                     {
                                         type: 'tool-result',
-                                        toolName: 'examnsSuggestions',
+                                        toolName: 'examsSuggestions',
                                         toolCallId,
                                         result: {
                                             suggestions
@@ -468,7 +468,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-call',
-                                    toolName: 'examnsSuggestions',
+                                    toolName: 'examsSuggestions',
                                     toolCallId,
                                     result: {
                                         suggestions
@@ -483,7 +483,7 @@ export async function continueConversation (
                             message: JSON.stringify([
                                 {
                                     type: 'tool-result',
-                                    toolName: 'examnsSuggestions',
+                                    toolName: 'examsSuggestions',
                                     toolCallId,
                                     result: {
                                         suggestions
@@ -600,10 +600,10 @@ export const getUIStateFromAIState = (aiState: Chat) => {
 
           message.role === 'tool' ? (
               message.content.map(tool => {
-                  // find if the next message is a showExamnResult
+                  // find if the next message is a showExamResult
                   // @ts-expect-error
-                  const isNextMessageAShowExamnResult = aiState?.messages[index + 1] ? aiState?.messages[index + 1].content[0]?.toolName === 'showExamnResult' : false
-                  return tool.toolName === 'showExamnForm' ? (
+                  const isNextMessageAShowExamnResult = aiState?.messages[index + 1] ? aiState?.messages[index + 1].content[0]?.toolName === 'showExamResult' : false
+                  return tool.toolName === 'showExamForm' ? (
                       <Message
                           sender={'assistant'}
                           time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
@@ -621,7 +621,7 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                               hideSubmit={isNextMessageAShowExamnResult}
                           />
                       </Message>
-                  ) : tool.toolName === 'showExamnResult' ? (
+                  ) : tool.toolName === 'showExamResult' ? (
                       <Message
                           sender={'assistant'}
                           time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
@@ -636,7 +636,7 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                               questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
                           />
                       </Message>
-                  ) : tool.toolName === 'examnsSuggestions' ? (
+                  ) : tool.toolName === 'examsSuggestions' ? (
                       <Message
                           sender={'assistant'}
                           time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
