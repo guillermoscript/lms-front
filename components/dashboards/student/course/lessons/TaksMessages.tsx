@@ -23,7 +23,7 @@ function useChatLogic (
         maxAutomaticRoundtrips: 5,
         body: { lessonId },
         initialMessages: [
-            { role: 'system', content: systemPrompt, id: generateId() },
+            { role: 'assistant', content: systemPrompt, id: generateId() },
             ...initialMessages.map((msg) => ({
                 role: msg.sender,
                 content: msg.message,
