@@ -113,11 +113,12 @@ const ChatWindow = ({
     isLoading: boolean
 }) => {
     return (
-        <div className="flex-1 overflow-y-auto p-4 ">
+        <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4">
             {messages.map((msg, index) => {
                 if (msg.role === 'system') {
                     return null
                 }
+                if (index === 0) return null
                 return (
                     <Message
                         key={index}
@@ -151,57 +152,86 @@ const ChatWindow = ({
 const ChatInput = ({
     isLoading,
     stop,
-    callbackFunction
+    callbackFunction,
+    isTemplatePresent
 }: {
     isLoading: boolean
     stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
+    isTemplatePresent?: boolean
 }) => {
     const [message, setMessage] = useState<string>('')
     const ref = useRef<MDXEditorMethods>(null)
 
     return (
-        <form
-            onSubmit={(e) => {
-                e.preventDefault()
-                callbackFunction({
-                    content: message,
-                    role: 'user',
-                    createdAt: new Date(),
-                    id: generateId()
-                })
-                setMessage('')
-                ref.current?.setMarkdown('')
-            }}
-            className="py-4 flex gap-2 flex-col w-full"
-        >
-            <ForwardRefEditor
-                className={cn(
-                    'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
-                    isLoading ? 'cursor-not-allowed' : 'cursor-text'
-                )}
-                placeholder="Chat with the AI assistant"
-                markdown={message}
-                onChange={(value) => setMessage(value)}
-                ref={ref}
-            />
-            <input type="hidden" value={message} />
-            {isLoading ? (
-                <Button
-                    type="button"
-                    onClick={stop}
-                    variant="outline"
-                    className="rounded-r-lg"
-                >
-          Stop
-                </Button>
-            ) : (
-                <Button type="submit" className="rounded-r-lg">
-          Send
-                </Button>
+        <>
+            {isTemplatePresent && (
+                <>
+                    <Button
+                        variant='outline'
+                        disabled={isLoading}
+                        onClick={() => {
+                            ('Template for generating exam form')
+                            setMessage('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
+                            ref.current?.setMarkdown('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
+                        } }
+                    >
+                    Template for generating exam form for a "X" topic
+                    </Button>
+                    <Button
+                        variant='outline'
+                        disabled={isLoading}
+                        onClick={() => {
+                            setMessage('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
+                            ref.current?.setMarkdown('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
+                        } }
+                    >
+                        Template for asking a suggestions of an exam form for a "X" topic
+                    </Button>
+                </>
             )}
-            <DisclaimerForUser />
-        </form>
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    callbackFunction({
+                        content: message,
+                        role: 'user',
+                        createdAt: new Date(),
+                        id: generateId()
+                    })
+                    setMessage('')
+                    ref.current?.setMarkdown('')
+                }}
+                className="py-4 flex gap-2 flex-col w-full"
+            >
+                <ForwardRefEditor
+                    className={cn(
+                        'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
+                        isLoading ? 'cursor-not-allowed' : 'cursor-text'
+                    )}
+                    placeholder="Chat with the AI assistant"
+                    markdown={message}
+                    onChange={(value) => setMessage(value)}
+                    ref={ref}
+                />
+                <input type="hidden" value={message} />
+                {isLoading ? (
+                    <Button
+                        type="button"
+                        onClick={stop}
+                        variant="outline"
+                        className="rounded-r-lg"
+                    >
+            Stop
+                    </Button>
+                ) : (
+                    <Button type="submit" className="rounded-r-lg">
+            Send
+                    </Button>
+                )}
+                <DisclaimerForUser />
+            </form>
+        </>
     )
 }
 

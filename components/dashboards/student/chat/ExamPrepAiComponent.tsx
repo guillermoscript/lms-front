@@ -6,7 +6,11 @@ import { useForm } from 'react-hook-form'
 
 import { AI } from '@/actions/dashboard/ExamPreparationActions'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Card, CardContent, CardDescription,
+    CardFooter,
+    CardHeader, CardTitle
+} from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -138,7 +142,7 @@ export default function ExamPrepAiComponent ({
         .join('')}.
         This is the object of the user submission: ${JSON.stringify(submission, null, 2)}
 
-        [showExamnResult, please call the function \`showExamnResult\` with the user submission object as the argument.]
+        [showExamResult, please call the function \`showExamResult\` with the user submission object as the argument.]
         `
 
         console.log(content)
@@ -357,64 +361,70 @@ function MatchingTextQuestionComponent ({ question, isFinished, form }: { questi
     const isMatched = (leftId: string, rightId: string): boolean => matchedPairs[leftId] === rightId
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold mb-4">
-            Matching Text Question
-            </h2>
-            <div className="grid grid-cols-2 gap-8">
-                <div className="flex flex-col gap-4">
-                    {question.leftColumn.map((item) => (
-                        <div
-                            key={item.id}
-                            className={cn(
-                                isItemDisabled(item, 'left') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
-                                getBackgroundColor(item, 'left'),
-                                'flex gap-4 items-center justify-between py-4 h-12'
-                            )}
-                            onClick={() => {
-                                if (isFinished) return
-                                !isItemDisabled(item, 'left') && handleLeftClick(item)
-                            }}
-                        >
-                            <span>{item.text}</span>
-                            {matchedPairs[item.id] && (
-                                <Button
-                                    variant='destructive'
-                                    onClick={() => handleDeselect(item.id)}
-                                    disabled={isFinished}
-                                >
+        <Card>
+            <CardHeader>
+                <CardTitle>Matching Text Question</CardTitle>
+                <CardDescription>Match the items in the left column with the items in the right column by clicking on the items.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 gap-8">
+                    <div className="flex flex-col gap-4">
+                        {question.leftColumn.map((item) => (
+                            <div
+                                key={item.id}
+                                className={cn(
+                                    isItemDisabled(item, 'left') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    getBackgroundColor(item, 'left'),
+                                    'flex gap-4 items-center justify-between py-4 h-12'
+                                )}
+                                onClick={() => {
+                                    if (isFinished) return
+                                    !isItemDisabled(item, 'left') && handleLeftClick(item)
+                                }}
+                            >
+                                <span>{item.text}</span>
+                                {matchedPairs[item.id] && (
+                                    <Button
+                                        variant='destructive'
+                                        onClick={() => handleDeselect(item.id)}
+                                        disabled={isFinished}
+                                    >
                     Cancel
-                                </Button>
-                            )}
-                        </div>
-                    ))}
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        {question.rightColumn.map((item) => (
+                            <div
+                                key={item.id}
+                                className={cn(
+                                    isItemDisabled(item, 'right') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                                    getBackgroundColor(item, 'right'),
+                                    'flex gap-4 items-center justify-between py-4 h-12'
+                                )}
+                                onClick={() => !isItemDisabled(item, 'right') && handleRightClick(item)}
+                            >
+                                <span>{item.text}</span>
+                                {Object.keys(matchedPairs).map((leftId) => (
+                                    isMatched(leftId, item.id) && (
+                                        <span key={item.id} className="ml-2 text-lg">{' (Matched)'}</span>
+                                    )
+                                ))}
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div className="flex flex-col gap-4">
-                    {question.rightColumn.map((item) => (
-                        <div
-                            key={item.id}
-                            className={cn(
-                                isItemDisabled(item, 'right') ? ' opacity-50 cursor-not-allowed' : 'cursor-pointer',
-                                getBackgroundColor(item, 'right'),
-                                'flex gap-4 items-center justify-between py-4 h-12'
-                            )}
-                            onClick={() => !isItemDisabled(item, 'right') && handleRightClick(item)}
-                        >
-                            <span>{item.text}</span>
-                            {Object.keys(matchedPairs).map((leftId) => (
-                                isMatched(leftId, item.id) && (
-                                    <span key={item.id} className="ml-2 text-lg">{' (Matched)'}</span>
-                                )
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            </div>
-            {selectedLeft && (
-                <div className="text-center mt-4 text-gray-700">
-                    <p>Selected: {selectedLeft.text}</p>
-                </div>
-            )}
-        </div>
+            </CardContent>
+            <CardFooter>
+
+                {selectedLeft && (
+                    <div className="text-center mt-4 text-gray-700">
+                        <p>Selected: {selectedLeft.text}</p>
+                    </div>
+                )}
+            </CardFooter>
+        </Card>
     )
 }
