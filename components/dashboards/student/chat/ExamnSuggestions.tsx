@@ -10,7 +10,7 @@ import { cn } from '@/utils'
 
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
-interface ExamnSuggestion {
+interface ExamSuggestion {
     title: string
     description: string
     content: string
@@ -22,20 +22,20 @@ export default function ExamnSuggestions ({
     suggestions,
     disabled
 }: {
-    suggestions: ExamnSuggestion[]
+    suggestions: ExamSuggestion[]
     disabled?: boolean
 }) {
     const [isLoading, setIsLoading] = useState(false)
     const { continueConversation } = useActions()
     const [_, setMessages] = useUIState<typeof AI>()
-    const [selectedSuggestion, setSelectedSuggestion] = useState<ExamnSuggestion | null>(null)
+    const [selectedSuggestion, setSelectedSuggestion] = useState<ExamSuggestion | null>(null)
 
-    async function onSuggestionClick (suggestion: ExamnSuggestion) {
+    async function onSuggestionClick (suggestion: ExamSuggestion) {
         setIsLoading(true)
         try {
-            const message = `Help me creating an examn form for ${suggestion.title}
+            const message = `Help me creating an exam form for ${suggestion.title}
             ---
-            # Examn Form
+            # Exam Form
             title: ${suggestion.title}
             description: ${suggestion.description}
             content: ${suggestion.content}
