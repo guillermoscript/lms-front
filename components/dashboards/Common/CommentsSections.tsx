@@ -36,7 +36,7 @@ export default async function CommentsSections ({
                 .filter(comment => comment.parent_comment_id === null)
                 .map((comment) => {
                     const user = profiles.data.find((profile) => profile.id === comment.user_id)
-                    const isReactionPresent = comment.comment_reactions.find(
+                    const isReactionPresent = comment?.comment_reactions?.find(
                         (reaction) => reaction.user_id === currentUser.data.user.id
                     )
 

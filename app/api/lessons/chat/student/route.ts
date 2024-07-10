@@ -35,6 +35,7 @@ export async function POST (req: Request) {
                         })
                 }
             },
+            temperature: 0.5,
             // model: ollama('llama3'),
             messages: convertToCoreMessages(messages),
             tools: {
@@ -76,6 +77,7 @@ export async function POST (req: Request) {
         // Respond with the stream
         return result.toAIStreamResponse()
     } catch (error) {
+        console.log('Error:', error)
         return new Response('Error', { status: 500 })
     }
 }

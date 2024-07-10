@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js'
 import dayjs from 'dayjs'
 import { Edit3, Flag, Reply } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { addReactionToComment } from '@/actions/dashboard/studentActions'
 import CommentEditor from '@/components/dashboards/student/course/lessons/CommentEditor'
@@ -13,7 +14,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
-import { useToast } from '@/components/ui/use-toast'
 import { reactionTypes } from '@/utils/const'
 import { Tables } from '@/utils/supabase/supabase'
 
@@ -45,7 +45,7 @@ const CommentCard = ({
     avatar: string
     date: string
     isAuthor: boolean
-    comment_reactions: Array<Tables<'comment_reactions'>>
+    comment_reactions?: Array<Tables<'comment_reactions'>>
     isReactionPresent?: Tables<'comment_reactions'>
     allComments: any[]
     profiles: Array<Tables<'profiles'>>
@@ -54,7 +54,6 @@ const CommentCard = ({
 }) => {
     const [showReplies, setShowReplies] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
-    const { toast } = useToast()
 
     const toggleReplies = () => setShowReplies(!showReplies)
     const toggleEdit = () => setIsEditing(!isEditing)
@@ -75,24 +74,21 @@ const CommentCard = ({
               : response.message,
                 variant: response.status === 'success' ? null : 'destructive'
             }
-            toast(toastMessage as any)
+            toast.success(toastMessage as any)
         } catch (error) {
             console.error(error)
-            toast({
-                title: 'Error',
-                description:
-          'An error occurred while adding reaction. Please try again.',
-                variant: 'destructive'
-            })
+            toast.error('An error occurred while adding reaction. Please try again.')
         }
     }
 
-    const reactionsForEachType = comment_reactions.reduce((acc, reaction) => {
+    const reactionsForEachType = comment_reactions?.reduce((acc, reaction) => {
         acc[reaction.reaction_type] = acc[reaction.reaction_type] + 1 || 1
         return acc
     }, {})
 
     const replies = allComments.filter(reply => reply.parent_comment_id === comment.id)
+
+    console.log(reactionsForEachType)
 
     return (
         <Card className="p-2 mb-4">
@@ -152,7 +148,7 @@ const CommentCard = ({
                         <Popover>
                             <PopoverTrigger>
                                 <button className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-                                    {reactionTypes.map(({ type, icon: Icon }) => (
+                                    {reactionsForEachType && reactionTypes?.map(({ type, icon: Icon }) => (
                                         <ReactionButton
                                             key={type}
                                             type={reactionsForEachType[type] ? reactionTypes.find(rt => rt.type === type).color : ''}
@@ -165,7 +161,7 @@ const CommentCard = ({
                             </PopoverTrigger>
                             <PopoverContent className="p-2 bg-white border rounded-md shadow-sm w-fit">
                                 <div className="flex items-center gap-4 h-7">
-                                    {reactionTypes.map(({ type, icon: Icon, color }) => (
+                                    {reactionsForEachType && reactionTypes?.map(({ type, icon: Icon, color }) => (
                                         <ReactionButton
                                             key={type}
                                             type={color}
@@ -199,10 +195,10 @@ const CommentCard = ({
                                             course_id={course_id}
                                             name={replyUser?.full_name || 'Unknown'}
                                             avatar={replyUser?.avatar_url || '/img/favicon.png'}
-                                            date={dayjs(reply.created_at).format('DD/MM/YYYY: HH:mm')}
+                                            date={dayjs(reply?.created_at).format('DD/MM/YYYY: HH:mm')}
                                             isAuthor={isReplyAuthor}
-                                            comment_reactions={reply.comment_reactions}
-                                            isReactionPresent={reply.comment_reactions.find(
+                                            comment_reactions={reply?.comment_reactions}
+                                            isReactionPresent={reply?.comment_reactions?.find(
                                                 (reaction) => reaction.user_id === currentUser.id
                                             )}
                                             allComments={allComments}

@@ -2,7 +2,9 @@ import './globals.css'
 
 import { GeistSans } from 'geist/font/sans'
 
+import ScrollToTopButton from '@/components/ScrollToTopButton'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster as SoonerToaster } from '@/components/ui/sonner'
 import { Toaster } from '@/components/ui/toaster'
 
 const defaultUrl = process.env.VERCEL_URL
@@ -11,8 +13,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata = {
     metadataBase: new URL(defaultUrl),
-    title: 'Next.js and Supabase Starter Kit',
-    description: 'The fastest way to build apps with Next.js and Supabase'
+    title: 'Next.js and Supabase AI powered LMS',
+    description: 'The fastest way to learn about programming'
 }
 
 export default function RootLayout ({
@@ -34,6 +36,8 @@ export default function RootLayout ({
                     >
                         {children}
                         <Toaster />
+                        <SoonerToaster />
+                        <ScrollToTopButton />
                     </ThemeProvider>
                 </main>
             </body>

@@ -27,8 +27,7 @@ export default async function FreeChatPage ({
     return (
 
         <>
-            <div className='flex flex-col gap-4 overflow-y-auto h-[calc(100vh-4rem)]'>
-
+            <div className='flex flex-col gap-4 overflow-y-auto h-[calc(100vh)] md:h-[calc(100vh-4rem)]'>
                 <FreeChat
                     chatId={Number(params.chatId)}
                     initialMessages={

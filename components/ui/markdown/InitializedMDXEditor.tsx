@@ -6,7 +6,9 @@ import {
     ChangeCodeMirrorLanguage,
     codeMirrorPlugin,
     ConditionalContents,
+    imagePlugin,
     InsertCodeBlock,
+    InsertImage,
     InsertSandpack,
     MDXEditorMethods,
     MDXEditorProps,
@@ -76,7 +78,13 @@ export default function InitializedMDXEditor ({
                 codeBlockPlugin({ defaultCodeBlockLanguage: 'js' }),
                 sandpackPlugin({ sandpackConfig: simpleSandpackConfig }),
                 codeMirrorPlugin({
-                    codeBlockLanguages: { js: 'JavaScript', css: 'CSS', html: 'HTML', python: 'Python', java: 'Java' }
+                    codeBlockLanguages: {
+                        js: 'JavaScript',
+                        css: 'CSS',
+                        html: 'HTML',
+                        python: 'Python',
+                        java: 'Java'
+                    }
                 }),
                 headingsPlugin(),
                 listsPlugin(),
@@ -87,9 +95,7 @@ export default function InitializedMDXEditor ({
                 markdownShortcutPlugin(),
                 toolbarPlugin({
                     toolbarContents: () => (
-                        <div
-                            className='flex gap-2 flex-wrap items-center justify-center w-full'
-                        >
+                        <div className="flex gap-2 flex-wrap items-center justify-center w-full">
                             <BlockTypeSelect />
                             <BoldItalicUnderlineToggles />
                             <Separator />
@@ -100,6 +106,7 @@ export default function InitializedMDXEditor ({
                             <UndoRedo />
                             <Separator />
                             <InsertTable />
+                            <InsertImage />
                             <ConditionalContents
                                 options={[
                                     {
@@ -122,8 +129,18 @@ export default function InitializedMDXEditor ({
                             />
                         </div>
                     )
+                }),
+                imagePlugin({
+                    imageUploadHandler: async () => {
+                        return await Promise.resolve('https://picsum.photos/200/300')
+                    },
+                    imageAutocompleteSuggestions: [
+                        'https://picsum.photos/200/300',
+                        'https://picsum.photos/200'
+                    ]
                 })
             ]}
+            contentEditableClassName="prose"
             {...props}
             ref={editorRef}
         />

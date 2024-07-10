@@ -1,9 +1,9 @@
-
 // UI Components
 
-import { Message as MessageType, nanoid, ToolInvocation } from 'ai'
+import { MDXEditorMethods } from '@mdxeditor/editor'
+import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { Suspense, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
@@ -21,7 +21,7 @@ const ToolInvocationMessage = ({
             {toolInvocations?.map(
                 (toolInvocation: ToolInvocation) =>
                     'result' in toolInvocation &&
-                    toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
+          toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
                         <SuccessMessage
                             key={toolInvocation.toolCallId}
                             status={toolInvocation.result.status}
@@ -38,13 +38,15 @@ const Message = ({
     sender,
     time,
     isUser,
-    toolInvocations
+    toolInvocations,
+    children
 }: {
-    message: string
+    message?: string
     sender: string
     time?: string
     isUser: boolean
     toolInvocations?: ToolInvocation[]
+    children?: React.ReactNode
 }) => {
     if (sender !== 'user' && sender !== 'assistant') {
         return null
@@ -57,18 +59,19 @@ const Message = ({
             )}
         >
             <div className="flex items-end w-full">
-                {!isUser && (
-                    <img
-                        src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
-                        alt="profile"
-                        className="max-w-[28px] object-cover rounded-full mr-4"
-                    />
-                )}
-                <div className="flex flex-col w-full px-4 py-2 rounded-lg relative">
+                <div className="flex flex-col w-full px-1 md:px-4 py-2 rounded-lg relative">
+                    {!isUser && (
+                        <img
+                            src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
+                            alt="profile"
+                            className="max-w-[28px] object-cover rounded-full mr-4"
+                        />
+                    )}
                     <div className="font-bold mb-1 capitalize">
                         {sender} <span className="text-xs text-gray-400 ml-2">{time}</span>
                     </div>
                     {!toolInvocations && <ViewMarkdown markdown={message} />}
+                    {!toolInvocations && children}
                     <ToolInvocationMessage toolInvocations={toolInvocations} />
                     {/* {isUser && (
                         <div className="flex mt-2 space-x-2 ">
@@ -102,13 +105,20 @@ const SuccessMessage = ({
     )
 }
 
-const ChatWindow = ({ messages, isLoading }: { messages: MessageType[], isLoading: boolean }) => {
+const ChatWindow = ({
+    messages,
+    isLoading
+}: {
+    messages: MessageType[]
+    isLoading: boolean
+}) => {
     return (
-        <div className="flex-1 overflow-y-auto p-4 ">
+        <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4">
             {messages.map((msg, index) => {
                 if (msg.role === 'system') {
                     return null
                 }
+                if (index === 0) return null
                 return (
                     <Message
                         key={index}
@@ -142,33 +152,58 @@ const ChatWindow = ({ messages, isLoading }: { messages: MessageType[], isLoadin
 const ChatInput = ({
     isLoading,
     stop,
-    callbackFunction
+    callbackFunction,
+    isTemplatePresent
 }: {
     isLoading: boolean
-    stop: () => void
+    stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
+    isTemplatePresent?: boolean
 }) => {
     const [message, setMessage] = useState<string>('')
+    const ref = useRef<MDXEditorMethods>(null)
 
     return (
-        <form
-            onSubmit={(e) => {
-                e.preventDefault()
-                callbackFunction({
-                    content: message,
-                    role: 'user',
-                    createdAt: new Date(),
-                    id: nanoid()
-                })
-                setMessage('')
-            }}
-            className="py-4 flex gap-2 flex-col w-full"
-        >
-            <Suspense fallback={
-                <Skeleton className="w-full h-12" />
-            }
+        <>
+            {isTemplatePresent && (
+                <>
+                    <Button
+                        variant='outline'
+                        disabled={isLoading}
+                        onClick={() => {
+                            ('Template for generating exam form')
+                            setMessage('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
+                            ref.current?.setMarkdown('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
+                        } }
+                    >
+                    Template for generating exam form for a "X" topic
+                    </Button>
+                    <Button
+                        variant='outline'
+                        disabled={isLoading}
+                        onClick={() => {
+                            setMessage('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
+                            ref.current?.setMarkdown('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
+                        } }
+                    >
+                        Template for asking a suggestions of an exam form for a "X" topic
+                    </Button>
+                </>
+            )}
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    callbackFunction({
+                        content: message,
+                        role: 'user',
+                        createdAt: new Date(),
+                        id: generateId()
+                    })
+                    setMessage('')
+                    ref.current?.setMarkdown('')
+                }}
+                className="py-4 flex gap-2 flex-col w-full"
             >
-
                 <ForwardRefEditor
                     className={cn(
                         'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
@@ -177,22 +212,36 @@ const ChatInput = ({
                     placeholder="Chat with the AI assistant"
                     markdown={message}
                     onChange={(value) => setMessage(value)}
+                    ref={ref}
                 />
-            </Suspense>
-            <input type="hidden" value={message} />
-            {isLoading ? (
-                <Button type="button" onClick={stop}
-                    variant='outline'
-                    className="rounded-r-lg"
-                >
-          Stop
-                </Button>
-            ) : (
-                <Button type="submit" className="rounded-r-lg">
-          Send
-                </Button>
-            )}
-        </form>
+                <input type="hidden" value={message} />
+                {isLoading ? (
+                    <Button
+                        type="button"
+                        onClick={stop}
+                        variant="outline"
+                        className="rounded-r-lg"
+                    >
+            Stop
+                    </Button>
+                ) : (
+                    <Button type="submit" className="rounded-r-lg">
+            Send
+                    </Button>
+                )}
+                <DisclaimerForUser />
+            </form>
+        </>
+    )
+}
+
+function DisclaimerForUser () {
+    return (
+        <div className="flex-1 flex items-center justify-center my-4">
+            <p className="text-sm">
+                LLMs can make mistakes. Verify important information.
+            </p>
+        </div>
     )
 }
 
