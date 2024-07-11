@@ -108,12 +108,10 @@ const SuccessMessage = ({
 
 const ChatWindow = ({
     messages,
-    isLoading,
-    messagesEndRef
+    isLoading
 }: {
     messages: MessageType[]
     isLoading: boolean
-    messagesEndRef: React.RefObject<HTMLDivElement>
 }) => {
     return (
         <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4">
