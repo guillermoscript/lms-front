@@ -1,5 +1,6 @@
 // Force the page to be dynamic and allow streaming responses up to 30 seconds
 
+import { FreeChatAI } from '@/actions/dashboard/AI/FreeChatPreparation'
 import ExamLink from '@/components/dashboards/student/chat/ExamLink'
 import FreeChat from '@/components/dashboards/student/chat/FreeChat'
 
@@ -17,7 +18,9 @@ export default async function ChatPage () {
                     <ExamLink />
                 </div>
             </div>
-            <FreeChat />
+            <FreeChatAI>
+                <FreeChat />
+            </FreeChatAI>
         </>
     )
 }
