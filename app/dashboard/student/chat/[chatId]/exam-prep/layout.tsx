@@ -1,4 +1,4 @@
-import { AI, getUIStateFromAIState } from '@/actions/dashboard/ExamPreparationActions'
+import { AI, getUIStateFromAIState } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExamnChatIdPageLayout ({

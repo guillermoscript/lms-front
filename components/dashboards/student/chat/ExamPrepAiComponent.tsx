@@ -4,7 +4,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { AI } from '@/actions/dashboard/ExamPreparationActions'
+import { AI } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
     Card, CardContent, CardDescription,
