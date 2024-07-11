@@ -1,8 +1,7 @@
 'use client'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { studentCreateNewChat } from '@/actions/dashboard/chatActions'
+import { studentCreateNewChatAndRedirect } from '@/actions/dashboard/chatActions'
 import { Button } from '@/components/ui/button'
 import {
     HoverCard,
@@ -12,7 +11,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ExamLink () {
-    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
 
     return (
@@ -25,14 +23,11 @@ export default function ExamLink () {
                         onClick={async () => {
                             setIsLoading(true)
                             try {
-                                const response = await studentCreateNewChat({
+                                const response = await studentCreateNewChatAndRedirect({
                                     chatType: 'exam_prep',
                                     title: 'Exam Preparation'
                                 })
-
-                                if (response.status === 'success') {
-                                    router.push(`/dashboard/student/chat/${response.data.chat_id}/exam-prep`)
-                                }
+                                console.log(response)
                             } catch (error) {
                                 console.error(error)
                             } finally {
