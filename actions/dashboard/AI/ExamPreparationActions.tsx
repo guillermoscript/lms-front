@@ -145,7 +145,7 @@ export async function continueConversation (
                     })),
                     freeTextQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
-                        label: z.string().describe('The question text for the user to answer')
+                        label: z.string().describe('The question the user must anwser with a free text')
                     })),
                     matchingTextQuestions: z.array(z.object({
                         id: z.string().describe('The id of the question'),
