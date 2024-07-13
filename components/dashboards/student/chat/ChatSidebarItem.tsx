@@ -25,6 +25,12 @@ import {
     PopoverTrigger
 } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger
+} from '@/components/ui/tooltip'
 import { cn } from '@/utils'
 
 export default function ChatSidebarItem ({
@@ -103,15 +109,26 @@ export default function ChatSidebarItem ({
             className="w-full p-2 rounded-lg overflow-hidden text-ellipsis"
             key={chat.chat_id}
         >
-            <Link
-                className={cn(
-                    'text-md font-semibold text-gray-900 dark:text-gray-50 capitalize hover:underline',
-                    router === `/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}` ? 'dark:text-primary text-primary' : ''
-                )}
-                href={`/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`}
-            >
-                {chat.title}
-            </Link>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Link
+                            className={cn(
+                                'text-md font-semibold text-gray-900 dark:text-gray-50 capitalize hover:underline',
+                                router === `/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`
+                                    ? 'dark:text-primary text-primary'
+                                    : ''
+                            )}
+                            href={`/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`}
+                        >
+                            {chat.title.slice(0, 30)}
+                        </Link>
+                    </TooltipTrigger>
+                    <TooltipContent className='max-w-[600px] p-2 rounded-lg '>
+                        {chat.title}
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
             <div className="flex gap-3 justify-between">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                     {dayjs(chat.created_at).format('MMM D, YYYY')}
@@ -122,21 +139,19 @@ export default function ChatSidebarItem ({
                     </PopoverTrigger>
                     <PopoverContent className="flex flex-col gap-4 p-3 w-fit">
                         <AlertDialog>
-                            <AlertDialogTrigger
-                                className='flex gap-2 items-center'
-                            >
+                            <AlertDialogTrigger className="flex gap-2 items-center">
                                 <Trash className="h-5 w-5" />
 
-                                <p>
-                    Delete
-                                </p>
+                                <p>Delete</p>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    your chat.
+                      This action cannot be undone. This will permanently delete
+                      your chat.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -153,23 +168,18 @@ export default function ChatSidebarItem ({
                                                 setIsLoading(false)
                                             }
                                         }}
-                                    >Continue</AlertDialogAction>
+                                    >
+                      Continue
+                                    </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
                         <button
                             onClick={() => setIsUpdate(true)}
-
                             className="flex gap-2 items-center"
                         >
-
-                            <UpdateIcon
-
-                                className="h-5 w-5"
-                            />
-                            <p>
-                Update
-                            </p>
+                            <UpdateIcon className="h-5 w-5" />
+                            <p>Update</p>
                         </button>
                     </PopoverContent>
                 </Popover>
