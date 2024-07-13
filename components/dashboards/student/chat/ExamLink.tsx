@@ -35,7 +35,9 @@ export default function ExamLink () {
                             }
                         }}
                         variant="outline"
-                    >Prepare for exams</Button>
+                    >
+                        Quiz Me
+                    </Button>
                 )}
             </HoverCardTrigger>
             <HoverCardContent>
