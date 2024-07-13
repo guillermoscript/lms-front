@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { FreeChatAI, UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
-import { studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
+import { studentCreateNewChat, studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
 import { ChatInput, Message } from '@/components/dashboards/Common/chat/chat'
 import SuggestionsContainer from '@/components/dashboards/Common/chat/SuggestionsContainer'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
@@ -39,7 +39,7 @@ export default function FreeChat ({
 
     return (
         <div>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 max-h-[calc(100vh-4rem)]">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 lg:max-h-[calc(100vh-4rem)]  max-h-[calc(100vh-0.5rem)]">
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} messagesEndRef={messagesEndRef} />
                 ) : (
@@ -65,6 +65,13 @@ export default function FreeChat ({
                                     if (stop) return
 
                                     setIsLoading(true)
+
+                                    if (!chatId) {
+                                        await studentCreateNewChat({
+                                            title: suggestion,
+                                            chatType: 'free_chat'
+                                        })
+                                    }
 
                                     if (aiState.messages.length === 0 && chatId) {
                                         await studentUpdateChatTitle({
@@ -120,6 +127,13 @@ export default function FreeChat ({
                         if (stop) return
 
                         setIsLoading(true)
+
+                        if (!chatId) {
+                            await studentCreateNewChat({
+                                title: input.content,
+                                chatType: 'free_chat'
+                            })
+                        }
 
                         if (aiState.messages.length === 0 && chatId) {
                             await studentUpdateChatTitle({ chatId, title: input.content })
