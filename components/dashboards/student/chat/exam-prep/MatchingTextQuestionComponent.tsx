@@ -161,19 +161,29 @@ function MatchingTextQuestionComponent ({ question, isFinished, form }: { questi
 export default MatchingTextQuestionComponent
 
 export interface FeedbackComponentProps {
+    question: string
+    rightColumn: RightColumn[]
+    feedback: string
+}
+
+export interface RightColumn {
+    id: string
+    text: string
+    matchedWith: string
+    userMatchedWith: string
+}
+
+export function FeedbackComponent ({ question }: {
     question: {
         question: string
         rightColumn: Array<{ id: string, text: string, matchedWith: string, userMatchedWith: string }>
         feedback: string
     }
-}
-
-export const FeedbackComponent: React.FC<FeedbackComponentProps> = ({ question }) => {
+}) {
     const { rightColumn, feedback } = question
 
     const isMatchedCorrectly = (leftId: string, rightId: string): boolean => {
-        const correctMatch = rightColumn.find(item => item.matchedWith === leftId)
-        return correctMatch?.userMatchedWith === rightId
+        return leftId === rightId
     }
 
     return (

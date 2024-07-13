@@ -154,9 +154,11 @@ export default function ExamFeedbackCard ({
                 </Card>
             ))}
 
-            {matchingTextQuestionsFeedback.map((item, index) => (
-                <FeedbackComponent key={index} question={item} />
-            ))}
+            {matchingTextQuestionsFeedback.map((item, index) => {
+                return (
+                    <FeedbackComponent key={index} question={item} />
+                )
+            })}
         </div>
     )
 }
