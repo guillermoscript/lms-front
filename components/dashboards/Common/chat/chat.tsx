@@ -155,9 +155,13 @@ const ChatInput = ({
     return (
         <>
             {isTemplatePresent && (
-                <div className="flex flex-wrap gap-4">
+                <div
+                    id='message-templates'
+                    className="flex flex-wrap gap-4"
+                >
                     <Button
                         variant='outline'
+                        id='form-exam-create-template'
                         disabled={isLoading}
                         className='text-wrap disabled:cursor-not-allowed'
                         onClick={() => {
@@ -171,6 +175,7 @@ const ChatInput = ({
                     </Button>
                     <Button
                         variant='outline'
+                        id='exam-suggestions-template'
                         disabled={isLoading}
                         className='text-wrap disabled:cursor-not-allowed'
                         onClick={() => {
@@ -200,7 +205,8 @@ const ChatInput = ({
                 <ForwardRefEditor
                     className={cn(
                         'flex-1 p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full rich-text markdown-body',
-                        isLoading ? 'cursor-not-allowed' : 'cursor-text'
+                        isLoading ? 'cursor-not-allowed' : 'cursor-text',
+                        'editor'
                     )}
                     placeholder="Chat with the AI assistant"
                     markdown={message}
