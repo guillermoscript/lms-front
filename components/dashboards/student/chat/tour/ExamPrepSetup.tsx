@@ -4,6 +4,12 @@ import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger
+} from '@/components/ui/tooltip'
 
 // Setup component with a button to start the tour
 export default function ExamPrepSetup () {
@@ -100,10 +106,21 @@ function ChatTourExamPrepChat () {
     const { setIsOpen } = useTour()
 
     return (
-        <div className="demo">
-            <Button onClick={() => setIsOpen(true)}>
-                <InfoIcon size={24} />
-            </Button>
-        </div>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger>
+
+                    <Button onClick={() => setIsOpen(true)}>
+                        <InfoIcon size={24} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>
+                        If you want to know more about the exam prep chat, click the button above to start the tour.
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+
     )
 }

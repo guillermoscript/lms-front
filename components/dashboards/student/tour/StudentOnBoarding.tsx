@@ -3,6 +3,12 @@ import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger
+} from '@/components/ui/tooltip'
 
 // Setup component with a button to start the tour
 export default function StudentOnBoarding () {
@@ -112,13 +118,23 @@ function StudentOnBoardingButton () {
     const { setIsOpen } = useTour()
 
     return (
-        <div className="hidden md:block">
-            <Button
-                variant='ghost'
-                onClick={() => setIsOpen(true)}
-            >
-                <InfoIcon size={24} />
-            </Button>
-        </div>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className="hidden md:block"
+                        onClick={() => setIsOpen(true)}
+                    >
+                        <InfoIcon size={24} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>
+            Take a tour of the dashboard
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     )
 }
