@@ -64,8 +64,13 @@ export default async function StudentChatSidebar ({ userRole }) {
                         }
 
                         return (
-                            <Collapsible defaultOpen={true} className="w-full">
-                                <CollapsibleTrigger className="w-full text-md font-semibold capitalize flex items-center justify-between p-2 px-2 rounded-lg my-2 hover:bg-opacity-10 dark:hover:bg-opacity-10 hover:bg-gray-400 dark:hover:bg-gray-200">
+                            <Collapsible
+                                id={type}
+                                defaultOpen={true} className="w-full"
+                            >
+                                <CollapsibleTrigger
+                                    className="w-full text-md font-semibold capitalize flex items-center justify-between p-2 px-2 rounded-lg my-2 hover:bg-opacity-10 dark:hover:bg-opacity-10 hover:bg-gray-400 dark:hover:bg-gray-200"
+                                >
                                     <p>{type.replace('_', ' ')}</p>
                                     <CaretSortIcon className="h-4 w-4" />
                                 </CollapsibleTrigger>
