@@ -12,6 +12,7 @@ import { ChatInput } from '../../Common/chat/chat'
 import Message from '../../Common/chat/Message'
 import SuggestionsContainer from '../../Common/chat/SuggestionsContainer'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
+import ExamPrepSetup from './tour/ExamPrepSetup'
 
 export default function ExamPrepChat ({ chatId }: { chatId?: number }) {
     const [conversation, setConversation] = useUIState<typeof AI>()
@@ -40,7 +41,9 @@ export default function ExamPrepChat ({ chatId }: { chatId?: number }) {
     return (
         <div>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 max-h-[calc(100vh-4rem)]">
-
+                <div className='my-4'>
+                    <ExamPrepSetup />
+                </div>
                 {conversation.length ? (
                     <ChatList messages={conversation} messagesEndRef={messagesEndRef} />
                 ) : (
@@ -97,8 +100,7 @@ export default function ExamPrepChat ({ chatId }: { chatId?: number }) {
                         />
                         <div className="flex-1 flex items-center justify-center my-4">
                             <p className="text-gray-400">
-                                Please write a message with the exam you want, like "help me creating a basic
-                                <span className="text-gray-600 font-semibold">[Exam Subject]</span> exam form for me please"
+                                Please Know that LLMs can make mistakes. Verify important information and always ask for help if you need it.
                             </p>
                         </div>
                     </div>
