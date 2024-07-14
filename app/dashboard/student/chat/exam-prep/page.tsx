@@ -1,5 +1,5 @@
 
-import { AI } from '@/actions/dashboard/ExamPreparationActions'
+import { AI } from '@/actions/dashboard/AI/ExamPreparationActions'
 import ExamPrepChat from '@/components/dashboards/student/chat/ExamPrepChat'
 
 export const dynamic = 'force-dynamic'

@@ -1,4 +1,4 @@
-import { AI, getUIStateFromAIState } from '@/actions/dashboard/AI/ExamPreparationActions'
+import { FreeChatAI, getUIStateFromFreeChatAIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExamnChatIdPageLayout ({
@@ -25,7 +25,7 @@ export default async function ExamnChatIdPageLayout ({
     }
 
     // WTF!!!! why this need an await?????
-    const uiState = await getUIStateFromAIState({
+    const uiState = await getUIStateFromFreeChatAIState({
         id: messagesData.data.chat_id.toString(),
         createdAt: new Date(messagesData.data.created_at),
         messages: messagesData.data.messages.map((message) => {
@@ -97,11 +97,11 @@ export default async function ExamnChatIdPageLayout ({
     })
 
     return (
-        <AI
+        <FreeChatAI
             initialUIState={uiState}
             initialAIState={{ chatId: (params.chatId), messages: messsages }}
         >
             {children}
-        </AI>
+        </FreeChatAI>
     )
 }

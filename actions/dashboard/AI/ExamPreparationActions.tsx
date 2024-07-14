@@ -2,7 +2,7 @@
 import 'server-only'
 
 import { google } from '@ai-sdk/google'
-import { CoreMessage, generateId, generateObject } from 'ai'
+import { CoreMessage, generateId } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
 import { ReactNode } from 'react'
@@ -68,19 +68,16 @@ export async function continueConversation (
             </Message>
         ),
         system: `\
-            You are a teacher and you must give feedback and a grade to the student based on the exam he took
-            You and the user can discuss the exam and the student's performance
+            You are a PHD expert Teacher and you must give feedback and a grade to the student based on the exams he takes
+            You and the user can discuss the exams and the student's performance.
+            Generate questions for a student who wants to review the main concepts of the learning objectives in the exam.
 
             Messages inside [] means that it's a UI element or a user event. For example:
-            - [showExamForm] means that the user will see an exam form and fill it out
-            - [showExamResult] means that the user will see the result of the exam he took
-            - [examsSuggestions] means that the user will see suggestions for exams he can take
+            - [showExamForm] means that the user will mean that the user will see a form to fill out for an exam preparation
+            - [showExamResult] means that the user will see the result of the exam he took with the score and the feedback for each question
+            - [examsSuggestions] means that the user will see suggestions for exams he can take, with the title, description, content, and difficulty of the exam, the user can click on the suggestion to see more details about the exam
 
-            If the user requests a exam or quiz, call \`showExamForm\` to show the exam form. after an exan is taken, call \`showExamResult\` to show the result of the exam.
-            As a teacher, if the user ask for an exam but is vague, you can suggest exams to the user by calling \`examsSuggestions\` or if the user is asking for suggestions.
-
-            Besides that, you can also chat with users about possible topics for exams, or any other topic you want to discuss with the user that goes along with the exam preparation as this is a exam preparation chat.
-        `,
+Also you can chat the user and ask him questions about the subject to get more information about the subject and the learning objectives of the student.`,
         text: async function * ({ content, done }) {
             if (done) {
                 aiState.done({
@@ -145,7 +142,7 @@ export async function continueConversation (
                     })),
                     freeTextQuestion: z.array(z.object({
                         id: z.string().describe('The id of the question'),
-                        label: z.string().describe('The question text for the user to answer')
+                        label: z.string().describe('The question the user must anwser with a free text')
                     })),
                     matchingTextQuestions: z.array(z.object({
                         id: z.string().describe('The id of the question'),
@@ -285,21 +282,53 @@ export async function continueConversation (
                 }
             },
             showExamResult: {
-                description: 'Show the user the result of the exam he took',
+                description: 'Show the user the result of the exam he took with the score and the feedback for each question',
                 parameters: z.object({
                     score: z.number().int().describe('The grade of the student in the exam with a scale from 0 to 20'),
                     overallFeedback: z.string().describe('The overall feedback for the student in the exam, if the student did well or not'),
-                    questionAndAnswerFeedback: z.array(z.object({
+                    freeTextQuestionFeedback: z.array(z.object({
+                        id: z.string().describe('The id of the question'),
                         question: z.string().describe('The original question'),
                         answer: z.string().describe('The answer the student gave'),
                         correctAnswer: z.string().describe('The correct answer of the question'),
                         feedback: z.string().describe('The feedback for the question the student gave')
+                    })),
+                    multipleChoiceQuestionFeedback: z.array(z.object({
+                        id: z.string().describe('The id of the question'),
+                        question: z.string().describe('The original question'),
+                        options: z.array(z.object({
+                            id: z.string().describe('The id of the option'),
+                            text: z.string().describe('The text of the option'),
+                            correct: z.boolean().describe('If the option is correct or not'),
+                            userSelected: z.boolean().describe('If the user selected the option')
+                        }))
+                    })),
+                    singleSelectQuestionFeedback: z.array(z.object({
+                        id: z.string().describe('The id of the question'),
+                        question: z.string().describe('The original question'),
+                        answer: z.string().describe('The answer the student gave'),
+                        correctAnswer: z.string().describe('The correct answer of the question'),
+                        feedback: z.string().describe('The feedback for the question the student gave')
+                    })),
+                    matchingTextQuestionsFeedback: z.array(z.object({
+                        question: z.string().describe('The original question'),
+                        rightColumn: z.array(z.object({
+                            id: z.string().describe('The id of the right column item'),
+                            text: z.string().describe('The text in the right column'),
+                            matchedWith: z.string().describe('The id of the matching left column item'),
+                            userMatchedWith: z.string().describe('The id of the matching left column item')
+                        })),
+                        feedback: z.string().describe('The feedback for the question the student gave')
                     }))
+
                 }),
                 generate: async function * ({
                     score,
                     overallFeedback,
-                    questionAndAnswerFeedback
+                    freeTextQuestionFeedback,
+                    multipleChoiceQuestionFeedback,
+                    singleSelectQuestionFeedback,
+                    matchingTextQuestionsFeedback
                 }) {
                     const toolCallId = generateId()
 
@@ -318,7 +347,10 @@ export async function continueConversation (
                                         args: {
                                             score,
                                             overallFeedback,
-                                            questionAndAnswerFeedback
+                                            freeTextQuestionFeedback,
+                                            multipleChoiceQuestionFeedback,
+                                            singleSelectQuestionFeedback,
+                                            matchingTextQuestionsFeedback
                                         }
                                     }
                                 ]
@@ -334,15 +366,16 @@ export async function continueConversation (
                                         result: {
                                             score,
                                             overallFeedback,
-                                            questionAndAnswerFeedback
+                                            freeTextQuestionFeedback,
+                                            multipleChoiceQuestionFeedback,
+                                            singleSelectQuestionFeedback,
+                                            matchingTextQuestionsFeedback
                                         }
                                     }
                                 ]
                             }
                         ]
                     })
-
-                    console.log(questionAndAnswerFeedback)
 
                     yield (
                         <Message
@@ -355,42 +388,54 @@ export async function continueConversation (
                         </Message>
                     )
 
-                    const aiMessageInsert = await supabase.from('messages').insert([
-                        {
-                            chat_id: +aiState.get().chatId,
-                            message: JSON.stringify([
-                                {
-                                    type: 'tool-call',
-                                    toolName: 'showExamResult',
-                                    toolCallId,
-                                    result: {
-                                        score,
-                                        overallFeedback,
-                                        questionAndAnswerFeedback
+                    const aiMessageInsert = await supabase
+                        .from('messages')
+                        .insert([
+                            {
+                                chat_id: +aiState.get().chatId,
+                                message: JSON.stringify([
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'showExamResult',
+                                        toolCallId,
+                                        result: {
+                                            score,
+                                            overallFeedback,
+                                            freeTextQuestionFeedback,
+                                            multipleChoiceQuestionFeedback,
+                                            singleSelectQuestionFeedback,
+                                            matchingTextQuestionsFeedback
+                                        }
                                     }
-                                }
-                            ]),
-                            sender: 'assistant',
-                            created_at: new Date().toISOString()
-                        },
-                        {
-                            chat_id: +aiState.get().chatId,
-                            message: JSON.stringify([
-                                {
-                                    type: 'tool-result',
-                                    toolName: 'showExamResult',
-                                    toolCallId,
-                                    result: {
-                                        score,
-                                        overallFeedback,
-                                        questionAndAnswerFeedback
+                                ]),
+                                sender: 'assistant',
+                                created_at: new Date().toISOString()
+                            },
+                            {
+                                chat_id: +aiState.get().chatId,
+                                message: JSON.stringify([
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'showExamResult',
+                                        toolCallId,
+                                        result: {
+                                            score,
+                                            overallFeedback,
+                                            freeTextQuestionFeedback,
+                                            multipleChoiceQuestionFeedback,
+                                            singleSelectQuestionFeedback,
+                                            matchingTextQuestionsFeedback
+                                        }
                                     }
-                                }
-                            ]),
-                            sender: 'tool',
-                            created_at: new Date().toISOString()
-                        }
-                    ])
+                                ]),
+                                sender: 'tool',
+                                created_at: new Date().toISOString()
+                            }
+                        ])
+                    console.log(freeTextQuestionFeedback,
+                        multipleChoiceQuestionFeedback,
+                        singleSelectQuestionFeedback,
+                        matchingTextQuestionsFeedback)
 
                     return (
                         <Message
@@ -402,7 +447,14 @@ export async function continueConversation (
                                 score={score}
                                 overallFeedback={overallFeedback}
                                 // @ts-expect-error
-                                questionAndAnswerFeedback={questionAndAnswerFeedback}
+                                freeTextQuestionFeedback={freeTextQuestionFeedback}
+                                // @ts-expect-error
+                                multipleChoiceQuestionFeedback={multipleChoiceQuestionFeedback}
+                                // @ts-expect-error
+                                singleSelectQuestionFeedback={singleSelectQuestionFeedback}
+                                // @ts-expect-error
+                                matchingTextQuestionsFeedback={matchingTextQuestionsFeedback}
+
                             />
                         </Message>
                     )
@@ -549,42 +601,6 @@ type Root = Record<string | number, {
     answers?: string[]
 }>
 
-export async function ExamPrepAnwser (data: Root) {
-    const content = `The student anwsered the following questions: ${Object.values(data).map((item) => item.question).join(', ')}
-                ${Object.values(data).map((item) => {
-        if (Array.isArray(item.answers)) {
-            console.log(item.answers)
-            console.log(item.questionOptions)
-            return 'Answer: ' + item.answers.join(', ') + ` Options: ${item.questionOptions.join(', ')}`
-        } else {
-            return `Answer: ${item.answer}`
-        }
-    }).join(', ')}`
-
-    console.log(content)
-
-    const { object } = await generateObject({
-        model: google('models/gemini-1.5-pro-latest'),
-        system: `You are a teacher and you must give feedback and a grade to the student based on the exam he took. The exam was about the following questions: ${Object.values(data).map((item) => item.question).join(', ')}`,
-        messages: [
-            {
-                role: 'user',
-                content
-            }
-        ],
-        schema: z.object({
-            grade: z.number().int().min(1).max(20).describe('The grade of the student in the exam with a scale from 1 to 20'),
-            questionAndAnswerFeedback: z.array(z.object({
-                question: z.string().describe('The question'),
-                feedback: z.string().describe('The feedback for the question of the student')
-            })).describe('The feedback for each question and answer the student gave in the exam'),
-            overallFeedback: z.string().describe('The overall feedback for the student in the exam')
-        })
-    })
-
-    return object
-}
-
 export interface Chat extends Record<string, any> {
     id: string
     createdAt: Date
@@ -633,7 +649,13 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                               // @ts-expect-error
                               overallFeedback={tool.result.overallFeedback}
                               // @ts-expect-error
-                              questionAndAnswerFeedback={tool.result.questionAndAnswerFeedback}
+                              freeTextQuestionFeedback={tool.result.freeTextQuestionFeedback}
+                              // @ts-expect-error
+                              multipleChoiceQuestionFeedback={tool.result.multipleChoiceQuestionFeedback}
+                              // @ts-expect-error
+                              singleSelectQuestionFeedback={tool.result.singleSelectQuestionFeedback}
+                              // @ts-expect-error
+                              matchingTextQuestionsFeedback={tool.result.matchingTextQuestionsFeedback}
                           />
                       </Message>
                   ) : tool.toolName === 'examsSuggestions' ? (

@@ -4,7 +4,7 @@ import { generateId } from 'ai'
 import { useActions, useUIState } from 'ai/rsc'
 import { useState } from 'react'
 
-import { AI } from '@/actions/dashboard/ExamPreparationActions'
+import { AI } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/utils'
 

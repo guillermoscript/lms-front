@@ -1,23 +1,19 @@
 'use client'
 import { generateId } from 'ai'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { AI, ClientMessage, UIState } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
-import { AI, ClientMessage, UIState } from '@/actions/dashboard/ExamPreparationActions'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import { ChatInput } from '../../Common/chat/chat'
 import Message from '../../Common/chat/Message'
 import SuggestionsContainer from '../../Common/chat/SuggestionsContainer'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
-export default function ExamPrepChat ({
-    chatId
-}: {
-    chatId?: number
-}) {
+export default function ExamPrepChat ({ chatId }: { chatId?: number }) {
     const [conversation, setConversation] = useUIState<typeof AI>()
     const { continueConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
@@ -25,183 +21,155 @@ export default function ExamPrepChat ({
     const [aiState] = useAIState()
     const lastMessage = aiState.messages ? aiState.messages[aiState.messages.length - 1] : null
     const [hideInput, setHideInput] = useState<boolean>(false)
-    const scrollRef = useRef(null)
+
+    const { scrollRef, visibilityRef, messagesEndRef, isAtBottom, isVisible, scrollToBottom } = useScrollAnchor()
 
     useEffect(() => {
         if (!lastMessage) return
         if (lastMessage.role === 'tool') {
             const [toolCalled] = lastMessage.content
-            const isShowExamnForm = toolCalled.toolName === 'showExamForm'
-            setHideInput(isShowExamnForm)
+            const isShowExamForm = toolCalled.toolName === 'showExamForm'
+            setHideInput(isShowExamForm)
         }
-    }
-    , [lastMessage])
+    }, [lastMessage])
 
     useEffect(() => {
-        if (scrollRef.current) {
-            const scroll = scrollRef.current
-            scroll.scrollTop = scroll.scrollHeight
-        }
-    }, [conversation]) // Dependency array includes conversation to trigger effect on update
+        scrollToBottom()
+    }, [conversation, scrollToBottom])
 
     return (
-        <div >
-            {conversation.length === 0 && (
-                <>
-                    <h1 className="text-2xl font-bold p-4">Exam Preparation Chat</h1>
-                    <SuggestionsContainer
-                        suggestions={[
-                            {
-                                title: 'help me creating a basic python exam form',
-                                description:
-                  'This will help you to create a basic python exam form'
-                            },
-                            {
-                                title: 'help me creating a basic Javascipt exam form',
-                                description:
-                  'This will help you to create a basic Javascript exam form'
-                            },
-                            {
-                                title: 'help me creating a basic HTML exam form',
-                                description:
-                  'This will help you to create a basic HTML exam form'
-                            }
-                        ]}
-                        onSuggestionClick={async (suggestion) => {
-                            setIsLoading(true)
+        <div>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 max-h-[calc(100vh-4rem)]">
 
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-
-                                        <Message
-                                            sender={message.role}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown markdown={message.content} />
-                                        </Message>
-                                    )
-                                }
-                            ])
-
-                            const message = await continueConversation(suggestion)
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                message
-                            ])
-                            setIsLoading(false)
-                        }}
-                    />
-                </>
-            )}
-            <ScrollArea
-                ref={scrollRef} // Add this line
-                className="flex-1 w-full p-1 lg:h-[calc(100vh-8rem)] h-[calc(100vh-0.5rem)]"
-            >
                 {conversation.length ? (
-                    <ChatList messages={conversation} />
+                    <ChatList messages={conversation} messagesEndRef={messagesEndRef} />
                 ) : (
-                    <div className="flex-1 flex items-center justify-center my-4">
-                        <p className="text-gray-400">
-                            Please write a message with the exam you want, like "help me creating a basic
-                            <span
-                                className="text-gray-600 font-semibold"
-                            >
-                            [Exam Subject]
-                            </span> exam form for me please"
-                        </p>
+                    <div className="flex flex-col gap-4">
+                        <h1 className="text-2xl">
+                            Exam Preparation Chat, Ask me anything, I'm here to help!
+                        </h1>
+                        <SuggestionsContainer
+                            suggestions={[
+                                {
+                                    title: 'help me creating a basic python exam form',
+                                    description:
+                  'This will help you to create a basic python exam form'
+                                },
+                                {
+                                    title: 'help me creating a basic Javascipt exam form',
+                                    description:
+                  'This will help you to create a basic Javascript exam form'
+                                },
+                                {
+                                    title: 'help me creating a basic HTML exam form',
+                                    description:
+                  'This will help you to create a basic HTML exam form'
+                                }
+                            ]}
+                            onSuggestionClick={async (suggestion) => {
+                                setIsLoading(true)
+
+                                setConversation((currentConversation: ClientMessage[]) => [
+                                    ...currentConversation,
+                                    {
+                                        id: generateId(),
+                                        role: 'user',
+                                        display: (
+
+                                            <Message
+                                                sender={message.role}
+                                                time={new Date().toDateString()}
+                                                isUser={true}
+                                            >
+                                                <ViewMarkdown markdown={message.content} />
+                                            </Message>
+                                        )
+                                    }
+                                ])
+
+                                const message = await continueConversation(suggestion)
+                                setConversation((currentConversation: ClientMessage[]) => [
+                                    ...currentConversation,
+                                    message
+                                ])
+                                setIsLoading(false)
+                            }}
+                        />
+                        <div className="flex-1 flex items-center justify-center my-4">
+                            <p className="text-gray-400">
+                                Please write a message with the exam you want, like "help me creating a basic
+                                <span className="text-gray-600 font-semibold">[Exam Subject]</span> exam form for me please"
+                            </p>
+                        </div>
                     </div>
                 )}
 
-                {isLoading && (
-                    <ChatLoadingSkeleton />
-                )}
+                {isLoading && <ChatLoadingSkeleton />}
+                <div ref={visibilityRef} className="w-full h-px" />
+            </div>
 
-                <div className="w-full h-px" />
-            </ScrollArea>
             {!hideInput && (
-                <>
-                    <ChatInput
-                        isLoading={isLoading}
-                        stop={() => setStop(true)}
-                        isTemplatePresent={true}
-                        callbackFunction={async (input) => {
-                            if (stop) return
+                <ChatInput
+                    isLoading={isLoading}
+                    stop={() => setStop(true)}
+                    isTemplatePresent={true}
+                    callbackFunction={async (input) => {
+                        if (stop) return
 
-                            setIsLoading(true)
+                        setIsLoading(true)
 
-                            if (aiState.messages.length === 0 && chatId) {
-                                console.log('First message')
-                                const message = await studentUpdateChatTitle({
-                                    chatId,
-                                    title: input.content
-                                })
+                        if (aiState.messages.length === 0 && chatId) {
+                            await studentUpdateChatTitle({ chatId, title: input.content })
+                        }
 
-                                console.log(message)
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            {
+                                id: generateId(),
+                                role: 'user',
+                                display: (
+                                    <Message
+                                        sender={'user'}
+                                        time={new Date().toDateString()}
+                                        isUser={true}
+                                    >
+                                        <ViewMarkdown markdown={input.content} />
+                                    </Message>
+                                )
                             }
+                        ])
 
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-                                        <Message
-                                            sender={'user'}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown markdown={input.content} />
-                                        </Message>
-                                    )
-                                }
-                            ])
+                        if (chatId) {
+                            await studentInsertChatMessage({ chatId, message: input.content })
+                        }
 
-                            if (chatId) {
-                                const inserUserMessage = await studentInsertChatMessage({
-                                    chatId,
-                                    message: input.content
-                                })
-                                console.log(inserUserMessage)
-                            }
-
-                            const message = await continueConversation(input.content)
-
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                message
-                            ])
-                            setIsLoading(false)
-                        }}
-                    />
-                </>
+                        const message = await continueConversation(input.content)
+                        setConversation((currentConversation: ClientMessage[]) => [
+                            ...currentConversation,
+                            message
+                        ])
+                        setIsLoading(false)
+                    }}
+                />
             )}
         </div>
     )
 }
-interface ChatList {
+
+interface ChatListProps {
     messages: UIState
+    messagesEndRef: React.RefObject<HTMLDivElement>
 }
 
-function ChatList ({ messages }: ChatList) {
-    if (!messages.length) {
-        return null
-    }
-
+function ChatList ({ messages, messagesEndRef }: ChatListProps) {
     return (
-        <>
-            <div className="relative">
-
-                {messages.map((message, index) => (
-                    <div key={index} className="flex flex-col gap-2">
-                        {message.display}
-                    </div>
-                ))}
-            </div>
-        </>
+        <div className="relative">
+            {messages.map((message, index) => (
+                <div key={index} className="flex flex-col gap-2">
+                    {message.display}
+                </div>
+            ))}
+            <div ref={messagesEndRef} className="h-px" />
+        </div>
     )
 }
