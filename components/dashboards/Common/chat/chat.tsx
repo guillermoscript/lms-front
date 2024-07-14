@@ -8,8 +8,9 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/utils'
+
+import ChatLoadingSkeleton from '../../student/chat/ChatLoadingSkeleton'
 
 const ToolInvocationMessage = ({
     toolInvocations
@@ -131,19 +132,7 @@ const ChatWindow = ({
                 )
             })}
             {isLoading && (
-                <div className="space-y-2 w-full">
-                    <Skeleton className="h-6 rounded mr-14" />
-                    <div className="grid grid-cols-3 gap-4">
-                        <Skeleton className="h-6 rounded col-span-2" />
-                        <Skeleton className="h-6 rounded col-span-1" />
-                    </div>
-                    <div className="grid grid-cols-4 gap-4">
-                        <Skeleton className="h-6 rounded col-span-1" />
-                        <Skeleton className="h-6 rounded col-span-2" />
-                        <Skeleton className="h-6 rounded col-span-1 mr-4" />
-                    </div>
-                    <Skeleton className="h-6 rounded" />
-                </div>
+                <ChatLoadingSkeleton />
             )}
         </div>
     )
@@ -166,14 +155,16 @@ const ChatInput = ({
     return (
         <>
             {isTemplatePresent && (
-                <>
+                <div className="flex flex-wrap gap-4">
                     <Button
                         variant='outline'
                         disabled={isLoading}
+                        className='text-wrap disabled:cursor-not-allowed'
                         onClick={() => {
                             ('Template for generating exam form')
-                            setMessage('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
-                            ref.current?.setMarkdown('Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n')
+                            const message = 'Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n'
+                            setMessage(message)
+                            ref.current?.setMarkdown(message)
                         } }
                     >
                     Template for generating exam form for a "X" topic
@@ -181,14 +172,16 @@ const ChatInput = ({
                     <Button
                         variant='outline'
                         disabled={isLoading}
+                        className='text-wrap disabled:cursor-not-allowed'
                         onClick={() => {
-                            setMessage('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
-                            ref.current?.setMarkdown('Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"')
-                        } }
+                            const message = 'Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"'
+                            setMessage(message + 'please call the function [examsSuggestions]  with the topic as a parameter')
+                            ref.current?.setMarkdown(message)
+                        }}
                     >
                         Template for asking a suggestions of an exam form for a "X" topic
                     </Button>
-                </>
+                </div>
             )}
             <form
                 onSubmit={(e) => {
