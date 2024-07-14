@@ -2,19 +2,12 @@
 import { Suspense } from 'react'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
 import LessonsTimeLine from '@/components/dashboards/student/course/lessons/LessonsTimeLine'
 import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
@@ -125,68 +118,22 @@ function Content ({
 }) {
     return (
         <div className="flex flex-col gap-8 w-full">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-              Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-              Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.course_id}`}
-                        >
-                            {courseData?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.course_id}/lessons/`}
-                        >
-              Lessons
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessonData.course_id}`}
-                        >
-                            {lessonData.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage >
-                            {lessonData.title}
-                        </BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: `/dashboard/student/courses/${lessonData.course_id}`, label: courseData?.title },
+                    { href: `/dashboard/student/courses/${lessonData.course_id}/lessons`, label: 'Lessons' },
+                    { href: `/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`, label: lessonData.title }
+                ]}
+            />
             <div className="flex flex-col gap-8 w-full">
                 <div>
                     <div className="flex items-center justify-between">
-                        <h1 className="text-3xl font-bold">{lessonData.title}</h1>
+                        <h1 className="text-3xl font-bold">
+                            {lessonData.title}
+                        </h1>
                         <Badge variant="default">Lesson # {lessonData.sequence}</Badge>
                     </div>
                     <p className="text-gray-500 dark:text-gray-400">
