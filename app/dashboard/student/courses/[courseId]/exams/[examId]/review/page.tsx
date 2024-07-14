@@ -6,14 +6,8 @@ import {
 } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { Badge } from '@/components/ui/badge'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
@@ -100,72 +94,29 @@ export default async function StudentExamCoursePage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/student">
-                          Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/student/courses">
-                          Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/student/courses/${examData?.data?.courses?.course_id}`}
-                        >
-                            {examData?.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/student/courses/${examData.data?.courses?.course_id}/exams`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}`}
-                        >
-                            {examData.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}/review`}
-                        >
-                            Review
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${examData?.data?.courses?.course_id}`,
+                        label: examData?.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams`,
+                        label: 'Exams'
+                    },
+                    {
+                        href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}`,
+                        label: examData.data?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}/review`,
+                        label: 'Review'
+                    }
+                ]}
+            />
             <div className="grid gap-8">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">

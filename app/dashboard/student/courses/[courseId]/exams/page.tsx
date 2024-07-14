@@ -3,13 +3,6 @@ import { CheckCircleIcon, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentExamsCoursePage ({
@@ -57,51 +50,21 @@ export default async function StudentExamsCoursePage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams.data[0].course_id}`}
-                        >
-                            {exams.data[0]?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams.data[0].course_id}/exams`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${exams.data[0].course_id}`,
+                        label: exams.data[0]?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data[0].course_id}/exams`,
+                        label: 'Exams'
+                    }
+                ]}
+            />
             <div className="grid gap-8">
                 <div>
                     <h1 className="text-3xl font-bold">Exams</h1>
