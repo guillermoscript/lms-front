@@ -1,5 +1,4 @@
-'use server'
-import { HomeIcon, MessageCircle, Settings, User2Icon } from 'lucide-react'
+import { HomeIcon, MessageCircle, User2Icon } from 'lucide-react'
 import Link from 'next/link'
 
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
@@ -15,23 +14,19 @@ async function Sidebar () {
                         href={`/dashboard/${userRole}`}
                         icon={<HomeIcon className="h-5 w-5" />}
                         label="Home"
+                        id='home'
                     />
                     <NavLink
                         href={`/dashboard/${userRole}/account`}
                         icon={<User2Icon className="h-5 w-5" />}
                         label="Account"
+                        id='account'
                     />
                     <NavLink
                         href={`/dashboard/${userRole}/chat`}
                         icon={<MessageCircle className="h-5 w-5" />}
                         label="Chat"
-                    />
-                </nav>
-                <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-                    <NavLink
-                        href="#"
-                        icon={<Settings className="h-5 w-5" />}
-                        label="Settings"
+                        id='chat'
                     />
                 </nav>
             </aside>
@@ -46,17 +41,20 @@ export const NavLink = ({
     href,
     icon,
     label,
-    children
+    children,
+    id
 }: {
     href: string
     icon: React.ReactNode
     label?: string
     children?: React.ReactNode
+    id: string
 }) => (
     <Link
         className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
         href={href}
         data-state="closed"
+        id={id}
     >
         {icon}
         {label && <span className="sr-only">{label}</span>}
