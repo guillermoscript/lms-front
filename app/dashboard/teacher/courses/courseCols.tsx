@@ -10,7 +10,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuLabel,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
@@ -28,28 +28,28 @@ export const courseCols: Array<ColumnDef<Course>> = [
         accessorKey: 'id',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="ID" />
-        )
+        ),
     },
     {
         accessorKey: 'title',
-        header: 'Title'
+        header: 'Title',
     },
     {
         accessorKey: 'description',
-        header: 'Description'
+        header: 'Description',
     },
     {
         accessorKey: 'status',
-        header: 'Status'
+        header: 'Status',
     },
     {
         accessorKey: 'date',
-        header: 'Date'
+        header: 'Date',
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -64,18 +64,20 @@ export const courseCols: Array<ColumnDef<Course>> = [
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>
-                            <Link
-                                href={`/dashboard/teacher/courses/${rowData.id}`}
-                            >
-                                Ver detalles
-                            </Link>
+                            <Button asChild variant="ghost" className="w-full">
+                                <Link
+                                    href={`/dashboard/teacher/courses/${rowData.id}`}
+                                >
+                                    View course
+                                </Link>
+                            </Button>
                         </DropdownMenuLabel>
-                        <DeleteCourseAlert
-                            courseId={rowData.id}
-                        />
+                        <DropdownMenuLabel>
+                            <DeleteCourseAlert courseId={rowData.id} />
+                        </DropdownMenuLabel>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
-        }
-    }
+        },
+    },
 ]

@@ -52,7 +52,7 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original

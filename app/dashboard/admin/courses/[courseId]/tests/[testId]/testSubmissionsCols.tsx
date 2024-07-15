@@ -8,7 +8,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuLabel,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
@@ -25,16 +25,16 @@ export const testSubmissionsCols: Array<ColumnDef<TestSubmissions>> = [
         accessorKey: 'id',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="ID" />
-        )
+        ),
     },
     {
         accessorKey: 'date',
-        header: 'Date'
+        header: 'Date',
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -49,15 +49,17 @@ export const testSubmissionsCols: Array<ColumnDef<TestSubmissions>> = [
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>
-                            <Link
-                                href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.testId}/review/${rowData.id}`}
-                            >
-                Ver detalles
-                            </Link>
+                            <Button asChild variant="ghost" className="w-full">
+                                <Link
+                                    href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.testId}/review/${rowData.id}`}
+                                >
+                                    View submission
+                                </Link>
+                            </Button>
                         </DropdownMenuLabel>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
-        }
-    }
+        },
+    },
 ]
