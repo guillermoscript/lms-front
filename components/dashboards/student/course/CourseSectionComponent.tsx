@@ -40,14 +40,8 @@ const CourseSectionComponent: React.FC<CourseSectionProps> = ({ userCourses, use
                             <CourseCard
                                 key={course.course_id}
                                 title={course.course.title}
-                                progress={75}
-                                totalLessons={course.course.lessons?.length}
                                 img={course.course.thumbnail_url}
-                                completedLessons={18}
-                                completedTests={5}
                                 description={course.course.description}
-                                totalTests={course.course.exams.length}
-                                approvedTests={4}
                                 courseId={course.course_id}
                             />
                         ))}
