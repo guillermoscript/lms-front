@@ -8,7 +8,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger
+    DialogTrigger,
 } from '@/components/ui/dialog'
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
@@ -26,28 +26,28 @@ export const courseCols: Array<ColumnDef<Course>> = [
         accessorKey: 'id',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="ID" />
-        )
+        ),
     },
     {
         accessorKey: 'title',
-        header: 'Title'
+        header: 'Title',
     },
     {
         accessorKey: 'description',
-        header: 'Description'
+        header: 'Description',
     },
     {
         accessorKey: 'status',
-        header: 'Status'
+        header: 'Status',
     },
     {
         accessorKey: 'date',
-        header: 'Date'
+        header: 'Date',
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -60,13 +60,15 @@ export const courseCols: Array<ColumnDef<Course>> = [
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Link product to course</DialogTitle>
+                                <DialogTitle>
+                                    Link product to course
+                                </DialogTitle>
                             </DialogHeader>
                             <ConvertCourseToProduct rowData={rowData} />
                         </DialogContent>
                     </Dialog>
                 </>
             )
-        }
-    }
+        },
+    },
 ]
