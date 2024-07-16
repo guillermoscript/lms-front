@@ -8,14 +8,14 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-export default function DeleteAlert ({
+export default function DeleteAlert({
     itemId,
     itemType,
-    deleteAction
+    deleteAction,
 }: {
     itemId: string
     itemType: string
@@ -23,24 +23,22 @@ export default function DeleteAlert ({
 }) {
     return (
         <AlertDialog>
-            <AlertDialogTrigger>
-        Delete {itemType}
-            </AlertDialogTrigger>
+            <Button asChild variant="ghost" className="w-full">
+                <AlertDialogTrigger>Delete {itemType}</AlertDialogTrigger>
+            </Button>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-            Are you absolutely sure?
+                        Are you absolutely sure?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-            This action cannot be undone. This will permanently
-            delete the {itemType}.
+                        This action cannot be undone. This will permanently
+                        delete the {itemType}.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                        asChild
-                    >
+                    <AlertDialogAction asChild>
                         <Button
                             variant={'destructive'}
                             onClick={async () => {
@@ -51,7 +49,7 @@ export default function DeleteAlert ({
                                 }
                             }}
                         >
-              Delete
+                            Delete
                         </Button>
                     </AlertDialogAction>
                 </AlertDialogFooter>

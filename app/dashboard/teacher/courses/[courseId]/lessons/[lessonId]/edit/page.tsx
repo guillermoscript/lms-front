@@ -4,7 +4,7 @@ import {
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
-    BreadcrumbSeparator
+    BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
@@ -12,10 +12,10 @@ import { createClient } from '@/utils/supabase/server'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export default async function EditLessonPage ({
-    params
+export default async function EditLessonPage({
+    params,
 }: {
-    params: { courseId: string, lessonId: string }
+    params: { courseId: string; lessonId: string }
 }) {
     const supabase = createClient()
     const lesson = await supabase
@@ -35,19 +35,19 @@ export default async function EditLessonPage ({
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard">
-                          Dashboard
+                            Dashboard
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
+                            Teacher
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
+                            Courses
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
@@ -83,7 +83,8 @@ export default async function EditLessonPage ({
                     status: lesson?.data?.status,
                     content: lesson?.data?.content,
                     description: lesson?.data?.description,
-                    systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt
+                    systemPrompt:
+                        lesson?.data.lessons_ai_tasks[0]?.system_prompt,
                 }}
             />
         </>

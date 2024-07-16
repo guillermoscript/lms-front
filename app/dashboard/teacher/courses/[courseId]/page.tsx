@@ -7,7 +7,7 @@ import {
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
-    BreadcrumbSeparator
+    BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -18,8 +18,8 @@ import { createClient } from '@/utils/supabase/server'
 import { lessonsCols } from './lessonsCols'
 import { testsCols } from './testsCols'
 
-export default async function CreateCourseLessonPage ({
-    params
+export default async function CreateCourseLessonPage({
+    params,
 }: {
     params: { courseId: string }
 }) {
@@ -35,8 +35,6 @@ export default async function CreateCourseLessonPage ({
         console.log(course.error.message)
     }
 
-    console.log(course.data)
-
     const lessonRow = course.data?.lessons?.map((lesson) => {
         return {
             id: lesson.id,
@@ -44,7 +42,7 @@ export default async function CreateCourseLessonPage ({
             content: lesson.content,
             sequence: lesson.sequence,
             courseId: lesson.course_id,
-            created_at: dayjs(lesson.created_at).format('DD/MM/YYYY')
+            created_at: dayjs(lesson.created_at).format('DD/MM/YYYY'),
         }
     })
 
@@ -57,7 +55,7 @@ export default async function CreateCourseLessonPage ({
             exam_date: test.exam_date,
             created_at: test.created_at,
             updated_at: test.updated_at,
-            description: test.description
+            description: test.description,
         }
     })
 
@@ -69,19 +67,19 @@ export default async function CreateCourseLessonPage ({
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard">
-                          Dashboard
+                            Dashboard
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
+                            Teacher
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
                         <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
+                            Courses
                         </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />

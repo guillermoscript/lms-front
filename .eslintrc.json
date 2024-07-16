@@ -30,15 +30,22 @@
         // ,"prettier",
     ],
     "rules": {
-        "indent": ["off", 4],
-        "@typescript-eslint/indent" : ["error", 4],
+        "@typescript-eslint/space-before-function-paren": "off",
+        "indent": [
+            "off",
+            4
+        ],
+        "@typescript-eslint/indent": [
+            "error",
+            4
+        ],
         "prettier/prettier": "off",
         "@next/next/no-img-element": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "@typescript-eslint/no-redeclare": "off",
         "@typescript-eslint/ban-ts-comment": "off",
         "react/jsx-indent-props": [
-                "off",
+            "off",
             4
         ],
         "no-tabs": "off",
@@ -96,8 +103,9 @@
             }
         ],
         "react-hooks/exhaustive-deps": "off",
-        "unused-imports/no-unused-imports": "error"
-
+        "unused-imports/no-unused-imports": "error",
+        "@typescript-eslint/comma-dangle": "off",
+        "@typescript-eslint/member-delimiter-style": "off"
     },
     "overrides": [
         {
