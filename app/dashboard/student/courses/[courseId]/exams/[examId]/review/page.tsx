@@ -36,6 +36,7 @@ export default async function StudentExamCoursePage ({
             description,
             duration,
             exam_date,
+            created_by,
             courses (
                 title,
                 course_id
@@ -123,10 +124,17 @@ export default async function StudentExamCoursePage ({
                         {examData.data?.title} Review
                     </h1>
 
-                    <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                    {score ? (
+                        <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
                         Score:
-                        <Badge className="ml-2 ">{score}</Badge>
-                    </h3>
+                            <Badge className="ml-2 ">{score}</Badge>
+                        </h3>
+                    ) : (
+                        <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
+                        Score:
+                            <Badge className="ml-2 ">Pending</Badge>
+                        </h3>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <UserIcon className="h-5 w-5 text-gray-500" />
