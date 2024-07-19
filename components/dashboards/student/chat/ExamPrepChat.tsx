@@ -41,16 +41,16 @@ export default function ExamPrepChat ({ chatId }: { chatId?: number }) {
     return (
         <div>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 max-h-[calc(100vh-4rem)]">
-                <div className='my-4'>
-                    <ExamPrepSetup />
-                </div>
                 {conversation.length ? (
                     <ChatList messages={conversation} messagesEndRef={messagesEndRef} />
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <h1 className="text-2xl">
+                        <div className='flex flex-wrap gap-4 w-full items-center'>
+                            <h1 className="text-2xl">
                             Exam Preparation Chat, Ask me anything, I'm here to help!
-                        </h1>
+                            </h1>
+                            <ExamPrepSetup />
+                        </div>
                         <SuggestionsContainer
                             suggestions={[
                                 {
