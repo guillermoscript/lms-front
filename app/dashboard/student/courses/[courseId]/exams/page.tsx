@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { CheckCircleIcon, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentExamsCoursePage ({
@@ -134,7 +134,7 @@ const ExamCard = ({
     statusIcon: React.ReactNode
     title: string
     description: string
-    score: number
+    score: number | string
     status: string
     actionText: string
     link?: string
