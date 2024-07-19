@@ -10,7 +10,7 @@ const CourseCard = ({
     courseId,
     children,
     img,
-    description
+    description,
 }: {
     title: string
     description?: string
@@ -20,7 +20,9 @@ const CourseCard = ({
 }) => (
     <Card className="h-full flex flex-col justify-between">
         <CardHeader>
-            <CardTitle>{title}</CardTitle>
+            <CardTitle>
+                <Link href={`/dashboard/student/courses/${courseId}`}>{title}</Link>
+            </CardTitle>
             {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent className="p-4 flex-grow">
