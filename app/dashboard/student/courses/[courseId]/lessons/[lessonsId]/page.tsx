@@ -69,7 +69,9 @@ export default async function StudentLessonPage ({
             <LessonPage
                 sideBar={
                     <Tabs defaultValue="comments" className="w-full">
-                        <TabsList>
+                        <TabsList
+                            className='mx-3'
+                        >
                             <TabsTrigger value="comments">Comments</TabsTrigger>
                             <TabsTrigger value="timeline">Timeline</TabsTrigger>
                         </TabsList>
