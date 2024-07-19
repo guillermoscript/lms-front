@@ -101,7 +101,10 @@ function ChatTourFreeChat () {
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button onClick={() => setIsOpen(true)}>
+                    <Button
+                        className='w-fit'
+                        onClick={() => setIsOpen(true)}
+                    >
                         <InfoIcon size={24} />
                     </Button>
                 </TooltipTrigger>
