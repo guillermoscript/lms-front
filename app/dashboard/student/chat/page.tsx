@@ -12,10 +12,12 @@ export default async function ChatPage () {
     return (
         <>
             <div className="flex flex-col gap-4 w-full mb-8">
-                <h1 className="text-2xl font-semibold">
+                <div className="flex flex-wrap gap-4 w-full items-center">
+                    <h1 className="text-2xl font-semibold">
                 Select a chat or start a new one
-                </h1>
-                <FreeChatSetup />
+                    </h1>
+                    <FreeChatSetup />
+                </div>
                 <div className="flex flex-wrap gap-4 w-full">
                     <ExamLink />
                 </div>
