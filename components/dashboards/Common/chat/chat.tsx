@@ -1,9 +1,8 @@
 // UI Components
 
-import { MDXEditorMethods } from '@mdxeditor/editor'
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
@@ -149,8 +148,7 @@ const ChatInput = ({
     callbackFunction: (MessageType: MessageType) => void
     isTemplatePresent?: boolean
 }) => {
-    const [message, setMessage] = useState<string>('')
-    const ref = useRef<MDXEditorMethods>(null)
+    const ref = useRef(null)
 
     return (
         <>
@@ -167,7 +165,6 @@ const ChatInput = ({
                         onClick={() => {
                             ('Template for generating exam form')
                             const message = 'Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n'
-                            setMessage(message)
                             ref.current?.setMarkdown(message)
                         } }
                     >
@@ -180,7 +177,6 @@ const ChatInput = ({
                         className='text-wrap disabled:cursor-not-allowed'
                         onClick={() => {
                             const message = 'Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"'
-                            setMessage(message + 'please call the function [examsSuggestions]  with the topic as a parameter')
                             ref.current?.setMarkdown(message)
                         }}
                     >
@@ -192,12 +188,11 @@ const ChatInput = ({
                 onSubmit={(e) => {
                     e.preventDefault()
                     callbackFunction({
-                        content: message,
+                        content: ref.current?.getMarkdown() || '',
                         role: 'user',
                         createdAt: new Date(),
                         id: generateId()
                     })
-                    setMessage('')
                     ref.current?.setMarkdown('')
                 }}
                 className="py-4 flex gap-2 flex-col w-full"
@@ -209,11 +204,10 @@ const ChatInput = ({
                         'editor'
                     )}
                     placeholder="Chat with the AI assistant"
-                    markdown={message}
-                    onChange={(value) => setMessage(value)}
+                    markdown=""
                     ref={ref}
                 />
-                <input type="hidden" value={message} />
+                <input type="hidden" value={ref.current?.getMarkdown()} />
                 {isLoading ? (
                     <Button
                         type="button"
