@@ -74,5 +74,10 @@ export async function updateSession (request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard/teacher', request.url))
     }
 
+    // redirect to the dashboard if the user is already logged in
+    if (request.nextUrl.pathname.startsWith('/auth') && userData.data.user) {
+        return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
+    }
+
     return response
 }
