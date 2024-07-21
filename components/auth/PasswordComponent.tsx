@@ -8,7 +8,7 @@ export default function PasswordComponent () {
     return (
         <div className="rounded-md px-4 py-2 w-full bg-inherit border mb-6 gap-4 flex items-center justify-between">
             <input
-                className="border-none w-full"
+                className="border-none w-full bg-transparent focus:outline-none"
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 placeholder="••••••••"

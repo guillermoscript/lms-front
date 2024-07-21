@@ -1,6 +1,7 @@
 'use client'
 
 import {
+    BookUser,
     CreditCard,
     User
 } from 'lucide-react'
@@ -111,6 +112,7 @@ export function CommandDialogComponent () {
                                         className='flex items-center gap-2'
                                         href={`/dashboard/${userRole}/courses/${course.course_id}`}
                                     >
+                                        <BookUser className="mr-2 h-4 w-4" />
                                         <span>{course.title}</span>
                                     </Link>
                                 </CommandItem>

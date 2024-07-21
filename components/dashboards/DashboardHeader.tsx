@@ -8,6 +8,7 @@ import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import DashboardHeaderSheet from './Common/DashboardHeaderSheet'
 import ProfileDropdown from './Common/ProfileDropdown'
 import Notifications from './notifications/Notifications'
+import StudentOnBoarding from './student/tour/StudentOnBoarding'
 
 export default async function DashboardHeader () {
     const userRole = await getServerUserRole()
@@ -31,6 +32,7 @@ export default async function DashboardHeader () {
                     </div>
                 </form>
             </div>
+            <StudentOnBoarding />
             <Notifications />
             <DarkThemeToggle />
             <ProfileDropdown />

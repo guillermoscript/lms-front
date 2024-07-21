@@ -74,7 +74,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const system_prompt = data.get('systemPrompt') as string
     const description = data.get('description') as string
 
-    const requiredFields = ['title', 'sequence', 'status', 'video_url', 'course_id', 'content', 'systemPrompt']
+    const requiredFields = ['title', 'sequence', 'status', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
 
     if (response) {

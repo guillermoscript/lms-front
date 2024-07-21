@@ -37,6 +37,7 @@ export default async function ProfileDropdown () {
                     className="rounded-full border border-gray-200 w-8 h-8 dark:border-gray-800"
                     size="icon"
                     variant="ghost"
+                    id='profile'
                 >
                     <img
                         alt="Avatar"

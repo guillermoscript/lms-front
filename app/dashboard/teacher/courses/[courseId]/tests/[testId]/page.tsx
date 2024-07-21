@@ -1,17 +1,11 @@
 // @ts-nocheck
 import Link from 'next/link'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { FreeTextQuestionRead } from '@/components/dashboards/teacher/test/FreeTextQuestion'
 import { MultipleChoiceQuestionRead } from '@/components/dashboards/teacher/test/MultipleChoiceQuestion'
 import { SingleSelectQuestionRead } from '@/components/dashboards/teacher/test/SingleSelectQuestion'
 import categorizeQuestions from '@/components/dashboards/teacher/test/utils/categorizeQuestions'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { DataTable } from '@/components/ui/Table/data-table'
@@ -65,43 +59,22 @@ export default async function LessonPage ({
 
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            {test?.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
-                        >
-                            {test?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}`,
+                        label: test?.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
+                        label: test?.data?.title
+                    },
+                    { href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`, label: 'Edit' }
+                ]}
+            />
             <Tabs defaultValue="examData" className="w-full">
                 <TabsList>
                     <TabsTrigger value="examData">Exam Data</TabsTrigger>

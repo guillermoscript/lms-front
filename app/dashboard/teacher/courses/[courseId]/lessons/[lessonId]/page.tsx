@@ -3,15 +3,9 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
 import TaskMessageSandbox from '@/components/dashboards/teacher/lessons/TaskMessageSandbox'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/utils/supabase/server'
@@ -52,43 +46,16 @@ export default async function TeacherLessonPage ({
             }
         >
             <div className="flex-1 md:p-8 overflow-y-auto w-full space-y-4">
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard">
-                                Dashboard
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard/teacher">
-                                Teacher
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard/teacher/courses">
-                                Courses
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink
-                                href={`/dashboard/teacher/courses/${params.courseId}`}
-                            >
-                                {lesson?.data?.courses?.title}
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink
-                                href={`/dashboard/teacher/courses/${params.courseId}/${params.lessonId}`}
-                            >
-                                {lesson?.data?.title}
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
+
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: 'Dashboard' },
+                        { href: '/dashboard/teacher', label: 'Teacher' },
+                        { href: '/dashboard/teacher/courses', label: 'Courses' },
+                        { href: `/dashboard/teacher/courses/${params.courseId}`, label: lesson?.data?.courses?.title },
+                        { href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`, label: lesson?.data?.title }
+                    ]}
+                />
                 <div className="flex flex-col gap-8 w-full">
 
                     <div className="flex justify-between items-center w-full">

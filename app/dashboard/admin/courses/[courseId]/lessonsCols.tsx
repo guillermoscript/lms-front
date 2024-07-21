@@ -71,7 +71,7 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
                                 <Link
                                     href={`/dashboard/teacher/courses/${rowData.courseId}/lessons/${rowData.id}`}
                                 >
-                                    Ver detalles
+                                    View Details
                                 </Link>
                             </Button>
                         </DropdownMenuLabel>

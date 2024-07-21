@@ -1,14 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { Badge } from '@/components/ui/badge'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/utils/supabase/server'
@@ -64,33 +58,14 @@ export default async function CourseStudentPage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${courseData.data.course_id}`}
-                        >
-                            {courseData.data.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: `/dashboard/student/courses/${courseData.data.course_id}`, label: courseData.data.title }
+                ]}
+            />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-1 lg:grid-cols-1">
                 <Card className="h-full">
                     <CardHeader>

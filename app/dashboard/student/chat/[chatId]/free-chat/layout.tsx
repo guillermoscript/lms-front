@@ -1,4 +1,5 @@
 import { FreeChatAI, getUIStateFromFreeChatAIState } from '@/actions/dashboard/AI/FreeChatPreparation'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExamnChatIdPageLayout ({
@@ -97,11 +98,21 @@ export default async function ExamnChatIdPageLayout ({
     })
 
     return (
-        <FreeChatAI
-            initialUIState={uiState}
-            initialAIState={{ chatId: (params.chatId), messages: messsages }}
-        >
-            {children}
-        </FreeChatAI>
+        <>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/chat', label: 'Chat' },
+                    { href: `/dashboard/student/chat/${params.chatId}`, label: messagesData.data.title }
+                ]}
+            />
+            <FreeChatAI
+                initialUIState={uiState}
+                initialAIState={{ chatId: (params.chatId), messages: messsages }}
+            >
+                {children}
+            </FreeChatAI>
+        </>
     )
 }

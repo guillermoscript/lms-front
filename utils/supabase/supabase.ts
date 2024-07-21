@@ -466,6 +466,7 @@ export type Database = {
         Row: {
           course_id: number
           created_at: string | null
+          created_by: string | null
           description: string | null
           duration: number
           exam_date: string
@@ -478,6 +479,7 @@ export type Database = {
         Insert: {
           course_id: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration: number
           exam_date: string
@@ -490,6 +492,7 @@ export type Database = {
         Update: {
           course_id?: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration?: number
           exam_date?: string
@@ -506,6 +509,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
