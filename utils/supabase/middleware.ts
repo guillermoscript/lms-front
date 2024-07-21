@@ -60,20 +60,11 @@ export async function updateSession (request: NextRequest) {
     // refreshing the auth token
     const userData = await supabase.auth.getUser()
 
-    const userRole = await getServerUserRole()
-
-    if (userData.error) {
-        console.log('Error getting user data', userData.error)
-        return NextResponse.next({
-            request: {
-                headers: request.headers
-            }
-        })
-    }
-
     if (request.nextUrl.pathname.startsWith('/dashboard') && userData.error) {
         return NextResponse.redirect(new URL('/auth/login', request.url))
     }
+
+    const userRole = await getServerUserRole()
 
     if (request.nextUrl.pathname.startsWith('/dashboard/teacher') && (userRole !== 'teacher' && userRole !== 'admin')) {
         return NextResponse.redirect(new URL('/dashboard/student', request.url))
