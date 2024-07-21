@@ -1,7 +1,7 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
 
 import CourseCard from './CourseCard'
-import EnrollButton from './EnrollButton'
+import LinkCourseCard from './LinksCourseCards'
 
 export default async function AllCoursesCard ({
     supabase,
@@ -43,9 +43,10 @@ export default async function AllCoursesCard ({
                                     courseId={course.course_id}
                                     img={course.thumbnail_url}
                                 >
-                                    {course.enrollments.length === 0 ? (
-                                        <EnrollButton courseId={course.course_id} />
-                                    ) : null}
+                                    <LinkCourseCard
+                                        courseId={course.course_id}
+                                        noEnroll={course.enrollments.length === 0}
+                                    />
                                 </CourseCard>
                             </div>
                         </CarouselItem>
