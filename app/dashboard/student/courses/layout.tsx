@@ -1,4 +1,4 @@
-import NoCourseAndSubAlert from '@/components/dashboards/student/NoCourseandSubAlert'
+import NoCoruseOrSubAlert from '@/components/dashboards/student/NoCoruseOrSubAlert'
 import { createClient } from '@/utils/supabase/server'
 
 export const metadata = {
@@ -37,7 +37,7 @@ export default async function CoursesLayout ({
 
     if (userSubscriptions.data.length === 0 && userCourses.data.length === 0) {
         return (
-            <NoCourseAndSubAlert />
+            <NoCoruseOrSubAlert />
         )
     }
 
