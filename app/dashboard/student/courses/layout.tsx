@@ -1,3 +1,4 @@
+import NoCourseAndSubAlert from '@/components/dashboards/student/NoCourseandSubAlert'
 import { createClient } from '@/utils/supabase/server'
 
 export const metadata = {
@@ -35,7 +36,9 @@ export default async function CoursesLayout ({
     }
 
     if (userSubscriptions.data.length === 0 && userCourses.data.length === 0) {
-        throw new Error('You are not authorized to view this page.')
+        return (
+            <NoCourseAndSubAlert />
+        )
     }
 
     return <>{children}</>
