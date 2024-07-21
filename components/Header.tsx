@@ -1,4 +1,4 @@
-import { Menu } from 'lucide-react'
+import { DollarSign, Menu, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 
 import {
@@ -7,13 +7,13 @@ import {
     SheetDescription,
     SheetHeader,
     SheetTitle,
-    SheetTrigger
+    SheetTrigger,
 } from '@/components/ui/sheet'
 
 import AuthButton from './AuthButton'
 import { DarkThemeToggle } from './DarkThemeToggle'
 
-export default function Header ({ children }: { children?: React.ReactNode }) {
+export default function Header({ children }: { children?: React.ReactNode }) {
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between py-1 px-4">
@@ -37,22 +37,21 @@ export default function Header ({ children }: { children?: React.ReactNode }) {
                             <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z" />
                         </svg>
                         <span className="hidden font-bold sm:inline-block">
-                LMS
+                            LMS
                         </span>
                     </a>
                     <nav className="hidden gap-6 md:flex">
-
                         <Link
                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/plans"
                         >
-                Plans
+                            Plans
                         </Link>
                         <Link
                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/store"
                         >
-                Store
+                            Store
                         </Link>
                     </nav>
                     <Sheet>
@@ -61,15 +60,27 @@ export default function Header ({ children }: { children?: React.ReactNode }) {
                         </SheetTrigger>
                         <SheetContent>
                             <SheetHeader>
-                                <SheetTitle>
-                LMS Academy
-                                </SheetTitle>
+                                <SheetTitle>LMS Academy</SheetTitle>
                                 <SheetDescription>
-                                    <nav className="flex justify-center items-center">
+                                    <nav className="flex flex-col gap-4">
                                         <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
                                             <AuthButton />
+                                            <DarkThemeToggle />
                                         </div>
-                                        <DarkThemeToggle />
+                                        <Link
+                                            className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
+                                            href="/plans"
+                                        >
+                                            <DollarSign className="h-5 w-5 mr-2" />
+                                            Plans
+                                        </Link>
+                                        <Link
+                                            className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
+                                            href="/store"
+                                        >
+                                            <ShoppingBag className="h-5 w-5 mr-2" />
+                                            Store
+                                        </Link>
                                     </nav>
                                     {children}
                                 </SheetDescription>
