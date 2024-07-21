@@ -4,6 +4,8 @@ import { BookTextIcon } from 'lucide-react'
 import AllCoursesCard from '@/components/dashboards/student/course/AllCoursesCard'
 import CourseCard from '@/components/dashboards/student/course/CourseCard'
 
+import NoCoruseOrSubAlert from '../NoCoruseOrSubAlert'
+
 interface CourseSectionProps {
     userCourses: any[]
     userSubscriptions: any[]
@@ -48,11 +50,7 @@ const CourseSectionComponent: React.FC<CourseSectionProps> = ({ userCourses, use
                     </div>
                 </div>
             ) : (
-                <div className="p-4 flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                        No Courses or Subscriptions
-                    </h2>
-                </div>
+                <NoCoruseOrSubAlert />
             )}
         </>
     )
