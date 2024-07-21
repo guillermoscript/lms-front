@@ -1,4 +1,5 @@
 import StudentChatSidebar from '@/components/dashboards/student/chat/StudentChatSidebar'
+import NoCourseAndSubAlert from '@/components/dashboards/student/NoCourseandSubAlert'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function CoursesLayout ({
@@ -31,7 +32,9 @@ export default async function CoursesLayout ({
     }
 
     if (userSubscriptions.data.length === 0 && userCourses.data.length === 0) {
-        throw new Error('You are not authorized to view this page.')
+        return (
+            <NoCourseAndSubAlert />
+        )
     }
 
     return (

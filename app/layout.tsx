@@ -28,8 +28,8 @@ export default function RootLayout ({
         <html lang="en"
             className={GeistSans.className}
         >
-            <ProgressBarProvider />
             <body>
+                <ProgressBarProvider />
                 <main className="min-h-screen flex flex-col items-center w-full">
                     <ThemeProvider
                         attribute="class"
