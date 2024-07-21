@@ -1,6 +1,7 @@
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
@@ -86,6 +87,8 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
 
+    const router = useRouter()
+
     const handleSubmit = async (data: TestFormType) => {
         setIsLoading(true)
 
@@ -120,6 +123,9 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
             const response = await axios[method](url, finalData)
             const message = testId ? 'Test Updated' : 'Test Created'
             toast({ title: message, description: response.data.message })
+            if (testId) {
+                router.push(`/dashboard/teacher/courses/${courseId}/tests`)
+            }
         } catch (error) {
             console.error('Error submitting the form', error)
             toast({
@@ -131,10 +137,6 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
             setIsLoading(false)
         }
     }
-
-    console.log(
-        formMethods.formState.errors
-    )
 
     return (
         <div className="container mx-auto p-4">
@@ -198,7 +200,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                                 initialFields={defaultValues.questions}
                             >
                                 <Button type="submit" disabled={isLoading}>
-                                    {isEditing ? 'Update Test' : 'Create Test'}
+                                    {isLoading ? 'Loading...' : isEditing ? 'Update Test' : 'Create Test'}
                                 </Button>
                             </FormBuilder>
                         </CardContent>
