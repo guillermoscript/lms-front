@@ -1,15 +1,8 @@
-// @ts-nocheck
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TestSubmissionReview from '@/components/dashboards/teacher/test/TestSubmissionReview'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ReviewStudentExamSubmission ({
@@ -84,63 +77,29 @@ export default async function ReviewStudentExamSubmission ({
     const { exams } = examData
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
-                        >
-                            {exams?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-
-                    <BreadcrumbSeparator />
-
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/review/${params.submissionId}`}
-                        >
-                            Review
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}`,
+                        label: exams?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests`,
+                        label: 'Tests'
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
+                        label: exams?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/review/${params.submissionId}`,
+                        label: 'Review'
+                    }
+                ]}
+            />
 
             <div className="grid gap-8">
                 <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950">
