@@ -1,3 +1,5 @@
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
+
 import CourseCard from './CourseCard'
 import EnrollButton from './EnrollButton'
 
@@ -18,31 +20,40 @@ export default async function AllCoursesCard ({
         throw new Error(allCourses.error.message)
     }
 
-    return allCourses.data.map((course) => {
-        return (
-            <>
-                <CourseCard
-                    title={course.title}
-                    progress={75}
-                    description={course.description}
-                    totalLessons={course.lessons.length}
-                    completedLessons={18}
-                    completedTests={5}
-                    totalTests={course.exams.length}
-                    approvedTests={4}
-                    courseId={course.course_id}
-                    img={course.thumbnail_url}
-                >
-                    {
-                        course.enrollments.length === 0 ? (
-                            <EnrollButton
-                                courseId={course.course_id}
-                            />
-                        ) : null
+    return (
+        <div className="w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-4">
+            <Carousel
+                opts={{
+                    align: 'start',
+                    loop: true,
+                    breakpoints: {
+                        '(min-width: 768px)': {
+                            loop: false
+                        }
                     }
-                </CourseCard>
-            </>
-        )
-    }
+                }}
+            >
+                <CarouselContent className="flex gap-4">
+                    {allCourses.data.map((course) => (
+                        <CarouselItem key={course.course_id} className="w-full sm:basis-1/2 lg:basis-1/3">
+                            <div className="h-full flex-grow">
+                                <CourseCard
+                                    title={course.title}
+                                    description={course.description}
+                                    courseId={course.course_id}
+                                    img={course.thumbnail_url}
+                                >
+                                    {course.enrollments.length === 0 ? (
+                                        <EnrollButton courseId={course.course_id} />
+                                    ) : null}
+                                </CourseCard>
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+            </Carousel>
+        </div>
     )
 }

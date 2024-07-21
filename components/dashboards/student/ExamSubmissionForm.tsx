@@ -155,7 +155,7 @@ function parseFormData (data: StudentExamSubmitFormData) {
                 if (optionId !== undefined) {
                     parsedData.push({
                         question_id: key,
-                        answer_text: optionId as string,
+                        answer_text: optionId,
                         question_type: 'multiple_choice'
                     })
                 }

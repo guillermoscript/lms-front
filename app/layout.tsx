@@ -2,6 +2,8 @@ import './globals.css'
 
 import { GeistSans } from 'geist/font/sans'
 
+// In app directory
+import ProgressBarProvider from '@/components/provider/ProgressBarProvider'
 import ScrollToTopButton from '@/components/ScrollToTopButton'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster as SoonerToaster } from '@/components/ui/sonner'
@@ -27,6 +29,7 @@ export default function RootLayout ({
             className={GeistSans.className}
         >
             <body>
+                <ProgressBarProvider />
                 <main className="min-h-screen flex flex-col items-center w-full">
                     <ThemeProvider
                         attribute="class"

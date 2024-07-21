@@ -1,11 +1,5 @@
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TeacherTestForm from '@/components/form/TeacherTestForm'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function TestFormPage ({
@@ -26,43 +20,15 @@ export default async function TestFormPage ({
 
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            {course?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests`}
-                        >
-                            Tests
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: `/dashboard/teacher/courses/${params.courseId}`, label: course?.data?.title },
+                    { href: `/dashboard/teacher/courses/${params.courseId}/tests`, label: 'Tests' }
+                ]}
+            />
             <TeacherTestForm
                 courseId={params.courseId}
             />

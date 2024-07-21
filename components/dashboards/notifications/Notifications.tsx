@@ -41,6 +41,7 @@ export default async function Notifications () {
                     className="rounded-full relative border border-gray-200 w-8 h-8 dark:border-gray-800"
                     size="icon"
                     variant="ghost"
+                    id='notifications'
                 >
                     <Bell className="h-6 w-6" />
                     {filteredNotifications.length > 0 && (

@@ -1,11 +1,5 @@
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonForm from '@/components/dashboards/teacher/lessons/LessonForm'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 // Force the page to be dynamic and allow streaming responses up to 30 seconds
@@ -31,47 +25,29 @@ export default async function EditLessonPage({
     console.log(lesson)
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                            Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                            Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/`}
-                        >
-                            {lesson?.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`}
-                        >
-                            {lesson?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink>Edit</BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}`,
+                        label: lesson?.data?.courses?.title,
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/lessons`,
+                        label: 'Lessons',
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`,
+                        label: lesson?.data?.title,
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`,
+                        label: 'Edit',
+                    },
+                ]}
+            />
 
             <LessonForm
                 params={params}

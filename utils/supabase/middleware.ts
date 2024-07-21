@@ -1,6 +1,7 @@
 import { type CookieOptions, createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
+import { getServerUserRole } from './getUserRole'
 import { Database } from './supabase'
 
 export async function updateSession (request: NextRequest) {
@@ -57,7 +58,30 @@ export async function updateSession (request: NextRequest) {
     )
 
     // refreshing the auth token
-    await supabase.auth.getUser()
+    const userData = await supabase.auth.getUser()
+
+    const userRole = await getServerUserRole()
+
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+        return NextResponse.next({
+            request: {
+                headers: request.headers
+            }
+        })
+    }
+
+    if (request.nextUrl.pathname.startsWith('/dashboard') && userData.error) {
+        return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    if (request.nextUrl.pathname.startsWith('/dashboard/teacher') && (userRole !== 'teacher' && userRole !== 'admin')) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url))
+    }
+
+    if (request.nextUrl.pathname.startsWith('/dashboard/student') && (userRole !== 'student' && userRole !== 'admin')) {
+        return NextResponse.redirect(new URL('/dashboard/teacher', request.url))
+    }
 
     return response
 }

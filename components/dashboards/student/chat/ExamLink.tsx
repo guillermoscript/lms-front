@@ -20,6 +20,8 @@ export default function ExamLink () {
                     <Skeleton className="w-24 h-8" />
                 ) : (
                     <Button
+
+                        id='quiz-me'
                         onClick={async () => {
                             setIsLoading(true)
                             try {

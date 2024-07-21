@@ -1,14 +1,7 @@
-// @ts-nocheck
 import dayjs from 'dayjs'
 import Link from 'next/link'
 
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { DataTable } from '@/components/ui/Table/data-table'
@@ -41,8 +34,9 @@ export default async function CreateCourseLessonPage({
             title: lesson.title,
             content: lesson.content,
             sequence: lesson.sequence,
+            description: lesson.description,
             courseId: lesson.course_id,
-            created_at: dayjs(lesson.created_at).format('DD/MM/YYYY'),
+            date: dayjs(lesson.created_at).format('DD/MM/YYYY'),
         }
     })
 
@@ -59,39 +53,16 @@ export default async function CreateCourseLessonPage({
         }
     })
 
-    // console.log(testRow);
-
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                            Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                            Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            {course?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: `/dashboard/teacher/courses/${params.courseId}`, label: course?.data?.title }
+                ]}
+            />
             <h1 className="text-2xl font-semibold  mb-4">
                 Course: {course?.data?.title}
             </h1>
@@ -116,7 +87,7 @@ export default async function CreateCourseLessonPage({
                             Create Lesson
                         </Link>
                     </div>
-                    <DataTable columns={lessonsCols} data={lessonRow} />
+                    <DataTable columns={lessonsCols} data={lessonRow as any[]} />
                 </TabsContent>
                 <TabsContent
                     className="flex flex-col  w-full  gap-4"
@@ -132,7 +103,7 @@ export default async function CreateCourseLessonPage({
                         </Link>
                     </div>
 
-                    <DataTable columns={testsCols} data={testRow} />
+                    <DataTable columns={testsCols} data={testRow as any[]} />
                 </TabsContent>
             </Tabs>
         </div>

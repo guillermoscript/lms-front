@@ -1,14 +1,8 @@
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentExamCoursePage ({
@@ -72,61 +66,26 @@ export default async function StudentExamCoursePage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}`}
-                        >
-                            {exams.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}/exams`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}/exams/${exams?.data?.exam_id}`}
-                        >
-                            {exams?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
 
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}`,
+                        label: exams.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
+                        label: 'Exams'
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
+                        label: exams.data?.title
+                    }
+                ]}
+            />
             <div className="grid gap-8">
                 <div>
                     <h1 className="text-3xl font-bold">

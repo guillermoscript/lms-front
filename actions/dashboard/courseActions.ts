@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
+import { Tables } from '@/utils/supabase/supabase'
 
 export async function createCourseAction (prevDate: any, data: FormData) {
     console.log(data)
@@ -108,4 +109,33 @@ export async function enrollUserToCourseAction ({
 
     revalidatePath('/dashboard/student/courses', 'layout')
     return createResponse('success', 'User enrolled to course successfully', null, null)
+}
+
+export async function updateCourseAction(prevDate: any, data: FormData) {
+    console.log(data)
+    if (!data.get('title') || !data.get('description')) {
+        return createResponse('error', 'Please fill in all fields', null, null)
+    }
+    const supabase = createClient()
+    const title = data.get('title') as string
+    const description = data.get('description') as string
+    const status = data.get('status') as Tables<'courses'>['status']
+    const courseId = data.get('course_id') as string
+
+    console.log(status)
+
+    const courseData = await supabase.from('courses').update({
+        title,
+        description,
+        status,
+        updated_at: new Date().toISOString()
+    }).eq('course_id', courseId)
+
+    if (courseData.error) {
+        console.log(courseData.error)
+        return createResponse('error', 'Error updating course', null, courseData.error.message)
+    }
+
+    revalidatePath('/dashboard/teacher/courses', 'layout')
+    return createResponse('success', 'Course updated successfully', null, null)
 }

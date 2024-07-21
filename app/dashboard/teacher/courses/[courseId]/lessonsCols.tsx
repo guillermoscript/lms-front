@@ -5,7 +5,7 @@ import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
 import DeleteLessonAlert from '@/components/dashboards/teacher/lessons/DeleteLessonAlert'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,6 +34,18 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
     {
         accessorKey: 'title',
         header: 'Title',
+        cell: ({ row }) => {
+            const rowData = row.original
+
+            return (
+                <Link
+                    className={buttonVariants({ variant: 'link' })}
+                    href={`/dashboard/teacher/courses/${rowData.courseId}/lessons/${rowData.id}`}
+                >
+                    {rowData.title}
+                </Link>
+            )
+        },
     },
     {
         accessorKey: 'description',
