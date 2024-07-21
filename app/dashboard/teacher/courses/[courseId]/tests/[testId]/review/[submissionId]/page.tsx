@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 

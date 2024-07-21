@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from 'next/link'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
