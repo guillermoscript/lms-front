@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { buttonVariants } from '@/components/ui/button'
 
-export default function NoCourseAndSubAlert() {
+export default function NoCoruseOrSubAlert() {
     return (
         <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950 flex flex-col items-center justify-center text-center gap-6">
             <div className="max-w-md">
