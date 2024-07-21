@@ -1,5 +1,4 @@
-// UI Components
-
+'use client'
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
 import { useRef } from 'react'
