@@ -216,8 +216,6 @@ function TrueFalse ({
     remove: any
     index: number
 }) {
-    console.log(optionFields)
-
     const [isCorrect, setIsCorrect] = useState<boolean>(optionFields[0]?.is_correct || false)
 
     return (
@@ -232,7 +230,9 @@ function TrueFalse ({
                     </label>
                 </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent
+                className='flex flex-col gap-2'
+            >
                 <input
                     {...register(`formFields[${index}].label`)}
                     type="text"
