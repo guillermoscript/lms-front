@@ -29,7 +29,10 @@ export default async function LessonNavigationButtons ({
 
     return (
         <Pagination>
-            <PaginationContent>
+            <PaginationContent
+                className="flex flex-wrap md:flex-nowrap items-center space-x-2"
+                aria-label="Lesson navigation"
+            >
                 {hasPrevious && (
                     <PaginationItem>
                         <PaginationPrevious href={`/dashboard/student/courses/${courseId}/lessons/${lessons.data[currentIndex - 1].id}`} />
