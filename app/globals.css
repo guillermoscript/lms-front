@@ -3,7 +3,9 @@
 @tailwind utilities;
  
  
-
+html {
+  scroll-behavior: smooth;
+}
 
 
 @layer base {
@@ -216,4 +218,11 @@ html.dark .prose {
     color: var(--foreground);
     --basePageBg: var(--background);
     background: var(--basePageBg);
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0; /* Adjust this value based on your layout */
+  z-index: 50;
+  background-color: white; /* Maintain background color while scrolling */
 }
