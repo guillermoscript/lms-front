@@ -60,7 +60,7 @@ export default async function StudentLessonPage ({
         <>
             <LessonPage
                 sideBar={
-                    <Tabs defaultValue="comments" className="w-full ">
+                    <Tabs defaultValue="comments" className="w-full flex items-center justify-center flex-col">
                         <TabsList
                             className='flex-col md:flex-row gap-2 h-auto md:h-10 md:gap-4 w-full md:w-auto mx-0 md:mx-3'
                         >
