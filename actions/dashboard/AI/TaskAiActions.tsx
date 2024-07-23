@@ -22,8 +22,6 @@ export async function continueTaskAiConversation (
 
     const supabase = createClient()
 
-    console.log(input)
-
     // Update the AI state with the new user message.
     aiState.update({
         ...aiState.get(),
@@ -40,8 +38,6 @@ export async function continueTaskAiConversation (
     const systemMessage = aiState.get().messages.find(
         (message) => message.role === 'system'
     )
-
-    console.log(systemMessage)
 
     const result = await streamUI({
         model: google('models/gemini-1.5-pro-latest'),
@@ -164,8 +160,6 @@ export async function continueTaskAiConversation (
                         user_id: aiState.get().userId
                     })
 
-                    console.log(task)
-
                     return (
                         <Message
                             sender={'assistant'}
@@ -175,6 +169,7 @@ export async function continueTaskAiConversation (
                             <SuccessMessage
                                 status="success"
                                 message="Assignment marked as completed."
+                                fire={true}
                             />
                         </Message>
                     )
