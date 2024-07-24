@@ -17,6 +17,7 @@ import {
     CardTitle
 } from '@/components/ui/card'
 
+import ConfettiMessage from './exam-prep/ConfettiMessage'
 import { FeedbackComponent, FeedbackComponentProps } from './exam-prep/MatchingTextQuestionComponent'
 import { MultipleChoiceQuestionInterface, QuizFeedback } from './exam-prep/MultipleChoiceQuestionComponent'
 
@@ -34,6 +35,7 @@ interface ExamFeedbackCardProps {
     multipleChoiceQuestionFeedback: MultipleChoiceQuestionInterface[]
     singleSelectQuestionFeedback: basicQuestion[]
     matchingTextQuestionsFeedback: FeedbackComponentProps[]
+    fire?: boolean
 }
 
 export default function ExamFeedbackCard ({
@@ -42,10 +44,12 @@ export default function ExamFeedbackCard ({
     freeTextQuestionFeedback,
     multipleChoiceQuestionFeedback,
     singleSelectQuestionFeedback,
-    matchingTextQuestionsFeedback
+    matchingTextQuestionsFeedback,
+    fire
 }: ExamFeedbackCardProps) {
     return (
-        <div className="flex flex-col gap-4 w-full">
+        <div className="flex flex-col gap-4 w-full relative">
+            {fire && score > 15 && <ConfettiMessage />}
             <Alert
                 className="my-4 p-2"
                 variant={
@@ -64,16 +68,16 @@ export default function ExamFeedbackCard ({
                     <CheckCircle className="w-4 h-4 text-green-500" />
                 )}
                 {score && (
-                    <AlertTitle className="text-lg">Your score is {score}</AlertTitle>
+                    <AlertTitle className="text-lg">
+                        Your score is {score}
+                    </AlertTitle>
                 )}
                 <AlertDescription>
-                    {
-                        score >= 10 && score <= 15
-                            ? 'You have passed the exam but you can do better. Keep it up!'
-                            : score < 10
-                                ? 'You have failed the exam. But don\'t worry, you can try again.'
-                                : 'Congratulations! You have passed the exam.'
-                    }
+                    {score >= 10 && score <= 15
+                        ? 'You have passed the exam but you can do better. Keep it up!'
+                        : score < 10
+                            ? "You have failed the exam. But don't worry, you can try again."
+                            : 'Congratulations! You have passed the exam.'}
                 </AlertDescription>
             </Alert>
 
@@ -95,12 +99,16 @@ export default function ExamFeedbackCard ({
                     <CardContent className="flex flex-col gap-4">
                         <div className="flex items-center gap-2">
                             <PencilLineIcon className="w-4 h-4 text-gray-500" />
-                            <h4 className="text-lg font-semibold">Your Answer:</h4>
+                            <h4 className="text-lg font-semibold">
+                                Your Answer:
+                            </h4>
                         </div>
                         <p>{item.answer}</p>
                         <div className="flex items-center gap-2">
                             <CheckIcon className="w-4 h-4 text-green-500" />
-                            <h4 className="text-lg font-semibold">Correct Answer:</h4>
+                            <h4 className="text-lg font-semibold">
+                                Correct Answer:
+                            </h4>
                         </div>
                         <p>{item.correctAnswer}</p>
                     </CardContent>
@@ -124,18 +132,24 @@ export default function ExamFeedbackCard ({
                 <Card key={item.question}>
                     <CardHeader>
                         <CardTitle>{item.question}</CardTitle>
-                        <CardDescription>Single Select Question</CardDescription>
+                        <CardDescription>
+                            Single Select Question
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
                         <CardContent className="flex flex-col gap-4">
                             <div className="flex items-center gap-2">
                                 <PencilLineIcon className="w-4 h-4 text-gray-500" />
-                                <h4 className="text-lg font-semibold">Your Answer:</h4>
+                                <h4 className="text-lg font-semibold">
+                                    Your Answer:
+                                </h4>
                                 <p>{item.answer}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <CheckIcon className="w-4 h-4 text-green-500" />
-                                <h4 className="text-lg font-semibold">Correct Answer:</h4>
+                                <h4 className="text-lg font-semibold">
+                                    Correct Answer:
+                                </h4>
                                 <p>{item.correctAnswer}</p>
                             </div>
                         </CardContent>
@@ -155,9 +169,7 @@ export default function ExamFeedbackCard ({
             ))}
 
             {matchingTextQuestionsFeedback.map((item, index) => {
-                return (
-                    <FeedbackComponent key={index} question={item} />
-                )
+                return <FeedbackComponent key={index} question={item} />
             })}
         </div>
     )
