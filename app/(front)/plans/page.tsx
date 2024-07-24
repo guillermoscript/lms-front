@@ -1,7 +1,7 @@
-import PlanCard from '@/components/plans/PlanCards'
+import PricingSection from '@/components/plans/PricingSection'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function PlanPage () {
+export default async function PlanPage() {
     const supabase = createClient()
 
     const plans = await supabase.from('plans').select('*')
@@ -16,8 +16,42 @@ export default async function PlanPage () {
     const [month, yearly, quarterly] = plans.data
 
     return (
-        <section className="w-full py-12 md:py-24 lg:py-32 ">
-            <div className="container px-4 md:px-6 flex flex-col gap-4 md:gap-8">
+        <section className="w-full py-12 md:py-24 lg:py-20 container ">
+            <div className="relative z-20 py-10 md:pt-15">
+                <h1 className="max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white text-3xl md:text-5xl md:leading-tight">
+                    <span
+                        data-br=":ru9:"
+                        data-brr={1}
+                        style={{
+                            display: 'inline-block',
+                            verticalAlign: 'top',
+                            textDecoration: 'inherit',
+                            textWrap: 'balance',
+                        }}
+                    >
+                        Simple pricing for your ease
+                    </span>
+                </h1>
+                <h2 className="text-sm md:text-base max-w-4xl my-4 mx-auto  font-normal text-center">
+                    <span
+                        data-br=":rua:"
+                        data-brr={1}
+                        style={{
+                            display: 'inline-block',
+                            verticalAlign: 'top',
+                            textDecoration: 'inherit',
+                            textWrap: 'balance',
+                        }}
+                    >
+                        Every AI offers a wide range of services. You can choose
+                        the one that suits your needs. Select from your
+                        favourite plan and get started instantly.
+                    </span>
+                </h2>
+            </div>
+
+            <PricingSection />
+            {/* <div className="container px-4 md:px-6 flex flex-col gap-4 md:gap-8">
                 <div className="space-y-6 text-center">
                     <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                         Pricing Plans
@@ -27,7 +61,7 @@ export default async function PlanPage () {
                         plans come with a 30-day money-back guarantee.
                     </p>
                 </div>
-                {/* <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-6 sm:grid-cols-3"> */}
+
                 <div className="mx-auto flex flex-col gap-6 sm:flex-row sm:justify-center sm:gap-6">
                     <PlanCard
                         title={month.plan_name}
@@ -70,7 +104,7 @@ export default async function PlanPage () {
                         service and features.
                     </p>
                 </div>
-            </div>
+            </div> */}
         </section>
     )
 }

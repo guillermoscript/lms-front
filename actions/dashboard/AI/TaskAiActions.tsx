@@ -82,8 +82,6 @@ export async function continueTaskAiConversation (
                     user_id: aiState.get().userId,
                     created_at: new Date().toISOString()
                 })
-
-                console.log(aiMessageInsert)
             }
 
             return (

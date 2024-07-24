@@ -87,8 +87,6 @@ export default function TaksMessages({
                                 },
                             })
 
-                            console.log(res)
-
                             const message = await continueTaskAiConversation(
                                 input.content
                             )

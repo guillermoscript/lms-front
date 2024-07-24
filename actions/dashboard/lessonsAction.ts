@@ -162,7 +162,6 @@ export async function studentSubmitAiTaskMessage({
             console.log('Error adding message to the database', messageData.error)
             return createResponse('error', 'Error adding message to the database', null, 'Error adding message to the database')
         }
-        console.log('Message added to the database', messageData)
     }
 
     return createResponse('success', 'Message sent successfully', null, null)
