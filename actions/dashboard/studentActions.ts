@@ -206,3 +206,40 @@ export async function updateComment ({
     revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
     return createResponse('success', 'Comment updated successfully', null, null)
 }
+
+export async function addReview({
+    stars,
+    text,
+    entityId,
+    entityType
+}: {
+    stars: number,
+    text: string
+    entityId: number
+    entityType: Tables<'reviews'>['entity_type']
+}) {
+    // add review to lesson
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return createResponse('error', 'Error getting user data', null, 'Error getting user data')
+    }
+
+    const insertReview = await supabase.from('reviews').insert({
+        entity_id: entityId,
+        entity_type: entityType,
+        rating: stars,
+        review_text: text,
+        user_id: userData.data.user.id,
+        created_at: new Date().toISOString()
+    })
+
+    if (insertReview.error) {
+        return createResponse('error', 'Error adding review', null, 'Error adding review')
+    }
+
+    revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
+    return createResponse('success', 'Review added successfully', null, null)
+}
