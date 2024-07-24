@@ -104,7 +104,7 @@ export default async function ExamnChatIdPageLayout ({
                     { href: '/dashboard', label: 'Dashboard' },
                     { href: '/dashboard/student', label: 'Student' },
                     { href: '/dashboard/student/chat', label: 'Chat' },
-                    { href: `/dashboard/student/chat/${params.chatId}`, label: messagesData.data.title }
+                    { href: `/dashboard/student/chat/${params.chatId}`, label: messagesData.data.title.slice(0, 40) + '...' }
                 ]}
             />
             <AI

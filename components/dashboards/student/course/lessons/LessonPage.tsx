@@ -16,7 +16,7 @@ export default function LessonPage({
         return (
             <div className="flex flex-row gap-4">
                 <div className="w-[75%]">{children}</div>
-                <div className="flex-1">{sideBar}</div>
+                <div className="flex-1 border-l">{sideBar}</div>
             </div>
         )
     }
@@ -25,7 +25,6 @@ export default function LessonPage({
         <div className="flex flex-col gap-4">
             {children}
             <Separator className="my-4" />
-            <h3 className="text-lg font-semibold">Comments</h3>
             {sideBar}
         </div>
     )
