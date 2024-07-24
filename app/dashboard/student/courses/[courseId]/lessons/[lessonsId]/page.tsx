@@ -3,6 +3,7 @@ import { CheckCircle } from 'lucide-react'
 import { Suspense } from 'react'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import ListOfReviews from '@/components/dashboards/Common/reviews/ListOfReviews'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
@@ -11,7 +12,9 @@ import LessonsTimeLine from '@/components/dashboards/student/course/lessons/Less
 import TableOfContents from '@/components/dashboards/student/course/lessons/LessonTableOfContent'
 import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
@@ -67,6 +70,9 @@ export default async function StudentLessonPage ({
                             <TabsTrigger value="comments">Comments</TabsTrigger>
                             <TabsTrigger value="timeline">Timeline</TabsTrigger>
                             <TabsTrigger value="tableOfContents">Table of Contents</TabsTrigger>
+                            <TabsTrigger value="reviews">
+                                Reviews
+                            </TabsTrigger>
                         </TabsList>
                         <TabsContent value="comments">
                             <Suspense fallback={<div>Loading...</div>}>
@@ -92,6 +98,15 @@ export default async function StudentLessonPage ({
                         >
                             <TableOfContents
                                 markdown={lessonData.data.content}
+                            />
+                        </TabsContent>
+                        <TabsContent
+                            className='p-4 md:p-6 flex flex-col gap-4'
+                            value="reviews"
+                        >
+                            <ListOfReviews
+                                entityId={lessonData.data.id}
+                                entityType="lessons"
                             />
                         </TabsContent>
                     </Tabs>
@@ -132,9 +147,18 @@ function Content ({
                     { href: '/dashboard', label: 'Dashboard' },
                     { href: '/dashboard/student', label: 'Student' },
                     { href: '/dashboard/student/courses/', label: 'Courses' },
-                    { href: `/dashboard/student/courses/${lessonData.course_id}`, label: courseData?.title },
-                    { href: `/dashboard/student/courses/${lessonData.course_id}/lessons`, label: 'Lessons' },
-                    { href: `/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`, label: lessonData.title }
+                    {
+                        href: `/dashboard/student/courses/${lessonData.course_id}`,
+                        label: courseData?.title,
+                    },
+                    {
+                        href: `/dashboard/student/courses/${lessonData.course_id}/lessons`,
+                        label: 'Lessons',
+                    },
+                    {
+                        href: `/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`,
+                        label: lessonData.title,
+                    },
                 ]}
             />
             <div className="flex flex-col gap-8 w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto">
@@ -143,8 +167,10 @@ function Content ({
                         <h1 className="text-3xl font-bold">
                             {lessonData.title}
                         </h1>
-                        <div className='flex gap-2'>
-                            <Badge variant="default">Lesson # {lessonData.sequence}</Badge>
+                        <div className="flex gap-2">
+                            <Badge variant="default">
+                                Lesson # {lessonData.sequence}
+                            </Badge>
                             {isLessonAiTaskCompleted && (
                                 <CheckCircle className="h-6 w-6 text-green-500" />
                             )}
@@ -172,7 +198,10 @@ function Content ({
                     </>
                 )}
                 <div className="prose dark:prose-invert">
-                    <ViewMarkdown markdown={lessonData.content} />
+                    <ViewMarkdown
+                        addLinks={true}
+                        markdown={lessonData.content}
+                    />
                 </div>
                 {lessonData?.summary && (
                     <div className="mt-8">
@@ -183,21 +212,48 @@ function Content ({
             </div>
             {lessonsAiTasks?.system_prompt && (
                 <>
-                    <h3 className="text-xl font-semibold mt-4">Try the chat sandbox</h3>
-                    <div className="flex flex-col gap-4 rounded border p-4">
-                        <AiTaskMessage
-                            userId={userId}
-                            lessonId={lessonData.id.toString()}
-                            systemPrompt={lessonsAiTasks.system_prompt}
-                            lessonsAiTasks={lessonsAiTasks}
-                            lessonsAiTasksMessages={lessonsAiTasksMessages}
-                        >
-                            <TaksMessages
-                                lessonId={lessonData.id}
-                                isLessonAiTaskCompleted={isLessonAiTaskCompleted}
-                            />
-                        </AiTaskMessage>
-                    </div>
+                    <Separator />
+
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between w-full">
+                                <CardTitle>AI Task</CardTitle>
+                                {isLessonAiTaskCompleted ? (
+                                    <div>
+                                        <Badge>Task Completed</Badge>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <Badge variant="outline">
+                                        Task Incomplete
+                                        </Badge>
+                                    </div>
+                                )}
+                            </div>
+                            <CardDescription>
+                                <ViewMarkdown
+                                    markdown={lessonsAiTasks.task_instructions}
+                                />
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                            <Separator />
+                            <AiTaskMessage
+                                userId={userId}
+                                lessonId={lessonData.id.toString()}
+                                systemPrompt={lessonsAiTasks.system_prompt}
+                                lessonsAiTasks={lessonsAiTasks}
+                                lessonsAiTasksMessages={lessonsAiTasksMessages}
+                            >
+                                <TaksMessages
+                                    lessonId={lessonData.id}
+                                    isLessonAiTaskCompleted={
+                                        isLessonAiTaskCompleted
+                                    }
+                                />
+                            </AiTaskMessage>
+                        </CardContent>
+                    </Card>
                 </>
             )}
             <LessonNavigationButtons
