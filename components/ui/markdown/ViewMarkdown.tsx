@@ -10,9 +10,11 @@ import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
 
 export default function ViewMarkdown ({
-    markdown
+    markdown,
+    addLinks
 }: {
     markdown: string
+    addLinks?: boolean
 }) {
     if (!markdown) {
         return null
@@ -21,7 +23,7 @@ export default function ViewMarkdown ({
         <Markdown
             className={'rich-text markdown-body w-full'}
             remarkPlugins={[[remarkGfm, { tight: true, maxDepth: 5 }]]}
-            rehypePlugins={[rehypeRaw, rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }], remarkRehype]}
+            rehypePlugins={addLinks ? [rehypeRaw, rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }], remarkRehype] : [rehypeRaw]}
             components={{
                 code ({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '')
