@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { addReview } from '@/actions/dashboard/studentActions'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
+import { Tables } from '@/utils/supabase/supabase'
 
 const FormSchema = z.object({
     rating: z.string().nonempty({ message: 'Please select a rating.' }),
@@ -32,20 +34,46 @@ const FormSchema = z.object({
         .max(460, { message: 'Review must not be longer than 460 characters.' }),
 })
 
-function ReviewForm() {
+function ReviewForm({
+    entityId,
+    entityType,
+}: {
+    entityId: number
+    entityType: Tables<'reviews'>['entity_type']
+}) {
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
     })
 
-    function onSubmit(data: z.infer<typeof FormSchema>) {
-        toast({
-            title: 'You submitted the following values:',
-            description: (
-                <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-                    <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-                </pre>
-            ),
-        })
+    async function onSubmit(data: z.infer<typeof FormSchema>) {
+        try {
+            const res = await addReview({
+                stars: parseInt(data.rating),
+                text: data.review,
+                entityId,
+                entityType
+            })
+
+            if (res.error) {
+                return toast({
+                    title: 'Error',
+                    description: res.message,
+                    variant: 'destructive',
+                })
+            }
+
+            toast({
+                title: 'Review added successfully',
+                description: 'Your review has been added to the lesson.',
+            })
+        } catch (error) {
+            console.error(error)
+            toast({
+                title: 'Error',
+                description: 'An error occurred while adding your review.',
+                variant: 'destructive'
+            })
+        }
     }
 
     return (
@@ -95,7 +123,12 @@ function ReviewForm() {
                         </FormItem>
                     )}
                 />
-                <Button type="submit">Submit Review</Button>
+                <Button
+                    disabled={form.formState.isSubmitting}
+                    type="submit"
+                >
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit'}
+                </Button>
             </form>
         </Form>
     )
