@@ -60,20 +60,11 @@ export async function updateSession (request: NextRequest) {
     // refreshing the auth token
     const userData = await supabase.auth.getUser()
 
-    const userRole = await getServerUserRole()
-
-    if (userData.error) {
-        console.log('Error getting user data', userData.error)
-        return NextResponse.next({
-            request: {
-                headers: request.headers
-            }
-        })
-    }
-
     if (request.nextUrl.pathname.startsWith('/dashboard') && userData.error) {
         return NextResponse.redirect(new URL('/auth/login', request.url))
     }
+
+    const userRole = await getServerUserRole()
 
     if (request.nextUrl.pathname.startsWith('/dashboard/teacher') && (userRole !== 'teacher' && userRole !== 'admin')) {
         return NextResponse.redirect(new URL('/dashboard/student', request.url))
@@ -81,6 +72,11 @@ export async function updateSession (request: NextRequest) {
 
     if (request.nextUrl.pathname.startsWith('/dashboard/student') && (userRole !== 'student' && userRole !== 'admin')) {
         return NextResponse.redirect(new URL('/dashboard/teacher', request.url))
+    }
+
+    // redirect to the dashboard if the user is already logged in
+    if (request.nextUrl.pathname.startsWith('/auth') && userData.data.user) {
+        return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
     }
 
     return response

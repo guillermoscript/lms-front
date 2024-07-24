@@ -64,12 +64,14 @@ export default async function CommentsSections({
                     )
                 })}
             <Card className="mt-6">
-                <CardHeader className="flex items-center gap-2">
+                <CardHeader className="flex items-center gap-2 p-2 lg:p-3">
                     <CardTitle className="text-lg font-medium">
                         Add a Comment
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent
+                    className='p-2 lg:p-6'
+                >
                     <CommentEditor
                         course_id={course_id}
                         lesson_id={lesson_id}

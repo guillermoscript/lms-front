@@ -105,7 +105,11 @@ function ChatTourFreeChat () {
                         className='w-fit'
                         onClick={() => setIsOpen(true)}
                     >
-                        <InfoIcon size={24} />
+                        Guided Tutorial
+                        <InfoIcon
+                            className='ml-2'
+                            size={24}
+                        />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>

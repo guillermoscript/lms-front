@@ -16,8 +16,10 @@ export default async function DashboardHeader () {
     return (
         <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-gray-100/40 px-6 dark:bg-gray-800/40">
             <DashboardHeaderSheet userRole={userRole} />
-            <div className="w-full flex-1">
-                <form>
+            <div className="w-full flex-1 hidden md:flex md:w-2/4">
+                <form
+                    className="w-full"
+                >
                     <div className="relative md:w-2/3 lg:w-1/3">
                         <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
 

@@ -74,12 +74,16 @@ export default async function StudentExamCoursePage ({
         .eq('exam_submissions.exam_id', params.examId)
         .single()
 
-    console.log(examData.data)
-
     if (examData.error != null) {
         console.log(examData.error.message)
         redirect
     }
+
+    const teacherData = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', examData.data?.created_by)
+        .single()
 
     const [exam_submissions] = examData?.data?.exam_submissions
 
@@ -139,7 +143,9 @@ export default async function StudentExamCoursePage ({
                 <div className="flex items-center gap-2">
                     <UserIcon className="h-5 w-5 text-gray-500" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Teacher: <b>falta el nombre del profesor</b>
+                        Teacher: <b>
+                            {teacherData.data?.full_name || 'Unknown'}
+                        </b>
                     </p>
                 </div>
 
@@ -164,7 +170,7 @@ export default async function StudentExamCoursePage ({
                                 {question.question_type ===
                                 'multiple_choice' ? (
                                         <>
-                                            <div className="mb-4 p-2 rounded">
+                                            <div className="flex flex-col gap-2 p-2">
                                                 {question.question_options.map(
                                                     (option) => {
                                                         const userAnwsers =

@@ -454,6 +454,7 @@ Also you can chat the user and ask him questions about the subject to get more i
                                 singleSelectQuestionFeedback={singleSelectQuestionFeedback}
                                 // @ts-expect-error
                                 matchingTextQuestionsFeedback={matchingTextQuestionsFeedback}
+                                fire
 
                             />
                         </Message>

@@ -1,9 +1,9 @@
-// UI Components
-
+'use client'
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
+import Confetti, { ConfettiRef } from '@/components/magicui/confetti'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
@@ -87,19 +87,36 @@ const Message = ({
 
 const SuccessMessage = ({
     status,
-    message
+    message,
+    fire
 }: {
     status: string
     message: string
+    fire?: boolean
 }) => {
+    const confettiRef = useRef<ConfettiRef>(null)
+
+    useEffect(() => {
+        if (fire) {
+            confettiRef.current?.fire({})
+        }
+    }
+    , [fire])
+
     return (
-        <div className="bg-[#f1f5f9] rounded-2xl p-8 shadow-lg">
+        <div className="bg-[#f1f5f9] relative rounded-2xl p-8 shadow-lg">
             <div className="flex flex-col items-center justify-center text-center space-y-4">
                 <div className="text-4xl font-bold text-[#334155]">
                     <CheckCircle className="h-12 w-12 inline-block mr-2 text-green-500" />
                     {status}
                 </div>
                 <p className="text-lg text-[#475569]">{message}</p>
+                {fire && (
+                    <Confetti
+                        ref={confettiRef}
+                        className="absolute left-0 top-0 z-0 size-full"
+                    />
+                )}
             </div>
         </div>
     )
