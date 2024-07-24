@@ -796,18 +796,21 @@ export type Database = {
           id: number
           lesson_id: number | null
           system_prompt: string | null
+          task_instructions: string | null
         }
         Insert: {
           created_at?: string
           id?: number
           lesson_id?: number | null
           system_prompt?: string | null
+          task_instructions?: string | null
         }
         Update: {
           created_at?: string
           id?: number
           lesson_id?: number | null
           system_prompt?: string | null
+          task_instructions?: string | null
         }
         Relationships: [
           {
@@ -1112,53 +1115,11 @@ export type Database = {
           },
         ]
       }
-      review_comments: {
-        Row: {
-          comment_text: string
-          created_at: string | null
-          id: number
-          review_id: number
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          comment_text: string
-          created_at?: string | null
-          id?: never
-          review_id: number
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          comment_text?: string
-          created_at?: string | null
-          id?: never
-          review_id?: number
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_comments_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: false
-            referencedRelation: "reviews"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       reviews: {
         Row: {
           created_at: string | null
           entity_id: number
-          entity_type: string
+          entity_type: Database["public"]["Enums"]["reviewable"]
           id: number
           rating: number
           review_text: string | null
@@ -1168,7 +1129,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           entity_id: number
-          entity_type: string
+          entity_type: Database["public"]["Enums"]["reviewable"]
           id?: never
           rating: number
           review_text?: string | null
@@ -1178,7 +1139,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           entity_id?: number
-          entity_type?: string
+          entity_type?: Database["public"]["Enums"]["reviewable"]
           id?: never
           rating?: number
           review_text?: string | null
@@ -1546,6 +1507,7 @@ export type Database = {
         | "order_renewal"
       reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
+      reviewable: "lessons" | "courses" | "exams"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
       transaction_status:
