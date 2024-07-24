@@ -17,7 +17,7 @@ const Message = ({
     return (
         <div
             className={cn(
-                'flex w-full border-b p-1 mb-4',
+                'flex w-full border-b p-1 mb-4 relative',
                 isUser ? 'justify-end ' : 'justify-start'
             )}
         >
