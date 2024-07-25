@@ -7,9 +7,12 @@ import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentSubmitAiTaskMessage } from '@/actions/dashboard/lessonsAction'
-import { ChatInput, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
+import {
+    ChatInput,
+    SuccessMessage,
+} from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
-import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 
 export default function TaksMessages({
@@ -31,14 +34,10 @@ export default function TaksMessages({
             'makeUserAssigmentCompleted'
 
     return (
-        <div className='w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-1'>
-            <div
-                className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 lg:max-h-[calc(100vh-4rem)]  max-h-[calc(100vh-0.5rem)]"
-            >
+        <div className="w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-1">
+            <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 lg:max-h-[calc(100vh-4rem)]  max-h-[calc(100vh-0.5rem)]">
                 {conversation.length > 0 ? (
-                    <ChatList
-                        messages={conversation}
-                    />
+                    <ChatList messages={conversation} />
                 ) : (
                     <div className="flex flex-col gap-4">
                         <p className="text-lg">Complete your task</p>
@@ -46,10 +45,9 @@ export default function TaksMessages({
                 )}
 
                 {isLoading && <ChatLoadingSkeleton />}
-                <div
-                    className="w-full h-px"
-                />
-                {!isLastMessageFromMakeUserAssigmentCompleted && !isLessonAiTaskCompleted && (
+                <div className="w-full h-px" />
+                {!isLastMessageFromMakeUserAssigmentCompleted &&
+                    !isLessonAiTaskCompleted && (
                     <ChatInput
                         isLoading={isLoading}
                         stop={() => setStop(true)}
@@ -87,9 +85,10 @@ export default function TaksMessages({
                                 },
                             })
 
-                            const message = await continueTaskAiConversation(
-                                input.content
-                            )
+                            const message =
+                                    await continueTaskAiConversation(
+                                        input.content
+                                    )
                             setConversation(
                                 (currentConversation: ClientMessage[]) => [
                                     ...currentConversation,

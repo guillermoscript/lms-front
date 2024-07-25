@@ -9,10 +9,10 @@ import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { cn } from '@/utils'
 
-import ChatLoadingSkeleton from '../../student/chat/ChatLoadingSkeleton'
+import ChatLoadingSkeleton from '../../chat/ChatLoadingSkeleton'
 
 const ToolInvocationMessage = ({
-    toolInvocations
+    toolInvocations,
 }: {
     toolInvocations?: ToolInvocation[]
 }) => {
@@ -21,7 +21,8 @@ const ToolInvocationMessage = ({
             {toolInvocations?.map(
                 (toolInvocation: ToolInvocation) =>
                     'result' in toolInvocation &&
-          toolInvocation.toolName === 'makeUserAssigmentCompleted' && (
+                    toolInvocation.toolName ===
+                        'makeUserAssigmentCompleted' && (
                         <SuccessMessage
                             key={toolInvocation.toolCallId}
                             status={toolInvocation.result.status}
@@ -39,7 +40,7 @@ const Message = ({
     time,
     isUser,
     toolInvocations,
-    children
+    children,
 }: {
     message?: string
     sender: string
@@ -62,13 +63,18 @@ const Message = ({
                 <div className="flex flex-col w-full px-1 md:px-4 py-2 rounded-lg relative">
                     {!isUser && (
                         <img
-                            src={isUser ? '/asdasd/adad.png' : '/img/favicon.png'}
+                            src={
+                                isUser ? '/asdasd/adad.png' : '/img/favicon.png'
+                            }
                             alt="profile"
                             className="max-w-[28px] object-cover rounded-full mr-4"
                         />
                     )}
                     <div className="font-bold mb-1 capitalize">
-                        {sender} <span className="text-xs text-gray-400 ml-2">{time}</span>
+                        {sender}{' '}
+                        <span className="text-xs text-gray-400 ml-2">
+                            {time}
+                        </span>
                     </div>
                     {!toolInvocations && <ViewMarkdown markdown={message} />}
                     {!toolInvocations && children}
@@ -88,7 +94,7 @@ const Message = ({
 const SuccessMessage = ({
     status,
     message,
-    fire
+    fire,
 }: {
     status: string
     message: string
@@ -100,8 +106,7 @@ const SuccessMessage = ({
         if (fire) {
             confettiRef.current?.fire({})
         }
-    }
-    , [fire])
+    }, [fire])
 
     return (
         <div className="bg-[#f1f5f9] relative rounded-2xl p-8 shadow-lg">
@@ -124,7 +129,7 @@ const SuccessMessage = ({
 
 const ChatWindow = ({
     messages,
-    isLoading
+    isLoading,
 }: {
     messages: MessageType[]
     isLoading: boolean
@@ -147,9 +152,7 @@ const ChatWindow = ({
                     />
                 )
             })}
-            {isLoading && (
-                <ChatLoadingSkeleton />
-            )}
+            {isLoading && <ChatLoadingSkeleton />}
         </div>
     )
 }
@@ -158,7 +161,7 @@ const ChatInput = ({
     isLoading,
     stop,
     callbackFunction,
-    isTemplatePresent
+    isTemplatePresent,
 }: {
     isLoading: boolean
     stop?: () => void
@@ -170,34 +173,34 @@ const ChatInput = ({
     return (
         <>
             {isTemplatePresent && (
-                <div
-                    id='message-templates'
-                    className="flex flex-wrap gap-4"
-                >
+                <div id="message-templates" className="flex flex-wrap gap-4">
                     <Button
-                        variant='outline'
-                        id='form-exam-create-template'
+                        variant="outline"
+                        id="form-exam-create-template"
                         disabled={isLoading}
-                        className='text-wrap disabled:cursor-not-allowed'
+                        className="text-wrap disabled:cursor-not-allowed"
                         onClick={() => {
                             ('Template for generating exam form')
-                            const message = 'Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n'
-                            ref.current?.setMarkdown(message)
-                        } }
-                    >
-                    Template for generating exam form for a "X" topic
-                    </Button>
-                    <Button
-                        variant='outline'
-                        id='exam-suggestions-template'
-                        disabled={isLoading}
-                        className='text-wrap disabled:cursor-not-allowed'
-                        onClick={() => {
-                            const message = 'Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"'
+                            const message =
+                                'Please create an exam form for the topic of **"Your Topic"**\n---\nThe exam form should contain the following sections:\n- Multiple choice questions\n- True or False questions\n- Fill in the blanks\n- Matching questions\nI want it to have a minimum of "X" questions.\nIt should have a level of difficulty of "X".\nThe exam form should be interactive and engaging.\n'
                             ref.current?.setMarkdown(message)
                         }}
                     >
-                        Template for asking a suggestions of an exam form for a "X" topic
+                        Template for generating exam form for a "X" topic
+                    </Button>
+                    <Button
+                        variant="outline"
+                        id="exam-suggestions-template"
+                        disabled={isLoading}
+                        className="text-wrap disabled:cursor-not-allowed"
+                        onClick={() => {
+                            const message =
+                                'Please help me by giving suggestions of possible exams You could generate for the given topic "Your topic"'
+                            ref.current?.setMarkdown(message)
+                        }}
+                    >
+                        Template for asking a suggestions of an exam form for a
+                        "X" topic
                     </Button>
                 </div>
             )}
@@ -208,7 +211,7 @@ const ChatInput = ({
                         content: ref.current?.getMarkdown() || '',
                         role: 'user',
                         createdAt: new Date(),
-                        id: generateId()
+                        id: generateId(),
                     })
                     ref.current?.setMarkdown('')
                 }}
@@ -232,11 +235,11 @@ const ChatInput = ({
                         variant="outline"
                         className="rounded-r-lg"
                     >
-            Stop
+                        Stop
                     </Button>
                 ) : (
                     <Button type="submit" className="rounded-r-lg">
-            Send
+                        Send
                     </Button>
                 )}
                 <DisclaimerForUser />
@@ -245,7 +248,7 @@ const ChatInput = ({
     )
 }
 
-function DisclaimerForUser () {
+function DisclaimerForUser() {
     return (
         <div className="flex-1 flex items-center justify-center my-4">
             <p className="text-sm">

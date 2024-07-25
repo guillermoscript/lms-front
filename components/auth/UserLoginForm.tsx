@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 
 import PasswordComponent from './PasswordComponent'
 
-export default function UserLoginForm () {
+export default function UserLoginForm() {
     const [state, action] = useFormState(signIn, {
         status: 'idle',
         message: '',
-        error: null
+        error: null,
     })
 
     return (
@@ -34,7 +34,7 @@ export default function UserLoginForm () {
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>{' '}
-        Back
+                Back
             </Link>
 
             <form
@@ -42,7 +42,7 @@ export default function UserLoginForm () {
                 action={action}
             >
                 <label className="text-md" htmlFor="email">
-          Email
+                    Email
                 </label>
                 <input
                     className="rounded-md px-4 py-2 bg-inherit border mb-6"
@@ -51,7 +51,7 @@ export default function UserLoginForm () {
                     required
                 />
                 <label className="text-md" htmlFor="password">
-          Password
+                    Password
                 </label>
                 <PasswordComponent />
                 <SubmitButton />
@@ -65,7 +65,7 @@ export default function UserLoginForm () {
     )
 }
 
-function SubmitButton () {
+function SubmitButton() {
     const { pending } = useFormStatus()
     return (
         <>
