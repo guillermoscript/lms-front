@@ -7,13 +7,13 @@ import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
 
 import Message from '@/components/dashboards/Common/chat/Message'
-import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
 
-export async function continueFreeChatConversation (
+export async function continueFreeChatConversation(
     input: string
 ): Promise<ClientMessage> {
     const aiState = getMutableAIState<typeof FreeChatAI>()
@@ -28,9 +28,9 @@ export async function continueFreeChatConversation (
             {
                 id: generateId(),
                 role: 'user',
-                content: input
-            }
-        ]
+                content: input,
+            },
+        ],
     })
 
     const result = await streamUI({
@@ -39,8 +39,8 @@ export async function continueFreeChatConversation (
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
                 content: message.content,
-                name: message.name
-            }))
+                name: message.name,
+            })),
         ],
         temperature: 0.3,
         initial: (
@@ -53,7 +53,7 @@ export async function continueFreeChatConversation (
             </Message>
         ),
         system: 'You are a helpful assistant. Ask me anything!',
-        text: async function * ({ content, done }) {
+        text: async function* ({ content, done }) {
             if (done) {
                 aiState.done({
                     ...aiState.get(),
@@ -62,9 +62,9 @@ export async function continueFreeChatConversation (
                         {
                             id: generateId(),
                             role: 'assistant',
-                            content
-                        }
-                    ]
+                            content,
+                        },
+                    ],
                 })
 
                 yield <ChatLoadingSkeleton />
@@ -73,7 +73,7 @@ export async function continueFreeChatConversation (
                     chat_id: +aiState.get().chatId,
                     message: content,
                     sender: 'assistant',
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
                 })
 
                 console.log(aiMessageInsert)
@@ -85,16 +85,16 @@ export async function continueFreeChatConversation (
                     time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                     isUser={false}
                 >
-                    <ViewMarkdown markdown={content}/>
+                    <ViewMarkdown markdown={content} />
                 </Message>
             )
-        }
+        },
     })
 
     return {
         id: generateId(),
         role: 'assistant',
-        display: result.value
+        display: result.value,
     }
 }
 
@@ -110,10 +110,10 @@ export type UIState = Array<{
 
 export const FreeChatAI = createAI<AIState, UIState>({
     actions: {
-        continueFreeChatConversation
+        continueFreeChatConversation,
     },
     initialUIState: [],
-    initialAIState: { chatId: generateId(), messages: [] }
+    initialAIState: { chatId: generateId(), messages: [] },
 })
 
 export interface Chat extends Record<string, any> {
@@ -124,30 +124,28 @@ export interface Chat extends Record<string, any> {
 
 export const getUIStateFromFreeChatAIState = (aiState: Chat) => {
     return aiState.messages
-        .filter(message => message.role !== 'system')
+        .filter((message) => message.role !== 'system')
         .map((message, index) => ({
             id: `${aiState.chatId}-${index}`,
             display:
-
-          message.role === 'tool' ? (
-              null
-          ) : message.role === 'user' && typeof message.content === 'string' ? (
-              <Message
-                  sender={message.role}
-                  time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                  isUser={true}
-              >
-                  <ViewMarkdown markdown={message.content} />
-              </Message>
-          ) : message.role === 'assistant' &&
-            typeof message.content === 'string' ? (
-                  <Message
-                      sender={message.role}
-                      time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                      isUser={false}
-                  >
-                      <ViewMarkdown markdown={message.content} />
-                  </Message>
-              ) : null
+                message.role === 'tool' ? null : message.role === 'user' &&
+                  typeof message.content === 'string' ? (
+                    <Message
+                        sender={message.role}
+                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                        isUser={true}
+                    >
+                        <ViewMarkdown markdown={message.content} />
+                    </Message>
+                ) : message.role === 'assistant' &&
+                  typeof message.content === 'string' ? (
+                    <Message
+                        sender={message.role}
+                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                        isUser={false}
+                    >
+                        <ViewMarkdown markdown={message.content} />
+                    </Message>
+                ) : null,
         }))
 }

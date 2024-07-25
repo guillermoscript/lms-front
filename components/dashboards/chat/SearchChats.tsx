@@ -2,7 +2,7 @@
 import { CaretSortIcon } from '@radix-ui/react-icons'
 import { useState } from 'react'
 
-import ChatSidebarItem from '@/components/dashboards/student/chat/ChatSidebarItem'
+import ChatSidebarItem from '@/components/dashboards/chat/ChatSidebarItem'
 import {
     Collapsible,
     CollapsibleContent,
@@ -45,9 +45,7 @@ export default function SearchChats({
                 />
                 <CommandList>
                     <CommandEmpty>No results found.</CommandEmpty>
-                    <CommandItem
-                        className='my-2'
-                    >
+                    <CommandItem className="my-2">
                         <StudentCreateNewChat />
                     </CommandItem>
                     {showChats ? (
@@ -55,7 +53,11 @@ export default function SearchChats({
                             {allChats.map((chat: Tables<'chats'>) => {
                                 return (
                                     <CommandItem
-                                        value={chat.chat_id + chat.chat_type + chat.title}
+                                        value={
+                                            chat.chat_id +
+                                            chat.chat_type +
+                                            chat.title
+                                        }
                                         key={chat.chat_id}
                                     >
                                         <ChatSidebarItem

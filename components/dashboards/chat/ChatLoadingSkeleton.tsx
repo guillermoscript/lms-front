@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function ChatLoadingSkeleton () {
+export default function ChatLoadingSkeleton() {
     return (
         <div className="space-y-2 w-full">
             <Skeleton className="h-6 rounded mr-14" />

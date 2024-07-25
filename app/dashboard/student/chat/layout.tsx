@@ -1,9 +1,9 @@
-import StudentChatSidebar from '@/components/dashboards/student/chat/StudentChatSidebar'
+import StudentChatSidebar from '@/components/dashboards/chat/StudentChatSidebar'
 import NoCoruseOrSubAlert from '@/components/dashboards/student/NoCoruseOrSubAlert'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function CoursesLayout ({
-    children
+export default async function CoursesLayout({
+    children,
 }: {
     children: React.ReactNode
 }) {
@@ -32,19 +32,13 @@ export default async function CoursesLayout ({
     }
 
     if (userSubscriptions.data.length === 0 && userCourses.data.length === 0) {
-        return (
-            <NoCoruseOrSubAlert />
-        )
+        return <NoCoruseOrSubAlert />
     }
 
     return (
         <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr] gap-6">
-            <StudentChatSidebar
-                userRole='student'
-            />
-            <div className="flex flex-col">
-                {children}
-            </div>
+            <StudentChatSidebar userRole="student" />
+            <div className="flex flex-col">{children}</div>
         </div>
     )
 }
