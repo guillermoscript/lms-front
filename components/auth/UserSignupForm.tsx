@@ -50,6 +50,24 @@ export default function UserSignupForm () {
                     placeholder="you@example.com"
                     required
                 />
+                <label className="text-md" htmlFor="full_name">
+            Full Name
+                </label>
+                <input
+                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
+                    name="full_name"
+                    placeholder="John Doe"
+                    required
+                />
+                <label className="text-md" htmlFor="username">
+            Username
+                </label>
+                <input
+                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
+                    name="username"
+                    placeholder="johndoe"
+                    required
+                />
                 <label className="text-md" htmlFor="password">
           Password
                 </label>
