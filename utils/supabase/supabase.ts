@@ -1045,6 +1045,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           currency_id: number | null
+          data_person: Json | null
           full_name: string | null
           id: string
           stripe_customer_id: string | null
@@ -1057,6 +1058,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          data_person?: Json | null
           full_name?: string | null
           id: string
           stripe_customer_id?: string | null
@@ -1069,6 +1071,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          data_person?: Json | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
