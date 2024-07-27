@@ -70,7 +70,7 @@ export default async function CommentsSections({
                     </CardTitle>
                 </CardHeader>
                 <CardContent
-                    className='p-2 lg:p-6'
+                    className='p-1 lg:p-3'
                 >
                     <CommentEditor
                         course_id={course_id}
