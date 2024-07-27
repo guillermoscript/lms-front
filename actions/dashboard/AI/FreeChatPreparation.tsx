@@ -6,8 +6,8 @@ import { generateId } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
 
-import Message from '@/components/dashboards/Common/chat/Message'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
+import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
@@ -53,7 +53,7 @@ export async function continueFreeChatConversation(
             </Message>
         ),
         system: 'You are a helpful assistant. Ask me anything!',
-        text: async function* ({ content, done }) {
+        text: async function * ({ content, done }) {
             if (done) {
                 aiState.done({
                     ...aiState.get(),
@@ -130,22 +130,22 @@ export const getUIStateFromFreeChatAIState = (aiState: Chat) => {
             display:
                 message.role === 'tool' ? null : message.role === 'user' &&
                   typeof message.content === 'string' ? (
-                    <Message
-                        sender={message.role}
-                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                        isUser={true}
-                    >
-                        <ViewMarkdown markdown={message.content} />
-                    </Message>
-                ) : message.role === 'assistant' &&
+                        <Message
+                            sender={message.role}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={true}
+                        >
+                            <ViewMarkdown markdown={message.content} />
+                        </Message>
+                    ) : message.role === 'assistant' &&
                   typeof message.content === 'string' ? (
-                    <Message
-                        sender={message.role}
-                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                        isUser={false}
-                    >
-                        <ViewMarkdown markdown={message.content} />
-                    </Message>
-                ) : null,
+                            <Message
+                                sender={message.role}
+                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                isUser={false}
+                            >
+                                <ViewMarkdown markdown={message.content} />
+                            </Message>
+                        ) : null,
         }))
 }
