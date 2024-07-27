@@ -1,4 +1,4 @@
-import PricingSection from '@/components/plans/PricingSection'
+import PriceCard from '@/components/plans/PriceCard'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function PlanPage() {
@@ -11,9 +11,63 @@ export default async function PlanPage() {
         throw plans.error
     }
 
-    console.log(plans)
+    const [month, quarterly, yearly] = plans.data
 
-    const [month, yearly, quarterly] = plans.data
+    const basicData = [
+        {
+            title: 'Hobby',
+            price: month.price,
+            description: 'Best for developers trying to use the platform.',
+            features: [
+                { text: '5 API requests per day' },
+                { text: 'Access to basic API endpoints' },
+                { text: 'Email support within 48 hours' },
+                { text: 'Community forum access' },
+                { text: 'Monthly newsletter' },
+            ],
+            buttonText: 'Buy Now',
+            isHighlighted: false,
+            periodicity: 'month',
+            id: month.plan_id,
+        },
+        {
+            title: 'Starter',
+            price: quarterly.price,
+            description: 'Perfect for small businesses',
+            features: [
+                { text: 'Everything in Hobby, plus' },
+                { text: '50 API requests per day' },
+                { text: 'Access to advanced API endpoints' },
+                { text: 'Email support within 24 hours' },
+                { text: 'Community forum access' },
+                { text: 'Self hosting options' },
+            ],
+            buttonText: 'Buy Now',
+            isHighlighted: false,
+            periodicity: 'quarter',
+            id: quarterly.plan_id,
+        },
+        {
+            title: 'Professional',
+            price: yearly.price,
+            description: 'Ideal for small to mid range startups',
+            features: [
+                { text: 'Everything in Starter, plus' },
+                { text: '500 API requests per day' },
+                { text: 'Access to super advanced API endpoints' },
+                { text: 'Email support within 12 hours' },
+                { text: 'Private Community access' },
+                { text: 'Monthly retreats' },
+                { text: 'Self hosting options' },
+                { text: 'Private infrastructure' },
+                { text: 'On-Prem deployments' },
+            ],
+            buttonText: 'Buy Now',
+            isHighlighted: true,
+            periodicity: 'year',
+            id: yearly.plan_id,
+        },
+    ]
 
     return (
         <section className="w-full py-12 md:py-24 lg:py-20 container ">
@@ -49,8 +103,23 @@ export default async function PlanPage() {
                     </span>
                 </h2>
             </div>
-
-            <PricingSection />
+            <div className="mx-auto flex flex-col gap-6 sm:flex-row sm:justify-center sm:gap-6">
+                {basicData.map((data) => {
+                    return (
+                        <PriceCard
+                            title={data.title}
+                            price={data.price}
+                            description={data.description}
+                            features={data.features}
+                            buttonText={data.buttonText}
+                            isHighlighted={data.isHighlighted}
+                            periodicity={data.periodicity}
+                            key={data.id}
+                            id={data.id}
+                        />
+                    )
+                })}
+            </div>
             {/* <div className="container px-4 md:px-6 flex flex-col gap-4 md:gap-8">
                 <div className="space-y-6 text-center">
                     <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
