@@ -74,7 +74,7 @@ export async function continueConversation (
 
             Messages inside [] means that it's a UI element or a user event. For example:
             - [showExamForm] means that the user will mean that the user will see a form to fill out for an exam preparation
-            - [showExamResult] means that the user will see the result of the exam he took with the score and the feedback for each question
+            - [showExamResult] means that the user will see the result of the exam he took with the score and the feedback for each question, you need to evaluate the correctnes of the answeres provided by the student.
             - [examsSuggestions] means that the user will see suggestions for exams he can take, with the title, description, content, and difficulty of the exam, the user can click on the suggestion to see more details about the exam
 
 Also you can chat the user and ask him questions about the subject to get more information about the subject and the learning objectives of the student.`,
