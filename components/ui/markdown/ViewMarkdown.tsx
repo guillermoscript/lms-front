@@ -9,6 +9,8 @@ import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
 
+import CopyToClipboardButton from '@/components/dashboards/Common/CopyToClipboardButton'
+
 export default function ViewMarkdown({
     markdown,
     addLinks,
@@ -28,21 +30,24 @@ export default function ViewMarkdown({
             components={{
                 code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '')
+                    const code = String(children).replace(/\n$/, '')
                     return !inline && match ? (
-                        <SyntaxHighlighter
-                            style={dracula}
-                            PreTag="div"
-                            language={match[1]}
-                            {...props}
-                            className="code-block"
-                        >
-                            {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
+                        <div className="relative">
+                            <SyntaxHighlighter
+                                style={dracula}
+                                PreTag="div"
+                                language={match[1]}
+                                {...props}
+                                className="code-block"
+                            >
+                                {code}
+                            </SyntaxHighlighter>
+                            <div className="absolute top-2 right-2">
+                                <CopyToClipboardButton content={code} />
+                            </div>
+                        </div>
                     ) : (
-                        <code
-                            className={`code-inline ${className}`}
-                            {...props}
-                        >
+                        <code className={`code-inline ${className}`} {...props}>
                             {children}
                         </code>
                     )
