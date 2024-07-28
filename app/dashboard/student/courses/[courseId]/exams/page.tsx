@@ -97,7 +97,7 @@ export default async function StudentExamsCoursePage ({
                                         ? exam.exam_submissions[0].exam_scores
                                             .length > 0
                                             ? 'Completed'
-                                            : 'In Progress'
+                                            : 'Waiting for Review from Instructor'
                                         : 'Not Started'
                                 }
                                 actionText={
@@ -134,7 +134,7 @@ const ExamCard = ({
     statusIcon: React.ReactNode
     title: string
     description: string
-    score: number | string
+    score?: number | string
     status: string
     actionText: string
     link?: string
@@ -153,7 +153,7 @@ const ExamCard = ({
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Score: {score}
+                          Score: {score ?? 'N/A'}
                         </span>
                     </div>
                     {status === 'Completed' ? (
