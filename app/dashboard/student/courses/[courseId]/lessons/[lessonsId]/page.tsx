@@ -229,7 +229,7 @@ function Content({
                                 />
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
+                        <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
                             <Separator />
                             <AiTaskMessage
                                 userId={userId}
