@@ -17,8 +17,8 @@ export default async function ListOfReviews({
     const userData = await supabase.auth.getUser()
 
     const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('id, rating, review_text, created_at, user_id')
+        .from('get_reviews')
+        .select('*')
         .eq('entity_id', entityId)
         .eq('entity_type', entityType)
 
@@ -27,16 +27,16 @@ export default async function ListOfReviews({
         return null
     }
 
-    const findCurrentUserReview = reviews.find((review) => review.user_id === userData?.data.user.id)
+    const findCurrentUserReview = reviews.find((review) => review.profile_id === userData?.data.user.id)
 
     return (
         <>
             {reviews.length > 0 ? reviews.map((review) => (
                 <ReviewCard
-                    key={review.id}
+                    key={review.profile_id}
                     rating={review.rating}
                     reviewText={review.review_text}
-                    reviewerName="John Doe"
+                    reviewerName={review.full_name || 'Anonymous'}
                     reviewDate={dayjs(review.created_at).format('MMMM D, YYYY')}
                 />
             )) : (
