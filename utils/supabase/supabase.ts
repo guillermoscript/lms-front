@@ -110,6 +110,13 @@ export type Database = {
             foreignKeyName: "comment_flags_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "comment_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -144,6 +151,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lesson_comments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "comment_reactions_user_id_fkey"
@@ -618,6 +632,13 @@ export type Database = {
             foreignKeyName: "lesson_comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "lesson_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -649,6 +670,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "lesson_completions_user_id_fkey"
@@ -1408,7 +1436,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      get_reviews: {
+        Row: {
+          created_at: string | null
+          entity_id: number | null
+          entity_type: Database["public"]["Enums"]["reviewable"] | null
+          full_name: string | null
+          profile_id: string | null
+          rating: number | null
+          review_id: number | null
+          review_text: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cancel_subscription: {

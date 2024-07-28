@@ -34,7 +34,7 @@ export default function TaksMessages({
             'makeUserAssigmentCompleted'
 
     return (
-        <div className="w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-1">
+        <div className="w-full sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-1">
             <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 lg:max-h-[calc(100vh-4rem)]  max-h-[calc(100vh-0.5rem)]">
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} />
