@@ -53,13 +53,24 @@ export const signUp = async (prevData: any, formData: FormData) => {
     const origin = headers().get('origin')
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const username = formData.get('username') as string
+    const full_name = formData.get('full_name') as string
+
+    if (!email || !password || !username || !full_name) {
+        return createResponse('error', 'All fields are required', null, null)
+    }
+
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`
+            emailRedirectTo: `${origin}/auth/callback`,
+            data: {
+                full_name,
+                username,
+            },
         }
     })
 
