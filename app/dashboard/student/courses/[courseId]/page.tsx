@@ -185,7 +185,7 @@ const LessonCard = ({
             </div>
             <div>
                 <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Incomplete' : 'Not Started'}
                 </Badge>
             </div>
         </div>
@@ -218,7 +218,7 @@ const ExamCard = ({
     examNumber: number
     description: string
     status: 'default' | 'destructive' | 'outline' | 'secondary'
-    grade: number | string
+    grade?: number | string
     courseId: number
     examId: number
 }) => (
@@ -232,7 +232,7 @@ const ExamCard = ({
             </div>
             <div>
                 <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Not Started' : 'Waiting for Review from Instructor'}
                 </Badge>
             </div>
         </div>
@@ -242,7 +242,7 @@ const ExamCard = ({
             </p>
             <div className="mt-2">
                 <div className="flex items-center justify-between">
-                    <p>Grade: {grade}</p>
+                    <p>Grade: {grade ?? 'N/A'}</p>
                     <Link
                         className={buttonVariants({ variant: 'link' })}
                         href={`/dashboard/student/courses/${courseId}/exams/${examId}`}
