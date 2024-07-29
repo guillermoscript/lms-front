@@ -1,9 +1,20 @@
-// @ts-nocheck
 'use client'
 import axios, { isAxiosError } from 'axios'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
@@ -42,11 +53,12 @@ export default function ExamsSubmissionForm ({
         )
     })
 
+    const [open, setOpen] = useState(false)
+
     const router = useRouter()
     const { toast } = useToast()
 
     async function onSubmit (data: any) {
-    // Show spinner or loading indicator
         const payload = parseFormData(data)
 
         try {
@@ -74,12 +86,19 @@ export default function ExamsSubmissionForm ({
             }
         }
 
-        console.log(payload)
+        setOpen(false)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            setOpen(true)
+        }
     }
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} onKeyDown={handleKeyDown} className="grid gap-6">
                 <>
                     {singleSelectQuestions.length > 0 && (
                         <div>
@@ -125,14 +144,41 @@ export default function ExamsSubmissionForm ({
                     )}
                 </>
 
-                <div className="flex justify-end gap-2">
-                    <Button
-                        disabled={form.formState.isSubmitting}
-                        type="submit"
-                    >
+                <AlertDialog
+                    open={open} onOpenChange={setOpen}
+                >
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            disabled={form.formState.isSubmitting}
+                            type='button'
+                        >
             Submit Exam
-                    </Button>
-                </div>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+        Once you submit, you can't go back and change your answers.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel
+                                disabled={form.formState.isSubmitting}
+                            >Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                disabled={form.formState.isSubmitting}
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    form.handleSubmit(onSubmit)()
+                                }}
+                            >
+                                {form.formState.isSubmitting ? 'Submitting...' : 'Submit'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
             </form>
         </Form>
     )
