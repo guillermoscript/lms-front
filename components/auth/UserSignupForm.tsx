@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button'
 
 import PasswordComponent from './PasswordComponent'
 
-export default function UserSignupForm () {
+export default function UserSignupForm ({
+    redirect
+}: {
+    redirect: string
+}) {
     const [state, action] = useFormState(signUp, {
         status: 'idle',
         message: '',
@@ -42,7 +46,7 @@ export default function UserSignupForm () {
                 action={action}
             >
                 <label className="text-md" htmlFor="email">
-          Email
+            Email
                 </label>
                 <input
                     className="rounded-md px-4 py-2 bg-inherit border mb-6"
@@ -69,8 +73,11 @@ export default function UserSignupForm () {
                     required
                 />
                 <label className="text-md" htmlFor="password">
-          Password
+            Password
                 </label>
+
+                <input type="hidden" name="redirect" value={redirect} />
+
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
