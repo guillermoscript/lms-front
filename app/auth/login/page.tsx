@@ -21,7 +21,9 @@ export default function Login ({
                         Enter your email below to login
                     </p>
                 </div>
-                <UserLoginForm />
+                <UserLoginForm
+                    redirect='/dashboard'
+                />
                 {searchParams.message && (
                     <Alert>
                         <Mail className="h-4 w-4" />

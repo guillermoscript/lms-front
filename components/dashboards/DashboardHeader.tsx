@@ -1,4 +1,6 @@
 import { SearchIcon } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
 
 import { DarkThemeToggle } from '@/components/DarkThemeToggle'
 import { CommandDialogComponent } from '@/components/dashboards/Common/CommandDialogComponent'
@@ -15,6 +17,14 @@ export default async function DashboardHeader () {
 
     return (
         <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-gray-100/40 px-6 dark:bg-gray-800/40">
+            <Link href="/">
+                <Image
+                    src="/img/logo.png"
+                    alt="LMS"
+                    width={85}
+                    height={82}
+                />
+            </Link>
             <DashboardHeaderSheet userRole={userRole} />
             <div className="w-full flex-1 hidden md:flex md:w-2/4">
                 <form

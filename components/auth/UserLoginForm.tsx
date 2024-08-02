@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button'
 
 import PasswordComponent from './PasswordComponent'
 
-export default function UserLoginForm() {
+export default function UserLoginForm({
+    redirect,
+}: {
+    redirect: string
+}) {
     const [state, action] = useFormState(signIn, {
         status: 'idle',
         message: '',
@@ -15,7 +19,7 @@ export default function UserLoginForm() {
     })
 
     return (
-        <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
+        <div className="flex-1 flex flex-col w-full sm:max-w-md justify-center gap-2">
             <Link
                 href="/"
                 className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
@@ -53,6 +57,7 @@ export default function UserLoginForm() {
                 <label className="text-md" htmlFor="password">
                     Password
                 </label>
+                <input type="hidden" name="redirect" value={redirect} />
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
