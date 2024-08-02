@@ -1,93 +1,78 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# LMS App with AI - README
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Features](#features)
+   - [Students](#students)
+   - [Teachers](#teachers)
+   - [Admins](#admins)
+3. [Technologies Used](#technologies-used)
+4. [Getting Started](#getting-started)
+5. [Subscription Plans](#subscription-plans)
+6. [Future Features](#future-features)
+7. [Contributing](#contributing)
+8. [License](#license)
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## Introduction
+Welcome to the LMS App with AI! Our Learning Management System leverages advanced AI technologies to provide a seamless and intelligent learning experience. Whether you are a student, teacher, or admin, our platform tailors itself to your needs, ensuring productive learning, teaching, and management.
 
 ## Features
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+### Students
+1. **Course Enrollment**: Students can subscribe to various plans and gain access to a wide range of courses, offering flexibility based on budget and needs.
+2. **Lesson Content**: Each course consists of multiple lessons featuring an engaging UI with text and video content, review ratings, comments, and interactive elements.
+3. **AI Chat with Live Feedback**: Experience an unprecedented learning aid with our unique AI chat! This feature offers **real-time feedback** as students complete their assignments. Unlike traditional LMS systems, our AI doesn't just passively wait for submission; it actively assists students by providing hints, reviews, and encouraging messages. Imagine having a personal tutor available 24/7, giving you immediate, constructive feedback and guiding you until you get the correct answer. The AI marks lessons as complete when correct answers are given, offering a celebratory generative UI message to reinforce learning success.
+4. **Exams**: Courses include interactive exams with various types of questions:
+   - Multiple Choice
+   - True or False
+   - Free Text (open questions for critical thinking)
+   Exams are reviewed by teachers for initial feedback, with AI providing a preliminary review (future feature).
+5. **AI Chat Page**: Prepare to be amazed by our AI Chat Page. Here, students can interact with the AI to prepare for exams, request tailored exam samples, and receive instant feedback on their responses. This isn't just an ordinary chatbot; it's a **game-like experience** reminiscent of "Who Wants to Be a Millionaire?"—but educational! The AI generates fully interactive forms featuring multiple choice, true/false, free-text, and matching questions. Each generated exam comes with real-time, detailed feedback and a score, keeping learning engaging and fun.
 
-## Demo
+### Teachers
+1. **Course Management**: Teachers have the ability to create, update, and delete courses. Courses contain lessons and exams, which can be customized with text, video content, and required information.
+2. **Lesson Content**: Teachers can upload all necessary content for lessons, including media and assignments.
+3. **Exam Creation**: Exams are customizable with multiple choice, true/false, and free text questions. Teachers can set multiple exams per course.
+4. **Exam Review**: Upon exam submission, teachers receive notifications to review student answers. They can provide feedback, assign scores, and offer overall feedback for the student’s performance.
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+### Admins
+1. **Transaction Management**: Admins have access to view all transactions, ensuring transparency and control over financial aspects.
+2. **App Control**: Admins have overall control of the app, including user management, course approvals, and system monitoring.
 
-## Deploy to Vercel
+## Technologies Used
+- **Backend**: [Supabase](https://supabase.io/)
+- **AI/LLM**: [OpenAI](https://openai.com/), [Gemini](https://geminiprotocol.net/)
+- **Front-end**: [Next.js App Router](https://nextjs.org/docs/routing/introduction)
+- **Payments**: [Stripe](https://stripe.com/)
+- **Database**: Subscriptions and transactions managed via backend triggers.
 
-Vercel deployment will guide you through creating a Supabase account and project.
+## Getting Started
+1. **Clone Repository**: `git clone <repository-url>`
+2. **Install Dependencies**: `npm install`
+3. **Environment Setup**: Configure your environment variables.
+4. **Run the Application**: `npm run dev`
+5. **Access Application**: Visit `http://localhost:3000/`
+6. **DB**: This is a work in progress. The database is not yet available for public use nor the seed data. We are working on making it available soon.
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## Subscription Plans
+Our LMS offers various subscription plans tailored to different budgets and needs. Each plan grants access to specific course materials and additional benefits:
+- Basic Plan
+- Standard Plan
+- Premium Plan
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This%20starter%20configures%20Supabase%20Auth%20to%20use%20cookies%2C%20making%20the%20user's%20session%20available%20throughout%20the%20entire%20Next.js%20app%20-%20Client%20Components%2C%20Server%20Components%2C%20Route%20Handlers%2C%20Server%20Actions%20and%20Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png&integration-ids=oac_VqOgBHqhEoFTPzGkPd7L0iH6)
+## Future Features
+Upcoming enhancements include:
+1. **AI Exam Review**: Soon, our AI will provide a secondary opinion on exam submissions. This feature will not only bolster the accuracy and reliability of evaluations but also offer additional feedback, allowing students to correct their mistakes before final teacher reviews. Imagine knowing where you stand instantly and being able to improve before the final grade!
+2. **AI Customization**: We are working on enabling personalized AI training based on individual user needs. This will empower students to shape the AI’s understanding to better support their unique learning style and requirements.
+3. **Document Uploads**: Users will soon be able to upload documents directly to the AI, enhancing its knowledge base. This feature will enable custom exam creations and targeted learning experiences tailored specifically to the user’s coursework and materials.
+4. **Assignments**: After completing lessons, students are required to answer open questions to validate their understanding. Our AI not only reviews these responses but also provides detailed feedback, helping students enhance their knowledge until they get it right. This feature is **exclusive** to our LMS, ensuring that learning is effective and mistakes are corrected in real-time.
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+## Contributing
+We welcome contributions! Please fork the repository and submit a pull request. For major changes, it's best to open an issue first to discuss your ideas.
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Clone and run locally
+---
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Create a Next.js app using the Supabase Starter template npx command
-
-   ```bash
-   npx create-next-app -e with-supabase
-   ```
-
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd name-of-new-app
-   ```
-
-4. Rename `.env.local.example` to `.env.local` and update the following:
-
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
-
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://app.supabase.com/project/_/settings/api)
-
-5. You can now run the Next.js local development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+Thank you for choosing the LMS App with AI. We are committed to revolutionizing the learning experience by integrating cutting-edge AI technology to meet and exceed your educational goals! Don’t miss out on this unique, intelligent, and engaging learning platform. Happy learning!
