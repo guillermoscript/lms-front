@@ -22,13 +22,15 @@ export default async function AuthButton () {
         ? (
             <div className="flex items-center gap-4">
                 <form action={signOut}>
-                    <Button>
+                    <Button
+                        variant='outline'
+                    >
             Logout
                     </Button>
                 </form>
                 <Link href={`/dashboard/${userRola}`}>
                     <Button
-                        variant={'link'}
+                        variant='default'
                     >
             Dashboard
                     </Button>
