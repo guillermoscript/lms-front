@@ -10,7 +10,7 @@ export default async function StorePage () {
         <div className="min-h-full">
             <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8">
                 <h2 className="text-2xl font-bold tracking-tight">
-                  Customers also purchased
+                  Our Products
                 </h2>
 
                 <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
@@ -21,7 +21,7 @@ export default async function StorePage () {
                         >
                             <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-md lg:aspect-none group-hover:opacity-75 lg:h-80">
                                 <img
-                                    src="/img/product-page-01-related-product-01.jpg"
+                                    src={product.image}
                                     alt={product.name}
                                     className="h-full w-full object-cover object-center lg:h-full lg:w-full"
                                 />
