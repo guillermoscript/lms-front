@@ -2,59 +2,68 @@ import { Cloud, DollarSign, Heart, HelpCircle, LineChart, Route, Settings2Icon, 
 
 import { cn } from '@/utils'
 
-export default function FeaturesSectionDemo() {
+export default function OptionsSection() {
     const features = [
         {
-            title: 'Built for developers',
+            title: 'Built for All Learners',
             description:
-        'Built for engineers, developers, dreamers, thinkers and doers.',
+        'From beginners to experts, our platform supports every learning journey.',
             icon: <Terminal />,
         },
         {
             title: 'Ease of use',
             description:
-        "It's as easy as using an Apple, and as expensive as buying one.",
+        'User-friendly interface that makes learning as simple and engaging as it should be.',
             icon: <LineChart />,
         },
         {
-            title: 'Pricing like no other',
+            title: 'Affordable Pricing',
             description:
-        'Our prices are best in the market. No cap, no lock, no credit card required.',
+        'Competitive rates with no hidden fees. Choose what works best for you.',
             icon: <DollarSign />,
         },
         {
-            title: '100% Uptime guarantee',
-            description: 'We just cannot be taken down by anyone.',
+            title: 'Unmatched Uptime',
+            description: 'Reliable and always accessible, so you can learn whenever and wherever you want.',
             icon: <Cloud />,
         },
         {
-            title: 'Multi-tenant Architecture',
-            description: 'You can simply share passwords instead of buying new seats',
+            title: 'Build with Next.js',
+            description: 'Next.js is a React framework that makes it easy to build fast, production-ready web applications.',
             icon: <Route />,
         },
         {
             title: '24/7 Customer Support',
             description:
-        'We are available a 100% of the time. Atleast our AI Agents are.',
+        'Our team is always here to help, around the clock.',
             icon: <HelpCircle />,
         },
         {
-            title: 'Money back guarantee',
+            title: 'Satisfaction Guaranteed',
             description:
-        'If you donot like EveryAI, we will convince you to like us.',
+        'Money-back guarantee if our service doesn’t meet your expectations.',
             icon: <Settings2Icon />,
         },
         {
-            title: 'And everything else',
-            description: 'I just ran out of copy ideas. Accept my sincere apologies',
+            title: 'Build with love',
+            description: 'We are a team of passionate individuals who love what we do.',
             icon: <Heart />,
         },
+
     ]
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4  relative z-10 py-10 max-w-7xl mx-auto">
-            {features.map((feature, index) => (
-                <Feature key={feature.title} {...feature} index={index} />
-            ))}
+        <div className="py-12 lg:py-24 relative">
+            <h3 className="text-3xl lg:text-5xl lg:leading-tight max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white">
+            Don’t Miss Out! Join this amazing platform today.
+            </h3>
+            <p className="text-sm lg:text-base  max-w-2xl  my-4 mx-auto text-neutral-500 text-center font-normal dark:text-neutral-300">
+            Be part of an educational revolution. Subscribe now and unlock your potential with our AI-powered LMS.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4  relative z-10 py-10 max-w-7xl mx-auto">
+                {features.map((feature, index) => (
+                    <Feature key={feature.title} {...feature} index={index} />
+                ))}
+            </div>
         </div>
     )
 }
