@@ -18,7 +18,9 @@ export default function Login ({
                         Enter your email below to create your account
                     </p>
                 </div>
-                <UserSignupForm />
+                <UserSignupForm
+                    redirect='/dashboard'
+                />
                 {searchParams.message && (
                     <p className="text-center text-red-500 text-sm">
                         {searchParams.message}
