@@ -1,5 +1,8 @@
+import UserLoginForm from '@/components/auth/UserLoginForm'
+import UserSignupForm from '@/components/auth/UserSignupForm'
 import CheckoutImages from '@/components/checkout/CheckoutImages'
 import CheckoutPlan from '@/components/plans/CheckoutPlan'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function PlansCheckoutPage ({
@@ -15,7 +18,7 @@ export default async function PlansCheckoutPage ({
         .eq('plan_id', params.planId)
         .single()
 
-    console.log(data)
+    const userData = await supabase.auth.getUser()
 
     return (
         <div className="container px-4 md:px-6 flex flex-col gap-4 md:gap-8 py-12 md:py-24 lg:py-32">
@@ -41,9 +44,48 @@ export default async function PlansCheckoutPage ({
                           /month
                         </div>
                     </div>
-                    <CheckoutPlan
-                        params={params}
-                    />
+                    {
+                        userData.data.user ? (
+                            <CheckoutPlan
+                                params={params}
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                <Tabs defaultValue="login" className="w-full px-8 sm:max-w-md">
+                                    <TabsList
+                                        className='h-12 p-3'
+                                    >
+                                        <TabsTrigger
+                                            className='p-2'
+                                            value="login"
+                                        >
+
+                                        Login to continue
+
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            className='p-2'
+                                            value="signup"
+                                        >
+
+                                        Create an account
+
+                                        </TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="login">
+                                        <UserLoginForm
+                                            redirect={`/plans/${params.planId}`}
+                                        />
+                                    </TabsContent>
+                                    <TabsContent value="signup">
+                                        <UserSignupForm
+                                            redirect={`/plans/${params.planId}`}
+                                        />
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        )
+                    }
                 </div>
                 <CheckoutImages
                     img1src={data?.thumbnail}
