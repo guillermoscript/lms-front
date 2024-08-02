@@ -978,6 +978,7 @@ export type Database = {
         Row: {
           created_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at: string | null
           description: string | null
           duration_in_days: number
           features: string | null
@@ -989,6 +990,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at?: string | null
           description?: string | null
           duration_in_days: number
           features?: string | null
@@ -1000,6 +1002,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at?: string | null
           description?: string | null
           duration_in_days?: number
           features?: string | null
@@ -1045,6 +1048,7 @@ export type Database = {
           created_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
           description: string | null
+          image: string | null
           name: string
           price: number
           product_id: number
@@ -1053,6 +1057,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          image?: string | null
           name: string
           price: number
           product_id?: number
@@ -1061,6 +1066,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          image?: string | null
           name?: string
           price?: number
           product_id?: number
