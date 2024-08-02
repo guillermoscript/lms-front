@@ -13,32 +13,27 @@ export default function CheckoutPlan ({
         <div className='flex flex-col gap-4'>
             <CheckoutCard
                 callback={async (data) => {
-                    if (data.radio === 'card') {
-                        try {
-                            const data = await fetch(
-                                '/api/plans/checkout',
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type':
+                    console.log(data)
+                    try {
+                        const data = await fetch(
+                            '/api/plans/checkout',
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type':
                                                   'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        planId: params.planId
-                                    })
-                                }
-                            )
-                            const response = await data.json()
-                            console.log(response)
-                            window.location.href = response.url
-                        } catch (error) {
-                            console.log(error)
-                            setError('An error occurred')
-                        }
-                    } else if (data.radio === 'binance') {
-                        console.log('binance')
-                    } else if (data.radio === 'paypal') {
-                        console.log('paypal')
+                                },
+                                body: JSON.stringify({
+                                    planId: params.planId
+                                })
+                            }
+                        )
+                        const response = await data.json()
+                        console.log(response)
+                        window.location.href = response.url
+                    } catch (error) {
+                        console.log(error)
+                        setError('An error occurred')
                     }
                 }}
             />
