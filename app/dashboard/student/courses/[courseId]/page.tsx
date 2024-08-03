@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -86,13 +87,18 @@ export default async function CourseStudentPage({
                     <CardHeader>
                         <div className="flex sm:flex-row flex-col">
                             <div className="sm:mr-4 mr-0 mb-2 sm:mb-0">
-                                <img
+                                <Image
                                     src={courseData.data.thumbnail_url}
                                     alt="Course Image"
-                                    className="rounded-md object-cover sm:max-w-[400px]"
+                                    className="rounded-md object-cover"
+                                    width={400}
+                                    height={200}
+                                    placeholder="blur"
+                                    layout="responsive"
+                                    blurDataURL="/img/placeholder.svg"
                                 />
                             </div>
-                            <div>
+                            <div className="flex flex-col gap-4 w-full">
                                 <CardTitle>{courseData.data.title}</CardTitle>
                                 {courseData.data.description && (
                                     <CardDescription>
