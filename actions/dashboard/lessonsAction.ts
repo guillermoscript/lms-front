@@ -20,6 +20,13 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const image = data.get('image') as string
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .update({
@@ -85,6 +92,13 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .insert({
@@ -126,6 +140,13 @@ export async function deleteLessonsAction (data: {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .delete()
