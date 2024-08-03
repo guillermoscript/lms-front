@@ -5,13 +5,37 @@ import { useEffect, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { FreeChatAI, UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
-import { studentCreateNewChat, studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
+import { studentCreateNewChatAndRedirect, studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
 import { ChatInput, Message } from '@/components/dashboards/Common/chat/chat'
 import SuggestionsContainer from '@/components/dashboards/Common/chat/SuggestionsContainer'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
+
+async function runUserMessage ({
+    input,
+    setConversation,
+    continueFreeChatConversation,
+    chatId,
+    addNewChatMessage
+}: {
+    input: string
+    setConversation: (value: React.SetStateAction<ClientMessage[]>) => void
+    continueFreeChatConversation: (input: string) => Promise<ClientMessage>
+    addNewChatMessage?: boolean
+    chatId?: number
+}) {
+    if (addNewChatMessage) {
+        await studentInsertChatMessage({ chatId, message: input })
+    }
+
+    const message = await continueFreeChatConversation(input)
+    setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        message
+    ])
+}
 
 export default function FreeChat ({
     chatId
@@ -23,7 +47,7 @@ export default function FreeChat ({
     const { continueFreeChatConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
     const [stop, setStop] = useState(false)
-    const [aiState] = useAIState()
+    const [aiState, setAiState] = useAIState()
 
     const {
         scrollRef,
@@ -36,6 +60,19 @@ export default function FreeChat ({
     useEffect(() => {
         scrollToBottom()
     }, [conversation, scrollToBottom])
+
+    useEffect(() => {
+        if (chatId) {
+            if (aiState.messages.length === 1) {
+                setIsLoading(true)
+                runUserMessage({
+                    input: aiState.messages[0].content,
+                    setConversation,
+                    continueFreeChatConversation,
+                }).finally(() => setIsLoading(false))
+            }
+        }
+    }, [])
 
     return (
         <div>
@@ -67,9 +104,10 @@ export default function FreeChat ({
                                     setIsLoading(true)
 
                                     if (!chatId) {
-                                        await studentCreateNewChat({
+                                        await studentCreateNewChatAndRedirect({
                                             title: suggestion,
-                                            chatType: 'free_chat'
+                                            chatType: 'free_chat',
+                                            insertMessage: true
                                         })
                                     }
 
@@ -97,20 +135,13 @@ export default function FreeChat ({
                                         }
                                     ])
 
-                                    if (chatId) {
-                                        await studentInsertChatMessage({
-                                            chatId,
-                                            message: suggestion
-                                        })
-                                    }
+                                    await runUserMessage({
+                                        input: suggestion,
+                                        setConversation,
+                                        continueFreeChatConversation,
+                                        chatId
+                                    })
 
-                                    const message = await continueFreeChatConversation(
-                                        suggestion
-                                    )
-                                    setConversation((currentConversation: ClientMessage[]) => [
-                                        ...currentConversation,
-                                        message
-                                    ])
                                     setIsLoading(false)
                                 }}
                             />
@@ -129,42 +160,40 @@ export default function FreeChat ({
                         setIsLoading(true)
 
                         if (!chatId) {
-                            await studentCreateNewChat({
+                            await studentCreateNewChatAndRedirect({
                                 title: input.content,
-                                chatType: 'free_chat'
+                                chatType: 'free_chat',
+                                insertMessage: true
+                            })
+                        } else {
+                            if (aiState.messages.length === 0 && chatId) {
+                                await studentUpdateChatTitle({ chatId, title: input.content })
+                            }
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+                                        <Message
+                                            sender={'user'}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown markdown={input.content} />
+                                        </Message>
+                                    )
+                                }
+                            ])
+
+                            await runUserMessage({
+                                input: input.content,
+                                setConversation,
+                                continueFreeChatConversation,
+                                chatId,
+                                addNewChatMessage: true
                             })
                         }
-
-                        if (aiState.messages.length === 0 && chatId) {
-                            await studentUpdateChatTitle({ chatId, title: input.content })
-                        }
-
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            {
-                                id: generateId(),
-                                role: 'user',
-                                display: (
-                                    <Message
-                                        sender={'user'}
-                                        time={new Date().toDateString()}
-                                        isUser={true}
-                                    >
-                                        <ViewMarkdown markdown={input.content} />
-                                    </Message>
-                                )
-                            }
-                        ])
-
-                        if (chatId) {
-                            await studentInsertChatMessage({ chatId, message: input.content })
-                        }
-
-                        const message = await continueFreeChatConversation(input.content)
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            message
-                        ])
                         setIsLoading(false)
                     }}
                 />
