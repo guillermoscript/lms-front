@@ -17,6 +17,7 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const embed = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const course_id = data.get('course_id') as string
+    const image = data.get('image') as string
 
     const supabase = createClient()
     const lessonData = await supabase
@@ -25,6 +26,7 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
             title,
             content,
             video_url,
+            image,
             embed_code: embed,
             description,
             status: status as any,
@@ -73,6 +75,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const embed_code = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const description = data.get('description') as string
+    const image = data.get('image') as string
 
     const requiredFields = ['title', 'sequence', 'status', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
@@ -92,6 +95,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             embed_code,
             status,
             description,
+            image,
             sequence,
             course_id,
             created_at: new Date().toISOString(),
