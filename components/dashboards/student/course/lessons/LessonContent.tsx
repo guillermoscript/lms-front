@@ -1,5 +1,6 @@
 
 import { CheckCircle } from 'lucide-react'
+import Image from 'next/image'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
@@ -55,8 +56,26 @@ export default function LessonContent({
                 ]}
             />
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 md:flex-row items-center justify-between">
-                    <h1 className="text-3xl font-bold">{lessonData.title}</h1>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center justify-between">
+                    <div className='flex flex-row-reverse md:flex-row md:items-center items-start  gap-2'>
+                        {lessonData.image && (
+                            <Image
+                                src={lessonData.image}
+                                alt={lessonData.title}
+                                width={100}
+                                height={100}
+                                className="rounded-full object-cover "
+                                placeholder='blur'
+                                blurDataURL='/img/placeholder.svg'
+                            />
+                        )}
+                        <div className='w-full'>
+                            <h1 className="text-3xl font-bold">{lessonData.title}</h1>
+                            <p className="text-gray-500 dark:text-gray-400">
+                                {lessonData.description}
+                            </p>
+                        </div>
+                    </div>
                     <div className="flex gap-2">
                         <Badge variant="default">
                             Lesson # {lessonData.sequence}
@@ -66,9 +85,7 @@ export default function LessonContent({
                         )}
                     </div>
                 </div>
-                <p className="text-gray-500 dark:text-gray-400">
-                    {lessonData.description}
-                </p>
+
             </div>
             {lessonData.video_url && (
                 <>
@@ -143,10 +160,7 @@ export default function LessonContent({
                 courseId={lessonData.course_id}
                 lessonId={lessonData.id}
             />
-            <LessonLoaderView
-                userId={userId}
-                lessonId={lessonData.id}
-            />
+            <LessonLoaderView userId={userId} lessonId={lessonData.id} />
         </div>
     )
 }
