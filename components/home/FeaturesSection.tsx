@@ -111,7 +111,7 @@ export const SkeletonOne = () => {
                     <img
                         src="/img/feature(3).png"
                         alt="header"
-                        className="h-full w-full aspect-square object-cover object-left-top rounded-sm"
+                        className="h-full w-full object-cover"
                     />
                 </div>
             </div>
@@ -122,7 +122,7 @@ export const SkeletonOne = () => {
 export const SkeletonThree = () => {
     return (
         <Link
-            href="https://www.youtube.com/watch?v=RPa3_AD1_Vs"
+            href="/plans"
             target="__blank"
             className="relative flex gap-10  h-full group/image"
         >
