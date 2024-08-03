@@ -21,8 +21,7 @@ export default async function EditLessonPage({
     if (lesson.error != null) {
         console.log(lesson.error.message)
     }
-    console.log(params)
-    console.log(lesson)
+
     return (
         <>
             <BreadcrumbComponent
@@ -59,6 +58,7 @@ export default async function EditLessonPage({
                     status: lesson?.data?.status,
                     content: lesson?.data?.content,
                     description: lesson?.data?.description,
+                    image: lesson?.data?.image,
                     systemPrompt:
                         lesson?.data.lessons_ai_tasks[0]?.system_prompt,
                 }}
