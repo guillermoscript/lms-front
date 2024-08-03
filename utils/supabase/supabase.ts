@@ -476,6 +476,42 @@ export type Database = {
           },
         ]
       }
+      exam_views: {
+        Row: {
+          exam_id: number
+          id: number
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          exam_id: number
+          id?: never
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          exam_id?: number
+          id?: never
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_views_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exams: {
         Row: {
           course_id: number
@@ -723,6 +759,42 @@ export type Database = {
           },
         ]
       }
+      lesson_views: {
+        Row: {
+          id: number
+          lesson_id: number
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: never
+          lesson_id: number
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: never
+          lesson_id?: number
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_views_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           content: string | null
@@ -731,6 +803,7 @@ export type Database = {
           description: string | null
           embed_code: string | null
           id: number
+          image: string | null
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
           summary: string | null
@@ -745,6 +818,7 @@ export type Database = {
           description?: string | null
           embed_code?: string | null
           id?: never
+          image?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
           summary?: string | null
@@ -759,6 +833,7 @@ export type Database = {
           description?: string | null
           embed_code?: string | null
           id?: never
+          image?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
           summary?: string | null
@@ -1442,6 +1517,97 @@ export type Database = {
       }
     }
     Views: {
+      distinct_exam_views: {
+        Row: {
+          exam_course_id: number | null
+          exam_created_at: string | null
+          exam_created_by: string | null
+          exam_date: string | null
+          exam_description: string | null
+          exam_duration: number | null
+          exam_id: number | null
+          exam_sequence: number | null
+          exam_status: Database["public"]["Enums"]["status"] | null
+          exam_title: string | null
+          exam_updated_at: string | null
+          user_id: string | null
+          view_id: number | null
+          viewed_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_views_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["exam_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["exam_created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distinct_lesson_views: {
+        Row: {
+          lesson_content: string | null
+          lesson_course_id: number | null
+          lesson_created_at: string | null
+          lesson_description: string | null
+          lesson_embed_code: string | null
+          lesson_id: number | null
+          lesson_image: string | null
+          lesson_sequence: number | null
+          lesson_status: Database["public"]["Enums"]["status"] | null
+          lesson_summary: string | null
+          lesson_title: string | null
+          lesson_updated_at: string | null
+          lesson_video_url: string | null
+          user_id: string | null
+          view_id: number | null
+          viewed_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_views_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["lesson_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       get_reviews: {
         Row: {
           created_at: string | null
