@@ -40,7 +40,8 @@ const lessonSchema = yup.object({
     content: yup.string().required('Content is required'),
     status: yup.string().oneOf(['draft', 'published', 'archived']).required(),
     systemPrompt: yup.string().required('System Prompt is required'),
-    description: yup.string()
+    description: yup.string(),
+    image: yup.string().nullable().url()
 })
 
 export type LessonSchemaType = yup.InferType<typeof lessonSchema>
@@ -68,6 +69,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
         embed: '',
         description: '',
         content: '',
+        image: '',
         status: 'draft',
         ...(initialValues || {
             title: '',
@@ -76,6 +78,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
             embed: '',
             content: '',
             status: 'draft',
+            image: '',
             systemPrompt: '',
             description: ''
         })
@@ -101,6 +104,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                 <Input name="sequence" displayName="Sequence" type="number" />
                 <Input type="text" name="video_url" displayName="YouTube Video URL" />
                 <Input type="text" name="embed" displayName="Embed Code" />
+                <Input type="text" name="image" displayName="Image URL" />
                 <Select
                     name="status"
                     displayName="Status"
