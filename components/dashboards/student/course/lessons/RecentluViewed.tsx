@@ -73,17 +73,24 @@ export default function RecentlyViewed({
                                         <p className="text-sm text-neutral-500 dark:text-neutral-400">
                                                 Viewed on{' '}
                                             {dayjs(lesson.viewed_at).format(
-                                                'MMMM D, YYYY'
+                                                'MMMM D, YYYY h:mm A'
                                             )}
                                         </p>
                                         {lesson.lesson_image && (
-                                            <Image
-                                                src={lesson.lesson_image || '/img/placeholder.svg'}
-                                                alt={lesson.lesson_title}
-                                                width={600}
-                                                height={400}
-                                                className="rounded-lg w-full"
-                                            />
+                                            <Link
+                                                href={`/dashboard/student/courses/${lesson.lesson_course_id}/lessons/${lesson.lesson_id}`}
+                                            >
+                                                <Image
+                                                    src={lesson.lesson_image || '/img/placeholder.svg'}
+                                                    alt={lesson.lesson_title}
+                                                    width={600}
+                                                    height={400}
+                                                    className="rounded-lg w-full"
+                                                    placeholder="blur"
+                                                    layout="responsive"
+                                                    blurDataURL="/img/placeholder.svg"
+                                                />
+                                            </Link>
                                         )}
                                         <p>{lesson.lesson_description}</p>
                                     </CardContent>
