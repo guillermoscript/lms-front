@@ -44,6 +44,9 @@ export const signIn = async (prevData: any, formData: FormData) => {
     } else if (userRole === teacher) {
         return redirect('/dashboard/teacher')
     } else if (userRole === student) {
+        if (redirectTo === '/dashboard') {
+            return redirect('/dashboard/student')
+        }
         return redirect(redirectTo || '/dashboard/student')
     }
 

@@ -57,9 +57,8 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 <SheetTitle>LMS Academy</SheetTitle>
                                 <SheetDescription>
                                     <nav className="flex flex-col gap-4">
-                                        <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
+                                        <div className="w-full max-w-5xl flex flex-wrap gap-4 items-center p-3 text-sm">
                                             <AuthButton />
-                                            <DarkThemeToggle />
                                         </div>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
@@ -75,6 +74,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                             <ShoppingBag className="h-5 w-5 mr-2" />
                                             Store
                                         </Link>
+                                        <DarkThemeToggle />
                                     </nav>
                                     {children}
                                 </SheetDescription>

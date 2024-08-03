@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +25,15 @@ const CourseCard = ({
         </CardHeader>
         <CardContent className="p-4 flex-grow">
             <Link className="p-4 flex justify-center w-full" href={`/dashboard/student/courses/${courseId}`}>
-                <img src={img} alt="Course Image" className="rounded-md object-cover max-h-48 w-full" />
+                <Image src={img}
+                    alt="Course Image"
+                    className="rounded-md object-cover max-h-48 w-full"
+                    width={600}
+                    height={400}
+                    placeholder="blur"
+                    layout="responsive"
+                    blurDataURL="/img/placeholder.svg"
+                />
             </Link>
             <div className="flex flex-wrap justify-center gap-4 mt-4">
                 {children}

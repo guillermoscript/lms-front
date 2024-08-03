@@ -1,25 +1,11 @@
-import { CheckCircle } from 'lucide-react'
 import { Suspense } from 'react'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
 import ListOfReviews from '@/components/dashboards/Common/reviews/ListOfReviews'
-import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
-import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
+import LessonContent from '@/components/dashboards/student/course/lessons/LessonContent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
 import LessonsTimeLine from '@/components/dashboards/student/course/lessons/LessonsTimeLine'
 import TableOfContents from '@/components/dashboards/student/course/lessons/LessonTableOfContent'
-import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
-import { Badge } from '@/components/ui/badge'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
@@ -45,8 +31,8 @@ export default async function StudentLessonPage({
     const lessonData = await supabase.from('lessons').select(`*,
       courses(*),
       lesson_comments(*,
-      profiles(*),
-      comment_reactions(*)
+        profiles(*),
+        comment_reactions(*)
       ),
       lessons_ai_tasks(*),
       lessons_ai_task_messages(*),
@@ -69,7 +55,7 @@ export default async function StudentLessonPage({
                 />
             }
         >
-            <Content
+            <LessonContent
                 lessonData={lessonData.data}
                 courseData={lessonData.data.courses}
                 lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
@@ -125,134 +111,5 @@ function Sidebar({
                 <ListOfReviews entityId={lessonId} entityType="lessons" />
             </TabsContent>
         </Tabs>
-    )
-}
-
-function Content({
-    lessonData,
-    courseData,
-    lessonsAiTasks,
-    lessonsAiTasksMessages,
-    isLessonAiTaskCompleted,
-    userId,
-}: {
-    lessonData: any // Define proper type
-    courseData: any // Define proper type
-    lessonsAiTasks: any // Define proper type
-    lessonsAiTasksMessages: any[] // Define proper type
-    isLessonAiTaskCompleted?: boolean
-    userId: string
-}) {
-    return (
-        <div className="flex flex-col gap-8 w-full">
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
-                    {
-                        href: `/dashboard/student/courses/${lessonData.course_id}`,
-                        label: courseData?.title,
-                    },
-                    {
-                        href: `/dashboard/student/courses/${lessonData.course_id}/lessons`,
-                        label: 'Lessons',
-                    },
-                    {
-                        href: `/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`,
-                        label: lessonData.title,
-                    },
-                ]}
-            />
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 md:flex-row items-center justify-between">
-                    <h1 className="text-3xl font-bold">{lessonData.title}</h1>
-                    <div className="flex gap-2">
-                        <Badge variant="default">
-                            Lesson # {lessonData.sequence}
-                        </Badge>
-                        {isLessonAiTaskCompleted && (
-                            <CheckCircle className="h-6 w-6 text-green-500" />
-                        )}
-                    </div>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400">
-                    {lessonData.description}
-                </p>
-            </div>
-            {lessonData.video_url && (
-                <>
-                    <h2 className="text-2xl font-bold">Video</h2>
-                    <iframe
-                        width="100%"
-                        height="500"
-                        src={lessonData.video_url}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                    ></iframe>
-                </>
-            )}
-            <div className="prose dark:prose-invert">
-                <ViewMarkdown addLinks={true} markdown={lessonData.content} />
-            </div>
-            {lessonData?.summary && (
-                <div className="mt-8">
-                    <h3 className="text-2xl font-bold">Summary</h3>
-                    <ViewMarkdown markdown={lessonData.summary} />
-                </div>
-            )}
-            {lessonsAiTasks?.system_prompt && (
-                <>
-                    <Separator />
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between w-full">
-                                <CardTitle>AI Task</CardTitle>
-                                {isLessonAiTaskCompleted ? (
-                                    <div>
-                                        <Badge>Task Completed</Badge>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <Badge variant="outline">
-                                            Task Incomplete
-                                        </Badge>
-                                    </div>
-                                )}
-                            </div>
-                            <CardDescription>
-                                <ViewMarkdown
-                                    markdown={lessonsAiTasks.task_instructions}
-                                />
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
-                            <Separator />
-                            <AiTaskMessage
-                                userId={userId}
-                                lessonId={lessonData.id.toString()}
-                                systemPrompt={lessonsAiTasks.system_prompt}
-                                lessonsAiTasks={lessonsAiTasks}
-                                lessonsAiTasksMessages={lessonsAiTasksMessages}
-                            >
-                                <TaksMessages
-                                    lessonId={lessonData.id}
-                                    isLessonAiTaskCompleted={
-                                        isLessonAiTaskCompleted
-                                    }
-                                />
-                            </AiTaskMessage>
-                        </CardContent>
-                    </Card>
-                </>
-            )}
-            <LessonNavigationButtons
-                courseId={lessonData.course_id}
-                lessonId={lessonData.id}
-            />
-        </div>
     )
 }

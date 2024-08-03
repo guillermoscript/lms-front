@@ -4,10 +4,10 @@ import Link from 'next/link'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import CourseSectionComponent from '@/components/dashboards/student/course/CourseSectionComponent'
+import RecentlyViewed from '@/components/dashboards/student/course/lessons/RecentluViewed'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
-
 export default async function CoursesStudentPage() {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
@@ -27,6 +27,20 @@ export default async function CoursesStudentPage() {
         .select('*')
         .eq('user_id', user.data.user.id)
 
+    const lessonsView = await supabase
+        .from('distinct_lesson_views')
+        .select(`
+        lesson_id,
+        viewed_at,
+        lesson_title,
+        lesson_description,
+        lesson_course_id,
+        lesson_image,
+        lesson_sequence`)
+        .eq('user_id', user.data.user.id)
+        .order('viewed_at', { ascending: false })
+        .limit(6)
+
     if (userCourses.error) throw new Error(userCourses.error.message)
     if (userSubscriptions.error) { throw new Error(userSubscriptions.error.message) }
 
@@ -45,6 +59,9 @@ export default async function CoursesStudentPage() {
                 supabase={supabase}
                 layoutType="flex"
             />
+            {lessonsView.data.length > 0 && (
+                <RecentlyViewed lessonsView={lessonsView.data} />
+            )}
             <ChatsSectionComponent chats={userChats.data} />
         </>
     )

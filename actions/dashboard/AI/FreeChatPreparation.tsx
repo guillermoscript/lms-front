@@ -34,7 +34,7 @@ export async function continueFreeChatConversation(
     })
 
     const result = await streamUI({
-        model: google('models/gemini-1.5-pro-latest'),
+        model: google('models/gemini-1.5-flash-latest'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
@@ -42,7 +42,7 @@ export async function continueFreeChatConversation(
                 name: message.name,
             })),
         ],
-        temperature: 0.3,
+        temperature: 0.8,
         initial: (
             <Message
                 sender={'assistant'}
@@ -53,7 +53,7 @@ export async function continueFreeChatConversation(
             </Message>
         ),
         system: 'You are a helpful assistant. Ask me anything!',
-        text: async function * ({ content, done }) {
+        text: async function ({ content, done }) {
             if (done) {
                 aiState.done({
                     ...aiState.get(),
@@ -67,16 +67,12 @@ export async function continueFreeChatConversation(
                     ],
                 })
 
-                yield <ChatLoadingSkeleton />
-
                 const aiMessageInsert = await supabase.from('messages').insert({
                     chat_id: +aiState.get().chatId,
                     message: content,
                     sender: 'assistant',
                     created_at: new Date().toISOString(),
                 })
-
-                console.log(aiMessageInsert)
             }
 
             return (

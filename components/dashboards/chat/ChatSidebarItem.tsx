@@ -3,7 +3,7 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import dayjs from 'dayjs'
 import { Check, CircleSlashedIcon, MoreHorizontalIcon, Trash } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { deleteChat, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
@@ -48,7 +48,8 @@ export default function ChatSidebarItem ({
 }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isUpdate, setIsUpdate] = useState(false)
-    const router = usePathname()
+    const path = usePathname()
+    const router = useRouter()
 
     const chatId = Number(chat.chat_id)
     if (isLoading) {
@@ -115,7 +116,7 @@ export default function ChatSidebarItem ({
                         <Link
                             className={cn(
                                 'text-md font-semibold text-gray-900 dark:text-gray-50 capitalize hover:underline',
-                                router === `/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`
+                                path === `/dashboard/${userRole}/chat/${chat.chat_id}/${chatType}`
                                     ? 'dark:text-primary text-primary'
                                     : ''
                             )}
@@ -161,7 +162,9 @@ export default function ChatSidebarItem ({
                                             setIsLoading(true)
                                             try {
                                                 const chat = await deleteChat({ chatId })
-                                                console.log(chat)
+                                                if (`/dashboard/${userRole}/chat/${chatId}/${chatType}` === path) {
+                                                    router.push(`/dashboard/${userRole}/chat`)
+                                                }
                                             } catch (error) {
                                                 console.error(error)
                                             } finally {

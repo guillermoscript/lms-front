@@ -17,14 +17,23 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const embed = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const course_id = data.get('course_id') as string
+    const image = data.get('image') as string
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .update({
             title,
             content,
             video_url,
+            image,
             embed_code: embed,
             description,
             status: status as any,
@@ -73,6 +82,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const embed_code = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const description = data.get('description') as string
+    const image = data.get('image') as string
 
     const requiredFields = ['title', 'sequence', 'status', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
@@ -82,6 +92,13 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .insert({
@@ -92,6 +109,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             embed_code,
             status,
             description,
+            image,
             sequence,
             course_id,
             created_at: new Date().toISOString(),
@@ -122,6 +140,13 @@ export async function deleteLessonsAction (data: {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .delete()

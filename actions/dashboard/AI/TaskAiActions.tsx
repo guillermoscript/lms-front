@@ -7,9 +7,9 @@ import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
 import { z } from 'zod'
 
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
-import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
@@ -59,7 +59,7 @@ export async function continueTaskAiConversation(
             </Message>
         ),
         system: systemMessage.content,
-        text: async function* ({ content, done }) {
+        text: async function * ({ content, done }) {
             if (done) {
                 aiState.done({
                     ...aiState.get(),
@@ -107,7 +107,7 @@ export async function continueTaskAiConversation(
                             'The ID of the assignment to mark as completed.'
                         ),
                 }),
-                generate: async function* ({ assignmentId }) {
+                generate: async function * ({ assignmentId }) {
                     const toolCallId = generateId()
 
                     aiState.done({
@@ -230,38 +230,38 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                     message.content.map((tool) => {
                         return tool.toolName ===
                             'makeUserAssigmentCompleted' ? (
-                            <Message
-                                sender={'assistant'}
-                                time={dayjs().format(
-                                    'dddd, MMMM D, YYYY h:mm A'
-                                )}
-                                isUser={false}
-                            >
-                                <SuccessMessage
-                                    status="success"
-                                    message="Assignment marked as completed."
-                                />
-                            </Message>
-                        ) : null
+                                <Message
+                                    sender={'assistant'}
+                                    time={dayjs().format(
+                                        'dddd, MMMM D, YYYY h:mm A'
+                                    )}
+                                    isUser={false}
+                                >
+                                    <SuccessMessage
+                                        status="success"
+                                        message="Assignment marked as completed."
+                                    />
+                                </Message>
+                            ) : null
                     })
                 ) : message.role === 'user' &&
                   typeof message.content === 'string' ? (
-                    <Message
-                        sender={message.role}
-                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                        isUser={true}
-                    >
-                        <ViewMarkdown markdown={message.content} />
-                    </Message>
-                ) : message.role === 'assistant' &&
+                        <Message
+                            sender={message.role}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={true}
+                        >
+                            <ViewMarkdown markdown={message.content} />
+                        </Message>
+                    ) : message.role === 'assistant' &&
                   typeof message.content === 'string' ? (
-                    <Message
-                        sender={message.role}
-                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                        isUser={false}
-                    >
-                        <ViewMarkdown markdown={message.content} />
-                    </Message>
-                ) : null,
+                            <Message
+                                sender={message.role}
+                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                isUser={false}
+                            >
+                                <ViewMarkdown markdown={message.content} />
+                            </Message>
+                        ) : null,
         }))
 }
