@@ -35,13 +35,11 @@ export default function CopyToClipboardButton({ content }: CopyToClipboardButton
         >
             {isCopied ? (
                 <span className="inline-flex items-center">
-                    <Check className="w-3 h-3 me-1.5" />
-                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-500">Copied</span>
+                    <Check className="w-3 h-3" />
                 </span>
             ) : (
                 <span className="inline-flex items-center">
-                    <Copy className="w-3 h-3 me-1.5" />
-                    <span className="text-xs font-semibold">Copy code</span>
+                    <Copy className="w-3 h-3" />
                 </span>
             )}
         </button>
