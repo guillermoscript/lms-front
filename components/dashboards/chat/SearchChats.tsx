@@ -26,7 +26,7 @@ export default function SearchChats({
     chatTypes: Record<string, Array<Tables<'chats'>>>
     userRole: Tables<'user_roles'>['role']
 }) {
-    const [showChats, setShowChats] = useState(false)
+    const [valueSearch, setValueSearch] = useState('')
 
     const allChats = Object.values(chatTypes).flat()
 
@@ -34,13 +34,8 @@ export default function SearchChats({
         <div className="bg-gray-100/40 dark:bg-gray-800/40 border rounded-lg w-full p-2 max-h-[calc(100vh-4rem)] overflow-y-auto ">
             <Command className="h-auto w-full">
                 <CommandInput
-                    onValueChange={(value) => {
-                        if (value === '') {
-                            setShowChats(false)
-                        } else {
-                            setShowChats(true)
-                        }
-                    }}
+                    value={valueSearch}
+                    onValueChange={setValueSearch}
                     placeholder="Type to search your chats"
                 />
                 <CommandList>
@@ -48,16 +43,11 @@ export default function SearchChats({
                     <CommandItem className="my-2">
                         <StudentCreateNewChat />
                     </CommandItem>
-                    {showChats ? (
+                    {valueSearch ? (
                         <>
                             {allChats.map((chat: Tables<'chats'>) => {
                                 return (
                                     <CommandItem
-                                        value={
-                                            chat.chat_id +
-                                            chat.chat_type +
-                                            chat.title
-                                        }
                                         key={chat.chat_id}
                                     >
                                         <ChatSidebarItem
@@ -72,8 +62,8 @@ export default function SearchChats({
                     ) : null}
                 </CommandList>
             </Command>
-            {!showChats && (
-                <>
+            {!valueSearch && (
+                <div className="my-4 mx-1">
                     {Object.entries(chatTypes).map(([type, chats], index) => {
                         const types = {
                             free_chat: 'free-chat',
@@ -93,7 +83,6 @@ export default function SearchChats({
                             <Collapsible
                                 id={type}
                                 key={index + type}
-                                defaultOpen={true}
                                 className="w-full"
                             >
                                 <CollapsibleTrigger className="w-full text-md font-semibold capitalize flex items-center justify-between p-2 px-2 rounded-lg my-2 hover:bg-opacity-10 dark:hover:bg-opacity-10 hover:bg-gray-400 dark:hover:bg-gray-200">
@@ -101,35 +90,33 @@ export default function SearchChats({
                                     <CaretSortIcon className="h-4 w-4" />
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="border-y border-gray-400 dark:border-gray-200">
-                                    <>
-                                        <div className="my-4 mx-1">
-                                            <ChatCreationButton
-                                                chatType={
-                                                    type as
+                                    <div className="my-4 mx-1">
+                                        <ChatCreationButton
+                                            chatType={
+                                                type as
                                                         | 'free_chat'
                                                         | 'exam_prep'
-                                                }
-                                                title={`Untitled ${title[type]}`}
-                                            />
-                                        </div>
-                                        {chats.map((chat: Tables<'chats'>) => {
-                                            return (
-                                                <>
-                                                    <ChatSidebarItem
-                                                        key={chat.chat_id}
-                                                        chat={chat}
-                                                        chatType={types[type]}
-                                                        userRole={userRole}
-                                                    />
-                                                </>
-                                            )
-                                        })}
-                                    </>
+                                            }
+                                            title={`Untitled ${title[type]}`}
+                                        />
+                                    </div>
+                                    {chats.map((chat: Tables<'chats'>) => {
+                                        return (
+                                            <>
+                                                <ChatSidebarItem
+                                                    key={chat.chat_id}
+                                                    chat={chat}
+                                                    chatType={types[type]}
+                                                    userRole={userRole}
+                                                />
+                                            </>
+                                        )
+                                    })}
                                 </CollapsibleContent>
                             </Collapsible>
                         )
                     })}
-                </>
+                </div>
             )}
         </div>
     )
