@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import AuthButton from '@/components/AuthButton'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,28 +33,13 @@ export default async function ProfileDropdown () {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button
-                    className="rounded-full border border-gray-200 w-8 h-8 dark:border-gray-800"
-                    size="icon"
-                    variant="ghost"
-                    id='profile'
-                >
-                    <img
-                        alt="Avatar"
-                        className="rounded-full"
-                        height="32"
-                        src={
-                            profile.data.avatar_url ||
-                            '/placeholder.svg'
-                        }
-                        style={{
-                            aspectRatio: '32/32',
-                            objectFit: 'cover'
-                        }}
-                        width="32"
-                    />
-                    <span className="sr-only">Toggle user menu</span>
-                </Button>
+                <Avatar>
+                    <AvatarImage src={profile.data.avatar_url} />
+                    <AvatarFallback className='capitalize'>
+                        {profile.data.full_name ? profile.data.full_name[0] : user.email[0]}
+                    </AvatarFallback>
+                </Avatar>
+
             </DropdownMenuTrigger>
             <DropdownMenuContent className="flex flex-col gap-2" align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
