@@ -1,4 +1,5 @@
 
+import dayjs from 'dayjs'
 import { CheckCircle } from 'lucide-react'
 import Image from 'next/image'
 
@@ -34,6 +35,10 @@ export default function LessonContent({
     isLessonAiTaskCompleted?: boolean
     userId: string
 }) {
+    const sortedMessages = lessonsAiTasksMessages.sort(
+        (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix()
+    )
+
     return (
         <div className="flex flex-col gap-8 w-full">
             <BreadcrumbComponent
@@ -56,7 +61,7 @@ export default function LessonContent({
                 ]}
             />
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2 md:flex-row md:items-center justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                     <div className='flex flex-row-reverse md:flex-row md:items-center items-start  gap-2'>
                         {lessonData.image && (
                             <Image
@@ -76,7 +81,7 @@ export default function LessonContent({
                             </p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 min-w-[100px]">
                         <Badge variant="default">
                             Lesson # {lessonData.sequence}
                         </Badge>
@@ -143,7 +148,7 @@ export default function LessonContent({
                                 lessonId={lessonData.id.toString()}
                                 systemPrompt={lessonsAiTasks.system_prompt}
                                 lessonsAiTasks={lessonsAiTasks}
-                                lessonsAiTasksMessages={lessonsAiTasksMessages}
+                                lessonsAiTasksMessages={sortedMessages}
                             >
                                 <TaksMessages
                                     lessonId={lessonData.id}
