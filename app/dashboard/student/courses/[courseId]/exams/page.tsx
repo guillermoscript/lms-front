@@ -140,8 +140,8 @@ const ExamCard = ({
     link?: string
 }) => {
     return (
-        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{number}</span>
                     {statusIcon}
