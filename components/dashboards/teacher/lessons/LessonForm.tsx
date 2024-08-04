@@ -1,6 +1,5 @@
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { Suspense } from 'react'
 import { useFormState } from 'react-dom'
 import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
@@ -17,8 +16,8 @@ import {
     CardHeader,
     CardTitle
 } from '@/components/ui/card'
-import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 
 import ButtonSubmitDashbaord from '../../ButtonSubmitDashbaord'
 import StateMessages from '../../StateMessages'
@@ -92,13 +91,13 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
         defaultValues
     })
 
-    const contentWatch = formMethods.watch('content')
-    const systemPromptWatch = formMethods.watch('systemPrompt')
-    const taskInstructionsWatch = formMethods.watch('task_instructions')
+    // const contentWatch = formMethods.watch('content')
+    // const systemPromptWatch = formMethods.watch('systemPrompt')
+    // const taskInstructionsWatch = formMethods.watch('task_instructions')
 
     return (
         <FormProvider {...formMethods}>
-            <form action={action} className="space-y-4">
+            <form action={action} className="space-y-4 container">
                 <h1 className="text-2xl font-semibold">
                     {isEditing ? 'Edit' : 'Create'} Lesson
                 </h1>
@@ -125,7 +124,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                         <CardTitle>Content of lessons</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Suspense fallback={
+                        {/* <Suspense fallback={
                             <div>Loading...</div>
                         }
                         >
@@ -141,7 +140,12 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                                 }}
                             />
                             <input type="hidden" name="content" value={contentWatch} />
-                        </Suspense>
+                        </Suspense> */}
+                        <Textarea
+                            name="content"
+                            placeholder="Content of the lesson"
+                            rows={15}
+                        />
                     </CardContent>
                 </Card>
 
@@ -155,7 +159,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Suspense fallback={
+                        {/* <Suspense fallback={
                             <div>Loading...</div>
                         }
                         >
@@ -172,7 +176,12 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                                 name="systemPrompt"
                                 value={systemPromptWatch}
                             />
-                        </Suspense>
+                        </Suspense> */}
+                        <Textarea
+                            name="systemPrompt"
+                            placeholder="System Prompt"
+                            rows={15}
+                        />
                     </CardContent>
                 </Card>
 
@@ -186,7 +195,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Suspense fallback={
+                        {/* <Suspense fallback={
                             <div>Loading...</div>
                         }
                         >
@@ -203,7 +212,12 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                                 name="task_instructions"
                                 value={taskInstructionsWatch}
                             />
-                        </Suspense>
+                        </Suspense> */}
+                        <Textarea
+                            name="task_instructions"
+                            placeholder="Task Instructions"
+                            rows={15}
+                        />
                     </CardContent>
                 </Card>
 
