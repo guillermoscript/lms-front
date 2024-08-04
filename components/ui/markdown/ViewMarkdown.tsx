@@ -55,6 +55,15 @@ export default function ViewMarkdown({
                 pre({ children, ...props }) {
                     return <pre className="pre-block" {...props}>{children}</pre>
                 },
+                table({ children, ...props }) {
+                    return (
+                        <div className="overflow-x-auto">
+                            <table className="table-auto w-full" {...props}>
+                                {children}
+                            </table>
+                        </div>
+                    )
+                }
             }}
         >
             {markdown}
