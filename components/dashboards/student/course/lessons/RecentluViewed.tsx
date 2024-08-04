@@ -3,6 +3,7 @@ import { Eye } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
+import ExpandableText from '@/components/dashboards/Common/ExpandableText'
 import { buttonVariants } from '@/components/ui/button'
 import {
     Card,
@@ -92,7 +93,11 @@ export default function RecentlyViewed({
                                                 />
                                             </Link>
                                         )}
-                                        <p>{lesson.lesson_description}</p>
+                                        {lesson.lesson_description && (
+                                            <p>
+                                                <ExpandableText text={lesson.lesson_description} maxLength={150} />
+                                            </p>
+                                        )}
                                     </CardContent>
                                     <CardFooter>
                                         <Link

@@ -18,6 +18,7 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const system_prompt = data.get('systemPrompt') as string
     const course_id = data.get('course_id') as string
     const image = data.get('image') as string
+    const task_instructions = data.get('task_instructions') as string
 
     const supabase = createClient()
 
@@ -50,7 +51,8 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
         const lessonAiAssignmentData = await supabase
             .from('lessons_ai_tasks')
             .update({
-                system_prompt
+                system_prompt,
+                task_instructions
             })
             .eq('lesson_id', lessonId)
 
@@ -83,6 +85,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const system_prompt = data.get('systemPrompt') as string
     const description = data.get('description') as string
     const image = data.get('image') as string
+    const task_instructions = data.get('task_instructions') as string
 
     const requiredFields = ['title', 'sequence', 'status', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
@@ -124,7 +127,8 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
         .from('lessons_ai_tasks')
         .insert({
             lesson_id: lessonData.data.id,
-            system_prompt
+            system_prompt,
+            task_instructions
         })
 
     redirect(`/dashboard/teacher/courses/${course_id}/lessons/${lessonData.data.id}`)

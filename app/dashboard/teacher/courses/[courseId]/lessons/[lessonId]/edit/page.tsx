@@ -61,6 +61,7 @@ export default async function EditLessonPage({
                     image: lesson?.data?.image,
                     systemPrompt:
                         lesson?.data.lessons_ai_tasks[0]?.system_prompt,
+                    task_instructions: lesson?.data.lessons_ai_tasks[0]?.task_instructions,
                 }}
             />
         </>

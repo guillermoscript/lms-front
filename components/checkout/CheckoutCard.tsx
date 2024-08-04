@@ -34,7 +34,12 @@ export default function CheckoutCard ({ callback }: CheckoutCardProps) {
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="w-full space-y-6"
                 >
-                    <input type='hidden' name='card' value='card' />
+                    <input
+                        {
+                            ...form.register('radio')
+                        }
+                        type='hidden' name='card' value='card'
+                    />
                     <Button
                         className="w-full"
                         type="submit"

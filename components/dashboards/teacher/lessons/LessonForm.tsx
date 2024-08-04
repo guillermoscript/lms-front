@@ -41,7 +41,8 @@ const lessonSchema = yup.object({
     status: yup.string().oneOf(['draft', 'published', 'archived']).required(),
     systemPrompt: yup.string().required('System Prompt is required'),
     description: yup.string(),
-    image: yup.string().nullable().url()
+    image: yup.string().nullable().url(),
+    task_instructions: yup.string().nullable()
 })
 
 export type LessonSchemaType = yup.InferType<typeof lessonSchema>
@@ -71,6 +72,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
         content: '',
         image: '',
         status: 'draft',
+        task_instructions: '',
         ...(initialValues || {
             title: '',
             sequence: 0,
@@ -80,7 +82,8 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
             status: 'draft',
             image: '',
             systemPrompt: '',
-            description: ''
+            description: '',
+            task_instructions: ''
         })
     }
 
@@ -91,6 +94,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 
     const contentWatch = formMethods.watch('content')
     const systemPromptWatch = formMethods.watch('systemPrompt')
+    const taskInstructionsWatch = formMethods.watch('task_instructions')
 
     return (
         <FormProvider {...formMethods}>
@@ -167,6 +171,37 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                                 type="hidden"
                                 name="systemPrompt"
                                 value={systemPromptWatch}
+                            />
+                        </Suspense>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>
+                            Task Instructions
+                        </CardTitle>
+                        <CardDescription>
+                            The assignment instructions for the AI task.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Suspense fallback={
+                            <div>Loading...</div>
+                        }
+                        >
+                            <ForwardRefEditor
+                                markdown={taskInstructionsWatch}
+                                className="markdown-body"
+                                onChange={(value) => formMethods.setValue('task_instructions', value)}
+                                onError={(error) => {
+                                    console.log('Error in editor system prompt', error)
+                                }}
+                            />
+                            <input
+                                type="hidden"
+                                name="task_instructions"
+                                value={taskInstructionsWatch}
                             />
                         </Suspense>
                     </CardContent>
