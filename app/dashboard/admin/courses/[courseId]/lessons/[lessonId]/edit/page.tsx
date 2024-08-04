@@ -79,7 +79,8 @@ export default async function EditLessonPage ({
                     status: lesson?.data?.status,
                     content: lesson?.data?.content,
                     description: lesson?.data?.description,
-                    systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt
+                    systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt,
+                    task_instructions: lesson?.data.lessons_ai_tasks[0]?.task_instructions
                 }}
             />
         </>
