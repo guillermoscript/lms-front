@@ -121,6 +121,7 @@ export async function updateCourseAction(prevDate: any, data: FormData) {
     const description = data.get('description') as string
     const status = data.get('status') as Tables<'courses'>['status']
     const courseId = data.get('course_id') as string
+    const thumbnail_url = data.get('thumbnail_url') as string
 
     console.log(status)
 
@@ -128,6 +129,7 @@ export async function updateCourseAction(prevDate: any, data: FormData) {
         title,
         description,
         status,
+        thumbnail_url: thumbnail_url ?? null,
         updated_at: new Date().toISOString()
     }).eq('course_id', courseId)
 
