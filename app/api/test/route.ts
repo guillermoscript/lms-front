@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
+import { revalidatePath } from 'next/cache'
 
 interface Root {
     sequence: number
@@ -147,6 +148,8 @@ export async function POST (req: Request) {
                 )
             }
         }
+
+        revalidatePath('/dashboard/teacher/courses', 'layout')
 
         return NextResponse.json(
             {
