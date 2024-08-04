@@ -59,7 +59,7 @@ export async function continueTaskAiConversation(
             </Message>
         ),
         system: systemMessage.content,
-        text: async function * ({ content, done }) {
+        text: async function ({ content, done }) {
             if (done) {
                 aiState.done({
                     ...aiState.get(),
@@ -72,8 +72,6 @@ export async function continueTaskAiConversation(
                         },
                     ],
                 })
-
-                yield <ChatLoadingSkeleton />
 
                 const aiMessageInsert = await supabase
                     .from('lessons_ai_task_messages')
@@ -107,7 +105,7 @@ export async function continueTaskAiConversation(
                             'The ID of the assignment to mark as completed.'
                         ),
                 }),
-                generate: async function * ({ assignmentId }) {
+                generate: async function ({ assignmentId }) {
                     const toolCallId = generateId()
 
                     aiState.done({
@@ -148,16 +146,6 @@ export async function continueTaskAiConversation(
                             },
                         ],
                     })
-
-                    yield (
-                        <Message
-                            sender={'assistant'}
-                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                            isUser={false}
-                        >
-                            <ChatLoadingSkeleton />
-                        </Message>
-                    )
 
                     const task = await supabase
                         .from('lesson_completions')
