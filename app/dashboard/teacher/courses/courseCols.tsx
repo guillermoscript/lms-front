@@ -56,7 +56,9 @@ export const courseCols: Array<ColumnDef<Course>> = [
     },
     {
         accessorKey: 'date',
-        header: 'Date',
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Date" />
+        ),
     },
     {
         accessorKey: 'actions',
