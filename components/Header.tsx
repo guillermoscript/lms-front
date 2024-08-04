@@ -23,20 +23,19 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                         className="hidden items-center space-x-2 md:flex"
                         href="/"
                     >
-
-                        <span className="hidden font-bold sm:inline-block">
+                        <span className="hidden cursor-pointer font-bold sm:inline-block">
                             LMS
                         </span>
                     </Link>
                     <nav className="hidden gap-6 md:flex">
                         <Link
-                            className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
+                            className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/plans"
                         >
                             Plans
                         </Link>
                         <Link
-                            className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
+                            className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/store"
                         >
                             Store

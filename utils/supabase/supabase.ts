@@ -1675,6 +1675,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_exam_submissions: {
+        Args: {
+          p_exam_id: number
+        }
+        Returns: {
+          submission_id: number
+          exam_id: number
+          exam_title: string
+          student_id: string
+          submission_date: string
+          score: number
+          feedback: string
+          evaluated_at: string
+          is_reviewed: boolean
+          full_name: string
+        }[]
+      }
       handle_new_subscription: {
         Args: {
           _user_id: string

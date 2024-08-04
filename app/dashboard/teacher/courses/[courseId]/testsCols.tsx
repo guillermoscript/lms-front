@@ -60,7 +60,9 @@ export const testsCols: Array<ColumnDef<Tests>> = [
     },
     {
         accessorKey: 'date',
-        header: 'Date',
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Date" />
+        ),
     },
     {
         accessorKey: 'actions',

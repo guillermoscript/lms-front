@@ -46,8 +46,9 @@ export default async function CreateCourseLessonPage({
             id: test.exam_id,
             duration: test.duration,
             courseId: test.course_id,
-            exam_date: test.exam_date,
-            created_at: test.created_at,
+            // finish_data: test.exam_date,
+            sequence: test.sequence,
+            date: dayjs(test.created_at).format('DD/MM/YYYY'),
             updated_at: test.updated_at,
             description: test.description,
         }

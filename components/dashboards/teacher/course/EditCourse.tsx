@@ -21,7 +21,7 @@ const courseSchema = yup.object().shape({
     description: yup.string().required(),
     status: yup.string().required().oneOf(['draft', 'published', 'archived']),
     product_id: yup.mixed().optional(),
-    thumbnail: yup.string().optional(),
+    thumbnail_url: yup.string().optional(),
     tags: yup.string().optional(),
     category_id: yup.number().optional()
 })
@@ -40,7 +40,7 @@ export default function EditCourse({
         status,
         product_id,
         category_id,
-        thumbnail,
+        thumbnail_url,
         tags
     } = courseData
 
@@ -58,7 +58,7 @@ export default function EditCourse({
             status,
             product_id,
             category_id,
-            thumbnail,
+            thumbnail_url,
             tags,
             course_id: courseId
         },
@@ -142,8 +142,8 @@ export default function EditCourse({
                     </div>
                     <div className="flex items-center gap-3 ">
                         <Input
-                            name="thumbnail"
-                            displayName="Thumbnail"
+                            name="thumbnail_url"
+                            displayName="thumbnail_url"
                             type="text"
                         />
                         <Input name="tags" displayName="Tags" type="text" />

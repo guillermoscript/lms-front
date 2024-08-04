@@ -11,21 +11,19 @@ import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleto
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 
-export async function continueTaskAiConversation(
+export async function continueTaskAiSandBoxConversation(
     input: string
 ): Promise<ClientMessage> {
-    const aiState = getMutableAIState<typeof TaskAiActions>()
+    const aiState = getMutableAIState<typeof TaskSandboxActions>()
 
-    const supabase = createClient()
+    const userRole = await getServerUserRole()
 
-    const userData = await supabase.auth.getUser()
-
-    if (userData.error) {
-        throw new Error('User not found.')
+    if (userRole === 'student') {
+        throw new Error('Only teachers can interact with the AI.')
     }
 
     // Update the AI state with the new user message.
@@ -44,6 +42,8 @@ export async function continueTaskAiConversation(
     const systemMessage = aiState
         .get()
         .messages.find((message) => message.role === 'system')
+
+    console.log(systemMessage)
 
     const result = await streamUI({
         model: google('models/gemini-1.5-pro-latest'),
@@ -78,16 +78,6 @@ export async function continueTaskAiConversation(
                         },
                     ],
                 })
-
-                const aiMessageInsert = await supabase
-                    .from('lessons_ai_task_messages')
-                    .insert({
-                        lesson_id: +aiState.get().lessonId,
-                        message: content,
-                        sender: 'assistant',
-                        user_id: aiState.get().userId,
-                        created_at: new Date().toISOString(),
-                    })
             }
 
             return (
@@ -153,13 +143,6 @@ export async function continueTaskAiConversation(
                         ],
                     })
 
-                    const task = await supabase
-                        .from('lesson_completions')
-                        .insert({
-                            lesson_id: +aiState.get().lessonId,
-                            user_id: aiState.get().userId,
-                        })
-
                     return (
                         <Message
                             sender={'assistant'}
@@ -186,8 +169,6 @@ export async function continueTaskAiConversation(
 }
 
 interface AIState {
-    lessonId: string
-    userId: string
     messages: MessageType[]
 }
 
@@ -196,14 +177,12 @@ type UIState = Array<{
     display: React.ReactNode
 }>
 
-export const TaskAiActions = createAI<AIState, UIState>({
+export const TaskSandboxActions = createAI<AIState, UIState>({
     actions: {
-        continueTaskAiConversation,
+        continueTaskAiSandBoxConversation,
     },
     initialUIState: [],
     initialAIState: {
-        lessonId: '',
-        userId: '',
         messages: [],
     },
 })

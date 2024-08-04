@@ -371,7 +371,7 @@ function MultipleChoisesOptions ({
     const [isCorrect, setIsCorrect] = useState<boolean>(optionField.is_correct)
     return (
         <div
-            className="flex flex-col gap-2 items-start"
+            className="flex gap-2 items-start"
             key={optionField.id}
         >
             <input
