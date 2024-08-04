@@ -22,6 +22,12 @@ export async function continueTaskAiConversation(
 
     const supabase = createClient()
 
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        throw new Error('User not found.')
+    }
+
     // Update the AI state with the new user message.
     aiState.update({
         ...aiState.get(),
