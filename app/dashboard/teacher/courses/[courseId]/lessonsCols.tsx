@@ -59,7 +59,9 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
     },
     {
         accessorKey: 'date',
-        header: 'Date',
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Date" />
+        ),
     },
     {
         accessorKey: 'actions',
