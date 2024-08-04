@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { createClient } from '@/utils/supabase/server'
@@ -20,10 +21,15 @@ export default async function StorePage () {
                             className="group relative"
                         >
                             <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden rounded-md lg:aspect-none group-hover:opacity-75 lg:h-80">
-                                <img
+                                <Image
                                     src={product.image}
                                     alt={product.name}
+                                    width={280}
+                                    height={320}
                                     className="h-full w-full object-cover object-center lg:h-full lg:w-full"
+                                    placeholder="blur"
+                                    layout="responsive"
+                                    blurDataURL="/img/placeholder.svg"
                                 />
                             </div>
                             <div className="mt-4 flex justify-between">
