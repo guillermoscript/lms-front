@@ -1,4 +1,3 @@
-import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
@@ -66,7 +65,6 @@ export default async function StudentExamCoursePage ({
 
     return (
         <>
-
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: 'Dashboard' },
@@ -86,24 +84,17 @@ export default async function StudentExamCoursePage ({
                     }
                 ]}
             />
-            <div className="grid gap-8">
+            <div className="grid gap-8 container">
                 <div>
                     <h1 className="text-3xl font-bold">
-                        CSS Fundamentals Exam
+                        {exams.data.title}
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        Test your understanding of CSS basics. You have 45
-                        minutes to complete the exam.
+                        {exams.data.description}
                     </p>
                     <p className="text-gray-500 dark:text-gray-400">
                         Exam duration: {exams.data?.duration} minutes
                     </p>
-                    <div className="mt-4 flex items-center gap-4">
-                        <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Time remaining: 42 minutes
-                        </span>
-                    </div>
                 </div>
                 <ExamsSubmissionForm
                     multipleChoiceQuestions={multipleChoiceQuestions}
