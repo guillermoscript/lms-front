@@ -109,8 +109,8 @@ function LessonCard ({
     lessonId: number
 }) {
     return (
-        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{number}</span>
                     <Icon className={cn('w-5 h-5', status === 'Completed' && 'text-green-500')} />
@@ -123,9 +123,6 @@ function LessonCard ({
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {status}
-                </span>
                 <Link
                     className="inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-gray-50 shadow transition-colors hover:bg-gray-900/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-50/90 dark:focus-visible:ring-gray-300"
                     href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}
