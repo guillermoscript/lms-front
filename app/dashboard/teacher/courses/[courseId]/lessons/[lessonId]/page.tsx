@@ -1,15 +1,15 @@
+import { generateId } from 'ai'
 import Link from 'next/link'
 
+import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
+import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import TaskSandboxMessage from '@/components/dashboards/teacher/course/TaskSandboxMessage'
 import { buttonVariants } from '@/components/ui/button'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/utils/supabase/server'
-import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
-import TaskSandboxMessage from '@/components/dashboards/teacher/course/TaskSandboxMessage'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { generateId } from 'ai'
-import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 
 export default async function TeacherLessonPage ({
     params
@@ -43,10 +43,10 @@ export default async function TeacherLessonPage ({
         <LessonPage
             sideBar={
                 <SidebarLessons
-                courseId={Number(params.courseId)}
-                lessonId={lesson.data.id}
-                lessonData={lesson.data}
-            />
+                    courseId={Number(params.courseId)}
+                    lessonId={lesson.data.id}
+                    lessonData={lesson.data}
+                />
             }
         >
             <div className="flex-1 md:p-8 overflow-y-auto w-full space-y-4">

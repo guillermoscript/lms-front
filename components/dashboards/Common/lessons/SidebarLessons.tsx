@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 
 import CommentsSections from '@/components/dashboards/Common/CommentsSections'
 import ListOfReviews from '@/components/dashboards/Common/reviews/ListOfReviews'
-
 import LessonsTimeLine from '@/components/dashboards/student/course/lessons/LessonsTimeLine'
 import TableOfContents from '@/components/dashboards/student/course/lessons/LessonTableOfContent'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'

@@ -1,8 +1,8 @@
+import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
-import { revalidatePath } from 'next/cache'
 
 interface Root {
     sequence: number

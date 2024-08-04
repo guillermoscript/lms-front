@@ -1,7 +1,7 @@
+import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import LessonContent from '@/components/dashboards/student/course/lessons/LessonContent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
 import { createClient } from '@/utils/supabase/server'
-import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 
 export const metadata = {
     title: 'Student Lesson Page',
@@ -60,4 +60,3 @@ export default async function StudentLessonPage({
         </LessonPage>
     )
 }
-

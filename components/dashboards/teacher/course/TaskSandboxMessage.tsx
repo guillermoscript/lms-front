@@ -1,18 +1,17 @@
 'use client'
 import { generateId } from 'ai'
-import { useActions, useAIState, useUIState } from 'ai/rsc'
+import { useActions, useUIState } from 'ai/rsc'
 import { useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
+import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import {
     ChatInput,
-    SuccessMessage,
 } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
 
 export default function TaskSandboxMessage() {
     const [conversation, setConversation] = useUIState<typeof TaskSandboxActions>()
@@ -38,48 +37,48 @@ export default function TaskSandboxMessage() {
 
                 {isLoading && <ChatLoadingSkeleton />}
                 <div className="w-full h-px" />
-                    <ChatInput
-                        isLoading={isLoading}
-                        stop={() => setStop(true)}
-                        callbackFunction={async (input) => {
-                            if (stop) return
+                <ChatInput
+                    isLoading={isLoading}
+                    stop={() => setStop(true)}
+                    callbackFunction={async (input) => {
+                        if (stop) return
 
-                            setIsLoading(true)
+                        setIsLoading(true)
 
-                            setConversation(
-                                (currentConversation: ClientMessage[]) => [
-                                    ...currentConversation,
-                                    {
-                                        id: generateId(),
-                                        role: 'user',
-                                        display: (
-                                            <Message
-                                                sender={'user'}
-                                                time={new Date().toDateString()}
-                                                isUser={true}
-                                            >
-                                                <ViewMarkdown
-                                                    markdown={input.content}
-                                                />
-                                            </Message>
-                                        ),
-                                    },
-                                ]
-                            )
+                        setConversation(
+                            (currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+                                        <Message
+                                            sender={'user'}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown
+                                                markdown={input.content}
+                                            />
+                                        </Message>
+                                    ),
+                                },
+                            ]
+                        )
 
-                            const message =
+                        const message =
                                     await continueTaskAiSandBoxConversation(
                                         input.content
                                     )
-                            setConversation(
-                                (currentConversation: ClientMessage[]) => [
-                                    ...currentConversation,
-                                    message,
-                                ]
-                            )
-                            setIsLoading(false)
-                        }}
-                    />
+                        setConversation(
+                            (currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                message,
+                            ]
+                        )
+                        setIsLoading(false)
+                    }}
+                />
             </div>
         </div>
     )
