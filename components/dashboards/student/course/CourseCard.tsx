@@ -3,6 +3,8 @@ import Link from 'next/link'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+import ExpandableText from '../../Common/ExpandableText'
+
 const CourseCard = ({
     title,
     courseId,
@@ -21,7 +23,11 @@ const CourseCard = ({
             <CardTitle>
                 <Link href={`/dashboard/student/courses/${courseId}`}>{title}</Link>
             </CardTitle>
-            {description && <CardDescription>{description}</CardDescription>}
+            {description && (
+                <CardDescription>
+                    <ExpandableText text={description} maxLength={100} />
+                </CardDescription>
+            )}
         </CardHeader>
         <CardContent className="p-4 flex-grow">
             <Link className="p-4 flex justify-center w-full" href={`/dashboard/student/courses/${courseId}`}>
