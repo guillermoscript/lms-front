@@ -81,9 +81,14 @@ export default function UserSignupForm ({
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
-                    <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-                        {state.error}
-                    </p>
+                    <div>
+                        <h3 className="mt-4 text-center text-red-500">
+                            Error: {state.error}
+                        </h3>
+                        <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
+                            {state.message}
+                        </p>
+                    </div>
                 )}
             </form>
         </div>
