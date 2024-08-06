@@ -8,7 +8,9 @@ export default function LessonPage({
     return (
         <div className="flex flex-col gap-4 md:flex-row w-full">
             <div className="flex flex-col w-full md:w-3/4">{children}</div>
-            <div className="flex-1 border-l w-full md:w-1/4">{sideBar}</div>
+            <div className="flex-1 lg:border-l border-t lg:border-t-0 py-8 lg:py-0 w-full md:w-1/4">
+                {sideBar}
+            </div>
         </div>
     )
 }

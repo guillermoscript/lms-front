@@ -1,60 +1,56 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export default function useScrollAnchor () {
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const messagesEndRef = useRef<HTMLDivElement>(null)
-    const visibilityRef = useRef<HTMLDivElement>(null)
+const useScrollAnchor = () => {
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const visibilityRef = useRef<HTMLDivElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [manualScroll, setManualScroll] = useState(false)
 
-    const [isAtBottom, setIsAtBottom] = useState(true)
-    const [isVisible, setIsVisible] = useState(false)
-
-    const scrollToBottom = useCallback(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-        }
-    }, [])
-
-    useEffect(() => {
-        if (scrollRef.current) {
-            const handleScroll = () => {
-                const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-                const isAtBottom = scrollHeight - (scrollTop + clientHeight) < 25
-                setIsAtBottom(isAtBottom)
-            }
-
-            scrollRef.current.addEventListener('scroll', handleScroll, { passive: true })
-
-            return () => {
-                if (scrollRef.current) {
-                    scrollRef.current.removeEventListener('scroll', handleScroll)
-                }
-            }
-        }
-    }, [])
-
-    useEffect(() => {
-        if (visibilityRef.current) {
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(entry => setIsVisible(entry.isIntersecting))
-            }, { rootMargin: '0px 0px -150px 0px' })
-
-            observer.observe(visibilityRef.current)
-
-            return () => {
-                if (visibilityRef.current) {
-                    observer.disconnect()
-                }
-            }
-        }
-    }, [])
-
-    return {
-        scrollRef,
-        messagesEndRef,
-        visibilityRef,
-        isAtBottom,
-        isVisible,
-        scrollToBottom
+  const scrollToBottom = useCallback(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollIntoView({ block: 'end', behavior: 'smooth' })
     }
+  }, [])
+
+  const handleScroll = (event: Event) => {
+    const target = event.target as HTMLDivElement
+    const offset = 10
+    const newIsAtBottom =
+      target.scrollTop + target.clientHeight >= target.scrollHeight - offset
+    setIsAtBottom(newIsAtBottom)
+
+    if (!newIsAtBottom) {
+      setManualScroll(true) // User scrolled up
+    } else {
+      setManualScroll(false) // User scrolled to bottom
+    }
+  }
+
+  useEffect(() => {
+    const { current } = scrollRef
+    if (current) {
+      current.addEventListener('scroll', handleScroll, { passive: true })
+      return () => {
+        current.removeEventListener('scroll', handleScroll)
+      }
+    }
+  }, [scrollRef.current])
+
+  useEffect(() => {
+    if (!manualScroll) {
+      scrollToBottom()
+    }
+  }, [manualScroll, messagesRef.current])
+
+  return {
+    messagesRef,
+    scrollRef,
+    visibilityRef,
+    scrollToBottom,
+    isAtBottom,
+  }
 }
+
+export default useScrollAnchor

@@ -35,9 +35,8 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
     const {
         scrollRef,
         visibilityRef,
-        messagesEndRef,
+        messagesRef: messagesEndRef,
         isAtBottom,
-        isVisible,
         scrollToBottom,
     } = useScrollAnchor()
 
@@ -58,7 +57,7 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
         <div>
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4 max-h-[calc(100vh-4rem)]"
+                className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4"
             >
                 {conversation.length ? (
                     <ChatList

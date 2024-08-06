@@ -19,6 +19,7 @@ import { Tables } from '@/utils/supabase/supabase'
 
 import ChatCreationButton from './ChatCreationButton'
 import StudentCreateNewChat from './StudentCreateNewChat'
+
 export default function SearchChats({
     chatTypes,
     userRole,
@@ -84,6 +85,7 @@ export default function SearchChats({
                                 id={type}
                                 key={index + type}
                                 className="w-full"
+                                defaultOpen={true}
                             >
                                 <CollapsibleTrigger className="w-full text-md font-semibold capitalize flex items-center justify-between p-2 px-2 rounded-lg my-2 hover:bg-opacity-10 dark:hover:bg-opacity-10 hover:bg-gray-400 dark:hover:bg-gray-200">
                                     <p>{type.replace('_', ' ')}</p>

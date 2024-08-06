@@ -1,6 +1,8 @@
 import SearchChats from '@/components/dashboards/chat/SearchChats'
 import { createClient } from '@/utils/supabase/server'
 
+import ChatSidebarMobile from './ChatSidebarMobile'
+
 export default async function StudentChatSidebar({ userRole }) {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
@@ -22,8 +24,11 @@ export default async function StudentChatSidebar({ userRole }) {
     }
 
     return (
-        <nav className="flex flex-col gap-2 h-auto justify-start w-full border-none items-start ">
-            <SearchChats userRole={userRole} chatTypes={chatTypes} />
-        </nav>
+        <div className="relative">
+            <nav className="hidden md:flex flex-col gap-2 h-auto justify-start w-full border-none items-start sticky top-1">
+                <SearchChats userRole={userRole} chatTypes={chatTypes} />
+            </nav>
+            <ChatSidebarMobile userRole={userRole} chatTypes={chatTypes} />
+        </div>
     )
 }
