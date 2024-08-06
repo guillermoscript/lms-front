@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import { CheckCircleIcon, ClockIcon, ShoppingCartIcon } from 'lucide-react'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/ui/Table/data-table'
 import { createClient } from '@/utils/supabase/server'
@@ -10,7 +11,13 @@ import { orderCols } from './columns'
 export default async function OrdersPage () {
     const supabase = createClient()
 
-    const orders = await supabase.from('transactions').select('*, products(*)').order('transaction_date', { ascending: false })
+    const userData = await supabase.auth.getUser()
+
+    const orders = await supabase
+        .from('transactions')
+        .select('*, products(*)')
+        .eq('user_id', userData.data.user.id)
+        .order('transaction_date', { ascending: false })
 
     if (orders.error != null) {
         return <div> Error </div>
@@ -35,6 +42,14 @@ export default async function OrdersPage () {
 
     return (
         <>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/account', label: 'Account' },
+                    { href: '/dashboard/student/account/orders', label: 'Orders' }
+                ]}
+            />
             <div className="grid md:grid-cols-3 gap-4">
                 <Card>
                     <CardHeader>
