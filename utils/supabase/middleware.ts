@@ -79,5 +79,9 @@ export async function updateSession (request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
     }
 
+    if (request.nextUrl.pathname.endsWith('/dashboard') && userData.data.user) {
+        return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
+    }
+
     return response
 }
