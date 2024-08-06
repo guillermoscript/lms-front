@@ -4,15 +4,12 @@ import { useEffect, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { FreeChatAI, UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
-import { studentCreateNewChatAndRedirect, studentInsertChatMessage, studentUpdateChatTitle } from '@/actions/dashboard/chatActions'
-import { ChatInput, Message } from '@/components/dashboards/Common/chat/chat'
-import SuggestionsContainer from '@/components/dashboards/Common/chat/SuggestionsContainer'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { studentInsertChatMessage } from '@/actions/dashboard/chatActions'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
-function  MainContainer ({ children }: {
+function MainContainer ({ children }: {
     children: React.ReactNode
 }) {
     return (
@@ -38,7 +35,7 @@ const ConversationTurn: React.FC<ConversationTurnProps> = ({
     role,
     message,
 }) => (
-    <div className={`w-full text-token-text-primary`} dir="auto">
+    <div className={'w-full text-token-text-primary'} dir="auto">
         <div className="text-base py-[18px] px-3 md:px-4 m-auto md:px-5 lg:px-1 xl:px-5">
             <div className="mx-auto flex flex-1 gap-4 text-base md:gap-5 lg:gap-6 md:max-w-3xl lg:max-w-[40rem] xl:max-w-[48rem]">
                 <div
@@ -74,17 +71,18 @@ function MessageInputArea ({
     callback
 }: {
     callback?: (input: string) => void
-})  {
+}) {
     return (
         <div className="md:pt-0 dark:border-white/20 md:border-transparent md:dark:border-transparent w-full">
             <div className="text-base px-3 md:px-4 m-auto md:px-5 lg:px-1 xl:px-5">
                 <div className="mx-auto flex flex-1 gap-4 text-base md:gap-5 lg:gap-6 md:max-w-3xl lg:max-w-[40rem] xl:max-w-[48rem]">
-                    <form 
+                    <form
                         onSubmit={(e) => {
                             e.preventDefault()
                             callback?.(e.currentTarget['prompt-textarea'].value)
                         }}
-                        className="w-full">
+                        className="w-full"
+                    >
                         <div className="relative flex h-full max-w-full flex-1 flex-col">
                             <div className="flex w-full items-center">
                                 <div className="flex w-full flex-col gap-1.5 rounded-[26px] p-1.5 transition-colors bg-[#f4f4f4] dark:bg-token-main-surface-secondary">
@@ -200,7 +198,6 @@ async function runUserMessage ({
     ])
 }
 
-
 export function MainPage ({
     chatId
 }: {
@@ -240,20 +237,18 @@ export function MainPage ({
     return (
         <MainContainer>
             {conversation.length > 0 ? (
-                    <ChatList messages={conversation} />
-                ) : (
-                    <h3>
+                <ChatList messages={conversation} />
+            ) : (
+                <h3>
                         Start a conversation with ChatGPT
-                    </h3>
-                )}
-                {isLoading && <ChatLoadingSkeleton />}
+                </h3>
+            )}
+            {isLoading && <ChatLoadingSkeleton />}
             <MessageInputArea />
             <HelperButton />
         </MainContainer>
     )
 }
-
-
 
 interface ChatListProps {
     messages: UIState

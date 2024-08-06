@@ -1,4 +1,8 @@
 'use client'
+import { MenuSquare } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
 import {
     Sheet,
     SheetContent,
@@ -7,10 +11,8 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet'
-import { MenuSquare } from 'lucide-react'
+
 import SearchChats from './SearchChats'
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
 
 export default function ChatSidebarMobile({ userRole, chatTypes }) {
     const [open, setOpen] = useState(false)
