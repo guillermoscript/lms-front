@@ -1,5 +1,7 @@
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
 
+import { CarouselItem } from '@/components/ui/carousel'
+
+import CarouselCourse from './CarouselCourse'
 import CourseCard from './CourseCard'
 import LinkCourseCard from './LinksCourseCards'
 
@@ -12,7 +14,7 @@ export default async function AllCoursesCard ({
 }) {
     const allCourses = await supabase
         .from('courses')
-        .select('*, lessons(*), exams(*), enrollments(*)')
+        .select('*, enrollments(user_id)')
         .eq('status', 'published')
         .eq('enrollments.user_id', userId)
 
@@ -22,39 +24,25 @@ export default async function AllCoursesCard ({
 
     return (
         <div className="w-full max-w-xs sm:max-w-screen-sm md:max-w-screen-md lg:max-w-screen-2xl mx-auto px-4">
-            <Carousel
-                opts={{
-                    align: 'start',
-                    loop: true,
-                    breakpoints: {
-                        '(min-width: 768px)': {
-                            loop: false
-                        }
-                    }
-                }}
-            >
-                <CarouselContent className="flex gap-4">
-                    {allCourses.data.map((course) => (
-                        <CarouselItem key={course.course_id} className="w-full sm:basis-1/2 lg:basis-1/3">
-                            <div className="h-full flex-grow">
-                                <CourseCard
-                                    title={course.title}
-                                    description={course.description}
+            <CarouselCourse>
+                {allCourses.data.map((course) => (
+                    <CarouselItem key={course.course_id} className="w-full sm:basis-1/2 lg:basis-1/3">
+                        <div className="h-full flex-grow">
+                            <CourseCard
+                                title={course.title}
+                                description={course.description}
+                                courseId={course.course_id}
+                                img={course.thumbnail_url}
+                            >
+                                <LinkCourseCard
                                     courseId={course.course_id}
-                                    img={course.thumbnail_url}
-                                >
-                                    <LinkCourseCard
-                                        courseId={course.course_id}
-                                        noEnroll={course.enrollments.length === 0}
-                                    />
-                                </CourseCard>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
-            </Carousel>
+                                    noEnroll={course.enrollments.length === 0}
+                                />
+                            </CourseCard>
+                        </div>
+                    </CarouselItem>
+                ))}
+            </CarouselCourse>
         </div>
     )
 }
