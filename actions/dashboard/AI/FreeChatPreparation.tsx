@@ -14,7 +14,8 @@ import { createClient } from '@/utils/supabase/server'
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
 
 export async function continueFreeChatConversation(
-    input: string
+    input: string,
+    chatId?: string
 ): Promise<ClientMessage> {
     const aiState = getMutableAIState<typeof FreeChatAI>()
 
@@ -22,7 +23,7 @@ export async function continueFreeChatConversation(
 
     // Update the AI state with the new user message.
     aiState.update({
-        ...aiState.get(),
+        chatId: chatId ?? aiState.get().chatId,
         messages: [
             ...aiState.get().messages,
             {
@@ -68,7 +69,7 @@ export async function continueFreeChatConversation(
                 })
 
                 const aiMessageInsert = await supabase.from('messages').insert({
-                    chat_id: +aiState.get().chatId,
+                    chat_id: chatId ? +chatId : +aiState.get().chatId,
                     message: content,
                     sender: 'assistant',
                     created_at: new Date().toISOString(),
