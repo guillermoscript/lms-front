@@ -48,7 +48,7 @@ export default async function StudentCourseLessonsPage ({
             />
             <div className="grid gap-8">
                 <div>
-                    <h1 className="text-3xl font-bold">
+                    <h1 className="lg:text-3xl font-bold text-xl">
                         {lessons.data[0]?.courses?.title}
                         Lessons
                     </h1>
