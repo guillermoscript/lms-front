@@ -67,9 +67,9 @@ export default async function StudentExamsCoursePage ({
             />
             <div className="grid gap-8">
                 <div>
-                    <h1 className="text-3xl font-bold">Exams</h1>
+                    <h1 className="lg:text-3xl font-bold text-xl">Exams</h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        {exams.data[0]?.courses?.title} Exams
+                        {exams.data[0]?.courses?.title} {' '} Exams
                     </p>
                 </div>
                 <div className="grid gap-4">
