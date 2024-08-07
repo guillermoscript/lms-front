@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { FreeChatAI, UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import {
+    studentCreateNewChat,
     studentCreateNewChatAndRedirect,
     studentInsertChatMessage,
     studentUpdateChatTitle,
@@ -53,7 +54,8 @@ export default function FreeChat({ chatId }: FreeChatProps) {
     const [conversation, setConversation] = useUIState<typeof FreeChatAI>()
     const { continueFreeChatConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
-    const [aiState] = useAIState()
+    const [id, setId] = useState<number | null>(chatId)
+    const [aiState, setAiState] = useAIState()
     const {
         messagesRef,
         scrollRef,
@@ -61,18 +63,6 @@ export default function FreeChat({ chatId }: FreeChatProps) {
         isAtBottom,
         scrollToBottom,
     } = useScrollAnchor()
-
-    useEffect(() => {
-        if (chatId && aiState.messages.length === 1) {
-            setIsLoading(true)
-            runUserMessage({
-                input: aiState.messages[0].content,
-                setConversation,
-                continueFreeChatConversation,
-                chatId,
-            }).finally(() => setIsLoading(false))
-        }
-    }, [chatId, aiState.messages, continueFreeChatConversation, setConversation])
 
     useEffect(() => {
         if (isAtBottom) {
@@ -101,51 +91,75 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                     isLoading={isLoading}
                     callbackFunction={async (input) => {
                         setIsLoading(true)
-                        if (!chatId) {
-                            await studentCreateNewChatAndRedirect({
+                        if (!id && !(/^\d+$/g.test(aiState.chatId))) {
+                            const data = await studentCreateNewChat({
                                 title: input.content,
                                 chatType: 'free_chat',
-                                insertMessage: true,
                             })
-                        }
-                        if (aiState.messages.length === 0 && chatId) {
-                            await studentUpdateChatTitle({
-                                chatId,
-                                title: input.content,
+
+                            setAiState({
+                                chatId: data.data.chat_id,
+                                ...aiState,
                             })
-                        }
-                        setConversation((currentConversation: ClientMessage[]) => [
-                            ...currentConversation,
-                            {
-                                id: generateId(),
-                                role: 'user',
-                                display: (
-                                    <Message
-                                        sender={'user'}
-                                        time={new Date().toDateString()}
-                                        isUser={true}
-                                    >
-                                        <ViewMarkdown markdown={input.content} />
-                                    </Message>
-                                ),
-                            },
-                        ])
-                        try {
-                            await runUserMessage({
-                                input: input.content,
-                                setConversation,
-                                continueFreeChatConversation,
-                                chatId,
-                                addNewChatMessage: true,
-                            })
-                        } catch (error) {
-                            console.error(error)
-                        } finally {
-                            setIsLoading(false)
-                            if (isAtBottom) {
-                                scrollToBottom()
+
+                            setId(+data.data.chat_id)
+
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+                                        <Message
+                                            sender={'user'}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown markdown={input.content} />
+                                        </Message>
+                                    ),
+                                },
+                            ])
+                            const message = await continueFreeChatConversation(input.content, data.data.chat_id)
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                message,
+                            ])
+                        } else {
+                            setConversation((currentConversation: ClientMessage[]) => [
+                                ...currentConversation,
+                                {
+                                    id: generateId(),
+                                    role: 'user',
+                                    display: (
+                                        <Message
+                                            sender={'user'}
+                                            time={new Date().toDateString()}
+                                            isUser={true}
+                                        >
+                                            <ViewMarkdown markdown={input.content} />
+                                        </Message>
+                                    ),
+                                },
+                            ])
+                            try {
+                                await runUserMessage({
+                                    input: input.content,
+                                    setConversation,
+                                    continueFreeChatConversation,
+                                    chatId: id,
+                                    addNewChatMessage: true,
+                                })
+                            } catch (error) {
+                                console.error(error)
+                            } finally {
+                                setIsLoading(false)
+                                if (isAtBottom) {
+                                    scrollToBottom()
+                                }
                             }
                         }
+                        setIsLoading(false)
                     }}
                 />
             </div>
