@@ -1,4 +1,4 @@
-import { DollarSign, Menu, ShoppingBag } from 'lucide-react'
+import { DollarSign, Home, Menu, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -59,6 +59,13 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                         <div className="w-full max-w-5xl flex flex-wrap gap-4 items-center p-3 text-sm">
                                             <AuthButton />
                                         </div>
+                                        <Link
+                                            className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
+                                            href="/"
+                                        >
+                                            <Home className="h-5 w-5 mr-2" />
+                                            Home
+                                        </Link>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                                             href="/plans"
