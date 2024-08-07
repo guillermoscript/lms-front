@@ -11,9 +11,9 @@ import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleto
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { getServerUserRole } from '@/utils/supabase/getUserRole'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
-import { getServerUserRole } from '@/utils/supabase/getUserRole'
 
 export async function continueTaskAiSandBoxConversation(
     input: string
