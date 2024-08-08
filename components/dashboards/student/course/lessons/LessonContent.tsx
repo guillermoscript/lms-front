@@ -7,6 +7,8 @@ import BreadcrumbComponent from '@/components/dashboards/student/course/Breadcru
 import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
 import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
+import CustomErrorBoundary from '@/components/errors/CustomErrorBoundary'
+import RetryError from '@/components/errors/RetryError'
 import { Badge } from '@/components/ui/badge'
 import {
     Card,
@@ -143,20 +145,28 @@ export default function LessonContent({
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
                             <Separator />
-                            <AiTaskMessage
-                                userId={userId}
-                                lessonId={lessonData.id.toString()}
-                                systemPrompt={lessonsAiTasks.system_prompt}
-                                lessonsAiTasks={lessonsAiTasks}
-                                lessonsAiTasksMessages={sortedMessages}
-                            >
-                                <TaksMessages
-                                    lessonId={lessonData.id}
-                                    isLessonAiTaskCompleted={
-                                        isLessonAiTaskCompleted
-                                    }
+                            <CustomErrorBoundary fallback={
+                                <RetryError
+                                    title="Error loading AI Task"
+                                    description="There was an issue loading the AI Task"
                                 />
-                            </AiTaskMessage>
+                            }
+                            >
+                                <AiTaskMessage
+                                    userId={userId}
+                                    lessonId={lessonData.id.toString()}
+                                    systemPrompt={lessonsAiTasks.system_prompt}
+                                    lessonsAiTasks={lessonsAiTasks}
+                                    lessonsAiTasksMessages={sortedMessages}
+                                >
+                                    <TaksMessages
+                                        lessonId={lessonData.id}
+                                        isLessonAiTaskCompleted={
+                                            isLessonAiTaskCompleted
+                                        }
+                                    />
+                                </AiTaskMessage>
+                            </CustomErrorBoundary>
                         </CardContent>
                     </Card>
                 </>
