@@ -513,3 +513,16 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_tickets_updated_at
+BEFORE UPDATE ON tickets
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
