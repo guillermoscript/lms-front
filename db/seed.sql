@@ -16,6 +16,13 @@ CREATE TYPE public.subscription_status AS ENUM ('active', 'inactive', 'canceled'
 CREATE TYPE public.transaction_status AS ENUM ('pending', 'completed');
 CREATE TYPE public.enrollement_status AS ENUM ('active', 'inactive');
 CREATE TYPE public.app_role AS ENUM ('admin', 'instructor', 'student');
+CREATE TYPE public.ticket_status AS ENUM (
+    'open',
+    'in_progress',
+    'resolved',
+    'closed'
+);
+
 
 -- Insert data into public.courses
 INSERT INTO public.course_categories (name, description) VALUES

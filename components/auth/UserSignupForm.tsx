@@ -85,7 +85,7 @@ export default function UserSignupForm ({
                         <h3 className="mt-4 text-center text-red-500">
                             Error: {state.error}
                         </h3>
-                        <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
+                        <p className="mt-4 p-4 bg-destructive/80 text-foreground text-center">
                             {state.message}
                         </p>
                     </div>

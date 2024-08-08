@@ -1431,6 +1431,83 @@ export type Database = {
           },
         ]
       }
+      ticket_messages: {
+        Row: {
+          created_at: string | null
+          message: string
+          message_id: number
+          ticket_id: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          message: string
+          message_id?: number
+          ticket_id?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          message?: string
+          message_id?: number
+          ticket_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          created_at: string | null
+          description: string
+          status: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id: number
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id?: number
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id?: number
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -1750,6 +1827,7 @@ export type Database = {
       reviewable: "lessons" | "courses" | "exams"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
+      ticket_status: "open" | "in_progress" | "resolved" | "closed"
       transaction_status:
         | "pending"
         | "successful"

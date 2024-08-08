@@ -61,7 +61,7 @@ export default function UserLoginForm({
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
-                    <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
+                    <p className="mt-4 p-4 bg-destructive/80 text-foreground text-center">
                         {state.message}
                     </p>
                 )}

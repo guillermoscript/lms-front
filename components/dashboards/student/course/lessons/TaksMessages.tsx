@@ -1,7 +1,7 @@
 'use client'
 import { generateId } from 'ai'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
@@ -14,6 +14,7 @@ import {
 } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import useNoCopy from '@/utils/hooks/useNoCopy'
 
 export default function TaksMessages({
     lessonId,
@@ -117,8 +118,15 @@ interface ChatListProps {
 }
 
 function ChatList({ messages, messagesEndRef }: ChatListProps) {
+    const contentRef = useRef(null)
+
+    useNoCopy(contentRef)
+
     return (
-        <div className="relative">
+        <div
+            ref={contentRef}
+            className="relative"
+        >
             {messages.map((message, index) => (
                 <div key={index} className="flex flex-col gap-2">
                     {message.display}
