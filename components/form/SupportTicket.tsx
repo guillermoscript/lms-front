@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { createSupportTicket } from '@/actions/contact'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { createSupportTicket } from '@/actions/contact'
+
 import { useToast } from '../ui/use-toast'
 
 const formSchema = z.object({
@@ -151,8 +152,9 @@ export default function SupportTicket() {
                                 <div className="flex justify-end">
                                     <Button
                                         disabled={form.formState.isSubmitting}
-                                        type="submit" className="w-full sm:w-auto">
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Ticket'}
+                                        type="submit" className="w-full sm:w-auto"
+                                    >
+                                        {form.formState.isSubmitting ? 'Submitting...' : 'Submit Ticket'}
                                     </Button>
                                 </div>
                             </form>

@@ -35,19 +35,19 @@ const Attachments = ({ attachments }: { attachments: Attachment[] }) => (
 )
 
 const TicketReview = ({ title, description }: TicketReviewProps) => (
-    
-        <Card>
-            <CardContent>
-                <div className="space-y-4">
-                    <TicketSection title="Title" content={title} />
-                    <TicketSection title="Description" content={description} />
-                    {/* <div>
+
+    <Card>
+        <CardContent>
+            <div className="space-y-4">
+                <TicketSection title="Title" content={title} />
+                <TicketSection title="Description" content={description} />
+                {/* <div>
                         <h3 className="text-lg font-medium text-foreground">Attachments</h3>
                         <Attachments attachments={attachments} />
                     </div> */}
-                </div>
-            </CardContent>
-        </Card>
+            </div>
+        </CardContent>
+    </Card>
 )
 
 export default TicketReview
