@@ -7,6 +7,7 @@ import Confetti, { ConfettiRef } from '@/components/magicui/confetti'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/utils'
 
 import ChatLoadingSkeleton from '../../chat/ChatLoadingSkeleton'
@@ -248,6 +249,58 @@ const ChatInput = ({
     )
 }
 
+function ChatTextArea({
+    isLoading,
+    stop,
+    callbackFunction,
+}: {
+    isLoading: boolean
+    stop?: () => void
+    callbackFunction: (MessageType: MessageType) => void
+}) {
+    return (
+        <>
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    callbackFunction({
+                        // @ts-expect-error
+                        content: e.target.textarea.value.trim(),
+                        role: 'user',
+                        createdAt: new Date(),
+                        id: generateId(),
+                    })
+                    e.currentTarget.reset()
+                }}
+                className="py-4 flex gap-2 flex-col w-full"
+            >
+                <Textarea
+                    placeholder="Type your message here"
+                    required
+                    className="rounded-l-lg"
+                    rows={3}
+                    id='textarea'
+                />
+                {isLoading ? (
+                    <Button
+                        type="button"
+                        onClick={stop}
+                        variant="outline"
+                        className="rounded-r-lg"
+                    >
+            Stop
+                    </Button>
+                ) : (
+                    <Button type="submit" className="rounded-r-lg">
+            Send
+                    </Button>
+                )}
+                <DisclaimerForUser />
+            </form>
+        </>
+    )
+}
+
 function DisclaimerForUser() {
     return (
         <div className="flex-1 flex items-center justify-center my-4">
@@ -258,4 +311,4 @@ function DisclaimerForUser() {
     )
 }
 
-export { ChatInput, ChatWindow, Message, SuccessMessage }
+export { ChatInput, ChatTextArea, ChatWindow, DisclaimerForUser, Message, SuccessMessage }

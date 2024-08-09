@@ -9,9 +9,53 @@ import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import {
     ChatInput,
+    ChatTextArea,
 } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const handleSubmit = async ({
+    input,
+    setIsLoading,
+    setConversation,
+    continueTaskAiSandBoxConversation,
+    stop,
+}: {
+    input: string
+    setIsLoading: (value: boolean) => void
+    setConversation: (value: React.SetStateAction<ClientMessage[]>) => void
+    continueTaskAiSandBoxConversation: (input: string) => Promise<ClientMessage>
+    stop: boolean
+}) => {
+    if (stop) return
+
+    setIsLoading(true)
+
+    setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        {
+            id: generateId(),
+            role: 'user',
+            display: (
+                <Message
+                    sender={'user'}
+                    time={new Date().toDateString()}
+                    isUser={true}
+                >
+                    <ViewMarkdown markdown={input} />
+                </Message>
+            ),
+        },
+    ])
+
+    const message = await continueTaskAiSandBoxConversation(input)
+    setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        message,
+    ])
+    setIsLoading(false)
+}
 
 export default function TaskSandboxMessage() {
     const [conversation, setConversation] = useUIState<typeof TaskSandboxActions>()
@@ -37,48 +81,42 @@ export default function TaskSandboxMessage() {
 
                 {isLoading && <ChatLoadingSkeleton />}
                 <div className="w-full h-px" />
-                <ChatInput
-                    isLoading={isLoading}
-                    stop={() => setStop(true)}
-                    callbackFunction={async (input) => {
-                        if (stop) return
-
-                        setIsLoading(true)
-
-                        setConversation(
-                            (currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-                                        <Message
-                                            sender={'user'}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown
-                                                markdown={input.content}
-                                            />
-                                        </Message>
-                                    ),
-                                },
-                            ]
-                        )
-
-                        const message =
-                                    await continueTaskAiSandBoxConversation(
-                                        input.content
-                                    )
-                        setConversation(
-                            (currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                message,
-                            ]
-                        )
-                        setIsLoading(false)
-                    }}
-                />
+                <Tabs defaultValue="simple" className="w-full py-4">
+                    <TabsList>
+                        <TabsTrigger value="simple">Simple</TabsTrigger>
+                        <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="markdown">
+                        <ChatInput
+                            isLoading={isLoading}
+                            stop={() => setStop(true)}
+                            callbackFunction={async (input) => {
+                                handleSubmit({
+                                    input: input.content,
+                                    setIsLoading,
+                                    setConversation,
+                                    continueTaskAiSandBoxConversation,
+                                    stop,
+                                })
+                            }}
+                        />
+                    </TabsContent>
+                    <TabsContent value="simple">
+                        <ChatTextArea
+                            isLoading={isLoading}
+                            stop={() => setStop(true)}
+                            callbackFunction={async (input) => {
+                                handleSubmit({
+                                    input: input.content,
+                                    setIsLoading,
+                                    setConversation,
+                                    continueTaskAiSandBoxConversation,
+                                    stop,
+                                })
+                            }}
+                        />
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     )

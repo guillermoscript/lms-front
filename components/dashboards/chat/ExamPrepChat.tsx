@@ -13,9 +13,10 @@ import {
     studentUpdateChatTitle,
 } from '@/actions/dashboard/chatActions'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
-import { ChatInput } from '../Common/chat/chat'
+import { ChatInput, ChatTextArea } from '../Common/chat/chat'
 import Message from '../Common/chat/Message'
 import SuggestionsContainer from '../Common/chat/SuggestionsContainer'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
@@ -52,6 +53,56 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
     useEffect(() => {
         scrollToBottom()
     }, [conversation, scrollToBottom])
+
+    const handleInput = async (input: any) => {
+        if (stop) return
+
+        setIsLoading(true)
+
+        if (aiState.messages.length === 0 && chatId) {
+            await studentUpdateChatTitle({
+                chatId,
+                title: input.content,
+            })
+        }
+
+        setConversation(
+            (currentConversation: ClientMessage[]) => [
+                ...currentConversation,
+                {
+                    id: generateId(),
+                    role: 'user',
+                    display: (
+                        <Message
+                            sender={'user'}
+                            time={new Date().toDateString()}
+                            isUser={true}
+                        >
+                            <ViewMarkdown
+                                markdown={input.content}
+                            />
+                        </Message>
+                    ),
+                },
+            ]
+        )
+
+        if (chatId) {
+            await studentInsertChatMessage({
+                chatId,
+                message: input.content,
+            })
+        }
+
+        const message = await continueConversation(input.content)
+        setConversation(
+            (currentConversation: ClientMessage[]) => [
+                ...currentConversation,
+                message,
+            ]
+        )
+        setIsLoading(false)
+    }
 
     return (
         <div>
@@ -144,62 +195,34 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
             </div>
 
             {!hideInput && (
-                <ChatInput
-                    isLoading={isLoading}
-                    stop={() => setStop(true)}
-                    isTemplatePresent={true}
-                    callbackFunction={async (input) => {
-                        if (stop) return
-
-                        setIsLoading(true)
-
-                        if (aiState.messages.length === 0 && chatId) {
-                            await studentUpdateChatTitle({
-                                chatId,
-                                title: input.content,
-                            })
-                        }
-
-                        setConversation(
-                            (currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-                                        <Message
-                                            sender={'user'}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown
-                                                markdown={input.content}
-                                            />
-                                        </Message>
-                                    ),
-                                },
-                            ]
-                        )
-
-                        if (chatId) {
-                            await studentInsertChatMessage({
-                                chatId,
-                                message: input.content,
-                            })
-                        }
-
-                        const message = await continueConversation(
-                            input.content
-                        )
-                        setConversation(
-                            (currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                message,
-                            ]
-                        )
-                        setIsLoading(false)
-                    }}
-                />
+                <>
+                    <ChatInput
+                        isLoading={isLoading}
+                        stop={() => setStop(true)}
+                        isTemplatePresent={true}
+                        callbackFunction={handleInput}
+                    />
+                    <Tabs defaultValue="simple" className="w-full py-4">
+                        <TabsList>
+                            <TabsTrigger value="simple">Simple</TabsTrigger>
+                            <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="markdown">
+                            <ChatInput
+                                isLoading={isLoading}
+                                stop={() => setStop(true)}
+                                callbackFunction={handleInput}
+                            />
+                        </TabsContent>
+                        <TabsContent value="simple">
+                            <ChatTextArea
+                                isLoading={isLoading}
+                                stop={() => setStop(true)}
+                                callbackFunction={handleInput}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                </>
             )}
         </div>
     )

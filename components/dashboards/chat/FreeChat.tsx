@@ -11,9 +11,10 @@ import {
     studentInsertChatMessage,
     studentUpdateChatTitle,
 } from '@/actions/dashboard/chatActions'
-import { ChatInput, Message } from '@/components/dashboards/Common/chat/chat'
+import { ChatInput, ChatTextArea, Message } from '@/components/dashboards/Common/chat/chat'
 import SuggestionsContainer from '@/components/dashboards/Common/chat/SuggestionsContainer'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
@@ -48,6 +49,101 @@ const runUserMessage = async ({
 interface FreeChatProps {
     children?: React.ReactNode
     chatId?: number
+}
+
+const handleCallbackFunction = async ({
+    input,
+    setIsLoading,
+    setConversation,
+    continueFreeChatConversation,
+    chatId,
+    aiState,
+    setAiState,
+    setId,
+    isAtBottom,
+    scrollToBottom,
+}: {
+    input: string
+    setIsLoading: (value: boolean) => void
+    setConversation: (value: React.SetStateAction<ClientMessage[]>) => void
+    continueFreeChatConversation: (input: string, chatId?: number) => Promise<ClientMessage>
+    chatId: number | null
+    aiState: any
+    setAiState: (value: any) => void
+    setId: (value: number) => void
+    isAtBottom: boolean
+    scrollToBottom: () => void
+}) => {
+    setIsLoading(true)
+    if (!chatId && !(/^\d+$/g.test(aiState.chatId))) {
+        const data = await studentCreateNewChat({
+            title: input,
+            chatType: 'free_chat',
+        })
+
+        setAiState({
+            chatId: data.data.chat_id,
+            ...aiState,
+        })
+
+        setId(+data.data.chat_id)
+
+        setConversation((currentConversation: ClientMessage[]) => [
+            ...currentConversation,
+            {
+                id: generateId(),
+                role: 'user',
+                display: (
+                    <Message
+                        sender={'user'}
+                        time={new Date().toDateString()}
+                        isUser={true}
+                    >
+                        <ViewMarkdown markdown={input} />
+                    </Message>
+                ),
+            },
+        ])
+        const message = await continueFreeChatConversation(input, data.data.chat_id)
+        setConversation((currentConversation: ClientMessage[]) => [
+            ...currentConversation,
+            message,
+        ])
+    } else {
+        setConversation((currentConversation: ClientMessage[]) => [
+            ...currentConversation,
+            {
+                id: generateId(),
+                role: 'user',
+                display: (
+                    <Message
+                        sender={'user'}
+                        time={new Date().toDateString()}
+                        isUser={true}
+                    >
+                        <ViewMarkdown markdown={input} />
+                    </Message>
+                ),
+            },
+        ])
+        try {
+            await runUserMessage({
+                input,
+                setConversation,
+                continueFreeChatConversation,
+                chatId,
+                addNewChatMessage: true,
+            })
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setIsLoading(false)
+            if (isAtBottom) {
+                scrollToBottom()
+            }
+        }
+    }
+    setIsLoading(false)
 }
 
 export default function FreeChat({ chatId }: FreeChatProps) {
@@ -87,81 +183,46 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                 <div ref={visibilityRef} className="w-full h-px" />
             </div>
             <div className='w-full absolute bottom-0'>
-                <ChatInput
-                    isLoading={isLoading}
-                    callbackFunction={async (input) => {
-                        setIsLoading(true)
-                        if (!id && !(/^\d+$/g.test(aiState.chatId))) {
-                            const data = await studentCreateNewChat({
-                                title: input.content,
-                                chatType: 'free_chat',
-                            })
-
-                            setAiState({
-                                chatId: data.data.chat_id,
-                                ...aiState,
-                            })
-
-                            setId(+data.data.chat_id)
-
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-                                        <Message
-                                            sender={'user'}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown markdown={input.content} />
-                                        </Message>
-                                    ),
-                                },
-                            ])
-                            const message = await continueFreeChatConversation(input.content, data.data.chat_id)
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                message,
-                            ])
-                        } else {
-                            setConversation((currentConversation: ClientMessage[]) => [
-                                ...currentConversation,
-                                {
-                                    id: generateId(),
-                                    role: 'user',
-                                    display: (
-                                        <Message
-                                            sender={'user'}
-                                            time={new Date().toDateString()}
-                                            isUser={true}
-                                        >
-                                            <ViewMarkdown markdown={input.content} />
-                                        </Message>
-                                    ),
-                                },
-                            ])
-                            try {
-                                await runUserMessage({
-                                    input: input.content,
-                                    setConversation,
-                                    continueFreeChatConversation,
-                                    chatId: id,
-                                    addNewChatMessage: true,
-                                })
-                            } catch (error) {
-                                console.error(error)
-                            } finally {
-                                setIsLoading(false)
-                                if (isAtBottom) {
-                                    scrollToBottom()
-                                }
-                            }
-                        }
-                        setIsLoading(false)
-                    }}
-                />
+                <Tabs defaultValue="simple" className="w-full py-4">
+                    <TabsList>
+                        <TabsTrigger value="simple">Simple</TabsTrigger>
+                        <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="markdown">
+                        <ChatInput
+                            isLoading={isLoading}
+                            callbackFunction={async (input) => await handleCallbackFunction({
+                                input: input.content,
+                                setIsLoading,
+                                setConversation,
+                                continueFreeChatConversation,
+                                chatId: id,
+                                aiState,
+                                setAiState,
+                                setId,
+                                isAtBottom,
+                                scrollToBottom,
+                            })}
+                        />
+                    </TabsContent>
+                    <TabsContent value="simple">
+                        <ChatTextArea
+                            isLoading={isLoading}
+                            callbackFunction={async (input) => await handleCallbackFunction({
+                                input: input.content,
+                                setIsLoading,
+                                setConversation,
+                                continueFreeChatConversation,
+                                chatId: id,
+                                aiState,
+                                setAiState,
+                                setId,
+                                isAtBottom,
+                                scrollToBottom,
+                            })}
+                        />
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     )
