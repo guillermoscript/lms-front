@@ -90,6 +90,13 @@ export default function UserSignupForm ({
                         </p>
                     </div>
                 )}
+                {state.status === 'success' && (
+                    <div>
+                        <h3 className="mt-4 text-center bg-green-500 text-white p-4 rounded">
+                            {state.message}
+                        </h3>
+                    </div>
+                )}
             </form>
         </div>
     )
