@@ -1,7 +1,8 @@
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import UserSignupForm from '@/components/auth/UserSignupForm'
+import CheckoutForm from '@/components/checkout/CheckoutForm'
 import CheckoutImages from '@/components/checkout/CheckoutImages'
-import CheckoutPlan from '@/components/plans/CheckoutPlan'
+import CheckoutStripeWrapper from '@/components/checkout/CheckoutStripeWrapper'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
@@ -46,9 +47,11 @@ export default async function PlansCheckoutPage ({
                     </div>
                     {
                         userData.data.user ? (
-                            <CheckoutPlan
-                                params={params}
-                            />
+                            <CheckoutStripeWrapper
+                                planId={params.planId}
+                            >
+                                <CheckoutForm />
+                            </CheckoutStripeWrapper>
                         ) : (
                             <div className="flex flex-col gap-4">
                                 <Tabs defaultValue="login" className="w-full px-8 sm:max-w-md">
