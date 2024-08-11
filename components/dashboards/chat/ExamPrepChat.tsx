@@ -196,22 +196,17 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
 
             {!hideInput && (
                 <>
-                    <ChatInput
-                        isLoading={isLoading}
-                        stop={() => setStop(true)}
-                        isTemplatePresent={true}
-                        callbackFunction={handleInput}
-                    />
-                    <Tabs defaultValue="simple" className="w-full py-4">
+                    <Tabs defaultValue="markdown" className="w-full py-4">
                         <TabsList>
-                            <TabsTrigger value="simple">Simple</TabsTrigger>
                             <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                            <TabsTrigger value="simple">Simple</TabsTrigger>
                         </TabsList>
                         <TabsContent value="markdown">
                             <ChatInput
                                 isLoading={isLoading}
                                 stop={() => setStop(true)}
                                 callbackFunction={handleInput}
+                                isTemplatePresent={true}
                             />
                         </TabsContent>
                         <TabsContent value="simple">
