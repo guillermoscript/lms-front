@@ -394,123 +394,62 @@ SELECT cron.schedule(
 
 
 CREATE OR REPLACE FUNCTION create_exam_submission(
-
     p_student_id UUID,
-
     p_exam_id INTEGER,
-
     p_answers JSONB
-
 )
-
 RETURNS VOID AS $$
-
 DECLARE
-
     v_submission_id INTEGER;
-
     answer JSONB;
-
     v_question_id INTEGER;
-
     v_question_type VARCHAR;
-
     v_answer_text TEXT;
-
 BEGIN
-
     -- Insert a new submission into the exam_submissions table and get the submission_id
-
     INSERT INTO public.exam_submissions (exam_id, student_id, submission_date)
-
     VALUES (p_exam_id, p_student_id, current_timestamp)
-
     RETURNING submission_id INTO v_submission_id;
-
-    
-
     -- Loop through each answer in the p_answers array
-
     FOR answer IN SELECT jsonb_array_elements(p_answers) LOOP
-
         -- Assign JSON values to variables
-
         v_question_id := (answer->>'question_id')::INTEGER;
-
         v_question_type := answer->>'question_type';
-
         v_answer_text := answer->>'answer_text';
-
-
-
         -- Check if there is already an answer for this question for this submission
-
         IF EXISTS (
-
             SELECT 1
-
             FROM public.exam_answers
-
             WHERE submission_id = v_submission_id AND question_id = v_question_id
-
         ) THEN
-
             -- RAISE NOTICE: Skip if already answered
-
             IF v_question_type != 'multiple_choice' THEN
-
                 RAISE NOTICE 'Skipping duplicate answer for question_id: %', v_question_id;
-
             ELSE
-
                 -- Allow multiple answers for multiple choice questions
-
                 INSERT INTO public.exam_answers (
-
                     submission_id, question_id, answer_text
-
                 ) VALUES (
-
                     v_submission_id,
-
                     v_question_id,
-
                     v_answer_text
-
                 );
-
             END IF;
-
         ELSE
-
             -- Insert the answer as it doesn’t exist
-
             INSERT INTO public.exam_answers (
-
                 submission_id, question_id, answer_text
-
             ) VALUES (
-
                 v_submission_id,
-
                 v_question_id,
-
                 v_answer_text
-
             );
-
         END IF;
-
     END LOOP;
-
 EXCEPTION
-
     WHEN OTHERS THEN
-
         RAISE;
-
 END;
-
 $$ LANGUAGE plpgsql;
 
 
