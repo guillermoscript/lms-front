@@ -63,7 +63,9 @@ export default async function CoursesStudentPage() {
             {lessonsView.data.length > 0 && (
                 <RecentlyViewed lessonsView={lessonsView.data} />
             )}
-            <ChatsSectionComponent chats={userChats.data} />
+            {userChats.data.length > 0 && (
+                <ChatsSectionComponent chats={userChats.data} />
+            )}
         </>
     )
 }
