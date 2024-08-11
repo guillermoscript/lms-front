@@ -89,11 +89,11 @@ export default function CheckoutForm() {
             className='p-4 rounded-lg shadow-lg bg-primary-foreground flex flex-col gap-4'
             id="payment-form" onSubmit={handleSubmit}
         >
-            
-            <PaymentElement 
-                id="payment-element" 
+
+            <PaymentElement
+                id="payment-element"
                 // @ts-expect-error
-                options={paymentElementOptions} 
+                options={paymentElementOptions}
             />
             <Button disabled={isLoading || !stripe || !elements} id="submit">
                 <span id="button-text">

@@ -38,10 +38,8 @@ export async function POST (req: Request) {
                         .update({ status: 'successful' })
                         .eq('transaction_id', invoiceId)
 
-
                     break
                 } else if (planId) {
-
                     // update invoice and set it to paid
                     const update = await supabase
                         .from('transactions')
