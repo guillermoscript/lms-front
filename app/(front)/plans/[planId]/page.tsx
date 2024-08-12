@@ -6,8 +6,8 @@ import CheckoutStripeWrapper from '@/components/checkout/CheckoutStripeWrapper'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function PlansCheckoutPage ({
-    params
+export default async function PlansCheckoutPage({
+    params,
 }: {
     params: { planId: string }
 }) {
@@ -30,11 +30,11 @@ export default async function PlansCheckoutPage ({
                             {data?.plan_name}
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                          Checkout
+                            Checkout
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg md:text-xl">
-                          Complete your purchase for the {data?.plan_name}{' '}
-                          Plan.
+                            Complete your purchase for the {data?.plan_name}{' '}
+                            Plan.
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -42,53 +42,57 @@ export default async function PlansCheckoutPage ({
                             {data?.price} $
                         </div>
                         <div className="text-gray-500 dark:text-gray-400 text-lg">
-                          /month
+                            /month
                         </div>
                     </div>
-                    {
-                        userData.data.user ? (
-                            <CheckoutStripeWrapper
-                                planId={params.planId}
+                    <div>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            For now this is a test payment, you can use the
+                            following card details:
+                        </p>
+                        <ul className="list-disc list-inside">
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >4242 4242 4242 4242</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any future date</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any CVC</li>
+                        </ul>
+                    </div>
+                    {userData.data.user ? (
+                        <CheckoutStripeWrapper planId={params.planId}>
+                            <CheckoutForm />
+                        </CheckoutStripeWrapper>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            <Tabs
+                                defaultValue="login"
+                                className="w-full px-8 sm:max-w-md"
                             >
-                                <CheckoutForm />
-                            </CheckoutStripeWrapper>
-                        ) : (
-                            <div className="flex flex-col gap-4">
-                                <Tabs defaultValue="login" className="w-full px-8 sm:max-w-md">
-                                    <TabsList
-                                        className='h-12 p-3'
-                                    >
-                                        <TabsTrigger
-                                            className='p-2'
-                                            value="login"
-                                        >
-
+                                <TabsList className="h-12 p-3">
+                                    <TabsTrigger className="p-2" value="login">
                                         Login to continue
-
-                                        </TabsTrigger>
-                                        <TabsTrigger
-                                            className='p-2'
-                                            value="signup"
-                                        >
-
+                                    </TabsTrigger>
+                                    <TabsTrigger className="p-2" value="signup">
                                         Create an account
-
-                                        </TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="login">
-                                        <UserLoginForm
-                                            redirect={`/plans/${params.planId}`}
-                                        />
-                                    </TabsContent>
-                                    <TabsContent value="signup">
-                                        <UserSignupForm
-                                            redirect={`/plans/${params.planId}`}
-                                        />
-                                    </TabsContent>
-                                </Tabs>
-                            </div>
-                        )
-                    }
+                                    </TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="login">
+                                    <UserLoginForm
+                                        redirect={`/plans/${params.planId}`}
+                                    />
+                                </TabsContent>
+                                <TabsContent value="signup">
+                                    <UserSignupForm
+                                        redirect={`/plans/${params.planId}`}
+                                    />
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+                    )}
                 </div>
                 <CheckoutImages
                     img1src={data?.thumbnail}

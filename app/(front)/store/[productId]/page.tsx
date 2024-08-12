@@ -42,6 +42,23 @@ export default async function ProductIdPage({
                             {product?.price} $
                         </div>
                     </div>
+                    <div>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            For now this is a test payment, you can use the
+                            following card details:
+                        </p>
+                        <ul className="list-disc list-inside">
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >4242 4242 4242 4242</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any future date</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any CVC</li>
+                        </ul>
+                    </div>
                     {userData.data.user ? (
                         <CheckoutStripeWrapper
                             productId={params.productId}
