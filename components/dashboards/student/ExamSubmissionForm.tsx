@@ -238,17 +238,17 @@ function parseFormData(
         ...questions.freeTextQuestions,
     ]
 
-    const getQuestionText = (id: string, optionId: string = '') => {
+    const getQuestionText = (id: string, optionId = '') => {
         const question = allQuestions.find((q) => q.id === id)
         if (question) {
             if ('options' in question && optionId) {
-                // @ts-ignore
+                // @ts-expect-error
                 const option = question.options?.find(
                     (opt) => opt.id === optionId
                 )
                 return option ? option.text : id
             }
-            // @ts-ignore
+            // @ts-expect-error
             return question.text || question.label
         }
         return id
@@ -281,7 +281,7 @@ function parseFormData(
                 question_type: 'multiple_choice',
                 question_text: getQuestionText(key),
                 user_answer: userAnswers,
-                // @ts-ignore
+                // @ts-expect-error
                 options,
             })
             data[key]?.forEach((optionId) => {

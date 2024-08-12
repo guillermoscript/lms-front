@@ -5,6 +5,9 @@ import {
     XCircleIcon
 } from 'lucide-react'
 import { redirect } from 'next/navigation'
+
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
+import { Badge } from '@/components/ui/badge'
 import {
     Card,
     CardContent,
@@ -12,10 +15,7 @@ import {
     CardFooter,
     CardHeader,
     CardTitle,
-  } from "@/components/ui/card"
-  
-import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import { Badge } from '@/components/ui/badge'
+} from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
@@ -170,17 +170,17 @@ export default async function StudentExamCoursePage ({
                                 </Label>
                                 {question.question_type ===
                                 'multiple_choice' ? (
-                                    <>
-                                        <div className="flex flex-col gap-2">
-                                            {question.question_options.map(
-                                                (option) => {
-                                                    const userAnwsers =
+                                        <>
+                                            <div className="flex flex-col gap-2">
+                                                {question.question_options.map(
+                                                    (option) => {
+                                                        const userAnwsers =
                                                         exam_submissions.exam_answers.filter(
                                                             (a) =>
                                                                 a.question_id ===
                                                                 question.question_id
                                                         )
-                                                    const isChecked =
+                                                        const isChecked =
                                                         userAnwsers.some((a) =>
                                                             a.answer_text
                                                                 .split(',')
@@ -188,65 +188,65 @@ export default async function StudentExamCoursePage ({
                                                                     option.option_id.toString()
                                                                 )
                                                         )
-                                                    const isCorrect =
+                                                        const isCorrect =
                                                         option.is_correct
-                                                    const backgroundColor =
+                                                        const backgroundColor =
                                                         isChecked
                                                             ? isCorrect
                                                                 ? 'bg-green-100 dark:bg-green-800'
                                                                 : 'bg-red-100 dark:bg-red-800'
                                                             : 'bg-gray-100 dark:bg-gray-800'
-                                                    return (
-                                                        <div
-                                                            key={
-                                                                option.option_id
-                                                            }
-                                                            className={cn(
-                                                                'flex items-center gap-2 p-2 rounded',
-                                                                backgroundColor
-                                                            )}
-                                                        >
-                                                            {isChecked ? (
-                                                                isCorrect ? (
-                                                                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                                                                ) : (
-                                                                    <XCircleIcon className="h-5 w-5 text-red-500" />
-                                                                )
-                                                            ) : (
-                                                                <CircleIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                                                            )}
-                                                            <span>
-                                                                {
-                                                                    option.option_text
+                                                        return (
+                                                            <div
+                                                                key={
+                                                                    option.option_id
                                                                 }
-                                                            </span>
-                                                        </div>
-                                                    )
-                                                }
-                                            )}
-                                        </div>
-                                        {answer?.feedback && (
-                                            <div className="mt-4">
-                                                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Feedback:
-                                                </Label>
-                                                <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                                                    {answer.feedback}
-                                                </p>
+                                                                className={cn(
+                                                                    'flex items-center gap-2 p-2 rounded',
+                                                                    backgroundColor
+                                                                )}
+                                                            >
+                                                                {isChecked ? (
+                                                                    isCorrect ? (
+                                                                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                                                    ) : (
+                                                                        <XCircleIcon className="h-5 w-5 text-red-500" />
+                                                                    )
+                                                                ) : (
+                                                                    <CircleIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                                                                )}
+                                                                <span>
+                                                                    {
+                                                                        option.option_text
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    }
+                                                )}
                                             </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <p className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                                        {question.question_type === 'true_false'
-                                            ? answer?.answer_text.split(
-                                                  '-'
-                                              )[1] === 'true'
-                                                ? 'True'
-                                                : 'False'
-                                            : answer?.answer_text}
-                                    </p>
-                                )}
+                                            {answer?.feedback && (
+                                                <div className="mt-4">
+                                                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Feedback:
+                                                    </Label>
+                                                    <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                                                        {answer.feedback}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <p className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                            {question.question_type === 'true_false'
+                                                ? answer?.answer_text.split(
+                                                    '-'
+                                                )[1] === 'true'
+                                                    ? 'True'
+                                                    : 'False'
+                                                : answer?.answer_text}
+                                        </p>
+                                    )}
                             </div>
                             {answer?.feedback && (
                                 <div className="mt-4">

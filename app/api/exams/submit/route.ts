@@ -1,8 +1,8 @@
+import { google } from '@ai-sdk/google'
+import { generateObject } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
-import { generateObject } from 'ai';
-import { z } from 'zod';
-import { google } from '@ai-sdk/google';
 import { createClient } from '@/utils/supabase/server'
 
 export async function POST (req: NextRequest) {
@@ -37,9 +37,9 @@ export async function POST (req: NextRequest) {
         console.log('AI response:', aiResponse)
 
         const updatedUserExam_submission = await supabase
-        .from('exam_submissions')
-        .update({ ai_data: aiResponse })
-        .eq('submission_id', data)
+            .from('exam_submissions')
+            .update({ ai_data: aiResponse })
+            .eq('submission_id', data)
 
         console.log('AI response:', updatedUserExam_submission)
 
@@ -67,13 +67,12 @@ export async function POST (req: NextRequest) {
 }
 
 async function generateAIReview({ input }: { input: string }) {
-
     const { object } = await generateObject({
         model: google('models/gemini-1.5-pro-latest'),
         schema: z.object({
             userSubmission: z.array(
                 z.object({
-                    question: z.string().describe("The question that the user answered."),
+                    question: z.string().describe('The question that the user answered.'),
                     review: z.string().describe("The given review of the user's answer."),
                     userAnswer: z.string().describe("The user's submission."),
                 })
@@ -105,8 +104,7 @@ Take a deep breath and consider how to accomplish this goal best using the follo
 ### INPUT:
 
 ${input}`,
-    });
+    })
 
-    return object;
-
+    return object
 }
