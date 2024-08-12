@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import Stripe from 'stripe'
+import BigNumber from "bignumber.js";
 
 import { createClient } from '@/utils/supabase/server'
 
@@ -83,9 +84,13 @@ export async function POST (req: NextRequest) {
 
         console.log(transaction, '<----------- transaction')
 
+        const price = new BigNumber(plan.data.price).multipliedBy(100).toNumber()
+
+        console.log(price, '<----------- price')
+
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: plan.data.price * 100,
+            amount: price,
             currency: 'usd',
             customer: stripeCustomerID,
             setup_future_usage: 'off_session',
@@ -131,9 +136,11 @@ export async function POST (req: NextRequest) {
             .select('*')
             .single()
 
+        const price = new BigNumber(product.data.price).multipliedBy(100).toNumber()
+
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: product.data.price * 100,
+            amount: price,
             customer: stripeCustomerID,
             setup_future_usage: 'off_session',
             currency: 'usd',
