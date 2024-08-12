@@ -1,6 +1,6 @@
+import BigNumber from 'bignumber.js'
 import { type NextRequest } from 'next/server'
 import Stripe from 'stripe'
-import BigNumber from "bignumber.js";
 
 import { createClient } from '@/utils/supabase/server'
 
