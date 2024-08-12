@@ -262,16 +262,18 @@ array[
  )
 ) tablespace pg_default;
 
-create table public.exam_submissions (
- submission_id serial not null,
- exam_id integer not null,
- student_id uuid not null,
- submission_date timestamp with time zone null default current_timestamp,
- constraint exam_submissions_pkey primary key (submission_id),
- constraint exam_submissions_exam_id_student_id_key unique (exam_id, student_id),
- constraint exam_submissions_exam_id_fkey foreign key (exam_id) references exams (exam_id) on update cascade on delete cascade,
- constraint exam_submissions_student_id_fkey foreign key (student_id) references auth.users (id)
-) tablespace pg_default;
+create table
+  public.exam_submissions (
+    submission_id serial not null,
+    exam_id integer not null,
+    student_id uuid not null,
+    submission_date timestamp with time zone null default current_timestamp,
+    ai_data jsonb null,
+    constraint exam_submissions_pkey primary key (submission_id),
+    constraint exam_submissions_exam_id_student_id_key unique (exam_id, student_id),
+    constraint exam_submissions_exam_id_fkey foreign key (exam_id) references exams (exam_id) on update cascade on delete cascade,
+    constraint exam_submissions_student_id_fkey foreign key (student_id) references auth.users (id)
+  ) tablespace pg_default;
 
 create table public.grades (
  grade_id serial not null,
