@@ -1,6 +1,7 @@
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import UserSignupForm from '@/components/auth/UserSignupForm'
-import CheckoutProduct from '@/components/store/CheckoutProduct'
+import CheckoutForm from '@/components/checkout/CheckoutForm'
+import CheckoutStripeWrapper from '@/components/checkout/CheckoutStripeWrapper'
 import ImageContainer from '@/components/store/product/ImageContainer'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
@@ -42,7 +43,11 @@ export default async function ProductIdPage({
                         </div>
                     </div>
                     {userData.data.user ? (
-                        <CheckoutProduct params={params} />
+                        <CheckoutStripeWrapper
+                            productId={params.productId}
+                        >
+                            <CheckoutForm />
+                        </CheckoutStripeWrapper>
                     ) : (
                         <div className="flex flex-col gap-4">
                             <Tabs

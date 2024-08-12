@@ -13,6 +13,7 @@ import {
 
 import AuthButton from './AuthButton'
 import { DarkThemeToggle } from './DarkThemeToggle'
+import ProfileDropdown from './dashboards/Common/ProfileDropdown'
 
 export default function Header({ children }: { children?: React.ReactNode }) {
     return (
@@ -42,17 +43,20 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                         </Link>
                     </nav>
                     <Sheet>
-                        <SheetTrigger className="flex items-center space-x-2 md:hidden p-3 justify-between gap-2 w-full">
-                            <Menu className="h-6 w-6" />
-                            <Image
-                                src="/img/logo.png"
-                                alt="LMS"
-                                width={52}
-                                height={52}
-                            />
-                        </SheetTrigger>
+                        <div className="md:hidden flex p-2 items-center justify-between w-full">
+                            <SheetTrigger className="flex items-center space-x-2 md:hidden p-3 justify-between gap-2 w-full">
+                                <Menu className="h-6 w-6" />
+                            </SheetTrigger>
+                            <ProfileDropdown />
+                        </div>
                         <SheetContent>
                             <SheetHeader className='w-full'>
+                                <Image
+                                    src="/img/logo.png"
+                                    alt="LMS"
+                                    width={52}
+                                    height={52}
+                                />
                                 <SheetTitle>LMS Academy</SheetTitle>
                                 <SheetDescription>
                                     <nav className="flex flex-col gap-4">
@@ -89,11 +93,12 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     </Sheet>
                     {children}
                 </div>
-                <nav className="hidden md:flex justify-center items-center">
+                <nav className="hidden md:flex justify-center gap-2 items-center">
                     <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
                         {<AuthButton />}
                     </div>
                     <DarkThemeToggle />
+                    <ProfileDropdown />
                 </nav>
             </div>
         </header>

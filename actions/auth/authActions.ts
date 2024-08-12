@@ -86,5 +86,5 @@ export const signUp = async (prevData: any, formData: FormData) => {
         return createResponse('error', 'Error submitting comment', null, error)
     }
 
-    redirect(redirectTo || '/auth/login?message=Check email to continue sign in process')
+    return createResponse('success', 'Check your email to continue sign in process', null, null)
 }

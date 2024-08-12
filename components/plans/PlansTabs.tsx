@@ -4,11 +4,19 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/utils'
 import { Tables } from '@/utils/supabase/supabase'
 
+import { Badge } from '../ui/badge'
 import { buttonVariants } from '../ui/button'
 
-function SubscriptionPlan({ plans }: { plans: Array<Tables<'plans'>> }) {
+function SubscriptionPlan({
+    plans,
+    userPlan
+}: {
+    plans: Array<Tables<'plans'>>
+    userPlan?: number
+}) {
     const [selectedPeriodicity, setSelectedPeriodicity] = useState('monthly')
 
     const getPlanPrice = (plan) => {
@@ -31,25 +39,17 @@ function SubscriptionPlan({ plans }: { plans: Array<Tables<'plans'>> }) {
             <Tabs
                 value={selectedPeriodicity}
                 onValueChange={setSelectedPeriodicity}
-                defaultValue="monthly" className="w-full"
+                defaultValue="monthly"
+                className="w-full"
             >
                 <TabsList className="flex justify-center w-fit mx-auto mb-6">
-                    <TabsTrigger
-                        value="monthly"
-                        className="px-4 py-2"
-                    >
+                    <TabsTrigger value="monthly" className="px-4 py-2">
                         Monthly
                     </TabsTrigger>
-                    <TabsTrigger
-                        value="quarterly"
-                        className="px-4 py-2"
-                    >
+                    <TabsTrigger value="quarterly" className="px-4 py-2">
                         Quarterly
                     </TabsTrigger>
-                    <TabsTrigger
-                        value="yearly"
-                        className="px-4 py-2"
-                    >
+                    <TabsTrigger value="yearly" className="px-4 py-2">
                         Yearly
                     </TabsTrigger>
                 </TabsList>
@@ -57,11 +57,11 @@ function SubscriptionPlan({ plans }: { plans: Array<Tables<'plans'>> }) {
                     {filteredPlans.map((plan) => (
                         <section
                             key={plan.plan_id}
-                            className={`flex flex-col w-full max-w-sm p-12 space-y-6 bg-card border rounded-lg shadow-md ${
-                                plan.plan_name.includes('Premium')
-                                    ? 'border-2 border-indigo-600'
-                                    : ''
-                            }`}
+                            className={cn('flex flex-col w-full max-w-sm p-12 space-y-6 bg-card border rounded-lg shadow-md',
+                                plan.plan_name.includes('Premium') && 'border-2 border-indigo-600',
+                                plan.plan_id === userPlan && 'border-2 '
+
+                            )}
                         >
                             <div className="flex-shrink-0">
                                 <span
@@ -83,6 +83,16 @@ function SubscriptionPlan({ plans }: { plans: Array<Tables<'plans'>> }) {
                                 <h2 className="text-2xl font-normal">
                                     {plan.plan_name}
                                 </h2>
+                                {
+                                    userPlan === plan.plan_id ? (
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle className="w-5 h-5 text-green-500" />
+                                            <Badge>
+                                            You are subscribed to this plan
+                                            </Badge>
+                                        </div>
+                                    ) : null
+                                }
                                 <p className="text-sm text-gray-400">
                                     {plan.description}
                                 </p>
@@ -103,10 +113,23 @@ function SubscriptionPlan({ plans }: { plans: Array<Tables<'plans'>> }) {
                                     ))}
                             </ul>
                             <div className="flex-shrink-0 pt-4">
-                                <Link
-                                    href={`/plans/${plan.plan_id}`}
-                                    className={buttonVariants({ variant: 'default' })}
-                                >{`Get ${plan.plan_name}`}</Link>
+                                {
+                                    userPlan === plan.plan_id ? (
+                                        <Link
+                                            className={buttonVariants({ variant: 'outline' })}
+                                            href="/dashboard"
+                                        >
+                                            Go to dashboard
+                                        </Link>
+                                    ) : (
+                                        <Link
+                                            className={buttonVariants({ variant: 'default' })}
+                                            href={`/plans/${plan.plan_id}`}
+                                        >
+                                            Choose this plan
+                                        </Link>
+                                    )
+                                }
                             </div>
                         </section>
                     ))}

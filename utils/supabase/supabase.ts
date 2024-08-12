@@ -442,18 +442,21 @@ export type Database = {
       }
       exam_submissions: {
         Row: {
+          ai_data: Json | null
           exam_id: number
           student_id: string
           submission_date: string | null
           submission_id: number
         }
         Insert: {
+          ai_data?: Json | null
           exam_id: number
           student_id: string
           submission_date?: string | null
           submission_id?: number
         }
         Update: {
+          ai_data?: Json | null
           exam_id?: number
           student_id?: string
           submission_date?: string | null
@@ -1721,7 +1724,7 @@ export type Database = {
           p_exam_id: number
           p_answers: Json
         }
-        Returns: undefined
+        Returns: number
       }
       create_notification: {
         Args: {

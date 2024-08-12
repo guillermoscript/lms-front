@@ -16,6 +16,11 @@ import { createClient } from '@/utils/supabase/server'
 export default async function ProfileDropdown () {
     const supabase = createClient()
     const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return null
+    }
+
     const user = userData.data.user
     const userRole = await getServerUserRole()
 
@@ -41,7 +46,7 @@ export default async function ProfileDropdown () {
                 </Avatar>
 
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="flex flex-col gap-2" align="end">
+            <DropdownMenuContent className="flex flex-col gap-2 p-2" align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>

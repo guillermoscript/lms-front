@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TeacherTestForm from '@/components/form/TeacherTestForm'
 import { createClient } from '@/utils/supabase/server'
 

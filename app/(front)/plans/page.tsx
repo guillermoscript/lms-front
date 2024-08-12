@@ -3,8 +3,14 @@ import { createClient } from '@/utils/supabase/server'
 
 export default async function PlanPage () {
     const supabase = createClient()
+    const userData = await supabase.auth.getUser()
 
     const plans = await supabase.from('plans').select('*').is('deleted_at', null)
+
+    const subscriptions = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userData.data.user.id).single()
 
     if (plans.error != null) {
         console.log(plans.error)
@@ -23,7 +29,10 @@ export default async function PlanPage () {
                         plans come with a 30-day money-back guarantee.
                     </p>
                 </div>
-                <SubscriptionPlan plans={plans.data} />
+                <SubscriptionPlan
+                    userPlan={subscriptions?.data?.plan_id}
+                    plans={plans.data}
+                />
                 <div className="mt-12 space-y-4 text-center">
                     <p className="text-gray-500 dark:text-gray-400">
                         All plans come with a 30-day money-back guarantee, 24/7

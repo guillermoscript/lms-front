@@ -37,13 +37,13 @@ export default function Footer () {
                         </ul>
                     </div>
                     <div>
-                        <h4 className="text-lg font-bold mb-4">Contact</h4>
+                        <h4 className="text-lg font-bold mb-4">
+                            <a href="https://yodxlomcjzw.typeform.com/to/XGa5b9Zm">
+                Contact
+                            </a>
+                        </h4>
                         <ul className="space-y-2 text-sm">
-                            <li>
-                                Address: 192.162.0.1
-                            </li>
-                            <li>Phone: (123) 456-7890</li>
-                            <li>Email: info@acme.com</li>
+                            <li>Email: rxh41sejl@mozmail.com</li>
                         </ul>
                         <div className="flex space-x-4 mt-4">
                             <Link aria-label="Github" href="https://github.com/guillermoscript">

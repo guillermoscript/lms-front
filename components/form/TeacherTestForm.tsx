@@ -123,7 +123,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
             const response = await axios[method](url, finalData)
             const message = testId ? 'Test Updated' : 'Test Created'
             toast({ title: message, description: response.data.message })
-            router.push(`/dashboard/teacher/courses/${courseId}/tests`)
+            router.push('/dashboard/teacher/courses/')
         } catch (error) {
             console.error('Error submitting the form', error)
             toast({
