@@ -48,6 +48,7 @@
     "ai": "^3.3.0",
     "autoprefixer": "10.4.20",
     "axios": "^1.7.3",
+    "bignumber.js": "^9.1.2",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
