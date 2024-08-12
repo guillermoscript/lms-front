@@ -398,7 +398,7 @@ CREATE OR REPLACE FUNCTION create_exam_submission(
     p_exam_id INTEGER,
     p_answers JSONB
 )
-RETURNS VOID AS $$
+RETURNS INTEGER AS $$
 DECLARE
     v_submission_id INTEGER;
     answer JSONB;
@@ -410,12 +410,14 @@ BEGIN
     INSERT INTO public.exam_submissions (exam_id, student_id, submission_date)
     VALUES (p_exam_id, p_student_id, current_timestamp)
     RETURNING submission_id INTO v_submission_id;
+
     -- Loop through each answer in the p_answers array
     FOR answer IN SELECT jsonb_array_elements(p_answers) LOOP
         -- Assign JSON values to variables
         v_question_id := (answer->>'question_id')::INTEGER;
         v_question_type := answer->>'question_type';
         v_answer_text := answer->>'answer_text';
+
         -- Check if there is already an answer for this question for this submission
         IF EXISTS (
             SELECT 1
@@ -446,6 +448,10 @@ BEGIN
             );
         END IF;
     END LOOP;
+
+    -- Return the submission ID
+    RETURN v_submission_id;
+
 EXCEPTION
     WHEN OTHERS THEN
         RAISE;
