@@ -49,7 +49,7 @@ revoke all
 create policy "Allow auth admin to read user roles" ON public.user_roles
 as permissive for select
 to supabase_auth_admin
-using (true)
+using (true);
 
 
 CREATE OR REPLACE FUNCTION public.get_exam_submissions(
@@ -331,11 +331,10 @@ BEGIN
   RETURN QUERY
   SELECT subscriptions.user_id, subscriptions.subscription_id, subscriptions.plan_id, subscriptions.end_date
   FROM subscriptions
-  WHERE end_date <= NOW() + renewal_period
-    AND subscription_status = 'active';
+  WHERE subscriptions.end_date <= NOW() + renewal_period
+    AND subscriptions.subscription_status = 'active';
 END;
 $$ LANGUAGE plpgsql;
-SELECT * FROM identify_subscriptions_due_for_renewal(INTERVAL '365 days');
 
 CREATE OR REPLACE FUNCTION create_transaction_for_renewal(
   sub_id INTEGER,
@@ -383,14 +382,6 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
-
-
-SELECT cron.schedule(
-    'notify_users_for_renewal',
-    '0 0 * * *', -- Every day at midnight
-    'CALL notify_users_for_renewal();'
-);
-
 
 
 CREATE OR REPLACE FUNCTION create_exam_submission(
@@ -471,3 +462,28 @@ CREATE TRIGGER update_tickets_updated_at
 BEFORE UPDATE ON tickets
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+    -- Insert row into profiles
+    INSERT INTO public.profiles (id, username, avatar_url, full_name)
+    VALUES (NEW.id, NEW.raw_user_meta_data->>'username', NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'full_name');
+
+    -- Insert default role 'student'
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (NEW.id, 'student');
+
+    -- Optional logging
+    RAISE NOTICE 'New user profile created with ID: %', NEW.id;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
