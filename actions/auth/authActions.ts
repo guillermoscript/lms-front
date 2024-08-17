@@ -1,6 +1,5 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { createResponse } from '@/utils/functions'
@@ -8,10 +7,16 @@ import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
-export const signIn = async (prevData: any, formData: FormData) => {
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const redirectTo = formData.get('redirect') as string
+export const signIn = async ({
+    email,
+    password,
+    redirectTo
+
+}: {
+    email: string
+    password: string
+    redirectTo?: string
+}) => {
     const supabase = createClient()
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -55,36 +60,67 @@ export const signIn = async (prevData: any, formData: FormData) => {
     redirect(redirectTo || '/dashboard')
 }
 
-export const signUp = async (prevData: any, formData: FormData) => {
-    const origin = headers().get('origin')
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const username = formData.get('username') as string
-    const full_name = formData.get('full_name') as string
-    const redirectTo = formData.get('redirect') as string
-
-    if (!email || !password || !username || !full_name) {
+export const signUp = async (userData: {
+    email: string
+    password: string
+    username: string
+    full_name: string
+}) => {
+    if (!userData.email || !userData.password || !userData.username || !userData.full_name) {
         return createResponse('error', 'All fields are required', null, null)
     }
 
     const supabase = createClient()
 
     const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
+        email: userData.email,
+        password: userData.password,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`,
             data: {
-                full_name,
-                username,
-            },
+                full_name: userData.full_name,
+                username: userData.username,
+            }
         }
     })
 
     if (error) {
         console.log(error)
-        return createResponse('error', 'Error submitting comment', null, error)
+        return createResponse('error', 'Error submitting comment', null, error.message.toString())
     }
 
     return createResponse('success', 'Check your email to continue sign in process', null, null)
+}
+
+export const resetPasswordFun = async (data: {
+    password: string
+}) => {
+    const supabase = createClient()
+
+    const { error } = await supabase.auth.updateUser({
+        password: data.password,
+    })
+
+    if (error != null) {
+        console.log(error)
+        return createResponse('error', 'Error submitting comment', null, error.message.toString())
+    }
+
+    return createResponse('success', 'Password updated successfully', null, null)
+}
+
+export const forgotPasswordFun = async (data: {
+    email: string
+}) => {
+    const supabase = createClient()
+
+    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: process.env.NEXT_PUBLIC_DOMAIN_URL + '/auth/reset-password',
+    })
+
+    if (error != null) {
+        console.log(error)
+        return createResponse('error', 'Error submitting comment', null, error.message.toString())
+    }
+
+    return createResponse('success', 'Password reset link sent to your email', null, null)
 }
