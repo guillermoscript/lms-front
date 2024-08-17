@@ -1,39 +1,75 @@
+'use client'
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { resetPasswordFun } from '@/actions/auth/authActions'
+import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/utils/supabase/server'
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/use-toast'
 
-export default function ResetPassword ({
-    searchParams
+const FormSchema = z.object({
+    password: z
+        .string()
+        .min(8, { message: 'Password must be at least 8 characters.' })
+        .max(100, {
+            message: 'Password must be at most 100 characters.',
+        }),
+})
+
+export default function ResetPassword({
+    searchParams,
 }: {
     searchParams: {
-        message: string
-        error: string
-        code: string
-    }
+        message: string;
+        error: string;
+        code: string;
+    };
 }) {
-    const resetPasswordFun = async (formData: FormData) => {
-        'use server'
+    const form = useForm<z.infer<typeof FormSchema>>({
+        resolver: zodResolver(FormSchema),
+        defaultValues: {
+            password: '',
+        },
+    })
 
-        const new_password = formData.get('password') as string
-        const supabase = createClient()
+    const [showPassword, setShowPassword] = useState(false)
+    const { toast } = useToast()
 
-        const { data, error } = await supabase.auth.updateUser({
-            password: new_password
+    const submit = async (data: z.infer<typeof FormSchema>) => {
+        const res = await resetPasswordFun({
+            password: data.password,
         })
 
-        if (error != null) {
-            console.log(error)
-            return redirect(
-                '/auth/reset-password?error=Could not authenticate user'
-            )
+        if (res.error) {
+            return toast({
+                title: 'Error',
+                description: res.error,
+                variant: 'destructive',
+            })
         }
 
-        return redirect(
-            '/auth/reset-password?message=Great! Your password has been reset'
-        )
+        return toast({
+            title: 'Success',
+            description: res.message,
+        })
     }
 
     return (
@@ -42,40 +78,59 @@ export default function ResetPassword ({
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                          Reset Password
+              Reset Password
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                          Enter your new password below
+              Enter your new password below
                         </p>
                     </div>
-                    <form
-                        className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
-                        action={resetPasswordFun}
-                    >
-                        <label className="text-md" htmlFor="password">
-                          New Password
-                        </label>
-                        <input
-                            className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                            name="password"
-                            type="password"
-                        />
-                        <Button type="submit">Submit</Button>
-                    </form>
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(submit)}
+                            className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
+                        >
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>New Password</FormLabel>
+                                        <FormControl>
+                                            <div className="rounded-md px-4 py-2 w-full bg-inherit border mb-6 gap-4 flex items-center justify-between">
+                                                <Input
+                                                    className="border-none w-full bg-transparent focus:outline-none"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    {...field}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {!showPassword ? (
+                                                        <EyeIcon />
+                                                    ) : (
+                                                        <EyeOffIcon />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit">Submit</Button>
+                        </form>
+                    </Form>
                     {searchParams.error && (
                         <Alert variant="destructive">
                             <AlertTitle>Error!</AlertTitle>
-                            <AlertDescription>
-                                {searchParams.message}
-                            </AlertDescription>
+                            <AlertDescription>{searchParams.error}</AlertDescription>
                         </Alert>
                     )}
                     {searchParams.message && (
                         <Alert>
                             <AlertTitle>Success!</AlertTitle>
-                            <AlertDescription>
-                                {searchParams.message}
-                            </AlertDescription>
+                            <AlertDescription>{searchParams.message}</AlertDescription>
                         </Alert>
                     )}
 
@@ -83,7 +138,7 @@ export default function ResetPassword ({
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
                     >
-                        Back to login
+            Back to login
                     </Link>
                 </div>
             </div>
