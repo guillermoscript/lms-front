@@ -163,13 +163,15 @@ const ChatInput = ({
     stop,
     callbackFunction,
     isTemplatePresent,
-    text
+    text,
+    buttonChildren,
 }: {
     isLoading: boolean
     stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
     isTemplatePresent?: boolean
     text?: string
+    buttonChildren?: React.ReactNode
 }) => {
     const ref = useRef(null)
 
@@ -231,23 +233,27 @@ const ChatInput = ({
                     ref={ref}
                 />
                 <input type="hidden" value={ref.current?.getMarkdown()} />
-                {isLoading ? (
-                    <Button
-                        type="button"
-                        onClick={stop}
-                        variant="outline"
-                        className="rounded-r-lg"
-                    >
-                        Stop
-                    </Button>
-                ) : (
-                    <Button
-                        id='send-button'
-                        type="submit" className="rounded-r-lg"
-                    >
-                        Send
-                    </Button>
-                )}
+                {
+                    buttonChildren || (
+                        isLoading ? (
+                            <Button
+                                type="button"
+                                onClick={stop}
+                                variant="outline"
+                                className="rounded-r-lg"
+                            >
+                                Stop
+                            </Button>
+                        ) : (
+                            <Button
+                                type="submit"
+                                className="rounded-r-lg"
+                            >
+                                Send
+                            </Button>
+                        )
+                    )
+                }
                 <DisclaimerForUser />
             </form>
         </>
@@ -258,12 +264,14 @@ function ChatTextArea({
     isLoading,
     stop,
     callbackFunction,
-    text
+    text,
+    buttonChildren
 }: {
     isLoading: boolean
     stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
     text?: string
+    buttonChildren?: React.ReactNode
 }) {
     const [value, setValue] = useState(text)
 
@@ -293,23 +301,27 @@ function ChatTextArea({
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                 />
-                {isLoading ? (
-                    <Button
-                        type="button"
-                        onClick={stop}
-                        variant="outline"
-                        className="rounded-r-lg"
-                    >
-            Stop
-                    </Button>
-                ) : (
-                    <Button
-                        id='send-button'
-                        type="submit" className="rounded-r-lg"
-                    >
-            Send
-                    </Button>
-                )}
+                {
+                    buttonChildren || (
+                        isLoading ? (
+                            <Button
+                                type="button"
+                                onClick={stop}
+                                variant="outline"
+                                className="rounded-r-lg"
+                            >
+                                Stop
+                            </Button>
+                        ) : (
+                            <Button
+                                type="submit"
+                                className="rounded-r-lg"
+                            >
+                                Send
+                            </Button>
+                        )
+                    )
+                }
                 <DisclaimerForUser />
             </form>
         </>
