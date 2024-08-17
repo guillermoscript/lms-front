@@ -36,6 +36,7 @@
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@reactour/tour": "^3.7.0",
+    "@sentry/nextjs": "^8.26.0",
     "@stripe/react-stripe-js": "^2.7.3",
     "@stripe/stripe-js": "^4.2.0",
     "@supabase/auth-ui-react": "^0.4.6",
