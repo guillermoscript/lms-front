@@ -6,12 +6,16 @@ import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentEditAiTaskMessage } from '@/actions/dashboard/lessonsAction'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
-import { ChatInput, ChatTextArea } from '@/components/dashboards/Common/chat/chat'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+    ChatInput,
+    ChatTextArea,
+} from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import { Button } from '@/components/ui/button'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import RegenerateMessage from './RegenerateMessage'
 
 export default function EditTaksMessage({
@@ -35,15 +39,21 @@ export default function EditTaksMessage({
     console.log(conversation.map((message) => message.id))
 
     async function editMessageFun(newText: string, buttonSelected: string) {
-        const message = aiState.messages.find((message) => message.content === text)
-        const messageIndex = aiState.messages.findIndex((message) => message.content === text)
+        const message = aiState.messages.find(
+            (message) => message.content === text
+        )
+        const messageIndex = aiState.messages.findIndex(
+            (message) => message.content === text
+        )
 
         console.log(message)
 
         const res = await studentEditAiTaskMessage({
             sender,
             lessonId: aiState.lessonId,
-            messageId: /^[0-9]+$/g.test(message.id) ? Number(message.id) : undefined,
+            messageId: /^[0-9]+$/g.test(message.id)
+                ? Number(message.id)
+                : undefined,
             message: text,
             newMessage: newText,
             regenerate: buttonSelected === 'editAndRegenerate',
@@ -67,38 +77,40 @@ export default function EditTaksMessage({
                     {
                         id: message.id,
                         role: 'assistant',
-                        display: <Message
-                            sender={'user'}
-                            time={new Date().toDateString()}
-                            isUser={true}
-                        >
-                            <MessageContentWrapper
-                                view={
-                                    <ViewMarkdown markdown={newText} />
-                                }
-                                role='assistant'
-                                edit={
-                                    <EditTaksMessage
-                                        text={newText}
-                                        sender='assistant'
-                                        viewMode={viewMode}
-                                        setViewMode={setViewMode}
-                                    />
-                                }
-                                regenerate={
-                                    <RegenerateMessage
-                                        message='Regenerate'
-                                        viewMode={viewMode}
-                                        setViewMode={setViewMode}
-                                    />
-                                }
-                            />
-                        </Message>,
+                        display: (
+                            <Message
+                                sender={'user'}
+                                time={new Date().toDateString()}
+                                isUser={true}
+                            >
+                                <MessageContentWrapper
+                                    view={<ViewMarkdown markdown={newText} />}
+                                    role="assistant"
+                                    edit={
+                                        <EditTaksMessage
+                                            text={newText}
+                                            sender="assistant"
+                                            viewMode={viewMode}
+                                            setViewMode={setViewMode}
+                                        />
+                                    }
+                                    regenerate={
+                                        <RegenerateMessage
+                                            message="Regenerate"
+                                            viewMode={viewMode}
+                                            setViewMode={setViewMode}
+                                        />
+                                    }
+                                />
+                            </Message>
+                        ),
                     },
                 ])
 
-
-                const messageRes = await continueTaskAiConversation(newText, res.data.toString())
+                const messageRes = await continueTaskAiConversation(
+                    newText,
+                    res.data.toString()
+                )
                 setConversation((currentConversation: ClientMessage[]) => [
                     ...currentConversation,
                     messageRes,

@@ -22,23 +22,22 @@ export default function MessageContentWrapper({
     const [viewMode, setViewMode] = useState<ViewMode>('view')
 
     console.log(viewMode)
-    
-    let clonedElement;
+
+    let clonedElement
     switch (viewMode) {
         case 'view':
-            clonedElement = cloneElement(React.isValidElement(view) ? view : <></>, { setViewMode, viewMode });
-            break;
+            clonedElement = cloneElement(React.isValidElement(view) ? view : <></>, { setViewMode, viewMode })
+            break
         case 'edit':
-            clonedElement = cloneElement(React.isValidElement(edit) ? edit : <></>, { setViewMode, viewMode });
-            break;
+            clonedElement = cloneElement(React.isValidElement(edit) ? edit : <></>, { setViewMode, viewMode })
+            break
         case 'regenerate':
-            clonedElement = cloneElement(React.isValidElement(regenerate) ? regenerate : <></>, { setViewMode, viewMode });
-            break;
+            clonedElement = cloneElement(React.isValidElement(regenerate) ? regenerate : <></>, { setViewMode, viewMode })
+            break
         default:
-            clonedElement = <></>;
+            clonedElement = <></>
     }
 
-    
     return (
         <>
             {clonedElement}

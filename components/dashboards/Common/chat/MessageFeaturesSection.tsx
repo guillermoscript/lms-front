@@ -1,13 +1,15 @@
 'use client'
 
 import { Eye, Loader, Pencil, Sparkle } from 'lucide-react'
-import { ViewMode } from './MessageContentWrapper'
+
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+
+import { ViewMode } from './MessageContentWrapper'
 
 export default function MessageFeatureSection({
     viewMode,

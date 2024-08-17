@@ -1,11 +1,12 @@
 'use client'
+import { useActions, useAIState, useUIState } from 'ai/rsc'
+import { useState } from 'react'
+
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentDeleteAiTaskMessage } from '@/actions/dashboard/lessonsAction'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { Button } from '@/components/ui/button'
-import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useEffect, useState } from 'react'
 
 export default function RegenerateMessage({
     message,
