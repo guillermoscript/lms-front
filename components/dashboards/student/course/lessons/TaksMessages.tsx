@@ -1,6 +1,5 @@
 'use client'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useAtom } from 'jotai'
 import { useRef, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
@@ -14,7 +13,6 @@ import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageCo
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useNoCopy from '@/utils/hooks/useNoCopy'
-import { MessageTypeAtom } from '@/utils/stores/MessageStore'
 
 import EditTaksMessage from './EditTaksMessage'
 
@@ -60,6 +58,7 @@ async function handleSubmitMessage({
                         view={
                             <ViewMarkdown markdown={input} />
                         }
+                        role='user'
                         edit={
                             <EditTaksMessage
                                 text={input}
@@ -93,14 +92,12 @@ export default function TaksMessages({
     const [isLoading, setIsLoading] = useState(false)
     const [stop, setStop] = useState(false)
     const [aiState] = useAIState()
-    const [messageStateAtom, setMessageStateAtom] = useAtom(MessageTypeAtom)
-    console.log(messageStateAtom)
 
     console.log(aiState)
 
     const isLastMessageFromMakeUserAssigmentCompleted =
-        aiState.messages[aiState.messages.length - 1].role === 'tool' &&
-        aiState.messages[aiState.messages.length - 1].content[0].toolName ===
+        aiState?.messages[aiState?.messages.length - 1]?.role === 'tool' &&
+        aiState?.messages[aiState?.messages.length - 1]?.content[0]?.toolName ===
             'makeUserAssigmentCompleted'
 
     return (
