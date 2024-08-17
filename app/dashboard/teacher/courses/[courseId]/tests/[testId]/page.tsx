@@ -1,17 +1,12 @@
 // @ts-nocheck
+import dayjs from 'dayjs'
 import Link from 'next/link'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { FreeTextQuestionRead } from '@/components/dashboards/teacher/test/FreeTextQuestion'
 import { MultipleChoiceQuestionRead } from '@/components/dashboards/teacher/test/MultipleChoiceQuestion'
 import { SingleSelectQuestionRead } from '@/components/dashboards/teacher/test/SingleSelectQuestion'
 import categorizeQuestions from '@/components/dashboards/teacher/test/utils/categorizeQuestions'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { DataTable } from '@/components/ui/Table/data-table'
@@ -26,6 +21,8 @@ export default async function LessonPage ({
     params: { courseId: string, testId: string }
 }) {
     const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
 
     const test = await supabase
         .from('exams')
@@ -50,11 +47,15 @@ export default async function LessonPage ({
         .eq('exam_id', params.testId)
         .single()
 
+    const subData = await supabase
+        .rpc('get_exam_submissions', {
+            p_exam_id: params.testId
+        })
+
     if (test.error != null) {
         console.log(test.error.message)
     }
 
-    console.log(test.data)
     const {
         multipleChoiceQuestions,
         freeTextQuestions,
@@ -65,43 +66,22 @@ export default async function LessonPage ({
 
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            {test?.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
-                        >
-                            {test?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}`,
+                        label: test?.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
+                        label: test?.data?.title
+                    },
+                    { href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`, label: 'Edit' }
+                ]}
+            />
             <Tabs defaultValue="examData" className="w-full">
                 <TabsList>
                     <TabsTrigger value="examData">Exam Data</TabsTrigger>
@@ -170,12 +150,19 @@ export default async function LessonPage ({
                 <TabsContent value="examSubmissions">
                     <DataTable
                         columns={testSubmissionsCols}
-                        data={test.data?.exam_submissions.map((submission) => {
+                        data={subData.data.map((sub) => {
                             return {
-                                id: submission.submission_id,
-                                date: submission.submission_date,
-                                courseId: params.courseId,
-                                testId: params.testId
+                                submission_id: sub.submission_id,
+                                exam_id: sub.exam_id,
+                                exam_title: sub.exam_title,
+                                student_id: sub.student_id,
+                                submission_date: dayjs(sub.submission_date).format('DD/MM/YYYY'),
+                                score: sub.exam_scores,
+                                feedback: sub.feedback,
+                                evaluated_at: dayjs(sub.evaluated_at).format('DD/MM/YYYY'),
+                                is_reviewed: sub.is_reviewed,
+                                full_name: sub.full_name,
+                                courseId: params.courseId
                             }
                         })}
                     />

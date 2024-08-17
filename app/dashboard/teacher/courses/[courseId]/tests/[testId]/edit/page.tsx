@@ -1,13 +1,7 @@
 // @ts-nocheck
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TeacherTestForm from '@/components/form/TeacherTestForm'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function EditTestPage ({
@@ -51,47 +45,30 @@ export default async function EditTestPage ({
 
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher/courses">
-                          Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}`}
-                        >
-                            {test?.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`}
-                        >
-                            {test?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink>Edit</BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}`,
+                        label: test?.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests`,
+                        label: 'Tests'
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
+                        label: test?.data?.title
+                    },
+                    {
+                        href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`,
+                        label: 'Edit'
+                    }
+                ]}
+            />
+
             <div className="flex justify-between items-center w-full">
                 <TeacherTestForm
                     testId={params.testId}

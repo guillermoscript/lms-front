@@ -1,15 +1,8 @@
-// @ts-nocheck
 import { CheckCircleIcon, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentExamsCoursePage ({
@@ -57,56 +50,26 @@ export default async function StudentExamsCoursePage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams.data[0].course_id}`}
-                        >
-                            {exams.data[0]?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams.data[0].course_id}/exams`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${exams.data[0].course_id}`,
+                        label: exams.data[0]?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data[0].course_id}/exams`,
+                        label: 'Exams'
+                    }
+                ]}
+            />
             <div className="grid gap-8">
                 <div>
-                    <h1 className="text-3xl font-bold">Exams</h1>
+                    <h1 className="lg:text-3xl font-bold text-xl">Exams</h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        {exams.data[0]?.courses?.title} Exams
+                        {exams.data[0]?.courses?.title} {' '} Exams
                     </p>
                 </div>
                 <div className="grid gap-4">
@@ -134,7 +97,7 @@ export default async function StudentExamsCoursePage ({
                                         ? exam.exam_submissions[0].exam_scores
                                             .length > 0
                                             ? 'Completed'
-                                            : 'In Progress'
+                                            : 'Waiting for Review from Instructor'
                                         : 'Not Started'
                                 }
                                 actionText={
@@ -171,14 +134,14 @@ const ExamCard = ({
     statusIcon: React.ReactNode
     title: string
     description: string
-    score: number
+    score?: number | string
     status: string
     actionText: string
     link?: string
 }) => {
     return (
-        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{number}</span>
                     {statusIcon}
@@ -190,7 +153,7 @@ const ExamCard = ({
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Score: {score}
+                          Score: {score ?? 'N/A'}
                         </span>
                     </div>
                     {status === 'Completed' ? (

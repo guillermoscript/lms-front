@@ -1,6 +1,8 @@
+import { Mail } from 'lucide-react'
 import Link from 'next/link'
 
 import UserLoginForm from '@/components/auth/UserLoginForm'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
 
 export default function Login ({
@@ -19,11 +21,17 @@ export default function Login ({
                         Enter your email below to login
                     </p>
                 </div>
-                <UserLoginForm />
+                <UserLoginForm
+                    redirect='/dashboard'
+                />
                 {searchParams.message && (
-                    <p className="text-center text-sm text-primary">
-                        {searchParams.message}
-                    </p>
+                    <Alert>
+                        <Mail className="h-4 w-4" />
+                        <AlertTitle>Heads up!</AlertTitle>
+                        <AlertDescription>
+                            {searchParams.message}
+                        </AlertDescription>
+                    </Alert>
                 )}
                 <Link
                     href="/auth/forgot-password"

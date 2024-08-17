@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button'
 
 import PasswordComponent from './PasswordComponent'
 
-export default function UserSignupForm () {
+export default function UserSignupForm ({
+    redirect
+}: {
+    redirect: string
+}) {
     const [state, action] = useFormState(signUp, {
         status: 'idle',
         message: '',
@@ -42,7 +46,7 @@ export default function UserSignupForm () {
                 action={action}
             >
                 <label className="text-md" htmlFor="email">
-          Email
+            Email
                 </label>
                 <input
                     className="rounded-md px-4 py-2 bg-inherit border mb-6"
@@ -50,15 +54,48 @@ export default function UserSignupForm () {
                     placeholder="you@example.com"
                     required
                 />
-                <label className="text-md" htmlFor="password">
-          Password
+                <label className="text-md" htmlFor="full_name">
+            Full Name
                 </label>
+                <input
+                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
+                    name="full_name"
+                    placeholder="John Doe"
+                    required
+                />
+                <label className="text-md" htmlFor="username">
+            Username
+                </label>
+                <input
+                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
+                    name="username"
+                    placeholder="johndoe"
+                    required
+                />
+                <label className="text-md" htmlFor="password">
+            Password
+                </label>
+
+                <input type="hidden" name="redirect" value={redirect} />
+
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
-                    <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-                        {state.error}
-                    </p>
+                    <div>
+                        <h3 className="mt-4 text-center text-red-500">
+                            Error: {state.error}
+                        </h3>
+                        <p className="mt-4 p-4 bg-destructive/80 text-foreground text-center">
+                            {state.message}
+                        </p>
+                    </div>
+                )}
+                {state.status === 'success' && (
+                    <div>
+                        <h3 className="mt-4 text-center bg-green-500 text-white p-4 rounded">
+                            {state.message}
+                        </h3>
+                    </div>
                 )}
             </form>
         </div>

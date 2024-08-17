@@ -1,9 +1,20 @@
-// @ts-nocheck
 'use client'
 import axios, { isAxiosError } from 'axios'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
@@ -12,7 +23,7 @@ import {
     FreeTextQuestion as FTQType,
     MultipleChoiceQuestion as MCQType,
     SingleSelectQuestion as SSQType,
-    StudentExamSubmitFormData
+    StudentExamSubmitFormData,
 } from '@/utils/types'
 
 import FreeTextQuestionForm from '../teacher/test/FreeTextQuestion'
@@ -27,64 +38,92 @@ interface ExamsSubmissionFormProps {
     courseId: number
 }
 
-export default function ExamsSubmissionForm ({
+export default function ExamsSubmissionForm({
     multipleChoiceQuestions,
     freeTextQuestions,
     singleSelectQuestions,
     examId,
-    courseId
+    courseId,
 }: ExamsSubmissionFormProps) {
     const form = useForm<StudentExamSubmitFormData>({
         defaultValues: generateDefaultValues(
             multipleChoiceQuestions,
             freeTextQuestions,
             singleSelectQuestions
-        )
+        ),
     })
+
+    const [open, setOpen] = useState(false)
 
     const router = useRouter()
     const { toast } = useToast()
 
-    async function onSubmit (data: any) {
-    // Show spinner or loading indicator
-        const payload = parseFormData(data)
+    async function onSubmit(data: any) {
+        console.log(data, 'submitting exam')
+        const payload = parseFormData(data, {
+            singleSelectQuestions,
+            multipleChoiceQuestions,
+            freeTextQuestions,
+        })
+
+        console.log(data, {
+            singleSelectQuestions,
+            multipleChoiceQuestions,
+            freeTextQuestions,
+        })
+
+        console.log(payload)
 
         try {
             const res = await axios.post('/api/exams/submit', {
                 examId,
-                answers: payload
+                answers: payload.parsedData,
+                detailedAnswers: payload.data,
             })
 
             console.log(res.data)
 
             toast({
                 title: 'Success',
-                description: 'Exam submitted successfully'
+                description: 'Exam submitted successfully',
             })
 
-            router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/review`)
+            router.push(
+                `/dashboard/student/courses/${courseId}/exams/${examId}/review`
+            )
         } catch (e) {
             console.log(e)
             if (isAxiosError(e)) {
                 toast({
                     title: 'Error',
                     description: e.response?.data.error || e.message,
-                    variant: 'destructive'
+                    variant: 'destructive',
                 })
             }
         }
 
-        console.log(payload)
+        setOpen(false)
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            setOpen(true)
+        }
     }
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+            <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                onKeyDown={handleKeyDown}
+                className="grid gap-6"
+            >
                 <>
                     {singleSelectQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-              True or False
+                                True or False
                             </h3>
 
                             <SingleSelectQuestion
@@ -99,7 +138,7 @@ export default function ExamsSubmissionForm ({
                     {freeTextQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-              Fill in the Blank
+                                Fill in the Blank
                             </h3>
 
                             <FreeTextQuestionForm
@@ -114,7 +153,7 @@ export default function ExamsSubmissionForm ({
                     {multipleChoiceQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-              Multiple Choice
+                                Multiple Choice
                             </h3>
 
                             <MultipleChoiceQuestion
@@ -125,60 +164,200 @@ export default function ExamsSubmissionForm ({
                     )}
                 </>
 
-                <div className="flex justify-end gap-2">
-                    <Button
-                        disabled={form.formState.isSubmitting}
-                        type="submit"
-                    >
-            Submit Exam
-                    </Button>
-                </div>
+                <AlertDialog open={open} onOpenChange={setOpen}>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            disabled={form.formState.isSubmitting}
+                            type="button"
+                        >
+                            Submit Exam
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                Are you absolutely sure?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Once you submit, you can't go back and change
+                                your answers.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel
+                                disabled={form.formState.isSubmitting}
+                            >
+                                Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                disabled={form.formState.isSubmitting}
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    form.handleSubmit(onSubmit)()
+                                }}
+                            >
+                                {form.formState.isSubmitting
+                                    ? 'Submitting...'
+                                    : 'Submit'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </form>
         </Form>
     )
 }
 
-function parseFormData (data: StudentExamSubmitFormData) {
-    const parsedData: Array<{ question_id: string, answer_text: string, question_type: string }> = []
+function parseFormData(
+    data: StudentExamSubmitFormData,
+    questions: {
+        singleSelectQuestions: Array<{ id: string; text: string }>
+        multipleChoiceQuestions: Array<{
+            id: string
+            label: string
+            options: Array<{ id: string; text: string }>
+        }>
+        freeTextQuestions: Array<{ id: string; label: string }>
+    }
+) {
+    const parsedData: Array<{
+        question_id: string
+        answer_text: string
+        question_type: string
+    }> = []
+    const detailedData: Array<{
+        question_type: string
+        question_text: string
+        user_answer: string | string[]
+        options?: Array<{ id: string; text: string }>
+    }> = []
+
+    const allQuestions = [
+        ...questions.singleSelectQuestions,
+        ...questions.multipleChoiceQuestions,
+        ...questions.freeTextQuestions,
+    ]
+
+    const getQuestionText = (id: string, optionId = '') => {
+        const question = allQuestions.find((q) => q.id === id)
+        if (question) {
+            if ('options' in question && optionId) {
+                // @ts-expect-error
+                const option = question.options?.find(
+                    (opt) => opt.id === optionId
+                )
+                return option ? option.text : id
+            }
+            // @ts-expect-error
+            return question.text || question.label
+        }
+        return id
+    }
+
+    const getQuestionOptions = (id: string) => {
+        const question = allQuestions.find((q) => q.id === id)
+        if (question && 'options' in question) {
+            return question.options
+        }
+        return []
+    }
+
+    const processedQuestionIds = new Set<string>()
 
     Object.keys(data).forEach((key) => {
-        if (key.includes('-true') || key.includes('-false')) {
-            if (data[key] === true) {
-                parsedData.push({
-                    question_id: key.split('-')[0],
-                    answer_text: key.includes('true') ? 'true' : 'false',
-                    question_type: 'true_false'
-                })
-            }
-        } else if (Array.isArray(data[key])) {
+        const questionId = key.includes('-') ? key.split('-')[0] : key
+
+        if (processedQuestionIds.has(questionId)) {
+            return
+        }
+
+        if (Array.isArray(data[key])) {
+            // Handle multiple choice questions
+            const options = getQuestionOptions(key)
+            const userAnswers = data[key]?.map((optionId) =>
+                getQuestionText(key, optionId)
+            )
+            detailedData.push({
+                question_type: 'multiple_choice',
+                question_text: getQuestionText(key),
+                user_answer: userAnswers,
+                // @ts-expect-error
+                options,
+            })
             data[key]?.forEach((optionId) => {
                 if (optionId !== undefined) {
                     parsedData.push({
                         question_id: key,
-                        answer_text: optionId as string,
-                        question_type: 'multiple_choice'
+                        answer_text: optionId,
+                        question_type: 'multiple_choice',
                     })
                 }
             })
         } else {
+            // Handle free text or potential true/false questions
+            const questionText = getQuestionText(key)
             parsedData.push({
                 question_id: key,
                 answer_text: data[key] as string,
-                question_type: 'free_text'
+                question_type: 'free_text',
             })
+            detailedData.push({
+                question_type: 'free_text',
+                question_text: questionText,
+                user_answer: data[key] as string,
+                options: [],
+            })
+        }
+
+        processedQuestionIds.add(questionId)
+    })
+
+    // Secondary check to correct mis-categorized true/false questions
+    detailedData.forEach((entry, index) => {
+        if (
+            entry.question_type === 'free_text' &&
+            typeof entry.user_answer === 'string' &&
+            (entry.user_answer.endsWith('-true') ||
+                entry.user_answer.endsWith('-false'))
+        ) {
+            const [questionId, answerPart] = entry.user_answer.split('-')
+            const answerText = (answerPart.charAt(0).toUpperCase() +
+                answerPart.slice(1)) as 'True' | 'False'
+            detailedData[index] = {
+                question_type: 'true_false',
+                question_text: getQuestionText(questionId),
+                user_answer: answerText,
+                options: [
+                    { id: `${questionId}-true`, text: 'True' },
+                    { id: `${questionId}-false`, text: 'False' },
+                ],
+            }
+
+            // Update parsedData accordingly
+            const parsedIndex = parsedData.findIndex(
+                (p) => p.question_id === questionId
+            )
+            if (parsedIndex !== -1) {
+                parsedData[parsedIndex] = {
+                    question_id: questionId,
+                    answer_text: answerText,
+                    question_type: 'true_false',
+                }
+            }
         }
     })
 
-    return parsedData.filter(
+    const filteredParsedData = parsedData.filter(
         (question) => question.answer_text && question.answer_text !== ''
     )
+
+    return {
+        parsedData: filteredParsedData,
+        data: detailedData,
+    }
 }
 
-function generateDefaultValues (
-    mcq: MCQType[],
-    ftq: FTQType[],
-    ssq: SSQType[]
-) {
+function generateDefaultValues(mcq: MCQType[], ftq: FTQType[], ssq: SSQType[]) {
     const defaults: StudentExamSubmitFormData = {}
     mcq.forEach((question) => {
         defaults[question.id] = []

@@ -1,19 +1,21 @@
-import PlanCard from '@/components/plans/PlanCards'
+import SubscriptionPlan from '@/components/plans/PlansTabs'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function PlanPage () {
     const supabase = createClient()
+    const userData = await supabase.auth.getUser()
 
-    const plans = await supabase.from('plans').select('*')
+    const plans = await supabase.from('plans').select('*').is('deleted_at', null)
+
+    const subscriptions = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userData.data.user.id).single()
 
     if (plans.error != null) {
         console.log(plans.error)
         throw plans.error
     }
-
-    console.log(plans)
-
-    const [month, yearly, quarterly] = plans.data
 
     return (
         <section className="w-full py-12 md:py-24 lg:py-32 ">
@@ -27,34 +29,10 @@ export default async function PlanPage () {
                         plans come with a 30-day money-back guarantee.
                     </p>
                 </div>
-                {/* <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-6 sm:grid-cols-3"> */}
-                <div className="mx-auto flex flex-col gap-6 sm:flex-row sm:justify-center sm:gap-6">
-                    <PlanCard
-                        title={month.plan_name}
-                        description={month.description}
-                        features={month.features}
-                        price={month.price}
-                        buttonVariant="secondary"
-                        planId={month.plan_id}
-                    />
-                    <PlanCard
-                        title={yearly.plan_name}
-                        description={yearly.description}
-                        features={yearly.features}
-                        price={yearly.price}
-                        oldPrice={400}
-                        isPopular
-                        buttonVariant="default"
-                        planId={quarterly.plan_id}
-                    />
-                    <PlanCard
-                        title={quarterly.plan_name}
-                        description={quarterly.description}
-                        features={quarterly.features}
-                        price={quarterly.price}
-                        buttonVariant="secondary"
-                    />
-                </div>
+                <SubscriptionPlan
+                    userPlan={subscriptions?.data?.plan_id}
+                    plans={plans.data}
+                />
                 <div className="mt-12 space-y-4 text-center">
                     <p className="text-gray-500 dark:text-gray-400">
                         All plans come with a 30-day money-back guarantee, 24/7

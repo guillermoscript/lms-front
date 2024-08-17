@@ -10,7 +10,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuLabel,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
@@ -29,30 +29,30 @@ export const testsCols: Array<ColumnDef<Tests>> = [
         accessorKey: 'id',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="ID" />
-        )
+        ),
     },
     {
         accessorKey: 'title',
-        header: 'Title'
+        header: 'Title',
     },
     {
         accessorKey: 'description',
-        header: 'Description'
+        header: 'Description',
     },
     {
         accessorKey: 'sequence',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="Sequence" />
-        )
+        ),
     },
     {
         accessorKey: 'date',
-        header: 'Date'
+        header: 'Date',
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -67,11 +67,13 @@ export const testsCols: Array<ColumnDef<Tests>> = [
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>
-                            <Link
-                                href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.id}`}
-                            >
-                Ver detalles
-                            </Link>
+                            <Button asChild variant="ghost" className="w-full">
+                                <Link
+                                    href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.id}`}
+                                >
+                                    View test
+                                </Link>
+                            </Button>
                         </DropdownMenuLabel>
                         <DropdownMenuLabel>
                             <DeleteTestAlert testId={rowData.id.toString()} />
@@ -79,6 +81,6 @@ export const testsCols: Array<ColumnDef<Tests>> = [
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
-        }
-    }
+        },
+    },
 ]

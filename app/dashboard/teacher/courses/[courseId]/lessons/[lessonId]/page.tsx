@@ -1,18 +1,13 @@
+import { generateId } from 'ai'
 import Link from 'next/link'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
-import CommentsSections from '@/components/dashboards/Common/CommentsSections'
+import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
+import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
-import TaskMessageSandbox from '@/components/dashboards/teacher/lessons/TaskMessageSandbox'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
+import TaskSandboxMessage from '@/components/dashboards/teacher/course/TaskSandboxMessage'
 import { buttonVariants } from '@/components/ui/button'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/utils/supabase/server'
 
@@ -40,85 +35,66 @@ export default async function TeacherLessonPage ({
     if (lesson.error != null) {
         throw new Error(lesson.error.message)
     }
+    const initialMessages = [
+        { role: 'system', content: lesson.data?.lessons_ai_tasks[0].system_prompt, id: generateId() },
+    ]
 
     return (
         <LessonPage
             sideBar={
-                <CommentsSections
-                    lesson_id={lesson?.data?.id}
-                    course_id={lesson?.data?.courses?.course_id}
-                    lesson_comments={lesson?.data?.lesson_comments}
+                <SidebarLessons
+                    courseId={Number(params.courseId)}
+                    lessonId={lesson.data.id}
+                    lessonData={lesson.data}
                 />
             }
         >
             <div className="flex-1 md:p-8 overflow-y-auto w-full space-y-4">
-                <Breadcrumb>
-                    <BreadcrumbList>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard">
-                                Dashboard
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard/teacher">
-                                Teacher
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href="/dashboard/teacher/courses">
-                                Courses
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink
-                                href={`/dashboard/teacher/courses/${params.courseId}`}
-                            >
-                                {lesson?.data?.courses?.title}
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink
-                                href={`/dashboard/teacher/courses/${params.courseId}/${params.lessonId}`}
-                            >
-                                {lesson?.data?.title}
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: 'Dashboard' },
+                        { href: '/dashboard/teacher', label: 'Teacher' },
+                        {
+                            href: '/dashboard/teacher/courses',
+                            label: 'Courses',
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}`,
+                            label: lesson?.data?.courses?.title,
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`,
+                            label: lesson?.data?.title,
+                        },
+                    ]}
+                />
                 <div className="flex flex-col gap-8 w-full">
-
                     <div className="flex justify-between items-center w-full">
                         <h1 className="text-2xl font-semibold mb-4">
-                        Lesson: {lesson?.data?.title}
+                            Lesson: {lesson?.data?.title}
                         </h1>
                         <Link
                             href={`/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`}
                             className={buttonVariants({ variant: 'link' })}
                         >
-                        Edit
+                            Edit
                         </Link>
                     </div>
 
                     <h3 className="text-lg font-semibold mt-4">
-                  Status: {lesson?.data?.status}
+                        Status: {lesson?.data?.status}
                     </h3>
                     <h3 className="text-lg font-semibold mt-4">
-                  Sequence: {lesson?.data?.sequence}
+                        Sequence: {lesson?.data?.sequence}
                     </h3>
-                    <p>
-                        {lesson?.data?.description}
-                    </p>
+                    <p>{lesson?.data?.description}</p>
 
                     <Separator />
 
                     {lesson.data?.video_url && (
                         <>
                             <h3 className="text-xl font-semibold mt-4">
-                      Youtube Video
+                                Youtube Video
                             </h3>
                             <iframe
                                 className="w-full"
@@ -136,7 +112,7 @@ export default async function TeacherLessonPage ({
                     {lesson.data?.embed_code ? (
                         <div className="flex flex-col mb-10 gap-4">
                             <h3 className="text-xl font-semibold mt-4">
-                          Embeded Code
+                                Embeded Code
                             </h3>
                             <iframe
                                 src={lesson.data?.embed_code}
@@ -145,7 +121,7 @@ export default async function TeacherLessonPage ({
                                     height: 600,
                                     border: 0,
                                     borderRadius: 4,
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
                                 }}
                                 title="htmx basic website"
                                 allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
@@ -158,34 +134,42 @@ export default async function TeacherLessonPage ({
 
                     <div className="flex flex-col mb-10 gap-4">
                         <h3 className="text-xl font-semibold mt-4">Content</h3>
-                        <Markdown
-                            className={' markdown-body'}
-                            remarkPlugins={[remarkGfm]}
-                        >
-                            {lesson.data?.content}
-                        </Markdown>
+                        <ViewMarkdown
+                            markdown={lesson.data?.content}
+                        />
                     </div>
 
                     <Separator />
 
-                    <h3 className="text-xl font-semibold mt-4">System Prompt</h3>
+                    {lesson.data?.lessons_ai_tasks[0].system_prompt && (
+                        <>
+                            <h3 className="text-xl font-semibold mt-4">
+                                System Prompt
+                            </h3>
 
-                    <Markdown
-                        className={' markdown-body'}
-                        remarkPlugins={[remarkGfm]}
-                    >
-                        {lesson.data?.lessons_ai_tasks[0].system_prompt}
-                    </Markdown>
+                            <ViewMarkdown
+                                markdown={lesson.data?.lessons_ai_tasks[0].system_prompt}
+                            />
 
-                    <Separator />
+                            <Separator />
 
-                    <h3 className="text-xl font-semibold mt-4">
-                    Try the chat sandbox
-                    </h3>
+                            <ViewMarkdown
+                                markdown={lesson.data?.lessons_ai_tasks[0].task_instructions}
+                            />
 
-                    <TaskMessageSandbox
-                        systemPrompt={lesson.data?.lessons_ai_tasks[0].system_prompt}
-                    />
+                            <h3 className="text-xl font-semibold mt-4">
+                                Try the chat sandbox
+                            </h3>
+
+                            <TaskSandboxActions
+                                initialAIState={{
+                                    messages: initialMessages as any
+                                }}
+                            >
+                                <TaskSandboxMessage />
+                            </TaskSandboxActions>
+                        </>
+                    )}
                 </div>
             </div>
         </LessonPage>

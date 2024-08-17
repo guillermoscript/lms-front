@@ -1,14 +1,7 @@
 import { CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
@@ -44,52 +37,19 @@ export default async function StudentCourseLessonsPage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${lessons.data[0].course_id}`}
-                        >
-                            {lessons.data[0]?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>
-                            Lessons
-                        </BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: `/dashboard/student/courses/${lessons.data[0].course_id}`, label: lessons.data[0]?.courses?.title },
+                    { href: `/dashboard/student/courses/${lessons.data[0].course_id}/lessons`, label: 'Lessons' }
+                ]}
+            />
             <div className="grid gap-8">
                 <div>
-                    <h1 className="text-3xl font-bold">
-                        {lessons.data[0]?.courses?.title}
+                    <h1 className="lg:text-3xl font-bold text-xl">
+                        {lessons.data[0]?.courses?.title} {' '}
                         Lessons
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
@@ -149,8 +109,8 @@ function LessonCard ({
     lessonId: number
 }) {
     return (
-        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{number}</span>
                     <Icon className={cn('w-5 h-5', status === 'Completed' && 'text-green-500')} />
@@ -163,9 +123,6 @@ function LessonCard ({
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {status}
-                </span>
                 <Link
                     className="inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-gray-50 shadow transition-colors hover:bg-gray-900/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-50/90 dark:focus-visible:ring-gray-300"
                     href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}

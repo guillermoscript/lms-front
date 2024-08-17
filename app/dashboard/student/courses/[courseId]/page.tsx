@@ -1,20 +1,27 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { Badge } from '@/components/ui/badge'
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function CourseStudentPage ({
-    params
+export default async function CourseStudentPage({
+    params,
 }: {
     params: { courseId: string }
 }) {
@@ -64,112 +71,138 @@ export default async function CourseStudentPage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${courseData.data.course_id}`}
-                        >
-                            {courseData.data.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${courseData.data.course_id}`,
+                        label: courseData.data.title,
+                    },
+                ]}
+            />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-1 lg:grid-cols-1">
                 <Card className="h-full">
                     <CardHeader>
-                        <CardTitle>{courseData.data.title}</CardTitle>
-                        {courseData.data.description && (
-                            <CardDescription>
-                                {courseData.data.description}
-                            </CardDescription>
-                        )}
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div>
-                                <h3 className="text-xl font-bold mb-4">
-                                    Course Overview
-                                </h3>
-                                <img
+                        <div className="flex sm:flex-row flex-col">
+                            <div className="sm:mr-4 mr-0 mb-2 sm:mb-0">
+                                <Image
                                     src={courseData.data.thumbnail_url}
                                     alt="Course Image"
                                     className="rounded-md object-cover"
+                                    width={400}
+                                    height={200}
+                                    placeholder="blur"
+                                    layout="responsive"
+                                    blurDataURL="/img/placeholder.svg"
                                 />
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold mb-4">
-                                  Lessons
-                                </h3>
-                                <div className="grid gap-4">
-                                    {courseData.data.lessons
-                                        .sort(
-                                            (a, b) => a?.sequence - b?.sequence
-                                        )
-                                        .map((lesson) => (
-                                            <LessonCard
-                                                title={lesson.title}
-                                                lessonNumber={lesson.sequence}
-                                                description={lesson.description}
-                                                status={lesson.lesson_completions.length > 0
-                                                    ? 'default'
-                                                    : 'outline'}
-                                                courseId={
-                                                    courseData.data.course_id
-                                                }
-                                                lessonId={lesson.id}
-                                            />
-                                        ))}
-                                </div>
+                            <div className="flex flex-col gap-4 w-full">
+                                <CardTitle>{courseData.data.title}</CardTitle>
+                                {courseData.data.description && (
+                                    <CardDescription>
+                                        {courseData.data.description}
+                                    </CardDescription>
+                                )}
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold mb-4">
-                                  Exams
-                                </h3>
-                                <div className="grid gap-4">
-                                    {courseData.data.exams
-                                        .sort(
-                                            (a, b) => a?.sequence - b?.sequence
-                                        )
-                                        .map((exam) => (
-                                            <ExamCard
-                                                title={exam.title}
-                                                examNumber={exam.sequence}
-                                                description={exam.description}
-                                                status={ exam.exam_submissions.length > 0
-                                                    ? exam.exam_submissions[0].exam_scores
-                                                        .length > 0
-                                                        ? 'default'
-                                                        : 'secondary'
-                                                    : 'outline'}
-                                                grade={exam.exam_submissions.length > 0
-                                                    ? exam?.exam_submissions[0]
-                                                        ?.exam_scores[0]?.score
-                                                    : 'N/A'}
-                                                courseId={
-                                                    courseData.data.course_id
-                                                }
-                                                examId={exam.exam_id}
-                                            />
-                                        ))}
-                                </div>
-                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col">
+                            <Accordion
+                                type="single"
+                                collapsible
+                                defaultValue="lessons"
+                            >
+                                <AccordionItem value="lessons">
+                                    <AccordionTrigger className="text-xl font-bold mb-4">
+                                        Lessons
+                                    </AccordionTrigger>
+                                    <AccordionContent className="grid gap-4">
+                                        {courseData.data.lessons
+                                            .sort(
+                                                (a, b) =>
+                                                    a?.sequence - b?.sequence
+                                            )
+                                            .map((lesson) => (
+                                                <LessonCard
+                                                    title={lesson.title}
+                                                    lessonNumber={
+                                                        lesson.sequence
+                                                    }
+                                                    description={
+                                                        lesson.description
+                                                    }
+                                                    status={
+                                                        lesson
+                                                            .lesson_completions
+                                                            .length > 0
+                                                            ? 'default'
+                                                            : 'outline'
+                                                    }
+                                                    courseId={
+                                                        courseData.data
+                                                            .course_id
+                                                    }
+                                                    lessonId={lesson.id}
+                                                />
+                                            ))}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                            <Accordion
+                                type="single"
+                                collapsible
+                                defaultValue="exams"
+                            >
+                                <AccordionItem value="exams">
+                                    <AccordionTrigger className="text-xl font-bold mb-4">
+                                        Exams
+                                    </AccordionTrigger>
+                                    <AccordionContent className="grid gap-4">
+                                        {courseData.data.exams
+                                            .sort(
+                                                (a, b) =>
+                                                    a?.sequence - b?.sequence
+                                            )
+                                            .map((exam) => (
+                                                <ExamCard
+                                                    title={exam.title}
+                                                    examNumber={exam.sequence}
+                                                    description={
+                                                        exam.description
+                                                    }
+                                                    status={
+                                                        exam.exam_submissions
+                                                            .length > 0
+                                                            ? exam
+                                                                .exam_submissions[0]
+                                                                .exam_scores
+                                                                .length > 0
+                                                                ? 'default'
+                                                                : 'secondary'
+                                                            : 'outline'
+                                                    }
+                                                    grade={
+                                                        exam.exam_submissions
+                                                            .length > 0
+                                                            ? exam
+                                                                ?.exam_submissions[0]
+                                                                ?.exam_scores[0]
+                                                                ?.score
+                                                            : 'N/A'
+                                                    }
+                                                    courseId={
+                                                        courseData.data
+                                                            .course_id
+                                                    }
+                                                    examId={exam.exam_id}
+                                                />
+                                            ))}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                     </CardContent>
                 </Card>
@@ -178,7 +211,7 @@ export default async function CourseStudentPage ({
     )
 }
 
-const CourseStats = ({ title, value }: { title: string, value: string }) => (
+const CourseStats = ({ title, value }: { title: string; value: string }) => (
     <div>
         <p className="text-2xl font-bold">{value}</p>
         <p className="text-gray-500 dark:text-gray-400">{title}</p>
@@ -191,7 +224,7 @@ const LessonCard = ({
     description,
     status,
     courseId,
-    lessonId
+    lessonId,
 }: {
     title: string
     lessonNumber: number
@@ -210,7 +243,7 @@ const LessonCard = ({
             </div>
             <div>
                 <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Incomplete' : 'Not Started'}
                 </Badge>
             </div>
         </div>
@@ -237,13 +270,13 @@ const ExamCard = ({
     status,
     grade,
     courseId,
-    examId
+    examId,
 }: {
     title: string
     examNumber: number
     description: string
     status: 'default' | 'destructive' | 'outline' | 'secondary'
-    grade: number | string
+    grade?: number | string
     courseId: number
     examId: number
 }) => (
@@ -257,7 +290,7 @@ const ExamCard = ({
             </div>
             <div>
                 <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : 'Incomplete'}
+                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Not Started' : 'Waiting for Review from Instructor'}
                 </Badge>
             </div>
         </div>
@@ -267,7 +300,7 @@ const ExamCard = ({
             </p>
             <div className="mt-2">
                 <div className="flex items-center justify-between">
-                    <p>Grade: {grade}</p>
+                    <p>Grade: {grade ?? 'N/A'}</p>
                     <Link
                         className={buttonVariants({ variant: 'link' })}
                         href={`/dashboard/student/courses/${courseId}/exams/${examId}`}

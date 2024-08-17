@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
@@ -26,13 +27,70 @@ export async function studentCreateNewChat (state: {
         title: state.title
     }).select('chat_id').single()
 
+    const messageInsert = await supabase.from('messages').insert({
+        chat_id: chatInsert.data.chat_id,
+        message: state.title,
+        sender: 'user',
+        created_at: new Date().toISOString()
+    })
+
     if (chatInsert.error) {
         return createResponse('error', 'Error creating chat', null, 'Error creating chat')
+    }
+
+    if (messageInsert.error) {
+        return createResponse('error', 'Error creating message', null, 'Error creating message')
     }
 
     // return chat id
     revalidatePath('/dashboard/student/chat/', 'layout')
     return createResponse('success', 'Chat created successfully', chatInsert.data, null)
+}
+
+export async function studentCreateNewChatAndRedirect (state: {
+    chatType: Tables<'chats'>['chat_type']
+    title: string
+    insertMessage?: boolean
+}) {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        return createResponse('error', 'Error no user found', null, 'Error no user found')
+    }
+
+    const studentId = userData.data.user?.id
+
+    const chatInsert = await supabase.from('chats').insert({
+        user_id: studentId,
+        chat_type: state.chatType,
+        created_at: new Date().toISOString(),
+        title: state.title
+    }).select('chat_id').single()
+
+    if (state.insertMessage) {
+        const messageInsert = await supabase.from('messages').insert({
+            chat_id: chatInsert.data.chat_id,
+            message: state.title,
+            sender: 'user',
+            created_at: new Date().toISOString()
+        })
+
+        if (messageInsert.error) {
+            console.log(messageInsert.error)
+            return createResponse('error', 'Error creating message', null, 'Error creating message')
+        }
+    }
+
+    if (chatInsert.error) {
+        console.log(chatInsert.error)
+        return createResponse('error', 'Error creating chat', null, 'Error creating chat')
+    }
+
+    const url = '/dashboard/student/chat/' + chatInsert.data.chat_id + '/' + state.chatType.replaceAll('_', '-')
+    console.log(url, 'url')
+    // return chat id
+    redirect(url)
 }
 
 export async function studentInsertChatMessage (state: {

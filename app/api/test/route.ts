@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 import { createClient } from '@/utils/supabase/server'
@@ -147,6 +148,8 @@ export async function POST (req: Request) {
                 )
             }
         }
+
+        revalidatePath('/dashboard/teacher/courses', 'layout')
 
         return NextResponse.json(
             {

@@ -1,125 +1,175 @@
 'use client'
 import { generateId } from 'ai'
-import { useChat } from 'ai/react'
-import { useState } from 'react'
+import { useActions, useAIState, useUIState } from 'ai/rsc'
+import { useRef, useState } from 'react'
 
-import { ChatInput, ChatWindow, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
-import { useToast } from '@/components/ui/use-toast'
-import { createClient } from '@/utils/supabase/client'
+import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
+import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
+import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
+import { studentSubmitAiTaskMessage } from '@/actions/dashboard/lessonsAction'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
+import { ChatInput, ChatTextArea, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
+import Message from '@/components/dashboards/Common/chat/Message'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import useNoCopy from '@/utils/hooks/useNoCopy'
 
-// Custom Hook for Chat logic
-function useChatLogic (
-    systemPrompt,
+async function handleSubmitMessage({
+    input,
+    setConversation,
+    setIsLoading,
+    stop,
+    continueTaskAiConversation,
     lessonId,
-    initialMessages,
-    isLessonAiTaskCompleted
-) {
-    const { toast } = useToast()
-    const [show, setShow] = useState<boolean>(!isLessonAiTaskCompleted)
+}: {
+    input: string
+    setConversation: (value: any) => void
+    setIsLoading: (value: boolean) => void
+    stop: boolean
+    continueTaskAiConversation: (content: string) => Promise<ClientMessage>
+    lessonId: number
+}) {
+    if (stop) return
 
-    const { messages, input, handleInputChange, stop, append, isLoading } =
-    useChat({
-        api: '/api/lessons/chat/student',
-        maxAutomaticRoundtrips: 5,
-        body: { lessonId },
-        initialMessages: [
-            { role: 'assistant', content: systemPrompt, id: generateId() },
-            ...initialMessages.map((msg) => ({
-                role: msg.sender,
-                content: msg.message,
-                id: generateId()
-            }))
-        ],
-        onError (error) {
-            console.log(error)
-            toast({
-                title: 'Error',
-                description: error.message,
-                variant: 'destructive'
-            })
+    setIsLoading(true)
+
+    setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        {
+            id: generateId(),
+            role: 'user',
+            display: (
+                <Message
+                    sender={'user'}
+                    time={new Date().toDateString()}
+                    isUser={true}
+                >
+                    <ViewMarkdown markdown={input} />
+                </Message>
+            ),
         },
-        async onToolCall ({ toolCall }) {
-            if (toolCall.toolName === 'makeUserAssigmentCompleted') {
-                setShow(false)
-            }
-        }
+    ])
+
+    const res = await studentSubmitAiTaskMessage({
+        lessonId,
+        message: {
+            content: input,
+            role: 'user',
+        },
     })
 
-    return {
-        messages,
-        input,
-        handleInputChange,
-        stop,
-        append,
-        isLoading,
-        show,
-        setShow
-    }
+    const message = await continueTaskAiConversation(input)
+    setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        message,
+    ])
+    setIsLoading(false)
 }
 
-// Function to add message to database (can be reused)
-async function addMessageToDatabase (message, lessonId) {
-    const supabase = createClient()
-    const userData = await supabase.auth.getUser()
-    if (userData.error) {
-        console.log('Error getting user data', userData.error)
-    } else {
-        const id = userData.data.user.id
-        const messageData = await supabase.from('lessons_ai_task_messages').insert({
-            user_id: id,
-            message: message.content,
-            sender: message.role as 'assistant' | 'user',
-            lesson_id: lessonId
-        })
-        if (messageData.error) {
-            console.log('Error adding message to the database', messageData.error)
-        }
-        console.log('Message added to the database', messageData)
-    }
-}
-
-// Main Component
-export default function TaskMessages ({
-    systemPrompt,
+export default function TaksMessages({
     lessonId,
-    initialMessages,
-    isLessonAiTaskCompleted
+    isLessonAiTaskCompleted,
 }: {
-    systemPrompt: string
-    lessonId: number
-    initialMessages: any[]
+    lessonId?: number
     isLessonAiTaskCompleted: boolean
 }) {
-    const { messages, stop, append, isLoading, show } =
-    useChatLogic(
-        systemPrompt,
-        lessonId,
-        initialMessages,
-        isLessonAiTaskCompleted
-    )
+    const [conversation, setConversation] = useUIState<typeof TaskAiActions>()
+    const { continueTaskAiConversation } = useActions()
+    const [isLoading, setIsLoading] = useState(false)
+    const [stop, setStop] = useState(false)
+    const [aiState] = useAIState()
+
+    const isLastMessageFromMakeUserAssigmentCompleted =
+        aiState.messages[aiState.messages.length - 1].role === 'tool' &&
+        aiState.messages[aiState.messages.length - 1].content[0].toolName ===
+            'makeUserAssigmentCompleted'
 
     return (
-        <>
-            {isLessonAiTaskCompleted && (
-                <SuccessMessage
-                    status='success'
-                    message='Assignment marked as completed.'
-                />
-            )}
-            <ChatWindow
-                isLoading={isLoading}
-                messages={messages}
-            />
-            {show && (
-                <ChatInput
-                    isLoading={isLoading}
-                    stop={stop}
-                    callbackFunction={async (message) => {
-                        await addMessageToDatabase(message, lessonId)
-                        append(message)
-                    }}
-                />
-            )}
-        </>
+        <div className="w-full px-1">
+            <div className="flex-1 overflow-y-auto p-1 md:p-2 lg:p-4">
+                {conversation.length > 0 ? (
+                    <ChatList messages={conversation} />
+                ) : (
+                    <div className="flex flex-col gap-4">
+                        <p className="text-lg">Complete your task</p>
+                    </div>
+                )}
+
+                {isLoading && <ChatLoadingSkeleton />}
+                <div className="w-full h-px" />
+                {!isLastMessageFromMakeUserAssigmentCompleted &&
+                    !isLessonAiTaskCompleted && (
+                    <>
+                        <Tabs defaultValue="simple" className="w-full py-4">
+                            <TabsList>
+                                <TabsTrigger value="simple">Simple</TabsTrigger>
+                                <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="markdown">
+                                <ChatInput
+                                    isLoading={isLoading}
+                                    stop={() => setStop(true)}
+                                    callbackFunction={async (input) => {
+                                        handleSubmitMessage({
+                                            input: input.content,
+                                            setIsLoading,
+                                            setConversation,
+                                            continueTaskAiConversation,
+                                            stop,
+                                            lessonId,
+                                        })
+                                    }}
+                                />
+                            </TabsContent>
+                            <TabsContent value="simple">
+                                <ChatTextArea
+                                    isLoading={isLoading}
+                                    stop={() => setStop(true)}
+                                    callbackFunction={async (input) => {
+                                        handleSubmitMessage({
+                                            input: input.content,
+                                            setIsLoading,
+                                            setConversation,
+                                            continueTaskAiConversation,
+                                            stop,
+                                            lessonId,
+                                        })
+                                    }}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    </>
+                )}
+
+                {isLessonAiTaskCompleted && (
+                    <SuccessMessage
+                        status="success"
+                        message="Assignment marked as completed."
+                    />
+                )}
+            </div>
+        </div>
+    )
+}
+
+interface ChatListProps {
+    messages: UIState
+    messagesEndRef?: React.RefObject<HTMLDivElement>
+}
+
+function ChatList({ messages, messagesEndRef }: ChatListProps) {
+    const contentRef = useRef(null)
+
+    useNoCopy(contentRef)
+
+    return (
+        <div ref={contentRef} className="relative">
+            {messages.map((message, index) => (
+                <div key={index} className="flex flex-col gap-2">
+                    {message.display}
+                </div>
+            ))}
+            <div ref={messagesEndRef} className="h-px" />
+        </div>
     )
 }

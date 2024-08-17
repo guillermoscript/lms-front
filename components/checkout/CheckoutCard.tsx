@@ -1,20 +1,12 @@
 // @ts-nocheck
 'use client'
 
-import { Label } from '@radix-ui/react-dropdown-menu'
-import { BitcoinIcon, CreditCardIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '../ui/button'
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage
+    Form
 } from '../ui/form'
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 
 interface formValues {
     radio: 'binance' | 'paypal' | 'card'
@@ -42,69 +34,18 @@ export default function CheckoutCard ({ callback }: CheckoutCardProps) {
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="w-full space-y-6"
                 >
-                    <FormField
-                        control={form.control}
-                        name="radio"
-                        render={({ field }) => (
-                            <FormItem className="space-y-3">
-                                <FormLabel>Payment Methods</FormLabel>
-                                <FormControl>
-                                    <RadioGroup
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                        className="flex gap-1 flex-col sm:flex-row sm:gap-4 w-full justify-around"
-                                    >
-                                        <div className="flex items-center space-x-2 w-1/3">
-                                            <RadioGroupItem
-                                                value="card"
-                                                id="r1"
-                                            />
-                                            <Label
-                                                className="flex items-center gap-1 "
-                                                htmlFor="r1"
-                                            >
-                                                <CreditCardIcon />
-                        Stripe
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2 w-1/3">
-                                            <RadioGroupItem
-                                                value="binance"
-                                                id="r2"
-                                            />
-                                            <Label
-                                                className="flex items-center gap-1 "
-                                                htmlFor="r2"
-                                            >
-                                                <BitcoinIcon />
-                        Binance
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2 w-1/3">
-                                            <RadioGroupItem
-                                                value="paypal"
-                                                id="r3"
-                                            />
-                                            <Label
-                                                className="flex items-center gap-1 "
-                                                htmlFor="r3"
-                                            >
-                                                {/* <Paypal /> */}
-                        Paypal
-                                            </Label>
-                                        </div>
-                                    </RadioGroup>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+                    <input
+                        {
+                            ...form.register('radio')
+                        }
+                        type='hidden' name='card' value='card'
                     />
                     <Button
                         className="w-full"
                         type="submit"
                         disabled={form.formState.isSubmitting}
                     >
-            Buy Now
+            Pay with Card
                     </Button>
                 </form>
             </Form>

@@ -19,7 +19,7 @@ export default async function LessonNavigationButtons ({
     const supabase = createClient()
     const lessons = await supabase
         .from('lessons')
-        .select('id')
+        .select('id, sequence')
         .eq('course_id', courseId)
         .order('sequence', { ascending: true })
 
@@ -27,25 +27,38 @@ export default async function LessonNavigationButtons ({
     const hasNext = currentIndex < lessons.data.length - 1
     const hasPrevious = currentIndex > 0
 
+    // Determine the range of lessons to display
+    const start = Math.max(0, currentIndex - 2)
+    const end = Math.min(lessons.data.length, currentIndex + 3)
+    const visibleLessons = lessons.data.slice(start, end)
+
     return (
         <Pagination>
-            <PaginationContent>
+            <PaginationContent
+                className="flex flex-wrap md:flex-nowrap items-center space-x-2"
+                aria-label="Lesson navigation"
+            >
                 {hasPrevious && (
                     <PaginationItem>
                         <PaginationPrevious href={`/dashboard/student/courses/${courseId}/lessons/${lessons.data[currentIndex - 1].id}`} />
                     </PaginationItem>
                 )}
-                {lessons.data.slice(0, 5).map((lesson, index) => (
-                    <PaginationItem key={index}>
+                {currentIndex > 2 && (
+                    <PaginationItem>
+                        <PaginationEllipsis />
+                    </PaginationItem>
+                )}
+                {visibleLessons.map((lesson, index) => (
+                    <PaginationItem key={lesson.id}>
                         <PaginationLink
                             href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
                             isActive={lesson.id === lessonId}
                         >
-                            {index + 1}
+                            {lesson.sequence}
                         </PaginationLink>
                     </PaginationItem>
                 ))}
-                {lessons.data.length > 5 && (
+                {currentIndex < lessons.data.length - 3 && (
                     <PaginationItem>
                         <PaginationEllipsis />
                     </PaginationItem>

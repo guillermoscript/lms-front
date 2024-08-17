@@ -1,13 +1,8 @@
-import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader
-} from '@/components/ui/card'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function Component () {
+export default function Component() {
     return (
         <div className="flex flex-wrap gap-4 md:gap-6 items-center justify-center">
             <Card>

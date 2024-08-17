@@ -1,6 +1,7 @@
 
 import Link from 'next/link'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import {
     Card,
     CardContent,
@@ -43,6 +44,13 @@ export default async function Dashboard () {
 
     return (
         <>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/account', label: 'Account' }
+                ]}
+            />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                     <CardHeader>

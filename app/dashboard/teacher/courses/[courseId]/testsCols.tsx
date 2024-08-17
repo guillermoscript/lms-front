@@ -5,12 +5,12 @@ import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
 import DeleteTestAlert from '@/components/dashboards/teacher/test/DeleteTestAlert'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuLabel,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
@@ -29,30 +29,45 @@ export const testsCols: Array<ColumnDef<Tests>> = [
         accessorKey: 'id',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="ID" />
-        )
+        ),
     },
     {
         accessorKey: 'title',
-        header: 'Title'
+        header: 'Title',
+        cell: ({ row }) => {
+            const rowData = row.original
+
+            return (
+                <Link
+                    className={buttonVariants({ variant: 'link' })}
+                    href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.id}`}
+                >
+                    {rowData.title}
+                </Link>
+            )
+        }
+
     },
     {
         accessorKey: 'description',
-        header: 'Description'
+        header: 'Description',
     },
     {
         accessorKey: 'sequence',
         header: ({ column }) => (
             <DataTableColumnHeader column={column} title="Sequence" />
-        )
+        ),
     },
     {
         accessorKey: 'date',
-        header: 'Date'
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Date" />
+        ),
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Acciones" />
+            <DataTableColumnHeader column={column} title="Actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -70,7 +85,7 @@ export const testsCols: Array<ColumnDef<Tests>> = [
                             <Link
                                 href={`/dashboard/teacher/courses/${rowData.courseId}/tests/${rowData.id}`}
                             >
-                                Ver detalles
+                                View test
                             </Link>
                         </DropdownMenuLabel>
                         <DropdownMenuLabel>
@@ -79,6 +94,6 @@ export const testsCols: Array<ColumnDef<Tests>> = [
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
-        }
-    }
+        },
+    },
 ]

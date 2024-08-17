@@ -3,6 +3,7 @@
 import axios, { isAxiosError } from 'axios'
 import cx from 'classnames'
 import { CheckCircleIcon, CircleIcon, XCircleIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,7 @@ export default function TestSubmissionReview ({
 
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
+    const router = useRouter()
 
     const handleFeedbackChange = (answerId, feedback) => {
         setAnswers((prevAnswers) =>
@@ -58,8 +60,6 @@ export default function TestSubmissionReview ({
             exam_id: exams.exam_id
         }
 
-        console.log(finalData)
-
         try {
             const response = await axios.post('/api/exams/review', finalData)
             console.log(response.data)
@@ -67,6 +67,7 @@ export default function TestSubmissionReview ({
                 title: 'Success',
                 description: 'Feedback submitted successfully'
             })
+            router.push(`/dashboard/teacher/courses/${exams.course_id}/tests/${exams.exam_id}`)
         } catch (error) {
             console.log(error)
             if (isAxiosError(error)) {
@@ -261,7 +262,7 @@ export default function TestSubmissionReview ({
                 />
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex gap-2">
 
                 <Button
                     disabled={isLoading}

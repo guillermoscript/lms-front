@@ -16,7 +16,15 @@ const schema = yup.object().shape({
 
 export type updateUserProfileSchema = yup.InferType<typeof schema>
 
-export default function EditProfileForm () {
+export default function EditProfileForm ({
+    fullName,
+    bio,
+    avatarUrl
+}: {
+    fullName: string
+    bio: string
+    avatarUrl: string
+}) {
     const form = useForm<updateUserProfileSchema>({
         resolver: yupResolver(schema)
     })
@@ -54,19 +62,19 @@ export default function EditProfileForm () {
             >
                 <Input
                     displayName="Full Name"
-                    placeholder="John Doe"
+                    placeholder={fullName || 'John Doe'}
                     type="text"
                     name='fullName'
                 />
                 <Input
                     displayName='Bio'
-                    placeholder='Tell us about yourself'
+                    placeholder={bio || 'Tell us about yourself'}
                     type='text'
                     name='bio'
                 />
                 <Input
                     displayName='Profile Picture'
-                    placeholder='https://example.com/image.jpg'
+                    placeholder={avatarUrl || 'https://example.com/image.jpg'}
                     type='text'
                     name='avatarUrl'
                 />

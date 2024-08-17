@@ -110,6 +110,13 @@ export type Database = {
             foreignKeyName: "comment_flags_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "comment_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -144,6 +151,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lesson_comments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "comment_reactions_user_id_fkey"
@@ -428,18 +442,21 @@ export type Database = {
       }
       exam_submissions: {
         Row: {
+          ai_data: Json | null
           exam_id: number
           student_id: string
           submission_date: string | null
           submission_id: number
         }
         Insert: {
+          ai_data?: Json | null
           exam_id: number
           student_id: string
           submission_date?: string | null
           submission_id?: number
         }
         Update: {
+          ai_data?: Json | null
           exam_id?: number
           student_id?: string
           submission_date?: string | null
@@ -462,10 +479,47 @@ export type Database = {
           },
         ]
       }
+      exam_views: {
+        Row: {
+          exam_id: number
+          id: number
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          exam_id: number
+          id?: never
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          exam_id?: number
+          id?: never
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_views_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exams: {
         Row: {
           course_id: number
           created_at: string | null
+          created_by: string | null
           description: string | null
           duration: number
           exam_date: string
@@ -478,6 +532,7 @@ export type Database = {
         Insert: {
           course_id: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration: number
           exam_date: string
@@ -490,6 +545,7 @@ export type Database = {
         Update: {
           course_id?: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration?: number
           exam_date?: string
@@ -506,6 +562,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -608,6 +671,13 @@ export type Database = {
             foreignKeyName: "lesson_comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "lesson_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -639,6 +709,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "lesson_completions_user_id_fkey"
@@ -685,6 +762,42 @@ export type Database = {
           },
         ]
       }
+      lesson_views: {
+        Row: {
+          id: number
+          lesson_id: number
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: never
+          lesson_id: number
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: never
+          lesson_id?: number
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_views_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           content: string | null
@@ -693,6 +806,7 @@ export type Database = {
           description: string | null
           embed_code: string | null
           id: number
+          image: string | null
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
           summary: string | null
@@ -707,6 +821,7 @@ export type Database = {
           description?: string | null
           embed_code?: string | null
           id?: never
+          image?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
           summary?: string | null
@@ -721,6 +836,7 @@ export type Database = {
           description?: string | null
           embed_code?: string | null
           id?: never
+          image?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
           summary?: string | null
@@ -786,18 +902,21 @@ export type Database = {
           id: number
           lesson_id: number | null
           system_prompt: string | null
+          task_instructions: string | null
         }
         Insert: {
           created_at?: string
           id?: number
           lesson_id?: number | null
           system_prompt?: string | null
+          task_instructions?: string | null
         }
         Update: {
           created_at?: string
           id?: number
           lesson_id?: number | null
           system_prompt?: string | null
+          task_instructions?: string | null
         }
         Relationships: [
           {
@@ -937,6 +1056,7 @@ export type Database = {
         Row: {
           created_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at: string | null
           description: string | null
           duration_in_days: number
           features: string | null
@@ -948,6 +1068,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at?: string | null
           description?: string | null
           duration_in_days: number
           features?: string | null
@@ -959,6 +1080,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          deleted_at?: string | null
           description?: string | null
           duration_in_days?: number
           features?: string | null
@@ -1004,6 +1126,7 @@ export type Database = {
           created_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
           description: string | null
+          image: string | null
           name: string
           price: number
           product_id: number
@@ -1012,6 +1135,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          image?: string | null
           name: string
           price: number
           product_id?: number
@@ -1020,6 +1144,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          image?: string | null
           name?: string
           price?: number
           product_id?: number
@@ -1032,6 +1157,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           currency_id: number | null
+          data_person: Json | null
           full_name: string | null
           id: string
           stripe_customer_id: string | null
@@ -1044,6 +1170,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          data_person?: Json | null
           full_name?: string | null
           id: string
           stripe_customer_id?: string | null
@@ -1056,6 +1183,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           currency_id?: number | null
+          data_person?: Json | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
@@ -1102,53 +1230,11 @@ export type Database = {
           },
         ]
       }
-      review_comments: {
-        Row: {
-          comment_text: string
-          created_at: string | null
-          id: number
-          review_id: number
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          comment_text: string
-          created_at?: string | null
-          id?: never
-          review_id: number
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          comment_text?: string
-          created_at?: string | null
-          id?: never
-          review_id?: number
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_comments_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: false
-            referencedRelation: "reviews"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       reviews: {
         Row: {
           created_at: string | null
           entity_id: number
-          entity_type: string
+          entity_type: Database["public"]["Enums"]["reviewable"]
           id: number
           rating: number
           review_text: string | null
@@ -1158,7 +1244,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           entity_id: number
-          entity_type: string
+          entity_type: Database["public"]["Enums"]["reviewable"]
           id?: never
           rating: number
           review_text?: string | null
@@ -1168,7 +1254,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           entity_id?: number
-          entity_type?: string
+          entity_type?: Database["public"]["Enums"]["reviewable"]
           id?: never
           rating?: number
           review_text?: string | null
@@ -1348,6 +1434,83 @@ export type Database = {
           },
         ]
       }
+      ticket_messages: {
+        Row: {
+          created_at: string | null
+          message: string
+          message_id: number
+          ticket_id: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          message: string
+          message_id?: number
+          ticket_id?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          message?: string
+          message_id?: number
+          ticket_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "ticket_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          created_at: string | null
+          description: string
+          status: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id: number
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id?: number
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_id?: number
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -1434,7 +1597,118 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      distinct_exam_views: {
+        Row: {
+          exam_course_id: number | null
+          exam_created_at: string | null
+          exam_created_by: string | null
+          exam_date: string | null
+          exam_description: string | null
+          exam_duration: number | null
+          exam_id: number | null
+          exam_sequence: number | null
+          exam_status: Database["public"]["Enums"]["status"] | null
+          exam_title: string | null
+          exam_updated_at: string | null
+          user_id: string | null
+          view_id: number | null
+          viewed_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_views_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["exam_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["exam_created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distinct_lesson_views: {
+        Row: {
+          lesson_content: string | null
+          lesson_course_id: number | null
+          lesson_created_at: string | null
+          lesson_description: string | null
+          lesson_embed_code: string | null
+          lesson_id: number | null
+          lesson_image: string | null
+          lesson_sequence: number | null
+          lesson_status: Database["public"]["Enums"]["status"] | null
+          lesson_summary: string | null
+          lesson_title: string | null
+          lesson_updated_at: string | null
+          lesson_video_url: string | null
+          user_id: string | null
+          view_id: number | null
+          viewed_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_views_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["lesson_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      get_reviews: {
+        Row: {
+          created_at: string | null
+          entity_id: number | null
+          entity_type: Database["public"]["Enums"]["reviewable"] | null
+          full_name: string | null
+          profile_id: string | null
+          rating: number | null
+          review_id: number | null
+          review_text: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cancel_subscription: {
@@ -1450,7 +1724,7 @@ export type Database = {
           p_exam_id: number
           p_answers: Json
         }
-        Returns: undefined
+        Returns: number
       }
       create_notification: {
         Args: {
@@ -1480,6 +1754,23 @@ export type Database = {
           _product_id: number
         }
         Returns: undefined
+      }
+      get_exam_submissions: {
+        Args: {
+          p_exam_id: number
+        }
+        Returns: {
+          submission_id: number
+          exam_id: number
+          exam_title: string
+          student_id: string
+          submission_date: string
+          score: number
+          feedback: string
+          evaluated_at: string
+          is_reviewed: boolean
+          full_name: string
+        }[]
       }
       handle_new_subscription: {
         Args: {
@@ -1536,8 +1827,10 @@ export type Database = {
         | "order_renewal"
       reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
+      reviewable: "lessons" | "courses" | "exams"
       status: "published" | "draft" | "archived"
       subscription_status: "active" | "canceled" | "expired" | "renewed"
+      ticket_status: "open" | "in_progress" | "resolved" | "closed"
       transaction_status:
         | "pending"
         | "successful"

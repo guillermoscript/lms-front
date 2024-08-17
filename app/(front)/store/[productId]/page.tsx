@@ -1,12 +1,13 @@
-
-import CheckoutProduct from '@/components/store/CheckoutProduct'
-import CourseCard from '@/components/store/product/CourseCard'
+import UserLoginForm from '@/components/auth/UserLoginForm'
+import UserSignupForm from '@/components/auth/UserSignupForm'
+import CheckoutForm from '@/components/checkout/CheckoutForm'
+import CheckoutStripeWrapper from '@/components/checkout/CheckoutStripeWrapper'
 import ImageContainer from '@/components/store/product/ImageContainer'
-import ReviewCard from '@/components/store/product/ReviewCard'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function ProductIdPage ({
-    params
+export default async function ProductIdPage({
+    params,
 }: {
     params: { productId: string }
 }) {
@@ -21,6 +22,8 @@ export default async function ProductIdPage ({
     if (data.error != null) throw new Error(data.error.message)
 
     const product = data.data
+
+    const userData = await supabase.auth.getUser()
 
     return (
         <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20">
@@ -39,47 +42,70 @@ export default async function ProductIdPage ({
                             {product?.price} $
                         </div>
                     </div>
-                    {/*
-						<ul className="grid gap-2">
-							<li className="flex items-center gap-2">
-								<CheckIcon className="h-5 w-5 text-primary" />
-								<span>Unlimited access to all courses</span>
-							</li>
-						</ul>
-					 */}
-                    <CheckoutProduct
-                        params={params}
-                    />
+                    <div>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            For now this is a test payment, you can use the
+                            following card details:
+                        </p>
+                        <ul className="list-disc list-inside">
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >4242 4242 4242 4242</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any future date</li>
+                            <li
+                                className='text-gray-500 dark:text-gray-400'
+                            >Any CVC</li>
+                        </ul>
+                    </div>
+                    {userData.data.user ? (
+                        <CheckoutStripeWrapper
+                            productId={params.productId}
+                        >
+                            <CheckoutForm />
+                        </CheckoutStripeWrapper>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            <Tabs
+                                defaultValue="login"
+                                className="w-full px-8 sm:max-w-md"
+                            >
+                                <TabsList className="h-12 p-3">
+                                    <TabsTrigger className="p-2" value="login">
+                                        Login to continue
+                                    </TabsTrigger>
+                                    <TabsTrigger className="p-2" value="signup">
+                                        Create an account
+                                    </TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="login">
+                                    <UserLoginForm
+                                        redirect={`/store/${params.productId}`}
+                                    />
+                                </TabsContent>
+                                <TabsContent value="signup">
+                                    <UserSignupForm
+                                        redirect={`/store/${params.productId}`}
+                                    />
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+                    )}
                 </div>
                 <div className="grid gap-6">
                     <ImageContainer
                         alt="Course Image"
-                        className="rounded-lg overflow-hidden"
                         height={600}
-                        src="/img/placeholder.svg"
+                        src={product.image}
                         width={800}
+                        className="rounded-lg w-full"
                     />
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <ImageContainer
-                            alt="Course Image"
-                            className="rounded-lg"
-                            height={300}
-                            src="/img/placeholder.svg"
-                            width={400}
-                        />
-                        <ImageContainer
-                            alt="Course Image"
-                            className="rounded-lg"
-                            height={300}
-                            src="/img/placeholder.svg"
-                            width={400}
-                        />
-                    </div>
                 </div>
             </div>
-            <div className="mt-12 md:mt-20">
+            {/* <div className="mt-12 md:mt-20">
                 <h2 className="text-2xl md:text-3xl font-bold">
-                  What Our Customers Say
+                    What Our Customers Say
                 </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                     <ReviewCard
@@ -98,14 +124,12 @@ export default async function ProductIdPage ({
                             '"I\'ve been using the LMS Pro Plan for over a year [...] user-friendly."'
                         }
                     />
-                    {/* more review cards */}
                 </div>
             </div>
             <div className="mt-12 md:mt-20">
                 <h2 className="text-2xl md:text-3xl font-bold">
-                  Our Course Library
+                    Our Course Library
                 </h2>
-                {/* TODO: AKI PONER LOS CURSOS */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                     <CourseCard
                         courseImage="/img/placeholder.svg"
@@ -125,9 +149,8 @@ export default async function ProductIdPage ({
                         lessonsCount="90 lessons"
                         description="Develop the skills to lead successful projects and teams."
                     />
-                    {/* more course cards */}
                 </div>
-            </div>
+            </div> */}
         </div>
     )
 }

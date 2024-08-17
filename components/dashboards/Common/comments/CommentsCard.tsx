@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { reactionTypes } from '@/utils/const'
 import { Tables } from '@/utils/supabase/supabase'
@@ -22,7 +21,7 @@ const ReactionButton = ({ type, icon: Icon, count, onClick }) => (
         onClick={onClick}
         className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
     >
-        <Icon className={`w-4 h-4 ${type}`} />
+        <Icon className={`w-5 h-5 ${type}`} />
         {count > 0 && <span className="text-xs text-gray-400">{count}</span>}
     </button>
 )
@@ -66,15 +65,7 @@ const CommentCard = ({
                 isReactionPresent
             })
 
-            const toastMessage = {
-                title: response.status === 'success' ? 'Success' : 'Error',
-                description:
-          response.status === 'success'
-              ? 'Reaction added successfully'
-              : response.message,
-                variant: response.status === 'success' ? null : 'destructive'
-            }
-            toast.success(toastMessage as any)
+            toast.success('Reaction added successfully')
         } catch (error) {
             console.error(error)
             toast.error('An error occurred while adding reaction. Please try again.')
@@ -87,8 +78,6 @@ const CommentCard = ({
     }, {})
 
     const replies = allComments.filter(reply => reply.parent_comment_id === comment.id)
-
-    console.log(reactionsForEachType)
 
     return (
         <Card className="p-2 mb-4">
@@ -145,34 +134,15 @@ const CommentCard = ({
             <CardFooter className="flex flex-col gap-4">
                 <div className="flex-1 w-full">
                     <div className="flex items-center gap-4 mt-4 justify-between">
-                        <Popover>
-                            <PopoverTrigger>
-                                <button className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-                                    {reactionsForEachType && reactionTypes?.map(({ type, icon: Icon }) => (
-                                        <ReactionButton
-                                            key={type}
-                                            type={reactionsForEachType[type] ? reactionTypes.find(rt => rt.type === type).color : ''}
-                                            icon={Icon}
-                                            count={reactionsForEachType[type] || 0}
-                                            onClick={null} // View only
-                                        />
-                                    ))}
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="p-2 bg-white border rounded-md shadow-sm w-fit">
-                                <div className="flex items-center gap-4 h-7">
-                                    {reactionsForEachType && reactionTypes?.map(({ type, icon: Icon, color }) => (
-                                        <ReactionButton
-                                            key={type}
-                                            type={color}
-                                            icon={Icon}
-                                            count={0}
-                                            onClick={async () => await AddReaction(type)}
-                                        />
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                        {reactionsForEachType && reactionTypes?.map(({ type, icon: Icon }) => (
+                            <ReactionButton
+                                key={type}
+                                type={reactionsForEachType[type] ? reactionTypes.find(rt => rt.type === type).color : ''}
+                                icon={Icon}
+                                count={reactionsForEachType[type] || 0}
+                                onClick={async () => await AddReaction(type)}
+                            />
+                        ))}
                         <button onClick={toggleReplies} className="flex items-center gap-1 text-de">
                             <Reply className="w-4 h-4" /> Reply ({replies.length})
                         </button>

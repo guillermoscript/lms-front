@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es5",
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -40,8 +40,7 @@
     "**/*.tsx",
     "pages/_document.js",
     "next.config.mjs",
-    ".next/types/**/*.ts",
-    "prettier.config.mjs"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

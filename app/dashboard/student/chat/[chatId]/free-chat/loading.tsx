@@ -1,7 +1,5 @@
-import ChatLoadingSkeleton from '@/components/dashboards/student/chat/ChatLoadingSkeleton'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 
-export default function Loading () {
-    return (
-        <ChatLoadingSkeleton />
-    )
+export default function Loading() {
+    return <ChatLoadingSkeleton />
 }

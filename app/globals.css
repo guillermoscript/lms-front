@@ -3,7 +3,9 @@
 @tailwind utilities;
  
  
-
+html {
+  scroll-behavior: smooth;
+}
 
 
 @layer base {
@@ -56,108 +58,116 @@
   }
 }
 
-
-/* Headings */
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4,
-.markdown-body h5,
-.markdown-body h6 {
-  @apply pb-2 mb-4 leading-tight;
+/* Dark theme */
+.dark .markdown-body,
+.dark [data-theme="dark"] {
+  color-scheme: dark;
+  --focus-outlineColor: #1f6feb;
+  --fgColor-default: #e6edf3;
+  --fgColor-muted: #8d96a0;
+  --fgColor-accent: #4493f8;
+  --fgColor-success: #3fb950;
+  --fgColor-attention: #d29922;
+  --fgColor-danger: #f85149;
+  --fgColor-done: #ab7df8;
+  --bgColor-default: transparent;
+  --bgColor-muted: #161b22;
+  --bgColor-neutral-muted: #6e768166;
+  --bgColor-attention-muted: #bb800926;
+  --borderColor-default: #30363d;
+  --borderColor-muted: #30363db3;
+  --borderColor-neutral-muted: #6e768166;
+  --borderColor-accent-emphasis: #1f6feb;
+  --borderColor-success-emphasis: #238636;
+  --borderColor-attention-emphasis: #9e6a03;
+  --borderColor-danger-emphasis: #da3633;
+  --borderColor-done-emphasis: #8957e5;
+  --color-prettylights-syntax-comment: #8b949e;
+  --color-prettylights-syntax-constant: #79c0ff;
+  --color-prettylights-syntax-constant-other-reference-link: #a5d6ff;
+  --color-prettylights-syntax-entity: #d2a8ff;
+  --color-prettylights-syntax-storage-modifier-import: #c9d1d9;
+  --color-prettylights-syntax-entity-tag: #7ee787;
+  --color-prettylights-syntax-keyword: #ff7b72;
+  --color-prettylights-syntax-string: #a5d6ff;
+  --color-prettylights-syntax-variable: #ffa657;
+  --color-prettylights-syntax-brackethighlighter-unmatched: #f85149;
+  --color-prettylights-syntax-brackethighlighter-angle: #8b949e;
+  --color-prettylights-syntax-invalid-illegal-text: #f0f6fc;
+  --color-prettylights-syntax-invalid-illegal-bg: #8e1519;
+  --color-prettylights-syntax-carriage-return-text: #f0f6fc;
+  --color-prettylights-syntax-carriage-return-bg: #b62324;
+  --color-prettylights-syntax-string-regexp: #7ee787;
+  --color-prettylights-syntax-markup-list: #f2cc60;
+  --color-prettylights-syntax-markup-heading: #1f6feb;
+  --color-prettylights-syntax-markup-italic: #c9d1d9;
+  --color-prettylights-syntax-markup-bold: #c9d1d9;
+  --color-prettylights-syntax-markup-deleted-text: #ffdcd7;
+  --color-prettylights-syntax-markup-deleted-bg: #67060c;
+  --color-prettylights-syntax-markup-inserted-text: #aff5b4;
+  --color-prettylights-syntax-markup-inserted-bg: #033a16;
+  --color-prettylights-syntax-markup-changed-text: #ffdfb6;
+  --color-prettylights-syntax-markup-changed-bg: #5a1e02;
+  --color-prettylights-syntax-markup-ignored-text: #c9d1d9;
+  --color-prettylights-syntax-markup-ignored-bg: #1158c7;
+  --color-prettylights-syntax-meta-diff-range: #d2a8ff;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #484f58;
 }
 
-.markdown-body h1 {
-  @apply text-4xl font-bold;
-}
-
-.markdown-body h2 {
-  @apply text-3xl font-semibold;
-}
-
-.markdown-body h3 {
-  @apply text-2xl font-medium;
-}
-
-.markdown-body h4 {
-  @apply text-xl font-medium;
-}
-
-.markdown-body h5 {
-  @apply text-lg font-medium;
-}
-
-.markdown-body h6 {
-  @apply text-base font-bold;
-
-}
-
-/* Paragraphs */
-.markdown-body p {
-  @apply my-4 leading-7;
-}
-
-/* Links */
-.markdown-body a {
-  @apply text-primary no-underline;
-}
-
-.markdown-body a:hover {
-  @apply underline;
-}
-
-.markdown-body a:focus {
-  @apply outline-none ring-2 ring-primary ring-offset-2;
-}
-
-/* Lists */
-.markdown-body ul,
-.markdown-body ol {
-  @apply pl-5 my-4 list-inside;
-}
-
-.markdown-body ul li,
-.markdown-body ol li {
-  @apply relative pl-3 leading-6;
-  list-style-position: inside;
-}
-
-.markdown-body ul li::before {
-  @apply absolute left-0 top-[calc(0.8em)] bg-primary w-2 h-2 rounded-full;
-  content: '';
-}
-
-.markdown-body ol li::before {
-  background-color: hsl(var(--primary));
-}
-
-/* Blockquotes */
-.markdown-body blockquote {
-  @apply border-l-4 border-muted pl-4 text-muted-foreground italic my-4;
-}
-
-/* Code blocks */
-.markdown-body pre,
-.markdown-body code {
-  @apply font-mono  p-2;
-}
-
-.markdown-body pre {
-  @apply whitespace-pre-wrap break-words my-4 overflow-x-auto rounded;
-}
-
-.markdown-body code {
-  @apply px-1 py-0.5 text-sm bg-muted;
-}
-
-/* Tables */
-.markdown-body table {
-  @apply table-auto w-full my-4 rounded;
-}
-
-.markdown-body th,
-.markdown-body td {
-  @apply px-4 py-2 border border-border text-left;
+/* Light theme */
+.light .markdown-body,
+.light [data-theme="light"] {
+  color-scheme: light;
+  --focus-outlineColor: #0969da;
+  --fgColor-default: #1f2328;
+  --fgColor-muted: #636c76;
+  --fgColor-accent: #0969da;
+  --fgColor-success: #1a7f37;
+  --fgColor-attention: #9a6700;
+  --fgColor-danger: #d1242f;
+  --fgColor-done: #8250df;
+  --bgColor-default: #ffffff;
+  --bgColor-muted: #f6f8fa;
+  --bgColor-neutral-muted: #afb8c133;
+  --bgColor-attention-muted: #fff8c5;
+  --borderColor-default: #d0d7de;
+  --borderColor-muted: #d0d7deb3;
+  --borderColor-neutral-muted: #afb8c133;
+  --borderColor-accent-emphasis: #0969da;
+  --borderColor-success-emphasis: #1a7f37;
+  --borderColor-attention-emphasis: #bf8700;
+  --borderColor-danger-emphasis: #cf222e;
+  --borderColor-done-emphasis: #8250df;
+  --color-prettylights-syntax-comment: #57606a;
+  --color-prettylights-syntax-constant: #0550ae;
+  --color-prettylights-syntax-constant-other-reference-link: #0a3069;
+  --color-prettylights-syntax-entity: #6639ba;
+  --color-prettylights-syntax-storage-modifier-import: #24292f;
+  --color-prettylights-syntax-entity-tag: #0550ae;
+  --color-prettylights-syntax-keyword: #cf222e;
+  --color-prettylights-syntax-string: #0a3069;
+  --color-prettylights-syntax-variable: #953800;
+  --color-prettylights-syntax-brackethighlighter-unmatched: #82071e;
+  --color-prettylights-syntax-brackethighlighter-angle: #57606a;
+  --color-prettylights-syntax-invalid-illegal-text: #f6f8fa;
+  --color-prettylights-syntax-invalid-illegal-bg: #82071e;
+  --color-prettylights-syntax-carriage-return-text: #f6f8fa;
+  --color-prettylights-syntax-carriage-return-bg: #cf222e;
+  --color-prettylights-syntax-string-regexp: #116329;
+  --color-prettylights-syntax-markup-list: #3b2300;
+  --color-prettylights-syntax-markup-heading: #0550ae;
+  --color-prettylights-syntax-markup-italic: #24292f;
+  --color-prettylights-syntax-markup-bold: #24292f;
+  --color-prettylights-syntax-markup-deleted-text: #82071e;
+  --color-prettylights-syntax-markup-deleted-bg: #ffebe9;
+  --color-prettylights-syntax-markup-inserted-text: #116329;
+  --color-prettylights-syntax-markup-inserted-bg: #dafbe1;
+  --color-prettylights-syntax-markup-changed-text: #953800;
+  --color-prettylights-syntax-markup-changed-bg: #ffd8b5;
+  --color-prettylights-syntax-markup-ignored-text: #eaeef2;
+  --color-prettylights-syntax-markup-ignored-bg: #0550ae;
+  --color-prettylights-syntax-meta-diff-range: #8250df;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #8c959f;
 }
 
 html.dark .prose {
@@ -208,4 +218,38 @@ html.dark .prose {
     color: var(--foreground);
     --basePageBg: var(--background);
     background: var(--basePageBg);
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0; /* Adjust this value based on your layout */
+  z-index: 50;
+  background-color: white; /* Maintain background color while scrolling */
+}
+
+.markdown-body {
+  word-wrap: break-word; /* Wrap long words */
+}
+
+.code-block,
+.code-inline,
+.pre-block {
+  max-width: 100%;
+}
+
+/* Ensures code in markdown wraps and is responsive */
+.code-block code,
+.code-inline {
+  white-space: pre-wrap !important; /* Wrap preformatted content */
+}
+
+/* Ensuring the pre block wraps as necessary with scrolling for large code blocks */
+.pre-block {
+  white-space: pre-wrap !important; /* Wrap preformatted content */
+  overflow-x: auto; /* Add horizontal scroll if necessary */
+  word-wrap: break-word; /* Ensure long strings wrap */
+}
+
+.pre-block code * {
+  white-space: pre-wrap !important; /* Wrap preformatted content */
 }

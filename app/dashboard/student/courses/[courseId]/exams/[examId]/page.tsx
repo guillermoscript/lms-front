@@ -1,14 +1,7 @@
-import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function StudentExamCoursePage ({
@@ -72,79 +65,36 @@ export default async function StudentExamCoursePage ({
 
     return (
         <>
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student"
-                        >
-                            Student
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/student/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}`}
-                        >
-                            {exams.data?.courses?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}/exams`}
-                        >
-                            Exams
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href={`/dashboard/student/courses/${exams?.data?.course_id}/exams/${exams?.data?.exam_id}`}
-                        >
-                            {exams?.data?.title}
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-
-            <div className="grid gap-8">
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/student', label: 'Student' },
+                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}`,
+                        label: exams.data?.courses?.title
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
+                        label: 'Exams'
+                    },
+                    {
+                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
+                        label: exams.data?.title
+                    }
+                ]}
+            />
+            <div className="grid gap-8 container">
                 <div>
                     <h1 className="text-3xl font-bold">
-                        CSS Fundamentals Exam
+                        {exams.data.title}
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        Test your understanding of CSS basics. You have 45
-                        minutes to complete the exam.
+                        {exams.data.description}
                     </p>
                     <p className="text-gray-500 dark:text-gray-400">
                         Exam duration: {exams.data?.duration} minutes
                     </p>
-                    <div className="mt-4 flex items-center gap-4">
-                        <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Time remaining: 42 minutes
-                        </span>
-                    </div>
                 </div>
                 <ExamsSubmissionForm
                     multipleChoiceQuestions={multipleChoiceQuestions}

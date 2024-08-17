@@ -22,30 +22,6 @@ export default function CheckoutImages ({
                 }}
                 width={800}
             />
-            <div className="grid md:grid-cols-2 gap-6">
-                <img
-                    alt="Course Image"
-                    className="rounded-lg overflow-hidden"
-                    height={300}
-                    src={img2src ?? ''}
-                    style={{
-                        aspectRatio: '400/300',
-                        objectFit: 'cover'
-                    }}
-                    width={400}
-                />
-                <img
-                    alt="Course Image"
-                    className="rounded-lg overflow-hidden"
-                    height={300}
-                    src={img3src ?? ''}
-                    style={{
-                        aspectRatio: '400/300',
-                        objectFit: 'cover'
-                    }}
-                    width={400}
-                />
-            </div>
         </div>
     )
 }

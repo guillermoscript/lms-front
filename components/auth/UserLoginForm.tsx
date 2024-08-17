@@ -7,15 +7,19 @@ import { Button } from '@/components/ui/button'
 
 import PasswordComponent from './PasswordComponent'
 
-export default function UserLoginForm () {
+export default function UserLoginForm({
+    redirect,
+}: {
+    redirect: string
+}) {
     const [state, action] = useFormState(signIn, {
         status: 'idle',
         message: '',
-        error: null
+        error: null,
     })
 
     return (
-        <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
+        <div className="flex-1 flex flex-col w-full sm:max-w-md justify-center gap-2">
             <Link
                 href="/"
                 className="absolute left-8 top-8 py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover flex items-center group text-sm"
@@ -34,7 +38,7 @@ export default function UserLoginForm () {
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>{' '}
-        Back
+                Back
             </Link>
 
             <form
@@ -42,7 +46,7 @@ export default function UserLoginForm () {
                 action={action}
             >
                 <label className="text-md" htmlFor="email">
-          Email
+                    Email
                 </label>
                 <input
                     className="rounded-md px-4 py-2 bg-inherit border mb-6"
@@ -51,12 +55,13 @@ export default function UserLoginForm () {
                     required
                 />
                 <label className="text-md" htmlFor="password">
-          Password
+                    Password
                 </label>
+                <input type="hidden" name="redirect" value={redirect} />
                 <PasswordComponent />
                 <SubmitButton />
                 {state.error && (
-                    <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
+                    <p className="mt-4 p-4 bg-destructive/80 text-foreground text-center">
                         {state.message}
                     </p>
                 )}
@@ -65,7 +70,7 @@ export default function UserLoginForm () {
     )
 }
 
-function SubmitButton () {
+function SubmitButton() {
     const { pending } = useFormStatus()
     return (
         <>

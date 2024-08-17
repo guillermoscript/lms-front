@@ -17,14 +17,24 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     const embed = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const course_id = data.get('course_id') as string
+    const image = data.get('image') as string
+    const task_instructions = data.get('task_instructions') as string
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .update({
             title,
             content,
             video_url,
+            image,
             embed_code: embed,
             description,
             status: status as any,
@@ -41,7 +51,8 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
         const lessonAiAssignmentData = await supabase
             .from('lessons_ai_tasks')
             .update({
-                system_prompt
+                system_prompt,
+                task_instructions
             })
             .eq('lesson_id', lessonId)
 
@@ -73,8 +84,10 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     const embed_code = data.get('embed') as string
     const system_prompt = data.get('systemPrompt') as string
     const description = data.get('description') as string
+    const image = data.get('image') as string
+    const task_instructions = data.get('task_instructions') as string
 
-    const requiredFields = ['title', 'sequence', 'status', 'video_url', 'course_id', 'content', 'systemPrompt']
+    const requiredFields = ['title', 'sequence', 'status', 'course_id', 'content', 'systemPrompt']
     const response = validateFields(data, requiredFields)
 
     if (response) {
@@ -82,6 +95,13 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .insert({
@@ -92,6 +112,7 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             embed_code,
             status,
             description,
+            image,
             sequence,
             course_id,
             created_at: new Date().toISOString(),
@@ -106,7 +127,8 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
         .from('lessons_ai_tasks')
         .insert({
             lesson_id: lessonData.data.id,
-            system_prompt
+            system_prompt,
+            task_instructions
         })
 
     redirect(`/dashboard/teacher/courses/${course_id}/lessons/${lessonData.data.id}`)
@@ -122,6 +144,13 @@ export async function deleteLessonsAction (data: {
     }
 
     const supabase = createClient()
+
+    const user = await supabase.auth.getUser()
+
+    if (!user) {
+        return createResponse('error', 'User not found', null, 'User not found')
+    }
+
     const lessonData = await supabase
         .from('lessons')
         .delete()
@@ -133,4 +162,36 @@ export async function deleteLessonsAction (data: {
 
     revalidatePath('/dashboard/teacher/courses/[courseId]', 'layout')
     return createResponse('success', 'Lesson deleted successfully', null, null)
+}
+
+export async function studentSubmitAiTaskMessage({
+    lessonId,
+    message
+}: {
+    lessonId: number
+    message: {
+        content: string
+        role: string
+    }
+}) {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+        return createResponse('error', 'Error getting user data', null, 'Error getting user data')
+    } else {
+        const id = userData.data.user.id
+        const messageData = await supabase.from('lessons_ai_task_messages').insert({
+            user_id: id,
+            message: message.content,
+            sender: message.role as 'assistant' | 'user',
+            lesson_id: lessonId
+        })
+        if (messageData.error) {
+            console.log('Error adding message to the database', messageData.error)
+            return createResponse('error', 'Error adding message to the database', null, 'Error adding message to the database')
+        }
+    }
+
+    return createResponse('success', 'Message sent successfully', null, null)
 }

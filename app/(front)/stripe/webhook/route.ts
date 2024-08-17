@@ -24,15 +24,7 @@ export async function POST (req: Request) {
         )
         switch (event?.type) {
             case 'payment_intent.succeeded':
-            // handle payment_intent.succeded
-                console.log(event, '<----------- event')
-                // const stripeCustomerID = event.data.object.customer
-                // const productId = event.data.object.metadata.productId
-
-                break
             case 'checkout.session.completed':
-            // handle checkout.session.completed
-                console.log(event, '<----------- event')
 
                 const stripeCustomerID = event.data.object.customer
                 const productId = event.data.object.metadata?.productId
@@ -40,48 +32,33 @@ export async function POST (req: Request) {
                 const planId = event.data.object.metadata?.planId
 
                 if (productId) {
-                    console.log(
-                        stripeCustomerID,
-                        '<----------- stripeCustomerID'
-                    )
-                    console.log(productId, '<----------- productId')
-
                     // update invoice and set it to paid
                     const update = await supabase
                         .from('transactions')
                         .update({ status: 'successful' })
                         .eq('transaction_id', invoiceId)
-
-                    console.log(update, '<----------- update')
 
                     break
                 } else if (planId) {
-                    console.log(
-                        stripeCustomerID,
-                        '<----------- stripeCustomerID'
-                    )
-                    console.log(planId, '<----------- planId')
-
                     // update invoice and set it to paid
                     const update = await supabase
                         .from('transactions')
                         .update({ status: 'successful' })
                         .eq('transaction_id', invoiceId)
-
-                    console.log(update, '<----------- update')
 
                     break
                 }
                 break
             case 'payment_intent.payment_failed':
-            // handle other type of stripe events
+                // handle other type of stripe events
                 console.log(event, '<----------- event')
                 break
             default:
-            // other events that we don't handle
+                // other events that we don't handle
                 break
         }
     } catch (err) {
+        console.log(err, '<----------- err')
         if (err instanceof Error) {
             console.error(err.message)
             return NextResponse.json({ message: err.message }, { status: 400 })

@@ -1,14 +1,7 @@
-// @ts-nocheck
 import dayjs from 'dayjs'
 
+import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import CreateCourse from '@/components/dashboards/teacher/course/CreateCourse'
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -43,30 +36,13 @@ export default async function CreateCoursePage () {
 
     return (
         <div className=" flex-1 p-8 overflow-auto w-full space-y-4">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/dashboard/teacher">
-                          Teacher
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink
-                            className="text-primary-500 dark:text-primary-400"
-                            href="/dashboard/teacher/courses"
-                        >
-                            Courses
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
+            <BreadcrumbComponent
+                links={[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/dashboard/teacher', label: 'Teacher' },
+                    { href: '/dashboard/teacher/courses', label: 'Courses' }
+                ]}
+            />
             <h1 className="text-2xl font-semibold mb-4">
                 List And Create course page
             </h1>
@@ -85,7 +61,7 @@ export default async function CreateCoursePage () {
                 </DialogContent>
             </Dialog>
 
-            <DataTable columns={courseCols} data={rows} />
+            <DataTable columns={courseCols} data={rows as any[]} />
         </div>
     )
 }
