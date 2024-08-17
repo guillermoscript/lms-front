@@ -1,10 +1,12 @@
+'use client'
+
 import { cn } from '@/utils'
 
 const Message = ({
     sender,
     time,
     isUser,
-    children
+    children,
 }: {
     sender: string
     time?: string
@@ -14,6 +16,7 @@ const Message = ({
     if (sender !== 'user' && sender !== 'assistant') {
         return null
     }
+
     return (
         <div
             className={cn(
@@ -22,7 +25,7 @@ const Message = ({
             )}
         >
             <div className="flex items-end w-full">
-                <div className="flex flex-col w-full px-1 md:px-4 py-2 rounded-lg relative">
+                <div className="flex flex-col gap-2 w-full px-1 md:px-4 py-2 rounded-lg relative">
                     {!isUser && (
                         <img
                             src={'/img/robot.jpeg'}
@@ -31,7 +34,10 @@ const Message = ({
                         />
                     )}
                     <div className="font-bold mb-1 capitalize">
-                        {sender} <span className="text-xs text-gray-400 ml-2">{time}</span>
+                        {sender}{' '}
+                        <span className="text-xs text-gray-400 ml-2">
+                            {time}
+                        </span>
                     </div>
                     {children}
                 </div>

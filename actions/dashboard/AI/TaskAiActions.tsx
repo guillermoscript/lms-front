@@ -10,13 +10,16 @@ import { z } from 'zod'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
+import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import EditTaksMessage from '@/components/dashboards/student/course/lessons/EditTaksMessage'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
 
 export async function continueTaskAiConversation(
-    input: string
+    input: string,
+    userMessageId: string
 ): Promise<ClientMessage> {
     const aiState = getMutableAIState<typeof TaskAiActions>()
 
@@ -34,7 +37,7 @@ export async function continueTaskAiConversation(
         messages: [
             ...aiState.get().messages,
             {
-                id: generateId(),
+                id: userMessageId,
                 role: 'user',
                 content: input,
             },
@@ -66,19 +69,9 @@ export async function continueTaskAiConversation(
         ),
         system: systemMessage.content,
         text: async function ({ content, done }) {
-            if (done) {
-                aiState.done({
-                    ...aiState.get(),
-                    messages: [
-                        ...aiState.get().messages,
-                        {
-                            id: generateId(),
-                            role: 'assistant',
-                            content,
-                        },
-                    ],
-                })
+            const id = generateId()
 
+            if (done) {
                 const aiMessageInsert = await supabase
                     .from('lessons_ai_task_messages')
                     .insert({
@@ -87,7 +80,19 @@ export async function continueTaskAiConversation(
                         sender: 'assistant',
                         user_id: aiState.get().userId,
                         created_at: new Date().toISOString(),
-                    })
+                    }).select('id').single()
+
+                aiState.done({
+                    ...aiState.get(),
+                    messages: [
+                        ...aiState.get().messages,
+                        {
+                            id: aiMessageInsert.data.id.toString(),
+                            role: 'assistant',
+                            content,
+                        },
+                    ],
+                })
             }
 
             return (
@@ -96,7 +101,15 @@ export async function continueTaskAiConversation(
                     time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                     isUser={false}
                 >
-                    <ViewMarkdown markdown={content} />
+                    <MessageContentWrapper
+                        view={<ViewMarkdown markdown={content} />}
+                        edit={
+                            <EditTaksMessage
+                                sender="assistant"
+                                text={content}
+                            />
+                        }
+                    />
                 </Message>
             )
         },
@@ -206,6 +219,16 @@ export const TaskAiActions = createAI<AIState, UIState>({
         userId: '',
         messages: [],
     },
+    onSetAIState: async ({ state, done }) => {
+        'use server'
+
+        console.log('AI State:', state)
+
+        if (done) {
+            console.log('AI State:', state)
+            console.log('AI State Done:', done)
+        }
+    },
 })
 
 export interface Chat extends Record<string, any> {
@@ -245,7 +268,15 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                             time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                             isUser={true}
                         >
-                            <ViewMarkdown markdown={message.content} />
+                            <MessageContentWrapper
+                                view={<ViewMarkdown markdown={message.content} />}
+                                edit={
+                                    <EditTaksMessage
+                                        sender="user"
+                                        text={message.content}
+                                    />
+                                }
+                            />
                         </Message>
                     ) : message.role === 'assistant' &&
                   typeof message.content === 'string' ? (
@@ -254,7 +285,15 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                                 time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                                 isUser={false}
                             >
-                                <ViewMarkdown markdown={message.content} />
+                                <MessageContentWrapper
+                                    view={<ViewMarkdown markdown={message.content} />}
+                                    edit={
+                                        <EditTaksMessage
+                                            sender="assistant"
+                                            text={message.content}
+                                        />
+                                    }
+                                />
                             </Message>
                         ) : null,
         }))

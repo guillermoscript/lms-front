@@ -179,19 +179,19 @@ export async function studentSubmitAiTaskMessage({
     if (userData.error) {
         console.log('Error getting user data', userData.error)
         return createResponse('error', 'Error getting user data', null, 'Error getting user data')
-    } else {
-        const id = userData.data.user.id
-        const messageData = await supabase.from('lessons_ai_task_messages').insert({
-            user_id: id,
-            message: message.content,
-            sender: message.role as 'assistant' | 'user',
-            lesson_id: lessonId
-        })
-        if (messageData.error) {
-            console.log('Error adding message to the database', messageData.error)
-            return createResponse('error', 'Error adding message to the database', null, 'Error adding message to the database')
-        }
     }
 
-    return createResponse('success', 'Message sent successfully', null, null)
+    const id = userData.data.user.id
+    const messageData = await supabase.from('lessons_ai_task_messages').insert({
+        user_id: id,
+        message: message.content,
+        sender: message.role as 'assistant' | 'user',
+        lesson_id: lessonId
+    }).select('id').single()
+    if (messageData.error) {
+        console.log('Error adding message to the database', messageData.error)
+        return createResponse('error', 'Error adding message to the database', null, 'Error adding message to the database')
+    }
+
+    return createResponse('success', 'Message sent successfully', messageData.data.id, null)
 }
