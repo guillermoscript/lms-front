@@ -16,6 +16,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
+import RegenerateMessage from '@/components/dashboards/student/course/lessons/RegenerateMessage'
 
 export async function continueTaskAiConversation(
     input: string,
@@ -57,7 +58,7 @@ export async function continueTaskAiConversation(
                 name: message.name,
             })),
         ],
-        temperature: 0.3,
+        temperature: 0.9,
         initial: (
             <Message
                 sender={'assistant'}
@@ -69,8 +70,6 @@ export async function continueTaskAiConversation(
         ),
         system: systemMessage.content,
         text: async function ({ content, done }) {
-            const id = generateId()
-
             if (done) {
                 const aiMessageInsert = await supabase
                     .from('lessons_ai_task_messages')
@@ -80,7 +79,9 @@ export async function continueTaskAiConversation(
                         sender: 'assistant',
                         user_id: aiState.get().userId,
                         created_at: new Date().toISOString(),
-                    }).select('id').single()
+                    })
+                    .select('id')
+                    .single()
 
                 aiState.done({
                     ...aiState.get(),
@@ -102,6 +103,7 @@ export async function continueTaskAiConversation(
                     isUser={false}
                 >
                     <MessageContentWrapper
+                        role="assistant"
                         view={<ViewMarkdown markdown={content} />}
                         edit={
                             <EditTaksMessage
@@ -109,6 +111,7 @@ export async function continueTaskAiConversation(
                                 text={content}
                             />
                         }
+                        regenerate={<RegenerateMessage message={content} />}
                     />
                 </Message>
             )
@@ -226,6 +229,7 @@ export const TaskAiActions = createAI<AIState, UIState>({
 
         if (done) {
             console.log('AI State:', state)
+
             console.log('AI State Done:', done)
         }
     },
@@ -240,13 +244,18 @@ export interface Chat extends Record<string, any> {
 export const getUIStateFromTaskAIState = (aiState: Chat) => {
     return aiState.messages
         .filter((message) => message.role !== 'system')
-        .map((message, index) => ({
-            id: `${aiState.chatId}-${index}`,
-            display:
-                message.role === 'tool' ? (
-                    message.content.map((tool) => {
-                        return tool.toolName ===
-                            'makeUserAssigmentCompleted' ? (
+        .map((message, index) => {
+            console.log(message)
+
+            console.log(aiState)
+
+            return {
+                id: message.id,
+                display:
+                    message.role === 'tool' ? (
+                        message.content.map((tool) => {
+                            return tool.toolName ===
+                                'makeUserAssigmentCompleted' ? (
                                 <Message
                                     sender={'assistant'}
                                     time={dayjs().format(
@@ -260,41 +269,53 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                                     />
                                 </Message>
                             ) : null
-                    })
-                ) : message.role === 'user' &&
-                  typeof message.content === 'string' ? (
+                        })
+                    ) : message.role === 'user' &&
+                      typeof message.content === 'string' ? (
                         <Message
                             sender={message.role}
                             time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                             isUser={true}
                         >
                             <MessageContentWrapper
-                                view={<ViewMarkdown markdown={message.content} />}
+                                view={
+                                    <ViewMarkdown markdown={message.content} />
+                                }
                                 edit={
                                     <EditTaksMessage
                                         sender="user"
                                         text={message.content}
                                     />
                                 }
+                                role="user"
                             />
                         </Message>
                     ) : message.role === 'assistant' &&
-                  typeof message.content === 'string' ? (
-                            <Message
-                                sender={message.role}
-                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                                isUser={false}
-                            >
-                                <MessageContentWrapper
-                                    view={<ViewMarkdown markdown={message.content} />}
-                                    edit={
-                                        <EditTaksMessage
-                                            sender="assistant"
-                                            text={message.content}
-                                        />
-                                    }
-                                />
-                            </Message>
-                        ) : null,
-        }))
+                      typeof message.content === 'string' ? (
+                        <Message
+                            sender={message.role}
+                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                            isUser={false}
+                        >
+                            <MessageContentWrapper
+                                view={
+                                    <ViewMarkdown markdown={message.content} />
+                                }
+                                edit={
+                                    <EditTaksMessage
+                                        sender="assistant"
+                                        text={message.content}
+                                    />
+                                }
+                                regenerate={
+                                    <RegenerateMessage
+                                        message={message.content}
+                                    />
+                                }
+                                role="assistant"
+                            />
+                        </Message>
+                    ) : null,
+            }
+        })
 }
