@@ -1,22 +1,84 @@
 'use client'
-import { Link } from 'lucide-react'
-import { useFormState, useFormStatus } from 'react-dom'
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { EyeIcon, EyeOffIcon, Link } from 'lucide-react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 
 import { signUp } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { toast } from '@/components/ui/use-toast'
 
-import PasswordComponent from './PasswordComponent'
+// Assuming this component handles password input and validation
 
-export default function UserSignupForm ({
-    redirect
-}: {
-    redirect: string
-}) {
-    const [state, action] = useFormState(signUp, {
-        status: 'idle',
-        message: '',
-        error: null
+// Define your Zod schema for validation
+const FormSchema = z.object({
+    email: z.string().email({ message: 'Invalid email address' }),
+    full_name: z
+        .string()
+        .min(2, { message: 'Full name must be at least 2 characters.' }),
+    username: z
+        .string()
+        .min(2, { message: 'Username must be at least 2 characters.' }),
+    password: z
+        .string()
+        .min(8, { message: 'Password must be at least 8 characters.' })
+        .max(100, { message: 'Password must be at most 100 characters.' })
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
+            message:
+                'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
+        }),
+})
+
+export default function UserSignupForm({ redirect }: { redirect?: string }) {
+    const form = useForm<z.infer<typeof FormSchema>>({
+        resolver: zodResolver(FormSchema),
+        defaultValues: {
+            email: '',
+            full_name: '',
+            username: '',
+            password: '',
+        },
     })
+
+    const [showPassword, setShowPassword] = useState(false)
+
+    const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+        try {
+            // Assuming signUp function returns a promise
+            const response = await signUp({
+                email: data.email,
+                full_name: data.full_name,
+                username: data.username,
+                password: data.password,
+            })
+
+            // Handle successful signup (e.g., redirect, show success message)
+            toast({
+                title: 'Check your email',
+                description:
+                    'Check your email to continue the sign-in process.',
+            })
+        } catch (error: any) {
+            // Handle signup errors (e.g., display error messages)
+            toast({
+                title: 'Signup Error',
+                description:
+                    error.message || 'An error occurred during signup.',
+                variant: 'destructive', // You can customize the toast variant
+            })
+        }
+    }
 
     return (
         <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
@@ -38,82 +100,90 @@ export default function UserSignupForm ({
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>{' '}
-        Back
+                Back
             </Link>
-
-            <form
-                className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
-                action={action}
-            >
-                <label className="text-md" htmlFor="email">
-            Email
-                </label>
-                <input
-                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                    name="email"
-                    placeholder="you@example.com"
-                    required
-                />
-                <label className="text-md" htmlFor="full_name">
-            Full Name
-                </label>
-                <input
-                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                    name="full_name"
-                    placeholder="John Doe"
-                    required
-                />
-                <label className="text-md" htmlFor="username">
-            Username
-                </label>
-                <input
-                    className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                    name="username"
-                    placeholder="johndoe"
-                    required
-                />
-                <label className="text-md" htmlFor="password">
-            Password
-                </label>
-
-                <input type="hidden" name="redirect" value={redirect} />
-
-                <PasswordComponent />
-                <SubmitButton />
-                {state.error && (
-                    <div>
-                        <h3 className="mt-4 text-center text-red-500">
-                            Error: {state.error}
-                        </h3>
-                        <p className="mt-4 p-4 bg-destructive/80 text-foreground text-center">
-                            {state.message}
-                        </p>
-                    </div>
-                )}
-                {state.status === 'success' && (
-                    <div>
-                        <h3 className="mt-4 text-center bg-green-500 text-white p-4 rounded">
-                            {state.message}
-                        </h3>
-                    </div>
-                )}
-            </form>
+            <Form {...form}>
+                <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="animate-in flex-1 flex flex-col w-full justify-center gap-4 text-foreground"
+                >
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        placeholder="you@example.com"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="full_name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="John Doe" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Username</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="johndoe" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                    <div className=" w-full gap-4 flex items-center justify-between">
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password"
+                                            placeholder="••••••••"
+                                            {...field}
+                                        />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                                            {!showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                                        </button>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    {/* Optional hidden input for redirect if needed */}
+                    {redirect && (
+                        <input type="hidden" name="redirect" value={redirect} />
+                    )}
+                    <Button
+                        disabled={form.formState.isSubmitting}
+                        type="submit"
+                    >
+                        {form.formState.isSubmitting ? 'Signing up...' : 'Sign Up'}
+                    </Button>
+                </form>
+            </Form>
         </div>
-    )
-}
-
-function SubmitButton () {
-    const { pending } = useFormStatus()
-    return (
-        <>
-            <Button
-                type="submit"
-                className="disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full"
-                disabled={pending}
-                variant={'secondary'}
-            >
-                {pending ? 'Submitting...' : 'Submit'}
-            </Button>
-        </>
     )
 }
