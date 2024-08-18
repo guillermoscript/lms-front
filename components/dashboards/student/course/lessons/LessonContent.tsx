@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
 
 import LessonLoaderView from './LessonLoaderView'
 import TaskMessageTour from './TaskMessageTour'
+import ResetTaskAIConversation from './ResetTaskAIConversation'
 
 export default function LessonContent({
     lessonData,
@@ -155,6 +156,9 @@ export default function LessonContent({
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
                             <Separator />
+                            <ResetTaskAIConversation
+                                lessonId={lessonData.id}
+                            />
                             <CustomErrorBoundary fallback={
                                 <RetryError
                                     title="Error loading AI Task"
