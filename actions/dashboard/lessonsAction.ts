@@ -350,3 +350,24 @@ export async function studentDeleteAiTaskMessage({
 
     return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', 'Message deleted successfully')
 }
+
+export async function studentResetAiTaskConversation({
+    lessonId
+}: {
+    lessonId: number
+}) {
+    const supabase = createClient()
+    const userData = await getUserData(supabase)
+    if (userData.error) return createResponse('error', userData.error, null, userData.error)
+
+    const userId = userData.id
+    const messageData = await supabase.from('lessons_ai_task_messages').select('id').eq('lesson_id', lessonId).eq('user_id', userId)
+    if (messageData.error) return createResponse('error', 'Error getting messages from the database', null, 'Error getting messages from the database')
+
+    const messagesToDelete = messageData.data.map((msg) => msg.id)
+    const deleteResult = await deleteMessages(supabase, messagesToDelete)
+    if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
+
+    revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]')
+    return createResponse('success', 'Message updated successfully', null, null)
+}
