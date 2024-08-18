@@ -16,8 +16,6 @@ import { Button } from '@/components/ui/button'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import RegenerateMessage from './RegenerateMessage'
-
 export default function EditTaksMessage({
     text,
     sender,
@@ -76,7 +74,7 @@ export default function EditTaksMessage({
                     ...currentConversation.slice(0, messageIndex - 1),
                     {
                         id: message.id,
-                        role: 'assistant',
+                        role: 'user',
                         display: (
                             <Message
                                 sender={'user'}
@@ -85,21 +83,17 @@ export default function EditTaksMessage({
                             >
                                 <MessageContentWrapper
                                     view={<ViewMarkdown markdown={newText} />}
-                                    role="assistant"
+                                    role="user"
                                     edit={
                                         <EditTaksMessage
                                             text={newText}
-                                            sender="assistant"
+                                            sender="user"
                                             viewMode={viewMode}
                                             setViewMode={setViewMode}
                                         />
                                     }
                                     regenerate={
-                                        <RegenerateMessage
-                                            message="Regenerate"
-                                            viewMode={viewMode}
-                                            setViewMode={setViewMode}
-                                        />
+                                        null
                                     }
                                 />
                             </Message>
