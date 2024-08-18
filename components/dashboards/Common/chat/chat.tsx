@@ -1,7 +1,7 @@
 'use client'
 import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Confetti, { ConfettiRef } from '@/components/magicui/confetti'
 import { Button } from '@/components/ui/button'
@@ -163,11 +163,15 @@ const ChatInput = ({
     stop,
     callbackFunction,
     isTemplatePresent,
+    text,
+    buttonChildren,
 }: {
     isLoading: boolean
     stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
     isTemplatePresent?: boolean
+    text?: string
+    buttonChildren?: React.ReactNode
 }) => {
     const ref = useRef(null)
 
@@ -225,24 +229,31 @@ const ChatInput = ({
                         'editor'
                     )}
                     placeholder="Chat with the AI assistant"
-                    markdown=""
+                    markdown={text ?? ''}
                     ref={ref}
                 />
                 <input type="hidden" value={ref.current?.getMarkdown()} />
-                {isLoading ? (
-                    <Button
-                        type="button"
-                        onClick={stop}
-                        variant="outline"
-                        className="rounded-r-lg"
-                    >
-                        Stop
-                    </Button>
-                ) : (
-                    <Button type="submit" className="rounded-r-lg">
-                        Send
-                    </Button>
-                )}
+                {
+                    buttonChildren || (
+                        isLoading ? (
+                            <Button
+                                type="button"
+                                onClick={stop}
+                                variant="outline"
+                                className="rounded-r-lg"
+                            >
+                                Stop
+                            </Button>
+                        ) : (
+                            <Button
+                                type="submit"
+                                className="rounded-r-lg"
+                            >
+                                Send
+                            </Button>
+                        )
+                    )
+                }
                 <DisclaimerForUser />
             </form>
         </>
@@ -253,11 +264,17 @@ function ChatTextArea({
     isLoading,
     stop,
     callbackFunction,
+    text,
+    buttonChildren
 }: {
     isLoading: boolean
     stop?: () => void
     callbackFunction: (MessageType: MessageType) => void
+    text?: string
+    buttonChildren?: React.ReactNode
 }) {
+    const [value, setValue] = useState(text)
+
     return (
         <>
             <form
@@ -271,6 +288,7 @@ function ChatTextArea({
                         id: generateId(),
                     })
                     e.currentTarget.reset()
+                    setValue('')
                 }}
                 className="py-4 flex gap-2 flex-col w-full"
             >
@@ -278,23 +296,32 @@ function ChatTextArea({
                     placeholder="Type your message here"
                     required
                     className="rounded-l-lg"
-                    rows={3}
+                    rows={7}
                     id='textarea'
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
                 />
-                {isLoading ? (
-                    <Button
-                        type="button"
-                        onClick={stop}
-                        variant="outline"
-                        className="rounded-r-lg"
-                    >
-            Stop
-                    </Button>
-                ) : (
-                    <Button type="submit" className="rounded-r-lg">
-            Send
-                    </Button>
-                )}
+                {
+                    buttonChildren || (
+                        isLoading ? (
+                            <Button
+                                type="button"
+                                onClick={stop}
+                                variant="outline"
+                                className="rounded-r-lg"
+                            >
+                                Stop
+                            </Button>
+                        ) : (
+                            <Button
+                                type="submit"
+                                className="rounded-r-lg"
+                            >
+                                Send
+                            </Button>
+                        )
+                    )
+                }
                 <DisclaimerForUser />
             </form>
         </>

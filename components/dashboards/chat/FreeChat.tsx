@@ -17,6 +17,8 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
+import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
+import FreeMessageChatEdit from '../student/free-chat/FreeMessageChatEdit'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
 interface RunUserMessageParams {
@@ -99,7 +101,17 @@ const handleCallbackFunction = async ({
                         time={new Date().toDateString()}
                         isUser={true}
                     >
-                        <ViewMarkdown markdown={input} />
+                        <MessageContentWrapper
+                            role="user"
+                            view={<ViewMarkdown markdown={input} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="user"
+                                    text={input}
+                                    chatId={data.data.chat_id}
+                                />
+                            }
+                        />
                     </Message>
                 ),
             },
@@ -121,7 +133,17 @@ const handleCallbackFunction = async ({
                         time={new Date().toDateString()}
                         isUser={true}
                     >
-                        <ViewMarkdown markdown={input} />
+                        <MessageContentWrapper
+                            role="user"
+                            view={<ViewMarkdown markdown={input} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="user"
+                                    text={input}
+                                    chatId={chatId}
+                                />
+                            }
+                        />
                     </Message>
                 ),
             },
@@ -168,7 +190,7 @@ export default function FreeChat({ chatId }: FreeChatProps) {
 
     return (
         <div ref={scrollRef} className="h-full relative overflow-auto pt-4">
-            <div ref={messagesRef} className="pb-[350px] lg:pb-[300px]">
+            <div ref={messagesRef} className="pb-[380px] lg:pb-[360px]">
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} />
                 ) : (

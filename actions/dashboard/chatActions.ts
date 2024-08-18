@@ -235,3 +235,173 @@ export async function deleteChat (state: {
     revalidatePath('/dashboard/student/chat/', 'layout')
     return createResponse('success', 'Chat deleted successfully', null, null)
 }
+
+// Helper function to fetch user data
+async function getUserData(supabase) {
+    const userData = await supabase.auth.getUser()
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+        return { error: 'Error getting user data' }
+    }
+    return { id: userData.data.user.id }
+}
+
+// Helper function to update a message
+async function updateMessage(supabase, messageId, newMessage) {
+    const messageData = await supabase.from('messages').update({ message: newMessage }).eq('id', messageId).select('id').single()
+    if (messageData.error) {
+        console.log('Error updating message in the database', messageData.error)
+        return { error: 'Error updating message in the database' }
+    }
+    return { id: messageData.data.id }
+}
+
+// Helper function to delete messages
+async function deleteMessages(supabase, messagesToDelete) {
+    const deleteResult = await supabase.from('messages').delete().in('id', messagesToDelete)
+    if (deleteResult.error) {
+        console.log('Error deleting next messages', deleteResult.error)
+        return { error: 'Error deleting next messages' }
+    }
+    return { success: true }
+}
+
+// Helper function to revalidate path and respond
+function revalidatePathAndRespond(path, layout, messageId) {
+    revalidatePath(path, layout)
+    return createResponse('success', 'Message updated successfully', messageId, null)
+}
+
+// Helper function to fetch next messages
+async function fetchNextMessages(supabase, messageId) {
+    const nextMessagesData = await supabase.from('messages').select('id').gt('id', messageId).order('id', { ascending: true })
+    if (nextMessagesData.error) {
+        console.log('Error getting next message', nextMessagesData.error)
+        return { error: 'Error getting next message' }
+    }
+    return { messages: nextMessagesData.data }
+}
+
+// Helper function to fetch messages by user
+async function fetchMessagesByUser(supabase, userId) {
+    const messageData = await supabase.from('messages').select('id, message').eq('user_id', userId).order('id', { ascending: true })
+    if (messageData.error) {
+        console.log('Error getting messages from the database', messageData.error)
+        return { error: 'Error getting messages from the database' }
+    }
+    return { messages: messageData.data }
+}
+
+export async function studentEditAiMessage({
+    sender,
+    messageId,
+    message,
+    newMessage,
+    regenerate
+}: {
+    sender: 'user' | 'assistant',
+    messageId?: number,
+    message: string,
+    newMessage: string,
+    regenerate?: boolean
+}) {
+    const supabase = createClient()
+    const userData = await getUserData(supabase)
+    if (userData.error) return createResponse('error', userData.error, null, userData.error)
+
+    const userId = userData.id
+
+    if (messageId) {
+        const updateResult = await updateMessage(supabase, messageId, newMessage)
+        if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
+
+        if (sender === 'user' && regenerate) {
+            const nextMessagesData = await fetchNextMessages(supabase, messageId)
+            if (nextMessagesData.error) return createResponse('error', nextMessagesData.error, null, nextMessagesData.error)
+
+            if (nextMessagesData.messages) {
+                const messagesToDelete = nextMessagesData.messages.map((msg) => msg.id)
+                const deleteResult = await deleteMessages(supabase, messagesToDelete)
+                if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
+
+                return revalidatePathAndRespond('/dashboard/student/chat/', 'layout', updateResult.id)
+            }
+        }
+        return revalidatePathAndRespond('/dashboard/student/chat/', 'layout', updateResult.id)
+    } else {
+        const messageData = await fetchMessagesByUser(supabase, userId)
+        if (messageData.error) return createResponse('error', messageData.error, null, messageData.error)
+
+        const messages = messageData.messages
+        const messageIndex = messages.findIndex((val) => val.message === message)
+        if (messageIndex === -1) return createResponse('error', 'Message not found', null, 'Message not found')
+
+        const messageIdToUpdate = messages[messageIndex].id
+
+        if (sender === 'user' && regenerate) {
+            const nextMessagesData = await fetchNextMessages(supabase, messageIdToUpdate)
+            if (nextMessagesData.error) return createResponse('error', nextMessagesData.error, null, nextMessagesData.error)
+
+            if (nextMessagesData.messages) {
+                const messagesToDelete = nextMessagesData.messages.map((msg) => msg.id)
+                const deleteResult = await deleteMessages(supabase, messagesToDelete)
+                if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
+
+                const updateResult = await updateMessage(supabase, messageIdToUpdate, newMessage)
+                if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
+
+                return revalidatePathAndRespond('/dashboard/student/chat/', 'layout', updateResult.id)
+            }
+        } else {
+            const updateResult = await updateMessage(supabase, messageIdToUpdate, newMessage)
+            if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
+
+            return revalidatePathAndRespond('/dashboard/student/chat/', 'layout', updateResult.id)
+        }
+    }
+}
+
+// Helper function to fetch messages
+async function fetchMessages(supabase, lessonId, userId, messageContent) {
+    const messageData = await supabase.from('messages')
+        .select('id, message')
+        .eq('message', messageContent)
+        .order('id', { ascending: true })
+
+    if (messageData.error) {
+        console.log('Error getting message from the database', messageData.error)
+        return { error: 'Error getting message from the database' }
+    }
+    return { messages: messageData.data }
+}
+
+export async function studentDeleteAikMessage({
+    lessonId,
+    message
+}: {
+    lessonId: number,
+    message: {
+        content: string,
+        role: string,
+        messageId?: number
+    }
+}) {
+    const supabase = createClient()
+    const userData = await getUserData(supabase)
+    if (userData.error) return createResponse('error', userData.error, null, userData.error)
+
+    const userId = userData.id
+    const messageData = await fetchMessages(supabase, lessonId, userId, message.content)
+    if (messageData.error) return createResponse('error', messageData.error, null, messageData.error)
+
+    const messages = messageData.messages
+    const messageIndex = messages.findIndex((val) => val.message === message.content)
+    if (messageIndex === -1) return createResponse('error', 'Message not found', null, 'Message not found')
+
+    const nextMessages = messages.slice(messageIndex)
+    const messagesToDelete = nextMessages.map((msg) => msg.id)
+    const deleteResult = await deleteMessages(supabase, messagesToDelete)
+    if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
+
+    return revalidatePathAndRespond('/dashboard/student/chat/', 'layout', null)
+}

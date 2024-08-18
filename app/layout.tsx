@@ -2,6 +2,7 @@ import './globals.css'
 
 import { GeistSans } from 'geist/font/sans'
 
+import { JotaiProvider } from '@/components/provider/JotaiProvider'
 // In app directory
 import ProgressBarProvider from '@/components/provider/ProgressBarProvider'
 import ScrollToTopButton from '@/components/ScrollToTopButton'
@@ -30,19 +31,21 @@ export default function RootLayout ({
         >
             <body>
                 <ProgressBarProvider />
-                <main className="min-h-screen flex flex-col items-center w-full">
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="system"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        {children}
-                        <Toaster />
-                        <SoonerToaster />
-                        <ScrollToTopButton />
-                    </ThemeProvider>
-                </main>
+                <JotaiProvider>
+                    <main className="min-h-screen flex flex-col items-center w-full">
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            {children}
+                            <Toaster />
+                            <SoonerToaster />
+                            <ScrollToTopButton />
+                        </ThemeProvider>
+                    </main>
+                </JotaiProvider>
             </body>
         </html>
     )
