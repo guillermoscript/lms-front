@@ -93,8 +93,6 @@ export default function TaksMessages({
     const [stop, setStop] = useState(false)
     const [aiState] = useAIState()
 
-    console.log(aiState)
-
     const isLastMessageFromMakeUserAssigmentCompleted =
         aiState?.messages[aiState?.messages.length - 1]?.role === 'tool' &&
         aiState?.messages[aiState?.messages.length - 1]?.content[0]?.toolName ===
