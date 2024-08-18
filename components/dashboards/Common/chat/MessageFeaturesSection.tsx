@@ -42,7 +42,7 @@ export default function MessageFeatureSection({
                                         <Eye className="w-4 h-4" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>View Mode</p>
+                                        <p>Go back to view mode</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -53,7 +53,7 @@ export default function MessageFeatureSection({
                                         <Pencil className="w-4 h-4" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Edit Mode</p>
+                                        <p>Edit Message</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
