@@ -12,15 +12,16 @@ import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
 import EditTaksMessage from '@/components/dashboards/student/course/lessons/EditTaksMessage'
+import RegenerateMessage from '@/components/dashboards/student/course/lessons/RegenerateMessage'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
-import RegenerateMessage from '@/components/dashboards/student/course/lessons/RegenerateMessage'
 
 export async function continueTaskAiConversation(
     input: string,
-    userMessageId: string
+    userMessageId?: string,
+    messageToRemove?: string
 ): Promise<ClientMessage> {
     const aiState = getMutableAIState<typeof TaskAiActions>()
 
@@ -32,18 +33,33 @@ export async function continueTaskAiConversation(
         throw new Error('User not found.')
     }
 
-    // Update the AI state with the new user message.
-    aiState.update({
-        ...aiState.get(),
-        messages: [
-            ...aiState.get().messages,
-            {
-                id: userMessageId,
-                role: 'user',
-                content: input,
-            },
-        ],
-    })
+    if (messageToRemove) {
+        const messageIndex = aiState.get().messages.findIndex(
+            (message) => message.id === messageToRemove
+        )
+
+        // remove the message from the state
+        aiState.update({
+            ...aiState.get(),
+            messages: [
+                ...aiState.get().messages.slice(0, messageIndex),
+                ...aiState.get().messages.slice(messageIndex + 1),
+            ],
+        })
+    } else {
+        // Update the AI state with the new user message.
+        aiState.update({
+            ...aiState.get(),
+            messages: [
+                ...aiState.get().messages,
+                {
+                    id: userMessageId,
+                    role: 'user',
+                    content: input,
+                },
+            ],
+        })
+    }
 
     const systemMessage = aiState
         .get()
@@ -256,66 +272,66 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                         message.content.map((tool) => {
                             return tool.toolName ===
                                 'makeUserAssigmentCompleted' ? (
-                                <Message
-                                    sender={'assistant'}
-                                    time={dayjs().format(
-                                        'dddd, MMMM D, YYYY h:mm A'
-                                    )}
-                                    isUser={false}
-                                >
-                                    <SuccessMessage
-                                        status="success"
-                                        message="Assignment marked as completed."
-                                    />
-                                </Message>
-                            ) : null
+                                    <Message
+                                        sender={'assistant'}
+                                        time={dayjs().format(
+                                            'dddd, MMMM D, YYYY h:mm A'
+                                        )}
+                                        isUser={false}
+                                    >
+                                        <SuccessMessage
+                                            status="success"
+                                            message="Assignment marked as completed."
+                                        />
+                                    </Message>
+                                ) : null
                         })
                     ) : message.role === 'user' &&
                       typeof message.content === 'string' ? (
-                        <Message
-                            sender={message.role}
-                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                            isUser={true}
-                        >
-                            <MessageContentWrapper
-                                view={
-                                    <ViewMarkdown markdown={message.content} />
-                                }
-                                edit={
-                                    <EditTaksMessage
-                                        sender="user"
-                                        text={message.content}
-                                    />
-                                }
-                                role="user"
-                            />
-                        </Message>
-                    ) : message.role === 'assistant' &&
+                            <Message
+                                sender={message.role}
+                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                isUser={true}
+                            >
+                                <MessageContentWrapper
+                                    view={
+                                        <ViewMarkdown markdown={message.content} />
+                                    }
+                                    edit={
+                                        <EditTaksMessage
+                                            sender="user"
+                                            text={message.content}
+                                        />
+                                    }
+                                    role="user"
+                                />
+                            </Message>
+                        ) : message.role === 'assistant' &&
                       typeof message.content === 'string' ? (
-                        <Message
-                            sender={message.role}
-                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                            isUser={false}
-                        >
-                            <MessageContentWrapper
-                                view={
-                                    <ViewMarkdown markdown={message.content} />
-                                }
-                                edit={
-                                    <EditTaksMessage
-                                        sender="assistant"
-                                        text={message.content}
+                                <Message
+                                    sender={message.role}
+                                    time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                    isUser={false}
+                                >
+                                    <MessageContentWrapper
+                                        view={
+                                            <ViewMarkdown markdown={message.content} />
+                                        }
+                                        edit={
+                                            <EditTaksMessage
+                                                sender="assistant"
+                                                text={message.content}
+                                            />
+                                        }
+                                        regenerate={
+                                            <RegenerateMessage
+                                                message={message.content}
+                                            />
+                                        }
+                                        role="assistant"
                                     />
-                                }
-                                regenerate={
-                                    <RegenerateMessage
-                                        message={message.content}
-                                    />
-                                }
-                                role="assistant"
-                            />
-                        </Message>
-                    ) : null,
+                                </Message>
+                            ) : null,
             }
         })
 }
