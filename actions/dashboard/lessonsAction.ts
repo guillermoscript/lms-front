@@ -197,6 +197,42 @@ export async function studentSubmitAiTaskMessage({
 }
 // here if the message is from a user, then the next message (ai) should be removed and the user message edited from supabase, for this i mus call an action
 // if hte message is from the AI then just delete the message and submit user last message to regenerate it, for this also an action
+// Helper function to fetch user data
+async function getUserData(supabase) {
+    const userData = await supabase.auth.getUser()
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+        return { error: 'Error getting user data' }
+    }
+    return { id: userData.data.user.id }
+}
+
+// Helper function to update a message
+async function updateMessage(supabase, messageId, newMessage) {
+    const messageData = await supabase.from('lessons_ai_task_messages').update({ message: newMessage }).eq('id', messageId).select('id').single()
+    if (messageData.error) {
+        console.log('Error updating message in the database', messageData.error)
+        return { error: 'Error updating message in the database' }
+    }
+    return { id: messageData.data.id }
+}
+
+// Helper function to delete messages
+async function deleteMessages(supabase, messageIds) {
+    const deleteResult = await supabase.from('lessons_ai_task_messages').delete().in('id', messageIds)
+    if (deleteResult.error) {
+        console.log('Error deleting messages', deleteResult.error)
+        return { error: 'Error deleting messages' }
+    }
+    return { success: true }
+}
+
+// Helper function to revalidate path
+function revalidatePathAndRespond(path, layout, messageId) {
+    revalidatePath(path, layout)
+    return createResponse('success', 'Message updated successfully', messageId, null)
+}
+
 export async function studentEditAiTaskMessage({
     sender,
     lessonId,
@@ -205,210 +241,112 @@ export async function studentEditAiTaskMessage({
     newMessage,
     regenerate
 }: {
-    sender: 'user' | 'assistant'
-    lessonId: number
-    messageId?: number
-    message: string
-    newMessage: string
+    sender: 'user' | 'assistant',
+    lessonId: number,
+    messageId?: number,
+    message: string,
+    newMessage: string,
     regenerate?: boolean
 }) {
     const supabase = createClient()
-    const userData = await supabase.auth.getUser()
-    if (userData.error) {
-        console.log('Error getting user data', userData.error)
-        return createResponse('error', 'Error getting user data', null, 'Error getting user data')
-    }
+    const userData = await getUserData(supabase)
+    if (userData.error) return createResponse('error', userData.error, null, userData.error)
 
-    const id = userData.data.user.id
+    const userId = userData.id
+
     if (messageId) {
-        const messageData = await supabase.from('lessons_ai_task_messages').update({
-            message: newMessage
-        }).eq('id', messageId).select('id').single()
+        const updateResult = await updateMessage(supabase, messageId, newMessage)
+        if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
 
-        if (messageData.error) {
-            console.log('Error updating message in the database', messageData.error)
-            return createResponse('error', 'Error updating message in the database', null, 'Error updating message in the database')
-        }
-
-        // TODO: Define if eliminating the next message is necessary or not @angel-afonso
         if (sender === 'user' && regenerate) {
-            const nextMessagesData = await supabase.from('lessons_ai_task_messages').select('id').eq('lesson_id', lessonId).eq('user_id', id).gt('id', messageId).order('id', { ascending: true })
-            if (nextMessagesData.error) {
-                console.log('Error getting next message', nextMessagesData.error)
-                return createResponse('error', 'Error getting next message', null, 'Error getting next message')
-            }
+            const nextMessagesData = await supabase.from('lessons_ai_task_messages').select('id').eq('lesson_id', lessonId).eq('user_id', userId).gt('id', messageId).order('id', { ascending: true })
+            if (nextMessagesData.error) return createResponse('error', 'Error getting next message', null, 'Error getting next message')
 
             if (nextMessagesData.data) {
-                // delete all the next messages
-                const nextMessages = nextMessagesData.data
-                const messagesToDelete = nextMessages.map((message) => message.id)
-                const nextMessagesDelete = await supabase.from('lessons_ai_task_messages').delete().in('id', messagesToDelete)
+                const messagesToDelete = nextMessagesData.data.map((msg) => msg.id)
+                const deleteResult = await deleteMessages(supabase, messagesToDelete)
+                if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
 
-                if (nextMessagesDelete.error) {
-                    console.log('Error deleting next messages', nextMessagesDelete.error)
-                    return createResponse('error', 'Error deleting next messages', null, 'Error deleting next messages')
-                }
-
-                revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-                return createResponse('success', 'Message updated successfully', messageData.data.id, null)
+                return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', updateResult.id)
             }
         }
-        revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-        return createResponse('success', 'Message updated successfully', messageData.data.id, null)
+        return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', updateResult.id)
     } else {
-        // if the message is from a user, then the next message (ai) should be removed and the user message edited from supabase
-        // check if the message is from a user, then delete the next message and update the user message by finding the text
-        const messageData = await supabase.from('lessons_ai_task_messages').select('id, message').eq('lesson_id', lessonId).eq('user_id', id).order('id', { ascending: true })
-
-        if (messageData.error) {
-            console.log('Error getting messages from the database', messageData.error)
-            return createResponse('error', 'Error getting messages from the database', null, 'Error getting messages from the database')
-        }
+        const messageData = await supabase.from('lessons_ai_task_messages').select('id, message').eq('lesson_id', lessonId).eq('user_id', userId).order('id', { ascending: true })
+        if (messageData.error) return createResponse('error', 'Error getting messages from the database', null, 'Error getting messages from the database')
 
         const messages = messageData.data
-
         const messageIndex = messages.findIndex((val) => val.message === message)
+        if (messageIndex === -1) return createResponse('error', 'Message not found', null, 'Message not found')
 
-        if (messageIndex === -1) {
-            console.log('Message not found')
-            return createResponse('error', 'Message not found', null, 'Message not found')
-        }
+        const messageIdToUpdate = messages[messageIndex].id
 
-        // TODO: Define if eliminating the next message is necessary or not @angel-afonso
         if (sender === 'user' && regenerate) {
-            const nextMessagesData = await supabase.from('lessons_ai_task_messages').select('id').eq('lesson_id', lessonId).eq('user_id', id).gt('id', messages[messageIndex].id).order('id', { ascending: true })
-            if (nextMessagesData.error) {
-                console.log('Error getting next message', nextMessagesData.error)
-                return createResponse('error', 'Error getting next message', null, 'Error getting next message')
-            }
+            const nextMessagesData = await supabase.from('lessons_ai_task_messages').select('id').eq('lesson_id', lessonId).eq('user_id', userId).gt('id', messageIdToUpdate).order('id', { ascending: true })
+            if (nextMessagesData.error) return createResponse('error', 'Error getting next message', null, 'Error getting next message')
 
             if (nextMessagesData.data) {
-                // delete all the next messages
-                const nextMessages = nextMessagesData.data
-                const messagesToDelete = nextMessages.map((message) => message.id)
-                const nextMessagesDelete = await supabase.from('lessons_ai_task_messages').delete().in('id', messagesToDelete)
+                const messagesToDelete = nextMessagesData.data.map((msg) => msg.id)
+                const deleteResult = await deleteMessages(supabase, messagesToDelete)
+                if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
 
-                if (nextMessagesDelete.error) {
-                    console.log('Error deleting next messages', nextMessagesDelete.error)
-                    return createResponse('error', 'Error deleting next messages', null, 'Error deleting next messages')
-                }
+                const updateResult = await updateMessage(supabase, messageIdToUpdate, newMessage)
+                if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
 
-                const messageData = await supabase.from('lessons_ai_task_messages').update({
-                    message: newMessage
-                }).eq('id', messages[messageIndex].id).select('id').single()
-
-                if (messageData.error) {
-                    console.log('Error updating message in the database', messageData.error)
-                    return createResponse('error', 'Error updating message in the database', null, 'Error updating message in the database')
-                }
-
-                revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-                return createResponse('success', 'Message updated successfully', messageData.data.id, null)
+                return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', updateResult.id)
             }
         } else {
-            const messageData = await supabase.from('lessons_ai_task_messages').update({
-                message: newMessage
-            }).eq('id', messages[messageIndex].id).select('id').single()
+            const updateResult = await updateMessage(supabase, messageIdToUpdate, newMessage)
+            if (updateResult.error) return createResponse('error', updateResult.error, null, updateResult.error)
 
-            if (messageData.error) {
-                console.log('Error updating message in the database', messageData.error)
-                return createResponse('error', 'Error updating message in the database', null, 'Error updating message in the database')
-            }
-
-            revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-            return createResponse('success', 'Message updated successfully', messageData.data.id, null)
+            return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', updateResult.id)
         }
     }
+}
+
+// Helper function to fetch messages
+async function fetchMessages(supabase, lessonId, userId, messageContent) {
+    const messageData = await supabase.from('lessons_ai_task_messages')
+        .select('id, message')
+        .eq('lesson_id', lessonId)
+        .eq('user_id', userId)
+        .eq('message', messageContent)
+        .order('id', { ascending: true })
+
+    if (messageData.error) {
+        console.log('Error getting message from the database', messageData.error)
+        return { error: 'Error getting message from the database' }
+    }
+    return { messages: messageData.data }
 }
 
 export async function studentDeleteAiTaskMessage({
     lessonId,
     message
 }: {
-    lessonId: number
+    lessonId: number,
     message: {
-        content: string
-        role: string
+        content: string,
+        role: string,
         messageId?: number
     }
-
 }) {
     const supabase = createClient()
-    const userData = await supabase.auth.getUser()
-    if (userData.error) {
-        console.log('Error getting user data', userData.error)
-        return createResponse('error', 'Error getting user data', null, 'Error getting user data')
-    }
+    const userData = await getUserData(supabase)
+    if (userData.error) return createResponse('error', userData.error, null, userData.error)
 
-    const id = userData.data.user.id
+    const userId = userData.id
+    const messageData = await fetchMessages(supabase, lessonId, userId, message.content)
+    if (messageData.error) return createResponse('error', messageData.error, null, messageData.error)
 
-    if (message.messageId) {
-        
-        // find the message and all the subsequent messages after it and delete them
-        const messageData = await supabase.from('lessons_ai_task_messages')
-            .select('id, message')
-            .eq('lesson_id', lessonId)
-            .eq('user_id', id)
-            .eq('message', message.content)
-            .order('id', { ascending: true })
-
-        if (messageData.error) {
-            console.log('Error getting message from the database', messageData.error)
-            return createResponse('error', 'Error getting message from the database', null, 'Error getting message from the database')
-        }
-
-        const messages = messageData.data
-
-        console.log(messages)
-
-        const messageIndex = messages.findIndex((val) => val.message === message.content)
-
-        if (messageIndex === -1) {
-            console.log('Message not found')
-            return createResponse('error', 'Message not found', null, 'Message not found')
-        }
-
-        // delete all the next messages
-        const nextMessages = messages.slice(messageIndex)
-        const messagesToDelete = nextMessages.map((message) => message.id)
-        const nextMessagesDelete = await supabase.from('lessons_ai_task_messages').delete().in('id', messagesToDelete)
-
-        if (nextMessagesDelete.error) {
-            console.log('Error deleting next messages', nextMessagesDelete.error)
-            return createResponse('error', 'Error deleting next messages', null, 'Error deleting next messages')
-        }
-
-        // revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-        return createResponse('success', 'Message deleted successfully', null, null)
-    }
-
-    // find the message and all the subsequent messages after it and delete them
-    const messageData = await supabase.from('lessons_ai_task_messages').select('id,message').eq('lesson_id', lessonId).eq('user_id', id).eq('message', message.content).order('id', { ascending: true })
-
-    if (messageData.error) {
-        console.log('Error getting message from the database', messageData.error)
-        return createResponse('error', 'Error getting message from the database', null, 'Error getting message from the database')
-    }
-
-    const messages = messageData.data
-
+    const messages = messageData.messages
     const messageIndex = messages.findIndex((val) => val.message === message.content)
+    if (messageIndex === -1) return createResponse('error', 'Message not found', null, 'Message not found')
 
-    if (messageIndex === -1) {
-        console.log('Message not found')
-        return createResponse('error', 'Message not found', null, 'Message not found')
-    }
-
-    // delete all the next messages
     const nextMessages = messages.slice(messageIndex)
-    const messagesToDelete = nextMessages.map((message) => message.id)
-    const nextMessagesDelete = await supabase.from('lessons_ai_task_messages').delete().in('id', messagesToDelete)
+    const messagesToDelete = nextMessages.map((msg) => msg.id)
+    const deleteResult = await deleteMessages(supabase, messagesToDelete)
+    if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
 
-    if (nextMessagesDelete.error) {
-        console.log('Error deleting next messages', nextMessagesDelete.error)
-        return createResponse('error', 'Error deleting next messages', null, 'Error deleting next messages')
-    }
-
-    // revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout')
-    return createResponse('success', 'Message deleted successfully', null, null)
+    return revalidatePathAndRespond('/dashboard/student/courses/[courseId]/lessons/[lessonId]', 'layout', 'Message deleted successfully')
 }
