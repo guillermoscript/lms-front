@@ -7,6 +7,7 @@ import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentDeleteAiTaskMessage } from '@/actions/dashboard/lessonsAction'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { Button } from '@/components/ui/button'
+import { ViewMode } from '@/components/dashboards/Common/chat/MessageContentWrapper'
 
 export default function RegenerateMessage({
     message,
@@ -14,39 +15,31 @@ export default function RegenerateMessage({
     setViewMode,
 }: {
     message: string
-    viewMode?: 'view' | 'edit'
-    setViewMode?: React.Dispatch<React.SetStateAction<'view' | 'edit'>>
+    viewMode?: ViewMode
+    setViewMode?: React.Dispatch<React.SetStateAction<ViewMode>>
 }) {
     const [aiState, setAiState] = useAIState()
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [conversation, setConversation] = useUIState<typeof TaskAiActions>()
     const { continueTaskAiConversation } = useActions()
 
-    console.log(aiState)
-
     async function editMessageFun() {
-        // search for the message in the aiState
-
-        console.log(aiState)
-
         const messageIndex = aiState.messages.findIndex(
             (val) => val.content === message
         )
 
-        // get the message before the message
+        if (messageIndex === -1) {
+            console.error('Message not found')
+            setIsLoading(false)
+            return
+        }
+
         const messageBefore = aiState.messages[messageIndex - 1]
-
         const messageVal = aiState.messages[messageIndex]
-
-        console.log(messageVal)
-
-        console.log(message)
 
         const messageId = /^[0-9]+$/g.test(messageVal.id)
             ? Number(messageVal.id)
             : undefined
-
-        console.log(messageId)
 
         const res = await studentDeleteAiTaskMessage({
             lessonId: aiState.lessonId,
@@ -57,39 +50,30 @@ export default function RegenerateMessage({
             },
         })
 
-        console.log(res)
-
         if (res.status === 'error') {
             setIsLoading(false)
             return
         }
 
-        // remove all the messages after the current message
-        setConversation((currentConversation: ClientMessage[]) => [
-            ...currentConversation.slice(0, messageIndex),
-        ])
-
-        // remove all the messages after the current message
+        // Remove the current message and all subsequent messages
         setAiState({
-            ...aiState,
             messages: aiState.messages.slice(0, messageIndex),
         })
 
-        console.log(messageBefore)
+        // replace the current message with the message before and remove all the subsequent messages
+        setConversation((currentConversation: ClientMessage[]) => [
+            ...currentConversation.slice(0, currentConversation.length - 1),
+        ])
 
-        // regenerate the message
-        const aiRes = await continueTaskAiConversation(messageBefore.content)
+        // Regenerate the message
+        const aiRes = await continueTaskAiConversation(messageBefore.content, messageBefore.id, messageVal.id)
 
-        // add the new message to the aiState
+        // Add the new message to the aiState
         setConversation((currentConversation: ClientMessage[]) => [
             ...currentConversation,
             aiRes,
         ])
-
-        console.log(conversation)
-
         setIsLoading(false)
-        setViewMode('view')
     }
 
     return isLoading ? (
