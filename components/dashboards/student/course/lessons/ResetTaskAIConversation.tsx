@@ -1,4 +1,8 @@
 'use client'
+import { ResetIcon } from '@radix-ui/react-icons'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
 import { studentResetAiTaskConversation } from '@/actions/dashboard/lessonsAction'
 import {
     AlertDialog,
@@ -12,9 +16,6 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { ResetIcon } from '@radix-ui/react-icons'
-import { useState } from 'react'
-import { toast } from 'sonner'
 
 export default function ResetTaskAIConversation({
     lessonId,

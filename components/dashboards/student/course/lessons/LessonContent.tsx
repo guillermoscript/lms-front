@@ -21,8 +21,8 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 
 import LessonLoaderView from './LessonLoaderView'
-import TaskMessageTour from './TaskMessageTour'
 import ResetTaskAIConversation from './ResetTaskAIConversation'
+import TaskMessageTour from './TaskMessageTour'
 
 export default function LessonContent({
     lessonData,
