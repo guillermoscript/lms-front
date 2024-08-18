@@ -49,8 +49,7 @@ export default async function StudentCourseLessonsPage ({
             <div className="grid gap-8">
                 <div>
                     <h1 className="lg:text-3xl font-bold text-xl">
-                        {lessons.data[0]?.courses?.title} {' '}
-                        Lessons
+                        {lessons.data[0]?.courses?.title}
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
                         View and track your progress through the course lessons.
