@@ -6,8 +6,8 @@ import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentDeleteAiTaskMessage } from '@/actions/dashboard/lessonsAction'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
-import { Button } from '@/components/ui/button'
 import { ViewMode } from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import { Button } from '@/components/ui/button'
 
 export default function RegenerateMessage({
     message,
