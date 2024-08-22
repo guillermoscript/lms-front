@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
+import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import FreeMessageChatEdit from '../student/free-chat/FreeMessageChatEdit'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
@@ -206,11 +207,30 @@ export default function FreeChat({ chatId }: FreeChatProps) {
             </div>
             <div className='w-full absolute bottom-0'>
                 <Tabs defaultValue="simple" className="w-full py-4">
-                    <TabsList>
-                        <TabsTrigger value="simple">Simple</TabsTrigger>
-                        <TabsTrigger value="markdown">Markdown</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="markdown">
+                    <div className="flex gap-4">
+                        <TabsList
+                            id='tabs-list'
+                            className='gap-4'
+                        >
+                            <TabsTrigger
+                                id='simple-tab'
+                                value="simple"
+                            >
+                                    Simple
+                            </TabsTrigger>
+                            <TabsTrigger
+                                id='markdown-tab'
+                                value="markdown"
+                            >
+                                    Markdown
+                            </TabsTrigger>
+                        </TabsList>
+                        <MarkdownEditorTour />
+                    </div>
+                    <TabsContent
+                        id='markdown-content'
+                        value="markdown"
+                    >
                         <ChatInput
                             isLoading={isLoading}
                             callbackFunction={async (input) => await handleCallbackFunction({
@@ -227,7 +247,10 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                             })}
                         />
                     </TabsContent>
-                    <TabsContent value="simple">
+                    <TabsContent
+                        id='simple-content'
+                        value="simple"
+                    >
                         <ChatTextArea
                             isLoading={isLoading}
                             callbackFunction={async (input) => await handleCallbackFunction({
