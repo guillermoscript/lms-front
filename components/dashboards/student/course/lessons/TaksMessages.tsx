@@ -10,6 +10,7 @@ import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleto
 import { ChatInput, ChatTextArea, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useNoCopy from '@/utils/hooks/useNoCopy'
@@ -118,22 +119,26 @@ export default function TaksMessages({
                     !isLessonAiTaskCompleted && (
                     <>
                         <Tabs defaultValue="simple" className="w-full py-4">
-                            <TabsList
-                                id='tabs-list'
-                            >
-                                <TabsTrigger
-                                    id='simple-tab'
-                                    value="simple"
+                            <div className="flex gap-4">
+                                <TabsList
+                                    id='tabs-list'
+                                    className='gap-4'
                                 >
+                                    <TabsTrigger
+                                        id='simple-tab'
+                                        value="simple"
+                                    >
                                     Simple
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    id='markdown-tab'
-                                    value="markdown"
-                                >
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        id='markdown-tab'
+                                        value="markdown"
+                                    >
                                     Markdown
-                                </TabsTrigger>
-                            </TabsList>
+                                    </TabsTrigger>
+                                </TabsList>
+                                <MarkdownEditorTour />
+                            </div>
                             <TabsContent
                                 id='markdown-content'
                                 value="markdown"
