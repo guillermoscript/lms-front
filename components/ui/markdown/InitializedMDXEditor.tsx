@@ -13,7 +13,6 @@ import {
     headingsPlugin,
     imagePlugin,
     InsertCodeBlock,
-    InsertImage,
     InsertSandpack,
     InsertTable,
     linkDialogPlugin,
@@ -31,7 +30,7 @@ import {
     ShowSandpackInfo,
     tablePlugin,
     toolbarPlugin,
-    UndoRedo
+    UndoRedo,
 } from '@mdxeditor/editor'
 import type { ForwardedRef } from 'react'
 
@@ -57,7 +56,7 @@ const simpleSandpackConfig: SandpackConfig = {
             sandpackTheme: 'light',
             snippetFileName: '/App.js',
             snippetLanguage: 'jsx',
-            initialSnippetContent: defaultSnippetContent
+            initialSnippetContent: defaultSnippetContent,
         },
         {
             label: 'React (dark)',
@@ -67,7 +66,7 @@ const simpleSandpackConfig: SandpackConfig = {
             sandpackTheme: 'dark',
             snippetFileName: '/App.js',
             snippetLanguage: 'jsx',
-            initialSnippetContent: defaultSnippetContent
+            initialSnippetContent: defaultSnippetContent,
         },
         {
             label: 'Vue',
@@ -158,12 +157,12 @@ const simpleSandpackConfig: SandpackConfig = {
             sandpackTheme: 'dark',
             snippetFileName: '/index.js',
             snippetLanguage: 'javascript',
-        }
-    ]
+        },
+    ],
 }
 
 // Only import this to the next file
-export default function InitializedMDXEditor ({
+export default function InitializedMDXEditor({
     editorRef,
     ...props
 }: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
@@ -179,8 +178,8 @@ export default function InitializedMDXEditor ({
                         css: 'CSS',
                         html: 'HTML',
                         python: 'Python',
-                        java: 'Java'
-                    }
+                        java: 'Java',
+                    },
                 }),
                 headingsPlugin(),
                 listsPlugin(),
@@ -192,49 +191,110 @@ export default function InitializedMDXEditor ({
                 toolbarPlugin({
                     toolbarContents: () => (
                         <div className="flex gap-2 flex-wrap items-center justify-center w-full">
-                            <BlockTypeSelect />
-                            <BoldItalicUnderlineToggles />
-                            <Separator />
-                            <CreateLink />
-                            <Separator />
-                            <ListsToggle />
-                            <Separator />
-                            <UndoRedo />
-                            <Separator />
-                            <InsertTable />
-                            <InsertImage />
-                            <ConditionalContents
-                                options={[
-                                    {
-                                        when: (editor) => editor?.editorType === 'codeblock',
-                                        contents: () => <ChangeCodeMirrorLanguage />
-                                    },
-                                    {
-                                        when: (editor) => editor?.editorType === 'sandpack',
-                                        contents: () => <ShowSandpackInfo />
-                                    },
-                                    {
-                                        fallback: () => (
-                                            <>
-                                                <InsertCodeBlock />
-                                                <InsertSandpack />
-                                            </>
-                                        )
-                                    }
-                                ]}
-                            />
+                            <div
+                                className='flex gap-2 items-center'
+                                id="blockTypeSelect"
+                            >
+                                <BlockTypeSelect />
+                            </div>
+                            <div
+                                className='flex gap-2 items-center'
+                                id="BoldSelect"
+                            >
+                                <BoldItalicUnderlineToggles />
+                                <Separator />
+                            </div>
+                            <div
+                                className='flex gap-2 items-center'
+                                id="creatLink"
+                            >
+                                <CreateLink />
+                            </div>
+                            <div
+                                className='flex gap-2 items-center'
+                                id="ListToggle"
+                            >
+                                <ListsToggle />
+                                <Separator />
+                            </div>
+                            <div
+                                className='flex gap-2 items-center'
+                                id="UndoRedo"
+                            >
+                                <UndoRedo />
+                                <Separator />
+                            </div>
+                            <div
+                                className='flex gap-2 items-center'
+                                id="InsertTable"
+                            >
+                                <InsertTable />
+                            </div>
+                            {/* <InsertImage /> */}
+                            <div>
+                                <ConditionalContents
+                                    options={[
+                                        {
+                                            when: (editor) =>
+                                                editor?.editorType ===
+                                                'codeblock',
+                                            contents: () => (
+                                                <div
+                                                    className='flex gap-2 items-center'
+                                                    id="simpleCodeBlock"
+                                                >
+                                                    <ChangeCodeMirrorLanguage />
+                                                </div>
+                                            ),
+                                        },
+                                        {
+                                            when: (editor) =>
+                                                editor?.editorType ===
+                                                'sandpack',
+                                            contents: () => (
+                                                <div
+                                                    className='flex gap-2 items-center'
+                                                    id="UI-Editor"
+                                                >
+                                                    <ShowSandpackInfo />
+                                                </div>
+                                            ),
+                                        },
+                                        {
+                                            fallback: () => (
+                                                <>
+                                                    <div
+                                                        className='flex gap-2 items-center'
+                                                        id="InsertCodeBlock"
+                                                    >
+                                                        <InsertCodeBlock />
+                                                    </div>
+                                                    <div
+                                                        className='flex gap-2 items-center'
+                                                        id="InsertSandPack"
+                                                    >
+                                                        <InsertSandpack />
+                                                    </div>
+                                                </>
+                                            ),
+                                        },
+                                    ]}
+                                />
+                            </div>
                         </div>
-                    )
+                    ),
                 }),
                 imagePlugin({
                     imageUploadHandler: async () => {
-                        return await Promise.resolve('https://picsum.photos/200/300')
+                        return await Promise.resolve(
+                            'https://picsum.photos/200/300'
+                        )
                     },
                     imageAutocompleteSuggestions: [
                         'https://picsum.photos/200/300',
-                        'https://picsum.photos/200'
-                    ]
-                })
+                        'https://picsum.photos/200',
+                    ],
+                }),
             ]}
             contentEditableClassName="prose"
             {...props}

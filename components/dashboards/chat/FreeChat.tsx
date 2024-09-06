@@ -17,6 +17,9 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
+import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
+import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
+import FreeMessageChatEdit from '../student/free-chat/FreeMessageChatEdit'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 
 interface RunUserMessageParams {
@@ -99,7 +102,17 @@ const handleCallbackFunction = async ({
                         time={new Date().toDateString()}
                         isUser={true}
                     >
-                        <ViewMarkdown markdown={input} />
+                        <MessageContentWrapper
+                            role="user"
+                            view={<ViewMarkdown markdown={input} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="user"
+                                    text={input}
+                                    chatId={data.data.chat_id}
+                                />
+                            }
+                        />
                     </Message>
                 ),
             },
@@ -121,7 +134,17 @@ const handleCallbackFunction = async ({
                         time={new Date().toDateString()}
                         isUser={true}
                     >
-                        <ViewMarkdown markdown={input} />
+                        <MessageContentWrapper
+                            role="user"
+                            view={<ViewMarkdown markdown={input} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="user"
+                                    text={input}
+                                    chatId={chatId}
+                                />
+                            }
+                        />
                     </Message>
                 ),
             },
@@ -168,7 +191,7 @@ export default function FreeChat({ chatId }: FreeChatProps) {
 
     return (
         <div ref={scrollRef} className="h-full relative overflow-auto pt-4">
-            <div ref={messagesRef} className="pb-[350px] lg:pb-[300px]">
+            <div ref={messagesRef} className="pb-[380px] lg:pb-[360px]">
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} />
                 ) : (
@@ -184,11 +207,30 @@ export default function FreeChat({ chatId }: FreeChatProps) {
             </div>
             <div className='w-full absolute bottom-0'>
                 <Tabs defaultValue="simple" className="w-full py-4">
-                    <TabsList>
-                        <TabsTrigger value="simple">Simple</TabsTrigger>
-                        <TabsTrigger value="markdown">Markdown</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="markdown">
+                    <div className="flex gap-4">
+                        <TabsList
+                            id='tabs-list'
+                            className='gap-4'
+                        >
+                            <TabsTrigger
+                                id='simple-tab'
+                                value="simple"
+                            >
+                                    Simple
+                            </TabsTrigger>
+                            <TabsTrigger
+                                id='markdown-tab'
+                                value="markdown"
+                            >
+                                    Markdown
+                            </TabsTrigger>
+                        </TabsList>
+                        <MarkdownEditorTour />
+                    </div>
+                    <TabsContent
+                        id='markdown-content'
+                        value="markdown"
+                    >
                         <ChatInput
                             isLoading={isLoading}
                             callbackFunction={async (input) => await handleCallbackFunction({
@@ -205,7 +247,10 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                             })}
                         />
                     </TabsContent>
-                    <TabsContent value="simple">
+                    <TabsContent
+                        id='simple-content'
+                        value="simple"
+                    >
                         <ChatTextArea
                             isLoading={isLoading}
                             callbackFunction={async (input) => await handleCallbackFunction({

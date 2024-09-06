@@ -21,6 +21,8 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 
 import LessonLoaderView from './LessonLoaderView'
+import ResetTaskAIConversation from './ResetTaskAIConversation'
+import TaskMessageTour from './TaskMessageTour'
 
 export default function LessonContent({
     lessonData,
@@ -121,23 +123,32 @@ export default function LessonContent({
             {lessonsAiTasks?.system_prompt && (
                 <>
                     <Separator />
-                    <Card>
-                        <CardHeader>
+                    <Card
+                        id='ai-task-card'
+                    >
+                        <CardHeader
+                            className='flex flex-col gap-4 p-2 md:p-4 lg:p-6'
+                        >
                             <div className="flex items-center justify-between w-full">
                                 <CardTitle>AI Task</CardTitle>
-                                {isLessonAiTaskCompleted ? (
-                                    <div>
+                                <div
+                                    id='task-status'
+                                    className="flex items-center gap-2"
+                                >
+                                    {isLessonAiTaskCompleted ? (
                                         <Badge>Task Completed</Badge>
-                                    </div>
-                                ) : (
-                                    <div>
+                                    ) : (
+
                                         <Badge variant="outline">
                                             Task Incomplete
                                         </Badge>
-                                    </div>
-                                )}
+                                    )}
+                                    <TaskMessageTour />
+                                </div>
                             </div>
-                            <CardDescription>
+                            <CardDescription
+                                id='task-instructions'
+                            >
                                 <ViewMarkdown
                                     markdown={lessonsAiTasks.task_instructions}
                                 />
@@ -145,6 +156,9 @@ export default function LessonContent({
                         </CardHeader>
                         <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
                             <Separator />
+                            <ResetTaskAIConversation
+                                lessonId={lessonData.id}
+                            />
                             <CustomErrorBoundary fallback={
                                 <RetryError
                                     title="Error loading AI Task"

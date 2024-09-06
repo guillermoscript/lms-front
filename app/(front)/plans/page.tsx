@@ -1,22 +1,7 @@
 import SubscriptionPlan from '@/components/plans/PlansTabs'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function PlanPage () {
-    const supabase = createClient()
-    const userData = await supabase.auth.getUser()
-
-    const plans = await supabase.from('plans').select('*').is('deleted_at', null)
-
-    const subscriptions = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userData.data.user.id).single()
-
-    if (plans.error != null) {
-        console.log(plans.error)
-        throw plans.error
-    }
-
+function PricingSection({ plans, userPlan }: { plans: any; userPlan?: number }) {
     return (
         <section className="w-full py-12 md:py-24 lg:py-32 ">
             <div className="container px-4 md:px-6 flex flex-col gap-4 md:gap-8">
@@ -29,10 +14,7 @@ export default async function PlanPage () {
                         plans come with a 30-day money-back guarantee.
                     </p>
                 </div>
-                <SubscriptionPlan
-                    userPlan={subscriptions?.data?.plan_id}
-                    plans={plans.data}
-                />
+                <SubscriptionPlan userPlan={userPlan} plans={plans} />
                 <div className="mt-12 space-y-4 text-center">
                     <p className="text-gray-500 dark:text-gray-400">
                         All plans come with a 30-day money-back guarantee, 24/7
@@ -51,4 +33,27 @@ export default async function PlanPage () {
             </div>
         </section>
     )
+}
+
+export default async function PlanPage() {
+    const supabase = createClient()
+    const userData = await supabase.auth.getUser()
+    const plans = await supabase.from('plans').select('*').is('deleted_at', null)
+
+    if (userData.error) {
+        return <PricingSection plans={plans.data} />
+    }
+
+    const subscriptions = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userData.data.user.id)
+        .single()
+
+    if (plans.error != null) {
+        console.log(plans.error)
+        throw plans.error
+    }
+
+    return <PricingSection plans={plans.data} userPlan={subscriptions?.data?.plan_id} />
 }

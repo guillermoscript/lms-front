@@ -19,6 +19,7 @@ import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 import { ChatInput, ChatTextArea } from '../Common/chat/chat'
 import Message from '../Common/chat/Message'
 import SuggestionsContainer from '../Common/chat/SuggestionsContainer'
+import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 import ExamPrepSetup from './tour/ExamPrepSetup'
 
@@ -197,11 +198,30 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
             {!hideInput && (
                 <>
                     <Tabs defaultValue="markdown" className="w-full py-4">
-                        <TabsList>
-                            <TabsTrigger value="markdown">Markdown</TabsTrigger>
-                            <TabsTrigger value="simple">Simple</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="markdown">
+                        <div className="flex gap-4">
+                            <TabsList
+                                id='tabs-list'
+                                className='gap-4'
+                            >
+                                <TabsTrigger
+                                    id='simple-tab'
+                                    value="simple"
+                                >
+                                    Simple
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    id='markdown-tab'
+                                    value="markdown"
+                                >
+                                    Markdown
+                                </TabsTrigger>
+                            </TabsList>
+                            <MarkdownEditorTour />
+                        </div>
+                        <TabsContent
+                            id='markdown-content'
+                            value="markdown"
+                        >
                             <ChatInput
                                 isLoading={isLoading}
                                 stop={() => setStop(true)}
@@ -209,7 +229,10 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
                                 isTemplatePresent={true}
                             />
                         </TabsContent>
-                        <TabsContent value="simple">
+                        <TabsContent
+                            id='simple-content'
+                            value="simple"
+                        >
                             <ChatTextArea
                                 isLoading={isLoading}
                                 stop={() => setStop(true)}

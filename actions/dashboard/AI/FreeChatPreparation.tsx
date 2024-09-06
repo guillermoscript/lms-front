@@ -8,6 +8,9 @@ import dayjs from 'dayjs'
 
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import Message from '@/components/dashboards/Common/chat/Message'
+import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import FreeMessageChatEdit from '@/components/dashboards/student/free-chat/FreeMessageChatEdit'
+import RegenerateMessageFreeChat from '@/components/dashboards/student/free-chat/RegenerateMessage'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
@@ -56,23 +59,23 @@ export async function continueFreeChatConversation(
         system: 'You are a helpful assistant. Ask me anything!',
         text: async function ({ content, done }) {
             if (done) {
-                aiState.done({
-                    ...aiState.get(),
-                    messages: [
-                        ...aiState.get().messages,
-                        {
-                            id: generateId(),
-                            role: 'assistant',
-                            content,
-                        },
-                    ],
-                })
-
                 const aiMessageInsert = await supabase.from('messages').insert({
                     chat_id: chatId ? +chatId : +aiState.get().chatId,
                     message: content,
                     sender: 'assistant',
                     created_at: new Date().toISOString(),
+                }).select('id').single()
+
+                aiState.done({
+                    ...aiState.get(),
+                    messages: [
+                        ...aiState.get().messages,
+                        {
+                            id: aiMessageInsert.data.id.toString(),
+                            role: 'assistant',
+                            content,
+                        },
+                    ],
                 })
             }
 
@@ -82,7 +85,29 @@ export async function continueFreeChatConversation(
                     time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                     isUser={false}
                 >
-                    <ViewMarkdown markdown={content} />
+                    <MessageContentWrapper
+                        role="assistant"
+                        view={<ViewMarkdown markdown={content} />}
+                        edit={
+                            <FreeMessageChatEdit
+                                sender="assistant"
+                                text={content}
+                                chatId={
+                                    Number(chatId) ??
+                                    Number(aiState.get().chatId)
+                                }
+                            />
+                        }
+                        regenerate={
+                            <RegenerateMessageFreeChat
+                                chatId={
+                                    Number(chatId) ??
+                                    Number(aiState.get().chatId)
+                                }
+                                message={content}
+                            />
+                        }
+                    />
                 </Message>
             )
         },
@@ -123,26 +148,52 @@ export const getUIStateFromFreeChatAIState = (aiState: Chat) => {
     return aiState.messages
         .filter((message) => message.role !== 'system')
         .map((message, index) => ({
-            id: `${aiState.chatId}-${index}`,
+            id: aiState.id,
             display:
                 message.role === 'tool' ? null : message.role === 'user' &&
                   typeof message.content === 'string' ? (
-                        <Message
-                            sender={message.role}
-                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                            isUser={true}
-                        >
-                            <ViewMarkdown markdown={message.content} />
-                        </Message>
-                    ) : message.role === 'assistant' &&
+                    <Message
+                        sender={message.role}
+                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                        isUser={true}
+                    >
+                        <MessageContentWrapper
+                            role="user"
+                            view={<ViewMarkdown markdown={message.content} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="user"
+                                    text={message.content}
+                                    chatId={Number(aiState.id)}
+                                />
+                            }
+                        />
+                    </Message>
+                ) : message.role === 'assistant' &&
                   typeof message.content === 'string' ? (
-                            <Message
-                                sender={message.role}
-                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                                isUser={false}
-                            >
-                                <ViewMarkdown markdown={message.content} />
-                            </Message>
-                        ) : null,
+                    <Message
+                        sender={message.role}
+                        time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                        isUser={false}
+                    >
+                        <MessageContentWrapper
+                            role="assistant"
+                            view={<ViewMarkdown markdown={message.content} />}
+                            edit={
+                                <FreeMessageChatEdit
+                                    sender="assistant"
+                                    text={message.content}
+                                    chatId={Number(aiState.id)}
+                                />
+                            }
+                            regenerate={
+                                <RegenerateMessageFreeChat
+                                    chatId={Number(aiState.id)}
+                                    message={message.content}
+                                />
+                            }
+                        />
+                    </Message>
+                ) : null,
         }))
 }

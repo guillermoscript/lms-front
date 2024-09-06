@@ -1,44 +1,61 @@
-import { cookies } from 'next/headers'
+'use client'
+
+import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { forgotPasswordFun } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/utils/supabase/server'
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/use-toast'
 
-export default function ForgotPassword ({
-    searchParams
+const FormSchema = z.object({
+    email: z.string().email({ message: 'Invalid email address' }),
+})
+
+export default function ForgotPassword({
+    searchParams,
 }: {
     searchParams: {
-        message: string
-        error: string
-    }
+        message: string;
+        error: string;
+    };
 }) {
-    const forgotPasswordFun = async (formData: FormData) => {
-        'use server'
+    const form = useForm<z.infer<typeof FormSchema>>({
+        resolver: zodResolver(FormSchema),
+        defaultValues: {
+            email: '',
+        },
+    })
 
-        const email = formData.get('email') as string
+    const { toast } = useToast()
 
-        const cookieStore = cookies()
-        const supabase = createClient()
+    const submit = async (data: z.infer<typeof FormSchema>) => {
+        const res = await forgotPasswordFun({
+            email: data.email,
+        })
 
-        const { data, error } = await supabase.auth.resetPasswordForEmail(
-            email,
-            {
-                redirectTo: 'http://localhost:3000/auth/reset-password'
-            }
-        )
-
-        if (error != null) {
-            console.log(error)
-            return redirect(
-                '/auth/forgot-password?error=Could not authenticate user'
-            )
+        if (res.status === 'error') {
+            return toast({
+                title: 'Error',
+                description: res.message,
+                variant: 'destructive',
+            })
         }
 
-        return redirect(
-            '/auth/forgot-password?message=Check email to continue sign in process'
-        )
+        return toast({
+            title: 'Success',
+            description: res.message,
+        })
     }
 
     return (
@@ -47,49 +64,42 @@ export default function ForgotPassword ({
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                          Forgot Password
+              Forgot Password
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                          Enter your email below to create your account
+              Enter your email below to reset your password
                         </p>
                     </div>
-                    <form
-                        className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
-                        action={forgotPasswordFun}
-                    >
-                        <label className="text-md" htmlFor="email">
-                          Email
-                        </label>
-                        <input
-                            className="rounded-md px-4 py-2 bg-inherit border mb-6"
-                            name="email"
-                            placeholder="you@example.com"
-                            required
-                        />
-                        <Button type="submit">Submit</Button>
-                    </form>
-                    {searchParams.error && (
-                        <Alert variant="destructive">
-                            <AlertTitle>Error!</AlertTitle>
-                            <AlertDescription>
-                                {searchParams.message}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                    {searchParams.message && (
-                        <Alert>
-                            <AlertTitle>Success!</AlertTitle>
-                            <AlertDescription>
-                                {searchParams.message}
-                            </AlertDescription>
-                        </Alert>
-                    )}
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(submit)}
+                            className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
+                        >
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="you@example.com"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit">Submit</Button>
+                        </form>
+                    </Form>
 
                     <Link
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
                     >
-                        Back to login
+            Back to login
                     </Link>
                 </div>
             </div>
