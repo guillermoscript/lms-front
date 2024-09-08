@@ -3,16 +3,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { resetPasswordFun } from '@/actions/auth/authActions'
-import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
-} from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -38,10 +35,10 @@ export default function ResetPassword({
     searchParams,
 }: {
     searchParams: {
-        message: string;
-        error: string;
-        code: string;
-    };
+        message: string
+        error: string
+        code: string
+    }
 }) {
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -52,24 +49,36 @@ export default function ResetPassword({
 
     const [showPassword, setShowPassword] = useState(false)
     const { toast } = useToast()
+    const router = useRouter()
 
     const submit = async (data: z.infer<typeof FormSchema>) => {
-        const res = await resetPasswordFun({
-            password: data.password,
-        })
+        try {
+            const res = await resetPasswordFun({
+                password: data.password,
+                code: searchParams.code,
+            })
 
-        if (res.error) {
+            if (res.error) {
+                return toast({
+                    title: 'Error',
+                    description: res.error,
+                    variant: 'destructive',
+                })
+            }
+
+            router.push('/')
+
+            return toast({
+                title: 'Success',
+                description: res.message,
+            })
+        } catch (error: any) {
             return toast({
                 title: 'Error',
-                description: res.error,
+                description: error.message,
                 variant: 'destructive',
             })
         }
-
-        return toast({
-            title: 'Success',
-            description: res.message,
-        })
     }
 
     return (
@@ -78,10 +87,10 @@ export default function ResetPassword({
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-              Reset Password
+                            Reset Password
                         </h1>
                         <p className="text-sm text-muted-foreground">
-              Enter your new password below
+                            Enter your new password below
                         </p>
                     </div>
                     <Form {...form}>
@@ -99,12 +108,20 @@ export default function ResetPassword({
                                             <div className="rounded-md px-4 py-2 w-full bg-inherit border mb-6 gap-4 flex items-center justify-between">
                                                 <Input
                                                     className="border-none w-full bg-transparent focus:outline-none"
-                                                    type={showPassword ? 'text' : 'password'}
+                                                    type={
+                                                        showPassword
+                                                            ? 'text'
+                                                            : 'password'
+                                                    }
                                                     {...field}
                                                 />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    onClick={() =>
+                                                        setShowPassword(
+                                                            !showPassword
+                                                        )
+                                                    }
                                                 >
                                                     {!showPassword ? (
                                                         <EyeIcon />
@@ -118,19 +135,22 @@ export default function ResetPassword({
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit">Submit</Button>
+                            <Button
+                                disabled={form.formState.isSubmitting}
+                                type="submit"
+                            >
+                                {form.formState.isSubmitting
+                                    ? 'Resetting password...'
+                                    : 'Reset Password'}
+                            </Button>
                         </form>
                     </Form>
                     {searchParams.error && (
                         <Alert variant="destructive">
                             <AlertTitle>Error!</AlertTitle>
-                            <AlertDescription>{searchParams.error}</AlertDescription>
-                        </Alert>
-                    )}
-                    {searchParams.message && (
-                        <Alert>
-                            <AlertTitle>Success!</AlertTitle>
-                            <AlertDescription>{searchParams.message}</AlertDescription>
+                            <AlertDescription>
+                                {searchParams.error}
+                            </AlertDescription>
                         </Alert>
                     )}
 
@@ -138,7 +158,7 @@ export default function ResetPassword({
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
                     >
-            Back to login
+                        Back to login
                     </Link>
                 </div>
             </div>
