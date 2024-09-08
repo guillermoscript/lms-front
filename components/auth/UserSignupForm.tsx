@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { EyeIcon, EyeOffIcon, Link } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { signUp } from '@/actions/auth/authActions'
@@ -17,7 +18,6 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { toast } from '@/components/ui/use-toast'
 
 // Assuming this component handles password input and validation
 
@@ -52,9 +52,11 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
     })
 
     const [showPassword, setShowPassword] = useState(false)
+    const [error, setError] = useState('')
 
     const onSubmit = async (data: z.infer<typeof FormSchema>) => {
         try {
+            setError('')
             // Assuming signUp function returns a promise
             const response = await signUp({
                 email: data.email,
@@ -63,20 +65,19 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                 password: data.password,
             })
 
+            if (response.error) {
+                // Handle signup errors (e.g., display error messages)
+                setError(response.message || 'An error occurred. Please try again.')
+                toast.error(response.message || 'An error occurred. Please try again.')
+                return
+            }
+
             // Handle successful signup (e.g., redirect, show success message)
-            toast({
-                title: 'Check your email',
-                description:
-                    'Check your email to continue the sign-in process.',
-            })
+            toast.success('Check your email to continue the sign-in process.')
         } catch (error: any) {
             // Handle signup errors (e.g., display error messages)
-            toast({
-                title: 'Signup Error',
-                description:
-                    error.message || 'An error occurred during signup.',
-                variant: 'destructive', // You can customize the toast variant
-            })
+            setError(error.message || 'An error occurred. Please try again.')
+            toast.error(error.message || 'An error occurred. Please try again.')
         }
     }
 
@@ -182,6 +183,12 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                     >
                         {form.formState.isSubmitting ? 'Signing up...' : 'Sign Up'}
                     </Button>
+
+                    {error && (
+                        <p className="text-red-500 text-sm text-center">
+                            {error}
+                        </p>
+                    )}
                 </form>
             </Form>
         </div>
