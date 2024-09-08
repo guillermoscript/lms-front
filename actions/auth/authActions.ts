@@ -91,13 +91,22 @@ export const signUp = async (userData: {
     return createResponse('success', 'Check your email to continue sign in process', null, null)
 }
 
-export const resetPasswordFun = async (data: {
+export const resetPasswordFun = async ({
+    password,
+    code
+}: {
     password: string
+    code: string
 }) => {
     const supabase = createClient()
+    const sessionFromCode = await supabase.auth.exchangeCodeForSession(code)
 
-    const { error } = await supabase.auth.updateUser({
-        password: data.password,
+    if (sessionFromCode.error) {
+        return createResponse('error', 'Error submitting comment', null, sessionFromCode.error.message.toString())
+    }
+
+    const { data, error } = await supabase.auth.updateUser({
+        password,
     })
 
     if (error != null) {
