@@ -15,7 +15,7 @@ import { createClient } from '@/utils/supabase/server'
 
 import { testSubmissionsCols } from './testSubmissionsCols'
 
-export default async function LessonPage ({
+export default async function LessonPage({
     params
 }: {
     params: { courseId: string, testId: string }
@@ -52,17 +52,11 @@ export default async function LessonPage ({
             p_exam_id: params.testId
         })
 
-    if (test.error != null) {
-        console.log(test.error.message)
-    }
-
     const {
         multipleChoiceQuestions,
         freeTextQuestions,
         singleSelectQuestions
     } = categorizeQuestions(test.data?.exam_questions)
-
-    console.log(multipleChoiceQuestions)
 
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
@@ -104,17 +98,17 @@ export default async function LessonPage ({
                         </div>
 
                         <h3 className="text-lg font-semibold mt-4">
-                          Status: {test?.data?.status}
+                            Status: {test?.data?.status}
                         </h3>
                         <h3 className="text-lg font-semibold mt-4">
-                          Sequence: {test?.data?.sequence}
+                            Sequence: {test?.data?.sequence}
                         </h3>
                         <div className="space-y-4">
                             <>
                                 {singleSelectQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                      True or False
+                                            True or False
                                         </h3>
                                         <SingleSelectQuestionRead
                                             questions={singleSelectQuestions}
@@ -125,7 +119,7 @@ export default async function LessonPage ({
                                 {freeTextQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                      Fill in the Blank
+                                            Fill in the Blank
                                         </h3>
                                         <FreeTextQuestionRead
                                             questions={freeTextQuestions}
@@ -136,7 +130,7 @@ export default async function LessonPage ({
                                 {multipleChoiceQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                      Multiple Choice
+                                            Multiple Choice
                                         </h3>
                                         <MultipleChoiceQuestionRead
                                             questions={multipleChoiceQuestions}
@@ -159,7 +153,7 @@ export default async function LessonPage ({
                                 submission_date: dayjs(sub.submission_date).format('DD/MM/YYYY'),
                                 score: sub.exam_scores,
                                 feedback: sub.feedback,
-                                evaluated_at: dayjs(sub.evaluated_at).format('DD/MM/YYYY'),
+                                evaluated_at: sub.evaluated_at ? dayjs(sub.evaluated_at).format('DD/MM/YYYY') : null,
                                 is_reviewed: sub.is_reviewed,
                                 full_name: sub.full_name,
                                 courseId: params.courseId
