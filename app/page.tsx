@@ -3,6 +3,7 @@ import { RetroGridDemo } from '@/components/example/RetroGridDemo'
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
 import { FeaturesSection } from '@/components/home/FeaturesSection'
+import GeminiHeroSection from '@/components/home/GeminiCompetition'
 import OptionsSection from '@/components/home/OptionsSection'
 import ParticlesSection from '@/components/home/ParticlesSection'
 import WaitingList from '@/components/home/WaitingList'
@@ -17,6 +18,7 @@ export default async function Index() {
                 </ParticlesSection>
                 <FeaturesSection />
                 <OptionsSection />
+                <GeminiHeroSection />
                 <WaitingList />
             </div>
             <div className="w-full ">
