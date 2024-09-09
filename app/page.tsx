@@ -19,9 +19,9 @@ export default async function Index() {
                 <FeaturesSection />
                 <OptionsSection />
                 <WaitingList />
-                <div className="w-full pb-12 lg:pb-24">
-                    <RetroGridDemo />
-                </div>
+            </div>
+            <div className="w-full ">
+                <RetroGridDemo />
             </div>
             <Footer />
         </>
