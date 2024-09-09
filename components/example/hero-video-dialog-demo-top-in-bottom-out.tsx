@@ -69,14 +69,14 @@ export default function HeroVideoDialogDemoTopInBottomOut() {
                 </a>
             </div>
             <div className="relative text-center">
-                <HeroVideoDialog
-                    className="dark:hidden block"
-                    animationStyle="top-in-bottom-out"
-                    videoSrc="https://www.youtube.com/embed/LxOUXPbTDm8?si=Br9ZRm19lyqyKbRU"
-                    thumbnailSrc="/img/dashboard.png"
-                    thumbnailAlt="Hero Video"
-                />
                 <div className="p-4 border border-neutral-200 bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 rounded-[32px] mt-20 relative">
+                    <HeroVideoDialog
+                        className="dark:hidden block"
+                        animationStyle="top-in-bottom-out"
+                        videoSrc="https://www.youtube.com/embed/LxOUXPbTDm8?si=Br9ZRm19lyqyKbRU"
+                        thumbnailSrc="/img/desktop-light.png"
+                        thumbnailAlt="Hero Video"
+                    />
                     <HeroVideoDialog
                         className="hidden dark:block"
                         animationStyle="top-in-bottom-out"
