@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { EyeIcon, EyeOffIcon, Link } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { signIn } from '@/actions/auth/authActions'
@@ -17,7 +18,6 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { toast } from '@/components/ui/use-toast'
 
 // Define your Zod schema for validation
 const FormSchema = z.object({
@@ -40,24 +40,29 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
             password: '',
         },
     })
+    const [error, setError] = useState('')
 
     const [showPassword, setShowPassword] = useState(false)
 
     const onSubmit = async (data: z.infer<typeof FormSchema>) => {
         try {
+            setError('')
             // Assuming signIn function returns a promise
             const response = await signIn({
                 email: data.email,
                 password: data.password,
                 redirectTo: redirect,
             })
+
+            if (response.error) {
+                // Handle login errors (e.g., display error messages)
+                setError(response.message || 'An error occurred. Please try again.')
+                toast.error(response.message || 'An error occurred. Please try again.')
+            }
         } catch (error: any) {
             // Handle login errors (e.g., display error messages)
-            toast({
-                title: 'Login Error',
-                description: error.message || 'An error occurred during login.',
-                variant: 'destructive',
-            })
+            setError(error.message || 'An error occurred. Please try again.')
+            toast.error(error.message || 'An error occurred. Please try again.')
         }
     }
 
@@ -134,6 +139,12 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                     >
                         {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
                     </Button>
+
+                    {error && (
+                        <p className="text-red-500 text-sm text-center">
+                            {error}
+                        </p>
+                    )}
                 </form>
             </Form>
         </div>

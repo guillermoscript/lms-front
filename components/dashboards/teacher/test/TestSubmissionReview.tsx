@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+
 import CorrectnessRadio from './CorrectnessRadio'
 
 interface Answer {
@@ -123,7 +124,6 @@ export default function TestSubmissionReview({
                                                     question.question_id
                                             )
 
-
                                             const userAnswer = userAnwsers.find(
                                                 (a) =>
                                                     a.answer_text
@@ -132,7 +132,6 @@ export default function TestSubmissionReview({
                                                             option.option_id.toString()
                                                         )
                                             )
-
 
                                             const isChecked = userAnwsers.some(
                                                 (a) =>

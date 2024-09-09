@@ -69,7 +69,7 @@ export default function ExamFeedbackCard ({
                 )}
                 {score && (
                     <AlertTitle className="text-lg">
-                        Your score is {score}
+                        Your score is {score} / 20
                     </AlertTitle>
                 )}
                 <AlertDescription>

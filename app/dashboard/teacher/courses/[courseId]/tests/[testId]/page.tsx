@@ -52,7 +52,6 @@ export default async function LessonPage({
             p_exam_id: params.testId
         })
 
-
     const {
         multipleChoiceQuestions,
         freeTextQuestions,

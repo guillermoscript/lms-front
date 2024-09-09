@@ -73,7 +73,7 @@ export default function ForgotPassword({
                     <Form {...form}>
                         <form
                             onSubmit={form.handleSubmit(submit)}
-                            className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground"
+                            className="animate-in flex-1 flex flex-col w-full justify-center gap-8 text-foreground"
                         >
                             <FormField
                                 control={form.control}
