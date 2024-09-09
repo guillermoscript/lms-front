@@ -81,7 +81,7 @@ export const testSubmissionsCols: Array<ColumnDef<TestSubmissions>> = [
 
             return (
                 <DropdownMenu>
-                    <DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild>
                         <Button >
                             <MoreHorizontal size={20} />
                         </Button>

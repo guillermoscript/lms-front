@@ -10,14 +10,24 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import CorrectnessRadio from './CorrectnessRadio'
 
-export default function TestSubmissionReview ({
+interface Answer {
+    answer_id: number
+    is_correct: boolean
+    feedback: string
+    question_id: number
+    answer_text: string
+    option_id: number
+}
+
+export default function TestSubmissionReview({
     exam_answers,
     exams,
     submissionId,
     studentId
 }: {
-    exam_answers: any[]
+    exam_answers: Answer[]
     exams: any
     submissionId: number
     studentId: number
@@ -31,7 +41,7 @@ export default function TestSubmissionReview ({
     const { toast } = useToast()
     const router = useRouter()
 
-    const handleFeedbackChange = (answerId, feedback) => {
+    const handleFeedbackChange = (answerId: number, feedback: string) => {
         setAnswers((prevAnswers) =>
             prevAnswers.map((answer) =>
                 answer.answer_id === answerId ? { ...answer, feedback } : answer
@@ -39,7 +49,7 @@ export default function TestSubmissionReview ({
         )
     }
 
-    const handleCorrectnessChange = (answerId, isCorrect) => {
+    const handleCorrectnessChange = (answerId: number, isCorrect: boolean) => {
         setAnswers((prevAnswers) =>
             prevAnswers.map((answer) =>
                 answer.answer_id === answerId
@@ -80,18 +90,16 @@ export default function TestSubmissionReview ({
         } finally {
             setIsLoading(false)
         }
-
-    // Optional: redirect or show success message
     }
 
     return (
         <>
             {exams.exam_questions.map((question) => {
-			  const answer = answers.find(
-			    (a) => a.question_id === question.question_id
-			  )
+                const answer = answers.find(
+                    (a) => a.question_id === question.question_id
+                )
 
-			  return (
+                return (
                     <div
                         key={question.question_id}
                         className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950"
@@ -102,7 +110,7 @@ export default function TestSubmissionReview ({
 
                         <div className="mt-2">
                             <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Student's Answer:
+                                Student's Answer:
                             </Label>
 
                             {question.question_type === 'multiple_choice'
@@ -110,34 +118,45 @@ export default function TestSubmissionReview ({
                                     <div className="mb-4 p-2 rounded flex flex-col gap-2">
                                         {question.question_options.map((option) => {
                                             const userAnwsers = answers.filter(
-									    (a) =>
-									      a.question_id ===
-												question.question_id
-									  )
+                                                (a) =>
+                                                    a.question_id ===
+                                                    question.question_id
+                                            )
 
-									  const isChecked = userAnwsers.some(
-									    (a) =>
-									      a.answer_text
-									        .split(',')
-									        .includes(
-									          option.option_id.toString()
-									        )
-									  )
 
-									  const isCorrect = option.is_correct
+                                            const userAnswer = userAnwsers.find(
+                                                (a) =>
+                                                    a.answer_text
+                                                        .split(',')
+                                                        .includes(
+                                                            option.option_id.toString()
+                                                        )
+                                            )
+
+
+                                            const isChecked = userAnwsers.some(
+                                                (a) =>
+                                                    a.answer_text
+                                                        .split(',')
+                                                        .includes(
+                                                            option.option_id.toString()
+                                                        )
+                                            )
+
+                                            const isCorrect = option.is_correct
 
                                             const backgroundColor = isChecked
-									    ? isCorrect
-									      ? 'bg-green-100 dark:bg-green-800'
-									      : 'bg-red-100 dark:bg-red-800'
-									    : 'bg-gray-100 dark:bg-gray-800'
+                                                ? isCorrect
+                                                    ? 'bg-green-100 dark:bg-green-800'
+                                                    : 'bg-red-100 dark:bg-red-800'
+                                                : 'bg-gray-100 dark:bg-gray-800'
 
-									  return (
+                                            return (
                                                 <div
                                                     key={option.option_id}
                                                     className={cx(
-												  'flex items-center gap-2 p-2 rounded',
-												  backgroundColor
+                                                        'flex items-center gap-2 p-2 rounded',
+                                                        backgroundColor
                                                     )}
                                                 >
                                                     {
@@ -159,8 +178,16 @@ export default function TestSubmissionReview ({
                                                     <span>
                                                         {option.option_text}
                                                     </span>
+                                                    {
+                                                        isChecked && (
+                                                            <CorrectnessRadio
+                                                                answer={userAnswer}
+                                                                onChange={handleCorrectnessChange}
+                                                            />
+                                                        )
+                                                    }
                                                 </div>
-									  )
+                                            )
                                         })}
                                     </div>
                                 )
@@ -173,71 +200,39 @@ export default function TestSubmissionReview ({
 
                         <div className="mt-4">
                             <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Feedback:
+                                Feedback:
                             </Label>
 
                             <Textarea
                                 className="mt-2 min-h-[120px]"
                                 value={answer?.feedback || ''}
                                 onChange={(e) =>
-								  handleFeedbackChange(
-								    answer.answer_id,
-								    e.target.value
-								  )
+                                    handleFeedbackChange(
+                                        answer.answer_id,
+                                        e.target.value
+                                    )
                                 }
                             />
                         </div>
-
-                        <div className="mt-4">
-                            <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Correct?
-                            </Label>
-
-                            <div className="flex items-center gap-2">
-                                <Label className="flex items-center gap-2">
-                                    <input
-                                        type="radio"
-                                        name={`correctness-${question.question_id}`}
-                                        value="true"
-                                        checked={answer?.is_correct === true}
-                                        onChange={() =>
-										  handleCorrectnessChange(
-										    answer.answer_id,
-										    true
-										  )
-                                        }
-                                        className="h-4 w-4 rounded border-gray-300"
-                                    />
-
-                                    <span>Yes</span>
+                        {question.question_type !== 'multiple_choice' &&
+                            <div className="mt-4">
+                                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Correct?
                                 </Label>
 
-                                <Label className="flex items-center gap-2">
-                                    <input
-                                        type="radio"
-                                        name={`correctness-${question.question_id}`}
-                                        value="false"
-                                        checked={answer?.is_correct === false}
-                                        onChange={() =>
-										  handleCorrectnessChange(
-										    answer.answer_id,
-										    false
-										  )
-                                        }
-                                        className="h-4 w-4 rounded border-gray-300"
-                                    />
-
-                                    <span>No</span>
-                                </Label>
+                                <CorrectnessRadio
+                                    answer={answer}
+                                    onChange={handleCorrectnessChange}
+                                />
                             </div>
-                        </div>
+                        }
                     </div>
-			  )
+                )
             })}
 
             <div>
                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Score:
+                    Score:
                 </Label>
 
                 <span className="text-2xl font-bold">
@@ -247,7 +242,7 @@ export default function TestSubmissionReview ({
 
             <div>
                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Overall Feedback:
+                    Overall Feedback:
                 </Label>
 
                 <Textarea
@@ -268,7 +263,7 @@ export default function TestSubmissionReview ({
                     disabled={isLoading}
                     onClick={handleSubmit}
                 >
-          Submit Review
+                    Submit Review
                 </Button>
             </div>
         </>
