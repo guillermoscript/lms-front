@@ -11,14 +11,13 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet'
 
-import AuthButton from './AuthButton'
 import { DarkThemeToggle } from './DarkThemeToggle'
 import ProfileDropdown from './dashboards/Common/ProfileDropdown'
 
 export default function Header({ children }: { children?: React.ReactNode }) {
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
-            <div className="flex items-center justify-between py-1 px-4">
+        <header className="sticky container top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
+            <div className="flex items-center justify-between py-4 px-4">
                 <div className="flex gap-6 md:gap-10 w-full">
                     <Link
                         className="hidden items-center space-x-2 md:flex"
@@ -31,15 +30,15 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     <nav className="hidden gap-6 md:flex">
                         <Link
                             className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-                            href="/plans"
+                            href="/contact"
                         >
-                            Plans
+                            Contact
                         </Link>
                         <Link
                             className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-                            href="/store"
+                            href="/about"
                         >
-                            Store
+                            About us
                         </Link>
                     </nav>
                     <Sheet>
@@ -60,9 +59,9 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 <SheetTitle>LMS Academy</SheetTitle>
                                 <SheetDescription>
                                     <nav className="flex flex-col gap-4">
-                                        <div className="w-full max-w-5xl flex flex-wrap gap-4 items-center p-3 text-sm">
+                                        {/* <div className="w-full max-w-5xl flex flex-wrap gap-4 items-center p-3 text-sm">
                                             <AuthButton />
-                                        </div>
+                                        </div> */}
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                                             href="/"
@@ -72,17 +71,17 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                         </Link>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-                                            href="/plans"
+                                            href="/contact"
                                         >
                                             <DollarSign className="h-5 w-5 mr-2" />
-                                            Plans
+                                            Contact
                                         </Link>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
-                                            href="/store"
+                                            href="/about"
                                         >
                                             <ShoppingBag className="h-5 w-5 mr-2" />
-                                            Store
+                                            About us
                                         </Link>
                                         <DarkThemeToggle />
                                     </nav>
@@ -94,11 +93,11 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     {children}
                 </div>
                 <nav className="hidden md:flex justify-center gap-2 items-center">
-                    <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
+                    {/* <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
                         {<AuthButton />}
-                    </div>
+                    </div> */}
                     <DarkThemeToggle />
-                    <ProfileDropdown />
+                    {/* <ProfileDropdown /> */}
                 </nav>
             </div>
         </header>
