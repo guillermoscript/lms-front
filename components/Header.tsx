@@ -59,9 +59,6 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 <SheetTitle>LMS Academy</SheetTitle>
                                 <SheetDescription>
                                     <nav className="flex flex-col gap-4">
-                                        {/* <div className="w-full max-w-5xl flex flex-wrap gap-4 items-center p-3 text-sm">
-                                            <AuthButton />
-                                        </div> */}
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                                             href="/"
@@ -93,11 +90,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     {children}
                 </div>
                 <nav className="hidden md:flex justify-center gap-2 items-center">
-                    {/* <div className="w-full max-w-4xl flex justify-end items-center p-3 text-sm">
-                        {<AuthButton />}
-                    </div> */}
                     <DarkThemeToggle />
-                    {/* <ProfileDropdown /> */}
                 </nav>
             </div>
         </header>

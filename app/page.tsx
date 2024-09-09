@@ -14,7 +14,6 @@ export default async function Index() {
             <div className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-between">
                 <ParticlesSection>
                     <HeroVideoDialogDemoTopInBottomOut />
-                    {/* <HeroSection /> */}
                 </ParticlesSection>
                 <FeaturesSection />
                 <OptionsSection />
