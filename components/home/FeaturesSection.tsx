@@ -3,11 +3,10 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import React from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { cn } from '@/utils'
-import { useI18n, useScopedI18n } from '@/app/locales/client'
 
 export function FeaturesSection() {
-
     const t = useScopedI18n('landing.features')
 
     const features = [

@@ -1,12 +1,13 @@
 'use client'
 
-import { useScopedI18n } from '@/app/locales/client'
 import {
     motion,
     useScroll,
     useTransform,
 } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
+
+import { useScopedI18n } from '@/app/locales/client'
 
 interface TimelineEntry {
     title: string

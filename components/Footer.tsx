@@ -4,8 +4,9 @@ import { Github, MountainIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { Button, buttonVariants } from './ui/button'
 import { useChangeLocale, useCurrentLocale, useScopedI18n } from '@/app/locales/client'
+
+import { Button, buttonVariants } from './ui/button'
 
 export default function Footer() {
     const t = useScopedI18n('footer')
@@ -85,14 +86,14 @@ export default function Footer() {
                 />
                 <div className="flex gap-2">
                     <Button
-                        className={`px-2 py-1 rounded`}
+                        className={'px-2 py-1 rounded'}
                         variant={locale === 'en' ? 'default' : 'outline'}
                         onClick={() => changeLocale('en')}
                     >
                         EN
                     </Button>
                     <Button
-                        className={`px-2 py-1 rounded`}
+                        className={'px-2 py-1 rounded'}
                         variant={locale === 'es' ? 'default' : 'outline'}
                         onClick={() => changeLocale('es')}
                     >

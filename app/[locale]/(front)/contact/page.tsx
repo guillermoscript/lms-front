@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { useScopedI18n } from '@/app/locales/client'
 
 const formSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -33,7 +33,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 const ContactForm = () => {
-    const t = useScopedI18n('contact.form');
+    const t = useScopedI18n('contact.form')
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -169,7 +169,7 @@ const ContactForm = () => {
                                                     className={`min-h-[150px] ${errors.message
                                                         ? 'border-red-500'
                                                         : ''
-                                                        }`}
+                                                    }`}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -193,7 +193,7 @@ const ContactForm = () => {
 }
 
 export default function ContactPage() {
-    const t = useScopedI18n('contact');
+    const t = useScopedI18n('contact')
 
     return (
         <div className="">

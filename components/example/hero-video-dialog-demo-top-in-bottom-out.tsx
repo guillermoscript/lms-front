@@ -1,10 +1,10 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import HeroVideoDialog from '@/components/magicui/HeroVideoDialog'
 
 import { buttonVariants } from '../ui/button'
-import { getI18n } from '@/app/locales/server'
 
 // Animated text component
 const AnimatedText = ({

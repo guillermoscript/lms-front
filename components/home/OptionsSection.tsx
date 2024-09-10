@@ -1,10 +1,10 @@
-import { Cloud, DollarSign, Heart, HelpCircle, LineChart, Route, Settings2Icon, Terminal } from 'lucide-react'
+import { DollarSign, Heart, LineChart, Route, Settings2Icon, Terminal } from 'lucide-react'
 
-import { cn } from '@/utils'
 import { getScopedI18n } from '@/app/locales/server'
+import { cn } from '@/utils'
 
 export default async function OptionsSection() {
-    const t = await getScopedI18n('landing.joinPlatform');
+    const t = await getScopedI18n('landing.joinPlatform')
 
     const features = [
         {

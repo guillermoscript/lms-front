@@ -1,4 +1,4 @@
-import { getScopedI18n } from "@/app/locales/server";
+import { getScopedI18n } from '@/app/locales/server'
 
 const GeminiSvg = () => (
     <svg
@@ -71,7 +71,7 @@ const GeminiSvg = () => (
 )
 
 export default async function GeminiHeroSection() {
-    const t = await getScopedI18n('landing.geminiCompetition');
+    const t = await getScopedI18n('landing.geminiCompetition')
 
     return (
         <section className=" pb-12 lg:pb-32">

@@ -2,6 +2,7 @@ import { DollarSign, Home, Menu, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { getScopedI18n } from '@/app/locales/server'
 import {
     Sheet,
     SheetContent,
@@ -13,10 +14,9 @@ import {
 
 import { DarkThemeToggle } from './DarkThemeToggle'
 import ProfileDropdown from './dashboards/Common/ProfileDropdown'
-import { getScopedI18n } from '@/app/locales/server'
 
 export default async function Header({ children }: { children?: React.ReactNode }) {
-    const t = await getScopedI18n('header');
+    const t = await getScopedI18n('header')
 
     return (
         <header className="sticky container top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">

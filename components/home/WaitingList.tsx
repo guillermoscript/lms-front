@@ -1,4 +1,4 @@
-import { getScopedI18n } from "@/app/locales/server"
+import { getScopedI18n } from '@/app/locales/server'
 
 export default async function WaitingList() {
     const t = await getScopedI18n('landing.waitingList')

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 
-import { Timeline } from '@/components/ui/Acernity/TimeLine'
 import { getScopedI18n } from '@/app/locales/server'
+import { Timeline } from '@/components/ui/Acernity/TimeLine'
 
 export default async function TimelineDemo() {
     const t = await getScopedI18n('aboutUs')
