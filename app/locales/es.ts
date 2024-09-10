@@ -1,4 +1,30 @@
 export default {
+    header: {
+        title: 'LMS',
+        contact: 'Contacto',
+        about: 'Acerca de nosotross',
+        pricing: 'Precios',
+        blog: 'Blog',
+        login: 'Iniciar sesión',
+        home: 'Inicio',
+        register: 'Registrarse'
+    },
+    footer: {
+        quickLinks: 'Enlaces rápidos',
+        contact: 'Contacto',
+        about: 'Acerca de nosotross',
+        plans: 'Planes',
+        store: 'Tienda',
+        home: 'Inicio',
+        login: 'Iniciar sesión',
+        register: 'Registrarse',
+        newsletter: 'Newsletter',
+        newsletterDescription: 'Suscríbete a nuestro boletín para las últimas actualizaciones y ofertas.',
+        copyright: 'Construyendo el futuro de la educación. © 2024.',
+        subscribe: 'Suscríbete',
+        madeWithLove: 'Hecho con ❤️ y fe',
+        newsletterDisclaimer: 'No compartiremos tu correo electrónico con nadie más.'
+    },
     landing: {
         title: 'Aprende con IA de la próxima generación',
         description: "Sumérgete en cursos elaborados por expertos que abarcan desde inglés hasta programación avanzada, guiados por IA y expertos humanos para maximizar tu potencial.",
