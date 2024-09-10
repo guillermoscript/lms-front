@@ -1,12 +1,17 @@
+'use client'
+
 import { Github, MountainIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { buttonVariants } from './ui/button'
-import { getScopedI18n } from '@/app/locales/server'
+import { Button, buttonVariants } from './ui/button'
+import { useChangeLocale, useCurrentLocale, useScopedI18n } from '@/app/locales/client'
 
-export default async function Footer() {
-    const t = await getScopedI18n('footer')
+export default function Footer() {
+    const t = useScopedI18n('footer')
+
+    const locale = useCurrentLocale()
+    const changeLocale = useChangeLocale()
 
     return (
         <footer className="w-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -78,6 +83,22 @@ export default async function Footer() {
                     height={52}
                     className="rounded"
                 />
+                <div className="flex gap-2">
+                    <Button
+                        className={`px-2 py-1 rounded`}
+                        variant={locale === 'en' ? 'default' : 'outline'}
+                        onClick={() => changeLocale('en')}
+                    >
+                        EN
+                    </Button>
+                    <Button
+                        className={`px-2 py-1 rounded`}
+                        variant={locale === 'es' ? 'default' : 'outline'}
+                        onClick={() => changeLocale('es')}
+                    >
+                        ES
+                    </Button>
+                </div>
             </div>
         </footer>
     )
