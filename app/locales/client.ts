@@ -1,7 +1,7 @@
-"use client"
+'use client'
 import { createI18nClient } from 'next-international/client'
 
 export const { useI18n, useScopedI18n, I18nProviderClient } = createI18nClient({
-    en: () => import('./en'),
-    es: () => import('./es')
+    en: async () => await import('./en'),
+    es: async () => await import('./es')
 })
