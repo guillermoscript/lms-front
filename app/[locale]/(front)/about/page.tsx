@@ -1,18 +1,21 @@
 import Image from 'next/image'
 
 import { Timeline } from '@/components/ui/Acernity/TimeLine'
+import { getScopedI18n } from '@/app/locales/server'
 
-export default function TimelineDemo() {
+export default async function TimelineDemo() {
+    const t = await getScopedI18n('aboutUs')
+
     const data = [
         {
-            title: 'Early 2024',
+            title: t('timeline.items.early2024.title'),
             content: (
                 <div>
                     <p className="text-neutral-800 dark:text-neutral-200 text-xs md:text-sm font-normal mb-8">
-            The Team started working on LMS-AI as a side project because whe knew that Google was creating a competition for the best AI project that uses their technology.
+                        {t('timeline.items.early2024.description1')}
                     </p>
                     <p className="text-neutral-800 dark:text-neutral-200 text-xs md:text-sm font-normal mb-8">
-            That was a huge opportunity for us and we decided to take it. We started working on the project and we were able to finish it in time for the competition.
+                        {t('timeline.items.early2024.description2')}
                     </p>
                     <div className="grid grid-cols-2 gap-4">
                         <img
@@ -48,14 +51,14 @@ export default function TimelineDemo() {
             ),
         },
         {
-            title: 'Early 2023',
+            title: t('timeline.items.early2023.title'),
             content: (
                 <div>
                     <p className="text-neutral-800 dark:text-neutral-200 text-xs md:text-sm font-normal mb-8">
-            This project started as a thesis for Guillermo Marin, a student at the University Santa Maria. He was studying computer science and he wanted to create a project that would help students learn more effectively.
+                        {t('timeline.items.early2023.description1')}
                     </p>
                     <p className="text-neutral-800 dark:text-neutral-200 text-xs md:text-sm font-normal mb-8">
-            This was accepted by the university and he started working on it full-time
+                        {t('timeline.items.early2023.description2')}
                     </p>
                     <div className="grid grid-cols-2 gap-4">
                         <img
@@ -93,14 +96,14 @@ export default function TimelineDemo() {
     ]
     return (
         <div className="w-full container py-4">
-            <h1 className="text-6xl font-bold text-center mb-4">About Us</h1>
+            <h1 className="text-6xl font-bold text-center mb-4">{t('title')}</h1>
             <Timeline data={data} />
             <section className="mb-16">
 
                 <section className="mb-16 text-center">
-                    <h2 className="text-4xl font-bold mb-4">Empowering the world with LMS-AI.</h2>
+                    <h2 className="text-4xl font-bold mb-4">{t('empoweringTheWorld')}</h2>
                     <p className="text-lg text-gray-600 mb-8">
-            We're a team of programmers who loves to build and create. We're passionate about our work and we're always looking for new ways to improve our skills.
+                        {t('description')}
                     </p>
                     <div className="flex flex-wrap justify-center gap-8">
                         <TeamMember

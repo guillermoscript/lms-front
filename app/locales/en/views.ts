@@ -1,32 +1,5 @@
 export default {
-    header: {
-        title: 'LMS',
-        contact: 'Contact',
-        about: 'About',
-        pricing: 'Pricing',
-        blog: 'Blog',
-        login: 'Login',
-        home: 'Home',
-        register: 'Register'
-    },
-    footer: {
-        quickLinks: 'Quick Links',
-        contact: 'Contact',
-        about: 'About',
-        plans: 'Plans',
-        store: 'Store',
-        home: 'Home',
-        login: 'Login',
-        register: 'Register',
-        newsletter: 'Newsletter',
-        newsletterDescription: 'Subscribe to our newsletter for the latest updates and offers.',
-        copyright: 'Building the future of education. © 2024.',
-        subscribe: 'Subscribe',
-        madeWithLove: 'Made with ❤️ and faith',
-        newsletterDisclaimer: 'We will not share your email with anyone else.'
-    },
     landing: {
-
         title: 'Next Gen AI-Powered Learning',
         description: "Dive into expertly crafted courses spanning from English to advanced programming, guided by AI and human experts to maximize your potential.",
         getEarlyAccess: "Get Early Access",
@@ -90,6 +63,42 @@ export default {
             title: 'Ready to signup and join the waitlist?',
             description: 'Get instant access to our state of the art project and join the waitlist.',
             joinWaitlist: 'Join Waitlist'
+        }
+    },
+    aboutUs: {
+        title: 'About Us',
+        empoweringTheWorld: 'Empowering the world with LMS-AI.',
+        description: 'We\'re a team of developers who loves to build and create. We\'re passionate about our work and we\'re always looking for new ways to improve our skills.',
+        timeline: {
+            title: 'Changelog from my journey',
+            description: 'I\'ve been working on LMS-AI for the past 2 years. Here\'s a timeline of my journey.',
+            items: {
+                early2024: {
+                    title: 'Early 2024',
+                    description1: 'The Team started working on LMS-AI as a side project because whe knew that Google was creating a competition for the best AI project that uses their technology.',
+                    description2: 'That was a huge opportunity for us and we decided to take it. We started working on the project and we were able to finish it in time for the competition.'
+                },
+                early2023: {
+                    title: 'Early 2023',
+                    description1: 'This project started as a thesis for Guillermo Marin, a student at the University Santa Maria. He was studying computer science and he wanted to create a project that would help students learn more effectively.',
+                    description2: 'This was accepted by the university and he started working on it full-time'
+                }
+
+            }
+        }
+    },
+    contact: {
+        title: 'Contact Us',
+        description: 'Please reach out to us and we will get back to you as soon as possible.',
+        description2: 'We are always happy to hear from you. Please feel free to contact us with any questions or concerns you may have.',
+        form: {
+            name: 'Name',
+            email: 'Email',
+            message: 'Message',
+            submit: 'Submit',
+            submitting: 'Submitting...',
+            subject: 'Subject',
+            yourMessageHere: 'Your message here...'
         }
     }
 } as const

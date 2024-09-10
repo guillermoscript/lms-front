@@ -1,30 +1,6 @@
+import { m } from "framer-motion";
+
 export default {
-    header: {
-        title: 'LMS',
-        contact: 'Contacto',
-        about: 'Acerca de nosotross',
-        pricing: 'Precios',
-        blog: 'Blog',
-        login: 'Iniciar sesión',
-        home: 'Inicio',
-        register: 'Registrarse'
-    },
-    footer: {
-        quickLinks: 'Enlaces rápidos',
-        contact: 'Contacto',
-        about: 'Acerca de nosotross',
-        plans: 'Planes',
-        store: 'Tienda',
-        home: 'Inicio',
-        login: 'Iniciar sesión',
-        register: 'Registrarse',
-        newsletter: 'Newsletter',
-        newsletterDescription: 'Suscríbete a nuestro boletín para las últimas actualizaciones y ofertas.',
-        copyright: 'Construyendo el futuro de la educación. © 2024.',
-        subscribe: 'Suscríbete',
-        madeWithLove: 'Hecho con ❤️ y fe',
-        newsletterDisclaimer: 'No compartiremos tu correo electrónico con nadie más.'
-    },
     landing: {
         title: 'Aprende con IA de la próxima generación',
         description: "Sumérgete en cursos elaborados por expertos que abarcan desde inglés hasta programación avanzada, guiados por IA y expertos humanos para maximizar tu potencial.",
@@ -89,6 +65,41 @@ export default {
             title: '¿Listo para registrarse y unirte a la lista de espera?',
             description: 'Obtén acceso instantáneo a nuestro proyecto de última generación y únete a la lista de espera.',
             joinWaitlist: 'Únete a la lista de espera'
+        }
+    },
+    aboutUs: {
+        title: 'Acerca de nosotros',
+        empoweringTheWorld: 'Empoderando el mundo con LMS-AI.',
+        description: 'Somos un equipo de desarrolladores que aman construir y crear. Estamos apasionados por nuestro trabajo y siempre buscamos nuevas formas de mejorar nuestras habilidades.',
+        timeline: {
+            title: 'Cronología de mi viaje',
+            description: 'He estado trabajando en LMS-AI durante los últimos 2 años. Aquí hay una cronología de mi viaje.',
+            items: {
+                early2024: {
+                    title: 'Principios de 2024',
+                    description1: 'El equipo comenzó a trabajar en LMS-AI como un proyecto secundario porque sabíamos que Google estaba creando una competencia para el mejor proyecto de IA que usaba su tecnología.',
+                    description2: 'Eso fue una gran oportunidad para nosotros y decidimos tomarlo. Empezamos a trabajar en el proyecto y pudimos terminarlo a tiempo para la competencia.'
+                },
+                early2023: {
+                    title: 'Principios de 2023',
+                    description1: 'Este proyecto comenzó como una tesis de Guillermo Marin, un estudiante de la Universidad Santa María. Estaba estudiando ciencias de la computación y quería crear un proyecto que ayudara a los estudiantes a aprender más efectivamente.',
+                    description2: 'Esto fue aceptado por la universidad y comenzó a trabajar en él a tiempo completo.'
+                }
+            }
+        }
+    },
+    contact: {
+        title: 'Contacto',
+        description: 'Por favor, contáctanos y nos pondremos en contacto contigo lo antes posible.',
+        description2: 'Estamos siempre felices de escuchar de ti. Por favor, no te lo pienses dos veces y contacta con nosotros con cualquier pregunta o preocupación que tengas.',
+        form: {
+            name: 'Nombre',
+            email: 'Email',
+            message: 'Mensaje',
+            submit: 'Enviar',
+            submitting: 'Enviando...',
+            subject: 'Asunto',
+            yourMessageHere: 'Tu mensaje aquí...'
         }
     }
 } as const

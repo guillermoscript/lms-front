@@ -1,6 +1,5 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { MapPin, Phone } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useScopedI18n } from '@/app/locales/client'
 
 const formSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -33,6 +33,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 const ContactForm = () => {
+    const t = useScopedI18n('contact.form');
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
     })
@@ -98,7 +100,7 @@ const ContactForm = () => {
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Name</FormLabel>
+                                            <FormLabel>{t('name')}</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     {...register('name')}
@@ -118,7 +120,7 @@ const ContactForm = () => {
                                     name="email"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Email</FormLabel>
+                                            <FormLabel>{t('email')}</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     {...register('email')}
@@ -139,11 +141,11 @@ const ContactForm = () => {
                                     name="subject"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Subject</FormLabel>
+                                            <FormLabel>{t('subject')}</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     {...register('subject')}
-                                                    placeholder="Subject"
+                                                    placeholder={t('subject')}
                                                     className={
                                                         errors.subject
                                                             ? 'border-red-500'
@@ -159,16 +161,15 @@ const ContactForm = () => {
                                     name="message"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Message</FormLabel>
+                                            <FormLabel>{t('message')}</FormLabel>
                                             <FormControl>
                                                 <Textarea
                                                     {...register('message')}
-                                                    placeholder="Your message here..."
-                                                    className={`min-h-[150px] ${
-                                                        errors.message
-                                                            ? 'border-red-500'
-                                                            : ''
-                                                    }`}
+                                                    placeholder={t('yourMessageHere')}
+                                                    className={`min-h-[150px] ${errors.message
+                                                        ? 'border-red-500'
+                                                        : ''
+                                                        }`}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -180,7 +181,7 @@ const ContactForm = () => {
                                     className="w-full"
                                     disabled={isSubmitting}
                                 >
-                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                    {isSubmitting ? t('submitting') : t('submit')}
                                 </Button>
                             </form>
                         </Form>
@@ -192,49 +193,22 @@ const ContactForm = () => {
 }
 
 export default function ContactPage() {
+    const t = useScopedI18n('contact');
+
     return (
         <div className="">
             <div className="container mx-auto px-4 py-12 space-y-8">
                 <div className="text-center max-w-3xl mx-auto space-y-4">
-                    <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
+                    <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
                     <p className="text-gray-400 mb-8">
-                        Please reach out to us and we will get back to you at
-                        the speed of light.
+                        {t('description')}
+                    </p>
+                    <p className="mt-3 mb-12 text-lg text-gray-600 dark:text-slate-400">
+                        {t('description2')}
                     </p>
                 </div>
-                <div className="grid md:grid-cols-2 gap-12 items-center">
+                <div className="items-center">
                     <ContactForm />
-                    <div className="h-full pr-6 p-2 flex flex-col ">
-                        <p className="mt-3 mb-12 text-lg text-gray-600 dark:text-slate-400">
-                            Class aptent taciti sociosqu ad litora torquent per
-                            conubia nostra, per inceptos himenaeos. Duis nec
-                            ipsum orci. Ut scelerisque sagittis ante, ac
-                            tincidunt sem venenatis ut.
-                        </p>
-                        <ul className="mb-6 md:mb-0">
-                            <li className="flex">
-                                <MapPin className="w-6 h-6" />
-                                <div className="ml-4 mb-4">
-                                    <h3 className="mb-2 text-lg font-medium leading-6">
-                                        Our Address
-                                    </h3>
-                                    <p>1230 Maecenas Street Donec Road</p>
-                                    <p>New York, EEUU</p>
-                                </div>
-                            </li>
-                            <li className="flex">
-                                <Phone className="w-6 h-6" />
-                                <div className="ml-4 mb-4">
-                                    <h3 className="mb-2 text-lg font-medium leading-6">
-                                        Contact
-                                    </h3>
-                                    <a
-                                        href='mailto:rxh41sejl@mozmail.com'
-                                    >rxh41sejl@mozmail.com</a>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
                 </div>
             </div>
         </div>
