@@ -4,6 +4,7 @@
  * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
  */
 import { Github, MountainIcon } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { buttonVariants } from './ui/button'
@@ -66,19 +67,17 @@ export default function Footer () {
                     </div>
                 </div>
             </div>
-            <div className="bg-gray-200 py-4 text-center text-sm dark:bg-gray-900">
+            <div className="bg-gray-200 py-4 text-center text-sm dark:bg-gray-900 flex gap-4 items-center justify-center">
                 <p className="text-gray-600 dark:text-gray-300">
-                    Give some love here:
-                    <a
-                        href="https://github.com/guillermoscript/lms-front"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 ml-1"
-                    >
-            Repository
-                    </a>
-                    .
+                    Made with ❤️ and faith
                 </p>
+                <Image
+                    src="/img/tengo-fe.jpg"
+                    alt="Mano Tengo Fe"
+                    width={52}
+                    height={52}
+                    className="rounded"
+                />
             </div>
         </footer>
     )
