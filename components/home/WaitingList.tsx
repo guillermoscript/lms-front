@@ -1,4 +1,7 @@
-export default function WaitingList() {
+import { getScopedI18n } from "@/app/locales/server"
+
+export default async function WaitingList() {
+    const t = await getScopedI18n('landing.waitingList')
     return (
         <div className="pb-12 lg:pb-24 relative">
             <div className="bg-white dark:bg-black">
@@ -19,7 +22,7 @@ export default function WaitingList() {
                         ></div>
                         <div className="relative px-6 pb-14 pt-20 sm:px-10 sm:pb-20 lg:px-[4.5rem]">
                             <h2 className="  text-center text-balance mx-auto text-3xl md:text-5xl font-semibold tracking-[-0.015em] text-white">
-                            Ready to signup and join the waitlist?
+                                {t('title')}
                             </h2>
                             <p
                                 className="mt-4 max-w-[26rem] text-center mx-auto  text-bas
@@ -30,8 +33,7 @@ export default function WaitingList() {
                                     data-brr="1"
                                     className="inline-block relative"
                                 >
-                                Get instant access to our state of the art
-                                project and join the waitlist.
+                                    {t('description')}
                                 </span>
                             </p>
                             <div className="relative z-10 mx-auto flex justify-center mt-6">
@@ -40,7 +42,7 @@ export default function WaitingList() {
                                     className="bg-neutral-900 relative z-10 hover:bg-blac
             k/90 border border-transparent text-white text-sm md:text-sm transition font-medium duration-200 rounded-full px-4 py-2 flex items-center justify-center shadow-[0px_-1px_0px_0px_#FFFFFF40_inset,_0px_1px_0px_0px_#FFFFFF40_inset]"
                                 >
-                                Join Waitlist
+                                    {t('joinWaitlist')}
                                 </a>
                             </div>
                         </div>

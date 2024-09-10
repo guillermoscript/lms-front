@@ -26,7 +26,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "strict": false,
+    "strict": true,
     "noImplicitAny": false,
     "plugins": [
       {

@@ -4,7 +4,7 @@ import { updateSession } from '@/utils/supabase/middleware'
 
 const I18nMiddleware = createI18nMiddleware({
     locales: ['en', 'es'],
-    defaultLocale: 'en',
+    defaultLocale: 'es',
     urlMappingStrategy: 'rewrite'
 })
 

@@ -1,3 +1,5 @@
+import { getScopedI18n } from "@/app/locales/server";
+
 const GeminiSvg = () => (
     <svg
         width="214"
@@ -68,7 +70,9 @@ const GeminiSvg = () => (
     </svg>
 )
 
-export default function GeminiHeroSection() {
+export default async function GeminiHeroSection() {
+    const t = await getScopedI18n('landing.geminiCompetition');
+
     return (
         <section className=" pb-12 lg:pb-32">
             <div className="container mx-auto px-4 text-center">
@@ -76,14 +80,10 @@ export default function GeminiHeroSection() {
                     <GeminiSvg />
                 </div>
                 <h1 className="text-4xl md:text-7xl font-bold mb-6 leading-tight">
-                    Gemini API Developer
-                    <br />
-
-                    Competition
+                    {t('title')}
                 </h1>
                 <p className="text-gray-400 text-lg mb-8">
-                    We are currently selected for the Gemini API Developer
-                    Competition. Vote for us and help us win the competition.
+                    {t('description')}
                 </p>
                 <a
                     href="https://ai.google.dev/competition/projects/lms-ai"
@@ -91,7 +91,7 @@ export default function GeminiHeroSection() {
                 >
                     <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
                     <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
-                Vote for us
+                        {t('voteForUs')}
                     </span>
                 </a>
             </div>
