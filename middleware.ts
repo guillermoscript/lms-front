@@ -1,21 +1,39 @@
-import { type NextRequest } from 'next/server'
-
+import { NextResponse, type NextRequest } from 'next/server'
+import { createI18nMiddleware } from 'next-international/middleware'
 import { updateSession } from '@/utils/supabase/middleware'
 
-export async function middleware (request: NextRequest) {
-    // update user's auth session
-    return await updateSession(request)
+const I18nMiddleware = createI18nMiddleware({
+    locales: ['en', 'es'],
+    defaultLocale: 'en',
+    urlMappingStrategy: 'rewrite',
+    resolveLocaleFromRequest: (request) => {
+        const userLanguage = request.headers.get('accept-language')?.split(',')[0].split('-')[0] || 'en';
+        return userLanguage as 'en' | 'es';
+    }
+})
+
+
+export async function middleware(request: NextRequest) {
+    const userLanguage = request.headers.get('accept-language');
+
+    const response = request.nextUrl.pathname.startsWith('/api') ? NextResponse.next({
+        request: {
+            headers: request.headers
+        }
+    }) : I18nMiddleware(request)
+
+    return await updateSession(request, response)
 }
 
 export const config = {
     matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * Feel free to modify this pattern to include more paths.
+         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
     ]
 }

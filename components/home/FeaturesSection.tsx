@@ -3,37 +3,36 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import React from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { cn } from '@/utils'
 
 export function FeaturesSection() {
+    const t = useScopedI18n('landing.features')
+
     const features = [
         {
-            title: 'AI-Powered Lesson Reviews',
-            description:
-        'Get instant feedback from our artificial intelligence on your assigned tasks. Complete your lessons with confidence, knowing you’ll receive real-time suggestions for improvement or an immediate pass when you’ve mastered the material.',
+            title: t('aiReviews.title'),
+            description: t('aiReviews.description'),
             skeleton: <SkeletonOne />,
             className:
-        'col-span-1 lg:col-span-4 border-b lg:border-r dark:border-neutral-800',
+                'col-span-1 lg:col-span-4 border-b lg:border-r dark:border-neutral-800',
         },
         {
-            title: 'Professional Content Creation',
-            description:
-        'Every lesson is crafted by industry professionals to ensure high-quality, relevant content that stays current with trends and best practices.',
+            title: t('professionalContentCreation.title'),
+            description: t('professionalContentCreation.description'),
             skeleton: <SkeletonTwo />,
             className: 'border-b col-span-1 lg:col-span-2 dark:border-neutral-800',
         },
         {
-            title: 'Advanced Interactive Exams',
-            description:
-        'Transform your preparation with AI-generated exam forms, featuring various question types – from multiple choice to free text. Submit your answers for immediate AI evaluation and detailed feedback',
+            title: t('advancedInteractiveExams.title'),
+            description: t('advancedInteractiveExams.description'),
             skeleton: <SkeletonThree />,
             className:
-        'col-span-1 lg:col-span-3 lg:border-r  dark:border-neutral-800',
+                'col-span-1 lg:col-span-3 lg:border-r  dark:border-neutral-800',
         },
         {
-            title: 'Fully Generative UI AI Chat',
-            description:
-        'Engage with the most advanced AI language models in our chat interface. Get instant answers to your questions, personalized recommendations, and more.',
+            title: t('fullyGenerativeUIChat.title'),
+            description: t('fullyGenerativeUIChat.description'),
             skeleton: <SkeletonFour />,
             className: 'col-span-1 lg:col-span-3 border-b lg:border-none',
         },
@@ -42,12 +41,11 @@ export function FeaturesSection() {
         <div className="relative z-20 py-10 lg:py-32 max-w-7xl mx-auto">
             <div className="px-8">
                 <h4 className="text-3xl lg:text-5xl lg:leading-tight max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white">
-                Packed with Innovative Features
+                    {t('title')}
                 </h4>
 
                 <p className="text-sm lg:text-base  max-w-2xl  my-4 mx-auto text-neutral-500 text-center font-normal dark:text-neutral-300">
-
-Experience educational excellence with a suite of powerful AI-driven tools designed to personalize and enhance your learning journey.
+                    {t('description')}
                 </p>
             </div>
 

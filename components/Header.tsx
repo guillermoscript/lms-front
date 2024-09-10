@@ -2,6 +2,7 @@ import { DollarSign, Home, Menu, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
+import { getScopedI18n } from '@/app/locales/server'
 import {
     Sheet,
     SheetContent,
@@ -14,7 +15,9 @@ import {
 import { DarkThemeToggle } from './DarkThemeToggle'
 import ProfileDropdown from './dashboards/Common/ProfileDropdown'
 
-export default function Header({ children }: { children?: React.ReactNode }) {
+export default async function Header({ children }: { children?: React.ReactNode }) {
+    const t = await getScopedI18n('header')
+
     return (
         <header className="sticky container top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
             <div className="flex items-center justify-between py-4 px-4">
@@ -24,7 +27,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                         href="/"
                     >
                         <span className="hidden cursor-pointer font-bold sm:inline-block">
-                            LMS
+                            {t('title')}
                         </span>
                     </Link>
                     <nav className="hidden gap-6 md:flex">
@@ -32,13 +35,13 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                             className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/contact"
                         >
-                            Contact
+                            {t('contact')}
                         </Link>
                         <Link
                             className="flex items-center cursor-pointer text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                             href="/about"
                         >
-                            About us
+                            {t('about')}
                         </Link>
                     </nav>
                     <Sheet>
@@ -64,21 +67,21 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                             href="/"
                                         >
                                             <Home className="h-5 w-5 mr-2" />
-                                            Home
+                                            {t('home')}
                                         </Link>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                                             href="/contact"
                                         >
                                             <DollarSign className="h-5 w-5 mr-2" />
-                                            Contact
+                                            {t('contact')}
                                         </Link>
                                         <Link
                                             className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 sm:text-sm text-foreground/60"
                                             href="/about"
                                         >
                                             <ShoppingBag className="h-5 w-5 mr-2" />
-                                            About us
+                                            {t('about')}
                                         </Link>
                                         <DarkThemeToggle />
                                     </nav>

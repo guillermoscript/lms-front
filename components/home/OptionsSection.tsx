@@ -1,52 +1,44 @@
-import { Cloud, DollarSign, Heart, HelpCircle, LineChart, Route, Settings2Icon, Terminal } from 'lucide-react'
+import { DollarSign, Heart, LineChart, Route, Settings2Icon, Terminal } from 'lucide-react'
 
+import { getScopedI18n } from '@/app/locales/server'
 import { cn } from '@/utils'
 
-export default function OptionsSection() {
+export default async function OptionsSection() {
+    const t = await getScopedI18n('landing.joinPlatform')
+
     const features = [
         {
-            title: 'Built for All Learners',
+            title: t('items.builtForAllLearners.title'),
             description:
-        'From beginners to experts, our platform supports every learning journey.',
+                t('items.builtForAllLearners.description'),
             icon: <Terminal />,
         },
         {
-            title: 'Ease of use',
+            title: t('items.easeOfUse.title'),
             description:
-        'User-friendly interface that makes learning as simple and engaging as it should be.',
+                t('items.easeOfUse.description'),
             icon: <LineChart />,
         },
         {
-            title: 'Affordable Pricing',
+            title: t('items.affordablePricing.title'),
             description:
-        'Competitive rates with no hidden fees. Choose what works best for you.',
+                t('items.affordablePricing.description'),
             icon: <DollarSign />,
         },
         {
-            title: 'Unmatched Uptime',
-            description: 'Reliable and always accessible, so you can learn whenever and wherever you want.',
-            icon: <Cloud />,
-        },
-        {
-            title: 'Build with Next.js',
-            description: 'Next.js is a React framework that makes it easy to build fast, production-ready web applications.',
+            title: t('items.buildWithNextjs.title'),
+            description: t('items.buildWithNextjs.description'),
             icon: <Route />,
         },
         {
-            title: '24/7 Customer Support',
+            title: t('items.satisfactionGuaranteed.title'),
             description:
-        'Our team is always here to help, around the clock.',
-            icon: <HelpCircle />,
-        },
-        {
-            title: 'Satisfaction Guaranteed',
-            description:
-        'Money-back guarantee if our service doesn’t meet your expectations.',
+                t('items.satisfactionGuaranteed.description'),
             icon: <Settings2Icon />,
         },
         {
-            title: 'Build with love',
-            description: 'We are a team of passionate individuals who love what we do.',
+            title: t('items.buildWithLove.title'),
+            description: t('items.buildWithLove.description'),
             icon: <Heart />,
         },
 
@@ -54,12 +46,12 @@ export default function OptionsSection() {
     return (
         <div className="py-12 lg:py-24 relative">
             <h3 className="text-3xl lg:text-5xl lg:leading-tight max-w-5xl mx-auto text-center tracking-tight font-medium text-black dark:text-white">
-            Don’t Miss Out! Join this amazing platform today.
+                {t('title')}
             </h3>
             <p className="text-sm lg:text-base  max-w-2xl  my-4 mx-auto text-neutral-500 text-center font-normal dark:text-neutral-300">
-            Be part of an educational revolution. Subscribe now and unlock your potential with our AI-powered LMS.
+                {t('description')}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4  relative z-10 py-10 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  relative z-10 py-10 max-w-7xl mx-auto">
                 {features.map((feature, index) => (
                     <Feature key={feature.title} {...feature} index={index} />
                 ))}

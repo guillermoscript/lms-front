@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import HeroVideoDialog from '@/components/magicui/HeroVideoDialog'
 
 import { buttonVariants } from '../ui/button'
@@ -41,22 +42,22 @@ const NotificationBanner = ({ message }: { message: string }) => {
     )
 }
 
-export default function HeroVideoDialogDemoTopInBottomOut() {
+export default async function HeroVideoDialogDemoTopInBottomOut() {
+    const t = await getI18n()
+
     return (
         <div className="flex flex-col md:pt-20 pt-10 items-center space-y-4 md:gap-7 gap-2 lg:space-y-0 lg:space-x-4 min-h-[calc(70vh-5rem)]">
-            <NotificationBanner message="We are currently in beta. Get early access now!" />
+            <NotificationBanner message={t('landing.betaBadge')} />
 
             <h1 className="text-2xl md:text-4xl lg:text-8xl font-semibold max-w-6xl mx-auto text-center mt-6 relative z-10">
                 <a href="https://yodxlomcjzw.typeform.com/to/L0FbgHZK">
-                    <AnimatedText>Next Gen AI-Powered Learning</AnimatedText>
+                    <AnimatedText>{t('landing.title')}</AnimatedText>
                 </a>
             </h1>
 
             <p className="text-center mt-6 text-base md:text-xl opacity-90 max-w-3xl mx-auto relative z-10">
                 <AnimatedText>
-                    Dive into expertly crafted courses spanning from English to
-                    advanced programming, guided by AI and human experts to
-                    maximize your potential.
+                    {t('landing.description')}
                 </AnimatedText>
             </p>
 
@@ -65,7 +66,7 @@ export default function HeroVideoDialogDemoTopInBottomOut() {
                     href="https://yodxlomcjzw.typeform.com/to/L0FbgHZK"
                     className={buttonVariants({ variant: 'default' })}
                 >
-                    Get Early Access
+                    {t('landing.getEarlyAccess')}
                 </a>
             </div>
             <div className="relative text-center">
