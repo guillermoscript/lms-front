@@ -169,7 +169,7 @@ const ContactForm = () => {
                                                     className={`min-h-[150px] ${errors.message
                                                         ? 'border-red-500'
                                                         : ''
-                                                        }`}
+                                                    }`}
                                                 />
                                             </FormControl>
                                             <FormMessage />

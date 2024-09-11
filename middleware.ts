@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createI18nMiddleware } from 'next-international/middleware'
+
 import { updateSession } from '@/utils/supabase/middleware'
 
 const I18nMiddleware = createI18nMiddleware({
@@ -7,14 +8,13 @@ const I18nMiddleware = createI18nMiddleware({
     defaultLocale: 'en',
     urlMappingStrategy: 'rewrite',
     resolveLocaleFromRequest: (request) => {
-        const userLanguage = request.headers.get('accept-language')?.split(',')[0].split('-')[0] || 'en';
-        return userLanguage as 'en' | 'es';
+        const userLanguage = request.headers.get('accept-language')?.split(',')[0].split('-')[0] || 'en'
+        return userLanguage as 'en' | 'es'
     }
 })
 
-
 export async function middleware(request: NextRequest) {
-    const userLanguage = request.headers.get('accept-language');
+    const userLanguage = request.headers.get('accept-language')
 
     const response = request.nextUrl.pathname.startsWith('/api') ? NextResponse.next({
         request: {
