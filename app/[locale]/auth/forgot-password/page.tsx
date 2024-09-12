@@ -88,7 +88,7 @@ export default function ForgotPassword({
                                         </FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="johndoe@mailtest.com"
+                                                placeholder="you@example.com"
                                                 {...field}
                                             />
                                         </FormControl>
