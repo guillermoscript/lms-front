@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
+import { useI18n } from '@/app/locales/client'
 
 const FormSchema = z.object({
     email: z.string().email({ message: 'Invalid email address' }),
@@ -26,10 +27,12 @@ export default function ForgotPassword({
     searchParams,
 }: {
     searchParams: {
-        message: string;
-        error: string;
-    };
+        message: string
+        error: string
+    }
 }) {
+    const t = useI18n()
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -64,10 +67,10 @@ export default function ForgotPassword({
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-              Forgot Password
+                            {t('auth.forgotPassword.header')}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-              Enter your email below to reset your password
+                            {t('auth.forgotPassword.helpText')}
                         </p>
                     </div>
                     <Form {...form}>
@@ -80,10 +83,12 @@ export default function ForgotPassword({
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel>
+                                            {t('auth.forgotPassword.helpText')}
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="you@example.com"
+                                                placeholder="johndoe@mailtest.com"
                                                 {...field}
                                             />
                                         </FormControl>
@@ -91,7 +96,9 @@ export default function ForgotPassword({
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit">Submit</Button>
+                            <Button type="submit">
+                                {t('auth.forgotPassword.submit')}
+                            </Button>
                         </form>
                     </Form>
 
@@ -99,7 +106,7 @@ export default function ForgotPassword({
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
                     >
-            Back to login
+                        {t('auth.forgotPassword.back')}
                     </Link>
                 </div>
             </div>

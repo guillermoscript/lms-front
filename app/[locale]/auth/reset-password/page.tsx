@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
+import { useI18n } from '@/app/locales/client'
 
 const FormSchema = z.object({
     password: z
@@ -46,6 +47,8 @@ export default function ResetPassword({
             password: '',
         },
     })
+
+    const t = useI18n()
 
     const [showPassword, setShowPassword] = useState(false)
     const { toast } = useToast()
@@ -87,10 +90,10 @@ export default function ResetPassword({
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Reset Password
+                            {t('auth.resetPassword.header')}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Enter your new password below
+                            {t('auth.resetPassword.description')}
                         </p>
                     </div>
                     <Form {...form}>
@@ -103,7 +106,11 @@ export default function ResetPassword({
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>New Password</FormLabel>
+                                        <FormLabel>
+                                            {t(
+                                                'auth.resetPassword.newPassword'
+                                            )}
+                                        </FormLabel>
                                         <FormControl>
                                             <div className="rounded-md px-4 py-2 w-full bg-inherit border mb-6 gap-4 flex items-center justify-between">
                                                 <Input
@@ -140,8 +147,8 @@ export default function ResetPassword({
                                 type="submit"
                             >
                                 {form.formState.isSubmitting
-                                    ? 'Resetting password...'
-                                    : 'Reset Password'}
+                                    ? t('auth.resetPassword.loading')
+                                    : t('auth.resetPassword.button')}
                             </Button>
                         </form>
                     </Form>
@@ -158,7 +165,7 @@ export default function ResetPassword({
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
                     >
-                        Back to login
+                        {t('auth.resetPassword.back')}
                     </Link>
                 </div>
             </div>

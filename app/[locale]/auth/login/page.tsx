@@ -4,26 +4,27 @@ import Link from 'next/link'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
+import { getI18n } from '@/app/locales/server'
 
-export default function Login ({
-    searchParams
+export default async function Login({
+    searchParams,
 }: {
     searchParams: { message: string }
 }) {
+    const t = await getI18n()
+
     return (
         <>
             <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                 <div className="flex flex-col space-y-2 text-center">
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        Login to your account
+                        {t('auth.login.loginHeader')}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Enter your email below to login
+                        {t('auth.login.helpText')}
                     </p>
                 </div>
-                <UserLoginForm
-                    redirect='/dashboard'
-                />
+                <UserLoginForm redirect="/dashboard" />
                 {searchParams.message && (
                     <Alert>
                         <Mail className="h-4 w-4" />
@@ -37,16 +38,16 @@ export default function Login ({
                     href="/auth/forgot-password"
                     className="text-center text-sm cursor-pointer text-primary"
                 >
-                    Forgot your password?
+                    {t('auth.login.forgotPassword')}
                 </Link>
                 <p className="text-center text-sm text-muted-foreground">
-                    Don't have an account?
+                    {t('auth.login.dontHaveAccount')}
                 </p>
                 <Link
                     href="/auth/signup"
                     className={buttonVariants({ variant: 'secondary' })}
                 >
-                    Sign up
+                    {t('auth.register.form.signUp')}
                 </Link>
             </div>
         </>

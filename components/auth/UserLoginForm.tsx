@@ -7,6 +7,8 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { useI18n } from '@/app/locales/client'
+
 import { signIn } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
 import {
@@ -40,6 +42,8 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
             password: '',
         },
     })
+    const t = useI18n()
+
     const [error, setError] = useState('')
 
     const [showPassword, setShowPassword] = useState(false)
@@ -56,8 +60,12 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
 
             if (response.error) {
                 // Handle login errors (e.g., display error messages)
-                setError(response.message || 'An error occurred. Please try again.')
-                toast.error(response.message || 'An error occurred. Please try again.')
+                setError(
+                    response.message || 'An error occurred. Please try again.'
+                )
+                toast.error(
+                    response.message || 'An error occurred. Please try again.'
+                )
             }
         } catch (error: any) {
             // Handle login errors (e.g., display error messages)
@@ -86,7 +94,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                 >
                     <polyline points="15 18 9 12 15 6" />
                 </svg>{' '}
-        Back
+                Back
             </Link>
             <Form {...form}>
                 <form
@@ -98,9 +106,15 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>
+                                    {' '}
+                                    {t('auth.login.form.email')}
+                                </FormLabel>
                                 <FormControl>
-                                    <Input placeholder="you@example.com" {...field} />
+                                    <Input
+                                        placeholder="you@example.com"
+                                        {...field}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -111,17 +125,32 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Password</FormLabel>
+                                <FormLabel>
+                                    {t('auth.login.form.password')}
+                                </FormLabel>
                                 <FormControl>
                                     <div className=" w-full gap-4 flex items-center justify-between">
                                         <Input
-                                            type={showPassword ? 'text' : 'password'}
+                                            type={
+                                                showPassword
+                                                    ? 'text'
+                                                    : 'password'
+                                            }
                                             name="password"
                                             placeholder="••••••••"
                                             {...field}
                                         />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)}>
-                                            {!showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setShowPassword(!showPassword)
+                                            }
+                                        >
+                                            {!showPassword ? (
+                                                <EyeIcon />
+                                            ) : (
+                                                <EyeOffIcon />
+                                            )}
                                         </button>
                                     </div>
                                 </FormControl>
@@ -137,7 +166,9 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                         disabled={form.formState.isSubmitting}
                         type="submit"
                     >
-                        {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
+                        {form.formState.isSubmitting
+                            ? t('auth.login.form.loggingIn')
+                            : t('auth.login.form.login')}
                     </Button>
 
                     {error && (

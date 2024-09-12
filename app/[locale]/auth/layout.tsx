@@ -3,12 +3,15 @@ import Link from 'next/link'
 import Header from '@/components/Header'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/utils'
+import { getI18n } from '@/app/locales/server'
 
-export default function LoginLayout ({
-    children
+export default async function LoginLayout({
+    children,
 }: {
     children: React.ReactNode
 }) {
+    const t = await getI18n()
+
     return (
         <>
             <Header>
@@ -16,13 +19,13 @@ export default function LoginLayout ({
             </Header>
             <div className="container relative min-h-screen flex-col py-8 items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
                 <Link
-                    href="/examples/authentication"
+                    href="/auth/login"
                     className={cn(
                         buttonVariants({ variant: 'ghost' }),
                         'absolute right-4 top-4 md:right-8 md:top-8 hidden md:flex'
                     )}
                 >
-                    Login
+                    {t('auth.login.form.login')}
                 </Link>
                 <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
                     <div className="absolute z-10 inset-0 bg-zinc-900 opacity-30" />
@@ -33,13 +36,11 @@ export default function LoginLayout ({
                             className="absolute inset-0 object-cover w-full h-full"
                         />
                         <p className="absolute z-20 text-4xl font-bold">
-                            LMS Inc
+                            LMS AI Inc
                         </p>
                     </div>
                     <div className="relative z-20 mt-auto">
-                        <p>
-                            Get started with LMS Inc. Learn how to build
-                        </p>
+                        <p>{t('auth.login.description')}</p>
                     </div>
                 </div>
                 <div className="lg:p-8">{children}</div>
