@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
-import UserSignupForm from '@/components/auth/UserSignupForm'
 import { getI18n } from '@/app/locales/server'
+import UserSignupForm from '@/components/auth/UserSignupForm'
 
 export default async function Login({
     searchParams,

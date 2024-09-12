@@ -7,9 +7,8 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { useI18n } from '@/app/locales/client'
-
 import { signIn } from '@/actions/auth/authActions'
+import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Form,

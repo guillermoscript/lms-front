@@ -1,9 +1,9 @@
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import Header from '@/components/Header'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/utils'
-import { getI18n } from '@/app/locales/server'
 
 export default async function LoginLayout({
     children,

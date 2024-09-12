@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { forgotPasswordFun } from '@/actions/auth/authActions'
+import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
-import { useI18n } from '@/app/locales/client'
 
 const FormSchema = z.object({
     email: z.string().email({ message: 'Invalid email address' }),

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { signUp } from '@/actions/auth/authActions'
+import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -18,7 +19,6 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { useI18n } from '@/app/locales/client'
 
 // Assuming this component handles password input and validation
 

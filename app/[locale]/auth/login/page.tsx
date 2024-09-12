@@ -1,10 +1,10 @@
 import { Mail } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
-import { getI18n } from '@/app/locales/server'
 
 export default async function Login({
     searchParams,
