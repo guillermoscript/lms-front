@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { signUp } from '@/actions/auth/authActions'
+import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -50,6 +51,7 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
             password: '',
         },
     })
+    const t = useI18n()
 
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
@@ -67,8 +69,12 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
 
             if (response.error) {
                 // Handle signup errors (e.g., display error messages)
-                setError(response.message || 'An error occurred. Please try again.')
-                toast.error(response.message || 'An error occurred. Please try again.')
+                setError(
+                    response.message || 'An error occurred. Please try again.'
+                )
+                toast.error(
+                    response.message || 'An error occurred. Please try again.'
+                )
                 return
             }
 
@@ -113,7 +119,9 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>
+                                    {t('auth.register.form.email')}
+                                </FormLabel>
                                 <FormControl>
                                     <Input
                                         placeholder="you@example.com"
@@ -129,7 +137,10 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                         name="full_name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Full Name</FormLabel>
+                                <FormLabel>
+                                    {' '}
+                                    {t('auth.register.form.name')}
+                                </FormLabel>
                                 <FormControl>
                                     <Input placeholder="John Doe" {...field} />
                                 </FormControl>
@@ -142,7 +153,10 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                         name="username"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Username</FormLabel>
+                                <FormLabel>
+                                    {' '}
+                                    {t('auth.register.form.username')}
+                                </FormLabel>
                                 <FormControl>
                                     <Input placeholder="johndoe" {...field} />
                                 </FormControl>
@@ -155,17 +169,33 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Password</FormLabel>
+                                <FormLabel>
+                                    {' '}
+                                    {t('auth.register.form.password')}
+                                </FormLabel>
                                 <FormControl>
                                     <div className=" w-full gap-4 flex items-center justify-between">
                                         <Input
-                                            type={showPassword ? 'text' : 'password'}
+                                            type={
+                                                showPassword
+                                                    ? 'text'
+                                                    : 'password'
+                                            }
                                             name="password"
                                             placeholder="••••••••"
                                             {...field}
                                         />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)}>
-                                            {!showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setShowPassword(!showPassword)
+                                            }
+                                        >
+                                            {!showPassword ? (
+                                                <EyeIcon />
+                                            ) : (
+                                                <EyeOffIcon />
+                                            )}
                                         </button>
                                     </div>
                                 </FormControl>
@@ -181,7 +211,9 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
                         disabled={form.formState.isSubmitting}
                         type="submit"
                     >
-                        {form.formState.isSubmitting ? 'Signing up...' : 'Sign Up'}
+                        {form.formState.isSubmitting
+                            ? t('auth.register.form.signingUp') + '...'
+                            : t('auth.register.form.signUp')}
                     </Button>
 
                     {error && (
