@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
 import { createClient } from '@/utils/supabase/server'
-import { getI18n } from '@/app/locales/server'
 
 export default async function StudentExamCoursePage ({
     params

@@ -1,9 +1,11 @@
 'use client'
 import axios, { isAxiosError } from 'axios'
+import { Loader } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import { useScopedI18n } from '@/app/locales/client'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -29,8 +31,6 @@ import {
 import FreeTextQuestionForm from '../teacher/test/FreeTextQuestion'
 import MultipleChoiceQuestion from '../teacher/test/MultipleChoiceQuestion'
 import SingleSelectQuestion from '../teacher/test/SingleSelectQuestion'
-import { useScopedI18n } from '@/app/locales/client'
-import { Loader } from 'lucide-react'
 
 interface ExamsSubmissionFormProps {
     multipleChoiceQuestions: MCQType[]
@@ -201,10 +201,10 @@ export default function ExamsSubmissionForm({
                             >
                                 {form.formState.isSubmitting
                                     ? (
-                                            <Loader
-                                                className="animate-spin"
-                                                size={20}
-                                            />
+                                        <Loader
+                                            className="animate-spin"
+                                            size={20}
+                                        />
                                     )
                                     : t('submit')}
                             </AlertDialogAction>
