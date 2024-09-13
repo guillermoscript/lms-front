@@ -6,6 +6,7 @@ import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import { TaskAiActions } from '@/actions/dashboard/AI/TaskAiActions'
 import { studentSubmitAiTaskMessage } from '@/actions/dashboard/lessonsAction'
+import { useScopedI18n } from '@/app/locales/client'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { ChatInput, ChatTextArea, SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
@@ -93,6 +94,7 @@ export default function TaksMessages({
     const [isLoading, setIsLoading] = useState(false)
     const [stop, setStop] = useState(false)
     const [aiState] = useAIState()
+    const t = useScopedI18n('LessonContent.TaksMessages')
 
     const isLastMessageFromMakeUserAssigmentCompleted =
         aiState?.messages[aiState?.messages.length - 1]?.role === 'tool' &&
@@ -109,7 +111,9 @@ export default function TaksMessages({
                     <ChatList messages={conversation} />
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <p className="text-lg">Complete your task</p>
+                        <p className="text-lg">
+                            {t('title')}
+                        </p>
                     </div>
                 )}
 
@@ -128,13 +132,13 @@ export default function TaksMessages({
                                         id='simple-tab'
                                         value="simple"
                                     >
-                                    Simple
+                                        {t('simple')}
                                     </TabsTrigger>
                                     <TabsTrigger
                                         id='markdown-tab'
                                         value="markdown"
                                     >
-                                    Markdown
+                                        {t('markdown')}
                                     </TabsTrigger>
                                 </TabsList>
                                 <MarkdownEditorTour />
@@ -183,8 +187,8 @@ export default function TaksMessages({
 
                 {isLessonAiTaskCompleted && (
                     <SuccessMessage
-                        status="success"
-                        message="Assignment marked as completed."
+                        status={t('status')}
+                        message={t('Assignment marked as completed.')}
                     />
                 )}
             </div>

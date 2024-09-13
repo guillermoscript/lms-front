@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { studentResetAiTaskConversation } from '@/actions/dashboard/lessonsAction'
+import { useScopedI18n } from '@/app/locales/client'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,6 +23,7 @@ export default function ResetTaskAIConversation({
 }: {
     lessonId: number
 }) {
+    const t = useScopedI18n('LessonContent.ResetTaskAIConversation')
     const [open, setOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -31,21 +33,24 @@ export default function ResetTaskAIConversation({
                 <AlertDialogTrigger asChild>
                     <Button className="flex items-center space-x-2">
                         <ResetIcon />
-                        <span>Reset Conversation</span>
+                        <span>
+                            {t('resetConversation')}
+                        </span>
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Are you absolutely sure?
+                            {t('title')}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete the conversation.
+                            {t('description')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                            {t('cancel')}
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={async () => {
                                 setOpen(true)
@@ -77,7 +82,7 @@ export default function ResetTaskAIConversation({
 
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Loading...' : 'Reset'}
+                            {isLoading ? t('loading') : t('action')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

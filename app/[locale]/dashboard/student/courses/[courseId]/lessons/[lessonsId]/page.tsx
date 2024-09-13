@@ -1,7 +1,11 @@
+import { Suspense } from 'react'
+
 import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import LessonContent from '@/components/dashboards/student/course/lessons/LessonContent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
 import { createClient } from '@/utils/supabase/server'
+
+import { LessonBodyLoading } from './loading'
 
 export const metadata = {
     title: 'Student Lesson Page',
@@ -49,14 +53,20 @@ export default async function StudentLessonPage({
                 />
             }
         >
-            <LessonContent
-                lessonData={lessonData.data}
-                courseData={lessonData.data.courses}
-                lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
-                lessonsAiTasksMessages={lessonData.data.lessons_ai_task_messages}
-                isLessonAiTaskCompleted={!!isLessonAiTaskCompleted}
-                userId={user.data.user.id}
-            />
+            <Suspense fallback={<>
+                <LessonBodyLoading />
+            </>}
+            >
+
+                <LessonContent
+                    lessonData={lessonData.data}
+                    courseData={lessonData.data.courses}
+                    lessonsAiTasks={lessonData.data.lessons_ai_tasks[0]}
+                    lessonsAiTasksMessages={lessonData.data.lessons_ai_task_messages}
+                    isLessonAiTaskCompleted={!!isLessonAiTaskCompleted}
+                    userId={user.data.user.id}
+                />
+            </Suspense>
         </LessonPage>
     )
 }

@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { CheckCircle } from 'lucide-react'
 import Image from 'next/image'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
@@ -24,7 +25,7 @@ import LessonLoaderView from './LessonLoaderView'
 import ResetTaskAIConversation from './ResetTaskAIConversation'
 import TaskMessageTour from './TaskMessageTour'
 
-export default function LessonContent({
+export default async function LessonContent({
     lessonData,
     courseData,
     lessonsAiTasks,
@@ -39,6 +40,7 @@ export default function LessonContent({
     isLessonAiTaskCompleted?: boolean
     userId: string
 }) {
+    const t = await getI18n()
     const sortedMessages = lessonsAiTasksMessages.sort(
         (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix()
     )
@@ -47,16 +49,16 @@ export default function LessonContent({
         <div className="flex flex-col gap-8 w-full">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/student/courses/${lessonData.course_id}`,
                         label: courseData?.title,
                     },
                     {
                         href: `/dashboard/student/courses/${lessonData.course_id}/lessons`,
-                        label: 'Lessons',
+                        label: t('BreadcrumbComponent.lesson'),
                     },
                     {
                         href: `/dashboard/student/courses/${lessonData.course_id}/lessons/${lessonData.id}`,
@@ -87,7 +89,7 @@ export default function LessonContent({
                     </div>
                     <div className="flex gap-2 min-w-[100px]">
                         <Badge variant="default">
-                            Lesson # {lessonData.sequence}
+                            #{lessonData.sequence}
                         </Badge>
                         {isLessonAiTaskCompleted && (
                             <CheckCircle className="h-6 w-6 text-green-500" />
@@ -98,7 +100,9 @@ export default function LessonContent({
             </div>
             {lessonData.video_url && (
                 <>
-                    <h2 className="text-2xl font-bold">Video</h2>
+                    <h2 className="text-2xl font-bold">
+                        {t('LessonContent.video')}
+                    </h2>
                     <iframe
                         width="100%"
                         height="500"
@@ -116,7 +120,9 @@ export default function LessonContent({
             </div>
             {lessonData?.summary && (
                 <div className="mt-8">
-                    <h3 className="text-2xl font-bold">Summary</h3>
+                    <h3 className="text-2xl font-bold">
+                        {t('LessonContent.summary')}
+                    </h3>
                     <ViewMarkdown markdown={lessonData.summary} />
                 </div>
             )}
@@ -130,17 +136,21 @@ export default function LessonContent({
                             className='flex flex-col gap-4 p-2 md:p-4 lg:p-6'
                         >
                             <div className="flex items-center justify-between w-full">
-                                <CardTitle>AI Task</CardTitle>
+                                <CardTitle>
+                                    {t('LessonContent.aiTask')}
+                                </CardTitle>
                                 <div
                                     id='task-status'
                                     className="flex items-center gap-2"
                                 >
                                     {isLessonAiTaskCompleted ? (
-                                        <Badge>Task Completed</Badge>
+                                        <Badge>
+                                            {t('LessonContent.aiTaskCompleted')}
+                                        </Badge>
                                     ) : (
 
                                         <Badge variant="outline">
-                                            Task Incomplete
+                                            {t('LessonContent.aiTaksInComplete')}
                                         </Badge>
                                     )}
                                     <TaskMessageTour />
@@ -161,8 +171,8 @@ export default function LessonContent({
                             />
                             <CustomErrorBoundary fallback={
                                 <RetryError
-                                    title="Error loading AI Task"
-                                    description="There was an issue loading the AI Task"
+                                    title={t('LessonContent.RetryError')}
+                                    description={t('LessonContent.RetryError.description')}
                                 />
                             }
                             >

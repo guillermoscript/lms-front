@@ -29,6 +29,8 @@ import {
 import FreeTextQuestionForm from '../teacher/test/FreeTextQuestion'
 import MultipleChoiceQuestion from '../teacher/test/MultipleChoiceQuestion'
 import SingleSelectQuestion from '../teacher/test/SingleSelectQuestion'
+import { useScopedI18n } from '@/app/locales/client'
+import { Loader } from 'lucide-react'
 
 interface ExamsSubmissionFormProps {
     multipleChoiceQuestions: MCQType[]
@@ -112,6 +114,8 @@ export default function ExamsSubmissionForm({
         }
     }
 
+    const t = useScopedI18n('ExamsSubmissionForm')
+
     return (
         <Form {...form}>
             <form
@@ -123,7 +127,7 @@ export default function ExamsSubmissionForm({
                     {singleSelectQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-                                True or False
+                                {t('trueOrFalse')}
                             </h3>
 
                             <SingleSelectQuestion
@@ -138,7 +142,7 @@ export default function ExamsSubmissionForm({
                     {freeTextQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-                                Fill in the Blank
+                                {t('freeText')}
                             </h3>
 
                             <FreeTextQuestionForm
@@ -153,7 +157,7 @@ export default function ExamsSubmissionForm({
                     {multipleChoiceQuestions.length > 0 && (
                         <div>
                             <h3 className="text-lg font-semibold">
-                                Multiple Choice
+                                {t('multipleChoice')}
                             </h3>
 
                             <MultipleChoiceQuestion
@@ -170,24 +174,23 @@ export default function ExamsSubmissionForm({
                             disabled={form.formState.isSubmitting}
                             type="button"
                         >
-                            Submit Exam
+                            {t('submit')}
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>
-                                Are you absolutely sure?
+                                {t('alert.title')}
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                                Once you submit, you can't go back and change
-                                your answers.
+                                {t('alert.description')}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel
                                 disabled={form.formState.isSubmitting}
                             >
-                                Cancel
+                                {t('cancel')}
                             </AlertDialogCancel>
                             <AlertDialogAction
                                 disabled={form.formState.isSubmitting}
@@ -197,8 +200,13 @@ export default function ExamsSubmissionForm({
                                 }}
                             >
                                 {form.formState.isSubmitting
-                                    ? 'Submitting...'
-                                    : 'Submit'}
+                                    ? (
+                                            <Loader
+                                                className="animate-spin"
+                                                size={20}
+                                            />
+                                    )
+                                    : t('submit')}
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

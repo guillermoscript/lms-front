@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Fragment } from 'react'
 
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface BreadcrumbComponentProps {
     links: Array<{ href: string, label: string }>
@@ -31,6 +32,12 @@ const BreadcrumbComponent: React.FC<BreadcrumbComponentProps> = ({ links }) => {
                 ))}
             </BreadcrumbList>
         </Breadcrumb>
+    )
+}
+
+export function BreadcrumbComponentLoading() {
+    return (
+        <Skeleton className="w-1/2 h-6" />
     )
 }
 

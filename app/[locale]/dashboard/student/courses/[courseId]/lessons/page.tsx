@@ -1,6 +1,7 @@
 import { CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
@@ -19,6 +20,7 @@ export default async function StudentCourseLessonsPage ({
 }) {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
+    const t = await getI18n()
 
     if (user.error != null) {
         throw new Error(user.error.message)
@@ -39,11 +41,11 @@ export default async function StudentCourseLessonsPage ({
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     { href: `/dashboard/student/courses/${lessons.data[0].course_id}`, label: lessons.data[0]?.courses?.title },
-                    { href: `/dashboard/student/courses/${lessons.data[0].course_id}/lessons`, label: 'Lessons' }
+                    { href: `/dashboard/student/courses/${lessons.data[0].course_id}/lesson`, label: t('BreadcrumbComponent.lessons') }
                 ]}
             />
             <div className="grid gap-8">
@@ -52,7 +54,9 @@ export default async function StudentCourseLessonsPage ({
                         {lessons.data[0]?.courses?.title}
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        View and track your progress through the course lessons.
+                        {
+                            t('dashboard.student.LessonPage.description')
+                        }
                     </p>
                 </div>
                 <div className="grid gap-4">
@@ -64,13 +68,13 @@ export default async function StudentCourseLessonsPage ({
                                 description={lesson.description}
                                 status={
                                     lesson.lesson_completions.length > 0
-                                        ? 'Completed'
-                                        : 'Not Started'
+                                        ? t('dashboard.student.StudentCourseLessonsPage.completed')
+                                        : t('dashboard.student.StudentCourseLessonsPage.notStarted')
                                 }
                                 action={
                                     lesson.lesson_completions.length > 0
-                                        ? 'Review'
-                                        : 'Start'
+                                        ? t('dashboard.student.StudentCourseLessonsPage.review')
+                                        : t('dashboard.student.StudentCourseLessonsPage.start')
                                 }
                                 Icon={
                                     lesson.lesson_completions.length > 0

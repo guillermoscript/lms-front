@@ -3,6 +3,7 @@ import { generateId, Message as MessageType, ToolInvocation } from 'ai'
 import { CheckCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import Confetti, { ConfettiRef } from '@/components/magicui/confetti'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
@@ -174,7 +175,7 @@ const ChatInput = ({
     buttonChildren?: React.ReactNode
 }) => {
     const ref = useRef(null)
-
+    const t = useScopedI18n('ChatInput')
     return (
         <>
             {isTemplatePresent && (
@@ -191,7 +192,7 @@ const ChatInput = ({
                             ref.current?.setMarkdown(message)
                         }}
                     >
-                        Template for generating exam form for a "X" topic
+                        {t('templateExamForm')}
                     </Button>
                     <Button
                         variant="outline"
@@ -204,8 +205,7 @@ const ChatInput = ({
                             ref.current?.setMarkdown(message)
                         }}
                     >
-                        Template for asking a suggestions of an exam form for a
-                        "X" topic
+                        {t('templateForQuestion')}
                     </Button>
                 </div>
             )}
@@ -228,7 +228,7 @@ const ChatInput = ({
                         isLoading ? 'cursor-not-allowed' : 'cursor-text',
                         'editor'
                     )}
-                    placeholder="Chat with the AI assistant"
+                    placeholder={t('placeholder')}
                     markdown={text ?? ''}
                     ref={ref}
                 />
@@ -242,14 +242,14 @@ const ChatInput = ({
                                 variant="outline"
                                 className="rounded-r-lg"
                             >
-                                Stop
+                                {t('stop')}
                             </Button>
                         ) : (
                             <Button
                                 type="submit"
                                 className="rounded-r-lg"
                             >
-                                Send
+                                {t('send')}
                             </Button>
                         )
                     )
@@ -274,7 +274,7 @@ function ChatTextArea({
     buttonChildren?: React.ReactNode
 }) {
     const [value, setValue] = useState(text)
-
+    const t = useScopedI18n('ChatTextArea')
     return (
         <>
             <form
@@ -293,7 +293,7 @@ function ChatTextArea({
                 className="py-4 flex gap-2 flex-col w-full"
             >
                 <Textarea
-                    placeholder="Type your message here"
+                    placeholder={t('placeholder')}
                     required
                     className="rounded-l-lg"
                     rows={7}
@@ -310,14 +310,14 @@ function ChatTextArea({
                                 variant="outline"
                                 className="rounded-r-lg"
                             >
-                                Stop
+                                {t('stop')}
                             </Button>
                         ) : (
                             <Button
                                 type="submit"
                                 className="rounded-r-lg"
                             >
-                                Send
+                                {t('send')}
                             </Button>
                         )
                     )
@@ -329,10 +329,11 @@ function ChatTextArea({
 }
 
 function DisclaimerForUser() {
+    const t = useScopedI18n('DisclaimerForUser')
     return (
         <div className="flex-1 flex items-center justify-center my-4">
             <p className="text-sm">
-                LLMs can make mistakes. Verify important information.
+                {t('text')}
             </p>
         </div>
     )

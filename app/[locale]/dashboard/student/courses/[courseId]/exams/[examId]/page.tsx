@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
 import { createClient } from '@/utils/supabase/server'
+import { getI18n } from '@/app/locales/server'
 
 export default async function StudentExamCoursePage ({
     params
@@ -63,20 +64,22 @@ export default async function StudentExamCoursePage ({
         multipleChoiceQuestions
     } = parseExamData(exams.data)
 
+    const t = await getI18n()
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/student/courses/${exams.data?.course_id}`,
                         label: exams.data?.courses?.title
                     },
                     {
                         href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
-                        label: 'Exams'
+                        label: t('BreadcrumbComponent.exam')
                     },
                     {
                         href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
@@ -93,7 +96,7 @@ export default async function StudentExamCoursePage ({
                         {exams.data.description}
                     </p>
                     <p className="text-gray-500 dark:text-gray-400">
-                        Exam duration: {exams.data?.duration} minutes
+                        {t('dashboard.student.StudentExamCoursePage.duration')}: {exams.data?.duration} minutes
                     </p>
                 </div>
                 <ExamsSubmissionForm

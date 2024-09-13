@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -15,12 +16,17 @@ export default function EditMessage({
 }) {
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [stop, setStop] = useState<boolean>(false)
+    const t = useScopedI18n('EditMessage')
 
     return (
         <Tabs defaultValue="simple" className="w-full py-4">
             <TabsList>
-                <TabsTrigger value="simple">Simple</TabsTrigger>
-                <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                <TabsTrigger value="simple">
+                    {t('simple')}
+                </TabsTrigger>
+                <TabsTrigger value="markdown">
+                    {t('markdown')}
+                </TabsTrigger>
             </TabsList>
             <TabsContent value="markdown">
                 <ChatInput
@@ -42,15 +48,13 @@ export default function EditMessage({
                     buttonChildren= {
                         <div className="flex items-center justify-center gap-4">
                             <Button>
-                                Edit and Regenerate AI Response
+                                {t('editAndRegenerate')}
                             </Button>
-
                             <Button
                                 variant='secondary'
                             >
-                                Edit
+                                {t('edit')}
                             </Button>
-
                         </div>
                     }
                 />
@@ -75,13 +79,13 @@ export default function EditMessage({
                     buttonChildren= {
                         <div className="flex items-center justify-center gap-4">
                             <Button>
-                                Edit and Regenerate AI Response
+                                {t('editAndRegenerate')}
                             </Button>
 
                             <Button
                                 variant='secondary'
                             >
-                                Edit
+                                {t('edit')}
                             </Button>
 
                         </div>

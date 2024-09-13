@@ -1,8 +1,10 @@
 'use client'
 
+import { Loader } from 'lucide-react'
 import { useState } from 'react'
 
 import { studentSubmitLessonComment, updateComment } from '@/actions/dashboard/studentActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import { useToast } from '@/components/ui/use-toast'
@@ -23,6 +25,7 @@ export default function CommentEditor ({
     const [commentState, setComment] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
+    const t = useScopedI18n('CommentEditor')
 
     const submitComment = async () => {
         const payload = comment_id ? { content: commentState, commentId: comment_id } : { comment: commentState, lesson_id, parent_comment_id, course_id }
@@ -35,8 +38,8 @@ export default function CommentEditor ({
                 setComment('')
             } else if (response.status === 'error') {
                 toast({
-                    title: 'Error',
-                    description: response.message,
+                    title: t('toast.titleError'),
+                    description: response.message || t('toast.descriptionError'),
                     variant: 'destructive'
                 })
             }
@@ -44,8 +47,8 @@ export default function CommentEditor ({
         } catch (error) {
             console.error(error)
             toast({
-                title: 'Error',
-                description: 'An error occurred while submitting comment. Please try again.',
+                title: t('toast.titleError'),
+                description: t('toast.descriptionError'),
                 variant: 'destructive'
             })
         } finally {
@@ -81,7 +84,12 @@ export default function CommentEditor ({
                     className="disabled:opacity-50 disabled:cursor-not-allowed w-full"
                     disabled={isLoading}
                 >
-                    {isLoading ? 'Submitting...' : 'Submit Comment'}
+                    {isLoading ? (
+                        <Loader
+                            className='animate-spin'
+                            size={20}
+                        />
+                    ) : t('action')}
                 </Button>
             </form>
         </>

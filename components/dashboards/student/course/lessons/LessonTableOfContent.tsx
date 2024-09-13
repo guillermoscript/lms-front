@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { extractHeadings } from '@/utils/functions'
 
 interface TableOfContentsProps {
@@ -11,6 +12,8 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
     markdown,
 }) => {
     const headings = extractHeadings(markdown)
+
+    const t = useScopedI18n('TableOfContents')
 
     useEffect(() => {
         const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -39,7 +42,9 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
 
     return (
         <nav className={'p-6'}>
-            <h2 className="font-bold text-xl mb-4">Table of contents</h2>
+            <h2 className="font-bold text-xl mb-4">
+                {t('title')}
+            </h2>
             <ul className="space-y-2">
                 {headings.map((heading, index) => (
                     <li

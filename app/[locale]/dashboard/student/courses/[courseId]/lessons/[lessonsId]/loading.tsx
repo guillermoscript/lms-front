@@ -21,57 +21,7 @@ export default function LessonIdLoadingComponent () {
                             </div>
                         </div>
                     </div>
-                    <div className='flex flex-col gap-4 mt-4'>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3 w-full">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="space-y-2 w-full">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[calc(100%-3rem)]" />
-                                <Skeleton className="h-4 w-[calc(100%-2rem)]" />
-                            </div>
-                        </div>
-
-                    </div>
+                    <LessonBodyLoading />
                 </main>
             </div>
             <div className="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40">
@@ -94,6 +44,62 @@ export default function LessonIdLoadingComponent () {
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+export function LessonBodyLoading() {
+    return (
+        <div className='flex flex-col gap-4 mt-4'>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+
         </div>
     )
 }

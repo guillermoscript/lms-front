@@ -34,10 +34,10 @@ export default function Footer() {
                                 <Link href="/">{t('home')}</Link>
                             </li>
                             <li>
-                                <Link href="/plans">{t('plans')}</Link>
+                                <Link href="/about">{t('about')}</Link>
                             </li>
                             <li>
-                                <Link href="/store">{t('store')}</Link>
+                                <Link href="/contact">{t('contact')}</Link>
                             </li>
                         </ul>
                     </div>
