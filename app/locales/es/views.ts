@@ -26,7 +26,7 @@ export default {
             }
         },
         joinPlatform: {
-            title: 'No te lo pierdas! Únete a esta increíble plataforma hoy.',
+            title: '¡No te lo pierdas! Únete a esta increíble plataforma hoy.',
             description: 'Forma parte de una revolución educativa. Suscríbete ahora y desbloquea tu potencial con nuestra plataforma LMS impulsada por IA.',
             items: {
                 builtForAllLearners: {
@@ -100,5 +100,45 @@ export default {
             subject: 'Asunto',
             yourMessageHere: 'Tu mensaje aquí...'
         }
+    },
+    dashboard: {
+        student: {
+            CourseStudentPage: {
+                lessonTitle: 'Lecciones',
+                examTitle: 'Exámenes',
+            },
+            LessonPage: {
+                description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',
+            },
+            StudentCourseLessonsPage: {
+                completed: 'Completado',
+                notStarted: 'No iniciado',
+                review: 'Review',
+                start: 'Comenzar',
+            },
+            StudentExamsCoursePage: {
+                completed: 'Completado',
+                notStarted: 'No iniciado',
+                waitingReview: 'Esperando revisión',
+                review: 'Review',
+                start: 'Comenzar',
+            },
+            StudentExamCoursePage: {
+                duration: 'Duración',
+            },
+            StudentExamReviewCoursePage: {
+                score: 'Puntuación',
+                status: 'Estado',
+                action: 'Acción',
+                teacher: 'Profesor',
+                pending: 'Pendiente',
+                review: 'Review',
+                start: 'Comenzar',
+                yourAnswer: 'Tu respuesta',
+                feedback: 'Feedback',
+                true: 'Verdadero',
+                false: 'Falso',
+            }
+        },
     }
 } as const
