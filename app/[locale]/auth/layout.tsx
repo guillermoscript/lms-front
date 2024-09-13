@@ -28,7 +28,7 @@ export default function LoginLayout ({
                     <div className="absolute z-10 inset-0 bg-zinc-900 opacity-30" />
                     <div className="flex items-center text-lg font-medium">
                         <img
-                            src="https://villademarcos.com/wp-content/uploads/2024/08/image_fx_a_illustration_of_javascript_logo_in_the_styl12.png"
+                            src="https://wp.villademarcos.com/wp-content/uploads/2024/08/image_fx_a_illustration_of_javascript_logo_in_the_styl12.png"
                             alt="Hero"
                             className="absolute inset-0 object-cover w-full h-full"
                         />
