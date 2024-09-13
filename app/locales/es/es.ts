@@ -1,5 +1,5 @@
+import components from './components'
 import views from './views'
-
 export default {
     header: {
         title: 'LMS',
@@ -12,7 +12,7 @@ export default {
         register: 'Registrarse'
     },
     footer: {
-        quickLinks: 'Enlaces rápidos',
+        quickLinks: 'Enlaces',
         contact: 'Contacto',
         about: 'Acerca de nosotross',
         plans: 'Planes',
@@ -27,5 +27,6 @@ export default {
         madeWithLove: 'Hecho con ❤️ y fe',
         newsletterDisclaimer: 'No compartiremos tu correo electrónico con nadie más.'
     },
-    ...views
+    ...views,
+    ...components
 } as const
