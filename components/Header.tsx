@@ -14,6 +14,7 @@ import {
 
 import { DarkThemeToggle } from './DarkThemeToggle'
 import ProfileDropdown from './dashboards/Common/ProfileDropdown'
+import LocaleButtons from './ui/LocaleButtons'
 
 export default async function Header({ children }: { children?: React.ReactNode }) {
     const t = await getScopedI18n('header')
@@ -94,6 +95,7 @@ export default async function Header({ children }: { children?: React.ReactNode 
                 </div>
                 <nav className="hidden md:flex justify-center gap-2 items-center">
                     <DarkThemeToggle />
+                    <LocaleButtons />
                 </nav>
             </div>
         </header>
