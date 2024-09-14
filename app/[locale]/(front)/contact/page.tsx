@@ -57,7 +57,7 @@ const ContactForm = () => {
             'your-message': data.message,
         }
 
-        const url = `/contact-form-7/v1/contact-forms/${contactFormId}/feedback`
+        const url = `https://wp.villademarcos.com/wp-json/contact-form-7/v1/contact-forms/${contactFormId}/feedback`
 
         // body should be in formdata format
         const formData = new FormData()
