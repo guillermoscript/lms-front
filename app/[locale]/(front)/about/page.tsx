@@ -113,7 +113,7 @@ export default async function TimelineDemo() {
                         />
                         <TeamMember
                             name="Guillermo Marin"
-                            role="Principal Strategist"
+                            role="Senior Developer"
                             image="/img/feature(2).png"
                         />
                         <TeamMember

@@ -1,9 +1,6 @@
-import Link from 'next/link'
 
 import { getI18n } from '@/app/locales/server'
 import Header from '@/components/Header'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/utils'
 
 export default async function LoginLayout({
     children,
@@ -18,15 +15,6 @@ export default async function LoginLayout({
                 <></>
             </Header>
             <div className="container relative min-h-screen flex-col py-8 items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-                <Link
-                    href="/auth/login"
-                    className={cn(
-                        buttonVariants({ variant: 'ghost' }),
-                        'absolute right-4 top-4 md:right-8 md:top-8 hidden md:flex'
-                    )}
-                >
-                    {t('auth.login.form.login')}
-                </Link>
                 <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
                     <div className="absolute z-10 inset-0 bg-zinc-900 opacity-30" />
                     <div className="flex items-center text-lg font-medium">
