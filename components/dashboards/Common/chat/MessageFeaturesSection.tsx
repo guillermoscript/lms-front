@@ -2,6 +2,7 @@
 
 import { Eye, Loader, Pencil, Sparkle } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import {
     Tooltip,
     TooltipContent,
@@ -20,6 +21,8 @@ export default function MessageFeatureSection({
     setViewMode: (value: ViewMode) => void
     role: 'assistant' | 'user'
 }) {
+    const t = useScopedI18n('MessageFeatureSection')
+
     return (
         <div className="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 svelte-1u5gq5j">
             <div className="flex">
@@ -42,7 +45,9 @@ export default function MessageFeatureSection({
                                         <Eye className="w-4 h-4" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Go back to view mode</p>
+                                        <p>
+                                            {t('tooltipContentView')}
+                                        </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -53,7 +58,9 @@ export default function MessageFeatureSection({
                                         <Pencil className="w-4 h-4" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Edit Message</p>
+                                        <p>
+                                            {t('tooltipContentEdit')}
+                                        </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -80,7 +87,9 @@ export default function MessageFeatureSection({
                                         <Sparkle className="w-4 h-4" />
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Regenerate the AI response</p>
+                                        <p>
+                                            {t('tooltipContentRegenerate')}
+                                        </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>

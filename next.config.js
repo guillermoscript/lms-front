@@ -2,7 +2,12 @@
 const nextConfig = {
     
     images: {
-        domains: ['images.unsplash.com', 'tailwindui.com', 'villademarcos.com'],
+        domains: [
+          'images.unsplash.com', 
+          'tailwindui.com', 
+          'villademarcos.com',
+          'wp.villademarcos.com'
+        ],
     },
     
 }

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 
+import { getScopedI18n } from '@/app/locales/server'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
 
@@ -27,6 +28,8 @@ export default async function ListOfReviews({
         return null
     }
 
+    const t = await getScopedI18n('ListOfReviews')
+
     const findCurrentUserReview = reviews.find((review) => review.profile_id === userData?.data.user.id)
 
     return (
@@ -40,10 +43,13 @@ export default async function ListOfReviews({
                     reviewDate={dayjs(review.created_at).format('MMMM D, YYYY')}
                 />
             )) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No reviews yet, be the first to review this lesson!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('noReviews')}
+                </p>
             )}
             {findCurrentUserReview ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">You have already reviewed this lesson
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('alreadyReviewed')}
                 </p>
             ) : (
                 <ReviewForm

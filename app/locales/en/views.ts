@@ -123,6 +123,46 @@ export default {
             yourMessageHere: 'Your message here...',
         },
     },
+    dashboard: {
+        student: {
+            CourseStudentPage: {
+                lessonTitle: 'Lessons',
+                examTitle: 'Exams'
+            },
+            LessonPage: {
+                description: 'View and track your progress through the course lessons.',
+            },
+            StudentCourseLessonsPage: {
+                completed: 'Completed',
+                notStarted: 'Not Started',
+                review: 'Review',
+                start: 'Start',
+            },
+            StudentExamsCoursePage: {
+                completed: 'Completed',
+                notStarted: 'Not Started',
+                waitingReview: 'Waiting Review',
+                review: 'Review',
+                start: 'Start',
+            },
+            StudentExamCoursePage: {
+                duration: 'Duration',
+            },
+            StudentExamReviewCoursePage: {
+                score: 'Score',
+                status: 'Status',
+                action: 'Action',
+                teacher: 'Teacher',
+                pending: 'Pending',
+                review: 'Review',
+                start: 'Start',
+                yourAnswer: 'Your Answer',
+                feedback: 'Feedback',
+                true: 'True',
+                false: 'False',
+            }
+        }
+    },
     auth: {
         register: {
             createAccount: 'Create an account',

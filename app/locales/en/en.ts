@@ -1,3 +1,4 @@
+import components from './components'
 import views from './views'
 
 export default {
@@ -27,5 +28,6 @@ export default {
         madeWithLove: 'Made with ❤️ and faith',
         newsletterDisclaimer: 'We will not share your email with anyone else.'
     },
-    ...views
+    ...views,
+    ...components
 } as const

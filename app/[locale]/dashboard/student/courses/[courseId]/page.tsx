@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import {
     Accordion,
@@ -27,6 +28,7 @@ export default async function CourseStudentPage({
 }) {
     const supabase = createClient()
     const userData = await supabase.auth.getUser()
+    const t = await getI18n()
 
     if (userData.error != null) {
         return redirect('/auth/login')
@@ -73,9 +75,9 @@ export default async function CourseStudentPage({
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/student/courses/${courseData.data.course_id}`,
                         label: courseData.data.title,
@@ -117,7 +119,7 @@ export default async function CourseStudentPage({
                             >
                                 <AccordionItem value="lessons">
                                     <AccordionTrigger className="text-xl font-bold mb-4">
-                                        Lessons
+                                        {t('dashboard.student.CourseStudentPage.lessonTitle')}
                                     </AccordionTrigger>
                                     <AccordionContent className="grid gap-4">
                                         {courseData.data.lessons
@@ -158,7 +160,7 @@ export default async function CourseStudentPage({
                             >
                                 <AccordionItem value="exams">
                                     <AccordionTrigger className="text-xl font-bold mb-4">
-                                        Exams
+                                        {t('dashboard.student.CourseStudentPage.examTitle')}
                                     </AccordionTrigger>
                                     <AccordionContent className="grid gap-4">
                                         {courseData.data.exams

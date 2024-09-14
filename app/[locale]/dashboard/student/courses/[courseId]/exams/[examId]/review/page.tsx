@@ -5,22 +5,18 @@ import {
     XCircleIcon
 } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 
+import { getI18n } from '@/app/locales/server'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
+import AiReview from '@/components/dashboards/Common/reviews/AiReview'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { Badge } from '@/components/ui/badge'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function StudentExamCoursePage ({
+export default async function StudentExamReviewCoursePage ({
     params
 }: {
     params: {
@@ -104,20 +100,23 @@ export default async function StudentExamCoursePage ({
     const aiData = exam_submissions?.ai_data as any
 
     console.log(aiData)
+
+    const t = await getI18n()
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/student/courses/${examData?.data?.courses?.course_id}`,
                         label: examData?.data?.courses?.title,
                     },
                     {
                         href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams`,
-                        label: 'Exams',
+                        label: t('BreadcrumbComponent.exam')
                     },
                     {
                         href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}`,
@@ -125,31 +124,33 @@ export default async function StudentExamCoursePage ({
                     },
                     {
                         href: `/dashboard/student/courses/${examData.data?.courses?.course_id}/exams/${examData.data?.exam_id}/review`,
-                        label: 'Review',
+                        label: t('BreadcrumbComponent.review')
                     },
                 ]}
             />
             <div className="space-y-8 p-6 lg:p-8 bg-gray-100 dark:bg-gray-900 rounded-lg shadow-lg">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">
-                        {examData.data?.title} Review
+                        {examData.data?.title} {t('dashboard.student.StudentExamReviewCoursePage.review')}
                     </h1>
                     {score ? (
                         <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                            Score:
+                            {t('dashboard.student.StudentExamReviewCoursePage.score')}:{' '}
                             <Badge className="ml-2">{score}</Badge>
                         </h3>
                     ) : (
                         <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                            Score:
-                            <Badge className="ml-2">Pending</Badge>
+                            {t('dashboard.student.StudentExamReviewCoursePage.status')}:{' '}
+                            <Badge className="ml-2">
+                                {t('dashboard.student.StudentExamReviewCoursePage.pending')}
+                            </Badge>
                         </h3>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
                     <UserIcon className="h-5 w-5 text-gray-500" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Teacher:{' '}
+                        {t('dashboard.student.StudentExamReviewCoursePage.teacher')}:{' '}
                         <b>{teacherData.data?.full_name || 'Jose Martinez'}</b>
                     </p>
                 </div>
@@ -166,7 +167,7 @@ export default async function StudentExamCoursePage ({
                             </h2>
                             <div className="space-y-2">
                                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Your Answer:
+                                    {t('dashboard.student.StudentExamReviewCoursePage.yourAnswer')}:
                                 </Label>
                                 {question.question_type ===
                                 'multiple_choice' ? (
@@ -228,7 +229,7 @@ export default async function StudentExamCoursePage ({
                                             {answer?.feedback && (
                                                 <div className="mt-4">
                                                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Feedback:
+                                                        {t('dashboard.student.StudentExamReviewCoursePage.feedback')}:
                                                     </Label>
                                                     <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
                                                         {answer.feedback}
@@ -242,8 +243,8 @@ export default async function StudentExamCoursePage ({
                                                 ? answer?.answer_text.split(
                                                     '-'
                                                 )[1] === 'true'
-                                                    ? 'True'
-                                                    : 'False'
+                                                    ? t('dashboard.student.StudentExamReviewCoursePage.true')
+                                                    : t('dashboard.student.StudentExamReviewCoursePage.false')
                                                 : answer?.answer_text}
                                         </p>
                                     )}
@@ -251,7 +252,7 @@ export default async function StudentExamCoursePage ({
                             {answer?.feedback && (
                                 <div className="mt-4">
                                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Feedback:
+                                        {t('dashboard.student.StudentExamReviewCoursePage.feedback')}:
                                     </Label>
                                     <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">
                                         {answer.feedback}
@@ -262,51 +263,12 @@ export default async function StudentExamCoursePage ({
                     )
                 })}
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>AI Review</CardTitle>
-                        <CardDescription>
-                            This is the AI review of your exam, its not final
-                            and is just for your reference on how you did.
-                            Please wait for the final review from your teacher.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {aiData ? (
-                            aiData?.userSubmission?.map((submission: any) => {
-                                return (
-                                    <div
-                                        className="p-4 space-y-4"
-                                        key={submission.question}
-                                    >
-                                        <h4 className="text-2xl font-semibold mb-2">
-                                            Question: {submission.question}
-                                        </h4>
-                                        <p className="text-gray-500 dark:text-gray-400">
-                                            <Badge
-                                                variant='outline'
-                                            >
-                                            Answer</Badge>: {submission.userAnswer}
-                                        </p>
-                                        <p className="font-medium text-gray-500 dark:text-gray-400">
-                                            AI review 🤖: {submission.review}
-                                        </p>
-                                    </div>
-                                )
-                            })
-                        ) : (
-                            <p>No AI review available</p>
-                        )}
-                    </CardContent>
-                    <CardFooter className="flex flex-col gap-4 items-start">
-                        <h3 className="text-xl font-semibold text-primary-500 dark:text-primary-400">
-                            AI Overall Review:
-                        </h3>
-                        <p className="text-gray-500 dark:text-gray-400">
-                            {aiData?.overallFeedback}
-                        </p>
-                    </CardFooter>
-                </Card>
+                <Suspense fallback={
+                    <ChatLoadingSkeleton />
+                }
+                >
+                    <AiReview aiData={aiData} />
+                </Suspense>
             </div>
         </>
     )

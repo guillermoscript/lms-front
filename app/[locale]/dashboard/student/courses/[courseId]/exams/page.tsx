@@ -2,6 +2,7 @@ import { CheckCircleIcon, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { createClient } from '@/utils/supabase/server'
 
@@ -48,28 +49,32 @@ export default async function StudentExamsCoursePage ({
         throw new Error(exams.error.message)
     }
 
+    const t = await getI18n()
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/courses/', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/student/courses/${exams.data[0].course_id}`,
                         label: exams.data[0]?.courses?.title
                     },
                     {
                         href: `/dashboard/student/courses/${exams.data[0].course_id}/exams`,
-                        label: 'Exams'
+                        label: t('BreadcrumbComponent.exam')
                     }
                 ]}
             />
             <div className="grid gap-8">
                 <div>
-                    <h1 className="lg:text-3xl font-bold text-xl">Exams</h1>
+                    <h1 className="lg:text-3xl font-bold text-xl">
+                        {t('BreadcrumbComponent.exam')}
+                    </h1>
                     <p className="text-gray-500 dark:text-gray-400">
-                        {exams.data[0]?.courses?.title} {' '} Exams
+                        {exams.data[0]?.courses?.title} {' '}
                     </p>
                 </div>
                 <div className="grid gap-4">
@@ -96,14 +101,14 @@ export default async function StudentExamsCoursePage ({
                                     exam.exam_submissions.length > 0
                                         ? exam.exam_submissions[0].exam_scores
                                             .length > 0
-                                            ? 'Completed'
-                                            : 'Waiting for Review from Instructor'
-                                        : 'Not Started'
+                                            ? t('dashboard.student.StudentExamsCoursePage.completed')
+                                            : t('dashboard.student.StudentExamsCoursePage.waitingReview')
+                                        : t('dashboard.student.StudentExamsCoursePage.notStarted')
                                 }
                                 actionText={
                                     exam.exam_submissions.length > 0
-                                        ? 'Review'
-                                        : 'Start'
+                                        ? t('dashboard.student.StudentExamsCoursePage.review')
+                                        : t('dashboard.student.StudentExamsCoursePage.start')
                                 }
                                 link={
                                     exam.exam_submissions.length > 0

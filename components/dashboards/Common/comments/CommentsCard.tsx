@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { addReactionToComment } from '@/actions/dashboard/studentActions'
+import { useScopedI18n } from '@/app/locales/client'
 import CommentEditor from '@/components/dashboards/student/course/lessons/CommentEditor'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -79,6 +80,8 @@ const CommentCard = ({
 
     const replies = allComments.filter(reply => reply.parent_comment_id === comment.id)
 
+    const t = useScopedI18n('CommentCard')
+
     return (
         <Card className="p-2 mb-4">
             <CardHeader className="flex p-2 flex-row items-start gap-4 bg-card">
@@ -98,7 +101,7 @@ const CommentCard = ({
                             </button>
                         )}
                         <button className="flex items-center gap-1 text-destructive">
-                            <Flag className="w-4 h-4" /> Flag
+                            <Flag className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -115,7 +118,9 @@ const CommentCard = ({
                             parent_comment_id={comment.parent_comment_id}
                             callback={() => setIsEditing(false)}
                         />
-                        <Button variant="destructive" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={() => setIsEditing(false)}>
+                            {t('cancel')}
+                        </Button>
                     </div>
                 )}
                 {showReplies && (
@@ -125,7 +130,9 @@ const CommentCard = ({
                                 course_id={course_id}
                                 lesson_id={comment.lesson_id} parent_comment_id={comment.id} callback={() => { setShowReplies(false) }}
                             />
-                            <Button variant="destructive" onClick={toggleReplies}>Cancel</Button>
+                            <Button variant="destructive" onClick={toggleReplies}>
+                                {t('cancel')}
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -144,13 +151,17 @@ const CommentCard = ({
                             />
                         ))}
                         <button onClick={toggleReplies} className="flex items-center gap-1 text-de">
-                            <Reply className="w-4 h-4" /> Reply ({replies.length})
+                            <Reply className="w-4 h-4" />
+                            {t('reply')}
+                             ({replies.length})
                         </button>
                     </div>
                 </div>
                 <Accordion className="w-full" type="single" collapsible>
                     <AccordionItem className="border-none w-full" value="reply">
-                        <AccordionTrigger>View Replies ({replies.length})</AccordionTrigger>
+                        <AccordionTrigger>
+                            {t('viewReplies')}
+                            ({replies.length})</AccordionTrigger>
                         <AccordionContent>
                             <div className="ml-1 mt-2">
                                 {replies.map((reply) => {
