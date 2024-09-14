@@ -86,9 +86,9 @@ export default {
         description:
             'Somos un equipo de desarrolladores que aman construir y crear. Estamos apasionados por nuestro trabajo y siempre buscamos nuevas formas de mejorar nuestras habilidades.',
         timeline: {
-            title: 'Cronología de mi viaje',
+            title: 'Cronología del viaje',
             description:
-                'He estado trabajando en LMS-AI durante los últimos 2 años. Aquí hay una cronología de mi viaje.',
+                'Hemos estado trabajando en LMS-AI durante los últimos 2 años. Aquí hay una cronología.',
             items: {
                 early2024: {
                     title: 'Principios de 2024',

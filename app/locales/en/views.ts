@@ -86,9 +86,9 @@ export default {
         description:
             "We're a team of developers who loves to build and create. We're passionate about our work and we're always looking for new ways to improve our skills.",
         timeline: {
-            title: 'Changelog from my journey',
+            title: 'Changelog from our journey',
             description:
-                "I've been working on LMS-AI for the past 2 years. Here's a timeline of my journey.",
+                "We been working on LMS-AI for the past 2 years. Here's a timeline of my journey.",
             items: {
                 early2024: {
                     title: 'Early 2024',
