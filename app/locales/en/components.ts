@@ -156,7 +156,7 @@ export default {
             english: 'English Teacher',
             spanish: 'Spanish Teacher',
             englishSpeech: 'English Teacher (Speech)',
-            codeTask: '**Write a program that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help',
+            codeTask: '**Write a program in Python that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help',
             englishTask: `**Homework Assignment: My Favorite Food**
 
 **Objective:** Practice writing simple sentences in English.
@@ -196,8 +196,19 @@ export default {
             My favorite hobby is reading. I like reading because it allows me to travel to other worlds. I usually read in the afternoon when I have free time. Sometimes, I read with my friends at the library. We enjoy sharing our favorite stories. Reading is a fun way to learn.
 
             \`\`\``,
-            englishSpeechTask: `## Describe your daily routine in English.
-                Please speak in English about your daily routine. the AI is going to evaluate your speech.`
+            englishSpeechTask: `## Speech Practice Teacher
+Please speak in English, The AI will help you be giving you feedback on your speech.
+\n**Things to talk about:**
+- Talk about your hobbies, the AI will continue the conversation.
+- Talk about your favorite foods, the AI will continue the conversation and give you feedback.
+- Ask questions about grammar, the AI will help you resolve your doubts.
+- Ask about vocabulary exercises, the AI will create exercises for you to practice.
+- Give a speech, the AI will give you feedback on your speech.
+
+# IMPORTANT
+### Only speak in English, the AI will not understand other languages.
+
+If you have doubts, try saying: "Could you give me a fake scenario to practice my speaking?"`,
         },
     },
     EnhancedVoiceAIChat: {
@@ -222,6 +233,8 @@ export default {
             active: 'active',
             loading: 'loading',
         },
+        earlyAccess: 'To continue using the service, please be sure to subscribe to our early access program.',
+        subscribe: 'Subscribe Now!',
     },
     SuccessMessage: {
         status: 'Success!',

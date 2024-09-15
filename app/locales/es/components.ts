@@ -155,7 +155,7 @@ export default {
             english: 'Profesor de inglés',
             spanish: 'Profesor de español',
             englishSpeech: 'Profesor de inglés (habla)',
-            codeTask: '**Escribe un programa que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA',
+            codeTask: '**Escribe un programa en Python que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA',
             englishTask: `**Tarea: Mi comida favorita**
 
 **Objetivo:** Practicar la escritura de oraciones simples en inglés.
@@ -192,8 +192,19 @@ export default {
    \`\`\`
    Mi pasatiempo favorito es la lectura. Me gusta leer porque me permite viajar a otros mundos. Suelo leer por la tarde, cuando tengo tiempo libre. A veces, leo con mis amigos en la biblioteca. Disfrutamos compartir nuestras historias favoritas. La lectura es una manera divertida de aprender.
    \`\`\``,
-            englishSpeechTask: `## Describe tu rutina diaria en inglés.
-                Por favor, habla en inglés sobre tu rutina diaria. la IA va a evaluar tu habla.`
+            englishSpeechTask: `## Profesor de inglés (habla)
+Por favor, habla en inglés, la IA te ayudará dándote retroalimentación sobre la conversación.
+\n**Cosas que puedes hacer:**
+- Hablar sobre tus pasatiempos, la IA te continuará la conversación.
+- Hablar sobre tus comidas favoritas, la IA te continuará la conversación y te dará retroalimentación.
+- Preguntar dudas sobre gramática, la IA te ayudará a resolver tus dudas.
+- Preguntar sobre ejercicios de vocabulario, la IA te creara ejercicios para practicar.
+- Dar un discurso, la IA te dará retroalimentación sobre tu discurso.
+
+# IMPORTANTE
+### Solo habla en inglés, la IA no entenderá otros idiomas.
+
+Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practice my speaking?"`,
         },
     },
     EnhancedVoiceAIChat: {
@@ -218,6 +229,8 @@ export default {
             active: 'activo',
             loading: 'cargando',
         },
+        earlyAccess: 'Para seguir utilizando el servicio, asegúrate de suscribirte a nuestro programa de acceso anticipado.',
+        subscribe: '¡Suscríbete ahora!',
     },
     SuccessMessage: {
         status: '¡Éxito!',
