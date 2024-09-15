@@ -1,0 +1,5 @@
+[auth.external.github]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GITHUB_SECRET)"
+redirect_uri = "http://localhost:3000/auth/callback"

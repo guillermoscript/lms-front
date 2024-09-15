@@ -2,11 +2,12 @@ import { Mail } from 'lucide-react'
 import Link from 'next/link'
 
 import { getI18n } from '@/app/locales/server'
+import FacebookOAuthFlow from '@/components/auth/FacebookOAuthFlow'
 import GoogleOAuthFlow from '@/components/auth/GoogleOAuthFlow'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
-import FacebookOAuthFlow from '@/components/auth/FacebookOAuthFlow'
+import GitHubOAuthFlow from '@/components/auth/GitHubOAuthFlow'
 
 export default async function Login({
     searchParams,
@@ -26,6 +27,9 @@ export default async function Login({
                         {t('auth.login.helpText')}
                     </p>
                 </div>
+
+                <GitHubOAuthFlow />
+
                 <FacebookOAuthFlow />
 
                 <GoogleOAuthFlow />
