@@ -95,7 +95,7 @@ Once you think the student has completed the task, you can end the conversation 
                 {t('title')}
             </h2>
             <Tabs defaultValue="code" className="w-full space-y-4">
-                <TabsList className="bg-transparent flex justify-around gap-4 w-full grid-cols-3">
+                <TabsList className="bg-transparent flex flex-wrap h-full justify-around gap-4 w-full grid-cols-3">
                     <TabsTrigger
                         className={buttonVariants({ variant: 'outline' })}
                         value="code"
@@ -114,6 +114,12 @@ Once you think the student has completed the task, you can end the conversation 
                     >
                         {t('tabs.spanish')}
                     </TabsTrigger>
+                    {/* <TabsTrigger
+                        className={buttonVariants({ variant: 'outline' })}
+                        value="english-speech"
+                    >
+                        {t('tabs.englishSpeech')}
+                    </TabsTrigger> */}
                 </TabsList>
                 <TabsContent className="w-full" value="code">
                     <ShowCaseChatAI>
@@ -125,6 +131,14 @@ Once you think the student has completed the task, you can end the conversation 
                         </ChatOption>
                     </ShowCaseChatAI>
                 </TabsContent>
+                {/* <TabsContent className="w-full" value="english-speech">
+                    <ChatOption
+                        title={t('tabs.englishSpeech')}
+                        task={t('tabs.englishSpeechTask')}
+                    >
+                        <EnhancedVoiceAIChat />
+                    </ChatOption>
+                </TabsContent> */}
                 <TabsContent className="w-full" value="english">
                     <ShowCaseChatAI>
                         <ChatOption
