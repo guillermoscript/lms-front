@@ -18,7 +18,6 @@ export default function EnhancedVoiceAIChat() {
     const [isListening, setIsListening] = useState(false)
     const [isSpeaking, setIsSpeaking] = useState(false)
 
-
     useEffect(() => {
         const callStartHandler = () => {
             setCallStatus(t('status.active'))
