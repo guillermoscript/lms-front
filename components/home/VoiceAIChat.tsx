@@ -2,9 +2,11 @@
 import Vapi from '@vapi-ai/web'
 import { Loader2, Mic, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { cn } from '@/utils'
-import { buttonVariants } from '../ui/button'
+
 import { useScopedI18n } from '@/app/locales/client'
+import { cn } from '@/utils'
+
+import { buttonVariants } from '../ui/button'
 
 const vapi = new Vapi('2bc1202d-687d-44db-b305-4dd44d6ee2ba')
 
@@ -164,12 +166,12 @@ export default function EnhancedVoiceAIChat() {
                 >
                     {callStatus === t('callStatus.active') &&
                     elapsedTime > 0 ? (
-                        <span>
-                            {(elapsedTime / 1000).toFixed(1)}s - {statusMessage}
-                        </span>
-                    ) : (
-                        statusMessage
-                    )}
+                            <span>
+                                {(elapsedTime / 1000).toFixed(1)}s - {statusMessage}
+                            </span>
+                        ) : (
+                            statusMessage
+                        )}
                 </div>
             </div>
         </div>

@@ -156,7 +156,7 @@ export default {
             english: 'English Teacher',
             spanish: 'Spanish Teacher',
             englishSpeech: 'English Teacher (Speech)',
-            codeTask: `**Write a program that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help`,
+            codeTask: '**Write a program that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help',
             englishTask: `**Homework Assignment: My Favorite Food**
 
 **Objective:** Practice writing simple sentences in English.

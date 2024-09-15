@@ -1,12 +1,12 @@
 import { ShowCaseChatAI } from '@/actions/dashboard/AI/ShowCaseActions'
+import { getScopedI18n } from '@/app/locales/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import ShowCaseChat from '../dashboards/chat/ShowCaseChat'
+import { buttonVariants } from '../ui/button'
 import ViewMarkdown from '../ui/markdown/ViewMarkdown'
 import VoiceAIChat from './VoiceAIChat'
-import { getScopedI18n } from '@/app/locales/server'
-import { buttonVariants } from '../ui/button'
 
 const ChatOption = ({
     title,
@@ -42,20 +42,24 @@ export default async function ChatOptionsShowcase() {
                 <TabsList className="bg-transparent flex justify-around gap-4 w-full grid-cols-3">
                     <TabsTrigger
                         className={buttonVariants({ variant: 'outline' })}
-                        value="code">{t('tabs.code')}</TabsTrigger>
+                        value="code"
+                    >{t('tabs.code')}</TabsTrigger>
                     <TabsTrigger
                         className={buttonVariants({ variant: 'outline' })}
-                        value="english">
+                        value="english"
+                    >
                         {t('tabs.english')}
                     </TabsTrigger>
                     <TabsTrigger
                         className={buttonVariants({ variant: 'outline' })}
-                        value="spanish">
+                        value="spanish"
+                    >
                         {t('tabs.spanish')}
                     </TabsTrigger>
                     <TabsTrigger
                         className={buttonVariants({ variant: 'outline' })}
-                        value="english-speech">
+                        value="english-speech"
+                    >
                         {t('tabs.englishSpeech')}
                     </TabsTrigger>
                 </TabsList>
@@ -112,7 +116,8 @@ Once you think the student has completed the task, you can end the conversation 
 - Correct use of simple sentences.
 - Proper answers to the questions asked.
 `
-                            } />
+                            }
+                            />
                         </ChatOption>
                     </ShowCaseChatAI>
                 </TabsContent>
@@ -147,7 +152,8 @@ Once you think the student has completed the task, you can end the conversation 
 2. **Ejemplo de cómo escribir tu párrafo:**
    \`\`\`
    Mi pasatiempo favorito es la lectura. Me gusta leer porque me permite viajar a otros mundos. Suelo leer por la tarde, cuando tengo tiempo libre. A veces, leo con mis amigos en la biblioteca. Disfrutamos compartir nuestras historias favoritas. La lectura es una manera divertida de aprender.
-   \`\`\``} />
+   \`\`\``}
+                            />
                         </ChatOption>
                     </ShowCaseChatAI>
                 </TabsContent>

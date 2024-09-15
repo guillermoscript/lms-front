@@ -155,7 +155,7 @@ export default {
             english: 'Profesor de inglés',
             spanish: 'Profesor de español',
             englishSpeech: 'Profesor de inglés (habla)',
-            codeTask: `**Escribe un programa que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA`,
+            codeTask: '**Escribe un programa que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA',
             englishTask: `**Tarea: Mi comida favorita**
 
 **Objetivo:** Practicar la escritura de oraciones simples en inglés.
