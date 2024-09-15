@@ -290,7 +290,7 @@ function ChatTextArea({
                     e.currentTarget.reset()
                     setValue('')
                 }}
-                className="py-4 flex gap-2 flex-col w-full"
+                className="py-4 flex gap-2 px-2 flex-col w-full"
             >
                 <Textarea
                     placeholder={t('placeholder')}
