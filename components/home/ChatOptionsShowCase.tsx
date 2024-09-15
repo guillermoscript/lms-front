@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ShowCaseChat from '../dashboards/chat/ShowCaseChat'
 import { buttonVariants } from '../ui/button'
 import ViewMarkdown from '../ui/markdown/ViewMarkdown'
-import VoiceAIChat from './VoiceAIChat'
 
 const ChatOption = ({
     title,
@@ -33,44 +32,7 @@ const ChatOption = ({
 export default async function ChatOptionsShowcase() {
     const t = await getScopedI18n('ChatOptionsShowcase')
 
-    return (
-        <section className="py-16 w-full">
-            <h2 className="text-3xl font-bold text-center mb-8">
-                {t('title')}
-            </h2>
-            <Tabs defaultValue="code" className="w-full space-y-4">
-                <TabsList className="bg-transparent flex justify-around gap-4 w-full grid-cols-3">
-                    <TabsTrigger
-                        className={buttonVariants({ variant: 'outline' })}
-                        value="code"
-                    >{t('tabs.code')}</TabsTrigger>
-                    <TabsTrigger
-                        className={buttonVariants({ variant: 'outline' })}
-                        value="english"
-                    >
-                        {t('tabs.english')}
-                    </TabsTrigger>
-                    <TabsTrigger
-                        className={buttonVariants({ variant: 'outline' })}
-                        value="spanish"
-                    >
-                        {t('tabs.spanish')}
-                    </TabsTrigger>
-                    <TabsTrigger
-                        className={buttonVariants({ variant: 'outline' })}
-                        value="english-speech"
-                    >
-                        {t('tabs.englishSpeech')}
-                    </TabsTrigger>
-                </TabsList>
-                <TabsContent className="w-full" value="code">
-                    <ShowCaseChatAI>
-                        <ChatOption
-                            title={t('tabs.code')}
-                            task={t('tabs.codeTask')}
-                        >
-                            <ShowCaseChat
-                                systemPrompt={`You are a teacher that needs to evaluate the student, this is the task given to the user that you are going to evaluate:
+    const codePrompt = `You are a teacher that needs to evaluate the student, this is the task given to the user that you are going to evaluate:
 
 ### Lesson 1.1 Assignment: Solidify Your Python Basics 
 
@@ -80,18 +42,9 @@ export default async function ChatOptionsShowcase() {
     - Prints a personalized greeting message that includes their name and age.
     - Tells the user how many years are left until they turn 100 years old.
     
-Once you think the student has completed the task, you can end the conversation by calling the' 'makeUserAssigmentCompleted' function.`}
-                            />
-                        </ChatOption>
-                    </ShowCaseChatAI>
-                </TabsContent>
-                <TabsContent className="w-full" value="english">
-                    <ShowCaseChatAI>
-                        <ChatOption
-                            title={t('tabs.english')}
-                            task={t('tabs.englishTask')}
-                        >
-                            <ShowCaseChat systemPrompt={`You are a teacher that needs to evaluate the student, this is the task given to the user that you are going to evaluate:
+Once you think the student has completed the task, you can end the conversation by calling the' 'makeUserAssigmentCompleted' function.`
+
+    const englishPrompt = `You are a teacher that needs to evaluate the student, this is the task given to the user that you are going to evaluate:
 
 **Homework Assignment: My Favorite Food**
 
@@ -116,26 +69,8 @@ Once you think the student has completed the task, you can end the conversation 
 - Correct use of simple sentences.
 - Proper answers to the questions asked.
 `
-                            }
-                            />
-                        </ChatOption>
-                    </ShowCaseChatAI>
-                </TabsContent>
-                <TabsContent className="w-full" value="english-speech">
-                    <ChatOption
-                        title={t('tabs.englishSpeech')}
-                        task={t('tabs.englishSpeechTask')}
-                    >
-                        <VoiceAIChat />
-                    </ChatOption>
-                </TabsContent>
-                <TabsContent className="w-full" value="spanish">
-                    <ShowCaseChatAI>
-                        <ChatOption
-                            title={t('tabs.spanish')}
-                            task={t('tabs.spanishTask')}
-                        >
-                            <ShowCaseChat systemPrompt={`Eres un profesor que necesita evaluar al estudiante, esta es la tarea dada al usuario que vas a evaluar:
+
+    const spanishPrompt = `Eres un profesor que necesita evaluar al estudiante, esta es la tarea dada al usuario que vas a evaluar:
                             **Tarea: Mi Pasatiempo Favorito**
 
 **Objetivo:** Practicar la escritura de oraciones simples en español.
@@ -152,8 +87,61 @@ Once you think the student has completed the task, you can end the conversation 
 2. **Ejemplo de cómo escribir tu párrafo:**
    \`\`\`
    Mi pasatiempo favorito es la lectura. Me gusta leer porque me permite viajar a otros mundos. Suelo leer por la tarde, cuando tengo tiempo libre. A veces, leo con mis amigos en la biblioteca. Disfrutamos compartir nuestras historias favoritas. La lectura es una manera divertida de aprender.
-   \`\`\``}
-                            />
+   \`\`\``
+
+    return (
+        <section className="py-16 w-full">
+            <h2 className="text-3xl font-bold text-center mb-8">
+                {t('title')}
+            </h2>
+            <Tabs defaultValue="code" className="w-full space-y-4">
+                <TabsList className="bg-transparent flex justify-around gap-4 w-full grid-cols-3">
+                    <TabsTrigger
+                        className={buttonVariants({ variant: 'outline' })}
+                        value="code"
+                    >
+                        {t('tabs.code')}
+                    </TabsTrigger>
+                    <TabsTrigger
+                        className={buttonVariants({ variant: 'outline' })}
+                        value="english"
+                    >
+                        {t('tabs.english')}
+                    </TabsTrigger>
+                    <TabsTrigger
+                        className={buttonVariants({ variant: 'outline' })}
+                        value="spanish"
+                    >
+                        {t('tabs.spanish')}
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent className="w-full" value="code">
+                    <ShowCaseChatAI>
+                        <ChatOption
+                            title={t('tabs.code')}
+                            task={t('tabs.codeTask')}
+                        >
+                            <ShowCaseChat systemPrompt={codePrompt} />
+                        </ChatOption>
+                    </ShowCaseChatAI>
+                </TabsContent>
+                <TabsContent className="w-full" value="english">
+                    <ShowCaseChatAI>
+                        <ChatOption
+                            title={t('tabs.english')}
+                            task={t('tabs.englishTask')}
+                        >
+                            <ShowCaseChat systemPrompt={englishPrompt} />
+                        </ChatOption>
+                    </ShowCaseChatAI>
+                </TabsContent>
+                <TabsContent className="w-full" value="spanish">
+                    <ShowCaseChatAI>
+                        <ChatOption
+                            title={t('tabs.spanish')}
+                            task={t('tabs.spanishTask')}
+                        >
+                            <ShowCaseChat systemPrompt={spanishPrompt} />
                         </ChatOption>
                     </ShowCaseChatAI>
                 </TabsContent>
