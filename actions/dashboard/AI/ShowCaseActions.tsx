@@ -1,7 +1,7 @@
 'use server'
 import 'server-only'
 
-import { google } from '@ai-sdk/google'
+import { openai } from '@ai-sdk/openai'
 import { CoreMessage, generateId } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
@@ -36,7 +36,7 @@ export async function continueShowCaseChatConversation(
     console.log(aiState.get())
 
     const result = await streamUI({
-        model: google('models/gemini-1.5-flash-latest'),
+        model: openai('gpt-4o-mini'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
