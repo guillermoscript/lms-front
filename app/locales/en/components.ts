@@ -222,5 +222,9 @@ export default {
             active: 'active',
             loading: 'loading',
         },
-    }
+    },
+    SuccessMessage: {
+        status: 'Success!',
+        message: 'Assignment marked as completed.',
+    },
 } as const

@@ -218,5 +218,9 @@ export default {
             active: 'activo',
             loading: 'cargando',
         },
-    }
+    },
+    SuccessMessage: {
+        status: '¡Éxito!',
+        message: 'Tarea marcada como completada.',
+    },
 } as const
