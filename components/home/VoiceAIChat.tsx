@@ -8,16 +8,16 @@ import { cn } from '@/utils'
 
 import { buttonVariants } from '../ui/button'
 
-const vapi = new Vapi('2bc1202d-687d-44db-b305-4dd44d6ee2ba')
+const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY)
 
 export default function EnhancedVoiceAIChat() {
+    const t = useScopedI18n('EnhancedVoiceAIChat')
     const [callStatus, setCallStatus] = useState('inactive')
-    const [statusMessage, setStatusMessage] = useState('Give it a try!')
+    const [statusMessage, setStatusMessage] = useState(t('statusMessage.giveItATry'))
     const [elapsedTime, setElapsedTime] = useState(0)
     const [isListening, setIsListening] = useState(false)
     const [isSpeaking, setIsSpeaking] = useState(false)
 
-    const t = useScopedI18n('EnhancedVoiceAIChat')
 
     useEffect(() => {
         const callStartHandler = () => {
