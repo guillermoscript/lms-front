@@ -148,5 +148,77 @@ export default {
         description: 'This is the AI review of your exam, its not final and is just for your reference on how you did. Please wait for the final review from your teacher.',
         noReview: 'No AI review available',
         overallReview: 'AI Overall Review:'
+    },
+    ChatOptionsShowcase: {
+        title: 'Chat Options Showcase',
+        tabs: {
+            code: 'Code Teacher',
+            english: 'English Teacher',
+            spanish: 'Spanish Teacher',
+            englishSpeech: 'English Teacher (Speech)',
+            codeTask: `**Write a program that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help`,
+            englishTask: `**Homework Assignment: My Favorite Food**
+
+**Objective:** Practice writing simple sentences in English.
+
+**Instructions:**
+
+1. **Write a Paragraph in English about Your Favorite Food**
+   - Please write a short paragraph (5-7 sentences) about your favorite food. Answer the following questions in your paragraph:
+     - What is your favorite food?
+     - Why do you like it?
+     - When do you usually eat it?
+     - Who do you enjoy eating it with?
+
+2. **Example of How to Write Your Paragraph:**
+   \`\`\`
+   My favorite food is tacos. I like tacos because they are tasty and versatile. I usually eat tacos on weekends with my friends. We enjoy different fillings like beef, chicken, and vegetables. Tacos are fun to make together! I love adding spicy salsa to my tacos.
+   \`\`\`
+`,
+            spanishTask: `**Homework Assignment: My Favorite Hobby**
+            
+            **Objective:** Practice writing simple sentences in Spanish.
+            
+            **Instructions:**
+            
+            1. **Write a Paragraph in Spanish about Your Favorite Hobby**
+            
+            - Write a short paragraph (5-7 sentences) about your favorite hobby. Answer the following questions in your paragraph:
+            - What is your favorite hobby?
+            - Why do you like it?
+            - When do you usually do it?
+            - Who do you like to do it with?
+            
+            2. **Example of How to Write Your Paragraph:**
+            
+            \`\`\`
+            
+            My favorite hobby is reading. I like reading because it allows me to travel to other worlds. I usually read in the afternoon when I have free time. Sometimes, I read with my friends at the library. We enjoy sharing our favorite stories. Reading is a fun way to learn.
+
+            \`\`\``,
+            englishSpeechTask: '## Describe your daily routine in English.',
+        },
+    },
+    EnhancedVoiceAIChat: {
+        status: {
+            inactive: 'inactive',
+            active: 'active',
+            loading: 'loading',
+            oneSecond: 'One second...',
+            trialEnded: 'Your trial has ended',
+        },
+        statusMessage: {
+            giveItATry: 'Give it a try!',
+            justTalk: 'Just talk.',
+            aiIsSpeaking: 'AI is speaking...',
+            aiFinishedSpeaking: 'AI finished speaking',
+            errorOccurred: 'Error occurred. Try again.',
+            stopping: 'Stopping...',
+        },
+        callStatus: {
+            inactive: 'inactive',
+            active: 'active',
+            loading: 'loading',
+        },
     }
 } as const
