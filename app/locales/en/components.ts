@@ -196,7 +196,8 @@ export default {
             My favorite hobby is reading. I like reading because it allows me to travel to other worlds. I usually read in the afternoon when I have free time. Sometimes, I read with my friends at the library. We enjoy sharing our favorite stories. Reading is a fun way to learn.
 
             \`\`\``,
-            englishSpeechTask: '## Describe your daily routine in English.',
+            englishSpeechTask: `## Describe your daily routine in English.
+                Please speak in English about your daily routine. the AI is going to evaluate your speech.`
         },
     },
     EnhancedVoiceAIChat: {
@@ -214,6 +215,7 @@ export default {
             aiFinishedSpeaking: 'AI finished speaking',
             errorOccurred: 'Error occurred. Try again.',
             stopping: 'Stopping...',
+            oneSecond: 'One second...',
         },
         callStatus: {
             inactive: 'inactive',

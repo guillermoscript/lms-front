@@ -192,7 +192,8 @@ export default {
    \`\`\`
    Mi pasatiempo favorito es la lectura. Me gusta leer porque me permite viajar a otros mundos. Suelo leer por la tarde, cuando tengo tiempo libre. A veces, leo con mis amigos en la biblioteca. Disfrutamos compartir nuestras historias favoritas. La lectura es una manera divertida de aprender.
    \`\`\``,
-            englishSpeechTask: '## Describe tu rutina diaria en inglés.'
+            englishSpeechTask: `## Describe tu rutina diaria en inglés.
+                Por favor, habla en inglés sobre tu rutina diaria. la IA va a evaluar tu habla.`
         },
     },
     EnhancedVoiceAIChat: {
@@ -210,6 +211,7 @@ export default {
             aiFinishedSpeaking: 'La IA ha terminado de hablar',
             errorOccurred: 'Se ha producido un error. Inténtalo de nuevo.',
             stopping: 'Deteniendo...',
+            oneSecond: 'Un segundo...',
         },
         callStatus: {
             inactive: 'inactivo',
