@@ -98,7 +98,7 @@ export default function EnhancedVoiceAIChat() {
         setCallStatus(t('callStatus.loading'))
         setStatusMessage(t('statusMessage.oneSecond'))
         try {
-            await vapi.start('2c87777e-0257-4e8b-b25d-323f236e3fbc')
+            await vapi.start('dedfda1e-9eae-4475-8052-b66cfb6b033e')
             localStorage.setItem('trialUsed', 'true') // Store trial status
         } catch (error) {
             console.error('Failed to start call:', error)
@@ -114,7 +114,7 @@ export default function EnhancedVoiceAIChat() {
     }
 
     // if elapsedTime is greater than 1:00 minutes, stop the call and show a message to the user telling them that the trial has ended
-    if (elapsedTime > 60000) {
+    if (elapsedTime >= 60000) {
         return (
             <div className="py-10 flex flex-col items-center justify-center p-4">
                 <div className="relative mb-8 flex flex-col items-center gap-9">
@@ -134,8 +134,18 @@ export default function EnhancedVoiceAIChat() {
                             'bg-gray-700 text-gray-300'
                         )}
                     >
-                        {t('statusMessage.trialEnded')}
+                        {t('status.trialEnded')}
                     </div>
+
+                    <p className="text-center text-gray-500">
+                        {t('earlyAccess')}
+                    </p>
+                    <a
+                        href='https://yodxlomcjzw.typeform.com/to/L0FbgHZK'
+                        className={buttonVariants({ variant: 'default' })}
+                    >
+                        {t('subscribe')}
+                    </a>
                 </div>
             </div>
         )
@@ -144,7 +154,7 @@ export default function EnhancedVoiceAIChat() {
     return (
         <div className="py-10 flex flex-col items-center justify-center p-4">
             <div className="relative mb-8 flex flex-col items-center gap-9">
-                <div
+                <button
                     className={cn(
                         'w-48 h-48 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300',
                         'shadow-lg hover:shadow-xl',
@@ -167,15 +177,17 @@ export default function EnhancedVoiceAIChat() {
                     ) : (
                         <Mic className="w-16 h-16 text-white" />
                     )}
-                </div>
-                <div
+                </button>
+                <button
                     className={cn(
-                        'px-6 py-3 rounded-full text-lg font-semibold transition-all duration-300',
+                        'px-6 py-3 w-72  rounded-full text-lg font-semibold transition-all duration-300',
                         buttonVariants({ variant: 'outline' }),
                         isSpeaking
                             ? 'bg-blue-500 text-white'
                             : 'bg-gray-700 text-gray-300'
                     )}
+
+                    onClick={callStatus === t('callStatus.active') ? stop : start}
                 >
                     {callStatus === t('callStatus.active') &&
                     elapsedTime > 0 ? (
@@ -185,7 +197,7 @@ export default function EnhancedVoiceAIChat() {
                         ) : (
                             statusMessage
                         )}
-                </div>
+                </button>
             </div>
         </div>
     )
