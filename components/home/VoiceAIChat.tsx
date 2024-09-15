@@ -81,11 +81,25 @@ export default function EnhancedVoiceAIChat() {
         return () => clearInterval(interval)
     }, [isListening])
 
+    useEffect(() => {
+        const trialUsed = localStorage.getItem('trialUsed')
+        if (trialUsed) {
+            setElapsedTime(60001) // Setting elapsed time to be more than 60 seconds to stop the trial
+            setStatusMessage(t('statusMessage.trialEnded'))
+        }
+    }, [])
+
+    // Modify your start function to store the trial status
     const start = async () => {
+        const trialUsed = localStorage.getItem('trialUsed')
+        if (trialUsed) {
+            return // Prevent starting the call
+        }
         setCallStatus(t('callStatus.loading'))
         setStatusMessage(t('statusMessage.oneSecond'))
         try {
             await vapi.start('2c87777e-0257-4e8b-b25d-323f236e3fbc')
+            localStorage.setItem('trialUsed', 'true') // Store trial status
         } catch (error) {
             console.error('Failed to start call:', error)
             setCallStatus(t('callStatus.inactive'))
