@@ -147,5 +147,93 @@ export default {
         description: 'Esta es la revisión de IA de tu examen, no es final y es solo para tu referencia sobre cómo lo hiciste. Por favor, espera la revisión final de tu profesor.',
         noReview: 'Aún no hay revisiones',
         overallReview: 'Revisión general de IA:'
-    }
+    },
+    ChatOptionsShowcase: {
+        title: 'Experimenta nuestras opciones de chat versátiles',
+        tabs: {
+            code: 'Profesor de código',
+            english: 'Profesor de inglés',
+            spanish: 'Profesor de español',
+            englishSpeech: 'Profesor de inglés (habla)',
+            codeTask: '**Escribe un programa en Python que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA',
+            englishTask: `**Tarea: Mi comida favorita**
+
+**Objetivo:** Practicar la escritura de oraciones simples en inglés.
+
+**Instrucciones:**
+
+1. **Escribe un párrafo en Inglés sobre tu comida favorita**
+    - Por favor, escribe un párrafo corto (5-7 oraciones) sobre tu comida favorita. Responde las siguientes preguntas en tu párrafo:
+        - ¿Cuál es tu comida favorita?
+        - ¿Por qué te gusta?
+        - ¿Cuándo sueles comerla?
+        - ¿Con quién disfrutas comiéndola?
+
+2. **Ejemplo de cómo escribir tu párrafo:**
+    \`\`\`
+    Mi comida favorita son los tacos. Me gustan los tacos porque son sabrosos y versátiles. Suelo comer tacos los fines de semana con mis amigos. Disfrutamos de diferentes rellenos como carne de res, pollo y verduras. ¡Hacer tacos juntos es divertido! Me encanta agregar salsa picante a mis tacos.
+    \`\`\`
+
+            `,
+            spanishTask: `**Tarea: Mi Pasatiempo Favorito**
+
+**Objetivo:** Practicar la escritura de oraciones simples en español.
+
+**Instrucciones:**
+
+1. **Escribe un párrafo en español sobre tu pasatiempo favorito**
+   - Escribe un párrafo corto (5-7 oraciones) sobre tu pasatiempo favorito. Responde las siguientes preguntas en tu párrafo:
+     - ¿Cuál es tu pasatiempo favorito?
+     - ¿Por qué te gusta?
+     - ¿Cuándo sueles hacerlo?
+     - ¿Con quién te gusta practicarlo?
+
+2. **Ejemplo de cómo escribir tu párrafo:**
+   \`\`\`
+   Mi pasatiempo favorito es la lectura. Me gusta leer porque me permite viajar a otros mundos. Suelo leer por la tarde, cuando tengo tiempo libre. A veces, leo con mis amigos en la biblioteca. Disfrutamos compartir nuestras historias favoritas. La lectura es una manera divertida de aprender.
+   \`\`\``,
+            englishSpeechTask: `## Profesor de inglés (habla)
+Por favor, habla en inglés, la IA te ayudará dándote retroalimentación sobre la conversación.
+\n**Cosas que puedes hacer:**
+- Hablar sobre tus pasatiempos, la IA te continuará la conversación.
+- Hablar sobre tus comidas favoritas, la IA te continuará la conversación y te dará retroalimentación.
+- Preguntar dudas sobre gramática, la IA te ayudará a resolver tus dudas.
+- Preguntar sobre ejercicios de vocabulario, la IA te creara ejercicios para practicar.
+- Dar un discurso, la IA te dará retroalimentación sobre tu discurso.
+
+# IMPORTANTE
+### Solo habla en inglés, la IA no entenderá otros idiomas.
+
+Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practice my speaking?"`,
+        },
+    },
+    EnhancedVoiceAIChat: {
+        status: {
+            inactive: 'inactivo',
+            active: 'activo',
+            loading: 'cargando',
+            oneSecond: 'Un segundo...',
+            trialEnded: 'Tu prueba ha terminado',
+        },
+        statusMessage: {
+            giveItATry: '¡Inténtalo!',
+            justTalk: 'Solo habla',
+            aiIsSpeaking: 'La IA está hablando...',
+            aiFinishedSpeaking: 'La IA ha terminado de hablar',
+            errorOccurred: 'Se ha producido un error. Inténtalo de nuevo.',
+            stopping: 'Deteniendo...',
+            oneSecond: 'Un segundo...',
+        },
+        callStatus: {
+            inactive: 'inactivo',
+            active: 'activo',
+            loading: 'cargando',
+        },
+        earlyAccess: 'Para seguir utilizando el servicio, asegúrate de suscribirte a nuestro programa de acceso anticipado.',
+        subscribe: '¡Suscríbete ahora!',
+    },
+    SuccessMessage: {
+        status: '¡Éxito!',
+        message: 'Tarea marcada como completada.',
+    },
 } as const

@@ -200,9 +200,6 @@ export default function ContactPage() {
             <div className="container mx-auto px-4 py-12 space-y-8">
                 <div className="text-center max-w-3xl mx-auto space-y-4">
                     <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
-                    <p className="text-gray-400 mb-8">
-                        {t('description')}
-                    </p>
                     <p className="mt-3 mb-12 text-lg text-gray-600 dark:text-slate-400">
                         {t('description2')}
                     </p>

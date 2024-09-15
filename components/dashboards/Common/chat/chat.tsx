@@ -104,6 +104,8 @@ const SuccessMessage = ({
 }) => {
     const confettiRef = useRef<ConfettiRef>(null)
 
+    const t = useScopedI18n('SuccessMessage')
+
     useEffect(() => {
         if (fire) {
             confettiRef.current?.fire({})
@@ -115,9 +117,11 @@ const SuccessMessage = ({
             <div className="flex flex-col items-center justify-center text-center space-y-4">
                 <div className="text-4xl font-bold text-[#334155]">
                     <CheckCircle className="h-12 w-12 inline-block mr-2 text-green-500" />
-                    {status}
+                    {t('status')}
                 </div>
-                <p className="text-lg text-[#475569]">{message}</p>
+                <p className="text-lg text-[#475569]">
+                    {t('message')}
+                </p>
                 {fire && (
                     <Confetti
                         ref={confettiRef}
@@ -290,7 +294,7 @@ function ChatTextArea({
                     e.currentTarget.reset()
                     setValue('')
                 }}
-                className="py-4 flex gap-2 flex-col w-full"
+                className="py-4 flex gap-2 px-2 flex-col w-full"
             >
                 <Textarea
                     placeholder={t('placeholder')}

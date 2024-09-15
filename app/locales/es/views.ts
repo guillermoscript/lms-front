@@ -82,7 +82,7 @@ export default {
     },
     aboutUs: {
         title: 'Acerca de nosotros',
-        empoweringTheWorld: 'Empoderando el mundo con LMS-AI.',
+        empoweringTheWorld: 'Mejorando el mundo con LMS-AI.',
         description:
             'Somos un equipo de desarrolladores que aman construir y crear. Estamos apasionados por nuestro trabajo y siempre buscamos nuevas formas de mejorar nuestras habilidades.',
         timeline: {
