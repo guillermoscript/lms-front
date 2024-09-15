@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/sheet'
 
 import { DarkThemeToggle } from './DarkThemeToggle'
-import ProfileDropdown from './dashboards/Common/ProfileDropdown'
 import LocaleButtons from './ui/LocaleButtons'
 
 export default async function Header({ children }: { children?: React.ReactNode }) {
@@ -50,7 +49,13 @@ export default async function Header({ children }: { children?: React.ReactNode 
                             <SheetTrigger className="flex items-center space-x-2 md:hidden p-3 justify-between gap-2 w-full">
                                 <Menu className="h-6 w-6" />
                             </SheetTrigger>
-                            <ProfileDropdown />
+                            {/* <ProfileDropdown /> */}
+                            <div
+                                className='flex gap-2 items-center'
+                            >
+                                <DarkThemeToggle />
+                                <LocaleButtons />
+                            </div>
                         </div>
                         <SheetContent>
                             <SheetHeader className='w-full'>
