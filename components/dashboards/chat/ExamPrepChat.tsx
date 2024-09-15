@@ -154,13 +154,13 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
                                             role: 'user',
                                             display: (
                                                 <Message
-                                                    sender={message.role}
+                                                    sender={'user'}
                                                     time={new Date().toDateString()}
                                                     isUser={true}
                                                 >
                                                     <ViewMarkdown
                                                         markdown={
-                                                            message.content
+                                                            suggestion
                                                         }
                                                     />
                                                 </Message>
