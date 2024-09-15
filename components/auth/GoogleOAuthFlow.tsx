@@ -1,7 +1,8 @@
 'use client'
+import { toast } from 'sonner'
+
 import { signInWithGoogle } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
 
 export default function GoogleOAuthFlow() {
     const signInWithProvider = async () => {
