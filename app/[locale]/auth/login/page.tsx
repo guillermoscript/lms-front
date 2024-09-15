@@ -6,6 +6,7 @@ import GoogleOAuthFlow from '@/components/auth/GoogleOAuthFlow'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
+import FacebookOAuthFlow from '@/components/auth/FacebookOAuthFlow'
 
 export default async function Login({
     searchParams,
@@ -25,6 +26,8 @@ export default async function Login({
                         {t('auth.login.helpText')}
                     </p>
                 </div>
+                <FacebookOAuthFlow />
+
                 <GoogleOAuthFlow />
 
                 <UserLoginForm redirect="/dashboard" />
