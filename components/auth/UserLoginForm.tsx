@@ -95,6 +95,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                 </svg>{' '}
                 Back
             </Link>
+
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(onSubmit)}

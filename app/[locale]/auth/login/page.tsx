@@ -2,6 +2,7 @@ import { Mail } from 'lucide-react'
 import Link from 'next/link'
 
 import { getI18n } from '@/app/locales/server'
+import GoogleOAuthFlow from '@/components/auth/GoogleOAuthFlow'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
@@ -24,6 +25,8 @@ export default async function Login({
                         {t('auth.login.helpText')}
                     </p>
                 </div>
+                <GoogleOAuthFlow />
+
                 <UserLoginForm redirect="/dashboard" />
                 {searchParams.message && (
                     <Alert>
