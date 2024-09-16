@@ -153,7 +153,7 @@ export async function continueShowCaseChatConversation(
                                 <SuccessMessage
                                     status="success"
                                     message="Assignment marked as completed."
-                                    fire={true}
+                                    fire
                                 />
                                 <SubscribeNow />
                             </div>
