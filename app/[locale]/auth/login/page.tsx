@@ -19,11 +19,6 @@ export default async function Login({
     return (
         <>
             <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-                <GitHubOAuthFlow />
-
-                <FacebookOAuthFlow />
-
-                <GoogleOAuthFlow />
                 <div className="flex flex-col space-y-2 text-center">
                     <h1 className="text-2xl font-semibold tracking-tight">
                         {t('auth.login.loginHeader')}
@@ -33,6 +28,12 @@ export default async function Login({
                     </p>
                 </div>
 
+                <GitHubOAuthFlow />
+
+                <FacebookOAuthFlow />
+
+                <GoogleOAuthFlow />
+                <hr />
                 <UserLoginForm redirect="/dashboard" />
                 {searchParams.message && (
                     <Alert>
@@ -50,14 +51,11 @@ export default async function Login({
                     {t('auth.login.forgotPassword')}
                 </Link>
                 <p className="text-center text-sm text-muted-foreground">
-                    {t('auth.login.dontHaveAccount')}
+                    {t('auth.login.dontHaveAccount')}{' '}
+                    <Link className="text-purple-800" href="/auth/signup">
+                        {t('auth.register.form.signUp')}
+                    </Link>
                 </p>
-                <Link
-                    href="/auth/signup"
-                    className={buttonVariants({ variant: 'secondary' })}
-                >
-                    {t('auth.register.form.signUp')}
-                </Link>
             </div>
         </>
     )

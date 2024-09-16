@@ -127,10 +127,11 @@ export default {
         student: {
             CourseStudentPage: {
                 lessonTitle: 'Lessons',
-                examTitle: 'Exams'
+                examTitle: 'Exams',
             },
             LessonPage: {
-                description: 'View and track your progress through the course lessons.',
+                description:
+                    'View and track your progress through the course lessons.',
             },
             StudentCourseLessonsPage: {
                 completed: 'Completed',
@@ -160,8 +161,8 @@ export default {
                 feedback: 'Feedback',
                 true: 'True',
                 false: 'False',
-            }
-        }
+            },
+        },
     },
     auth: {
         register: {
@@ -177,7 +178,7 @@ export default {
                 name: 'Full name',
                 username: 'Username',
                 password: 'Password',
-                signUp: 'Sign Up',
+                signUp: 'Create Account',
                 signingUp: 'Signing Up',
             },
         },
