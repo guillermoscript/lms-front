@@ -8,7 +8,6 @@ import { ShowCaseChatAI } from '@/actions/dashboard/AI/ShowCaseActions'
 import { ChatInput, ChatTextArea } from '@/components/dashboards/Common/chat/chat'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import Message from '../Common/chat/Message'
 import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
@@ -24,19 +23,12 @@ export default function ShowCaseChat({ systemPrompt }: FreeChatProps) {
     const [conversation, setConversation] = useUIState<typeof ShowCaseChatAI>()
     const { continueShowCaseChatConversation } = useActions()
     const [isLoading, setIsLoading] = useState(false)
-    const {
-        messagesRef,
-        scrollRef,
-        visibilityRef,
-        isAtBottom,
-        scrollToBottom,
-    } = useScrollAnchor()
 
     console.log(conversation, '<  conversation')
 
     return (
-        <div ref={scrollRef} className="h-full relative overflow-auto pt-4">
-            <div ref={messagesRef} className="pb-[380px] lg:pb-[360px]">
+        <div className="h-full relative overflow-auto pt-4">
+            <div className="pb-[380px] lg:pb-[360px]">
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} />
                 ) : (
@@ -50,7 +42,7 @@ export default function ShowCaseChat({ systemPrompt }: FreeChatProps) {
                     </>
                 )}
                 {isLoading && <ChatLoadingSkeleton />}
-                <div ref={visibilityRef} className="w-full h-px" />
+                <div className="w-full h-px" />
             </div>
             <div className='w-full absolute bottom-0'>
                 <Tabs defaultValue="simple" className="w-full py-4">
