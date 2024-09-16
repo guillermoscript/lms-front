@@ -201,7 +201,7 @@ export async function continueTaskAiConversation(
                             <SuccessMessage
                                 status="success"
                                 message="Assignment marked as completed."
-                                fire={true}
+                                fire
                             />
                         </Message>
                     )

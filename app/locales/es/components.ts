@@ -236,4 +236,8 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         status: '¡Éxito!',
         message: 'Tarea marcada como completada.',
     },
+    SubscribeNow: {
+        title: '¡Suscríbete ahora!',
+        description: 'Para seguir utilizando el servicio, asegúrate de suscribirte a nuestro programa de acceso anticipado.',
+    }
 } as const

@@ -11,6 +11,7 @@ import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleto
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
+import SubscribeNow from '@/components/home/SubscribeNow'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 
 import { ClientMessage } from './ExamPreparationActions'
@@ -148,11 +149,14 @@ export async function continueShowCaseChatConversation(
                             time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
                             isUser={false}
                         >
-                            <SuccessMessage
-                                status="success"
-                                message="Assignment marked as completed."
-                                fire={true}
-                            />
+                            <div className="w-full flex flex-col gap-8">
+                                <SuccessMessage
+                                    status="success"
+                                    message="Assignment marked as completed."
+                                    fire
+                                />
+                                <SubscribeNow />
+                            </div>
                         </Message>
                     )
                 },
