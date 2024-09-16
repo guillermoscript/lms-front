@@ -82,29 +82,32 @@ export default async function TimelineDemo() {
     ]
     return (
         <div className="w-full container py-4">
-            <h1 className="text-6xl font-bold text-center mb-4">{t('title')}</h1>
+            <h1 className="text-6xl font-bold text-center mb-4">
+                {t('title')}
+            </h1>
             <Timeline data={data} />
             <section className="mb-16">
-
                 <section className="mb-16 text-center">
-                    <h2 className="text-4xl font-bold mb-4">{t('empoweringTheWorld')}</h2>
+                    <h2 className="text-4xl font-bold mb-4">
+                        {t('empoweringTheWorld')}
+                    </h2>
                     <p className="text-lg text-gray-600 mb-8">
                         {t('description')}
                     </p>
                     <div className="flex flex-wrap justify-center gap-8">
                         <TeamMember
                             name="Angel Afonso"
-                            role="Senior Developer"
+                            role="Senior Software Engineer"
                             image="/img/feature(1).png"
                         />
                         <TeamMember
                             name="Guillermo Marin"
-                            role="Senior Developer"
+                            role="Senior Software Engineer"
                             image="/img/feature(2).png"
                         />
                         <TeamMember
                             name="Hector Zurga"
-                            role="Marketing Engineer"
+                            role="Senior Software Engineer"
                             image="/img/feature(3).png"
                         />
                     </div>
@@ -114,7 +117,15 @@ export default async function TimelineDemo() {
     )
 }
 
-const TeamMember = ({ name, role, image }: { name: string; role: string; image: string }) => (
+const TeamMember = ({
+    name,
+    role,
+    image,
+}: {
+    name: string
+    role: string
+    image: string
+}) => (
     <div className="text-center">
         <Image
             src={image}
