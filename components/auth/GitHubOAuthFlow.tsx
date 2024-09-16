@@ -1,9 +1,9 @@
 'use client'
+import { GithubIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { signInWithGitHub } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
-import { GithubIcon } from 'lucide-react'
 
 export default function GitHubOAuthFlow() {
     const signInWithProvider = async () => {

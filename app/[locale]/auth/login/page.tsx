@@ -3,11 +3,11 @@ import Link from 'next/link'
 
 import { getI18n } from '@/app/locales/server'
 import FacebookOAuthFlow from '@/components/auth/FacebookOAuthFlow'
+import GitHubOAuthFlow from '@/components/auth/GitHubOAuthFlow'
 import GoogleOAuthFlow from '@/components/auth/GoogleOAuthFlow'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { buttonVariants } from '@/components/ui/button'
-import GitHubOAuthFlow from '@/components/auth/GitHubOAuthFlow'
 
 export default async function Login({
     searchParams,
@@ -19,6 +19,11 @@ export default async function Login({
     return (
         <>
             <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+                <GitHubOAuthFlow />
+
+                <FacebookOAuthFlow />
+
+                <GoogleOAuthFlow />
                 <div className="flex flex-col space-y-2 text-center">
                     <h1 className="text-2xl font-semibold tracking-tight">
                         {t('auth.login.loginHeader')}
@@ -27,12 +32,6 @@ export default async function Login({
                         {t('auth.login.helpText')}
                     </p>
                 </div>
-
-                <GitHubOAuthFlow />
-
-                <FacebookOAuthFlow />
-
-                <GoogleOAuthFlow />
 
                 <UserLoginForm redirect="/dashboard" />
                 {searchParams.message && (
