@@ -240,4 +240,8 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         status: 'Success!',
         message: 'Assignment marked as completed.',
     },
+    SubscribeNow: {
+        title: 'Subscribe Now!',
+        description: 'To continue using the service, please be sure to subscribe to our early access program.',
+    }
 } as const
