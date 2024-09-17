@@ -33,7 +33,8 @@ export default {
         },
         joinPlatform: {
             title: '¡No te lo pierdas! Únete a esta increíble plataforma hoy.',
-            description: 'Forma parte de una revolución educativa. Suscríbete ahora y desbloquea tu potencial con nuestra plataforma LMS impulsada por IA.',
+            description:
+                'Forma parte de una revolución educativa. Suscríbete ahora y desbloquea tu potencial con nuestra plataforma LMS impulsada por IA.',
             items: {
                 builtForAllLearners: {
                     title: 'Para todos los aprendices',
@@ -130,7 +131,8 @@ export default {
                 examTitle: 'Exámenes',
             },
             LessonPage: {
-                description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',
+                description:
+                    'Ver y realizar un seguimiento de tu progreso a través de la lección.',
             },
             StudentCourseLessonsPage: {
                 completed: 'Completado',
@@ -160,7 +162,7 @@ export default {
                 feedback: 'Feedback',
                 true: 'Verdadero',
                 false: 'Falso',
-            }
+            },
         },
     },
     auth: {
@@ -183,7 +185,8 @@ export default {
         },
         login: {
             loginHeader: 'Iniciar sesion',
-            helpText: 'Ingresa tu correo para iniciar sesion.',
+            helpText: 'Iniciar sesion con proveedor',
+            or: 'O',
             forgotPassword: 'Olvidaste tu contraseña?',
             dontHaveAccount: 'No tienes cuenta?',
             description: 'Comienza tu aprendizaje con LMS AI.',

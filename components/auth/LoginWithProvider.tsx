@@ -1,13 +1,10 @@
 'use client'
+import { Provider } from '@supabase/supabase-js'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
-import {
-    signInWithGitHub,
-    signInWithProvider,
-} from '@/actions/auth/authActions'
+import { signInWithProvider } from '@/actions/auth/authActions'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
-import { Provider } from '@supabase/supabase-js'
 
 export default function LoginWithProvider({
     provider,
@@ -33,10 +30,16 @@ export default function LoginWithProvider({
             <Button
                 onClick={Init}
                 variant="outline"
-                className={`${loading ? 'animate-pulse' : ''}`}
+                className={`${
+                    loading
+                        ? 'animate-pulse'
+                        : 'group transition-all ease-out duration-500'
+                }`}
             >
                 {icon}
-                <span className="capitalize">{provider}</span>
+                <span className="capitalize group-hover:scale-95">
+                    {provider}
+                </span>
             </Button>
         </div>
     )

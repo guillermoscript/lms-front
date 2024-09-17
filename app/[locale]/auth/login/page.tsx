@@ -1,11 +1,14 @@
-import { Facebook, Github, GithubIcon, Mail } from 'lucide-react'
+import { GithubIcon, Mail } from 'lucide-react'
 import Link from 'next/link'
 
 import { getI18n } from '@/app/locales/server'
+import LoginWithProvider from '@/components/auth/LoginWithProvider'
 import UserLoginForm from '@/components/auth/UserLoginForm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import LoginWithProvider from '@/components/auth/LoginWithProvider'
-
+export const metadata = {
+    title: 'Login',
+    description: 'Login to LMS',
+}
 export default async function Login({
     searchParams,
 }: {
@@ -21,7 +24,7 @@ export default async function Login({
                         {t('auth.login.loginHeader')}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Login with provider
+                        {t('auth.login.helpText')}
                     </p>
                 </div>
 
@@ -87,7 +90,9 @@ export default async function Login({
                 </div>
                 <div className="flex w-full items-center gap-4">
                     <div className=" bg-slate-600 w-full h-[1px]"></div>
-                    <span className="text-slate-600 text-sm">Or</span>
+                    <span className="text-slate-600 text-sm">
+                        {t('auth.login.or')}
+                    </span>
                     <div className=" bg-slate-600 w-full h-[1px]"></div>
                 </div>
                 <UserLoginForm redirect="/dashboard" />
@@ -108,7 +113,7 @@ export default async function Login({
                 </Link>
                 <p className="text-center text-sm text-muted-foreground">
                     {t('auth.login.dontHaveAccount')}{' '}
-                    <Link className="text-purple-800" href="/auth/signup">
+                    <Link className="text-primary" href="/auth/signup">
                         {t('auth.register.form.signUp')}
                     </Link>
                 </p>

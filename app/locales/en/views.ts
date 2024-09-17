@@ -184,7 +184,8 @@ export default {
         },
         login: {
             loginHeader: 'Login to your account',
-            helpText: 'Enter your email below to login',
+            helpText: 'Login with providers',
+            or: 'Or',
             forgotPassword: 'Forgot your password?',
             dontHaveAccount: "Don't have account?",
             description: 'Get started with LMS AI Inc. Learn fast and smart.!',
