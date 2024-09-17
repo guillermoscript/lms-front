@@ -22,7 +22,6 @@ function getIP() {
 
 export async function rateLimit() {
     const limit = await ratelimit.limit(getIP())
-    console.log(limit, ' <== limit')
     if (!limit.success) {
         redirect('/waiting-room')
     }
