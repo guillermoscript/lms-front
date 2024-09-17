@@ -1,7 +1,7 @@
 'use server'
 import 'server-only'
 
-import { openai } from '@ai-sdk/openai'
+import { google } from '@ai-sdk/google'
 import { CoreMessage, generateId } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
@@ -13,6 +13,7 @@ import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
 import SubscribeNow from '@/components/home/SubscribeNow'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { rateLimit } from '@/utils/rateLimit'
 
 import { ClientMessage } from './ExamPreparationActions'
 
@@ -20,8 +21,8 @@ export async function continueShowCaseChatConversation(
     input: string,
     systemPrompt: string
 ): Promise<ClientMessage> {
+    await rateLimit()
     const aiState = getMutableAIState<typeof ShowCaseChatAI>()
-
     // Update the AI state with the new user message.
     aiState.update({
         messages: [
@@ -37,7 +38,8 @@ export async function continueShowCaseChatConversation(
     console.log(aiState.get())
 
     const result = await streamUI({
-        model: openai('gpt-4o-mini'),
+        // model: openai('gpt-4o-mini'),
+        model: google('gemini-1.5-flash'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
