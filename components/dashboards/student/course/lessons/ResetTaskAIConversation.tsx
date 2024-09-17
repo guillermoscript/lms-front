@@ -34,7 +34,7 @@ export default function ResetTaskAIConversation({
                     <Button className="flex items-center space-x-2">
                         <ResetIcon />
                         <span>
-                            {t('resetConversation')}
+                            {t('action')}
                         </span>
                     </Button>
                 </AlertDialogTrigger>
