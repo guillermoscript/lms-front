@@ -99,7 +99,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(onSubmit)}
-                    className="animate-in flex-1 flex flex-col w-full justify-center gap-4 text-foreground"
+                    className="animate-in flex-1 flex flex-col w-full justify-center gap-6 text-foreground"
                 >
                     <FormField
                         control={form.control}
@@ -129,7 +129,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                                     {t('auth.login.form.password')}
                                 </FormLabel>
                                 <FormControl>
-                                    <div className=" w-full gap-4 flex items-center justify-between">
+                                    <div className="w-full flex items-center relative justify-between">
                                         <Input
                                             type={
                                                 showPassword
@@ -145,6 +145,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                                             onClick={() =>
                                                 setShowPassword(!showPassword)
                                             }
+                                            className="absolute right-4"
                                         >
                                             {!showPassword ? (
                                                 <EyeIcon />
@@ -165,6 +166,7 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                     <Button
                         disabled={form.formState.isSubmitting}
                         type="submit"
+                        className="mt-2"
                     >
                         {form.formState.isSubmitting
                             ? t('auth.login.form.loggingIn')

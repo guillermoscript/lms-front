@@ -13,8 +13,8 @@ export default async function LoginLayout({
             <Header>
                 <></>
             </Header>
-            <div className="container relative min-h-screen flex-col items-center justify-center md:grid">
-                <div className="lg:p-8">{children}</div>
+            <div className="container relative min-h-screen lg:-mt-28 flex-col items-center justify-center md:grid">
+                {children}
             </div>
         </>
     )
