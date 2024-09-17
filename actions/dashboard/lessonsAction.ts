@@ -368,6 +368,14 @@ export async function studentResetAiTaskConversation({
     const deleteResult = await deleteMessages(supabase, messagesToDelete)
     if (deleteResult.error) return createResponse('error', deleteResult.error, null, deleteResult.error)
 
+    // check if the lessons is marked as completed
+    const lessonCompletionData = await supabase.from('lesson_completions').select('id').eq('lesson_id', lessonId).eq('user_id', userId).single()
+
+    if (lessonCompletionData.data.id) {
+        const deleteCompletionData = await supabase.from('lesson_completions').delete().eq('id', lessonCompletionData.data.id)
+        if (deleteCompletionData.error) return createResponse('error', 'Error deleting lesson completion', null, 'Error deleting lesson completion')
+    }
+
     revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]')
     return createResponse('success', 'Message updated successfully', null, null)
 }
