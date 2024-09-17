@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
 
-const WaitingRoom = ({ initialWaitTime = 60, }: { initialWaitTime: number }) => {
-    const [waitTime, setWaitTime] = useState(initialWaitTime)
+const WaitingRoom = () => {
+    const [waitTime, setWaitTime] = useState(60)
 
     const t = useScopedI18n('waitingRoom')
     const router = useRouter()
