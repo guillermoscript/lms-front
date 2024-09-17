@@ -71,7 +71,7 @@ export default {
             description: 'Esto restablecerá la conversación de la tarea de IA y perderás todo el progreso.',
             cancel: 'Cancelar',
             loading: 'Cargando...',
-            action: 'Restablecer conversación',
+            action: 'Reiniciar tarea de IA'
         }
     },
     AiTaskMessage: {
