@@ -29,7 +29,7 @@ export default function LoginWithProvider({
     }
 
     return (
-        <div className="flex flex-col space-y-2 text-center">
+        <div className="flex flex-col text-center">
             <Button
                 onClick={Init}
                 variant="outline"

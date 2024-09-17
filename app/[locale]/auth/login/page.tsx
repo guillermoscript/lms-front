@@ -25,7 +25,7 @@ export default async function Login({
                     </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <LoginWithProvider
                         provider="github"
                         icon={<GithubIcon className="mr-4" />}
@@ -85,10 +85,10 @@ export default async function Login({
                         }
                     />
                 </div>
-                <div className="flex w-full items-center gap-3">
-                    <div className=" bg-slate-500 w-full h-[1px]"></div>
-                    <span className="text-slate-500">Or</span>
-                    <div className=" bg-slate-500 w-full h-[1px]"></div>
+                <div className="flex w-full items-center gap-4">
+                    <div className=" bg-slate-600 w-full h-[1px]"></div>
+                    <span className="text-slate-600 text-sm">Or</span>
+                    <div className=" bg-slate-600 w-full h-[1px]"></div>
                 </div>
                 <UserLoginForm redirect="/dashboard" />
                 {searchParams.message && (

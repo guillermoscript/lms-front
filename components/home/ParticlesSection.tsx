@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react'
 
 import Particles from '../magicui/particles'
 
-export default function ParticlesSection({ children }: { children: React.ReactNode }) {
+export default function ParticlesSection({
+    children,
+    className,
+}: {
+    children: React.ReactNode
+    className?: string
+}) {
     const { theme } = useTheme()
     const [color, setColor] = useState('#ffffff')
 
@@ -16,7 +22,7 @@ export default function ParticlesSection({ children }: { children: React.ReactNo
         <>
             {children}
             <Particles
-                className="absolute inset-0"
+                className={`absolute inset-0 ${className}`}
                 quantity={100}
                 ease={80}
                 color={color}
