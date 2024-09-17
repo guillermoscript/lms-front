@@ -209,4 +209,11 @@ export default {
             back: 'Back to Login',
         },
     },
+
+    waitingRoom: {
+        title: 'Waiting Room',
+        description: "You've been placed in a queue due to high traffic. We'll get you back to the site shortly.",
+        waitTime: 'Estimated wait time',
+        waitDescription: 'We use a queue system to ensure fair access for all users during peak times. Thank you for your patience!',
+    }
 } as const
