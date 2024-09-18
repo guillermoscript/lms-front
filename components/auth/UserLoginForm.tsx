@@ -56,16 +56,6 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
                 password: data.password,
                 redirectTo: redirect,
             })
-
-            if (response.error) {
-                // Handle login errors (e.g., display error messages)
-                setError(
-                    response.message || 'An error occurred. Please try again.'
-                )
-                toast.error(
-                    response.message || 'An error occurred. Please try again.'
-                )
-            }
         } catch (error: any) {
             // Handle login errors (e.g., display error messages)
             setError(error.message || 'An error occurred. Please try again.')

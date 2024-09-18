@@ -26,7 +26,8 @@ export const signIn = async ({
 
     if (error) {
         console.log(error)
-        return createResponse('error', 'Invalid credentials', null, error.message)
+        // return createResponse('error', 'Invalid credentials', null, error.message)
+        throw new Error(error.message || 'Invalid credentials')
     }
 
     const userRole = await getServerUserRole()
