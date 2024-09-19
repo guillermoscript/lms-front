@@ -1,7 +1,7 @@
 'use client'
 import { generateId } from 'ai'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { FreeChatAI, UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
@@ -12,7 +12,6 @@ import {
     studentUpdateChatTitle,
 } from '@/actions/dashboard/chatActions'
 import { ChatInput, ChatTextArea, Message } from '@/components/dashboards/Common/chat/chat'
-import SuggestionsContainer from '@/components/dashboards/Common/chat/SuggestionsContainer'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
@@ -21,6 +20,7 @@ import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
 import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import FreeMessageChatEdit from '../student/free-chat/FreeMessageChatEdit'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
+import EmptyChatState from './EmptyChatState'
 
 interface RunUserMessageParams {
     input: string
@@ -195,12 +195,51 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                 {conversation.length > 0 ? (
                     <ChatList messages={conversation} />
                 ) : (
-                    <EmptyState
-                        setIsLoading={setIsLoading}
-                        continueFreeChatConversation={continueFreeChatConversation}
-                        setConversation={setConversation}
-                        chatId={chatId}
-                    />
+                    <Suspense
+                        fallback={
+                            <ChatLoadingSkeleton />
+                        }
+                    >
+                        <EmptyChatState
+                            onSuggestionClick={async (suggestion) => {
+                                if (chatId) {
+                                    await studentUpdateChatTitle({
+                                        chatId,
+                                        title: suggestion,
+                                    })
+                                } else {
+                                    await studentCreateNewChatAndRedirect({
+                                        title: suggestion,
+                                        chatType: 'free_chat',
+                                        insertMessage: true,
+                                    })
+                                }
+                                setConversation((currentConversation) => [
+                                    ...currentConversation,
+                                    {
+                                        id: generateId(),
+                                        role: 'user',
+                                        display: (
+                                            <Message
+                                                sender={'user'}
+                                                time={new Date().toDateString()}
+                                                isUser={true}
+                                            >
+                                                <ViewMarkdown markdown={suggestion} />
+                                            </Message>
+                                        ),
+                                    },
+                                ])
+                                await runUserMessage({
+                                    input: suggestion,
+                                    setConversation,
+                                    continueFreeChatConversation,
+                                    chatId,
+                                })
+                                setIsLoading(false)
+                            }}
+                        />
+                    </Suspense>
                 )}
                 {isLoading && <ChatLoadingSkeleton />}
                 <div ref={visibilityRef} className="w-full h-px" />
@@ -272,77 +311,6 @@ export default function FreeChat({ chatId }: FreeChatProps) {
         </div>
     )
 }
-
-const EmptyState: React.FC<{
-    setIsLoading: (value: boolean) => void
-    continueFreeChatConversation: (input: string) => Promise<ClientMessage>
-    setConversation: (value: React.SetStateAction<ClientMessage[]>) => void
-    chatId?: number
-}> = ({
-    setIsLoading,
-    continueFreeChatConversation,
-    setConversation,
-    chatId,
-}) => (
-    <div className="flex flex-col gap-4">
-        <p className="text-lg">Ask me anything, I'm here to help!</p>
-        <div className="w-full flex flex-col gap-4">
-            <SuggestionsContainer
-                suggestions={[
-                    {
-                        title: 'What is the capital of France?',
-                        description: 'Ask me about anything',
-                    },
-                    {
-                        title: 'What is the weather in London?',
-                        description: 'Ask me about anything',
-                    },
-                    {
-                        title: 'What is the population of New York?',
-                        description: 'Ask me about anything',
-                    },
-                ]}
-                onSuggestionClick={async (suggestion) => {
-                    if (chatId) {
-                        await studentUpdateChatTitle({
-                            chatId,
-                            title: suggestion,
-                        })
-                    } else {
-                        await studentCreateNewChatAndRedirect({
-                            title: suggestion,
-                            chatType: 'free_chat',
-                            insertMessage: true,
-                        })
-                    }
-                    setConversation((currentConversation) => [
-                        ...currentConversation,
-                        {
-                            id: generateId(),
-                            role: 'user',
-                            display: (
-                                <Message
-                                    sender={'user'}
-                                    time={new Date().toDateString()}
-                                    isUser={true}
-                                >
-                                    <ViewMarkdown markdown={suggestion} />
-                                </Message>
-                            ),
-                        },
-                    ])
-                    await runUserMessage({
-                        input: suggestion,
-                        setConversation,
-                        continueFreeChatConversation,
-                        chatId,
-                    })
-                    setIsLoading(false)
-                }}
-            />
-        </div>
-    </div>
-)
 
 const ChatList: React.FC<{ messages: UIState }> = ({ messages }) => (
     <div className="relative px-4">
