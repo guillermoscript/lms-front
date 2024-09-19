@@ -2,6 +2,7 @@
 import { CaretSortIcon } from '@radix-ui/react-icons'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import ChatSidebarItem from '@/components/dashboards/chat/ChatSidebarItem'
 import {
     Collapsible,
@@ -31,16 +32,20 @@ export default function SearchChats({
 
     const allChats = Object.values(chatTypes).flat()
 
+    const t = useScopedI18n('SearchChats')
+
     return (
         <div className="bg-gray-100/40 dark:bg-gray-800/40 border rounded-lg w-full p-2 max-h-[calc(100vh-4rem)] overflow-y-auto ">
             <Command className="h-auto w-full">
                 <CommandInput
                     value={valueSearch}
                     onValueChange={setValueSearch}
-                    placeholder="Type to search your chats"
+                    placeholder={t('input')}
                 />
                 <CommandList>
-                    <CommandEmpty>No results found.</CommandEmpty>
+                    <CommandEmpty>
+                        {t('empty')}
+                    </CommandEmpty>
                     <CommandItem className="my-2">
                         <StudentCreateNewChat />
                     </CommandItem>
