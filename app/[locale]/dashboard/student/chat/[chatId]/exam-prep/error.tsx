@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import GenericError from '@/components/GenericError'
 
 export default function Error ({
@@ -11,6 +12,8 @@ export default function Error ({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    const t = useScopedI18n('GenericError')
+
     useEffect(() => {
     // Log the error to an error reporting service
         console.error(error)
@@ -19,7 +22,7 @@ export default function Error ({
     return (
         <GenericError
             retry={reset}
-            title="Oh no! An error occurred loading the chat."
+            title={t('title')}
             description={error.message}
         />
     )
