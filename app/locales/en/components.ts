@@ -17,6 +17,7 @@ export default {
         lesson: 'Lessons',
         exam: 'Exams',
         review: 'Reviews',
+        chat: 'Chat',
     },
     RecentlyViewed: {
         title: 'Recently Viewed',
@@ -243,5 +244,46 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
     SubscribeNow: {
         title: 'Subscribe Now!',
         description: 'To continue using the service, please be sure to subscribe to our early access program.',
+    },
+    FreeChatSetup: {
+        freeChat: {
+            title: 'Free Chat',
+            description: 'This is where you can chat with the AI assistant. You can ask questions, get suggestions, and more.',
+        },
+        examPrep: {
+            title: 'Exam Preparation',
+            description: 'This part is where you can create and view all of your exam preparation messages. This is a different chat type from the free chat, focused on exam preparation.',
+        },
+        quizMe: {
+            title: 'Quiz Me',
+            description: 'This is where you can prepare for your exams, the AI will create Forms for you to fill out and get feedback on your answers.',
+        },
+        suggestions: {
+            title: 'Suggestions',
+            description: 'This is where you can get suggestions on what to do next. The AI will guide you on what to do next.',
+        },
+        editor: {
+            title: 'Editor',
+            description: 'This is where you can write code, markdown, or any other text. The AI will help you with your code, markdown, or text.',
+        },
+        title: 'Guided Tutorial',
+        description: 'If you want to know more about the free chat, click the button above to start the tour.',
+    },
+    ExamLink: {
+        title: 'Quiz Me',
+        description: 'This is where you can prepare for your exams, the AI will create Forms for you to fill out and get feedback on your answers.',
+    },
+    EmptyChatState: {
+        title: 'Ask me anything, I\'m here to help!',
+    },
+    SearchChats: {
+        input: 'Type to search your chats',
+        empty: 'No results found.',
+        freeChat: 'Free Chat',
+        examPrep: 'Exam Prep',
+    },
+    StudentCreateNewChat: {
+        title: 'Untitled Chat',
+        newChat: 'Nuevo chat',
     }
 } as const
