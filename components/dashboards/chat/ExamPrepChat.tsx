@@ -18,10 +18,9 @@ import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
 import { ChatInput, ChatTextArea } from '../Common/chat/chat'
 import Message from '../Common/chat/Message'
-import SuggestionsContainer from '../Common/chat/SuggestionsContainer'
 import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
-import ExamPrepSetup from './tour/ExamPrepSetup'
+import EmptyChatState from './EmptyChatState'
 
 export default function ExamPrepChat({ chatId }: { chatId?: number }) {
     const [conversation, setConversation] = useUIState<typeof AI>()
@@ -118,32 +117,8 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
                     />
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <div className="flex flex-wrap gap-4 w-full items-center">
-                            <h1 className="text-2xl">
-                                Exam Preparation Chat, Ask me anything, I'm here
-                                to help!
-                            </h1>
-                            <ExamPrepSetup />
-                        </div>
-                        <SuggestionsContainer
-                            suggestions={[
-                                {
-                                    title: 'help me creating a basic python exam form',
-                                    description:
-                                        'This will help you to create a basic python exam form',
-                                },
-                                {
-                                    title: 'help me creating a basic Javascipt exam form',
-                                    description:
-                                        'This will help you to create a basic Javascript exam form',
-                                },
-                                {
-                                    title: 'help me creating a basic HTML exam form',
-                                    description:
-                                        'This will help you to create a basic HTML exam form',
-                                },
-                            ]}
-                            onSuggestionClick={async (suggestion) => {
+                        <EmptyChatState
+                            onSuggestionClick={ async (suggestion) => {
                                 setIsLoading(true)
 
                                 setConversation(
@@ -181,13 +156,6 @@ export default function ExamPrepChat({ chatId }: { chatId?: number }) {
                                 setIsLoading(false)
                             }}
                         />
-                        <div className="flex-1 flex items-center justify-center my-4">
-                            <p className="text-gray-400">
-                                Please Know that LLMs can make mistakes. Verify
-                                important information and always ask for help if
-                                you need it.
-                            </p>
-                        </div>
                     </div>
                 )}
 
