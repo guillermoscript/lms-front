@@ -215,5 +215,8 @@ export default {
         description: "You've been placed in a queue due to high traffic. We'll get you back to the site shortly.",
         waitTime: 'Estimated wait time',
         waitDescription: 'We use a queue system to ensure fair access for all users during peak times. Thank you for your patience!',
+    },
+    chatPage: {
+        title: 'Select a chat or start a new one',
     }
 } as const

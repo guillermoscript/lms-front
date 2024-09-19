@@ -214,5 +214,8 @@ export default {
         description: 'Has sido puesto en una sala de espera debido a la alta demanda. Por favor espera un minuto',
         waitTime: 'Tiempo de espera',
         waitDescription: 'Usamos un sistema de espera para asegurarnos de que todos tengan una experiencia fluida. Gracias por tu paciencia.'
+    },
+    chatPage: {
+        title: 'Selecciona un chat o comienza uno nuevo',
     }
 } as const
