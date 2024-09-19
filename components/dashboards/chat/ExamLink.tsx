@@ -2,6 +2,7 @@
 import { useState } from 'react'
 
 import { studentCreateNewChatAndRedirect } from '@/actions/dashboard/chatActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     HoverCard,
@@ -12,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ExamLink () {
     const [isLoading, setIsLoading] = useState(false)
+    const t = useScopedI18n('ExamLink')
 
     return (
         <HoverCard>
@@ -38,12 +40,12 @@ export default function ExamLink () {
                         }}
                         variant="outline"
                     >
-                        Quiz Me
+                        {t('title')}
                     </Button>
                 )}
             </HoverCardTrigger>
             <HoverCardContent>
-                This is where you can prepare for your exams, the AI will create Forms for you to fill out and get feedback on your answers.
+                {t('description')}
             </HoverCardContent>
         </HoverCard>
     )
