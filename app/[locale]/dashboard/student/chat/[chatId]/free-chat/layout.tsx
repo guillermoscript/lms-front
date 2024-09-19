@@ -1,4 +1,5 @@
 import { FreeChatAI, getUIStateFromFreeChatAIState } from '@/actions/dashboard/AI/FreeChatPreparation'
+import { getScopedI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { createClient } from '@/utils/supabase/server'
 
@@ -97,13 +98,15 @@ export default async function ExamnChatIdPageLayout ({
         })
     })
 
+    const t = await getScopedI18n('BreadcrumbComponent')
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/chat', label: 'Chat' },
+                    { href: '/dashboard', label: t('dashboard') },
+                    { href: '/dashboard/student', label: t('student') },
+                    { href: '/dashboard/student/chat', label: t('chat') },
                     { href: `/dashboard/student/chat/${params.chatId}`, label: messagesData.data.title.slice(0, 40) + '...' }
                 ]}
             />
