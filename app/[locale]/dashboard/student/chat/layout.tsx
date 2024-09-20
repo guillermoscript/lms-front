@@ -38,7 +38,7 @@ export default async function CoursesLayout({
     return (
         <div className="lg:grid flex flex-col min-h-screen w-full lg:grid-cols-[280px_1fr] gap-6">
             <StudentChatSidebar userRole="student" />
-            <div className="flex flex-col">{children}</div>
+            <div className="flex flex-col gap-4">{children}</div>
         </div>
     )
 }

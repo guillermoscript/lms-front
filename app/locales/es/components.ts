@@ -266,7 +266,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         description: 'Si deseas saber más sobre el chat libre, haz clic en el botón de arriba para comenzar el recorrido.',
     },
     ExamLink: {
-        title: 'Enlace al examen',
+        title: 'Exámenes',
         description: 'Aquí es donde puedes ver tus exámenes y comenzar a hacerlos. La IA te dará comentarios sobre tus respuestas.',
     },
     EmptyChatState: {
