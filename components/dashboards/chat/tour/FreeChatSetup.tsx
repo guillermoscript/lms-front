@@ -2,6 +2,7 @@
 import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
@@ -12,6 +13,8 @@ import {
 
 // Setup component with a button to start the tour
 export default function FreeChatSetup () {
+    const t = useScopedI18n('FreeChatSetup')
+
     return (
         <TourProvider
             steps={[
@@ -19,10 +22,11 @@ export default function FreeChatSetup () {
                     selector: '#free_chat',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Free Chat</h4>
-
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('freeChat.title')}
+                            </h4>
                             <p className="text-gray-600 dark:text-gray-300">
-    This part of the sidebar si where you can create and view all of your free chat messages.
+                                {t('freeChat.description')}
                             </p>
                         </>
                     )
@@ -32,11 +36,12 @@ export default function FreeChatSetup () {
                     selector: '#exam_prep',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Exam Preparation</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('examPrep.title')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This part is when you can create and view all of your exam preparation messages.
-                                This is a different chat type from the free chat. focused on exam preparation.
+                                {t('examPrep.description')}
                             </p>
                         </>
                     )
@@ -46,10 +51,12 @@ export default function FreeChatSetup () {
                     selector: '#quiz-me',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Quiz Me</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('quizMe.title')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can prepare for your exams, the AI will create Forms for you to fill out and get feedback on your answers.
+                                {t('quizMe.description')}
                             </p>
                         </>
                     )
@@ -58,10 +65,12 @@ export default function FreeChatSetup () {
                     selector: '#suggestions-container',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Suggestions</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('suggestions.title')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can view the suggestions from the AI. to chat about with the AI.
+                                {t('suggestions.description')}
                             </p>
                         </>
 
@@ -71,10 +80,12 @@ export default function FreeChatSetup () {
                     selector: '.editor',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Chat with the AI assistant</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('editor.title')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can chat with the AI assistant. You can ask questions, get suggestions, and more.
+                                {t('editor.description')}
                             </p>
                         </>
                     )
@@ -96,6 +107,7 @@ export default function FreeChatSetup () {
 
 function ChatTourFreeChat () {
     const { setIsOpen } = useTour()
+    const t = useScopedI18n('FreeChatSetup')
 
     return (
         <TooltipProvider>
@@ -105,7 +117,7 @@ function ChatTourFreeChat () {
                         className='w-fit'
                         onClick={() => setIsOpen(true)}
                     >
-                        Guided Tutorial
+                        {t('title')}
                         <InfoIcon
                             className='ml-2'
                             size={24}
@@ -114,7 +126,7 @@ function ChatTourFreeChat () {
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-                        If you want to know more about the free chat, click the button above to start the tour.
+                        {t('description')}
                     </p>
                 </TooltipContent>
             </Tooltip>

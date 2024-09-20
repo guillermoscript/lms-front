@@ -1,4 +1,5 @@
 import { FreeChatAI } from '@/actions/dashboard/AI/FreeChatPreparation'
+import { getScopedI18n } from '@/app/locales/server'
 import ExamLink from '@/components/dashboards/chat/ExamLink'
 import FreeChat from '@/components/dashboards/chat/FreeChat'
 import FreeChatSetup from '@/components/dashboards/chat/tour/FreeChatSetup'
@@ -8,18 +9,19 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 export default async function ChatPage() {
+    const t = await getScopedI18n('BreadcrumbComponent')
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/student', label: 'Student' },
-                    { href: '/dashboard/student/chat', label: 'Chat' },
+                    { href: '/dashboard', label: t('dashboard') },
+                    { href: '/dashboard/student', label: t('student') },
+                    { href: '/dashboard/student/chat', label: t('chat') },
                 ]}
             />
             <div className="flex flex-col gap-4 w-full mb-8">
                 <div className="flex flex-wrap gap-4 w-full items-center">
-                    <h1 className="text-2xl font-semibold">Select a chat or start a new one</h1>
                     <FreeChatSetup />
                 </div>
                 <div className="flex flex-wrap gap-4 w-full">

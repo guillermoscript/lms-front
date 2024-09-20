@@ -17,6 +17,7 @@ export default {
         lesson: 'Lecciones',
         exam: 'Exámenes',
         review: 'Reseñas',
+        chat: 'Chat',
     },
     RecentlyViewed: {
         title: 'Visto recientemente',
@@ -239,5 +240,50 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
     SubscribeNow: {
         title: '¡Suscríbete ahora!',
         description: 'Para seguir utilizando el servicio, asegúrate de suscribirte a nuestro programa de acceso anticipado.',
+    },
+    FreeChatSetup: {
+        freeChat: {
+            title: 'Chat libre',
+            description: 'Aquí es donde puedes chatear con el asistente de IA. Puedes hacer preguntas, obtener sugerencias y más.',
+        },
+        examPrep: {
+            title: 'Preparación para el examen',
+            description: 'Aquí es donde puedes prepararte para tus exámenes, la IA creará formularios para que los completes y obtengas comentarios sobre tus respuestas.',
+        },
+        quizMe: {
+            title: 'Evaluame',
+            description: 'Aquí es donde puedes hacer preguntas y obtener sugerencias sobre qué hacer a continuación. La IA te guiará sobre qué hacer a continuación.',
+        },
+        suggestions: {
+            title: 'Sugerencias',
+            description: 'Aquí es donde puedes obtener sugerencias sobre qué hacer a continuación. La IA te guiará sobre qué hacer a continuación.',
+        },
+        editor: {
+            title: 'Editor',
+            description: 'Aquí es donde puedes escribir código, markdown o cualquier otro texto. La IA te ayudará con tu código, markdown o texto.',
+        },
+        title: 'Tutorial guiado',
+        description: 'Si deseas saber más sobre el chat libre, haz clic en el botón de arriba para comenzar el recorrido.',
+    },
+    ExamLink: {
+        title: 'Exámenes',
+        description: 'Aquí es donde puedes ver tus exámenes y comenzar a hacerlos. La IA te dará comentarios sobre tus respuestas.',
+    },
+    EmptyChatState: {
+        title: 'Pregúntame cualquier cosa, ¡estoy aquí para ayudarte!',
+    },
+    GenericError: {
+        tile: '¡Oh no! Ocurrió un error',
+        description: 'Ocurrió un error al cargar la página. Por favor, intenta nuevamente. Si el problema persiste, contacta al soporte.',
+    },
+    SearchChats: {
+        input: 'Escribe aquí para buscar tus chats...',
+        empty: 'No se encontraron resultados',
+        freeChat: 'Chat libre',
+        examPrep: 'Preparación para el examen',
+    },
+    StudentCreateNewChat: {
+        title: 'Chat sin titulo',
+        newChat: 'Nuevo chat',
     }
 } as const

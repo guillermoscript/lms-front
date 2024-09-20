@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { studentCreateNewChat } from '@/actions/dashboard/chatActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function StudentCreateNewChat () {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+    const t = useScopedI18n('StudentCreateNewChat')
 
     return isLoading ? (
         <Skeleton className="w-full h-8" />
@@ -21,7 +23,7 @@ export default function StudentCreateNewChat () {
                 try {
                     const chat = await studentCreateNewChat({
                         chatType: 'free_chat',
-                        title: 'Untitled Chat'
+                        title: t('newChatTitle')
                     })
 
                     if (chat.status === 'error') {
@@ -38,7 +40,7 @@ export default function StudentCreateNewChat () {
                 }
             }}
         >
-                New Chat <Plus className="h-4 w-4" />
+            {t('newChat')} <Plus className="h-4 w-4" />
         </Button>
     )
 }
