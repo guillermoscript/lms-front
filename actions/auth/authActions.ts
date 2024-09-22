@@ -18,7 +18,6 @@ export const signInWithProvider = async (provider: Provider) => {
                 access_type: 'offline',
                 prompt: 'consent',
             },
-            redirectTo: 'http://localhost:3000/auth/callback',
         },
     })
     if (error) {
