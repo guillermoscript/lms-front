@@ -1,3 +1,4 @@
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonForm from '@/components/dashboards/teacher/lessons/LessonForm'
 import { createClient } from '@/utils/supabase/server'
@@ -20,16 +21,18 @@ export default async function CreateLessonPage ({
         console.log(course.error.message)
         throw new Error(course.error.message)
     }
+
+    const t = await getI18n()
     console.log(course)
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                     { href: `/dashboard/teacher/courses/${params.courseId}`, label: course?.data?.title },
-                    { href: `/dashboard/teacher/courses/${params.courseId}/lessons`, label: 'Lessons' }
+                    { href: `/dashboard/teacher/courses/${params.courseId}/lessons`, label: t('BreadcrumbComponent.lesson') }
                 ]}
             />
 
