@@ -161,6 +161,48 @@ export default {
                 true: 'True',
                 false: 'False',
             }
+        },
+        teacher: {
+            CreateCoursePage: {
+                title: 'List And Create course page',
+                actionButton: 'Create a new course',
+                dialogTitle: 'Create a new course',
+                dialogDescription: 'Fill in the form below to create a new course',
+            },
+            CreateCourseLessonPage: {
+                tabs: {
+                    lessons: 'Lessons',
+                    exams: 'Exams',
+                    createLesson: 'Create Lesson',
+                    createExam: 'Create Exam',
+                }
+            },
+            TeacherLessonPage: {
+                status: 'Status',
+                sequence: 'Sequence',
+                video: 'Video',
+                embedVideo: 'Embed Video',
+                content: 'Content',
+                systemPrompt: 'System Prompt',
+                description: 'Description',
+                tryItOut: 'Try it out',
+            },
+            TestTeacherPage: {
+                tabs: {
+                    examData: 'Exam Data',
+                    examSubmissions: 'Exam Submissions',
+                },
+                status: 'Status',
+                sequence: 'Sequence',
+                trueOrFalse: 'True or False',
+                freeText: 'Free text',
+                multipleChoice: 'Multiple Choice',
+            },
+            ReviewStudentExamSubmission: {
+                title: 'Review Student Exam Submission',
+                duration: 'Duration',
+                minutes: 'minutes',
+            }
         }
     },
     auth: {
