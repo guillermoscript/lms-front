@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TestSubmissionReview from '@/components/dashboards/teacher/test/TestSubmissionReview'
 import { createClient } from '@/utils/supabase/server'
+import { getI18n } from '@/app/locales/server'
 
 export default async function ReviewStudentExamSubmission ({
     params
@@ -76,20 +77,23 @@ export default async function ReviewStudentExamSubmission ({
     console.log(examData)
 
     const { exams } = examData
+
+    const t = await getI18n()
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}`,
                         label: exams?.courses?.title
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests`,
-                        label: 'Tests'
+                        label: t('BreadcrumbComponent.exam')
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
@@ -97,7 +101,7 @@ export default async function ReviewStudentExamSubmission ({
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/review/${params.submissionId}`,
-                        label: 'Review'
+                        label: t('BreadcrumbComponent.review')
                     }
                 ]}
             />
@@ -105,7 +109,7 @@ export default async function ReviewStudentExamSubmission ({
             <div className="grid gap-8">
                 <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-950">
                     <h1 className="text-3xl font-bold">
-                        {exams?.title} Exam Review
+                        {exams?.title} {t('dashboard.teacher.ReviewStudentExamSubmission.title')}
                     </h1>
 
                     <p className="text-gray-500 dark:text-gray-400">
@@ -116,7 +120,7 @@ export default async function ReviewStudentExamSubmission ({
                         <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
 
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Duration: {exams?.duration} minutes
+                        {t('dashboard.teacher.ReviewStudentExamSubmission.duration')} {exams?.duration} {t('dashboard.teacher.ReviewStudentExamSubmission.minutes')}
                         </span>
                     </div>
                 </div>
