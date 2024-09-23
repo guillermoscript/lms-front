@@ -4,7 +4,7 @@ export default {
     header: {
         title: 'LMS',
         contact: 'Contacto',
-        about: 'Acerca de nosotross',
+        about: 'Acerca de nosotros',
         pricing: 'Precios',
         blog: 'Blog',
         login: 'Iniciar sesión',
@@ -14,7 +14,7 @@ export default {
     footer: {
         quickLinks: 'Enlaces',
         contact: 'Contacto',
-        about: 'Acerca de nosotross',
+        about: 'Acerca de nosotros',
         plans: 'Planes',
         store: 'Tienda',
         home: 'Inicio',
