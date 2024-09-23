@@ -18,6 +18,8 @@ export default {
         exam: 'Exámenes',
         review: 'Reseñas',
         chat: 'Chat',
+        teacher: 'Profesor',
+        edit: 'Editar'
     },
     RecentlyViewed: {
         title: 'Visto recientemente',
@@ -285,5 +287,106 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
     StudentCreateNewChat: {
         title: 'Chat sin titulo',
         newChat: 'Nuevo chat',
+    },
+    courseCols: {
+        title: 'Título',
+        description: 'Descripción',
+        status: 'Estado',
+        date: 'Fecha',
+        actions: 'Acciones',
+    },
+    CreateCourse: {
+        title: 'Crear un nuevo curso',
+        actionButton: 'Crear curso',
+        dialogTitle: 'Crear un nuevo curso',
+        form: {
+            title: 'Título',
+            description: 'Descripción',
+            thumbnail: 'Miniatura',
+            tags: 'Tags',
+            category: 'Categoría',
+            product: 'Producto',
+        }
+    },
+    SelectStatus: {
+        status: 'Estado',
+        placeholder: 'Seleccionar estado',
+        draft: 'Borrador',
+        published: 'Publicado',
+        archived: 'Archivado',
+    },
+    DeleteAlert: {
+        title: '¿Estás seguro de que quieres eliminar esto?',
+        description: 'Esta acción no se puede deshacer.',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+    },
+    DeleteCourseAlert: {
+        course: 'Curso'
+    },
+    lessonsCols: {
+        id: 'ID',
+        title: 'Titulo',
+        description: 'Descripción',
+        sequence: 'Secuencia',
+        date: 'Fecha',
+        actions: 'Acciones',
+    },
+    LessonForm: {
+        title: 'Título',
+        description: 'Descripción',
+        sequence: 'Secuencia',
+        videoUrl: 'URL del video',
+        embed: 'Incrustar',
+        image: 'Imagen',
+        status: 'Estado',
+        statusOptions: {
+            draft: 'Borrador',
+            published: 'Publicado',
+            archived: 'Archivado'
+        },
+        cardTitle: 'Contenido de la lección',
+        systemPromptTitle: 'Sistema de sugerencias',
+        systemPromptDescription: 'Sistema de sugerencias para la lección',
+        form: {
+            title: 'Título',
+            description: 'Descripción',
+            sequence: 'Secuencia',
+            videoUrl: 'URL del video',
+            embed: 'Incrustar',
+            image: 'Imagen',
+            status: 'Estado',
+            systemPrompt: 'Sistema de sugerencias'
+        }
+    },
+    TeacherTestForm: {
+        edit: 'Editar',
+        create: 'Crear',
+        form: {
+            testName: 'Nombre del examen',
+            testDescription: 'Descripción del examen',
+            sequence: 'Secuencia',
+            exam_date: 'Fecha del examen',
+            duration: 'Duración (minutos)',
+            status: 'Estado',
+            statusOptions: {
+                draft: 'Borrador',
+                published: 'Publicado',
+                archived: 'Archivado'
+            },
+            update: 'Actualizar',
+            create: 'Crear',
+        },
+        card: {
+            title: 'Preguntas',
+            description: 'Agrega preguntas al examen',
+        }
+    },
+    TestSubmissionReview: {
+        studentAnswer: 'Respuesta del estudiante',
+        feedback: 'Retroalimentación',
+        score: 'Puntuación',
+        correct: 'Correcto',
+        overallFeedback: 'Retroalimentación general',
     }
 } as const

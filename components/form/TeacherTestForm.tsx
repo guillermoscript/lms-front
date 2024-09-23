@@ -1,10 +1,13 @@
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
+import { Loader } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
+
+import { useScopedI18n } from '@/app/locales/client'
 
 import { Button } from '../ui/button'
 import {
@@ -136,10 +139,15 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
         }
     }
 
+    const t = useScopedI18n('TeacherTestForm')
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-4">
-                {testId ? 'Edit Test Content' : 'Create Test Content'}
+                {testId ? (
+                    t('edit')
+                )
+                    : t('create')}
             </h1>
             <FormProvider {...formMethods}>
                 <form
@@ -148,49 +156,51 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                 >
                     <Input
                         name="testName"
-                        displayName="Test Name"
+                        displayName={t('form.testName')}
                         type="text"
                         clasess={classNames}
                     />
                     <Input
                         name="testDescription"
-                        displayName="Test Description"
+                        displayName={t('form.testDescription')}
                         type="text"
                         clasess={classNames}
                     />
                     <Input
                         name="sequence"
-                        displayName="Sequence"
+                        displayName={t('form.sequence')}
                         type="number"
                         clasess={classNames}
                     />
                     <Input
                         name="exam_date"
-                        displayName="Exam Date"
+                        displayName={t('form.examDate')}
                         type="date"
                         clasess={classNames}
                     />
                     <Input
                         name="duration"
-                        displayName="Duration (in minutes)"
+                        displayName={t('form.duration')}
                         type="number"
                         clasess={classNames}
                     />
                     <Select
                         name="status"
-                        displayName="Status"
+                        displayName={t('form.status')}
                         options={[
-						  { value: 'draft', label: 'Draft' },
-						  { value: 'published', label: 'Published' },
-						  { value: 'archived', label: 'Archived' }
+						  { value: 'draft', label: t('form.statusOptions.draft') },
+						  { value: 'published', label: t('form.statusOptions.published') },
+						  { value: 'archived', label: t('form.statusOptions.archived') }
                         ]}
                         clasess={classNames}
                     />
                     <Card>
                         <CardHeader>
-                            <CardTitle>Test Questions</CardTitle>
+                            <CardTitle>
+                                {t('card.title')}
+                            </CardTitle>
                             <CardDescription>
-                Here you can add questions to the test
+                                {t('card.description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -198,7 +208,13 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                                 initialFields={defaultValues.questions}
                             >
                                 <Button type="submit" disabled={isLoading}>
-                                    {isLoading ? 'Loading...' : isEditing ? 'Update Test' : 'Create Test'}
+                                    {isLoading ? (
+                                        <Loader className="h-6 w-6 animate-spin" />
+                                    ) : isEditing ? (
+                                        t('form.update')
+                                    ) : (
+                                        t('form.create')
+                                    )}
                                 </Button>
                             </FormBuilder>
                         </CardContent>

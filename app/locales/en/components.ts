@@ -18,6 +18,8 @@ export default {
         exam: 'Exams',
         review: 'Reviews',
         chat: 'Chat',
+        teacher: 'Teacher',
+        edit: 'Edit',
     },
     RecentlyViewed: {
         title: 'Recently Viewed',
@@ -285,5 +287,106 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
     StudentCreateNewChat: {
         title: 'Untitled Chat',
         newChat: 'Nuevo chat',
+    },
+    courseCols: {
+        id: 'ID',
+        title: 'Title',
+        description: 'Description',
+        status: 'Status',
+        date: 'Date',
+        actions: 'Actions',
+    },
+    CreateCourse: {
+        title: 'Create a new course',
+        actionButton: 'Create Course',
+        dialogTitle: 'Create a new course',
+        form: {
+            title: 'Title',
+            description: 'Description',
+            thumbnail: 'Thumbnail',
+            tags: 'Tags',
+            category: 'Category',
+            product: 'Product',
+        }
+    },
+    SelectStatus: {
+        status: 'Status',
+        placeholder: 'Select status',
+        draft: 'Draft',
+        published: 'Published',
+        archived: 'Archived',
+    },
+    DeleteAlert: {
+        title: 'Are you sure you want to delete this?',
+        description: 'This action cannot be undone.',
+        cancel: 'Cancel',
+        delete: 'Delete',
+    },
+    DeleteCourseAlert: {
+        course: 'Course',
+    },
+    lessonsCols: {
+        id: 'ID',
+        title: 'Title',
+        description: 'Description',
+        sequence: 'Sequence',
+        date: 'Date',
+        actions: 'Actions',
+    },
+    LessonForm: {
+        title: 'Lesson',
+        form: {
+            title: 'Title',
+            description: 'Description',
+            sequence: 'Sequence',
+            video_url: 'YouTube Video URL',
+            embed: 'Embed Code',
+            image: 'Image URL',
+            content: 'Content',
+            status: 'Status',
+            statusOptions: {
+                draft: 'Draft',
+                published: 'Published',
+                archived: 'Archived',
+            },
+            systemPrompt: 'System Prompt',
+            taskInstructions: 'Task Instructions',
+        },
+        cardTitle: 'Content of the lesson',
+        systemPromptTitle: 'System Prompt',
+        systemPromptDescription: 'This is the prompt that the AI will use to generate responses.',
+        taskInsturctionsTitle: 'Task Instructions',
+        taskInstructionsDescription: 'This is the task that the AI will use to generate responses.',
+    },
+    TeacherTestForm: {
+        edit: 'Edit',
+        create: 'Create',
+        form: {
+            testName: 'Name of the exam',
+            testDescription: 'Description of the exam',
+            sequence: 'Sequence',
+            exam_date: 'Exam Date',
+            duration: 'Duration (in minutes)',
+            status: 'Status',
+            statusOptions: {
+                draft: 'Draft',
+                published: 'Published',
+                archived: 'Archived',
+            },
+            update: 'Update',
+            create: 'Create',
+        },
+        card: {
+            title: 'Exam Questions',
+            description: 'This is where you can add questions to your exam.',
+        }
+    },
+    TestSubmissionReview: {
+        studentAnswer: 'Student Answer',
+        feedback: 'Feedback',
+        score: 'Score',
+        correct: 'Correct?',
+        overallFeedback: 'Overall Feedback',
+
     }
 } as const

@@ -1,9 +1,10 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal } from 'lucide-react'
+import { Eye, MoreHorizontal, View } from 'lucide-react'
 import Link from 'next/link'
 
+import ScopedHeader from '@/components/dashboards/Common/table/ScopedHeader'
 import DeleteLessonAlert from '@/components/dashboards/teacher/lessons/DeleteLessonAlert'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -12,7 +13,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
 interface Lessons {
     id: bigint | number
@@ -28,12 +28,14 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
     {
         accessorKey: 'id',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="ID" />
+            <ScopedHeader scoped="lessonsCols" column={column} word="id" />
         ),
     },
     {
         accessorKey: 'title',
-        header: 'Title',
+        header: ({ column }) => (
+            <ScopedHeader scoped="lessonsCols" column={column} word="title" />
+        ),
         cell: ({ row }) => {
             const rowData = row.original
 
@@ -49,24 +51,34 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
     },
     {
         accessorKey: 'description',
-        header: 'Description',
+        header: ({ column }) => (
+            <ScopedHeader
+                scoped="lessonsCols"
+                column={column}
+                word="description"
+            />
+        ),
     },
     {
         accessorKey: 'sequence',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Sequence" />
+            <ScopedHeader
+                scoped="lessonsCols"
+                column={column}
+                word="sequence"
+            />
         ),
     },
     {
         accessorKey: 'date',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Date" />
+            <ScopedHeader scoped="lessonsCols" column={column} word="date" />
         ),
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Actions" />
+            <ScopedHeader scoped="lessonsCols" column={column} word="actions" />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -75,7 +87,9 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">
+                                <Eye />
+                            </span>
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -85,7 +99,7 @@ export const lessonsCols: Array<ColumnDef<Lessons>> = [
                                 <Link
                                     href={`/dashboard/teacher/courses/${rowData.courseId}/lessons/${rowData.id}`}
                                 >
-                                    View details
+                                    <View className="h-4 w-4" />
                                 </Link>
                             </Button>
                         </DropdownMenuLabel>

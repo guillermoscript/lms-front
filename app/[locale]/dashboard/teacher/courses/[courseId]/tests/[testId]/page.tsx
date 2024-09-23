@@ -1,5 +1,6 @@
 // @ts-nocheck
 import dayjs from 'dayjs'
+import { Edit } from 'lucide-react'
 import Link from 'next/link'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
@@ -15,7 +16,7 @@ import { createClient } from '@/utils/supabase/server'
 
 import { testSubmissionsCols } from './testSubmissionsCols'
 
-export default async function LessonPage({
+export default async function TestTeacherPage({
     params
 }: {
     params: { courseId: string, testId: string }
@@ -58,13 +59,15 @@ export default async function LessonPage({
         singleSelectQuestions
     } = categorizeQuestions(test.data?.exam_questions)
 
+    const t = await getI18n()
+
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}`,
                         label: test?.data?.courses?.title
@@ -73,42 +76,44 @@ export default async function LessonPage({
                         href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
                         label: test?.data?.title
                     },
-                    { href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`, label: 'Edit' }
+                    { href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`, label: t('BreadcrumbComponent.edit') }
                 ]}
             />
             <Tabs defaultValue="examData" className="w-full">
                 <TabsList>
-                    <TabsTrigger value="examData">Exam Data</TabsTrigger>
+                    <TabsTrigger value="examData">
+                        {t('dashboard.teacher.TestTeacherPage.tabs.examData')}
+                    </TabsTrigger>
                     <TabsTrigger value="examSubmissions">
-                        Exam Submissions
+                        {t('dashboard.teacher.TestTeacherPage.tabs.examSubmissions')}
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="examData">
                     <>
                         <div className="flex justify-between items-center w-full">
                             <h1 className="text-2xl font-semibold mb-4">
-                                Test: {test?.data?.title}
+                                {test?.data?.title}
                             </h1>
                             <Link
                                 href={`/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`}
                                 className={buttonVariants({ variant: 'link' })}
                             >
-                                Edit
+                                <Edit className="h-6 w-6" />
                             </Link>
                         </div>
 
                         <h3 className="text-lg font-semibold mt-4">
-                            Status: {test?.data?.status}
+                            {t('dashboard.teacher.TestTeacherPage.status')}: {test?.data?.status}
                         </h3>
                         <h3 className="text-lg font-semibold mt-4">
-                            Sequence: {test?.data?.sequence}
+                            {t('dashboard.teacher.TestTeacherPage.sequence')}: {test?.data?.sequence}
                         </h3>
                         <div className="space-y-4">
                             <>
                                 {singleSelectQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                            True or False
+                                            {t('dashboard.teacher.TestTeacherPage.trueOrFalse')}
                                         </h3>
                                         <SingleSelectQuestionRead
                                             questions={singleSelectQuestions}
@@ -119,7 +124,7 @@ export default async function LessonPage({
                                 {freeTextQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                            Fill in the Blank
+                                            {t('dashboard.teacher.TestTeacherPage.freeText')}
                                         </h3>
                                         <FreeTextQuestionRead
                                             questions={freeTextQuestions}
@@ -130,7 +135,7 @@ export default async function LessonPage({
                                 {multipleChoiceQuestions.length > 0 && (
                                     <div>
                                         <h3 className="text-lg font-semibold">
-                                            Multiple Choice
+                                            {t('dashboard.teacher.TestTeacherPage.multipleChoice')}
                                         </h3>
                                         <MultipleChoiceQuestionRead
                                             questions={multipleChoiceQuestions}

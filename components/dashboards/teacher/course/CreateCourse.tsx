@@ -7,6 +7,7 @@ import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
 
 import { createCourseAction } from '@/actions/dashboard/courseActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Input, Select } from '@/components/form/Form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { selectClassNames } from '@/utils/const'
@@ -30,6 +31,8 @@ const courseSchema = yup.object().shape({
 export type courseSchemaType = yup.InferType<typeof courseSchema>
 
 export default function CreateCourse () {
+    const t = useScopedI18n('CreateCourse')
+
     const [state, action] = useFormState(createCourseAction, {
         status: 'idle',
         message: '',
@@ -75,20 +78,33 @@ export default function CreateCourse () {
 
     return (
         <>
-            <h1 className="text-2xl font-semibold">Create a new course</h1>
+            <h1 className="text-2xl font-semibold">
+                {t('title')}
+            </h1>
             <FormProvider {...methods}>
                 <form action={action} className="flex flex-col gap-4 md:min-h-800px">
                     <div className="flex items-center gap-3 ">
-                        <Input name="title" displayName="Title*" type="text" />
+                        <Input name="title" displayName={
+                            t('form.title')
+                        } type="text"
+                        />
                         <Input
                             name="description"
-                            displayName="Description"
+                            displayName={
+                                t('form.description')
+                            }
                             type="textarea"
                         />
                     </div>
                     <div className="flex items-center gap-3 ">
-                        <Input name="thumbnail" displayName="Thumbnail" type="text" />
-                        <Input name="tags" displayName="Tags" type="text" />
+                        <Input name="thumbnail" displayName={
+                            t('form.thumbnail')
+                        } type="text"
+                        />
+                        <Input name="tags" displayName={
+                            t('form.tags')
+                        } type="text"
+                        />
                     </div>
 
                     {loading ? (
@@ -107,7 +123,9 @@ export default function CreateCourse () {
                                     })
                                 )}
                                 name="category_id"
-                                displayName="Category ID"
+                                displayName={
+                                    t('form.category')
+                                }
                             />
                             <Select
                                 clasess={selectClassNames}
@@ -116,7 +134,9 @@ export default function CreateCourse () {
                                     label: product.name
                                 }))}
                                 name="product_id"
-                                displayName="Product ID"
+                                displayName={
+                                    t('form.product')
+                                }
                             />
                         </>
                     )}

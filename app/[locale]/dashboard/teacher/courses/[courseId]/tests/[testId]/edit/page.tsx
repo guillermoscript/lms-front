@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TeacherTestForm from '@/components/form/TeacherTestForm'
 import { createClient } from '@/utils/supabase/server'
@@ -43,20 +44,22 @@ export default async function EditTestPage ({
 
     console.log(fieldsForQuestions)
 
+    const t = await getI18n()
+
     return (
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}`,
                         label: test?.data?.courses?.title
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests`,
-                        label: 'Tests'
+                        label: t('BreadcrumbComponent.exam')
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}`,
@@ -64,7 +67,7 @@ export default async function EditTestPage ({
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/tests/${params.testId}/edit`,
-                        label: 'Edit'
+                        label: t('BreadcrumbComponent.edit')
                     }
                 ]}
             />

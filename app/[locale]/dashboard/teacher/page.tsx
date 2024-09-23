@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import {
     Card,
@@ -15,13 +16,15 @@ import {
     CardTitle
 } from '@/components/ui/card'
 
-export default function TeacherPage () {
+export default async function TeacherPage () {
+    const t = await getI18n()
+
     return (
         <>
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' }
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') }
                 ]}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

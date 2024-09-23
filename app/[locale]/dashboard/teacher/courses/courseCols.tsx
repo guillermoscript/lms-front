@@ -1,9 +1,10 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal } from 'lucide-react'
+import { Edit, Eye, MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
+import ScopedHeader from '@/components/dashboards/Common/table/ScopedHeader'
 import DeleteCourseAlert from '@/components/dashboards/teacher/course/DeleteCourseAlert'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -12,7 +13,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { DataTableColumnHeader } from '@/components/ui/Table/DataTableColumnHeader'
 
 interface Course {
     id: number
@@ -27,12 +27,14 @@ export const courseCols: Array<ColumnDef<Course>> = [
     {
         accessorKey: 'id',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="ID" />
+            <ScopedHeader scoped='courseCols' column={column} word='id' />
         ),
     },
     {
         accessorKey: 'title',
-        header: 'Title',
+        header: ({ column }) => (
+            <ScopedHeader scoped='courseCols' column={column} word='title' />
+        ),
         cell: ({ row }) => {
             const rowData = row.original
 
@@ -48,22 +50,26 @@ export const courseCols: Array<ColumnDef<Course>> = [
     },
     {
         accessorKey: 'description',
-        header: 'Description',
+        header: ({ column }) => (
+            <ScopedHeader scoped='courseCols' column={column} word='description' />
+        ),
     },
     {
         accessorKey: 'status',
-        header: 'Status',
+        header: ({ column }) => (
+            <ScopedHeader scoped='courseCols' column={column} word='status' />
+        ),
     },
     {
         accessorKey: 'date',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Date" />
+            <ScopedHeader scoped='courseCols' column={column} word='date' />
         ),
     },
     {
         accessorKey: 'actions',
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Actions" />
+            <ScopedHeader scoped='courseCols' column={column} word='actions' />
         ),
         cell: ({ row }) => {
             const rowData = row.original
@@ -82,7 +88,7 @@ export const courseCols: Array<ColumnDef<Course>> = [
                                 <Link
                                     href={`/dashboard/teacher/courses/${rowData.id}`}
                                 >
-                                    View course
+                                    <Eye className="mr-2 h-4 w-4" />
                                 </Link>
                             </Button>
                         </DropdownMenuLabel>
@@ -91,7 +97,7 @@ export const courseCols: Array<ColumnDef<Course>> = [
                                 <Link
                                     href={`/dashboard/teacher/courses/${rowData.id}/edit`}
                                 >
-                                    Edit course
+                                    <Edit className="mr-2 h-4 w-4" />
                                 </Link>
                             </Button>
                         </DropdownMenuLabel>

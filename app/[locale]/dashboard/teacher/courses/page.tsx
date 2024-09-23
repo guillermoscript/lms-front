@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import CreateCourse from '@/components/dashboards/teacher/course/CreateCourse'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,8 @@ export default async function CreateCoursePage () {
         console.log(course.error.message)
     }
 
+    const t = await getI18n()
+
     const rows = course.data?.map((course) => {
         return {
             id: course.course_id,
@@ -38,23 +41,27 @@ export default async function CreateCoursePage () {
         <div className=" flex-1 p-8 overflow-auto w-full space-y-4">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' }
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                 ]}
             />
             <h1 className="text-2xl font-semibold mb-4">
-                List And Create course page
+                {t('dashboard.teacher.CreateCoursePage.title')}
             </h1>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button>Create a new course</Button>
+                    <Button>
+                        {t('dashboard.teacher.CreateCoursePage.actionButton')}
+                    </Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create a new course</DialogTitle>
+                        <DialogTitle>
+                            {t('dashboard.teacher.CreateCoursePage.dialogTitle')}
+                        </DialogTitle>
                         <DialogDescription>
-                          Fill in the form below to create a new course
+                            {t('dashboard.teacher.CreateCoursePage.dialogDescription')}
                         </DialogDescription>
                     </DialogHeader>
                     <CreateCourse />

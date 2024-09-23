@@ -162,6 +162,48 @@ export default {
                 false: 'Falso',
             }
         },
+        teacher: {
+            CreateCoursePage: {
+                title: 'Crear y listar página de cursos',
+                actionButton: 'Crear un nuevo curso',
+                dialogTitle: 'Crear un nuevo curso',
+                dialogDescription: 'Rellena el formulario de abajo para crear un nuevo curso',
+            },
+            CreateCourseLessonPage: {
+                tabs: {
+                    lessons: 'Lecciones',
+                    exams: 'Exámenes',
+                    createLesson: 'Crear lección',
+                    createExam: 'Crear examen',
+                }
+            },
+            TeacherLessonPage: {
+                status: 'Estado',
+                sequence: 'Secuencia',
+                video: 'Video',
+                embedVideo: 'Insertar video',
+                description: 'Descripción',
+                content: 'Contenido',
+                systemPrompt: 'Sistema de sugerencias',
+                tryItOut: 'Pruébalo',
+            },
+            TestTeacherPage: {
+                tabs: {
+                    examData: 'Datos del examen',
+                    examSubmissions: 'Examenes enviados',
+                },
+                status: 'Estado',
+                sequence: 'Secuencia',
+                trueOrFalse: 'Verdadero o falso',
+                freeText: 'Texto libre',
+                multipleChoice: 'Selección múltiple',
+            },
+            ReviewStudentExamSubmission: {
+                title: 'Revisar examen de estudiante',
+                duration: 'Duración',
+                minutes: 'minutos',
+            }
+        }
     },
     auth: {
         register: {
