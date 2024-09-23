@@ -10,6 +10,8 @@ import { buttonVariants } from '@/components/ui/button'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/utils/supabase/server'
+import { getI18n } from '@/app/locales/server'
+import { Edit } from 'lucide-react'
 
 export default async function TeacherLessonPage ({
     params
@@ -39,6 +41,8 @@ export default async function TeacherLessonPage ({
         { role: 'system', content: lesson.data?.lessons_ai_tasks[0].system_prompt, id: generateId() },
     ]
 
+    const t = await getI18n()
+
     return (
         <LessonPage
             sideBar={
@@ -52,11 +56,11 @@ export default async function TeacherLessonPage ({
             <div className="flex-1 md:p-8 overflow-y-auto w-full space-y-4">
                 <BreadcrumbComponent
                     links={[
-                        { href: '/dashboard', label: 'Dashboard' },
-                        { href: '/dashboard/teacher', label: 'Teacher' },
+                        { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                        { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
                         {
                             href: '/dashboard/teacher/courses',
-                            label: 'Courses',
+                            label: t('BreadcrumbComponent.course'),
                         },
                         {
                             href: `/dashboard/teacher/courses/${params.courseId}`,
@@ -71,21 +75,24 @@ export default async function TeacherLessonPage ({
                 <div className="flex flex-col gap-8 w-full">
                     <div className="flex justify-between items-center w-full">
                         <h1 className="text-2xl font-semibold mb-4">
-                            Lesson: {lesson?.data?.title}
+                            {lesson?.data?.title}
                         </h1>
                         <Link
                             href={`/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`}
                             className={buttonVariants({ variant: 'link' })}
                         >
-                            Edit
+                            <Edit className="h-6 w-6" />
                         </Link>
                     </div>
 
                     <h3 className="text-lg font-semibold mt-4">
-                        Status: {lesson?.data?.status}
+                        {t('dashboard.teacher.TeacherLessonPage.status')}: {' '}
+                        {lesson?.data?.status}
                     </h3>
                     <h3 className="text-lg font-semibold mt-4">
-                        Sequence: {lesson?.data?.sequence}
+                        {
+                            t('dashboard.teacher.TeacherLessonPage.sequence')
+                        }: {lesson?.data?.sequence}
                     </h3>
                     <p>{lesson?.data?.description}</p>
 
@@ -94,7 +101,7 @@ export default async function TeacherLessonPage ({
                     {lesson.data?.video_url && (
                         <>
                             <h3 className="text-xl font-semibold mt-4">
-                                Youtube Video
+                                {t('dashboard.teacher.TeacherLessonPage.video')}
                             </h3>
                             <iframe
                                 className="w-full"
@@ -112,7 +119,7 @@ export default async function TeacherLessonPage ({
                     {lesson.data?.embed_code ? (
                         <div className="flex flex-col mb-10 gap-4">
                             <h3 className="text-xl font-semibold mt-4">
-                                Embeded Code
+                                {t('dashboard.teacher.TeacherLessonPage.embed')}
                             </h3>
                             <iframe
                                 src={lesson.data?.embed_code}
@@ -133,7 +140,9 @@ export default async function TeacherLessonPage ({
                     ) : null}
 
                     <div className="flex flex-col mb-10 gap-4">
-                        <h3 className="text-xl font-semibold mt-4">Content</h3>
+                        <h3 className="text-xl font-semibold mt-4">
+                            {t('dashboard.teacher.TeacherLessonPage.content')}
+                        </h3>
                         <ViewMarkdown
                             markdown={lesson.data?.content}
                         />
@@ -144,7 +153,7 @@ export default async function TeacherLessonPage ({
                     {lesson.data?.lessons_ai_tasks[0].system_prompt && (
                         <>
                             <h3 className="text-xl font-semibold mt-4">
-                                System Prompt
+                                {t('dashboard.teacher.TeacherLessonPage.systemPrompt')}
                             </h3>
 
                             <ViewMarkdown
@@ -158,7 +167,7 @@ export default async function TeacherLessonPage ({
                             />
 
                             <h3 className="text-xl font-semibold mt-4">
-                                Try the chat sandbox
+                                {t('dashboard.teacher.TeacherLessonPage.tryItOut')}
                             </h3>
 
                             <TaskSandboxActions
