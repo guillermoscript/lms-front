@@ -1,10 +1,13 @@
 'use client'
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
+import { Loader } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
+
+import { useScopedI18n } from '@/app/locales/client'
 
 import { Button } from '../ui/button'
 import {
@@ -17,8 +20,6 @@ import {
 import { useToast } from '../ui/use-toast'
 import { Input, Select } from './Form'
 import FormBuilder from './FormBuilder'
-import { useScopedI18n } from '@/app/locales/client'
-import { Edit, Loader } from 'lucide-react'
 
 const classNames = {
     label: 'text-xs font-medium text-neutral-600',
@@ -146,7 +147,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                 {testId ? (
                     t('edit')
                 )
-                 : t('create')}
+                    : t('create')}
             </h1>
             <FormProvider {...formMethods}>
                 <form
@@ -199,7 +200,7 @@ const TeacherTestForm: React.FC<TestFormProps> = ({
                                 {t('card.title')}
                             </CardTitle>
                             <CardDescription>
-                {t('card.description')}
+                                {t('card.description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

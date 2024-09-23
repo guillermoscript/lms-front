@@ -2,10 +2,10 @@
 import { ClockIcon } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import TestSubmissionReview from '@/components/dashboards/teacher/test/TestSubmissionReview'
 import { createClient } from '@/utils/supabase/server'
-import { getI18n } from '@/app/locales/server'
 
 export default async function ReviewStudentExamSubmission ({
     params
@@ -120,7 +120,7 @@ export default async function ReviewStudentExamSubmission ({
                         <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
 
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('dashboard.teacher.ReviewStudentExamSubmission.duration')} {exams?.duration} {t('dashboard.teacher.ReviewStudentExamSubmission.minutes')}
+                            {t('dashboard.teacher.ReviewStudentExamSubmission.duration')} {exams?.duration} {t('dashboard.teacher.ReviewStudentExamSubmission.minutes')}
                         </span>
                     </div>
                 </div>

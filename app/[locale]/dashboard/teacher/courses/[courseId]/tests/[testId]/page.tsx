@@ -1,5 +1,6 @@
 // @ts-nocheck
 import dayjs from 'dayjs'
+import { Edit } from 'lucide-react'
 import Link from 'next/link'
 
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
@@ -14,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
 import { testSubmissionsCols } from './testSubmissionsCols'
-import { Edit } from 'lucide-react'
 
 export default async function TestTeacherPage({
     params

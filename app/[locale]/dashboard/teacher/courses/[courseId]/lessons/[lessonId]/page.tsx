@@ -1,7 +1,9 @@
 import { generateId } from 'ai'
+import { Edit } from 'lucide-react'
 import Link from 'next/link'
 
 import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
+import { getI18n } from '@/app/locales/server'
 import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
@@ -10,8 +12,6 @@ import { buttonVariants } from '@/components/ui/button'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/utils/supabase/server'
-import { getI18n } from '@/app/locales/server'
-import { Edit } from 'lucide-react'
 
 export default async function TeacherLessonPage ({
     params

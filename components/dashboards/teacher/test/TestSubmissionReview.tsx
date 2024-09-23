@@ -6,13 +6,13 @@ import { CheckCircleIcon, CircleIcon, Loader, XCircleIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 
 import CorrectnessRadio from './CorrectnessRadio'
-import { useScopedI18n } from '@/app/locales/client'
 
 interface Answer {
     answer_id: number
