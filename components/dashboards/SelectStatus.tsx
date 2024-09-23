@@ -1,44 +1,54 @@
 import { Control } from 'react-hook-form'
 
+import { useScopedI18n } from '@/app/locales/client'
 import {
     FormControl,
     FormDescription,
     FormField,
     FormItem,
     FormLabel,
-    FormMessage
+    FormMessage,
 } from '@/components/ui/form'
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
 } from '@/components/ui/select'
 
 import { courseSchemaType } from './teacher/course/CreateCourse'
 
-export default function SelectStatus ({ control }: { control: Control<courseSchemaType> }) {
+export default function SelectStatus({
+    control,
+}: {
+    control: Control<courseSchemaType>
+}) {
+    const t = useScopedI18n('SelectStatus')
     return (
         <FormField
             control={control}
             name="status"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>{t('status')}</FormLabel>
                     <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                     >
                         <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder={t('placeholder')} />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="published">Published</SelectItem>
-                            <SelectItem value="archived">Archived</SelectItem>
+                            <SelectItem value="draft">{t('draft')}</SelectItem>
+                            <SelectItem value="published">
+                                {t('published')}
+                            </SelectItem>
+                            <SelectItem value="archived">
+                                {t('archived')}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                     <FormDescription></FormDescription>
