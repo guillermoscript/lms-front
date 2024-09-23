@@ -2,7 +2,7 @@
 
 import axios, { isAxiosError } from 'axios'
 import cx from 'classnames'
-import { CheckCircleIcon, CircleIcon, XCircleIcon } from 'lucide-react'
+import { CheckCircleIcon, CircleIcon, Loader, XCircleIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 
 import CorrectnessRadio from './CorrectnessRadio'
+import { useScopedI18n } from '@/app/locales/client'
 
 interface Answer {
     answer_id: number
@@ -41,6 +42,7 @@ export default function TestSubmissionReview({
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
     const router = useRouter()
+    const t = useScopedI18n('TestSubmissionReview')
 
     const handleFeedbackChange = (answerId: number, feedback: string) => {
         setAnswers((prevAnswers) =>
@@ -111,95 +113,87 @@ export default function TestSubmissionReview({
 
                         <div className="mt-2">
                             <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Student's Answer:
+                                {t('studentAnswer')}
                             </Label>
 
-                            {question.question_type === 'multiple_choice'
-                                ? (
-                                    <div className="mb-4 p-2 rounded flex flex-col gap-2">
-                                        {question.question_options.map((option) => {
-                                            const userAnwsers = answers.filter(
-                                                (a) =>
-                                                    a.question_id ===
-                                                    question.question_id
-                                            )
+                            {question.question_type === 'multiple_choice' ? (
+                                <div className="mb-4 p-2 rounded flex flex-col gap-2">
+                                    {question.question_options.map((option) => {
+                                        const userAnwsers = answers.filter(
+                                            (a) =>
+                                                a.question_id ===
+                                                question.question_id
+                                        )
 
-                                            const userAnswer = userAnwsers.find(
-                                                (a) =>
-                                                    a.answer_text
-                                                        .split(',')
-                                                        .includes(
-                                                            option.option_id.toString()
-                                                        )
-                                            )
+                                        const userAnswer = userAnwsers.find(
+                                            (a) =>
+                                                a.answer_text
+                                                    .split(',')
+                                                    .includes(
+                                                        option.option_id.toString()
+                                                    )
+                                        )
 
-                                            const isChecked = userAnwsers.some(
-                                                (a) =>
-                                                    a.answer_text
-                                                        .split(',')
-                                                        .includes(
-                                                            option.option_id.toString()
-                                                        )
-                                            )
+                                        const isChecked = userAnwsers.some(
+                                            (a) =>
+                                                a.answer_text
+                                                    .split(',')
+                                                    .includes(
+                                                        option.option_id.toString()
+                                                    )
+                                        )
 
-                                            const isCorrect = option.is_correct
+                                        const isCorrect = option.is_correct
 
-                                            const backgroundColor = isChecked
-                                                ? isCorrect
-                                                    ? 'bg-green-100 dark:bg-green-800'
-                                                    : 'bg-red-100 dark:bg-red-800'
-                                                : 'bg-gray-100 dark:bg-gray-800'
+                                        const backgroundColor = isChecked
+                                            ? isCorrect
+                                                ? 'bg-green-100 dark:bg-green-800'
+                                                : 'bg-red-100 dark:bg-red-800'
+                                            : 'bg-gray-100 dark:bg-gray-800'
 
-                                            return (
-                                                <div
-                                                    key={option.option_id}
-                                                    className={cx(
-                                                        'flex items-center gap-2 p-2 rounded',
-                                                        backgroundColor
-                                                    )}
-                                                >
-                                                    {
-                                                        isChecked
-                                                            ? (
-                                                                isCorrect
-                                                                    ? (
-                                                                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                                                                    )
-                                                                    : (
-                                                                        <XCircleIcon className="h-5 w-5 text-red-500" />
-                                                                    )
-                                                            )
-                                                            : (
-                                                                <CircleIcon className="h-5 w-5 text-gray-500" />
-                                                            )
-                                                    }
+                                        return (
+                                            <div
+                                                key={option.option_id}
+                                                className={cx(
+                                                    'flex items-center gap-2 p-2 rounded',
+                                                    backgroundColor
+                                                )}
+                                            >
+                                                {isChecked ? (
+                                                    isCorrect ? (
+                                                        <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                                    ) : (
+                                                        <XCircleIcon className="h-5 w-5 text-red-500" />
+                                                    )
+                                                ) : (
+                                                    <CircleIcon className="h-5 w-5 text-gray-500" />
+                                                )}
 
-                                                    <span>
-                                                        {option.option_text}
-                                                    </span>
-                                                    {
-                                                        isChecked && (
-                                                            <CorrectnessRadio
-                                                                answer={userAnswer}
-                                                                onChange={handleCorrectnessChange}
-                                                            />
-                                                        )
-                                                    }
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )
-                                : (
-                                    <p className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                                        {answer?.answer_text}
-                                    </p>
-                                )}
+                                                <span>
+                                                    {option.option_text}
+                                                </span>
+                                                {isChecked && (
+                                                    <CorrectnessRadio
+                                                        answer={userAnswer}
+                                                        onChange={
+                                                            handleCorrectnessChange
+                                                        }
+                                                    />
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded">
+                                    {answer?.answer_text}
+                                </p>
+                            )}
                         </div>
 
                         <div className="mt-4">
                             <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Feedback:
+                                {t('feedback')}
                             </Label>
 
                             <Textarea
@@ -213,10 +207,10 @@ export default function TestSubmissionReview({
                                 }
                             />
                         </div>
-                        {question.question_type !== 'multiple_choice' &&
+                        {question.question_type !== 'multiple_choice' && (
                             <div className="mt-4">
                                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Correct?
+                                    {t('correct')}
                                 </Label>
 
                                 <CorrectnessRadio
@@ -224,24 +218,28 @@ export default function TestSubmissionReview({
                                     onChange={handleCorrectnessChange}
                                 />
                             </div>
-                        }
+                        )}
                     </div>
                 )
             })}
 
             <div>
                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Score:
+                    {t('score')}
                 </Label>
 
                 <span className="text-2xl font-bold">
-                    {answers.reduce((acc, answer) => acc + (answer.is_correct ? 1 : 0), 0)}/{answers.length}
+                    {answers.reduce(
+                        (acc, answer) => acc + (answer.is_correct ? 1 : 0),
+                        0
+                    )}
+                    /{answers.length}
                 </span>
             </div>
 
             <div>
                 <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Overall Feedback:
+                    {t('overallFeedback')}
                 </Label>
 
                 <Textarea
@@ -250,19 +248,19 @@ export default function TestSubmissionReview({
                     onChange={(e) =>
                         setfeedback((prevfeedback) => ({
                             ...prevfeedback,
-                            overall_feedback: e.target.value
+                            overall_feedback: e.target.value,
                         }))
                     }
                 />
             </div>
 
             <div className="flex gap-2">
-
-                <Button
-                    disabled={isLoading}
-                    onClick={handleSubmit}
-                >
-                    Submit Review
+                <Button disabled={isLoading} onClick={handleSubmit}>
+                    {isLoading ? (
+                        <Loader className="h-6 w-6 animate-spin" />
+                    ) : (
+                        t('submit')
+                    )}
                 </Button>
             </div>
         </>
