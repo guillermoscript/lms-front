@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -27,6 +28,8 @@ export default async function CreateCourseLessonPage({
     if (course.error != null) {
         console.log(course.error.message)
     }
+
+    const t = await getI18n()
 
     const lessonRow = course.data?.lessons?.map((lesson) => {
         return {
@@ -58,34 +61,40 @@ export default async function CreateCourseLessonPage({
         <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: 'Dashboard' },
-                    { href: '/dashboard/teacher', label: 'Teacher' },
-                    { href: '/dashboard/teacher/courses', label: 'Courses' },
+                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
+                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
                     { href: `/dashboard/teacher/courses/${params.courseId}`, label: course?.data?.title }
                 ]}
             />
             <h1 className="text-2xl font-semibold  mb-4">
-                Course: {course?.data?.title}
+                {course?.data?.title}
             </h1>
             <p>{course?.data?.description}</p>
 
             <Separator className="my-4 " />
             <Tabs defaultValue="lessons" className="w-full space-y-4">
                 <TabsList>
-                    <TabsTrigger value="lessons">Lessons</TabsTrigger>
-                    <TabsTrigger value="tests">Tests</TabsTrigger>
+                    <TabsTrigger value="lessons">
+                        {t('dashboard.teacher.CreateCourseLessonPage.tabs.lessons')}
+                    </TabsTrigger>
+                    <TabsTrigger value="tests">
+                        {t('dashboard.teacher.CreateCourseLessonPage.tabs.exams')}
+                    </TabsTrigger>
                 </TabsList>
                 <TabsContent
                     className="flex flex-col  w-full  gap-4"
                     value="lessons"
                 >
                     <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-semibold">Lessons</h3>
+                        <h3 className="text-xl font-semibold">
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.lessons')}
+                        </h3>
                         <Link
                             className={buttonVariants({ variant: 'link' })}
                             href={`/dashboard/teacher/courses/${params.courseId}/lessons/`}
                         >
-                            Create Lesson
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.createLesson')}
                         </Link>
                     </div>
                     <DataTable columns={lessonsCols} data={lessonRow as any[]} />
@@ -95,12 +104,14 @@ export default async function CreateCourseLessonPage({
                     value="tests"
                 >
                     <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-semibold">Tests</h3>
+                        <h3 className="text-xl font-semibold">
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.tests')}
+                        </h3>
                         <Link
                             className={buttonVariants({ variant: 'link' })}
                             href={`/dashboard/teacher/courses/${params.courseId}/tests/`}
                         >
-                            Create Test
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.createTest')}
                         </Link>
                     </div>
 
