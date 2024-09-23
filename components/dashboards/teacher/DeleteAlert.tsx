@@ -1,4 +1,7 @@
 'use client'
+import { Trash } from 'lucide-react'
+
+import { useScopedI18n } from '@/app/locales/client'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -21,23 +24,28 @@ export default function DeleteAlert({
     itemType: string
     deleteAction: (id: string) => Promise<any>
 }) {
+    const t = useScopedI18n('DeleteAlert')
+
     return (
         <AlertDialog>
             <Button asChild variant="ghost" className="w-full">
-                <AlertDialogTrigger>Delete {itemType}</AlertDialogTrigger>
+                <AlertDialogTrigger>
+                    <Trash />
+                    {itemType}</AlertDialogTrigger>
             </Button>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you absolutely sure?
+                        {t('title')}
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        delete the {itemType}.
+                        {t('description')}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>
+                        {t('cancel')}
+                    </AlertDialogCancel>
                     <AlertDialogAction asChild>
                         <Button
                             variant={'destructive'}
@@ -49,7 +57,7 @@ export default function DeleteAlert({
                                 }
                             }}
                         >
-                            Delete
+                            {t('delete')}
                         </Button>
                     </AlertDialogAction>
                 </AlertDialogFooter>
