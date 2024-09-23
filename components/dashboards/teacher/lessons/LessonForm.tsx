@@ -8,6 +8,7 @@ import {
     createLessonsAction,
     editLessonsAction
 } from '@/actions/dashboard/lessonsAction'
+import { useScopedI18n } from '@/app/locales/client'
 import { Input, Select } from '@/components/form/Form'
 import {
     Card,
@@ -94,53 +95,39 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
     // const contentWatch = formMethods.watch('content')
     // const systemPromptWatch = formMethods.watch('systemPrompt')
     // const taskInstructionsWatch = formMethods.watch('task_instructions')
+    const t = useScopedI18n('LessonForm')
 
     return (
         <FormProvider {...formMethods}>
             <form action={action} className="space-y-4 container">
                 <h1 className="text-2xl font-semibold">
-                    {isEditing ? 'Edit' : 'Create'} Lesson
+                    {isEditing ? 'Edit' : 'Create'} {t('title')}
                 </h1>
-                <Input type="text" name="title" displayName="Title" />
+                <Input type="text" name="title" displayName={t('form.title')} />
 
-                <Input type="text" name="description" displayName="Description" />
-                <Input name="sequence" displayName="Sequence" type="number" />
-                <Input type="text" name="video_url" displayName="YouTube Video URL" />
-                <Input type="text" name="embed" displayName="Embed Code" />
-                <Input type="text" name="image" displayName="Image URL" />
+                <Input type="text" name="description" displayName={t('form.description')} />
+                <Input name="sequence" displayName="Sequence" type={t('form.sequence')} />
+                <Input type="text" name="video_url" displayName={t('form.videoUrl')} />
+                <Input type="text" name="embed" displayName={t('form.embed')} />
+                <Input type="text" name="image" displayName={t('form.image')} />
                 <Select
                     name="status"
-                    displayName="Status"
+                    displayName={t('form.status')}
                     options={[
-                        { value: 'draft', label: 'Draft' },
-                        { value: 'published', label: 'Published' },
-                        { value: 'archived', label: 'Archived' }
+                        { value: 'draft', label: t('form.statusOptions.draft') },
+                        { value: 'published', label: t('form.statusOptions.published') },
+                        { value: 'archived', label: t('form.statusOptions.archived') }
                     ]}
                     clasess={selectClassNames}
                 />
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Content of lessons</CardTitle>
+                        <CardTitle>
+                            {t('cardTitle')}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {/* <Suspense fallback={
-                            <div>Loading...</div>
-                        }
-                        >
-                            <ForwardRefEditor
-                                markdown={contentWatch}
-                                className="markdown-body"
-                                onChange={(value) => {
-                                    console.log(value)
-                                    formMethods.setValue('content', value)
-                                }}
-                                onError={(error) => {
-                                    console.log('Error in editor content', error)
-                                }}
-                            />
-                            <input type="hidden" name="content" value={contentWatch} />
-                        </Suspense> */}
                         <Textarea
                             name="content"
                             placeholder="Content of the lesson"
@@ -153,33 +140,17 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>System Prompt</CardTitle>
+                        <CardTitle>
+                            {t('systemPromptTitle')}
+                        </CardTitle>
                         <CardDescription>
-              This is the prompt that the AI will use to generate responses.
+                            {t('systemPromptDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* <Suspense fallback={
-                            <div>Loading...</div>
-                        }
-                        >
-                            <ForwardRefEditor
-                                markdown={systemPromptWatch}
-                                className="markdown-body"
-                                onChange={(value) => formMethods.setValue('systemPrompt', value)}
-                                onError={(error) => {
-                                    console.log('Error in editor system prompt', error)
-                                }}
-                            />
-                            <input
-                                type="hidden"
-                                name="systemPrompt"
-                                value={systemPromptWatch}
-                            />
-                        </Suspense> */}
                         <Textarea
                             name="systemPrompt"
-                            placeholder="System Prompt"
+                            placeholder={t('form.systemPrompt')}
                             rows={15}
                         />
                     </CardContent>
@@ -188,34 +159,16 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                 <Card>
                     <CardHeader>
                         <CardTitle>
-                            Task Instructions
+                            {t('taskInsturctionsTitle')}
                         </CardTitle>
                         <CardDescription>
-                            The assignment instructions for the AI task.
+                            {t('taskInstructionsDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* <Suspense fallback={
-                            <div>Loading...</div>
-                        }
-                        >
-                            <ForwardRefEditor
-                                markdown={taskInstructionsWatch}
-                                className="markdown-body"
-                                onChange={(value) => formMethods.setValue('task_instructions', value)}
-                                onError={(error) => {
-                                    console.log('Error in editor system prompt', error)
-                                }}
-                            />
-                            <input
-                                type="hidden"
-                                name="task_instructions"
-                                value={taskInstructionsWatch}
-                            />
-                        </Suspense> */}
                         <Textarea
                             name="task_instructions"
-                            placeholder="Task Instructions"
+                            placeholder={t('form.taskInstructions')}
                             rows={15}
                         />
                     </CardContent>
