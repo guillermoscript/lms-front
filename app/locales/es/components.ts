@@ -248,6 +248,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
             title: 'Chat libre',
             description: 'Aquí es donde puedes chatear con el asistente de IA. Puedes hacer preguntas, obtener sugerencias y más.',
         },
+
         examPrep: {
             title: 'Preparación para el examen',
             description: 'Aquí es donde puedes prepararte para tus exámenes, la IA creará formularios para que los completes y obtengas comentarios sobre tus respuestas.',
@@ -347,7 +348,9 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         },
         cardTitle: 'Contenido de la lección',
         systemPromptTitle: 'Sistema de sugerencias',
+        taskInsturctionsTitle: 'Instrucciones de la tarea',
         systemPromptDescription: 'Sistema de sugerencias para la lección',
+        taskInstructionsDescription: 'Instrucciones para la tarea de la lección',
         form: {
             title: 'Título',
             description: 'Descripción',
@@ -356,7 +359,12 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
             embed: 'Incrustar',
             image: 'Imagen',
             status: 'Estado',
-            systemPrompt: 'Sistema de sugerencias'
+            systemPrompt: 'Sistema de sugerencias',
+            statusOptions: {
+                draft: 'Draft',
+                published: 'Published',
+                archived: 'Archived',
+            },
         }
     },
     TeacherTestForm: {
