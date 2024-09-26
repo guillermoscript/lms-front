@@ -1,7 +1,7 @@
 'use server'
 import 'server-only'
 
-import { google } from '@ai-sdk/google'
+import { openai } from '@ai-sdk/openai'
 import { generateId } from 'ai'
 import { createAI, getMutableAIState, streamUI } from 'ai/rsc'
 import dayjs from 'dayjs'
@@ -46,7 +46,8 @@ export async function continueTaskAiSandBoxConversation(
     console.log(systemMessage)
 
     const result = await streamUI({
-        model: google('models/gemini-1.5-pro-latest'),
+        // model: google('gemini-1.5-pro-latest'),
+        model: openai('gpt-4o-mini'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
@@ -54,7 +55,7 @@ export async function continueTaskAiSandBoxConversation(
                 name: message.name,
             })),
         ],
-        temperature: 0.3,
+        temperature: 0.7,
         initial: (
             <Message
                 sender={'assistant'}
@@ -95,13 +96,9 @@ export async function continueTaskAiSandBoxConversation(
                 description:
                     'Function to mark the assignment as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the assignment.',
                 parameters: z.object({
-                    assignmentId: z
-                        .string()
-                        .describe(
-                            'The ID of the assignment to mark as completed.'
-                        ),
+                    feedback: z.string().describe('This is the feedback given to the user for completing the task')
                 }),
-                generate: async function ({ assignmentId }) {
+                generate: async function ({ feedback }) {
                     const toolCallId = generateId()
 
                     aiState.done({
@@ -154,6 +151,9 @@ export async function continueTaskAiSandBoxConversation(
                                 message="Assignment marked as completed."
                                 fire
                             />
+                            <p>
+                                {feedback}
+                            </p>
                         </Message>
                     )
                 },
