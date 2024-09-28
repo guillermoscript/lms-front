@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { Edit } from 'lucide-react'
 import Link from 'next/link'
 
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import { FreeTextQuestionRead } from '@/components/dashboards/teacher/test/FreeTextQuestion'
 import { MultipleChoiceQuestionRead } from '@/components/dashboards/teacher/test/MultipleChoiceQuestion'
