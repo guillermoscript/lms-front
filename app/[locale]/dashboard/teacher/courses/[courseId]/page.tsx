@@ -105,13 +105,13 @@ export default async function CreateCourseLessonPage({
                 >
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-semibold">
-                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.tests')}
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.exams')}
                         </h3>
                         <Link
                             className={buttonVariants({ variant: 'link' })}
                             href={`/dashboard/teacher/courses/${params.courseId}/tests/`}
                         >
-                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.createTest')}
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.createExam')}
                         </Link>
                     </div>
 
