@@ -19,10 +19,10 @@ export default async function Index() {
                 <ParticlesSection>
                     <HeroVideoDialogDemoTopInBottomOut />
                 </ParticlesSection>
-                <FeaturesSection />
                 <ChatOptionsShowcase />
-                <OptionsSection />
+                <FeaturesSection />
                 <GeminiHeroSection />
+                <OptionsSection />
                 <WaitingList />
             </div>
             <div className="w-full ">

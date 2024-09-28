@@ -64,32 +64,22 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
         }
     )
     const defaultValues: LessonSchemaType = {
-        title: '',
-        sequence: 0,
-        video_url: '',
-        embed: '',
-        description: '',
-        content: '',
-        image: '',
-        status: 'draft',
-        task_instructions: '',
-        ...(initialValues || {
-            title: '',
-            sequence: 0,
-            video_url: '',
-            embed: '',
-            content: '',
-            status: 'draft',
-            image: '',
-            systemPrompt: '',
-            description: '',
-            task_instructions: ''
-        })
+        title: initialValues?.title || '',
+        sequence: initialValues?.sequence || 0,
+        video_url: initialValues?.video_url || '',
+        embed: initialValues?.embed || '',
+        description: initialValues?.description || '',
+        content: initialValues?.content || '',
+        image: initialValues?.image || '',
+        status: initialValues?.status || 'draft',
+        task_instructions: initialValues?.task_instructions || '',
     }
 
     const formMethods = useForm<LessonSchemaType>({
         resolver: yupResolver(lessonSchema),
-        defaultValues
+        ...(
+            isEditing && { defaultValues }
+        )
     })
 
     // const contentWatch = formMethods.watch('content')
@@ -132,6 +122,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                             name="content"
                             placeholder="Content of the lesson"
                             rows={15}
+                            defaultValue={initialValues?.content}
                         />
                     </CardContent>
                 </Card>
@@ -152,6 +143,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                             name="systemPrompt"
                             placeholder={t('form.systemPrompt')}
                             rows={15}
+                            defaultValue={initialValues?.systemPrompt}
                         />
                     </CardContent>
                 </Card>
@@ -170,6 +162,7 @@ const LessonForm: React.FC<LessonFormProps> = ({ params, initialValues }) => {
                             name="task_instructions"
                             placeholder={t('form.taskInstructions')}
                             rows={15}
+                            defaultValue={initialValues?.task_instructions}
                         />
                     </CardContent>
                 </Card>

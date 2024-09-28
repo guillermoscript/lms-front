@@ -9,7 +9,7 @@ export default function ButtonSubmitDashbaord () {
     return (
         <Button type="submit" disabled={pending}>
             {pending ? (
-                <Loader />
+                <Loader className='h-4 w-4 animate-spin' />
             ) : 'Submit'}
         </Button>
     )
