@@ -91,7 +91,7 @@ Once you think the student has completed the task, you can end the conversation 
 
     return (
         <section className="py-16 w-full">
-            <h2 className="text-3xl font-bold text-center mb-8">
+            <h2 className="text-5xl font-bold text-center mb-8">
                 {t('title')}
             </h2>
             <Tabs defaultValue="code" className="w-full space-y-4">
