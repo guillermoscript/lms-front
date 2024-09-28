@@ -137,6 +137,9 @@ export default function ResetPassword({
                                                     )}
                                                 </button>
                                             </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t('auth.resetPassword.passwordHelp')}
+                                            </p>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
