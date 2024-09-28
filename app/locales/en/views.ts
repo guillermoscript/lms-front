@@ -249,6 +249,7 @@ export default {
             button: 'Reset Password',
             loading: 'Resetting Password...',
             back: 'Back to Login',
+            passwordHelp: 'Important: Your password should have 1 Cap, 1 number, 1 special character and a min lenght of 8 characters',
         },
     },
 

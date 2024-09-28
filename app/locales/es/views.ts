@@ -249,6 +249,7 @@ export default {
             button: 'Resetear contraseña',
             loading: 'Reseteando contraseña...',
             back: 'Volver a iniciar sesion',
+            passwordHelp: 'Importante: Tu contraseña debe tener 1 mayúscula, 1 número, 1 carácter especial y una longitud mínima de 8 caracteres',
         },
     },
     waitingRoom: {
