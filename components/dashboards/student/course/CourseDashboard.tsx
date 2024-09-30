@@ -20,30 +20,13 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useScopedI18n } from '@/app/locales/client'
 
-interface Course {
-    course_id: string
-    course: {
-        title: string
-        description: string
-        thumbnail_url: string
-        lessons: any[]
-        exams: any[]
-    }
-}
-
-interface CourseDashboardProps {
-    userCourses: Course[]
-    userId: string
-    supabase: SupabaseClient
-    t: (key: string) => string
-}
 
 const CourseCard = ({
     course,
     t,
     view,
 }: {
-    course: Course
+    course: any
     t: (key: string) => string
     view: 'grid' | 'list'
 }) => {
@@ -126,7 +109,7 @@ const CourseCard = ({
     )
 }
 
-const CourseDashboard: React.FC<CourseDashboardProps> = ({ userCourses }) => {
+const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
     const [searchTerm, setSearchTerm] = useState('')
     const [view, setView] = useState<'grid' | 'list'>('grid')
     const t = useScopedI18n('CourseDashboard')
