@@ -59,6 +59,7 @@ export default {
     },
     LessonContent: {
         video: 'Video',
+
         summary: 'Summary',
         aiTask: 'AI Task',
         aiTaskCompleted: 'AI Task Completed',
@@ -74,6 +75,12 @@ export default {
             cancel: 'Cancel',
             loading: 'Loading...',
             action: 'Reset Conversation',
+        },
+        TaksMessages: {
+            title: 'Complete your task',
+            simple: 'Simple',
+            markdown: 'Markdown',
+            status: 'Success',
         }
     },
     AiTaskMessage: {
@@ -388,5 +395,16 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         correct: 'Correct?',
         overallFeedback: 'Overall Feedback',
 
+    },
+    CourseDashboard: {
+        yourCourses: 'Your Courses',
+        searchCourses: 'Search Courses',
+        inProgress: 'In Progress',
+        completed: 'Completed',
+        allCourses: 'All Courses',
+        lessons: 'Lessons',
+        exams: 'Exams',
+        continueCourse: 'Continue Course',
+        noCoursesFound: 'No courses found',
     }
 } as const

@@ -75,6 +75,12 @@ export default {
             cancel: 'Cancelar',
             loading: 'Cargando...',
             action: 'Reiniciar tarea de IA'
+        },
+        TaksMessages: {
+            title: 'Completa tu tarea',
+            simple: 'Simple',
+            markdown: 'Markdown',
+            status: 'Éxito',
         }
     },
     AiTaskMessage: {
@@ -396,5 +402,16 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         score: 'Puntuación',
         correct: 'Correcto',
         overallFeedback: 'Retroalimentación general',
+    },
+    CourseDashboard: {
+        yourCourses: 'Tus Cursos',
+        searchCourses: 'Buscar Cursos',
+        inProgress: 'En Progreso',
+        completed: 'Completado',
+        allCourses: 'Todos los Cursos',
+        lessons: 'Lecciones',
+        exams: 'Exámenes',
+        continueCourse: 'Continuar Curso',
+        noCoursesFound: 'No se encontraron cursos',
     }
 } as const
