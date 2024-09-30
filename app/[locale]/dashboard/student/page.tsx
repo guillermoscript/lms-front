@@ -1,6 +1,5 @@
 import { ChatBubbleIcon } from '@radix-ui/react-icons'
 import dayjs from 'dayjs'
-import { Loader } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense } from 'react'
 

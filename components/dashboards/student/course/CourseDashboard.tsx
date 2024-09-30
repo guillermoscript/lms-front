@@ -1,10 +1,10 @@
 'use client'
-import { SupabaseClient } from '@supabase/supabase-js'
 import { ChevronRight, Grid, List, Search } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,8 +18,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useScopedI18n } from '@/app/locales/client'
-
 
 const CourseCard = ({
     course,
@@ -121,7 +119,7 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                 .includes(searchTerm.toLowerCase()) ||
             course.course.description
                 .toLowerCase()
-               .includes(searchTerm.toLowerCase())
+                .includes(searchTerm.toLowerCase())
     )
 
     return (
