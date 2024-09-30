@@ -1,10 +1,10 @@
 
 import { getScopedI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import CourseSectionComponent from '@/components/dashboards/student/course/CourseSectionComponent'
+import CourseDashboard from '@/components/dashboards/student/course/CourseDashboard'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function CoursesStudentPage () {
+export default async function CourseSectionComponent () {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
     const t = await getScopedI18n('BreadcrumbComponent')
@@ -23,7 +23,7 @@ export default async function CoursesStudentPage () {
     if (userSubscriptions.error) throw new Error(userSubscriptions.error.message)
 
     return (
-        <>
+        <div className="container mx-auto">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('dashboard') },
@@ -31,13 +31,9 @@ export default async function CoursesStudentPage () {
                     { href: '/dashboard/student/courses/', label: t('courses') },
                 ]}
             />
-            <CourseSectionComponent
+            <CourseDashboard
                 userCourses={userCourses.data}
-                userSubscriptions={userSubscriptions.data}
-                userId={user.data.user.id}
-                supabase={supabase}
-                layoutType="flex"
             />
-        </>
+        </div>
     )
 }
