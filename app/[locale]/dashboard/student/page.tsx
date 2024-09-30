@@ -83,11 +83,11 @@ export default async function CoursesStudentPage() {
                     <RecentlyViewed lessonsView={lessonsView.data} />
                 </Suspense>
             )}
-            {userChats.data.length > 0 && (
+            {/* {userChats.data.length > 0 && (
                 <Suspense fallback={<Loader className="mx-auto my-8" />}>
                     <ChatsSectionComponent chats={userChats.data} />
                 </Suspense>
-            )}
+            )} */}
         </>
     )
 }
