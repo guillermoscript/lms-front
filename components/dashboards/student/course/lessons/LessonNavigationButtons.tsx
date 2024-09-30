@@ -23,7 +23,7 @@ export default async function LessonNavigationButtons ({
         .eq('course_id', courseId)
         .order('sequence', { ascending: true })
 
-    const currentIndex = lessons.data.findIndex(lesson => lesson.id === lessonId)
+    const currentIndex = lessons.data?.findIndex(lesson => lesson.id === lessonId)
     const hasNext = currentIndex < lessons.data.length - 1
     const hasPrevious = currentIndex > 0
 
