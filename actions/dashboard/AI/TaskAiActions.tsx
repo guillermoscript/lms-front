@@ -66,7 +66,7 @@ export async function continueTaskAiConversation(
         .messages.find((message) => message.role === 'system')
 
     const result = await streamUI({
-        model: google('models/gemini-1.5-pro-latest'),
+        model: google('gemini-1.5-pro-002'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
@@ -74,7 +74,7 @@ export async function continueTaskAiConversation(
                 name: message.name,
             })),
         ],
-        temperature: 0.9,
+        temperature: 0.6,
         initial: (
             <Message
                 sender={'assistant'}
@@ -135,15 +135,11 @@ export async function continueTaskAiConversation(
         tools: {
             makeUserAssigmentCompleted: {
                 description:
-                    'Function to mark the assignment as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the assignment.',
+                    'Function to mark the assignment as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the assignment. Respond using the language of the student.',
                 parameters: z.object({
-                    assignmentId: z
-                        .string()
-                        .describe(
-                            'The ID of the assignment to mark as completed.'
-                        ),
+                    feedback: z.string().describe('Feedback for the student. Tell them what they did right and what they can improve, if needed.'),
                 }),
-                generate: async function ({ assignmentId }) {
+                generate: async function ({ feedback }) {
                     const toolCallId = generateId()
 
                     aiState.done({
@@ -161,7 +157,7 @@ export async function continueTaskAiConversation(
                                         args: {
                                             status: 'success',
                                             message:
-                                                'Assignment marked as completed.',
+                                            feedback,
                                         },
                                     },
                                 ],
@@ -176,14 +172,23 @@ export async function continueTaskAiConversation(
                                         toolCallId,
                                         result: {
                                             status: 'success',
-                                            message:
-                                                'Assignment marked as completed.',
+                                            message: feedback
                                         },
                                     },
                                 ],
                             },
                         ],
                     })
+
+                    const message = await supabase
+                        .from('lessons_ai_task_messages')
+                        .insert({
+                            lesson_id: +aiState.get().lessonId,
+                            message: feedback,
+                            sender: 'assistant',
+                            user_id: aiState.get().userId,
+                            created_at: new Date().toISOString(),
+                        })
 
                     const task = await supabase
                         .from('lesson_completions')
@@ -193,17 +198,32 @@ export async function continueTaskAiConversation(
                         })
 
                     return (
-                        <Message
-                            sender={'assistant'}
-                            time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
-                            isUser={false}
-                        >
-                            <SuccessMessage
-                                status="success"
-                                message="Assignment marked as completed."
-                                fire
-                            />
-                        </Message>
+                        <>
+                            <Message
+                                sender={'assistant'}
+                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                isUser={false}
+                            >
+                                <MessageContentWrapper
+                                    role="assistant"
+                                    view={<ViewMarkdown markdown={feedback} />}
+                                    edit={<></>}
+
+                                    regenerate={<></>}
+                                />
+                            </Message>
+                            <Message
+                                sender={'assistant'}
+                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                isUser={false}
+                            >
+                                <SuccessMessage
+                                    status="success"
+                                    message="Assignment marked as completed."
+                                    fire
+                                />
+                            </Message>
+                        </>
                     )
                 },
             },
