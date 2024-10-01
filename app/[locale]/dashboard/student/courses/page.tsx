@@ -23,7 +23,7 @@ export default async function CourseSectionComponent () {
     if (userSubscriptions.error) throw new Error(userSubscriptions.error.message)
 
     return (
-        <div className="container mx-auto">
+        <>
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('dashboard') },
@@ -34,6 +34,6 @@ export default async function CourseSectionComponent () {
             <CourseDashboard
                 userCourses={userCourses.data}
             />
-        </div>
+        </>
     )
 }
