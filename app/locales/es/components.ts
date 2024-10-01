@@ -413,5 +413,22 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         exams: 'Exámenes',
         continueCourse: 'Continuar Curso',
         noCoursesFound: 'No se encontraron cursos',
+    },
+    StudentDashboard: {
+        welcome: '¡Bienvenido, Estudiante!',
+        dashboardDescription: 'Aquí tienes una visión general de tus cursos y actividades.',
+        totalCourses: 'Cursos Totales',
+        averageProgress: 'Progreso Promedio',
+        upcomingDeadlines: 'Próximas Fechas Límite',
+        unreadMessages: 'Mensajes No Leídos',
+        courseProgress: 'Progreso del Curso',
+        viewAllCourses: 'Ver Todos los Cursos',
+        recentActivity: 'Actividad Reciente',
+        viewAllActivity: 'Ver Toda la Actividad',
+        progress: 'Progreso',
+        lessons: 'Lecciones',
+        continueCourse: 'Continuar Curso',
+        lastViewed: 'Última Vista',
+        continueLesson: 'Continuar Lección',
     }
 } as const

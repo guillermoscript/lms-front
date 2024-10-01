@@ -406,5 +406,22 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         exams: 'Exams',
         continueCourse: 'Continue Course',
         noCoursesFound: 'No courses found',
+    },
+    StudentDashboard: {
+        welcome: 'Welcome, Student!',
+        dashboardDescription: 'Here is an overview of your courses and activities.',
+        totalCourses: 'Total Courses',
+        averageProgress: 'Average Progress',
+        upcomingDeadlines: 'Upcoming Deadlines',
+        unreadMessages: 'Unread Messages',
+        courseProgress: 'Course Progress',
+        viewAllCourses: 'View All Courses',
+        recentActivity: 'Recent Activity',
+        viewAllActivity: 'View All Activity',
+        progress: 'Progress',
+        lessons: 'Lessons',
+        continueCourse: 'Continue Course',
+        lastViewed: 'Last Viewed',
+        continueLesson: 'Continue Lesson',
     }
 } as const
