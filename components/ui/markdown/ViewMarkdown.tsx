@@ -57,10 +57,12 @@ export default function ViewMarkdown({
                 },
                 table({ children, ...props }) {
                     return (
-                        <div className="overflow-x-auto">
-                            <table className="table-auto w-full" {...props}>
-                                {children}
-                            </table>
+                        <div className="w-full">
+                            <div className="overflow-x-auto max-w-[340px] md:max-w-full">
+                                <table className="table-auto w-full" {...props}>
+                                    {children}
+                                </table>
+                            </div>
                         </div>
                     )
                 }
