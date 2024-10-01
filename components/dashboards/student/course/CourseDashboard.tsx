@@ -84,7 +84,7 @@ const CourseCard = ({
                         <Progress value={(completedExams / totalExams) * 100} />
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
+                <CardFooter className="flex justify-between flex-wrap md:flex-nowrap items-center gap-4">
                     <Button asChild variant="default">
                         <Link
                             href={`/dashboard/student/courses/${course.course_id}`}
@@ -123,7 +123,7 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
     )
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div>
             <h1 className="text-3xl font-bold mb-8">{t('yourCourses')}</h1>
 
             <div className="flex justify-between items-center mb-6">
