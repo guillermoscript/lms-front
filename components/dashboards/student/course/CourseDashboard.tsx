@@ -87,7 +87,7 @@ const CourseCard = ({
                 <CardFooter className="flex justify-between flex-wrap md:flex-nowrap items-center gap-4">
                     <Button asChild variant="default">
                         <Link
-                            href={`/dashboard/student/courses/${course.course_id}`}
+                            href={`/dashboard/student/courses/${course.course.course_id}`}
                         >
                             {t('continueCourse')}{' '}
                             <ChevronRight className="ml-2 h-4 w-4" />
@@ -123,7 +123,9 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
     )
 
     return (
-        <div>
+        <div
+            className='md:container'
+        >
             <h1 className="text-3xl font-bold mb-8">{t('yourCourses')}</h1>
 
             <div className="flex justify-between items-center mb-6">
