@@ -1,4 +1,3 @@
-
 import { getScopedI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import CourseDashboard from '@/components/dashboards/student/course/CourseDashboard'
@@ -11,12 +10,21 @@ export default async function CourseSectionComponent () {
 
     const userCourses = await supabase
         .from('enrollments')
-        .select('*, course:course_id(*,lessons(*), exams(*))')
+        .select(`
+            course:course_id(
+                course_id,
+                title,
+                description,
+                thumbnail_url,
+                lessons(id),
+                exams(exam_id)
+            )
+        `)
         .eq('user_id', user.data.user.id)
 
     const userSubscriptions = await supabase
         .from('subscriptions')
-        .select('*')
+        .select('subscription_id')
         .eq('user_id', user.data.user.id)
 
     if (userCourses.error) throw new Error(userCourses.error.message)
