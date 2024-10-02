@@ -93,7 +93,10 @@ const LessonCard = ({
             </Badge>
         </CardContent>
         <CardFooter className="p-4 pt-0">
-            <Button asChild className="w-full">
+            <Button
+                variant={status === 'Completed' ? 'secondary' : 'default'}
+                asChild className="w-full"
+            >
                 <Link href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}>
                     {status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : t('dashboard.student.CourseStudentPage.start')}
                 </Link>
