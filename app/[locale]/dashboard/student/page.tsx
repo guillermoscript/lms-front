@@ -6,7 +6,6 @@ import { createClient } from '@/utils/supabase/server'
 export default async function CoursesStudentPage() {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
-    // const t = await getScopedI18n('studentDashboard')
 
     const userCourses = await supabase
         .from('enrollments')
