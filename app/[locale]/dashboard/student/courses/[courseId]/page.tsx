@@ -148,7 +148,7 @@ export default async function CourseStudentPage({
         .from('courses')
         .select(
             `*,
-        lessons(*, lesson_completions(*)),
+        lessons(title, description, image, sequence, id, lesson_completions(*)),
         exams(*,
             exam_submissions(
                 submission_id,
