@@ -16,7 +16,7 @@ export default async function CourseSectionComponent () {
                 title,
                 description,
                 thumbnail_url,
-                lessons(id),
+                lessons(id, lesson_completions(*)),
                 exams(exam_id)
             )
         `)
@@ -32,13 +32,15 @@ export default async function CourseSectionComponent () {
 
     return (
         <>
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('dashboard') },
-                    { href: '/dashboard/student', label: t('student') },
-                    { href: '/dashboard/student/courses/', label: t('courses') },
-                ]}
-            />
+            <div className="container mx-auto pt-8">
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: t('dashboard') },
+                        { href: '/dashboard/student', label: t('student') },
+                        { href: '/dashboard/student/courses/', label: t('courses') },
+                    ]}
+                />
+            </div>
             <CourseDashboard
                 userCourses={userCourses.data}
             />
