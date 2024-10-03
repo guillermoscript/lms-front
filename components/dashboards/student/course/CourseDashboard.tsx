@@ -31,7 +31,7 @@ const CourseCard = ({
     const totalLessons = course.course.lessons.length
     const totalExams = course.course.exams.length
     const completedLessons = course.course.lessons.filter(
-        (lesson) => lesson.completed
+        (lesson) => lesson.lesson_completions.length > 0
     ).length
     const completedExams = course.course.exams.filter(
         (exam) => exam.completed
@@ -157,7 +157,7 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                 </div>
             </div>
 
-            <Tabs defaultValue="all" className="mb-6">
+            <Tabs defaultValue="all" className="mb-6 space-y-4">
                 <TabsList>
                     <TabsTrigger value="inProgress">
                         {t('inProgress')}
