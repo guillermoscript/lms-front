@@ -182,7 +182,7 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                                     course.course.exams.length
                                 const completedItems =
                                     course.course.lessons.filter(
-                                        (l) => l.completed
+                                        (l) => l.lesson_completions.length > 0
                                     ).length +
                                     course.course.exams.filter(
                                         (e) => e.completed
