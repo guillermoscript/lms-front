@@ -16,9 +16,9 @@ export default async function CourseSectionComponent() {
     const coursesQuery =
         subscriptions.data.length > 0
             ? supabase
-                  .from('courses')
-                  .select(
-                      `
+                .from('courses')
+                .select(
+                    `
                 course_id,
             title,
             description,
@@ -26,13 +26,13 @@ export default async function CourseSectionComponent() {
             lessons(id, lesson_completions(*)),
             exams(exam_id)
             `
-                  )
-                  .eq('status', 'published')
-                  .eq('lessons.lesson_completions.user_id', user.data.user.id)
+                )
+                .eq('status', 'published')
+                .eq('lessons.lesson_completions.user_id', user.data.user.id)
             : supabase
-                  .from('enrollments')
-                  .select(
-                      `
+                .from('enrollments')
+                .select(
+                    `
                 course:course_id(
                 course_id,
                 title,
@@ -42,9 +42,9 @@ export default async function CourseSectionComponent() {
                 exams(exam_id)
             )
             `
-                  )
-                  .eq('user_id', user.data.user.id)
-                  .eq('course.lessons.lesson_completions.user_id', user.data.user.id)
+                )
+                .eq('user_id', user.data.user.id)
+                .eq('course.lessons.lesson_completions.user_id', user.data.user.id)
 
     const coursesResult = await coursesQuery
 
