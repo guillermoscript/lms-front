@@ -189,7 +189,6 @@ export default async function CourseStudentPage({
             <div
                 className='pb-6'
             >
-
                 <BreadcrumbComponent
                     links={[
                         { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
@@ -216,7 +215,7 @@ export default async function CourseStudentPage({
                 t={t}
             />
 
-            <Tabs defaultValue="lessons" className="w-full">
+            <Tabs defaultValue="lessons" className="w-full space-y-8">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="lessons">{t('dashboard.student.CourseStudentPage.lessons')}</TabsTrigger>
                     <TabsTrigger value="exams">{t('dashboard.student.CourseStudentPage.exams')}</TabsTrigger>
