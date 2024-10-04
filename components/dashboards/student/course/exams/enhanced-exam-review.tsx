@@ -107,7 +107,7 @@ const ExamReview: React.FC<ExamReviewProps> = ({ examData, aiData, examIsReviewe
         : 0
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto">
             <Card className="mb-8">
                 <CardHeader>
                     <div className="flex justify-between items-center">
