@@ -36,31 +36,6 @@ const QuestionCard = ({ question, answer, examIsReviewed }) => {
 
     const isCorrect = examIsReviewed && answer.is_correct
 
-    const getAnswerText = (answerText) => {
-        if (question.question_type === 'multiple_choice') {
-            const selectedOptionIds = answerText.split(',')
-            return selectedOptionIds
-                .map(
-                    (id) =>
-                        question.question_options.find(
-                            (opt) => opt.option_id.toString() === id
-                        )?.option_text
-                )
-                .join(', ')
-        }
-        return answerText
-    }
-
-    const getCorrectAnswerText = () => {
-        if (question.question_type === 'multiple_choice') {
-            return question.question_options
-                .filter((opt) => opt.is_correct)
-                .map((opt) => opt.option_text)
-                .join(', ')
-        }
-        return question.correct_answer
-    }
-
     const renderAnswerOption = (optionText, isSelected, isCorrect) => {
         let bgColor = 'bg-gray-100 dark:bg-gray-800'
         let icon = null
