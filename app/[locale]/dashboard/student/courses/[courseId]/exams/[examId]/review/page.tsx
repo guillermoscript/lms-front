@@ -86,6 +86,8 @@ export default async function StudentExamReviewCoursePage ({
 
     const t = await getI18n()
 
+    console.log(examData.data.exam_submissions)
+
     return (
         <>
             <div className='container'>

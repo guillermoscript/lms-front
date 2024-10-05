@@ -3,7 +3,7 @@
 import { User } from '@supabase/supabase-js'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { Edit2, Flag, MessageSquare, ThumbsUp } from 'lucide-react'
+import { Edit2, Flag, ThumbsUp } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
