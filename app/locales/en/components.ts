@@ -443,5 +443,6 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         waitingForReview: 'Waiting for review',
         notSpecified: 'Not specified',
         aiReviewFooter: 'This is the AI review of your exam, its not final and is just for your reference on how you did. Please wait for the final review from your teacher.',
+        options: 'Options',
     }
 } as const

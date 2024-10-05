@@ -450,5 +450,6 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         waitingForReview: 'Esperando revisión',
         notSpecified: 'No especificado',
         aiReviewFooter: 'Esta es la revisión de IA de tu examen, no es final y es solo para tu referencia sobre cómo lo hiciste. Por favor, espera la revisión final de tu profesor.',
+        options: 'Opciones',
     }
 } as const
