@@ -25,7 +25,7 @@ export default function CommentEditor ({
     const [commentState, setComment] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const { toast } = useToast()
-    const t = useScopedI18n('CommentEditor')
+    const t = useScopedI18n('CommentsSections.CommentEditor')
 
     const submitComment = async () => {
         const payload = comment_id ? { content: commentState, commentId: comment_id } : { comment: commentState, lesson_id, parent_comment_id, course_id }
