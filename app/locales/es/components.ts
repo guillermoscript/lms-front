@@ -43,6 +43,10 @@ export default {
     CommentsSections: {
         title: 'Comentarios',
         CardTitle: 'Agregar un comentario',
+        edit: 'Editar',
+        delete: 'Eliminar',
+        reply: 'Responder',
+        comments: 'Comentarios',
         CommentCard: {
             cancel: 'Cancelar',
             reply: 'Responder',

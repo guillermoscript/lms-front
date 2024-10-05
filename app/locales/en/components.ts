@@ -42,6 +42,10 @@ export default {
     CommentsSections: {
         title: 'Comments',
         CardTitle: 'Add a Comment',
+        edit: 'Edit',
+        delete: 'Delete',
+        reply: 'Reply',
+        comments: 'Comments',
         CommentCard: {
             cancel: 'Cancel',
             reply: 'Reply',
