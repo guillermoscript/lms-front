@@ -38,7 +38,9 @@ async function SidebarLessons({
                     {t('reviews')}
                 </TabsTrigger>
             </TabsList>
-            <TabsContent value="comments">
+            <TabsContent 
+                className="overflow-auto w-full p-4 md:p-6 flex flex-col gap-4 max-w-[100%]"
+            value="comments">
                 <Suspense fallback={
                     <div className="flex items-center justify-center h-32">
                         <Loader size={32} />
