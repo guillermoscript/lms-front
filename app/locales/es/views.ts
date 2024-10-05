@@ -126,8 +126,21 @@ export default {
     dashboard: {
         student: {
             CourseStudentPage: {
-                lessonTitle: 'Lecciones',
-                examTitle: 'Exámenes',
+                progressTitle: 'Progreso del curso',
+                lessonsCompleted: 'Lecciones completadas',
+                examsCompleted: 'Exámenes completados',
+                completed: 'Completado',
+                notStarted: 'No iniciado',
+                waitingForReview: 'Esperando revisión',
+                lesson: 'Lección',
+                exam: 'Examen',
+                grade: 'Calificación',
+                viewLesson: 'Ver lección',
+                viewExam: 'Ver examen',
+                lessons: 'Lecciones',
+                exams: 'Exámenes',
+                start: 'Comenzar',
+                review: 'Revisar',
             },
             LessonPage: {
                 description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',

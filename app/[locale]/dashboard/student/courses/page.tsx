@@ -1,43 +1,82 @@
-
 import { getScopedI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import CourseSectionComponent from '@/components/dashboards/student/course/CourseSectionComponent'
+import CourseDashboard from '@/components/dashboards/student/course/CourseDashboard'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function CoursesStudentPage () {
+export default async function CourseSectionComponent() {
     const supabase = createClient()
     const user = await supabase.auth.getUser()
     const t = await getScopedI18n('BreadcrumbComponent')
 
-    const userCourses = await supabase
-        .from('enrollments')
-        .select('*, course:course_id(*,lessons(*), exams(*))')
-        .eq('user_id', user.data.user.id)
-
-    const userSubscriptions = await supabase
+    const subscriptions = await supabase
         .from('subscriptions')
-        .select('*')
+        .select('subscription_id')
         .eq('user_id', user.data.user.id)
 
-    if (userCourses.error) throw new Error(userCourses.error.message)
-    if (userSubscriptions.error) throw new Error(userSubscriptions.error.message)
+    const coursesQuery =
+        subscriptions.data.length > 0
+            ? supabase
+                .from('courses')
+                .select(
+                    `
+                course_id,
+            title,
+            description,
+            thumbnail_url,
+            lessons(id, lesson_completions(*)),
+            exams(exam_id)
+            `
+                )
+                .eq('status', 'published')
+                .eq('lessons.lesson_completions.user_id', user.data.user.id)
+            : supabase
+                .from('enrollments')
+                .select(
+                    `
+                course:course_id(
+                course_id,
+                title,
+                description,
+                thumbnail_url,
+                lessons(id, lesson_completions(*)),
+                exams(exam_id)
+            )
+            `
+                )
+                .eq('user_id', user.data.user.id)
+                .eq('course.lessons.lesson_completions.user_id', user.data.user.id)
+
+    const coursesResult = await coursesQuery
+
+    if (coursesResult.error) throw new Error(coursesResult.error.message)
+    const courses = coursesResult.data.map((course) => {
+        return {
+            course: {
+                course_id: course.course_id,
+                title: course.title,
+                description: course.description,
+                thumbnail_url: course.thumbnail_url,
+                lessons: course.lessons,
+                exams: course.exams,
+            },
+        }
+    })
 
     return (
         <>
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('dashboard') },
-                    { href: '/dashboard/student', label: t('student') },
-                    { href: '/dashboard/student/courses/', label: t('courses') },
-                ]}
-            />
-            <CourseSectionComponent
-                userCourses={userCourses.data}
-                userSubscriptions={userSubscriptions.data}
-                userId={user.data.user.id}
-                supabase={supabase}
-                layoutType="flex"
-            />
+            <div className="container mx-auto pt-8">
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: t('dashboard') },
+                        { href: '/dashboard/student', label: t('student') },
+                        {
+                            href: '/dashboard/student/courses/',
+                            label: t('courses'),
+                        },
+                    ]}
+                />
+            </div>
+            <CourseDashboard userCourses={courses} />
         </>
     )
 }

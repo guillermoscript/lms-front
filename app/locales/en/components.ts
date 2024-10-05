@@ -42,6 +42,10 @@ export default {
     CommentsSections: {
         title: 'Comments',
         CardTitle: 'Add a Comment',
+        edit: 'Edit',
+        delete: 'Delete',
+        reply: 'Reply',
+        comments: 'Comments',
         CommentCard: {
             cancel: 'Cancel',
             reply: 'Reply',
@@ -59,6 +63,7 @@ export default {
     },
     LessonContent: {
         video: 'Video',
+
         summary: 'Summary',
         aiTask: 'AI Task',
         aiTaskCompleted: 'AI Task Completed',
@@ -74,6 +79,12 @@ export default {
             cancel: 'Cancel',
             loading: 'Loading...',
             action: 'Reset Conversation',
+        },
+        TaksMessages: {
+            title: 'Complete your task',
+            simple: 'Simple',
+            markdown: 'Markdown',
+            status: 'Success',
         }
     },
     AiTaskMessage: {
@@ -388,5 +399,54 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         correct: 'Correct?',
         overallFeedback: 'Overall Feedback',
 
+    },
+    CourseDashboard: {
+        yourCourses: 'Your Courses',
+        searchCourses: 'Search Courses',
+        inProgress: 'In Progress',
+        completed: 'Completed',
+        allCourses: 'All Courses',
+        lessons: 'Lessons',
+        exams: 'Exams',
+        continueCourse: 'Continue Course',
+        noCoursesFound: 'No courses found',
+    },
+    StudentDashboard: {
+        welcome: 'Welcome, Student!',
+        dashboardDescription: 'Here is an overview of your courses and activities.',
+        totalCourses: 'Total Courses',
+        averageProgress: 'Average Progress',
+        upcomingDeadlines: 'Upcoming Deadlines',
+        unreadMessages: 'Unread Messages',
+        courseProgress: 'Course Progress',
+        viewAllCourses: 'View All Courses',
+        recentActivity: 'Recent Activity',
+        viewAllActivity: 'View All Activity',
+        progress: 'Progress',
+        lessons: 'Lessons',
+        continueCourse: 'Continue Course',
+        lastViewed: 'Last Viewed',
+        continueLesson: 'Continue Lesson',
+    },
+    ExamReview: {
+        review: 'Review',
+        teacher: 'Teacher',
+        score: 'Score',
+        outOf: 'out of',
+        correct: 'correct',
+        questions: 'Questions',
+        aiReview: 'AI Review',
+        aiReviewTitle: 'AI Review',
+        aiReviewDescription: 'Here is the AI analysis of your answers.',
+        question: 'Question',
+        answer: 'Answer',
+        overallFeedback: 'Overall Feedback',
+        yourAnswer: 'Your Answer',
+        correctAnswer: 'Correct Answer',
+        feedback: 'Feedback',
+        waitingForReview: 'Waiting for review',
+        notSpecified: 'Not specified',
+        aiReviewFooter: 'This is the AI review of your exam, its not final and is just for your reference on how you did. Please wait for the final review from your teacher.',
+        options: 'Options',
     }
 } as const

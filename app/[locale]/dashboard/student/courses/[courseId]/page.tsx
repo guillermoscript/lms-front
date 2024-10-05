@@ -1,25 +1,135 @@
+import { CheckCircle, Clock, FileText } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
+
+const CourseHeader = ({ title, description, image }) => (
+    <div className="relative h-64 md:h-80 mb-8 rounded-lg overflow-hidden">
+        <Image
+            src={image}
+            alt={title}
+            layout="fill"
+            objectFit="cover"
+            className="brightness-50"
+        />
+        <div className="absolute inset-0 flex flex-col justify-end p-6 bg-gradient-to-t from-black/80 to-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{title}</h1>
+            <p className="text-lg text-gray-200">{description}</p>
+        </div>
+    </div>
+)
+
+const ProgressCard = ({ completedLessons, totalLessons, completedExams, totalExams, t }) => (
+    <Card className="mb-8">
+        <CardHeader>
+            <CardTitle>{t('dashboard.student.CourseStudentPage.progressTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <div className="space-y-4">
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">{t('dashboard.student.CourseStudentPage.lessonsCompleted')}</span>
+                        <span className="text-sm font-medium">{completedLessons}/{totalLessons}</span>
+                    </div>
+                    <Progress value={(completedLessons / totalLessons) * 100} className="h-2" />
+                </div>
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">{t('dashboard.student.CourseStudentPage.examsCompleted')}</span>
+                        <span className="text-sm font-medium">{completedExams}/{totalExams}</span>
+                    </div>
+                    <Progress value={(completedExams / totalExams) * 100} className="h-2" />
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+)
+
+const LessonCard = ({
+    title,
+    number,
+    description,
+    status,
+    courseId,
+    lessonId,
+    image,
+    t
+}) => (
+    <Card className="overflow-hidden">
+        <div className="relative h-48">
+            <Link href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}>
+                <Image
+                    src={image || '/icons/placeholder.svg'}
+                    alt={title}
+                    layout="fill"
+                    objectFit="cover"
+                />
+            </Link>
+            <div className="absolute top-2 left-2 bg-white dark:bg-gray-800 rounded-full px-2 py-1 text-sm font-semibold">
+                {t('dashboard.student.CourseStudentPage.lesson')} {number}
+            </div>
+        </div>
+        <CardContent className="p-4">
+            <h3 className="text-lg font-semibold mb-2">{title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{description}</p>
+            <Badge
+                variant={status === 'Completed' ? 'default' : 'secondary'}
+                className="mb-2"
+            >
+                {status === 'Completed' ? (
+                    <><CheckCircle className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.completed')}</>
+                ) : (
+                    <><Clock className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.notStarted')}</>
+                )}
+            </Badge>
+        </CardContent>
+        <CardFooter className="p-4 pt-0">
+            <Button
+                variant={status === 'Completed' ? 'secondary' : 'default'}
+                asChild className="w-full"
+            >
+                <Link href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}>
+                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : t('dashboard.student.CourseStudentPage.start')}
+                </Link>
+            </Button>
+        </CardFooter>
+    </Card>
+)
+
+const ExamCard = ({ title, number, description, status, grade, courseId, examId, t }) => (
+    <Card className="mb-4">
+        <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+                <span>{title}</span>
+                <Badge variant={status === 'Completed' ? 'default' : status === 'Not Started' ? 'outline' : 'secondary'}>
+                    {status === 'Completed' ? <CheckCircle className="mr-1 h-3 w-3" /> : <Clock className="mr-1 h-3 w-3" />}
+                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.completed') : status === 'Not Started' ? t('dashboard.student.CourseStudentPage.notStarted') : t('dashboard.student.CourseStudentPage.waitingForReview')}
+                </Badge>
+            </CardTitle>
+            <CardDescription>{t('dashboard.student.CourseStudentPage.exam')} {number}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{description}</p>
+            {grade && <p className="font-semibold">{t('dashboard.student.CourseStudentPage.grade')}: {grade}</p>}
+        </CardContent>
+        <CardFooter>
+            <Button asChild>
+                <Link href={`/dashboard/student/courses/${courseId}/exams/${examId}`}>
+                    <FileText className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.viewExam')}
+                </Link>
+            </Button>
+        </CardFooter>
+    </Card>
+)
 
 export default async function CourseStudentPage({
     params,
@@ -38,26 +148,26 @@ export default async function CourseStudentPage({
         .from('courses')
         .select(
             `*,
-		lessons(*, lesson_completions(*)),
-		exams(*,
-			exam_submissions(
-				submission_id,
-				student_id,
-				submission_date,
-				exam_answers(
-					answer_id,
-					question_id,
-					answer_text,
-					is_correct,
-					feedback
-				),
-				exam_scores (
-					score_id,
-					score
+        lessons(title, description, image, sequence, id, lesson_completions(*)),
+        exams(*,
+            exam_submissions(
+                submission_id,
+                student_id,
+                submission_date,
+                exam_answers(
+                    answer_id,
+                    question_id,
+                    answer_text,
+                    is_correct,
+                    feedback
+                ),
+                exam_scores (
+                    score_id,
+                    score
                 )
             )
-		)
-	`
+        )
+    `
         )
         .eq('course_id', params.courseId)
         .eq('status', 'published')
@@ -71,246 +181,96 @@ export default async function CourseStudentPage({
         throw new Error(courseData.error.message)
     }
 
+    const completedLessons = courseData.data.lessons.filter(lesson => lesson.lesson_completions.length > 0).length
+    const completedExams = courseData.data.exams.filter(exam => exam.exam_submissions.length > 0).length
+
     return (
-        <>
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
-                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
-                    {
-                        href: `/dashboard/student/courses/${courseData.data.course_id}`,
-                        label: courseData.data.title,
-                    },
-                ]}
-            />
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-1 lg:grid-cols-1">
-                <Card className="h-full">
-                    <CardHeader>
-                        <div className="flex sm:flex-row flex-col">
-                            <div className="sm:mr-4 mr-0 mb-2 sm:mb-0">
-                                <Image
-                                    src={courseData.data.thumbnail_url}
-                                    alt="Course Image"
-                                    className="rounded-md object-cover"
-                                    width={400}
-                                    height={200}
-                                    placeholder="blur"
-                                    layout="responsive"
-                                    blurDataURL="/img/placeholder.svg"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-4 w-full">
-                                <CardTitle>{courseData.data.title}</CardTitle>
-                                {courseData.data.description && (
-                                    <CardDescription>
-                                        {courseData.data.description}
-                                    </CardDescription>
-                                )}
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col">
-                            <Accordion
-                                type="single"
-                                collapsible
-                                defaultValue="lessons"
-                            >
-                                <AccordionItem value="lessons">
-                                    <AccordionTrigger className="text-xl font-bold mb-4">
-                                        {t('dashboard.student.CourseStudentPage.lessonTitle')}
-                                    </AccordionTrigger>
-                                    <AccordionContent className="grid gap-4">
-                                        {courseData.data.lessons
-                                            .sort(
-                                                (a, b) =>
-                                                    a?.sequence - b?.sequence
-                                            )
-                                            .map((lesson) => (
-                                                <LessonCard
-                                                    title={lesson.title}
-                                                    lessonNumber={
-                                                        lesson.sequence
-                                                    }
-                                                    description={
-                                                        lesson.description
-                                                    }
-                                                    status={
-                                                        lesson
-                                                            .lesson_completions
-                                                            .length > 0
-                                                            ? 'default'
-                                                            : 'outline'
-                                                    }
-                                                    courseId={
-                                                        courseData.data
-                                                            .course_id
-                                                    }
-                                                    lessonId={lesson.id}
-                                                />
-                                            ))}
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                            <Accordion
-                                type="single"
-                                collapsible
-                                defaultValue="exams"
-                            >
-                                <AccordionItem value="exams">
-                                    <AccordionTrigger className="text-xl font-bold mb-4">
-                                        {t('dashboard.student.CourseStudentPage.examTitle')}
-                                    </AccordionTrigger>
-                                    <AccordionContent className="grid gap-4">
-                                        {courseData.data.exams
-                                            .sort(
-                                                (a, b) =>
-                                                    a?.sequence - b?.sequence
-                                            )
-                                            .map((exam) => (
-                                                <ExamCard
-                                                    title={exam.title}
-                                                    examNumber={exam.sequence}
-                                                    description={
-                                                        exam.description
-                                                    }
-                                                    status={
-                                                        exam.exam_submissions
-                                                            .length > 0
-                                                            ? exam
-                                                                .exam_submissions[0]
-                                                                .exam_scores
-                                                                .length > 0
-                                                                ? 'default'
-                                                                : 'secondary'
-                                                            : 'outline'
-                                                    }
-                                                    grade={
-                                                        exam.exam_submissions
-                                                            .length > 0
-                                                            ? exam
-                                                                ?.exam_submissions[0]
-                                                                ?.exam_scores[0]
-                                                                ?.score
-                                                            : 'N/A'
-                                                    }
-                                                    courseId={
-                                                        courseData.data
-                                                            .course_id
-                                                    }
-                                                    examId={exam.exam_id}
-                                                />
-                                            ))}
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                        </div>
-                    </CardContent>
-                </Card>
+        <div className="container mx-auto px-4 py-8">
+            <div
+                className='pb-6'
+            >
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                        { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                        { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
+                        {
+                            href: `/dashboard/student/courses/${courseData.data.course_id}`,
+                            label: courseData.data.title,
+                        },
+                    ]}
+                />
             </div>
-        </>
+            <CourseHeader
+                title={courseData.data.title}
+                description={courseData.data.description}
+                image={courseData.data.thumbnail_url}
+            />
+
+            <ProgressCard
+                completedLessons={completedLessons}
+                totalLessons={courseData.data.lessons.length}
+                completedExams={completedExams}
+                totalExams={courseData.data.exams.length}
+                t={t}
+            />
+
+            <Tabs defaultValue="lessons" className="w-full space-y-8">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="lessons">{t('dashboard.student.CourseStudentPage.lessons')}</TabsTrigger>
+                    <TabsTrigger value="exams">{t('dashboard.student.CourseStudentPage.exams')}</TabsTrigger>
+                </TabsList>
+                <TabsContent
+                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    value="lessons"
+                >
+                    {courseData.data.lessons
+                        .sort((a, b) => a.sequence - b.sequence)
+                        .map((lesson) => (
+                            <LessonCard
+                                key={lesson.id}
+                                image={lesson.image}
+                                title={lesson.title}
+                                number={lesson.sequence}
+                                description={lesson.description}
+                                status={lesson.lesson_completions.length > 0 ? 'Completed' : 'Not Started'}
+                                courseId={courseData.data.course_id}
+                                lessonId={lesson.id}
+                                t={t}
+                            />
+                        ))}
+                </TabsContent>
+                <TabsContent
+                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    value="exams"
+                >
+                    {courseData.data.exams
+                        .sort((a, b) => a.sequence - b.sequence)
+                        .map((exam) => (
+                            <ExamCard
+                                key={exam.exam_id}
+                                title={exam.title}
+                                number={exam.sequence}
+                                description={exam.description}
+                                status={
+                                    exam.exam_submissions.length > 0
+                                        ? exam.exam_submissions[0].exam_scores.length > 0
+                                            ? 'Completed'
+                                            : 'Waiting for Review'
+                                        : 'Not Started'
+                                }
+                                grade={
+                                    exam.exam_submissions.length > 0 && exam.exam_submissions[0].exam_scores.length > 0
+                                        ? exam.exam_submissions[0].exam_scores[0].score
+                                        : undefined
+                                }
+                                courseId={courseData.data.course_id}
+                                examId={exam.exam_id}
+                                t={t}
+                            />
+                        ))}
+                </TabsContent>
+            </Tabs>
+        </div>
     )
 }
-
-const CourseStats = ({ title, value }: { title: string; value: string }) => (
-    <div>
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-gray-500 dark:text-gray-400">{title}</p>
-    </div>
-)
-
-const LessonCard = ({
-    title,
-    lessonNumber,
-    description,
-    status,
-    courseId,
-    lessonId,
-}: {
-    title: string
-    lessonNumber: number
-    description: string
-    status: 'default' | 'destructive' | 'outline' | 'secondary'
-    courseId: number
-    lessonId: number
-}) => (
-    <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-        <div className="flex items-center justify-between">
-            <div>
-                <h4 className="text-lg font-bold">{title}</h4>
-                <p className="text-gray-500 dark:text-gray-400">
-                    Lesson {lessonNumber}
-                </p>
-            </div>
-            <div>
-                <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Incomplete' : 'Not Started'}
-                </Badge>
-            </div>
-        </div>
-        <div className="mt-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-                {description}
-            </p>
-            <div className="mt-2">
-                <Link
-                    className={buttonVariants({ variant: 'link' })}
-                    href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}
-                >
-                    View Lesson
-                </Link>
-            </div>
-        </div>
-    </div>
-)
-
-const ExamCard = ({
-    title,
-    examNumber,
-    description,
-    status,
-    grade,
-    courseId,
-    examId,
-}: {
-    title: string
-    examNumber: number
-    description: string
-    status: 'default' | 'destructive' | 'outline' | 'secondary'
-    grade?: number | string
-    courseId: number
-    examId: number
-}) => (
-    <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
-        <div className="flex items-center justify-between">
-            <div>
-                <h4 className="text-lg font-bold">{title}</h4>
-                <p className="text-gray-500 dark:text-gray-400">
-                    Exam {examNumber}
-                </p>
-            </div>
-            <div>
-                <Badge variant={status}>
-                    {status === 'default' ? 'Completed' : status === 'outline' ? 'Not Started' : 'Waiting for Review from Instructor'}
-                </Badge>
-            </div>
-        </div>
-        <div className="mt-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-                {description}
-            </p>
-            <div className="mt-2">
-                <div className="flex items-center justify-between">
-                    <p>Grade: {grade ?? 'N/A'}</p>
-                    <Link
-                        className={buttonVariants({ variant: 'link' })}
-                        href={`/dashboard/student/courses/${courseId}/exams/${examId}`}
-                    >
-                        View Exam
-                    </Link>
-                </div>
-            </div>
-        </div>
-    </div>
-)

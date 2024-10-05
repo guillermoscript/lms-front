@@ -68,25 +68,27 @@ export default async function StudentExamCoursePage ({
 
     return (
         <>
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
-                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
-                    {
-                        href: `/dashboard/student/courses/${exams.data?.course_id}`,
-                        label: exams.data?.courses?.title
-                    },
-                    {
-                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
-                        label: t('BreadcrumbComponent.exam')
-                    },
-                    {
-                        href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
-                        label: exams.data?.title
-                    }
-                ]}
-            />
+            <div className='container'>
+                <BreadcrumbComponent
+                    links={[
+                        { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
+                        { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
+                        { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
+                        {
+                            href: `/dashboard/student/courses/${exams.data?.course_id}`,
+                            label: exams.data?.courses?.title
+                        },
+                        {
+                            href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
+                            label: t('BreadcrumbComponent.exam')
+                        },
+                        {
+                            href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
+                            label: exams.data?.title
+                        }
+                    ]}
+                />
+            </div>
             <div className="grid gap-8 container">
                 <div>
                     <h1 className="text-3xl font-bold">

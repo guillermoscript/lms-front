@@ -4,6 +4,7 @@ import { MessageCircleIcon, User2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { DarkThemeToggle } from '@/components/DarkThemeToggle'
 import {
     Sheet,
     SheetContent,
@@ -70,8 +71,8 @@ export default function DashboardHeaderSheet ({
                         <MessageCircleIcon className="h-6 w-6" />
                         <span>Chat</span>
                     </Link>
+                    <DarkThemeToggle />
                 </div>
-
             </SheetContent>
         </Sheet>
 

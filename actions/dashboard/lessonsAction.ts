@@ -376,6 +376,5 @@ export async function studentResetAiTaskConversation({
         if (deleteCompletionData.error) return createResponse('error', 'Error deleting lesson completion', null, 'Error deleting lesson completion')
     }
 
-    revalidatePath('/dashboard/student/courses/[courseId]/lessons/[lessonId]')
     return createResponse('success', 'Message updated successfully', null, null)
 }
