@@ -9,18 +9,14 @@ const I18nMiddleware = createI18nMiddleware({
     urlMappingStrategy: 'rewrite',
     resolveLocaleFromRequest: (request) => {
         const userLanguage = request.headers.get('accept-language')?.split(',')[0].split('-')[0] || 'en'
-        return userLanguage as 'en' | 'es'
+        return (userLanguage === 'en' || userLanguage === 'es') ? userLanguage : 'en'
     }
 })
 
 export async function middleware(request: NextRequest) {
-    const userLanguage = request.headers.get('accept-language')
-
-    const response = request.nextUrl.pathname.startsWith('/api') ? NextResponse.next({
-        request: {
-            headers: request.headers
-        }
-    }) : I18nMiddleware(request)
+    const response = request.nextUrl.pathname.startsWith('/api')
+        ? NextResponse.next({ request: { headers: request.headers } })
+        : I18nMiddleware(request)
 
     return await updateSession(request, response)
 }
