@@ -239,8 +239,8 @@ export default {
         login: {
             loginHeader: 'Iniciar sesion',
             helpText: 'Ingresa tu correo para iniciar sesion.',
-            forgotPassword: 'Olvidaste tu contraseña?',
-            dontHaveAccount: 'No tienes cuenta?',
+            forgotPassword: '¿Olvidaste tu contraseña?',
+            dontHaveAccount: '¿No tienes cuenta?',
             description: 'Comienza tu aprendizaje con LMS AI.',
             form: {
                 email: 'Correo',

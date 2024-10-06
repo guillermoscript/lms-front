@@ -10,7 +10,6 @@ import { z } from 'zod'
 
 import { resetPasswordFun } from '@/actions/auth/authActions'
 import { useI18n } from '@/app/locales/client'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
     Form,
@@ -137,11 +136,11 @@ export default function ResetPasswordForm({
                                                     )}
                                                 </button>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {t('auth.resetPassword.passwordHelp')}
-                                            </p>
                                         </FormControl>
                                         <FormMessage />
+                                        <p className="text-xs text-muted-foreground">
+                                            {t('auth.resetPassword.passwordHelp')}
+                                        </p>
                                     </FormItem>
                                 )}
                             />
@@ -155,15 +154,6 @@ export default function ResetPasswordForm({
                             </Button>
                         </form>
                     </Form>
-                    {searchParams.error && (
-                        <Alert variant="destructive">
-                            <AlertTitle>Error!</AlertTitle>
-                            <AlertDescription>
-                                {searchParams.error}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-
                     <Link
                         href="/auth/login"
                         className="text-center text-sm cursor-pointer text-primary"
