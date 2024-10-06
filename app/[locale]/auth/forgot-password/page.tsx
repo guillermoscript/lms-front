@@ -1,6 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader } from 'lucide-react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -96,8 +97,17 @@ export default function ForgotPassword({
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit">
-                                {t('auth.forgotPassword.submit')}
+                            <Button
+                                disabled={form.formState.isSubmitting}
+                                type="submit"
+                            >
+                                {form.formState.isSubmitting ? (
+                                    <>
+                                        <Loader className="animate-spin" />
+                                    </>
+                                ) : (
+                                    t('auth.forgotPassword.submit')
+                                )}
                             </Button>
                         </form>
                     </Form>
