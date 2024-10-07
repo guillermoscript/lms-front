@@ -396,6 +396,8 @@ DECLARE
     v_question_id INTEGER;
     v_question_type VARCHAR;
     v_answer_text TEXT;
+    v_is_correct BOOLEAN;
+    v_actual_correct BOOLEAN;
 BEGIN
     -- Insert a new submission into the exam_submissions table and get the submission_id
     INSERT INTO public.exam_submissions (exam_id, student_id, submission_date)
@@ -409,40 +411,51 @@ BEGIN
         v_question_type := answer->>'question_type';
         v_answer_text := answer->>'answer_text';
 
+        -- Convert v_answer_text to BOOLEAN if v_question_type is 'true_false'
+        IF v_question_type = 'true_false' THEN
+            v_is_correct := (v_answer_text = 'True');
+            -- Retrieve the correct answer from question_options
+            SELECT is_correct INTO v_actual_correct
+            FROM public.question_options
+            WHERE question_id = v_question_id;
+        ELSE
+            v_actual_correct := NULL;
+        END IF;
+
         -- Check if there is already an answer for this question for this submission
         IF EXISTS (
             SELECT 1
             FROM public.exam_answers
             WHERE submission_id = v_submission_id AND question_id = v_question_id
         ) THEN
-            -- RAISE NOTICE: Skip if already answered
             IF v_question_type != 'multiple_choice' THEN
                 RAISE NOTICE 'Skipping duplicate answer for question_id: %', v_question_id;
             ELSE
-                -- Allow multiple answers for multiple choice questions
+                -- Allow multiple answers for multiple-choice questions
                 INSERT INTO public.exam_answers (
-                    submission_id, question_id, answer_text
+                    submission_id, question_id, answer_text, is_correct
                 ) VALUES (
                     v_submission_id,
                     v_question_id,
-                    v_answer_text
+                    v_answer_text,
+                    v_is_correct = v_actual_correct
                 );
             END IF;
         ELSE
             -- Insert the answer as it doesn’t exist
             INSERT INTO public.exam_answers (
-                submission_id, question_id, answer_text
+                submission_id, question_id, answer_text, is_correct
             ) VALUES (
                 v_submission_id,
                 v_question_id,
-                v_answer_text
+                v_answer_text,
+                v_is_correct = v_actual_correct
             );
         END IF;
     END LOOP;
 
     -- Return the submission ID
     RETURN v_submission_id;
-
 EXCEPTION
     WHEN OTHERS THEN
         RAISE;
