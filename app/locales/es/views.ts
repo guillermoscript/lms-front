@@ -235,6 +235,18 @@ export default {
                 signUp: 'Registrarse',
                 signingUp: 'Registrandose',
             },
+            validations: {
+                invalid_email: 'Dirección de correo electrónico no válida',
+                full_name_min: 'El nombre completo debe tener al menos 2 caracteres.',
+                username_min: 'El nombre de usuario debe tener al menos 2 caracteres.',
+                password_min: 'La contraseña debe tener al menos 8 caracteres.',
+                password_max: 'La contraseña debe tener como máximo 100 caracteres.',
+                password_lower: 'La contraseña debe contener al menos una letra minúscula.',
+                password_upper: 'La contraseña debe contener al menos una letra mayúscula.',
+                password_number: 'La contraseña debe contener al menos un número.',
+                password_symbol: 'La contraseña debe contener al menos un símbolo.',
+                password_required: 'La contraseña es requerida',
+            }
         },
         login: {
             loginHeader: 'Iniciar sesion',
@@ -248,6 +260,16 @@ export default {
                 login: 'Iniciar sesion',
                 loggingIn: 'Iniciando sesion...',
             },
+            validations: {
+                invalid_email: 'Dirección de correo electrónico no válida',
+                password_min: 'La contraseña debe tener al menos 8 caracteres.',
+                password_max: 'La contraseña debe tener como máximo 100 caracteres.',
+                password_lower: 'La contraseña debe contener al menos una letra minúscula.',
+                password_upper: 'La contraseña debe contener al menos una letra mayúscula.',
+                password_number: 'La contraseña debe contener al menos un número.',
+                password_symbol: 'La contraseña debe contener al menos un símbolo.',
+                password_required: 'La contraseña es requerida',
+            }
         },
         forgotPassword: {
             header: 'Reseteo de contraseña',
@@ -263,6 +285,15 @@ export default {
             loading: 'Reseteando contraseña...',
             back: 'Volver a iniciar sesion',
             passwordHelp: 'Importante: Tu contraseña debe tener 1 mayúscula, 1 número, 1 carácter especial y una longitud mínima de 8 caracteres',
+            validations: {
+                password_min: 'La contraseña debe tener al menos 8 caracteres.',
+                password_max: 'La contraseña debe tener como máximo 100 caracteres.',
+                password_lower: 'La contraseña debe contener al menos una letra minúscula.',
+                password_upper: 'La contraseña debe contener al menos una letra mayúscula.',
+                password_number: 'La contraseña debe contener al menos un número.',
+                password_symbol: 'La contraseña debe contener al menos un símbolo.',
+                password_required: 'La contraseña es requerida',
+            }
         },
     },
     waitingRoom: {

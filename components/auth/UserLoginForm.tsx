@@ -20,20 +20,23 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 
-// Define your Zod schema for validation
-const FormSchema = z.object({
-    email: z.string().email({ message: 'Invalid email address' }),
-    password: z
-        .string()
-        .min(8, { message: 'Password must be at least 8 characters.' })
-        .max(100, { message: 'Password must be at most 100 characters.' })
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
-            message:
-                'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
-        }),
-})
-
 export default function UserLoginForm({ redirect }: { redirect?: string }) {
+    const t = useI18n()
+
+    // Define your Zod schema for validation
+    const FormSchema = z.object({
+        email: z.string().email({ message: t('auth.login.validations.invalid_email') }),
+        password: z
+            .string()
+            .min(8, { message: t('auth.login.validations.password_min') })
+            .max(100, { message: t('auth.login.validations.password_max') })
+            .regex(/[a-z]/, { message: t('auth.login.validations.password_lower') })
+            .regex(/[A-Z]/, { message: t('auth.login.validations.password_upper') })
+            .regex(/\d/, { message: t('auth.login.validations.password_number') })
+            .regex(/\W/, { message: t('auth.login.validations.password_symbol') })
+            .nonempty({ message: t('auth.login.validations.password_required') }),
+    })
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -41,7 +44,6 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
             password: '',
         },
     })
-    const t = useI18n()
 
     const [error, setError] = useState('')
 

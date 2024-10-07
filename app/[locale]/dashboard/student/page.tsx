@@ -40,7 +40,7 @@ export default async function CoursesStudentPage() {
                 title,
                 description,
                 thumbnail_url,
-                lessons(id, title),
+                lessons(id, title, lesson_completions(id)),
                 exams(exam_id)
             `)
             .eq('status', 'published')
@@ -52,7 +52,7 @@ export default async function CoursesStudentPage() {
                     title,
                     description,
                     thumbnail_url,
-                    lessons(id, title),
+                    lessons(id, title, lesson_completions(id)),
                     exams(exam_id)
                 )
             `)

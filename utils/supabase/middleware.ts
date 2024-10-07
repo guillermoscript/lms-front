@@ -14,67 +14,52 @@ export async function updateSession(request: NextRequest, response: NextResponse
                     return request.cookies.get(name)?.value
                 },
                 set(name: string, value: string, options: CookieOptions) {
-                    request.cookies.set({
-                        name,
-                        value,
-                        ...options
-                    })
-                    response = NextResponse.next({
-                        request: {
-                            headers: request.headers
-                        }
-                    })
-                    response.cookies.set({
-                        name,
-                        value,
-                        ...options
-                    })
+                    response.cookies.set({ name, value, ...options })
                 },
                 remove(name: string, options: CookieOptions) {
-                    request.cookies.set({
-                        name,
-                        value: '',
-                        ...options
-                    })
-                    response = NextResponse.next({
-                        request: {
-                            headers: request.headers
-                        }
-                    })
-                    response.cookies.set({
-                        name,
-                        value: '',
-                        ...options
-                    })
+                    response.cookies.set({ name, value: '', ...options })
                 }
             }
         }
     )
 
-    // refreshing the auth token
-    const userData = await supabase.auth.getUser()
+    // Refreshing the authentication token
+    const { data: userData, error: userError } = await supabase.auth.getUser()
 
-    if (request.nextUrl.pathname.startsWith('/dashboard') && userData.error) {
+    const localePattern = /^\/(en|es|po|fr|de|it|pt|ru|zh|ja|ko)/ // Add more locales as needed
+    const pathname = request.nextUrl.pathname.replace(localePattern, '')
+
+    if (pathname.includes('dashboard') && (!userData || userError)) {
+        // Redirect to login if user is not authenticated
         return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
     const userRole = await getServerUserRole()
 
-    if (request.nextUrl.pathname.startsWith('/dashboard/teacher') && (userRole !== 'teacher' && userRole !== 'admin')) {
-        return NextResponse.redirect(new URL('/dashboard/student', request.url))
+    if (userRole) {
+        if (pathname.startsWith('/dashboard/teacher') &&
+            (userRole !== 'teacher' && userRole !== 'admin')) {
+            // Redirect non-teachers to student dashboard
+            return NextResponse.redirect(new URL('/dashboard/student', request.url))
+        }
+
+        if (pathname.startsWith('/dashboard/student') &&
+            (userRole !== 'student' && userRole !== 'admin')) {
+            // Redirect non-students to teacher dashboard
+            return NextResponse.redirect(new URL('/dashboard/teacher', request.url))
+        }
     }
 
-    if (request.nextUrl.pathname.startsWith('/dashboard/student') && (userRole !== 'student' && userRole !== 'admin')) {
-        return NextResponse.redirect(new URL('/dashboard/teacher', request.url))
-    }
+    if (!userError) {
+        if (userData.user.id && pathname.startsWith('/auth')) {
+            // Redirect logged in users from auth pages to their dashboard
+            return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+        }
 
-    // redirect to the dashboard if the user is already logged in
-    if (request.nextUrl.pathname.startsWith('/auth') && userData.data.user) {
-        return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
-    }
-
-    if (request.nextUrl.pathname.endsWith('/dashboard') && userData.data.user) {
-        return NextResponse.redirect(new URL('/dashboard/' + userRole, request.url))
+        if (userData.user.id && pathname.endsWith('/dashboard')) {
+            // Redirect to user role specific dashboard
+            return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+        }
     }
 
     return response

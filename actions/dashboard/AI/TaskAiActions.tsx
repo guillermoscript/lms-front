@@ -66,7 +66,7 @@ export async function continueTaskAiConversation(
         .messages.find((message) => message.role === 'system')
 
     const result = await streamUI({
-        model: google('gemini-1.5-pro-002'),
+        model: google('gemini-1.5-flash-latest'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,

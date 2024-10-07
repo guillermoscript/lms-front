@@ -22,15 +22,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
 
-const FormSchema = z.object({
-    password: z
-        .string()
-        .min(8, { message: 'Password must be at least 8 characters.' })
-        .max(100, {
-            message: 'Password must be at most 100 characters.',
-        }),
-})
-
 export default function ResetPasswordForm({
     searchParams,
 }: {
@@ -40,14 +31,25 @@ export default function ResetPasswordForm({
         code: string
     }
 }) {
+    const t = useI18n()
+
+    const FormSchema = z.object({
+        password: z
+            .string()
+            .min(8, { message: t('auth.resetPassword.password_min') })
+            .max(100, { message: t('auth.resetPassword.password_max') })
+            .regex(/[a-z]/, { message: t('auth.resetPassword.password_lower') })
+            .regex(/[A-Z]/, { message: t('auth.resetPassword.password_upper') })
+            .regex(/\d/, { message: t('auth.resetPassword.password_number') })
+            .regex(/\W/, { message: t('auth.resetPassword.password_symbol') })
+            .nonempty({ message: t('auth.resetPassword.password_required') }),
+    })
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
             password: '',
         },
     })
-
-    const t = useI18n()
 
     const [showPassword, setShowPassword] = useState(false)
     const { toast } = useToast()

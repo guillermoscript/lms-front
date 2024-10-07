@@ -20,28 +20,28 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 
-// Assuming this component handles password input and validation
-
-// Define your Zod schema for validation
-const FormSchema = z.object({
-    email: z.string().email({ message: 'Invalid email address' }),
-    full_name: z
-        .string()
-        .min(2, { message: 'Full name must be at least 2 characters.' }),
-    username: z
-        .string()
-        .min(2, { message: 'Username must be at least 2 characters.' }),
-    password: z
-        .string()
-        .min(8, { message: 'Password must be at least 8 characters.' })
-        .max(100, { message: 'Password must be at most 100 characters.' })
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
-            message:
-                'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
-        }),
-})
-
 export default function UserSignupForm({ redirect }: { redirect?: string }) {
+    const t = useI18n()
+    // Define your Zod schema for validation
+    const FormSchema = z.object({
+        email: z.string().email({ message: t('auth.register.validations.invalid_email') }),
+        full_name: z
+            .string()
+            .min(2, { message: t('auth.register.validations.full_name_min') }),
+        username: z
+            .string()
+            .min(2, { message: t('auth.register.validations.username_min') }),
+        password: z
+            .string()
+            .min(8, { message: t('auth.register.validations.password_min') })
+            .max(100, { message: t('auth.register.validations.password_max') })
+            .regex(/[a-z]/, { message: t('auth.register.validations.password_lower') })
+            .regex(/[A-Z]/, { message: t('auth.register.validations.password_upper') })
+            .regex(/\d/, { message: t('auth.register.validations.password_number') })
+            .regex(/\W/, { message: t('auth.register.validations.password_symbol') })
+            .nonempty({ message: t('auth.register.validations.password_required') }),
+    })
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -51,7 +51,6 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
             password: '',
         },
     })
-    const t = useI18n()
 
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')

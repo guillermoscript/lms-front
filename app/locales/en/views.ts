@@ -235,6 +235,18 @@ export default {
                 signUp: 'Sign Up',
                 signingUp: 'Signing Up',
             },
+            validations: {
+                invalid_email: 'Invalid email address',
+                full_name_min: 'Full name must be at least 2 characters.',
+                username_min: 'Username must be at least 2 characters.',
+                password_min: 'Password must be at least 8 characters.',
+                password_max: 'Password must be at most 100 characters.',
+                password_lower: 'Password must contain at least one lowercase letter.',
+                password_upper: 'Password must contain at least one uppercase letter.',
+                password_number: 'Password must contain at least one number.',
+                password_symbol: 'Password must contain at least one symbol.',
+                password_required: 'Password is required',
+            }
         },
         login: {
             loginHeader: 'Login to your account',
@@ -248,6 +260,16 @@ export default {
                 login: 'Login',
                 loggingIn: 'Logging In...',
             },
+            validations: {
+                invalid_email: 'Invalid email address',
+                password_min: 'Password must be at least 8 characters.',
+                password_max: 'Password must be at most 100 characters.',
+                password_lower: 'Password must contain at least one lowercase letter.',
+                password_upper: 'Password must contain at least one uppercase letter.',
+                password_number: 'Password must contain at least one number.',
+                password_symbol: 'Password must contain at least one symbol.',
+                password_required: 'Password is required',
+            }
         },
         forgotPassword: {
             header: 'Forgot Password',
@@ -263,6 +285,15 @@ export default {
             loading: 'Resetting Password...',
             back: 'Back to Login',
             passwordHelp: 'Important: Your password should have 1 Cap, 1 number, 1 special character and a min lenght of 8 characters',
+            validations: {
+                password_min: 'Password must be at least 8 characters.',
+                password_max: 'Password must be at most 100 characters.',
+                password_lower: 'Password must contain at least one lowercase letter.',
+                password_upper: 'Password must contain at least one uppercase letter.',
+                password_number: 'Password must contain at least one number.',
+                password_symbol: 'Password must contain at least one symbol.',
+                password_required: 'Password is required',
+            }
         },
     },
 

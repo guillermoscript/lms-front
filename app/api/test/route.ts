@@ -320,7 +320,7 @@ export async function PUT (req: Request) {
                             .from('question_options')
                             .update({
                                 option_text: option.label,
-                                is_correct: option.value
+                                is_correct: field.type === 'true_false' ? option.is_correct : option.value
                             })
                             .eq('option_id', option.option_id)
 
