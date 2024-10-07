@@ -53,7 +53,7 @@ interface StudentDashboardProps {
 const CourseProgressCard = ({ course }: { course: Course }) => {
     const totalLessons = course.course.lessons.length
     const completedLessons = course.course.lessons.filter(
-        (lesson) => lesson.completed
+        (lesson) => lesson.lesson_completions.length > 0
     ).length
     const progress = (completedLessons / totalLessons) * 100
     const t = useScopedI18n('StudentDashboard')
