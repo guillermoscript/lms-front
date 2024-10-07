@@ -60,7 +60,20 @@ const QuestionCard = ({ question, answer, examIsReviewed }) => {
         return (
             <div className={`flex items-center p-2 rounded-md ${bgColor} mb-2`}>
                 {icon}
+                {question.question_type === 'free_text' && (
+                    <Badge variant="outline" className="ml-auto">
+                        {t('yourAnswer')}
+                    </Badge>
+                )}
                 <span>{optionText}</span>
+
+                {isSelected && question.question_type === 'multiple_choice' && (
+                    <>
+                        <Badge variant="outline" className="ml-auto">
+                            {t('yourAnswer')}
+                        </Badge>
+                    </>
+                )}
             </div>
         )
     }
@@ -141,7 +154,7 @@ const QuestionCard = ({ question, answer, examIsReviewed }) => {
                                     <p className="font-semibold mb-2">
                                         {t('yourAnswer')}:
                                     </p>
-                                    <p className="p-2 bg-gray-100 rounded-md mb-4">
+                                    <p className="p-2 bg-gray-100 dark:bg-gray-800 rounded-md mb-4">
                                         {answer.answer_text}
                                     </p>
                                 </>
@@ -151,7 +164,7 @@ const QuestionCard = ({ question, answer, examIsReviewed }) => {
                                     <p className="font-semibold mb-2">
                                         {t('feedback')}:
                                     </p>
-                                    <p className="p-2 bg-gray-100 rounded-md">
+                                    <p className="p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
                                         {answer.feedback}
                                     </p>
                                 </div>
@@ -171,21 +184,19 @@ const ExamReview: React.FC<ExamReviewProps> = ({
 }) => {
     const t = useScopedI18n('ExamReview')
 
-    console.log(examData)
-
     const score = examData.exam_submissions[0]?.exam_scores[0]?.score
     const totalQuestions = examData.exam_questions.length
     const correctAnswers = examIsReviewed
         ? examData.exam_submissions[0]?.exam_answers.filter((a) => a.is_correct)
-            .length
+              .length
         : 0
 
     return (
         <div className="container mx-auto px-4 py-8">
             <Card className="mb-8">
                 <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
+                    <div className="flex justify-between items-center flex-wrap gap-4">
+                        <div className="flex flex-col gap-4">
                             <CardTitle className="text-2xl">
                                 {examData.title} {t('review')}
                             </CardTitle>
