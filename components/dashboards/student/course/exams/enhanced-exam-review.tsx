@@ -135,18 +135,6 @@ const QuestionCard = ({ question, answer, examIsReviewed }) => {
                                         true,
                                         answer.is_correct
                                     )}
-                                    {examIsReviewed && (
-                                        <>
-                                            <p className="font-semibold mb-2 mt-4">
-                                                {t('correctAnswer')}:
-                                            </p>
-                                            {renderAnswerOption(
-                                                question.correct_answer,
-                                                false,
-                                                true
-                                            )}
-                                        </>
-                                    )}
                                 </>
                             )}
                             {question.question_type === 'free_text' && (
