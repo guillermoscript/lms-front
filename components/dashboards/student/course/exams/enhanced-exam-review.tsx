@@ -188,7 +188,7 @@ const ExamReview: React.FC<ExamReviewProps> = ({
     const totalQuestions = examData.exam_questions.length
     const correctAnswers = examIsReviewed
         ? examData.exam_submissions[0]?.exam_answers.filter((a) => a.is_correct)
-              .length
+            .length
         : 0
 
     return (
