@@ -19,7 +19,8 @@ export default {
         review: 'Reseñas',
         chat: 'Chat',
         teacher: 'Profesor',
-        edit: 'Editar'
+        edit: 'Editar',
+        exercise: 'Ejercicios',
     },
     RecentlyViewed: {
         title: 'Visto recientemente',
@@ -83,14 +84,14 @@ export default {
         TaksMessages: {
             title: 'Completa tu tarea',
             simple: 'Simple',
-            markdown: 'Markdown',
+            markdown: 'Editor Avanzado',
             status: 'Éxito',
         }
     },
     AiTaskMessage: {
         title: 'Completa tu tarea',
         simple: 'Simple',
-        markdown: 'Markdown',
+        markdown: 'Editor Avanzado',
         status: 'Éxito',
     },
     ChatInput: {
@@ -115,7 +116,7 @@ export default {
     },
     EditMessage: {
         simple: 'Simple',
-        markdown: 'Markdown',
+        markdown: 'Editor Avanzado',
         editAndRegenerate: 'Editar y regenerar respuesta de IA',
         edit: 'Editar'
     },
@@ -440,7 +441,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         teacher: 'Profesor',
         score: 'Puntuación',
         outOf: 'de',
-        correct: 'correctas',
+        correct: 'Correctas',
         questions: 'Preguntas',
         aiReview: 'Revisión AI',
         aiReviewTitle: 'Revisión AI',
@@ -455,5 +456,24 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         notSpecified: 'No especificado',
         aiReviewFooter: 'Esta es la revisión de IA de tu examen, no es final y es solo para tu referencia sobre cómo lo hiciste. Por favor, espera la revisión final de tu profesor.',
         options: 'Opciones',
+        totalQuestions: 'Total de preguntas',
+    },
+    NotificationsPage: {
+        title: 'Notificaciones',
+        filters: 'Filtros',
+        allNotifications: 'Todas las Notificaciones',
+        comments: 'Comentarios',
+        commentReplies: 'Respuestas a Comentarios',
+        examReviews: 'Revisiones de Exámenes',
+        orderRenewals: 'Renovaciones de Pedidos',
+        searchPlaceholder: 'Buscar notificaciones',
+        viewDetails: 'Ver Detalles',
+        markAsRead: 'Marcar como leído',
+        markAsUnread: 'Marcar como no leído',
+        lastViewed: 'Última Vista',
+    },
+    FreeChat: {
+        simpleEditor: 'Editor Simple',
+        markdownEditor: 'Editor Avanzado',
     }
 } as const
