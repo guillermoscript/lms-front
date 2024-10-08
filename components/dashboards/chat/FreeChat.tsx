@@ -11,6 +11,7 @@ import {
     studentInsertChatMessage,
     studentUpdateChatTitle,
 } from '@/actions/dashboard/chatActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { ChatInput, ChatTextArea, Message } from '@/components/dashboards/Common/chat/chat'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -183,6 +184,8 @@ export default function FreeChat({ chatId }: FreeChatProps) {
         scrollToBottom,
     } = useScrollAnchor()
 
+    const t = useScopedI18n('FreeChat')
+
     useEffect(() => {
         if (isAtBottom) {
             scrollToBottom()
@@ -255,13 +258,13 @@ export default function FreeChat({ chatId }: FreeChatProps) {
                                 id='simple-tab'
                                 value="simple"
                             >
-                                    Simple
+                                {t('simpleEditor')}
                             </TabsTrigger>
                             <TabsTrigger
                                 id='markdown-tab'
                                 value="markdown"
                             >
-                                    Markdown
+                                {t('markdownEditor')}
                             </TabsTrigger>
                         </TabsList>
                         <MarkdownEditorTour />
