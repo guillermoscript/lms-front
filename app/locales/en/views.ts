@@ -186,8 +186,10 @@ export default {
                 tabs: {
                     lessons: 'Lessons',
                     exams: 'Exams',
+                    exercises: 'Exercises',
                     createLesson: 'Create Lesson',
                     createExam: 'Create Exam',
+                    createExercise: 'Create Exercise',
                 }
             },
             TeacherLessonPage: {
@@ -215,7 +217,21 @@ export default {
                 title: 'Review Student Exam Submission',
                 duration: 'Duration',
                 minutes: 'minutes',
-            }
+            },
+            ExercisePageTeacher: {
+                editExercise: 'Edit Exercise',
+                exerciseDetails: 'Exercise Details',
+                systemPrompt: 'System Prompt:',
+                performanceMetrics: 'Performance Metrics',
+                completions: 'Completions',
+                averageScore: 'Average Score',
+                exerciseChat: 'Exercise Chat',
+                studentCompletions: 'Student Completions',
+                completed: 'Completed',
+                score: 'Score',
+                minutes: 'minutes',
+                errorLoadingExercise: 'Error loading exercise',
+            },
         }
     },
     auth: {
