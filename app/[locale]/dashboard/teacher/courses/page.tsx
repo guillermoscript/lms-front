@@ -38,7 +38,7 @@ export default async function CreateCoursePage () {
     })
 
     return (
-        <div className=" flex-1 p-8 overflow-auto w-full space-y-4">
+        <div className=" flex-1 p-8 overflow-auto w-full space-y-4 container mx-auto">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
