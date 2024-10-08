@@ -32,7 +32,7 @@ export default async function CommentsSections({
     const t = await getScopedI18n('CommentsSections')
 
     return (
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 ">
             <h2 className="text-xl font-semibold mb-4">
                 {t('comments')} ({lesson_comments.length})
             </h2>
