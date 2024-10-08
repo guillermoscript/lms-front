@@ -3,7 +3,6 @@ import { convertToCoreMessages, streamText } from 'ai'
 import { z } from 'zod'
 
 import { createClient } from '@/utils/supabase/server'
-import { openai } from '@ai-sdk/openai'
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30

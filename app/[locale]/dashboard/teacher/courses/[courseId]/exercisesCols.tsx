@@ -5,6 +5,7 @@ import { Eye, MoreHorizontal, View } from 'lucide-react'
 import Link from 'next/link'
 
 import ScopedHeader from '@/components/dashboards/Common/table/ScopedHeader'
+import DeleteExerciseAlert from '@/components/dashboards/teacher/exercises/DeleteExerciseAlert'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -12,7 +13,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import DeleteExerciseAlert from '@/components/dashboards/teacher/exercises/DeleteExerciseAlert'
 
 interface Lessons {
     id: bigint | number

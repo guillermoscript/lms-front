@@ -1,18 +1,18 @@
 import { Clock, Edit, MessageSquare, Users } from 'lucide-react'
 import Link from 'next/link'
 
-import { getI18n, getScopedI18n } from '@/app/locales/server'
+import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
 import DeleteExerciseAlert from '@/components/dashboards/teacher/exercises/DeleteExerciseAlert'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default async function ExercisePageTeacher({
     params

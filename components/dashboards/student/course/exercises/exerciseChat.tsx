@@ -2,17 +2,17 @@
 
 import { generateId, ToolInvocation } from 'ai'
 import { Message, useChat } from 'ai/react'
-import { Paperclip, Send, Code, ChevronRight } from 'lucide-react'
+import { Paperclip, Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Textarea } from '@/components/ui/textarea'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 
 interface ExerciseChatProps {
     systemPrompt: string
@@ -92,7 +92,7 @@ export default function ExerciseChat({
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
-                                        <div className={`p-3 rounded-lg `}>
+                                        <div className={'p-3 rounded-lg '}>
                                             <ViewMarkdown
                                                 markdown={m.content}
                                             />
