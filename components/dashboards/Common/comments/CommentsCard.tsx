@@ -77,7 +77,7 @@ const CommentCard = ({
                 <AvatarFallback>{name[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-                <div className="bg-gray-100 rounded-2xl px-4 py-2 shadow-sm">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
                         <h4 className="text-sm font-semibold">{name}</h4>
                         <div className="flex items-center gap-2">
