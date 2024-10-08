@@ -208,8 +208,11 @@ const ExamReview: React.FC<ExamReviewProps> = ({
                             className="h-2 mb-2"
                         />
                         <p className="text-sm text-center">
-                            {correctAnswers} {t('outOf')} {totalQuestions}{' '}
-                            {t('correct')}
+                            {t('correct')} {' '}
+                            {correctAnswers}
+                        </p>
+                        <p className="text-sm text-center">
+                            {t('totalQuestions')}: {totalQuestions}
                         </p>
                     </CardContent>
                 )}

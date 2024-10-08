@@ -20,6 +20,7 @@ export default {
         chat: 'Chat',
         teacher: 'Teacher',
         edit: 'Edit',
+        exercise: 'Exercises',
     },
     RecentlyViewed: {
         title: 'Recently Viewed',
@@ -83,14 +84,14 @@ export default {
         TaksMessages: {
             title: 'Complete your task',
             simple: 'Simple',
-            markdown: 'Markdown',
+            markdown: 'Advanced Editor',
             status: 'Success',
         }
     },
     AiTaskMessage: {
         title: 'Complete your task',
         simple: 'Simple',
-        markdown: 'Markdown',
+        markdown: 'Advanced Editor',
         status: 'Success',
     },
     ChatInput: {
@@ -115,7 +116,7 @@ export default {
     },
     EditMessage: {
         simple: 'Simple',
-        markdown: 'Markdown',
+        markdown: 'Advanced Editor',
         editAndRegenerate: 'Edit and Regenerate AI Response',
         edit: 'Edit'
     },
@@ -433,7 +434,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         teacher: 'Teacher',
         score: 'Score',
         outOf: 'out of',
-        correct: 'correct',
+        correct: 'Correct',
         questions: 'Questions',
         aiReview: 'AI Review',
         aiReviewTitle: 'AI Review',
@@ -448,5 +449,32 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         notSpecified: 'Not specified',
         aiReviewFooter: 'This is the AI review of your exam, its not final and is just for your reference on how you did. Please wait for the final review from your teacher.',
         options: 'Options',
+        totalQuestions: 'Total Questions',
+    },
+    NotificationsPage: {
+        title: 'Notifications',
+        filters: 'Filters',
+        allNotifications: 'All Notifications',
+        comments: 'Comments',
+        commentReplies: 'Comment Replies',
+        examReviews: 'Exam Reviews',
+        orderRenewals: 'Order Renewals',
+        searchPlaceholder: 'Search notifications',
+        viewDetails: 'View Details',
+        markAsRead: 'Mark as read',
+        markAsUnread: 'Mark as unread',
+        lastViewed: 'Last Viewed',
+    },
+    FreeChat: {
+        simpleEditor: 'Simple Editor',
+        markdownEditor: 'Markdown Editor',
+    },
+    exerciseCols: {
+        title: 'Title',
+        description: 'Description',
+        created_at: 'Created At',
+        created_by: 'Created By',
+        exercise_type: 'Exercise Type',
+        difficulty_level: 'Difficulty Level',
     }
 } as const

@@ -186,8 +186,10 @@ export default {
                 tabs: {
                     lessons: 'Lecciones',
                     exams: 'Exámenes',
+                    exercises: 'Ejercicios',
                     createLesson: 'Crear lección',
                     createExam: 'Crear examen',
+                    createExercise: 'Crear ejercicio',
                 }
             },
             TeacherLessonPage: {
@@ -215,7 +217,21 @@ export default {
                 title: 'Revisar examen de estudiante',
                 duration: 'Duración',
                 minutes: 'minutos',
-            }
+            },
+            ExercisePageTeacher: {
+                editExercise: 'Editar Ejercicio',
+                exerciseDetails: 'Detalles del Ejercicio',
+                systemPrompt: 'Instrucción del Sistema:',
+                performanceMetrics: 'Métricas de Rendimiento',
+                completions: 'Completados',
+                averageScore: 'Puntuación Media',
+                exerciseChat: 'Chat del Ejercicio',
+                studentCompletions: 'Completados por Estudiantes',
+                completed: 'Completado',
+                score: 'Puntuación',
+                minutes: 'minutos',
+                errorLoadingExercise: 'Error al cargar el ejercicio',
+            },
         }
     },
     auth: {

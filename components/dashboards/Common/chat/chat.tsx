@@ -98,8 +98,8 @@ const SuccessMessage = ({
     message,
     fire,
 }: {
-    status: string
-    message: string
+    status?: string
+    message?: string
     fire?: boolean
 }) => {
     const confettiRef = useRef<ConfettiRef>(null)

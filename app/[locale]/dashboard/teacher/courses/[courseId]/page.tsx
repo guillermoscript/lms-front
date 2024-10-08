@@ -9,6 +9,7 @@ import { DataTable } from '@/components/ui/Table/data-table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
+import { exerciseCols } from './exercisesCols'
 import { lessonsCols } from './lessonsCols'
 import { testsCols } from './testsCols'
 
@@ -21,7 +22,7 @@ export default async function CreateCourseLessonPage({
 
     const course = await supabase
         .from('courses')
-        .select('*, lessons(*), exams(*)')
+        .select('*, lessons(*), exams(*), exercises(*)')
         .eq('course_id', params.courseId)
         .single()
 
@@ -57,8 +58,25 @@ export default async function CreateCourseLessonPage({
         }
     })
 
+    const exerciseRow = course.data?.exercises?.map((exercise) => {
+        return {
+            title: exercise.title,
+            description: exercise.description,
+            lesson_id: exercise.lesson_id,
+            instructions: exercise.instructions,
+            system_prompt: exercise.system_prompt,
+            created_by: exercise.created_by,
+            exercise_type: exercise.exercise_type,
+            difficulty_level: exercise.difficulty_level,
+            time_limit: exercise.time_limit,
+            created_at: dayjs(exercise.created_at).format('DD/MM/YYYY'),
+            id: exercise.id,
+            courseId: exercise.course_id,
+        }
+    })
+
     return (
-        <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
+        <div className="flex-1 p-8 overflow-y-auto w-full space-y-4 container mx-auto">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
@@ -80,6 +98,9 @@ export default async function CreateCourseLessonPage({
                     </TabsTrigger>
                     <TabsTrigger value="tests">
                         {t('dashboard.teacher.CreateCourseLessonPage.tabs.exams')}
+                    </TabsTrigger>
+                    <TabsTrigger value="exercise">
+                        {t('dashboard.teacher.CreateCourseLessonPage.tabs.exercises')}
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent
@@ -116,6 +137,23 @@ export default async function CreateCourseLessonPage({
                     </div>
 
                     <DataTable columns={testsCols} data={testRow as any[]} />
+                </TabsContent>
+                <TabsContent
+                    className="flex flex-col  w-full  gap-4"
+                    value="exercise"
+                >
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-semibold">
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.exercises')}
+                        </h3>
+                        <Link
+                            className={buttonVariants({ variant: 'link' })}
+                            href={`/dashboard/teacher/courses/${params.courseId}/exercises/`}
+                        >
+                            {t('dashboard.teacher.CreateCourseLessonPage.tabs.createExercise')}
+                        </Link>
+                    </div>
+                    <DataTable columns={exerciseCols} data={exerciseRow as any[]} />
                 </TabsContent>
             </Tabs>
         </div>

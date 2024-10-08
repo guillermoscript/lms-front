@@ -85,6 +85,18 @@ CREATE TYPE public.transaction_status AS ENUM (
     'canceled'
 );
 
+CREATE TYPE public.exercise_type AS ENUM(
+  'quiz',
+  'coding_challenge',
+  'essay',
+  'multiple_choice',
+  'true_false',
+  'fill_in_the_blank',
+  'discussion'
+);
+
+CREATE TYPE public.difficulty_level AS ENUM('easy', 'medium', 'hard');
+
 create table
   public.course_categories (
     id serial not null,
@@ -664,4 +676,49 @@ create table
     constraint comment_reactions_pkey primary key (id),
     constraint comment_reactions_comment_id_fkey foreign key (comment_id) references lesson_comments (id),
     constraint comment_reactions_user_id_fkey foreign key (user_id) references profiles (id)
+  ) tablespace pg_default;
+
+create table
+  public.exercises (
+    id bigint generated always as identity not null,
+    lesson_id bigint null,
+    instructions text not null,
+    system_prompt text null,
+    created_by uuid not null,
+    created_at timestamp with time zone null default current_timestamp,
+    updated_at timestamp with time zone null,
+    exercise_type public.exercise_type not null,
+    difficulty_level public.difficulty_level not null,
+    time_limit integer null,
+    title text not null,
+    description text null,
+    course_id integer not null,
+    constraint exercises_pkey primary key (id),
+    constraint exercises_course_id_fkey foreign key (course_id) references courses (course_id) on update cascade on delete cascade,
+    constraint exercises_created_by_fkey foreign key (created_by) references auth.users (id) on delete cascade,
+    constraint exercises_lesson_id_fkey foreign key (lesson_id) references lessons (id) on update cascade on delete set null
+  ) tablespace pg_default;
+
+  create table
+  public.exercise_messages (
+    id bigint generated always as identity not null,
+    exercise_id bigint not null,
+    message text not null,
+    created_at timestamp with time zone null default current_timestamp,
+    constraint exercise_messages_pkey primary key (id),
+    constraint exercise_messages_exercise_id_fkey foreign key (exercise_id) references exercises (id) on delete cascade
+  ) tablespace pg_default;
+
+  create table
+  public.exercise_completions (
+    id bigint generated always as identity not null,
+    exercise_id bigint not null,
+    user_id uuid not null,
+    completed_by uuid not null,
+    completed_at timestamp with time zone null default current_timestamp,
+    score numeric(5, 2) null,
+    constraint exercise_completions_pkey primary key (id),
+    constraint exercise_completions_completed_by_fkey foreign key (completed_by) references auth.users (id) on delete cascade,
+    constraint exercise_completions_exercise_id_fkey foreign key (exercise_id) references exercises (id) on delete cascade,
+    constraint exercise_completions_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
   ) tablespace pg_default;
