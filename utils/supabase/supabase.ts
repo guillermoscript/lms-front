@@ -572,6 +572,154 @@ export type Database = {
           },
         ]
       }
+      exercise_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string
+          exercise_id: number
+          id: number
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by: string
+          exercise_id: number
+          id?: never
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string
+          exercise_id?: number
+          id?: never
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_completions_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_completions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_messages: {
+        Row: {
+          created_at: string | null
+          exercise_id: number
+          id: number
+          message: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: number
+          id?: never
+          message: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: number
+          id?: never
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_messages_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercises: {
+        Row: {
+          course_id: number
+          created_at: string | null
+          created_by: string
+          description: string | null
+          difficulty_level: Database["public"]["Enums"]["difficulty_level"]
+          exercise_type: Database["public"]["Enums"]["exercise_type"]
+          id: number
+          instructions: string
+          lesson_id: number | null
+          system_prompt: string | null
+          time_limit: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: number
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          difficulty_level: Database["public"]["Enums"]["difficulty_level"]
+          exercise_type: Database["public"]["Enums"]["exercise_type"]
+          id?: never
+          instructions: string
+          lesson_id?: number | null
+          system_prompt?: string | null
+          time_limit?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: number
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          difficulty_level?: Database["public"]["Enums"]["difficulty_level"]
+          exercise_type?: Database["public"]["Enums"]["exercise_type"]
+          id?: never
+          instructions?: string
+          lesson_id?: number | null
+          system_prompt?: string | null
+          time_limit?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercises_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "exercises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercises_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grades: {
         Row: {
           course_id: number
@@ -1819,7 +1967,16 @@ export type Database = {
       app_role: "admin" | "moderator" | "teacher" | "student"
       chat_types: "free_chat" | "q&a" | "exam_prep" | "course_convo"
       currency_type: "usd" | "eur"
+      difficulty_level: "easy" | "medium" | "hard"
       enrollement_status: "active" | "disabled"
+      exercise_type:
+        | "quiz"
+        | "coding_challenge"
+        | "essay"
+        | "multiple_choice"
+        | "true_false"
+        | "fill_in_the_blank"
+        | "discussion"
       notification_types:
         | "comment_reply"
         | "comment"
