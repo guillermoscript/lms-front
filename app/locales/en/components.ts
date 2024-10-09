@@ -501,5 +501,12 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
             success: 'Exercise deleted',
             trigger: 'Delete Progress',
         },
+    },
+    NotEnrolledMessage: {
+        courseAccess: 'Course Access',
+        notEnrolledIn: 'Not Enrolled in',
+        enrollPrompt: "You're just one step away from accessing this amazing course! Enroll now to unlock all the lessons and start your learning journey.",
+        aboutThisCourse: 'About this course:',
+        enrollNow: 'Enroll Now',
     }
 } as const
