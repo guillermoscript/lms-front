@@ -93,3 +93,59 @@ export default function LessonPageSkeleton() {
         </div>
     )
 }
+
+export function LessonBodyLoading() {
+    return (
+        <div className='flex flex-col gap-4 mt-4'>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+            <div className="flex items-start gap-3 w-full">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[calc(100%-3rem)]" />
+                    <Skeleton className="h-4 w-[calc(100%-2rem)]" />
+                </div>
+            </div>
+
+        </div>
+    )
+}
