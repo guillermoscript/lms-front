@@ -26,3 +26,5 @@ export const reactionTypes: Array<{
     { type: 'boring', icon: Meh, color: '' },
     { type: 'dislike', icon: ThumbsDown, color: 'text-red-500' }
 ]
+
+export const URL_OF_SITE = process.env.NEXT_PUBLIC_DOMAIN_URL
