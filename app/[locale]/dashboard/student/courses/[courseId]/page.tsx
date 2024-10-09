@@ -151,7 +151,11 @@ const ExamCard = ({ title, number, description, status, grade, courseId, examId,
             {grade && <p className="font-semibold">{t('dashboard.student.CourseStudentPage.grade')}: {grade}</p>}
         </CardContent>
         <CardFooter>
-            <Button asChild>
+            <Button
+                variant={status === 'Completed' ? 'secondary' : 'default'}
+                className='w-full'
+                asChild
+            >
                 <Link href={`/dashboard/student/courses/${courseId}/exams/${examId}`}>
                     <FileText className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.viewExam')}
                 </Link>
