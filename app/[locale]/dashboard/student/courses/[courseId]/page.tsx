@@ -28,7 +28,11 @@ const ExerciseCard = ({ title, description, difficulty, type, status, courseId, 
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{description}</p>
         </CardContent>
         <CardFooter>
-            <Button asChild>
+            <Button
+                variant={status === 'Completed' ? 'secondary' : 'default'}
+                asChild
+                className='w-full'
+            >
                 <Link href={`/dashboard/student/courses/${courseId}/exercises/${exerciseId}`}>
                     <Dumbbell className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.startExercise')}
                 </Link>
@@ -147,7 +151,11 @@ const ExamCard = ({ title, number, description, status, grade, courseId, examId,
             {grade && <p className="font-semibold">{t('dashboard.student.CourseStudentPage.grade')}: {grade}</p>}
         </CardContent>
         <CardFooter>
-            <Button asChild>
+            <Button
+                variant={status === 'Completed' ? 'secondary' : 'default'}
+                className='w-full'
+                asChild
+            >
                 <Link href={`/dashboard/student/courses/${courseId}/exams/${examId}`}>
                     <FileText className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.viewExam')}
                 </Link>
@@ -201,6 +209,7 @@ export default async function CourseStudentPage({
         .eq('status', 'published')
         .eq('lessons.lesson_completions.user_id', userData.data.user.id)
         .eq('exams.exam_submissions.student_id', userData.data.user.id)
+        .eq('exercises.exercise_completions.user_id', userData.data.user.id)
         .single()
 
     if (courseData.error != null) {

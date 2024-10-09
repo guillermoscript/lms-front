@@ -51,7 +51,7 @@ export default async function ExercisesPage({
             <CourseExercisesPage
                 courseId={params.courseId}
                 exercises={exerciseData.data}
-                courseTitle={exerciseData.data[0].title}
+                courseTitle={exerciseData.data[0].courses.title}
             />
         </div>
     )

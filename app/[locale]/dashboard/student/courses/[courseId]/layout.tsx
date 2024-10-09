@@ -39,8 +39,20 @@ export default async function CoursesPageLayout ({
             if (userSubscriptions.error != null || userSubscriptions.data.length === 0) {
                 throw new Error(userSubscriptions?.error?.message || 'You are not authorized to view this page.')
             }
+
+            const courseTitle = await supabase
+                .from('courses')
+                .select('title, description, thumbnail_url')
+                .eq('course_id', Number(params.courseId))
+                .single()
+
             return (
-                <EnrollCard courseId={Number(params.courseId)} />
+                <EnrollCard
+                    courseName={courseTitle.data.title}
+                    courseId={Number(params.courseId)}
+                    courseDescription={courseTitle.data.description}
+                    courseThumbnail={courseTitle.data.thumbnail_url}
+                />
             )
         }
         throw new Error(isUserEnrolled.error.message)
@@ -50,8 +62,20 @@ export default async function CoursesPageLayout ({
         if (userSubscriptions.error != null || userSubscriptions.data.length === 0) {
             throw new Error(userSubscriptions?.error?.message || 'You are not authorized to view this page.')
         }
+
+        const courseTitle = await supabase
+            .from('courses')
+            .select('title, description, thumbnail_url')
+            .eq('course_id', Number(params.courseId))
+            .single()
+
         return (
-            <EnrollCard courseId={Number(params.courseId)} />
+            <EnrollCard
+                courseName={courseTitle.data.title}
+                courseId={Number(params.courseId)}
+                courseDescription={courseTitle.data.description}
+                courseThumbnail={courseTitle.data.thumbnail_url}
+            />
         )
     }
 

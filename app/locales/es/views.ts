@@ -160,6 +160,8 @@ export default {
                 waitingReview: 'Esperando revisión',
                 review: 'Review',
                 start: 'Comenzar',
+                completedExams: 'Exámenes completados',
+                exam: 'Examen',
             },
             StudentExamCoursePage: {
                 duration: 'Duración',

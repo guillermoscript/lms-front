@@ -1,33 +1,85 @@
-/**
- * v0 by Vercel.
- * @see https://v0.dev/t/vkBhDMemo6s
- * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
- */
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 
-export default function Component () {
+export default function ExamPageSkeleton() {
     return (
-        <div className="grid min-h-screen w-full lg:grid-cols-[1fr]">
-            <div className="flex flex-col">
-                <main className="flex-1 p-4 md:p-6">
-                    <div className="flex items-center">
-                        <Skeleton className="h-6 w-40 rounded-md" />
-                        <Skeleton className="h-8 w-20 ml-auto rounded-md" />
-                    </div>
-                    <div className="mt-4 border rounded-lg shadow-sm">
-                        <Skeleton className="h-[200px] w-full rounded-t-lg" />
-                        <div className="p-4 md:p-6">
-                            <div className="space-y-4">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                            </div>
-                        </div>
-                    </div>
-                </main>
+        <div className="container mx-auto px-4 py-8">
+            <div className="mb-4">
+                <Skeleton className="h-4 w-full max-w-3xl" />
             </div>
+
+            <div className="mb-8">
+                <Skeleton className="h-8 w-3/4 max-w-2xl mb-2" />
+                <Skeleton className="h-4 w-full max-w-3xl mb-4" />
+                <Skeleton className="h-4 w-32" />
+            </div>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {[...Array(4)].map((_, index) => (
+                        <div key={index} className="mb-4">
+                            <Skeleton className="h-4 w-full max-w-xl mb-2" />
+                            <RadioGroup>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="placeholder" id={`true-${index}`} />
+                                    <Label htmlFor={`true-${index}`}><Skeleton className="h-4 w-16" /></Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="placeholder" id={`false-${index}`} />
+                                    <Label htmlFor={`false-${index}`}><Skeleton className="h-4 w-16" /></Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {[...Array(5)].map((_, index) => (
+                        <div key={index} className="mb-6">
+                            <Skeleton className="h-4 w-full max-w-2xl mb-2" />
+                            <Textarea placeholder="Enter your answer" />
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {[...Array(3)].map((_, questionIndex) => (
+                        <div key={questionIndex} className="mb-6">
+                            <Skeleton className="h-4 w-full max-w-xl mb-2" />
+                            {[...Array(4)].map((_, optionIndex) => (
+                                <div key={optionIndex} className="flex items-center space-x-2 mb-2">
+                                    <Checkbox id={`q${questionIndex}-option${optionIndex}`} />
+                                    <Label htmlFor={`q${questionIndex}-option${optionIndex}`}>
+                                        <Skeleton className="h-4 w-32" />
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <Button className="w-full md:w-auto">
+                <Skeleton className="h-4 w-32" />
+            </Button>
         </div>
     )
 }

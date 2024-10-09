@@ -500,5 +500,12 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
             success: 'Ejercicio eliminado',
             trigger: 'Eliminar progreso',
         },
+    },
+    NotEnrolledMessage: {
+        courseAccess: 'Acceso al Curso',
+        notEnrolledIn: 'No Inscrito en',
+        enrollPrompt: '¡Estás a solo un paso de acceder a este increíble curso! Inscríbete ahora para desbloquear todas las lecciones y comenzar tu viaje de aprendizaje.',
+        aboutThisCourse: 'Sobre este curso:',
+        enrollNow: 'Inscribirse Ahora',
     }
 } as const
