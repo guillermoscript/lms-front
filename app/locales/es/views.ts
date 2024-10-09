@@ -141,6 +141,9 @@ export default {
                 exams: 'Exámenes',
                 start: 'Comenzar',
                 review: 'Revisar',
+                startExercise: 'Comenzar ejercicio',
+                viewExercise: 'Ver ejercicio',
+                exercises: 'Ejercicios',
             },
             LessonPage: {
                 description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',
