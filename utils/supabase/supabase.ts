@@ -627,18 +627,24 @@ export type Database = {
           exercise_id: number
           id: number
           message: string
+          role: Database["public"]["Enums"]["ai_sender_type"] | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           exercise_id: number
           id?: never
           message: string
+          role?: Database["public"]["Enums"]["ai_sender_type"] | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
           exercise_id?: number
           id?: never
           message?: string
+          role?: Database["public"]["Enums"]["ai_sender_type"] | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -646,6 +652,20 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "exercise_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
