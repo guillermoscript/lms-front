@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import LessonContent from '@/components/dashboards/student/course/lessons/LessonContent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
+import ChatBox from '@/components/chatbox/ChatBox'
 import { createClient } from '@/utils/supabase/server'
 
 import { LessonBodyLoading } from './loading'
@@ -43,6 +44,10 @@ export default async function StudentLessonPage({
 
     const isLessonAiTaskCompleted = lessonData.data.lesson_completions.length > 0
 
+    const lessonInstructions = JSON.stringify({ // Convierte el objeto a JSON
+        content: lessonData.data.content,
+      });
+
     return (
         <LessonPage
             sideBar={
@@ -67,6 +72,7 @@ export default async function StudentLessonPage({
                     userId={user.data.user.id}
                 />
             </Suspense>
+            <ChatBox instructions={lessonInstructions} />
         </LessonPage>
     )
 }

@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/google": "^0.0.51",
     "@ai-sdk/openai": "^0.0.66",
+    "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.9.0",
     "@mdxeditor/editor": "^3.11.5",
     "@radix-ui/react-accordion": "^1.2.1",
