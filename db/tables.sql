@@ -705,10 +705,13 @@ create table
     exercise_id bigint not null,
     message text not null,
     created_at timestamp with time zone null default current_timestamp,
+    role public.ai_sender_type null,
+    user_id uuid not null,
     constraint exercise_messages_pkey primary key (id),
-    constraint exercise_messages_exercise_id_fkey foreign key (exercise_id) references exercises (id) on delete cascade
+    constraint exercise_messages_exercise_id_fkey foreign key (exercise_id) references exercises (id) on delete cascade,
+    constraint exercise_messages_user_id_fkey foreign key (user_id) references profiles (id) on update cascade on delete cascade
   ) tablespace pg_default;
-
+  
   create table
   public.exercise_completions (
     id bigint generated always as identity not null,
