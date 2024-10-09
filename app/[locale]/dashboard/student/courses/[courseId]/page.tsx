@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
 
-
 const ExerciseCard = ({ title, description, difficulty, type, status, courseId, exerciseId, t }) => (
     <Card className="mb-4">
         <CardHeader>
@@ -211,7 +210,6 @@ export default async function CourseStudentPage({
     const completedLessons = courseData.data.lessons.filter(lesson => lesson.lesson_completions.length > 0).length
     const completedExams = courseData.data.exams.filter(exam => exam.exam_submissions.length > 0).length
     const completedExercises = courseData.data.exercises.filter(exercise => exercise.exercise_completions?.length > 0).length
-
 
     return (
         <div className="container mx-auto px-4 py-8">

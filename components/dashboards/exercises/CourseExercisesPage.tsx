@@ -43,7 +43,7 @@ interface Exercise {
 interface CourseExercisesPageProps {
     courseId: string
     courseTitle: string
-    exercises: Tables<'exercises'>[]
+    exercises: Array<Tables<'exercises'>>
 }
 
 export default function CourseExercisesPage({

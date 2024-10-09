@@ -61,7 +61,7 @@ export default async function ExercisePageTeacher({
     const initialMessages = [
         {
             id: generateId().toString(),
-            role: 'system' as 'system',
+            role: 'system' as const,
             content: exercise.system_prompt
         },
         ...exercise.exercise_messages.map((message) => ({

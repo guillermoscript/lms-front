@@ -5,7 +5,6 @@ import confetti from 'canvas-confetti'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     Award,
-    Bookmark,
     ChevronLeft,
     Clock,
     HelpCircle,
@@ -17,6 +16,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { deleteMessagesAndCompletitionOfExerciseAction } from '@/actions/dashboard/exercisesActions'
+import { useScopedI18n } from '@/app/locales/client'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -28,8 +31,6 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-
-import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,13 +42,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { cn } from '@/utils'
 import { URL_OF_SITE } from '@/utils/const'
-import { Tables } from '@/utils/supabase/supabase'
 
 import ExerciseChat from '../student/course/exercises/exerciseChat'
-import { deleteMessagesAndCompletitionOfExerciseAction } from '@/actions/dashboard/exercisesActions'
-import { toast } from 'sonner'
-import { cn } from '@/utils'
 
 export default function StudentExercisePage({
     exercise,

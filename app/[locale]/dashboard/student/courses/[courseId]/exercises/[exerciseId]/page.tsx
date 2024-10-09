@@ -25,10 +25,10 @@ export default async function ExerciseStudentPage({
     console.log(exercise)
 
     const profile = await supabase
-    .from('profiles')
-    .select('full_name, avatar_url')
-    .eq('id', userData.data.user.id)
-    .single()
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', userData.data.user.id)
+        .single()
 
     const t = await getI18n()
 
