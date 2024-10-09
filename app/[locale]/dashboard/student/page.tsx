@@ -40,10 +40,11 @@ export default async function CoursesStudentPage() {
                 title,
                 description,
                 thumbnail_url,
-                lessons(id, title, lesson_completions(id)),
+                lessons(id, title, lesson_completions(id,user_id)),
                 exams(exam_id)
             `)
             .eq('status', 'published')
+            .eq('lessons.lesson_completions.user_id', user.data.user.id)
         : supabase
             .from('enrollments')
             .select(`
@@ -52,11 +53,13 @@ export default async function CoursesStudentPage() {
                     title,
                     description,
                     thumbnail_url,
-                    lessons(id, title, lesson_completions(id)),
+                    lessons(id, title, lesson_completions(id,user_id)),
                     exams(exam_id)
                 )
             `)
             .eq('user_id', user.data.user.id)
+            .eq('status', 'published')
+            .eq('course.course_id.lessons.lesson_completions.user_id', user.data.user.id)
 
     const coursesResult = await coursesQuery
 
