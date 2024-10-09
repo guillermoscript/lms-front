@@ -17,7 +17,7 @@ export default async function ExamnChatIdPageLayout ({
         .from('chats')
         .select('*, messages(*)')
         .eq('chat_id', Number(params.chatId))
-        .order('created_at', { foreignTable: 'messages', ascending: true })
+        .order('created_at', { referencedTable: 'messages', ascending: true })
         .single()
 
     if (messagesData.error) {

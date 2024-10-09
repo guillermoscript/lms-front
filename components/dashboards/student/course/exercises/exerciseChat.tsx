@@ -1,7 +1,8 @@
 'use client'
 
-import { generateId, ToolInvocation } from 'ai'
+import { ToolInvocation } from 'ai'
 import { Message, useChat } from 'ai/react'
+import dayjs from 'dayjs'
 import { Paperclip, Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -15,32 +16,39 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 
 interface ExerciseChatProps {
-    systemPrompt: string
     apiEndpoint: string
     exerciseId: string
+    initialMessages: Message[]
+    isExerciseCompleted: boolean
+    profile: {
+        full_name: string
+        avatar_url: string
+    }
 }
 
 export default function ExerciseChat({
-    systemPrompt,
     apiEndpoint,
     exerciseId,
+    initialMessages,
+    isExerciseCompleted,
+    profile,
 }: ExerciseChatProps) {
     const [files, setFiles] = useState<FileList | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
-    const [isCompleted, setIsCompleted] = useState(false)
+    const [isCompleted, setIsCompleted] = useState(isExerciseCompleted)
+
+    console.log(initialMessages)
 
     const { messages, input, handleInputChange, handleSubmit, isLoading } =
         useChat({
-            api: '/api/chat/exercises',
-            initialMessages: [
-                { role: 'system', content: systemPrompt, id: generateId() },
-            ],
+            api: apiEndpoint ?? '/api/chat/exercises',
+            initialMessages,
             body: { exerciseId },
             onFinish: (message) => {
                 console.log('Message:', message)
             },
-            maxSteps: 5,
+            maxSteps: 2,
             async onToolCall({ toolCall }) {
                 console.log('Tool call:', toolCall)
                 if (toolCall.toolName === 'makeUserAssigmentCompleted') {
@@ -70,7 +78,7 @@ export default function ExerciseChat({
     }
 
     return (
-        <Card className="w-full mx-auto  text-gray-100">
+        <Card className="w-full mx-auto">
             <CardContent className="p-6">
                 <ScrollArea className="h-[600px] pr-4" ref={chatContainerRef}>
                     {messages.map((m: Message) => {
@@ -83,12 +91,16 @@ export default function ExerciseChat({
                                         <AvatarImage
                                             src={
                                                 m.role === 'user'
-                                                    ? '/user-avatar.png'
-                                                    : '/ai-avatar.png'
+                                                    ? profile.avatar_url
+                                                    : '/img/robot.jpeg'
                                             }
                                         />
                                         <AvatarFallback>
-                                            {m.role === 'user' ? 'U' : 'AI'}
+                                            {m.role === 'user' ? (
+                                                profile.full_name[0]
+                                            ) : (
+                                                'A'
+                                            )}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
@@ -96,11 +108,17 @@ export default function ExerciseChat({
                                             <ViewMarkdown
                                                 markdown={m.content}
                                             />
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {dayjs(m.createdAt).format(
+                                                    'MMM D, YYYY [at] h:mm A'
+                                                )}
+                                            </div>
                                         </div>
                                         {m.toolInvocations?.map(
                                             (
                                                 toolInvocation: ToolInvocation
                                             ) => {
+                                                console.log(toolInvocation)
                                                 if (
                                                     toolInvocation.toolName ===
                                                         'makeUserAssigmentCompleted' &&
@@ -113,7 +131,7 @@ export default function ExerciseChat({
                                                             }
                                                             className="mt-3"
                                                         >
-                                                            <SuccessMessage message="Exercise completed" />
+                                                            {toolInvocation.result}
                                                         </div>
                                                     )
                                                 }
@@ -129,11 +147,7 @@ export default function ExerciseChat({
                 </ScrollArea>
                 {isCompleted ? (
                     <>
-                        <div className="mt-4 flex items-center space-x-2">
-                            <h4 className="text-lg font-semibold">
-                                Exercise completed
-                            </h4>
-                        </div>
+                        <SuccessMessage message="Exercise completed" />
                     </>
                 ) : (
                     <form
@@ -150,7 +164,7 @@ export default function ExerciseChat({
                                 onChange={handleInputChange}
                                 placeholder="Type your message..."
                                 disabled={isLoading}
-                                className="flex-grow "
+                                className="flex-grow"
                             />
                             <Button
                                 disabled={isLoading}

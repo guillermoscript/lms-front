@@ -475,5 +475,30 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
     FreeChat: {
         simpleEditor: 'Editor Simple',
         markdownEditor: 'Editor Avanzado',
+    },
+    StudentExercisePage: {
+        backToCourse: 'Volver al Curso',
+        helpTooltip: '¿Necesitas ayuda? Haz clic aquí para más información.',
+        minutes: 'minutos',
+        progress: 'Progreso',
+        tips: 'Consejos',
+        tip1: 'Lee las instrucciones cuidadosamente.',
+        tip2: 'Tómate tu tiempo para entender el problema.',
+        tip3: 'Pide ayuda si te quedas atascado.',
+        actions: 'Acciones',
+        saveProgress: 'Guardar Progreso',
+        shareProgress: 'Compartir Progreso',
+        congratulations: '¡Felicidades!',
+        exerciseCompleted: 'Has completado el ejercicio con éxito.',
+        instructions: 'Instrucciones',
+        deleteConfirmation: {
+            title: '¿Estás absolutamente seguro?',
+            description: 'Esta acción no se puede deshacer. Esto eliminará permanentemente los datos de nuestros servidores.',
+            cancel: 'Cancelar',
+            continue: 'Continuar',
+            error: 'Error',
+            success: 'Ejercicio eliminado',
+            trigger: 'Eliminar progreso',
+        },
     }
 } as const

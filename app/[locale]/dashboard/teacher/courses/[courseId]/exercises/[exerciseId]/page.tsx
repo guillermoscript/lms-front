@@ -1,3 +1,4 @@
+import { generateId } from 'ai'
 import { Clock, Edit, MessageSquare, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { URL_OF_SITE } from '@/utils/const'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExercisePageTeacher({
@@ -27,7 +29,8 @@ export default async function ExercisePageTeacher({
         .select(`
             *,
             courses(*),
-            exercise_completions(*)
+            exercise_completions(*),
+            exercise_messages(id,message,role)
         `)
         .eq('id', params.exerciseId)
         .single()
@@ -54,6 +57,29 @@ export default async function ExercisePageTeacher({
     const averageScore = exercise?.exercise_completions.length > 0
         ? (exercise?.exercise_completions.reduce((acc, curr) => acc + (curr.score || 0), 0) / exercise?.exercise_completions.length).toFixed(2)
         : 'N/A'
+
+    const initialMessages = [
+        {
+            id: generateId().toString(),
+            role: 'system' as const,
+            content: exercise.system_prompt
+        },
+        ...exercise.exercise_messages.map((message) => ({
+            id: message.id.toString(),
+            role: message.role as 'system' | 'user' | 'assistant' | 'data' | 'tool',
+            content: message.message
+        }))
+    ]
+
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.data.user.id)
+        .single()
+
+    console.log(initialMessages, 'initialMessages')
 
     return (
         <div className="container mx-auto">
@@ -143,9 +169,11 @@ export default async function ExercisePageTeacher({
                 </TabsList>
                 <TabsContent value="chat" className="mt-4">
                     <ExerciseChat
-                        systemPrompt={exercise.system_prompt || ''}
                         exerciseId={params.exerciseId}
-                        apiEndpoint='/api/exercise'
+                        apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/`}
+                        initialMessages={initialMessages || []}
+                        isExerciseCompleted={false}
+                        profile={profile.data}
                     />
                 </TabsContent>
                 <TabsContent value="completions" className="mt-4">

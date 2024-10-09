@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, FileText } from 'lucide-react'
+import { CheckCircle, Clock, Dumbbell, FileText } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -11,6 +11,31 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
+
+const ExerciseCard = ({ title, description, difficulty, type, status, courseId, exerciseId, t }) => (
+    <Card className="mb-4">
+        <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+                <span>{title}</span>
+                <Badge variant={status === 'Completed' ? 'default' : 'outline'}>
+                    {status === 'Completed' ? <CheckCircle className="mr-1 h-3 w-3" /> : <Clock className="mr-1 h-3 w-3" />}
+                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.completed') : t('dashboard.student.CourseStudentPage.notStarted')}
+                </Badge>
+            </CardTitle>
+            <CardDescription>{type} - {difficulty}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{description}</p>
+        </CardContent>
+        <CardFooter>
+            <Button asChild>
+                <Link href={`/dashboard/student/courses/${courseId}/exercises/${exerciseId}`}>
+                    <Dumbbell className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.startExercise')}
+                </Link>
+            </Button>
+        </CardFooter>
+    </Card>
+)
 
 const CourseHeader = ({ title, description, image }) => (
     <div className="relative h-64 md:h-80 mb-8 rounded-lg overflow-hidden">
@@ -166,13 +191,14 @@ export default async function CourseStudentPage({
                     score
                 )
             )
+        ),
+        exercises(*,
+            exercise_completions(id)
         )
     `
         )
         .eq('course_id', params.courseId)
         .eq('status', 'published')
-        // .eq('lessons.status', 'published')
-        // .eq('exams.status', 'published')
         .eq('lessons.lesson_completions.user_id', userData.data.user.id)
         .eq('exams.exam_submissions.student_id', userData.data.user.id)
         .single()
@@ -183,6 +209,7 @@ export default async function CourseStudentPage({
 
     const completedLessons = courseData.data.lessons.filter(lesson => lesson.lesson_completions.length > 0).length
     const completedExams = courseData.data.exams.filter(exam => exam.exam_submissions.length > 0).length
+    const completedExercises = courseData.data.exercises.filter(exercise => exercise.exercise_completions?.length > 0).length
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -216,8 +243,9 @@ export default async function CourseStudentPage({
             />
 
             <Tabs defaultValue="lessons" className="w-full space-y-8">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="lessons">{t('dashboard.student.CourseStudentPage.lessons')}</TabsTrigger>
+                    <TabsTrigger value="exercises">{t('dashboard.student.CourseStudentPage.exercises')}</TabsTrigger>
                     <TabsTrigger value="exams">{t('dashboard.student.CourseStudentPage.exams')}</TabsTrigger>
                 </TabsList>
                 <TabsContent
@@ -236,6 +264,25 @@ export default async function CourseStudentPage({
                                 status={lesson.lesson_completions.length > 0 ? 'Completed' : 'Not Started'}
                                 courseId={courseData.data.course_id}
                                 lessonId={lesson.id}
+                                t={t}
+                            />
+                        ))}
+                </TabsContent>
+                <TabsContent
+                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    value="exercises"
+                >
+                    {courseData.data.exercises
+                        .map((exercise) => (
+                            <ExerciseCard
+                                key={exercise.id}
+                                title={exercise.title}
+                                description={exercise.description}
+                                difficulty={exercise.difficulty_level}
+                                type={exercise.exercise_type}
+                                status={exercise.exercise_completions?.length > 0 ? 'Completed' : 'Not Started'}
+                                courseId={courseData.data.course_id}
+                                exerciseId={exercise.id}
                                 t={t}
                             />
                         ))}

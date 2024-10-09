@@ -141,6 +141,8 @@ export default {
                 exams: 'Exams',
                 start: 'Start',
                 review: 'Review',
+                startExercise: 'Start Exercise',
+                exercises: 'Exercises',
             },
             LessonPage: {
                 description: 'View and track your progress through the course lessons.',
