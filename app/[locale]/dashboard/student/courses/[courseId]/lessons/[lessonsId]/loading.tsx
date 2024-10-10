@@ -69,23 +69,26 @@ export default function LessonPageSkeleton() {
                             </Tabs>
                         </CardHeader>
                         <CardContent>
-                            <TabsContent value="comments">
-                                <div className="space-y-4">
-                                    {[...Array(3)].map((_, index) => (
-                                        <div key={index} className="flex gap-2">
-                                            <Skeleton className="h-10 w-10 rounded-full" />
-                                            <div className="flex-1">
-                                                <Skeleton className="h-4 w-32 mb-2" />
-                                                <Skeleton className="h-3 w-full" />
-                                                <Skeleton className="h-3 w-5/6" />
+                            <Tabs defaultValue="comments">
+
+                                <TabsContent value="comments">
+                                    <div className="space-y-4">
+                                        {[...Array(3)].map((_, index) => (
+                                            <div key={index} className="flex gap-2">
+                                                <Skeleton className="h-10 w-10 rounded-full" />
+                                                <div className="flex-1">
+                                                    <Skeleton className="h-4 w-32 mb-2" />
+                                                    <Skeleton className="h-3 w-full" />
+                                                    <Skeleton className="h-3 w-5/6" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="timeline">
-                                <Skeleton className="h-40 w-full" />
-                            </TabsContent>
+                                        ))}
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="timeline">
+                                    <Skeleton className="h-40 w-full" />
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                     </Card>
                 </div>
