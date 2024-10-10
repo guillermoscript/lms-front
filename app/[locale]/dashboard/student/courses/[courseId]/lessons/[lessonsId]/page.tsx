@@ -27,15 +27,15 @@ export default async function StudentLessonPage({
         throw new Error(user.error.message)
     }
     const lessonData = await supabase.from('lessons').select(`*,
-      courses(*),
-      lesson_comments(*,
-        profiles(*),
-        comment_reactions(*)
-      ),
-      lessons_ai_tasks(*),
-      lessons_ai_task_messages(*),
-      lesson_completions(lesson_id, user_id)
-      `)
+        courses(*),
+        lesson_comments(*,
+            profiles(*),
+            comment_reactions(*)
+        ),
+        lessons_ai_tasks(*),
+        lessons_ai_task_messages(*),
+        lesson_completions(lesson_id, user_id)
+    `)
         .eq('id', params.lessonsId)
         .eq('lessons_ai_task_messages.user_id', user.data.user.id)
         .eq('lesson_completions.user_id', user.data.user.id)
@@ -46,11 +46,16 @@ export default async function StudentLessonPage({
     return (
         <LessonPage
             sideBar={
-                <SidebarLessons
-                    courseId={Number(params.courseId)}
-                    lessonId={lessonData.data.id}
-                    lessonData={lessonData.data}
-                />
+                <Suspense fallback={<>
+                    <LessonBodyLoading />
+                </>}
+                >
+                    <SidebarLessons
+                        courseId={Number(params.courseId)}
+                        lessonId={lessonData.data.id}
+                        lessonData={lessonData.data}
+                    />
+                </Suspense>
             }
         >
             <Suspense fallback={<>

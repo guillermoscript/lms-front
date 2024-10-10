@@ -6,13 +6,17 @@ import dayjs from 'dayjs'
 import { Paperclip, Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
+import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
+import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 interface ExerciseChatProps {
@@ -38,9 +42,7 @@ export default function ExerciseChat({
     const chatContainerRef = useRef<HTMLDivElement>(null)
     const [isCompleted, setIsCompleted] = useState(isExerciseCompleted)
 
-    console.log(initialMessages)
-
-    const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    const { messages, input, handleInputChange, handleSubmit, isLoading, stop, append } =
         useChat({
             api: apiEndpoint ?? '/api/chat/exercises',
             initialMessages,
@@ -78,8 +80,8 @@ export default function ExerciseChat({
     }
 
     return (
-        <Card className="w-full mx-auto">
-            <CardContent className="p-6">
+        <Card className="w-full mx-auto border-none md:border">
+            <CardContent className="p-1 md:p-6">
                 <ScrollArea className="h-[600px] pr-4" ref={chatContainerRef}>
                     {messages.map((m: Message) => {
                         if (m.role === 'system') return null
@@ -150,22 +152,109 @@ export default function ExerciseChat({
                         <SuccessMessage message="Exercise completed" />
                     </>
                 ) : (
-                    <form
-                        className="mt-4"
-                        onSubmit={(e) => {
-                            e.preventDefault()
-                            handleSubmit(e)
-                            removeFile()
-                        }}
+                    <TextEditors
+                        isLoading={isLoading}
+                        stop={stop}
+                        text={input}
+                        input={input}
+                        handleInputChange={handleInputChange}
+                        handleSubmit={handleSubmit}
+                        handleFileChange={handleFileChange}
+                        files={files}
+                        removeFile={removeFile}
+                        fileInputRef={fileInputRef}
+                        append={append}
+                    />
+                )}
+            </CardContent>
+        </Card>
+    )
+}
+
+function TextEditors({
+    isLoading,
+    stop,
+    text,
+    input,
+    handleInputChange,
+    handleSubmit,
+    handleFileChange,
+    files,
+    removeFile,
+    fileInputRef,
+    append
+}: {
+    isLoading: boolean
+    stop: () => void
+    text: string
+    input: string
+    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+    handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+    files: FileList | null
+    removeFile: () => void
+    fileInputRef: React.RefObject<HTMLInputElement>
+    append: (message: Message) => void
+}) {
+    const t = useScopedI18n('LessonContent.TaksMessages')
+
+    return (
+        <Tabs defaultValue="simple" className="w-full py-4">
+            <div className="flex gap-4">
+                <TabsList
+                    id='tabs-list'
+                    className='gap-4'
+                >
+                    <TabsTrigger
+                        id='simple-tab'
+                        value="simple"
                     >
+                        {t('simple')}
+                    </TabsTrigger>
+                    <TabsTrigger
+                        id='markdown-tab'
+                        value="markdown"
+                    >
+                        {t('markdown')}
+                    </TabsTrigger>
+                </TabsList>
+                <MarkdownEditorTour />
+            </div>
+            <TabsContent
+                id='markdown-content'
+                value="markdown"
+            >
+                <MarkdownEditor
+                    isLoading={isLoading}
+                    stop={stop}
+                    callbackFunction={(e) => {
+                        append(e as Message)
+                        removeFile()
+                    }}
+                    text={text}
+                />
+            </TabsContent>
+            <TabsContent
+                id='simple-content'
+                value="simple"
+            >
+                <form
+                    className="mt-4"
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSubmit(e)
+                        removeFile()
+                    }}
+                >
+                    <div className="flex items-center gap-4 flex-col md:flex-row">
+                        <Textarea
+                            value={input}
+                            onChange={handleInputChange}
+                            placeholder="Type your message..."
+                            disabled={isLoading}
+                            className="flex-grow"
+                        />
                         <div className="flex items-center space-x-2">
-                            <Textarea
-                                value={input}
-                                onChange={handleInputChange}
-                                placeholder="Type your message..."
-                                disabled={isLoading}
-                                className="flex-grow"
-                            />
                             <Button
                                 disabled={isLoading}
                                 type="button"
@@ -179,33 +268,33 @@ export default function ExerciseChat({
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
-                        <input
-                            type="file"
-                            className="hidden"
-                            onChange={handleFileChange}
-                            multiple
-                            disabled={isLoading}
-                            ref={fileInputRef}
-                        />
-                        {files && (
-                            <div className="mt-2 flex items-center">
-                                <span className="text-sm text-gray-400">
-                                    {files.length} file(s) selected
-                                </span>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={removeFile}
-                                    className="ml-2 text-gray-400 hover:text-gray-200"
-                                >
+                    </div>
+                    <input
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileChange}
+                        multiple
+                        disabled={isLoading}
+                        ref={fileInputRef}
+                    />
+                    {files && (
+                        <div className="mt-2 flex items-center">
+                            <span className="text-sm text-gray-400">
+                                {files.length} file(s) selected
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeFile}
+                                className="ml-2 text-gray-400 hover:text-gray-200"
+                            >
                                     Remove
-                                </Button>
-                            </div>
-                        )}
-                    </form>
-                )}
-            </CardContent>
-        </Card>
+                            </Button>
+                        </div>
+                    )}
+                </form>
+            </TabsContent>
+        </Tabs>
     )
 }

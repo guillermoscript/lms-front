@@ -19,6 +19,7 @@ export default async function ExerciseStudentPage({
             exercise_messages(id,message,role,created_at)`)
         .eq('id', params.exerciseId)
         .eq('exercise_completions.user_id', userData?.data.user.id)
+        .eq('exercise_messages.user_id', userData?.data.user.id)
         .order('created_at', { referencedTable: 'exercise_messages', ascending: true })
         .single()
 
@@ -35,35 +36,37 @@ export default async function ExerciseStudentPage({
     const isExerciseCompleted = exercise.data?.exercise_completions.length > 0
 
     return (
-        <div className="container mx-auto">
-            <BreadcrumbComponent
-                links={[
-                    {
-                        href: '/dashboard',
-                        label: t('BreadcrumbComponent.dashboard'),
-                    },
-                    {
-                        href: '/dashboard/student',
-                        label: t('BreadcrumbComponent.student'),
-                    },
-                    {
-                        href: '/dashboard/student/courses/',
-                        label: t('BreadcrumbComponent.course'),
-                    },
-                    {
-                        href: `/dashboard/student/courses/${params.courseId}`,
-                        label: exercise.data?.courses.title,
-                    },
-                    {
-                        href: `/dashboard/student/courses/${params.courseId}/exercises`,
-                        label: t('BreadcrumbComponent.exercise'),
-                    },
-                    {
-                        href: `/dashboard/student/courses/${params.courseId}/exercises/${params.exerciseId}`,
-                        label: exercise.data?.title,
-                    },
-                ]}
-            />
+        <div className="md:container mx-auto space-y-4">
+            <div className='container'>
+                <BreadcrumbComponent
+                    links={[
+                        {
+                            href: '/dashboard',
+                            label: t('BreadcrumbComponent.dashboard'),
+                        },
+                        {
+                            href: '/dashboard/student',
+                            label: t('BreadcrumbComponent.student'),
+                        },
+                        {
+                            href: '/dashboard/student/courses/',
+                            label: t('BreadcrumbComponent.course'),
+                        },
+                        {
+                            href: `/dashboard/student/courses/${params.courseId}`,
+                            label: exercise.data?.courses.title,
+                        },
+                        {
+                            href: `/dashboard/student/courses/${params.courseId}/exercises`,
+                            label: t('BreadcrumbComponent.exercise'),
+                        },
+                        {
+                            href: `/dashboard/student/courses/${params.courseId}/exercises/${params.exerciseId}`,
+                            label: exercise.data?.title,
+                        },
+                    ]}
+                />
+            </div>
             <StudentExercisePage
                 exercise={exercise.data}
                 exerciseId={params.exerciseId}

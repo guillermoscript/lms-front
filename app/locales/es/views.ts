@@ -144,6 +144,7 @@ export default {
                 startExercise: 'Comenzar ejercicio',
                 viewExercise: 'Ver ejercicio',
                 exercises: 'Ejercicios',
+                exercisesCompleted: 'Ejercicios completados',
             },
             LessonPage: {
                 description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',

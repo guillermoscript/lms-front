@@ -108,7 +108,7 @@ export default function StudentExercisePage({
     ]
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -187,7 +187,7 @@ export default function StudentExercisePage({
                                     markdown={exercise.instructions}
                                 />
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-1 md:p-6">
                                 <ExerciseChat
                                     apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
                                     exerciseId={exerciseId}

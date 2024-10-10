@@ -23,6 +23,7 @@ export default async function ExercisePageTeacher({
 }) {
     const supabase = createClient()
     const t = await getI18n()
+    const user = await supabase.auth.getUser()
 
     const { data: exercise, error } = await supabase
         .from('exercises')
@@ -33,6 +34,9 @@ export default async function ExercisePageTeacher({
             exercise_messages(id,message,role)
         `)
         .eq('id', params.exerciseId)
+        .eq('exercise_completions.user_id', user.data.user.id)
+        .eq('exercise_messages.user_id', user.data.user.id)
+        .order('created_at', { referencedTable: 'exercise_messages', ascending: true })
         .single()
 
     const usersData = await supabase
@@ -70,8 +74,6 @@ export default async function ExercisePageTeacher({
             content: message.message
         }))
     ]
-
-    const user = await supabase.auth.getUser()
 
     const profile = await supabase
         .from('profiles')

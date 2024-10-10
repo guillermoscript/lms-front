@@ -143,6 +143,7 @@ export default {
                 review: 'Review',
                 startExercise: 'Start Exercise',
                 exercises: 'Exercises',
+                exercisesCompleted: 'Exercises Completed',
             },
             LessonPage: {
                 description: 'View and track your progress through the course lessons.',
