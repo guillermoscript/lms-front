@@ -57,7 +57,10 @@ const CourseHeader = ({ title, description, image }) => (
     </div>
 )
 
-const ProgressCard = ({ completedLessons, totalLessons, completedExams, totalExams, t }) => (
+const ProgressCard = ({
+    completedLessons, totalLessons, completedExams, totalExams, t,
+    completedExercises, totalExercises
+}) => (
     <Card className="mb-8">
         <CardHeader>
             <CardTitle>{t('dashboard.student.CourseStudentPage.progressTitle')}</CardTitle>
@@ -77,6 +80,13 @@ const ProgressCard = ({ completedLessons, totalLessons, completedExams, totalExa
                         <span className="text-sm font-medium">{completedExams}/{totalExams}</span>
                     </div>
                     <Progress value={(completedExams / totalExams) * 100} className="h-2" />
+                </div>
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">{t('dashboard.student.CourseStudentPage.exercisesCompleted')}</span>
+                        <span className="text-sm font-medium">{completedExercises}/{totalExercises}</span>
+                    </div>
+                    <Progress value={(completedExercises / totalExercises) * 100} className="h-2" />
                 </div>
             </div>
         </CardContent>
@@ -248,6 +258,8 @@ export default async function CourseStudentPage({
                 totalLessons={courseData.data.lessons.length}
                 completedExams={completedExams}
                 totalExams={courseData.data.exams.length}
+                totalExercises={courseData.data.exercises.length}
+                completedExercises={completedExercises}
                 t={t}
             />
 
