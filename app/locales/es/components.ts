@@ -457,6 +457,10 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         aiReviewFooter: 'Esta es la revisión de IA de tu examen, no es final y es solo para tu referencia sobre cómo lo hiciste. Por favor, espera la revisión final de tu profesor.',
         options: 'Opciones',
         totalQuestions: 'Total de preguntas',
+        noFeedback: 'Sin comentarios',
+        noAnswer: 'Sin respuesta',
+        aiProcessingMessage: 'Procesando la revisión de AI...',
+        aiNotAvailableMessage: 'La revisión de AI no está disponible en este momento.',
     },
     NotificationsPage: {
         title: 'Notificaciones',
