@@ -153,9 +153,11 @@ export default {
         submit: 'Submit Exam',
         alert: {
             title: 'Are you sure you want to submit the exam?',
+            warningTitle: 'Incomplete Submission',
             description: 'You will not be able to change your answers after submitting.',
             cancel: 'Cancel',
-            submit: 'Submit'
+            submit: 'Submit',
+            warningDescription: 'You have some incomplete answers. Submitting will affect your score. Do you wish to proceed?',
         },
     },
     AiReview: {
@@ -450,6 +452,10 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         aiReviewFooter: 'This is the AI review of your exam, its not final and is just for your reference on how you did. Please wait for the final review from your teacher.',
         options: 'Options',
         totalQuestions: 'Total Questions',
+        noFeedback: 'No feedback provided',
+        noAnswer: 'No answer provided',
+        aiProcessingMessage: 'AI is processing your exam...',
+        aiNotAvailableMessage: 'AI review is not available for this exam.',
     },
     NotificationsPage: {
         title: 'Notifications',

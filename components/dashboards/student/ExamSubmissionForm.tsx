@@ -56,7 +56,7 @@ export default function ExamsSubmissionForm({
     })
 
     const [open, setOpen] = useState(false)
-
+    const [openWarning, setOpenWarning] = useState(false) // New state to control warning modal
     const router = useRouter()
     const { toast } = useToast()
 
@@ -68,11 +68,10 @@ export default function ExamsSubmissionForm({
             freeTextQuestions,
         })
 
-        console.log(data, {
-            singleSelectQuestions,
-            multipleChoiceQuestions,
-            freeTextQuestions,
-        })
+        if (payload.hasIncomplete && !openWarning) {
+            setOpenWarning(true) // New state to control warning modal
+            return
+        }
 
         console.log(payload)
 
@@ -82,8 +81,6 @@ export default function ExamsSubmissionForm({
                 answers: payload.parsedData,
                 detailedAnswers: payload.data,
             })
-
-            console.log(res.data)
 
             toast({
                 title: 'Success',
@@ -180,15 +177,23 @@ export default function ExamsSubmissionForm({
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>
-                                {t('alert.title')}
+                                {openWarning
+                                    ? t('alert.warningTitle')
+                                    : t('alert.title')}
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                                {t('alert.description')}
+                                {openWarning
+                                    ? t('alert.warningDescription')
+                                    : t('alert.description')}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel
                                 disabled={form.formState.isSubmitting}
+                                onClick={() => {
+                                    setOpen(false)
+                                    setOpenWarning(false)
+                                }}
                             >
                                 {t('cancel')}
                             </AlertDialogCancel>
@@ -199,14 +204,14 @@ export default function ExamsSubmissionForm({
                                     form.handleSubmit(onSubmit)()
                                 }}
                             >
-                                {form.formState.isSubmitting
-                                    ? (
-                                        <Loader
-                                            className="animate-spin"
-                                            size={20}
-                                        />
-                                    )
-                                    : t('submit')}
+                                {form.formState.isSubmitting ? (
+                                    <Loader
+                                        className="animate-spin"
+                                        size={20}
+                                    />
+                                ) : (
+                                    t('submit')
+                                )}
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -239,7 +244,6 @@ function parseFormData(
         user_answer: string | string[]
         options?: Array<{ id: string; text: string }>
     }> = []
-
     const allQuestions = [
         ...questions.singleSelectQuestions,
         ...questions.multipleChoiceQuestions,
@@ -271,6 +275,7 @@ function parseFormData(
     }
 
     const processedQuestionIds = new Set<string>()
+    let hasIncomplete = false // Flag to track incomplete data
 
     Object.keys(data).forEach((key) => {
         const questionId = key.includes('-') ? key.split('-')[0] : key
@@ -281,6 +286,10 @@ function parseFormData(
 
         if (Array.isArray(data[key])) {
             // Handle multiple choice questions
+
+            if (data[key].length === 0) {
+                hasIncomplete = true
+            }
             const options = getQuestionOptions(key)
             const userAnswers = data[key]?.map((optionId) =>
                 getQuestionText(key, optionId)
@@ -303,6 +312,9 @@ function parseFormData(
             })
         } else {
             // Handle free text or potential true/false questions
+            if (!data[key]) {
+                hasIncomplete = true
+            }
             const questionText = getQuestionText(key)
             parsedData.push({
                 question_id: key,
@@ -362,6 +374,7 @@ function parseFormData(
     return {
         parsedData: filteredParsedData,
         data: detailedData,
+        hasIncomplete, // Return the flag
     }
 }
 
