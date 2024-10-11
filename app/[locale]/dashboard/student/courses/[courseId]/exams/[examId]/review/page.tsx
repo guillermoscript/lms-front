@@ -117,8 +117,9 @@ export default async function StudentExamReviewCoursePage ({
             </div>
             <ExamReview
                 examData={examData.data}
-                aiData={aiData}
+                initialAiData={aiData}
                 examIsReviewed={score != null}
+                submissionId={exam_submissions.submission_id}
             />
         </>
     )
