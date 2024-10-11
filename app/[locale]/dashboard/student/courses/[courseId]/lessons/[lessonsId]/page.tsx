@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 
+import ChatBox from '@/components/chatbox/ChatBox'
 import SidebarLessons from '@/components/dashboards/Common/lessons/SidebarLessons'
 import LessonContent from '@/components/dashboards/student/course/lessons/LessonContent'
 import LessonPage from '@/components/dashboards/student/course/lessons/LessonPage'
@@ -43,6 +44,7 @@ export default async function StudentLessonPage({
 
     const isLessonAiTaskCompleted = lessonData.data.lesson_completions.length > 0
 
+    const lessonInstructions = lessonData.data.content;
     return (
         <LessonPage
             sideBar={
@@ -72,6 +74,7 @@ export default async function StudentLessonPage({
                     userId={user.data.user.id}
                 />
             </Suspense>
+            <ChatBox instructions={lessonInstructions} />
         </LessonPage>
     )
 }
