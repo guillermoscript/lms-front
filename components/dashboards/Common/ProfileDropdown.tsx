@@ -10,6 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import LocaleButtons from '@/components/ui/LocaleButtons'
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
 
@@ -54,7 +55,12 @@ export default async function ProfileDropdown () {
                         Account
                     </Link>
                 </DropdownMenuItem>
-                <AuthButton />
+                <DropdownMenuItem>
+                    <LocaleButtons />
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                    <AuthButton />
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )
