@@ -44,22 +44,30 @@ export default function ForgotPassword({
     const { toast } = useToast()
 
     const submit = async (data: z.infer<typeof FormSchema>) => {
-        const res = await forgotPasswordFun({
-            email: data.email,
-        })
+        try {
+            const res = await forgotPasswordFun({
+                email: data.email,
+            })
 
-        if (res.status === 'error') {
+            if (res.status === 'error') {
+                return toast({
+                    title: 'Error',
+                    description: res.message || t('auth.forgotPassword.errors.generic_error'),
+                    variant: 'destructive',
+                })
+            }
+
+            return toast({
+                title: 'Success',
+                description: res.message,
+            })
+        } catch (error) {
             return toast({
                 title: 'Error',
-                description: res.message,
+                description: error.message || t('auth.forgotPassword.errors.generic_error'),
                 variant: 'destructive',
             })
         }
-
-        return toast({
-            title: 'Success',
-            description: res.message,
-        })
     }
 
     return (
