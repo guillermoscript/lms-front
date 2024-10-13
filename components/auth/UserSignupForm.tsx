@@ -81,8 +81,8 @@ export default function UserSignupForm({ redirect }: { redirect?: string }) {
             toast.success('Check your email to continue the sign-in process.')
         } catch (error: any) {
             // Handle signup errors (e.g., display error messages)
-            setError(error.message || 'An error occurred. Please try again.')
-            toast.error(error.message || 'An error occurred. Please try again.')
+            setError(t('auth.register.errors.generic_error') || 'An error occurred. Please try again.')
+            toast.error(t('auth.register.errors.generic_error') || 'An error occurred. Please try again.')
         }
     }
 
