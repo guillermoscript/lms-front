@@ -1,5 +1,6 @@
 'use client'
 
+import { generateId } from 'ai'
 import { useChat } from 'ai/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -26,7 +27,6 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 import ViewMarkdown from '../ui/markdown/ViewMarkdown'
-import { generateId } from 'ai'
 
 interface ChatBoxProps {
     instructions: string
