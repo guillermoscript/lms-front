@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, Dumbbell, FileText } from 'lucide-react'
+import { CheckCircle, Clock, Clock10, Dumbbell, FileText } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -17,9 +17,9 @@ const ExerciseCard = ({ title, description, difficulty, type, status, courseId, 
         <CardHeader>
             <CardTitle className="flex items-center justify-between">
                 <span>{title}</span>
-                <Badge variant={status === 'Completed' ? 'default' : 'outline'}>
-                    {status === 'Completed' ? <CheckCircle className="mr-1 h-3 w-3" /> : <Clock className="mr-1 h-3 w-3" />}
-                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.completed') : t('dashboard.student.CourseStudentPage.notStarted')}
+                <Badge variant={status === 'Completed' ? 'default' : status === 'In Progress' ? 'outline' : 'secondary'}>
+                    {status === 'Completed' ? <CheckCircle className="mr-1 h-3 w-3" /> : status === 'In Progress' ? <Clock className="mr-1 h-3 w-3" /> : <Clock10 className="mr-1 h-3 w-3" />}
+                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.completed') : status === 'In Progress' ? t('dashboard.student.CourseStudentPage.inProgress') : t('dashboard.student.CourseStudentPage.notStarted')}
                 </Badge>
             </CardTitle>
             <CardDescription>{type} - {difficulty}</CardDescription>
@@ -29,12 +29,15 @@ const ExerciseCard = ({ title, description, difficulty, type, status, courseId, 
         </CardContent>
         <CardFooter>
             <Button
-                variant={status === 'Completed' ? 'secondary' : 'default'}
+                variant={status === 'Completed' ? 'secondary' : status === 'In Progress' ? 'default' : 'outline'}
                 asChild
                 className='w-full'
             >
                 <Link href={`/dashboard/student/courses/${courseId}/exercises/${exerciseId}`}>
-                    <Dumbbell className="mr-2 h-4 w-4" /> {t('dashboard.student.CourseStudentPage.startExercise')}
+                    <Dumbbell className="mr-2 h-4 w-4" /> 
+                    {
+                        status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : status === 'In Progress' ? t('dashboard.student.CourseStudentPage.continue') : t('dashboard.student.CourseStudentPage.start')
+                    }
                 </Link>
             </Button>
         </CardFooter>
@@ -211,7 +214,8 @@ export default async function CourseStudentPage({
             )
         ),
         exercises(*,
-            exercise_completions(id)
+            exercise_completions(id),
+            exercise_messages(id)
         )
     `
         )
@@ -220,6 +224,7 @@ export default async function CourseStudentPage({
         .eq('lessons.lesson_completions.user_id', userData.data.user.id)
         .eq('exams.exam_submissions.student_id', userData.data.user.id)
         .eq('exercises.exercise_completions.user_id', userData.data.user.id)
+        .eq('exercises.exercise_messages.user_id', userData.data.user.id)
         .single()
 
     if (courseData.error != null) {
@@ -294,19 +299,25 @@ export default async function CourseStudentPage({
                     value="exercises"
                 >
                     {courseData.data.exercises
-                        .map((exercise) => (
-                            <ExerciseCard
-                                key={exercise.id}
-                                title={exercise.title}
-                                description={exercise.description}
-                                difficulty={exercise.difficulty_level}
-                                type={exercise.exercise_type}
-                                status={exercise.exercise_completions?.length > 0 ? 'Completed' : 'Not Started'}
-                                courseId={courseData.data.course_id}
-                                exerciseId={exercise.id}
-                                t={t}
-                            />
-                        ))}
+                        .map((exercise) => {
+
+                            // if exercise has a completion, it is completed, else if it has a message, it is in progress else not started
+                            const status = exercise.exercise_completions?.length > 0 ? 'Completed' : exercise.exercise_messages?.length > 0 ? 'In Progress' : 'Not Started'
+                            
+                            return (
+                                <ExerciseCard
+                                    key={exercise.id}
+                                    title={exercise.title}
+                                    description={exercise.description}
+                                    difficulty={exercise.difficulty_level}
+                                    type={exercise.exercise_type}
+                                    status={status}
+                                    courseId={courseData.data.course_id}
+                                    exerciseId={exercise.id}
+                                    t={t}
+                                />
+                            )
+                        })}
                 </TabsContent>
                 <TabsContent
                     className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
