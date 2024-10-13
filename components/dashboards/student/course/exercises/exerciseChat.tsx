@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { useRouter } from 'next/navigation'
 
 interface ExerciseChatProps {
     apiEndpoint: string
@@ -44,6 +45,7 @@ export default function ExerciseChat({
 
     // Create a ref for the scroll anchor
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
 
     const { messages, input, handleInputChange, handleSubmit, isLoading, stop, append } =
         useChat({
@@ -58,6 +60,7 @@ export default function ExerciseChat({
                 console.log('Tool call:', toolCall)
                 if (toolCall.toolName === 'makeUserAssigmentCompleted') {
                     setIsCompleted(true)
+                    router.refresh()
                 }
             },
         })
