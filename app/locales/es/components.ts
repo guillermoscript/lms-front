@@ -531,5 +531,23 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         vibrantCommunity: 'Únete a nuestra vibrante comunidad de aprendizaje',
         certificates: 'Certificados',
         earnCertificates: 'Obtén certificados al completar los cursos',
+    },
+    ChatBox: {
+        closeChat: 'Cerrar chat',
+        openChat: 'Abrir chat',
+        chatAssistant: 'Asistente de Chat',
+        minimize: 'Minimizar',
+        expand: 'Expandir',
+        greeting: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?',
+        quickAccess: {
+            productQuestions: 'Preguntas sobre productos y generales',
+            shareFeedback: 'Compartir comentarios',
+            loggingIn: 'Iniciar sesión',
+            reset2FA: 'Restablecer 2FA',
+            abuseReport: 'Informe de abuso',
+            contactingSales: 'Contactar con Ventas y Asociaciones',
+        },
+        typeMessage: 'Escribe tu mensaje...',
+        sendMessage: 'Enviar mensaje',
     }
 } as const

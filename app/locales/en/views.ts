@@ -144,6 +144,8 @@ export default {
                 startExercise: 'Start Exercise',
                 exercises: 'Exercises',
                 exercisesCompleted: 'Exercises Completed',
+                inProgress: 'In Progress',
+                continue: 'Continue',
             },
             LessonPage: {
                 description: 'View and track your progress through the course lessons.',

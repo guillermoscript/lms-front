@@ -4,9 +4,11 @@ import { ToolInvocation } from 'ai'
 import { Message, useChat } from 'ai/react'
 import dayjs from 'dayjs'
 import { Paperclip, Send } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
 import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
@@ -42,6 +44,10 @@ export default function ExerciseChat({
     const chatContainerRef = useRef<HTMLDivElement>(null)
     const [isCompleted, setIsCompleted] = useState(isExerciseCompleted)
 
+    // Create a ref for the scroll anchor
+    const scrollAnchorRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
+
     const { messages, input, handleInputChange, handleSubmit, isLoading, stop, append } =
         useChat({
             api: apiEndpoint ?? '/api/chat/exercises',
@@ -55,16 +61,17 @@ export default function ExerciseChat({
                 console.log('Tool call:', toolCall)
                 if (toolCall.toolName === 'makeUserAssigmentCompleted') {
                     setIsCompleted(true)
+                    router.refresh()
                 }
             },
         })
 
     useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop =
-                chatContainerRef.current.scrollHeight
+        // Skip the initial render
+        if (messages.length > initialMessages.length && scrollAnchorRef.current) {
+            scrollAnchorRef.current.scrollIntoView({ behavior: 'smooth' })
         }
-    }, [messages])
+    }, [messages, initialMessages.length])
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -82,70 +89,76 @@ export default function ExerciseChat({
     return (
         <Card className="w-full mx-auto border-none md:border">
             <CardContent className="p-1 md:p-6">
-                <ScrollArea className="h-[600px] pr-4" ref={chatContainerRef}>
-                    {messages.map((m: Message) => {
-                        if (m.role === 'system') return null
+                <ScrollArea className="h-[600px] pr-4">
+                    <div ref={chatContainerRef}>
+                        {messages.map((m: Message) => {
+                            if (m.role === 'system') return null
 
-                        return (
-                            <div key={m.id} className="mb-6">
-                                <div className="flex items-start gap-3">
-                                    <Avatar className="w-8 h-8">
-                                        <AvatarImage
-                                            src={
-                                                m.role === 'user'
-                                                    ? profile.avatar_url
-                                                    : '/img/robot.jpeg'
-                                            }
-                                        />
-                                        <AvatarFallback>
-                                            {m.role === 'user' ? (
-                                                profile.full_name[0]
-                                            ) : (
-                                                'A'
-                                            )}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <div className={'p-3 rounded-lg '}>
-                                            <ViewMarkdown
-                                                markdown={m.content}
-                                            />
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                {dayjs(m.createdAt).format(
-                                                    'MMM D, YYYY [at] h:mm A'
-                                                )}
-                                            </div>
-                                        </div>
-                                        {m.toolInvocations?.map(
-                                            (
-                                                toolInvocation: ToolInvocation
-                                            ) => {
-                                                console.log(toolInvocation)
-                                                if (
-                                                    toolInvocation.toolName ===
-                                                        'makeUserAssigmentCompleted' &&
-                                                    'result' in toolInvocation
-                                                ) {
-                                                    return (
-                                                        <div
-                                                            key={
-                                                                toolInvocation.toolCallId
-                                                            }
-                                                            className="mt-3"
-                                                        >
-                                                            {toolInvocation.result}
-                                                        </div>
-                                                    )
+                            return (
+                                <div key={m.id} className="mb-6">
+                                    <div className="flex items-start gap-3">
+                                        <Avatar className="w-8 h-8">
+                                            <AvatarImage
+                                                src={
+                                                    m.role === 'user'
+                                                        ? profile.avatar_url
+                                                        : '/img/robot.jpeg'
                                                 }
-                                                return null
-                                            }
-                                        )}
-                                        <Separator className="mt-3" />
+                                            />
+                                            <AvatarFallback>
+                                                {m.role === 'user'
+                                                    ? profile.full_name[0]
+                                                    : 'A'}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <div className={'p-3 rounded-lg '}>
+                                                <ViewMarkdown
+                                                    markdown={m.content}
+                                                />
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {dayjs(m.createdAt).format(
+                                                        'MMM D, YYYY [at] h:mm A'
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {m.toolInvocations?.map(
+                                                (
+                                                    toolInvocation: ToolInvocation
+                                                ) => {
+                                                    console.log(toolInvocation)
+                                                    if (
+                                                        toolInvocation.toolName ===
+                                                            'makeUserAssigmentCompleted' &&
+                                                        'result' in
+                                                            toolInvocation
+                                                    ) {
+                                                        return (
+                                                            <div
+                                                                key={
+                                                                    toolInvocation.toolCallId
+                                                                }
+                                                                className="mt-3"
+                                                            >
+                                                                {
+                                                                    toolInvocation.result
+                                                                }
+                                                            </div>
+                                                        )
+                                                    }
+                                                    return null
+                                                }
+                                            )}
+                                            <Separator className="mt-3" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )
-                    })}
+                            )
+                        })}
+                        {isLoading && <ChatLoadingSkeleton />}
+                        {/* Scroll Anchor */}
+                        <div ref={scrollAnchorRef}></div>
+                    </div>
                 </ScrollArea>
                 {isCompleted ? (
                     <>

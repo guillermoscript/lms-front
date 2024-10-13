@@ -35,7 +35,7 @@ function ScrollToTopButton () {
                 <Button
                     variant='outline'
                     onClick={scrollToTop}
-                    className="fixed bottom-5 right-5 p-3 rounded-md shadow-lg"
+                    className="fixed bottom-5 right-20 p-3 rounded-md shadow-lg"
                 >
                     <ArrowBigUpDash size={24} />
                 </Button>

@@ -534,5 +534,23 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         vibrantCommunity: 'Join our vibrant learning community',
         certificates: 'Certificates',
         earnCertificates: 'Earn certificates upon course completion',
+    },
+    ChatBox: {
+        closeChat: 'Close chat',
+        openChat: 'Open chat',
+        chatAssistant: 'Chat Assistant',
+        minimize: 'Minimize',
+        expand: 'Expand',
+        greeting: "Hi! I'm your AI assistant. How can I help you today?",
+        quickAccess: {
+            productQuestions: 'Product & General questions',
+            shareFeedback: 'Share feedback',
+            loggingIn: 'Logging in',
+            reset2FA: 'Reset 2FA',
+            abuseReport: 'Abuse report',
+            contactingSales: 'Contacting Sales & Partnerships',
+        },
+        typeMessage: 'Type your message...',
+        sendMessage: 'Send message',
     }
 } as const

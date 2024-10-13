@@ -1,28 +1,23 @@
 import { google } from '@ai-sdk/google'
-import { generateText } from 'ai'
+import { convertToCoreMessages, Message, streamText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
 
 interface RequestBody {
-    message: string;
-    instructions: string;
+    messages: Message[];
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest) {
     try {
         const reqBody: RequestBody = await request.json()
-        const { message, instructions } = reqBody
         const model = google('gemini-1.5-flash')
 
-        const result = await generateText({
+        const result = await streamText({
             model,
-            system: `Act like a teacher. Always provide responses in plain text without using any markdown or special formatting like **, _ or other font styles. Respond naturally and clearly. ${instructions}`,
-            prompt: message,
+            messages: convertToCoreMessages(reqBody.messages),
             temperature: 0.7,
         })
 
-        const responseText = result.text
-
-        return new NextResponse(responseText)
+        return result.toDataStreamResponse()
     } catch (error) {
         console.error('Error al generar la respuesta:', error)
         return NextResponse.json(
