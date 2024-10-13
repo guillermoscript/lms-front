@@ -42,12 +42,7 @@ export async function POST(req: Request) {
             }
         },
         async onFinish({ responseMessages, text, toolResults }) {
-            console.log('Response messages:', responseMessages)
-            console.log(text, 'TEXT')
-
             const lastMessage = body.messages[body.messages.length - 1]
-
-            console.log('Tool results:', toolResults)
 
             const save = await supabase.from('exercise_messages').insert([
                 {
@@ -79,8 +74,6 @@ export async function POST(req: Request) {
                     }
                 )
             }
-
-            console.log('Save:', save)
         }
     })
 
