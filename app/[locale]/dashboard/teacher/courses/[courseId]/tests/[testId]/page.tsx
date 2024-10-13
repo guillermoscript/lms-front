@@ -63,7 +63,7 @@ export default async function TestTeacherPage({
     const t = await getI18n()
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto w-full space-y-4">
+        <div className="flex-1 p-8 overflow-y-auto w-full container space-y-4">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
