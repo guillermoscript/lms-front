@@ -1,7 +1,7 @@
 'use client'
+import { useChat } from 'ai/react'
 import { Maximize2, MessageSquare, Minimize2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useChat } from 'ai/react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -113,7 +113,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                 isExpanded
                     ? 'inset-4 md:inset-10'
                     : 'bottom-20 right-4 md:right-20 w-[calc(100%-2rem)] md:w-80 h-[400px]'
-            }
+                }
           `}
                 >
                     <Card className="w-full h-full shadow-xl bg-black text-white overflow-hidden flex flex-col">
@@ -217,7 +217,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                     handleSubmit(e, {
                                         body: {
                                             message: input, // Mensaje del usuario
-                                            instructions,   // Instrucciones pasadas como props
+                                            instructions, // Instrucciones pasadas como props
                                         },
                                     })
                                 }

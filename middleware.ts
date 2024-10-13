@@ -18,6 +18,17 @@ export async function middleware(request: NextRequest) {
         ? NextResponse.next({ request: { headers: request.headers } })
         : I18nMiddleware(request)
 
+    // check if the search query is present in the URL and if they have an 'error' query parameter
+    if (request.nextUrl.searchParams.has('error_description')
+    ) {
+        // get value of 'error' query parameter
+        const errorDescription = request.nextUrl.searchParams.get('error_description')
+        const error = request.nextUrl.searchParams.has('error') ? request.nextUrl.searchParams.get('error') : 'unknown'
+        // redirect to the error page with the error message
+
+        return NextResponse.redirect(new URL(`/auth/error/?errorDescription=${errorDescription}`, request.url))
+    }
+
     return await updateSession(request, response)
 }
 

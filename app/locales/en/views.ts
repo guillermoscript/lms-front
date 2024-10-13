@@ -316,6 +316,13 @@ export default {
                 password_required: 'Password is required',
             }
         },
+        ErrorAuthPage: {
+            emailError: 'The email link is invalid or has expired, please go back to "forgot my password" and put your email to receive a new link.',
+            genericError: 'An error occurred, please try again later.',
+            requestNewLink: 'Request a new link',
+            backToLogin: 'Back to login',
+            errorTitle: 'An error occurred',
+        }
     },
 
     waitingRoom: {

@@ -317,6 +317,13 @@ export default {
                 password_required: 'La contraseña es requerida',
             }
         },
+        ErrorAuthPage: {
+            emailError: 'El enlace de correo electrónico es inválido o ha expirado, por favor vuelve a "olvidé mi contraseña" y pon tu correo para recibir un nuevo enlace.',
+            genericError: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
+            requestNewLink: 'Solicitar nuevo enlace',
+            backToLogin: 'Volver a iniciar sesion',
+            errorTitle: 'Ha ocurrido un error',
+        }
     },
     waitingRoom: {
         title: 'Por favor espera',

@@ -44,7 +44,7 @@ export default async function StudentLessonPage({
 
     const isLessonAiTaskCompleted = lessonData.data.lesson_completions.length > 0
 
-    const lessonInstructions = lessonData.data.content;
+    const lessonInstructions = lessonData.data.content
     return (
         <LessonPage
             sideBar={
