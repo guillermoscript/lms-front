@@ -59,7 +59,9 @@ const AIReview = ({ aiData, aiLoading }) => {
                     </div>
                 ))}
             </CardContent>
-            <CardFooter>
+            <CardFooter
+                className='flex flex-col items-start gap-4 border-t pt-4'
+            >
                 <h3 className="font-semibold text-lg mb-2">
                     {t('overallFeedback')}
                 </h3>

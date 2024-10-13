@@ -2,7 +2,7 @@
 import axios, { isAxiosError } from 'axios'
 import { Loader } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { useScopedI18n } from '@/app/locales/client'
@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { createClient } from '@/utils/supabase/client'
 import {
     FreeTextQuestion as FTQType,
     MultipleChoiceQuestion as MCQType,
@@ -38,6 +39,7 @@ interface ExamsSubmissionFormProps {
     singleSelectQuestions: SSQType[]
     examId: number
     courseId: number
+    userId: string
 }
 
 export default function ExamsSubmissionForm({
@@ -46,6 +48,7 @@ export default function ExamsSubmissionForm({
     singleSelectQuestions,
     examId,
     courseId,
+    userId
 }: ExamsSubmissionFormProps) {
     const form = useForm<StudentExamSubmitFormData>({
         defaultValues: generateDefaultValues(
@@ -103,6 +106,33 @@ export default function ExamsSubmissionForm({
 
         setOpen(false)
     }
+
+    useEffect(() => {
+        // check if the user has already submitted the exam
+        // if so, redirect them to the review page
+        async function checkIfUserHasExam() {
+            const supabase = createClient()
+
+            try {
+                const examSubmission = await supabase
+                    .from('exam_submissions')
+                    .select('*')
+                    .eq('exam_id', examId)
+                    .eq('student_id', userId)
+                    .single()
+
+                if (examSubmission.data?.exam_id) {
+                    router.push(
+                        `/dashboard/student/courses/${courseId}/exams/${examId}/review`
+                    )
+                }
+            } catch (e) {
+                console.error(e)
+            }
+        }
+
+        checkIfUserHasExam()
+    }, [])
 
     const t = useScopedI18n('ExamsSubmissionForm')
 
