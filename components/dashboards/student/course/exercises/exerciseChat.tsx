@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
 import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
@@ -19,7 +20,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 
 interface ExerciseChatProps {
     apiEndpoint: string

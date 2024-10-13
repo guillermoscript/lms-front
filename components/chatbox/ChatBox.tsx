@@ -26,8 +26,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-import ViewMarkdown from '../ui/markdown/ViewMarkdown'
 import ChatLoadingSkeleton from '../dashboards/chat/ChatLoadingSkeleton'
+import ViewMarkdown from '../ui/markdown/ViewMarkdown'
 
 interface ChatBoxProps {
     instructions: string

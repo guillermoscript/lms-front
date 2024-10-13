@@ -34,7 +34,7 @@ const ExerciseCard = ({ title, description, difficulty, type, status, courseId, 
                 className='w-full'
             >
                 <Link href={`/dashboard/student/courses/${courseId}/exercises/${exerciseId}`}>
-                    <Dumbbell className="mr-2 h-4 w-4" /> 
+                    <Dumbbell className="mr-2 h-4 w-4" />
                     {
                         status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : status === 'In Progress' ? t('dashboard.student.CourseStudentPage.continue') : t('dashboard.student.CourseStudentPage.start')
                     }
@@ -300,10 +300,9 @@ export default async function CourseStudentPage({
                 >
                     {courseData.data.exercises
                         .map((exercise) => {
-
                             // if exercise has a completion, it is completed, else if it has a message, it is in progress else not started
                             const status = exercise.exercise_completions?.length > 0 ? 'Completed' : exercise.exercise_messages?.length > 0 ? 'In Progress' : 'Not Started'
-                            
+
                             return (
                                 <ExerciseCard
                                     key={exercise.id}
