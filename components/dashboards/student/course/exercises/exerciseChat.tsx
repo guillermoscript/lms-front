@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 
 interface ExerciseChatProps {
     apiEndpoint: string
@@ -105,11 +106,9 @@ export default function ExerciseChat({
                                                 }
                                             />
                                             <AvatarFallback>
-                                                {m.role === 'user' ? (
-                                                    profile.full_name[0]
-                                                ) : (
-                                                    'A'
-                                                )}
+                                                {m.role === 'user'
+                                                    ? profile.full_name[0]
+                                                    : 'A'}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1">
@@ -131,7 +130,8 @@ export default function ExerciseChat({
                                                     if (
                                                         toolInvocation.toolName ===
                                                             'makeUserAssigmentCompleted' &&
-                                                        'result' in toolInvocation
+                                                        'result' in
+                                                            toolInvocation
                                                     ) {
                                                         return (
                                                             <div
@@ -140,7 +140,9 @@ export default function ExerciseChat({
                                                                 }
                                                                 className="mt-3"
                                                             >
-                                                                {toolInvocation.result}
+                                                                {
+                                                                    toolInvocation.result
+                                                                }
                                                             </div>
                                                         )
                                                     }
@@ -153,6 +155,7 @@ export default function ExerciseChat({
                                 </div>
                             )
                         })}
+                        {isLoading && <ChatLoadingSkeleton />}
                         {/* Scroll Anchor */}
                         <div ref={scrollAnchorRef}></div>
                     </div>
