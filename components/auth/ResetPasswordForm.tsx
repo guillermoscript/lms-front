@@ -65,7 +65,7 @@ export default function ResetPasswordForm({
             if (res.error) {
                 return toast({
                     title: 'Error',
-                    description: res.error,
+                    description: res.error || t('auth.resetPassword.errors.generic'),
                     variant: 'destructive',
                 })
             }
@@ -79,7 +79,7 @@ export default function ResetPasswordForm({
         } catch (error: any) {
             return toast({
                 title: 'Error',
-                description: error.message,
+                description: error.message || t('auth.resetPassword.errors.generic'),
                 variant: 'destructive',
             })
         }
