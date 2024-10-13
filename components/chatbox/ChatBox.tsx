@@ -227,7 +227,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                                                     message.role ===
                                                                     'user'
                                                                         ? '/user-avatar.png'
-                                                                        : '/bot-avatar.png'
+                                                                        : '/img/robot.jpeg'
                                                                 }
                                                             />
                                                             <AvatarFallback>
