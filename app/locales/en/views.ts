@@ -267,6 +267,11 @@ export default {
                 password_number: 'Password must contain at least one number.',
                 password_symbol: 'Password must contain at least one symbol.',
                 password_required: 'Password is required',
+            },
+            errors: {
+                email_already_exists: 'Email already exists',
+                username_already_exists: 'Username already exists',
+                generic_error: 'An error occurred, please try again later.',
             }
         },
         login: {
@@ -290,6 +295,10 @@ export default {
                 password_number: 'Password must contain at least one number.',
                 password_symbol: 'Password must contain at least one symbol.',
                 password_required: 'Password is required',
+            },
+            errors: {
+                password_or_email_incorrect: 'Password or email is incorrect',
+                generic_error: 'An error occurred, please try again later.',
             }
         },
         forgotPassword: {
@@ -297,6 +306,10 @@ export default {
             helpText: 'Enter your email below to reset your password',
             submit: 'Submit',
             back: 'Back to login',
+            errors: {
+                email_not_found: 'Email not found',
+                generic_error: 'An error occurred, please try again later.',
+            }
         },
         resetPassword: {
             header: 'Reset Password',
@@ -314,6 +327,9 @@ export default {
                 password_number: 'Password must contain at least one number.',
                 password_symbol: 'Password must contain at least one symbol.',
                 password_required: 'Password is required',
+            },
+            errors: {
+                generic_error: 'An error occurred, please try again later.',
             }
         },
         ErrorAuthPage: {

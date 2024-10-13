@@ -268,6 +268,11 @@ export default {
                 password_number: 'La contraseña debe contener al menos un número.',
                 password_symbol: 'La contraseña debe contener al menos un símbolo.',
                 password_required: 'La contraseña es requerida',
+            },
+            errors: {
+                email_already_exists: 'Correo ya registrado',
+                username_already_exists: 'Nombre de usuario ya registrado',
+                generic_error: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
             }
         },
         login: {
@@ -291,6 +296,10 @@ export default {
                 password_number: 'La contraseña debe contener al menos un número.',
                 password_symbol: 'La contraseña debe contener al menos un símbolo.',
                 password_required: 'La contraseña es requerida',
+            },
+            errors: {
+                invalid_credentials: 'Credenciales inválidas',
+                generic_error: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
             }
         },
         forgotPassword: {
@@ -298,6 +307,9 @@ export default {
             helpText: 'Ingresa tu correo para resetear tu contraseña',
             submit: 'Enviar',
             back: 'Regresar a iniciar sesion',
+            errors: {
+                generic_error: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
+            }
         },
         resetPassword: {
             header: 'Resetear contraseña',
@@ -315,6 +327,9 @@ export default {
                 password_number: 'La contraseña debe contener al menos un número.',
                 password_symbol: 'La contraseña debe contener al menos un símbolo.',
                 password_required: 'La contraseña es requerida',
+            },
+            errors: {
+                generic_error: 'An error occurred, please try again later.',
             }
         },
         ErrorAuthPage: {
