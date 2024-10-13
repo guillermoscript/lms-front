@@ -104,20 +104,12 @@ export default function ExamsSubmissionForm({
         setOpen(false)
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            setOpen(true)
-        }
-    }
-
     const t = useScopedI18n('ExamsSubmissionForm')
 
     return (
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                onKeyDown={handleKeyDown}
                 className="grid gap-6"
             >
                 <>
