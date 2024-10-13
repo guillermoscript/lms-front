@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 import ViewMarkdown from '../ui/markdown/ViewMarkdown'
+import ChatLoadingSkeleton from '../dashboards/chat/ChatLoadingSkeleton'
 
 interface ChatBoxProps {
     instructions: string
@@ -252,6 +253,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                                 )
                                             })
                                         )}
+                                        {isLoading && <ChatLoadingSkeleton />}
                                     </div>
                                 </ScrollArea>
                             </CardContent>
