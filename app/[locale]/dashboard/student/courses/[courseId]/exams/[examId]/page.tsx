@@ -107,6 +107,7 @@ export default async function StudentExamCoursePage ({
                     singleSelectQuestions={singleSelectQuestions}
                     examId={parseFloat(params.examId)}
                     courseId={parseFloat(params.courseId)}
+                    userId={userData.data?.user?.id }
                 />
             </div>
         </>
