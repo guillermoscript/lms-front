@@ -430,6 +430,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         continueCourse: 'Continue Course',
         lastViewed: 'Last Viewed',
         continueLesson: 'Continue Lesson',
+        enrollOnCourse: 'Enroll on Course',
     },
     ExamReview: {
         review: 'Review',
