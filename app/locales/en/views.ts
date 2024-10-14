@@ -146,6 +146,12 @@ export default {
                 exercisesCompleted: 'Exercises Completed',
                 inProgress: 'In Progress',
                 continue: 'Continue',
+                noExercises: 'No exercises available',
+                noExercisesDescription: 'There are no exercises available for this lesson.',
+                noLessons: 'No lessons available',
+                noLessonsDescription: 'There are no lessons available for this course.',
+                noExams: 'No exams available',
+                noExamsDescription: 'There are no exams available for this course.',
             },
             LessonPage: {
                 description: 'View and track your progress through the course lessons.',
