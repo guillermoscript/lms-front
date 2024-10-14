@@ -3,6 +3,7 @@
 import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
@@ -13,6 +14,8 @@ import {
 
 // Setup component with a button to start the tour
 export default function TaskMessageTour () {
+    const t = useScopedI18n('TaskMessageTour')
+
     return (
         <TourProvider
             steps={[
@@ -21,11 +24,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Welcome to the AI Task Chat
+                                {t('welcome')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-    Here is where you can test what you have learned in the lesson. The AI will be your teacher and will reviw your work, give you feedback, and once you give the correct answer, it will mark the task as completed.
+                                {t('welcomeDescription')}
                             </p>
                         </>
                     )
@@ -36,11 +39,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Task Status
+                                {t('taskStatus')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can see the status of the task. If you have completed the task, it will show as completed.
+                                {t('taskStatusDescription')}
                             </p>
                         </>
                     )
@@ -50,11 +53,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Task Instructions
+                                {t('taskInstructions')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can see the instructions for the task. Make sure to read them carefully before starting the task.
+                                {t('taskInstructionsDescription')}
                             </p>
                         </>
                     )
@@ -64,11 +67,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Messages
+                                {t('messages')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can see the messages from the AI and your responses.
+                                {t('messagesDescription')}
                             </p>
                         </>
 
@@ -79,11 +82,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Select the input type
+                                {t('selectInputType')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can select the input type. You can choose between a simple text input and a markdown text input.
+                                {t('selectInputTypeDescription')}
                             </p>
                         </>
                     )
@@ -93,11 +96,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                A simple text input
+                                {t('simpleTextInput')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                You can type your response here and send it to the AI. its a simple text input.
+                                {t('simpleTextInputDescription')}
                             </p>
                         </>
                     )
@@ -107,11 +110,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Markdown text input
+                                {t('markdownTextInput')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                You can type your response here and send it to the AI. its a markdown text input. you have multiple options to format your text. Like code blocks, lists, and more.
+                                {t('markdownTextInputDescription')}
                             </p>
                         </>
                     )
@@ -121,11 +124,11 @@ export default function TaskMessageTour () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Send Button
+                                {t('sendButton')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can send your response to the AI. Once you have typed your response, click the send button to send it to the AI.
+                                {t('sendButtonDescription')}
                             </p>
                         </>
                     )
@@ -147,14 +150,13 @@ export default function TaskMessageTour () {
 
 function TaskMessageTourButton () {
     const { setIsOpen } = useTour()
+    const t = useScopedI18n('TaskMessageTour')
 
     return (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger>
-
                     <Button onClick={() => setIsOpen(true)}>
-
                         <InfoIcon
                             className=''
                             size={24}
@@ -163,11 +165,10 @@ function TaskMessageTourButton () {
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-                        Here you can find a guided tutorial to help you get started with the AI Task Chat.
+                        {t('guidedTutorialDescription')}
                     </p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
-
     )
 }
