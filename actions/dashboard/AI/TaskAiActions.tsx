@@ -74,7 +74,7 @@ export async function continueTaskAiConversation(
                 name: message.name,
             })),
         ],
-        temperature: 0.6,
+        temperature: 0.5,
         initial: (
             <Message
                 sender={'assistant'}
