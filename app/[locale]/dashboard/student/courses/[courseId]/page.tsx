@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
 const ExerciseCard = ({ title, description, difficulty, type, status, courseId, exerciseId, t }) => (
@@ -278,10 +279,14 @@ export default async function CourseStudentPage({
                     <TabsTrigger value="exams">{t('dashboard.student.CourseStudentPage.exams')}</TabsTrigger>
                 </TabsList>
                 <TabsContent
-                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    className={
+                        cn('grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+                            courseData.data.lessons.length === 0 && 'flex justify-center'
+                        )
+                    }
                     value="lessons"
                 >
-                    {courseData.data.lessons
+                    {courseData.data.lessons.length > 0 ? courseData.data.lessons
                         .sort((a, b) => a.sequence - b.sequence)
                         .map((lesson) => {
                             const status = lesson.lesson_completions.length > 0 ? 'Completed' : lesson.lessons_ai_task_messages.length > 0 ? 'In Progress' : 'Not Started'
@@ -299,13 +304,25 @@ export default async function CourseStudentPage({
                                     t={t}
                                 />
                             )
-                        })}
+                        }
+                        ) : (
+                        <NoDataPlaceholder
+                            iconSrc="/img/404(2).jpeg"
+                            iconAlt="No Data"
+                            message={t('dashboard.student.CourseStudentPage.noLessons')}
+                            description={t('dashboard.student.CourseStudentPage.noLessonsDescription')}
+                        />
+                    )}
                 </TabsContent>
                 <TabsContent
-                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    className={
+                        cn('grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+                            courseData.data.exercises.length === 0 && 'flex justify-center'
+                        )
+                    }
                     value="exercises"
                 >
-                    {courseData.data.exercises
+                    {courseData.data.exercises.length > 0 ? courseData.data.exercises
                         .map((exercise) => {
                             // if exercise has a completion, it is completed, else if it has a message, it is in progress else not started
                             const status = exercise.exercise_completions?.length > 0 ? 'Completed' : exercise.exercise_messages?.length > 0 ? 'In Progress' : 'Not Started'
@@ -323,13 +340,25 @@ export default async function CourseStudentPage({
                                     t={t}
                                 />
                             )
-                        })}
+                        }
+                        ) : (
+                        <NoDataPlaceholder
+                            iconSrc="/img/404(2).jpeg"
+                            iconAlt="No Data"
+                            message={t('dashboard.student.CourseStudentPage.noExercises')}
+                            description={t('dashboard.student.CourseStudentPage.noExercisesDescription')}
+                        />
+                    )}
                 </TabsContent>
                 <TabsContent
-                    className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    className={
+                        cn('grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+                            courseData.data.exams.length === 0 && 'flex justify-center'
+                        )
+                    }
                     value="exams"
                 >
-                    {courseData.data.exams
+                    {courseData.data.exams.length > 0 ? courseData.data.exams
                         .sort((a, b) => a.sequence - b.sequence)
                         .map((exam) => (
                             <ExamCard
@@ -353,9 +382,24 @@ export default async function CourseStudentPage({
                                 examId={exam.exam_id}
                                 t={t}
                             />
-                        ))}
+                        )) : (
+                        <NoDataPlaceholder
+                            iconSrc="/img/404(2).jpeg"
+                            iconAlt="No Data"
+                            message={t('dashboard.student.CourseStudentPage.noExams')}
+                            description={t('dashboard.student.CourseStudentPage.noExamsDescription')}
+                        />
+                    )}
                 </TabsContent>
             </Tabs>
         </div>
     )
 }
+
+const NoDataPlaceholder = ({ iconSrc, iconAlt, message, description }) => (
+    <div className="flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800 rounded-lg shadow-md container mx-auto">
+        <Image src={iconSrc} alt={iconAlt} width={250} height={250} className="mb-4 rounded-lg" />
+        <h2 className="text-xl font-semibold mb-2">{message}</h2>
+        <p className="text-gray-600 dark:text-gray-400">{description}</p>
+    </div>
+)
