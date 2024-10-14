@@ -1,6 +1,7 @@
 import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
@@ -10,6 +11,8 @@ import {
 } from '@/components/ui/tooltip'
 
 export default function MarkdownEditorTour() {
+    const t = useScopedI18n('MarkdownEditorTour')
+
     return (
         <TourProvider
             steps={[
@@ -18,11 +21,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Welcome to guide on how to use the text editor
+                                {t('welcomeGuide')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can find a guided tutorial to help you work with the rich text editor.
+                                {t('welcomeGuideDescription')}
                             </p>
                         </>
                     )
@@ -32,11 +35,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the tab for simple text
+                                {t('simpleTab')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can click this tab to write simple text.
+                                {t('simpleTabDescription')}
                             </p>
                         </>
                     )
@@ -46,11 +49,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the content area for simple text
+                                {t('simpleContent')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can write simple text. it does not support markdown rendering. its just plain text.
+                                {t('simpleContentDescription')}
                             </p>
                         </>
                     )
@@ -60,14 +63,14 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the tab for markdown text
+                                {t('markdownTab')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can click this tab to write markdown text. it supports markdown rendering.
+                                {t('markdownTabDescription')}
                             </p>
                             <p className='font-bold text-red-500'>
-                                Please click the tab to continue the tutorial
+                                {t('clickToContinue')}
                             </p>
                         </>
                     )
@@ -77,25 +80,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the content area for markdown text
+                                {t('markdownContent')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can select this tab to write markdown text. it supports markdown rendering. it also has multiple options to format your text. Like code blocks, lists, and more. lets explore it
-                            </p>
-                        </>
-                    )
-                },
-                {
-                    selector: '#markdown-content',
-                    content: (
-                        <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the content area for markdown text
-                            </h4>
-
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Here you can select this tab to write markdown text. it supports markdown rendering. it also has multiple options to format your text. Like code blocks, lists, and more. lets explore it
+                                {t('markdownContentDescription')}
                             </p>
                         </>
                     )
@@ -105,11 +94,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the block type select
+                                {t('blockTypeSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can select the block type. like paragraph, heading, code block, and more.
+                                {t('blockTypeSelectDescription')}
                             </p>
                         </>
                     )
@@ -119,11 +108,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the bold, italic, underline select
+                                {t('boldItalicUnderlineSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can select the bold, italic, underline options to format your text.
+                                {t('boldItalicUnderlineSelectDescription')}
                             </p>
                         </>
                     )
@@ -133,11 +122,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the create link select
+                                {t('createLinkSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can create a link in your text.
+                                {t('createLinkSelectDescription')}
                             </p>
                         </>
                     )
@@ -147,11 +136,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the list toggle select
+                                {t('listToggleSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can select the list toggle to create lists in your text.
+                                {t('listToggleSelectDescription')}
                             </p>
                         </>
                     )
@@ -161,11 +150,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the undo redo select
+                                {t('undoRedoSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can undo or redo your text changes.
+                                {t('undoRedoSelectDescription')}
                             </p>
                         </>
                     )
@@ -175,11 +164,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the insert table select
+                                {t('insertTableSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can insert a table in your text.
+                                {t('insertTableSelectDescription')}
                             </p>
                         </>
                     )
@@ -189,12 +178,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the simpleCodeBlock select
+                                {t('insertCodeBlockSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can insert a code block in your text. Like python, javascript, and more. this will have automatic syntax highlighting, line numbers, and more.
-                                Please use this when you want to insert code in your text.
+                                {t('insertCodeBlockSelectDescription')}
                             </p>
                         </>
                     )
@@ -204,12 +192,11 @@ export default function MarkdownEditorTour() {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                This is the SandPack select
+                                {t('insertSandPackSelect')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                Here you can insert code blocks that renders a live code editor. with a live preview. This means that you can write code and see the output in real-time.
-                                like a code playground with real code execution. it supports javascript, typescript, react, and more.
+                                {t('insertSandPackSelectDescription')}
                             </p>
                         </>
                     )
@@ -224,13 +211,14 @@ export default function MarkdownEditorTour() {
                 }
             }}
         >
-            <MarkdowinEditorTourButton />
+            <MarkdownEditorTourButton />
         </TourProvider>
     )
 }
 
-function MarkdowinEditorTourButton () {
+function MarkdownEditorTourButton () {
     const { setIsOpen } = useTour()
+    const t = useScopedI18n('MarkdownEditorTour')
 
     return (
         <TooltipProvider>
@@ -245,7 +233,7 @@ function MarkdowinEditorTourButton () {
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-                        Here you can find a guided tutorial to help you work with the rich text editor.
+                        {t('guidedTutorialDescription')}
                     </p>
                 </TooltipContent>
             </Tooltip>
