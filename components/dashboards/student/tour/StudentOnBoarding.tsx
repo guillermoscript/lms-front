@@ -2,6 +2,7 @@
 import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
@@ -12,6 +13,8 @@ import {
 
 // Setup component with a button to start the tour
 export default function StudentOnBoarding () {
+    const t = useScopedI18n('StudentOnBoarding')
+
     return (
         <TourProvider
             steps={[
@@ -20,11 +23,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                Welcome to the Home Page
+                                {t('welcomeHome')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                This is the starting point of your journey. Here you can find
-                the latest updates and navigate to other sections.
+                                {t('homeDescription')}
                             </p>
                         </>
                     )
@@ -34,11 +36,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                Manage Your Account
+                                {t('manageAccount')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                In this section, you can update your personal information,
-                change your password, and manage your account settings.
+                                {t('accountDescription')}
                             </p>
                         </>
                     )
@@ -48,10 +49,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                Chat with Our AI
+                                {t('chatWithAI')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                Use the chat feature to interact with our AI. You can ask for practices for your exam or just chat about anything.
+                                {t('chatDescription')}
                             </p>
                         </>
                     )
@@ -61,12 +62,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                Check Notifications
+                                {t('checkNotifications')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                Stay updated with the latest notifications. Here you will find
-                alerts about new messages, updates, and other important
-                information.
+                                {t('notificationsDescription')}
                             </p>
                         </>
                     )
@@ -76,11 +75,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                Toggle Dark Theme
+                                {t('toggleDarkTheme')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                Switch between light and dark themes to suit your preference.
-                This can help reduce eye strain in low-light conditions.
+                                {t('darkThemeDescription')}
                             </p>
                         </>
                     )
@@ -90,11 +88,10 @@ export default function StudentOnBoarding () {
                     content: (
                         <>
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                View Your Profile
+                                {t('viewProfile')}
                             </h2>
                             <p className="text-gray-600 dark:text-gray-300">
-                Access your profile to see your activity, update your profile
-                picture, and manage your personal information.
+                                {t('profileDescription')}
                             </p>
                         </>
                     )
@@ -108,6 +105,10 @@ export default function StudentOnBoarding () {
                     setCurrentStep((s) => (s === steps.length - 1 ? 0 : s + 1))
                 }
             }}
+
+            badgeContent={({ currentStep }) => {
+                return ''
+            }}
         >
             <StudentOnBoardingButton />
         </TourProvider>
@@ -116,6 +117,7 @@ export default function StudentOnBoarding () {
 
 function StudentOnBoardingButton () {
     const { setIsOpen } = useTour()
+    const t = useScopedI18n('StudentOnBoarding')
 
     return (
         <TooltipProvider>
@@ -131,7 +133,7 @@ function StudentOnBoardingButton () {
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-            Take a tour of the dashboard
+                        {t('takeTour')}
                     </p>
                 </TooltipContent>
             </Tooltip>

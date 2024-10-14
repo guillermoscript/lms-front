@@ -39,7 +39,9 @@ export default async function ProfileDropdown () {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Avatar>
+                <Avatar
+                    id='profile'
+                >
                     <AvatarImage src={profile.data.avatar_url} />
                     <AvatarFallback className='capitalize'>
                         {profile.data.full_name ? profile.data.full_name[0] : user.email[0]}
