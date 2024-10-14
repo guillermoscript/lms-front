@@ -435,6 +435,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         continueCourse: 'Continuar Curso',
         lastViewed: 'Última Vista',
         continueLesson: 'Continuar Lección',
+        enrollOnCourse: 'Inscribirse en el Curso',
     },
     ExamReview: {
         review: 'Revisión',

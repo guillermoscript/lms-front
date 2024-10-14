@@ -124,23 +124,25 @@ const LessonCard = ({
             <h3 className="text-lg font-semibold mb-2">{title}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{description}</p>
             <Badge
-                variant={status === 'Completed' ? 'default' : 'secondary'}
+                variant={status === 'Completed' ? 'default' : status === 'In Progress' ? 'outline' : 'secondary'}
                 className="mb-2"
             >
                 {status === 'Completed' ? (
                     <><CheckCircle className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.completed')}</>
+                ) : status === 'In Progress' ? (
+                    <><Clock className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.inProgress')}</>
                 ) : (
-                    <><Clock className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.notStarted')}</>
+                    <><Clock10 className="mr-1 h-3 w-3" /> {t('dashboard.student.CourseStudentPage.notStarted')}</>
                 )}
             </Badge>
         </CardContent>
         <CardFooter className="p-4 pt-0">
             <Button
-                variant={status === 'Completed' ? 'secondary' : 'default'}
+                variant={status === 'Completed' ? 'secondary' : status === 'In Progress' ? 'default' : 'outline'}
                 asChild className="w-full"
             >
                 <Link href={`/dashboard/student/courses/${courseId}/lessons/${lessonId}`}>
-                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : t('dashboard.student.CourseStudentPage.start')}
+                    {status === 'Completed' ? t('dashboard.student.CourseStudentPage.review') : status === 'In Progress' ? t('dashboard.student.CourseStudentPage.continue') : t('dashboard.student.CourseStudentPage.start')}
                 </Link>
             </Button>
         </CardFooter>
@@ -194,7 +196,7 @@ export default async function CourseStudentPage({
         .from('courses')
         .select(
             `*,
-        lessons(title, description, image, sequence, id, lesson_completions(*)),
+        lessons(title, description, image, sequence, id, lesson_completions(*), lessons_ai_task_messages(*)),
         exams(*,
             exam_submissions(
                 submission_id,
@@ -225,6 +227,7 @@ export default async function CourseStudentPage({
         .eq('exams.exam_submissions.student_id', userData.data.user.id)
         .eq('exercises.exercise_completions.user_id', userData.data.user.id)
         .eq('exercises.exercise_messages.user_id', userData.data.user.id)
+        .eq('lessons.lessons_ai_task_messages.user_id', userData.data.user.id)
         .single()
 
     if (courseData.error != null) {
@@ -280,19 +283,23 @@ export default async function CourseStudentPage({
                 >
                     {courseData.data.lessons
                         .sort((a, b) => a.sequence - b.sequence)
-                        .map((lesson) => (
-                            <LessonCard
-                                key={lesson.id}
-                                image={lesson.image}
-                                title={lesson.title}
-                                number={lesson.sequence}
-                                description={lesson.description}
-                                status={lesson.lesson_completions.length > 0 ? 'Completed' : 'Not Started'}
-                                courseId={courseData.data.course_id}
-                                lessonId={lesson.id}
-                                t={t}
-                            />
-                        ))}
+                        .map((lesson) => {
+                            const status = lesson.lesson_completions.length > 0 ? 'Completed' : lesson.lessons_ai_task_messages.length > 0 ? 'In Progress' : 'Not Started'
+
+                            return (
+                                <LessonCard
+                                    key={lesson.id}
+                                    image={lesson.image}
+                                    title={lesson.title}
+                                    number={lesson.sequence}
+                                    description={lesson.description}
+                                    status={status}
+                                    courseId={courseData.data.course_id}
+                                    lessonId={lesson.id}
+                                    t={t}
+                                />
+                            )
+                        })}
                 </TabsContent>
                 <TabsContent
                     className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
