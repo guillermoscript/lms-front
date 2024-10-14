@@ -3,6 +3,7 @@
 import { TourProvider, useTour } from '@reactour/tour'
 import { InfoIcon } from 'lucide-react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
@@ -13,6 +14,8 @@ import {
 
 // Setup component with a button to start the tour
 export default function ExamPrepSetup () {
+    const t = useScopedI18n('ExamPrepSetup')
+
     return (
         <TourProvider
             steps={[
@@ -21,11 +24,11 @@ export default function ExamPrepSetup () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Message Templates
+                                {t('messageTemplates')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-    This buttons will help you to create a message following a template, for the specific button you will get a basic text with some placeholders to fill out.
+                                {t('messageTemplatesDescription')}
                             </p>
                         </>
                     )
@@ -36,13 +39,11 @@ export default function ExamPrepSetup () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Create Exam Form Template
+                                {t('createExamFormTemplate')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This button will help you to create a basic exam form for the subject you want. For that your will need to fill out the placeholders marked with " ".
-                                The AI will improve the form with the information you provide. The more you give the better the form will be.
-                                Also keep in mind that the AI will ask you for more information if needed. So be ready to provide it.
+                                {t('createExamFormTemplateDescription')}
                             </p>
                         </>
                     )
@@ -52,12 +53,11 @@ export default function ExamPrepSetup () {
                     content: (
                         <>
                             <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
-                                Exam Suggestions Template
+                                {t('examSuggestionsTemplate')}
                             </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This button will help you to ask the AI for suggestions for an exam form for the subject you want. For that your will need to fill out the placeholders marked with " ".
-                                The AI will give you some suggestions for the form. You can ask for more suggestions if you want.
+                                {t('examSuggestionsTemplateDescription')}
                             </p>
                         </>
                     )
@@ -66,23 +66,26 @@ export default function ExamPrepSetup () {
                     selector: '#suggestions-container',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Suggestions</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('suggestions')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can view the suggestions from the AI. to chat about with the AI.
+                                {t('suggestionsDescription')}
                             </p>
                         </>
-
                     )
                 },
                 {
                     selector: '.editor',
                     content: (
                         <>
-                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">Chat with the AI assistant</h4>
+                            <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-400">
+                                {t('chatWithAI')}
+                            </h4>
 
                             <p className="text-gray-600 dark:text-gray-300">
-                                This is where you can chat with the AI assistant. You can ask questions, get suggestions, and more.
+                                {t('chatWithAIDescription')}
                             </p>
                         </>
                     )
@@ -104,14 +107,14 @@ export default function ExamPrepSetup () {
 
 function ChatTourExamPrepChat () {
     const { setIsOpen } = useTour()
+    const t = useScopedI18n('ExamPrepSetup')
 
     return (
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger>
-
                     <Button onClick={() => setIsOpen(true)}>
-                        Guided Tutorial
+                        {t('guidedTutorial')}
                         <InfoIcon
                             className='ml-2'
                             size={24}
@@ -120,11 +123,10 @@ function ChatTourExamPrepChat () {
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>
-                        If you want to know more about the exam prep chat, click the button above to start the tour.
+                        {t('guidedTutorialDescription')}
                     </p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
-
     )
 }
