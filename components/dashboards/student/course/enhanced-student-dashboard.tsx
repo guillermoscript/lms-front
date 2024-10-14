@@ -4,6 +4,7 @@ import {
     Book,
     Calendar,
     ChevronRight,
+    Clock,
     MessageCircle,
 } from 'lucide-react'
 import Image from 'next/image'
@@ -25,6 +26,7 @@ import { Progress } from '@/components/ui/progress'
 
 interface Course {
     course_id: string
+    enrolled: boolean
     course: {
         title: string
         description: string
@@ -59,37 +61,33 @@ const CourseProgressCard = ({ course }: { course: Course }) => {
     const t = useScopedI18n('StudentDashboard')
 
     return (
-        <Card className="w-full">
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <div className="w-12 h-12 rounded-full overflow-hidden mr-4">
-                    <Image
-                        src={course.course.thumbnail_url || '/placeholder.svg'}
-                        alt={course.course.title}
-                        width={48}
-                        height={48}
-                        objectFit="cover"
-                    />
+        <Card className="w-full overflow-hidden">
+            <div className="relative h-48">
+                <Image
+                    src={course.course.thumbnail_url || '/placeholder.svg'}
+                    alt={course.course.title}
+                    layout="fill"
+                    objectFit="cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-4 text-white">
+                    <h3 className="text-xl font-semibold mb-1">{course.course.title}</h3>
+                    <p className="text-sm">
+                        {t('progress')}: {completedLessons}/{totalLessons} {t('lessons')}
+                    </p>
                 </div>
-                <div>
-                    <CardTitle className="text-lg">
-                        {course.course.title}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('progress')}: {completedLessons}/{totalLessons}{' '}
-                        {t('lessons')}
-                    </CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+            <CardContent className="pt-4">
                 <Progress value={progress} className="w-full" />
             </CardContent>
             <CardFooter>
                 <Button asChild variant="ghost" className="w-full">
-                    <Link
-                        href={`/dashboard/student/courses/${course.course_id}`}
-                    >
-                        {t('continueCourse')}{' '}
-                        <ChevronRight className="ml-2 h-4 w-4" />
+                    <Link href={`/dashboard/student/courses/${course.course_id}`}>
+                        {
+                            course.enrolled
+                                ? t('continueCourse')
+                                : t('enrollOnCourse')
+                        } <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>
             </CardFooter>
@@ -101,37 +99,34 @@ const RecentActivityCard = ({ activity }: { activity: LessonView }) => {
     const t = useScopedI18n('StudentDashboard')
 
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                <div className="w-10 h-10 rounded-full overflow-hidden mr-4">
+        <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="flex flex-col sm:flex-row">
+                <div className="relative w-full sm:w-1/3 h-56 ">
                     <Image
                         src={activity.lesson_image || '/placeholder.svg'}
                         alt={activity.lesson_title}
-                        width={40}
-                        height={40}
+                        layout="fill"
                         objectFit="cover"
                     />
                 </div>
-                <div>
-                    <CardTitle className="text-md">
-                        {activity.lesson_title}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                        {t('lastViewed')}:{' '}
-                        {new Date(activity.viewed_at).toLocaleDateString()}
+                <div className="flex-1 p-4">
+                    <CardTitle className="text-lg mb-2">{activity.lesson_title}</CardTitle>
+                    <CardDescription className="mb-4 line-clamp-2">
+                        {activity.lesson_description}
                     </CardDescription>
+                    <div className="flex items-center text-sm text-muted-foreground mb-4">
+                        <Clock className="mr-2 h-4 w-4" />
+                        {t('lastViewed')}: {new Date(activity.viewed_at).toLocaleDateString()}
+                    </div>
+                    <Button asChild variant="outline" size="sm">
+                        <Link
+                            href={`/dashboard/student/courses/${activity.lesson_course_id}/lessons/${activity.lesson_id}`}
+                        >
+                            {t('continueLesson')} <ChevronRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
                 </div>
-            </CardHeader>
-            <CardFooter>
-                <Button asChild variant="ghost" className="w-full">
-                    <Link
-                        href={`/dashboard/student/courses/${activity.lesson_course_id}/lessons/${activity.lesson_id}`}
-                    >
-                        {t('continueLesson')}{' '}
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                    </Link>
-                </Button>
-            </CardFooter>
+            </div>
         </Card>
     )
 }
@@ -159,12 +154,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold">
-                        {t('welcome')}
-                    </h1>
-                    <p className="text-muted-foreground">
-                        {t('dashboardDescription')}
-                    </p>
+                    <h1 className="text-3xl font-bold">{t('welcome')}</h1>
+                    <p className="text-muted-foreground">{t('dashboardDescription')}</p>
                 </div>
                 <Avatar className="h-12 w-12">
                     <AvatarImage src="/placeholder-avatar.jpg" alt="Student" />
@@ -175,22 +166,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('totalCourses')}
-                        </CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalCourses')}</CardTitle>
                         <Book className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
-                            {userCourses.length}
-                        </div>
+                        <div className="text-2xl font-bold">{userCourses.length}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('averageProgress')}
-                        </CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('averageProgress')}</CardTitle>
                         <BarChart className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -199,9 +184,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('upcomingDeadlines')}
-                        </CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('upcomingDeadlines')}</CardTitle>
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -210,51 +193,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            {t('unreadMessages')}
-                        </CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('unreadMessages')}</CardTitle>
                         <MessageCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
-                            {userChats.length}
-                        </div>
+                        <div className="text-2xl font-bold">{userChats.length}</div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6">
                 <div className="md:col-span-2">
-                    <h2 className="text-2xl font-semibold mb-4">
-                        {t('courseProgress')}
-                    </h2>
-                    <div className="space-y-4">
+                    <h2 className="text-2xl font-semibold mb-4">{t('courseProgress')}</h2>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {filteredCourses.slice(0, 3).map((course) => (
-                            <CourseProgressCard
-                                key={course.course_id}
-                                course={course}
-                            />
+                            <CourseProgressCard key={course.course_id} course={course} />
                         ))}
                     </div>
                     {filteredCourses.length > 3 && (
                         <Button asChild variant="link" className="mt-4">
                             <Link href="/dashboard/student/courses">
-                                {t('viewAllCourses')}{' '}
-                                <ChevronRight className="ml-2 h-4 w-4" />
+                                {t('viewAllCourses')} <ChevronRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
                     )}
                 </div>
                 <div>
-                    <h2 className="text-2xl font-semibold mb-4">
-                        {t('recentActivity')}
-                    </h2>
-                    <div className="space-y-4">
+                    <h2 className="text-2xl font-semibold mb-4">{t('recentActivity')}</h2>
+                    <div className="space-y-6">
                         {lessonsView.slice(0, 3).map((lesson) => (
-                            <RecentActivityCard
-                                key={lesson.lesson_id}
-                                activity={lesson}
-                            />
+                            <RecentActivityCard key={lesson.lesson_id} activity={lesson} />
                         ))}
                     </div>
                 </div>
