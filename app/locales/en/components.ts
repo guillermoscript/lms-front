@@ -553,5 +553,20 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         },
         typeMessage: 'Type your message...',
         sendMessage: 'Send message',
+    },
+    StudentOnBoarding: {
+        welcomeHome: 'Welcome to the Home Page',
+        homeDescription: 'This is the starting point of your journey. Here you can find the latest updates and navigate to other sections.',
+        manageAccount: 'Manage Your Account',
+        accountDescription: 'In this section, you can update your personal information, change your password, and manage your account settings.',
+        chatWithAI: 'Chat with Our AI',
+        chatDescription: 'Use the chat feature to interact with our AI. You can ask for practices for your exam or just chat about anything.',
+        checkNotifications: 'Check Notifications',
+        notificationsDescription: 'Stay updated with the latest notifications. Here you will find alerts about new messages, updates, and other important information.',
+        toggleDarkTheme: 'Toggle Dark Theme',
+        darkThemeDescription: 'Switch between light and dark themes to suit your preference. This can help reduce eye strain in low-light conditions.',
+        viewProfile: 'View Your Profile',
+        profileDescription: 'Access your profile to see your activity, update your profile picture, and manage your personal information.',
+        takeTour: 'Take a tour of the dashboard',
     }
 } as const

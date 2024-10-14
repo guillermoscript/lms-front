@@ -550,5 +550,20 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         },
         typeMessage: 'Escribe tu mensaje...',
         sendMessage: 'Enviar mensaje',
+    },
+    StudentOnBoarding: {
+        welcomeHome: 'Bienvenido a la Página Principal',
+        homeDescription: 'Este es el punto de partida de tu viaje. Aquí puedes encontrar las últimas actualizaciones y navegar a otras secciones.',
+        manageAccount: 'Gestiona Tu Cuenta',
+        accountDescription: 'En esta sección, puedes actualizar tu información personal, cambiar tu contraseña y gestionar la configuración de tu cuenta.',
+        chatWithAI: 'Chatea con Nuestro AI',
+        chatDescription: 'Usa la función de chat para interactuar con nuestro AI. Puedes pedir prácticas para tu examen o simplemente charlar sobre cualquier cosa.',
+        checkNotifications: 'Revisa las Notificaciones',
+        notificationsDescription: 'Mantente actualizado con las últimas notificaciones. Aquí encontrarás alertas sobre nuevos mensajes, actualizaciones y otra información importante.',
+        toggleDarkTheme: 'Cambiar a Tema Oscuro',
+        darkThemeDescription: 'Cambia entre temas claros y oscuros según tu preferencia. Esto puede ayudar a reducir la fatiga visual en condiciones de poca luz.',
+        viewProfile: 'Ver Tu Perfil',
+        profileDescription: 'Accede a tu perfil para ver tu actividad, actualizar tu foto de perfil y gestionar tu información personal.',
+        takeTour: 'Haz un recorrido por el tablero',
     }
 } as const
