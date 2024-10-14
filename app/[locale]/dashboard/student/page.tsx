@@ -38,6 +38,7 @@ export default async function CoursesStudentPage() {
             .select(`
                 course_id,
                 title,
+                enrollments(user_id),
                 description,
                 thumbnail_url,
                 lessons(id, title, lesson_completions(id,user_id)),
@@ -45,10 +46,12 @@ export default async function CoursesStudentPage() {
             `)
             .eq('status', 'published')
             .eq('lessons.lesson_completions.user_id', user.data.user.id)
+            .eq('enrollments.user_id', user.data.user.id)
         : supabase
             .from('enrollments')
             .select(`
                 course_id,
+                user_id,
                 course:course_id(
                     title,
                     description,
@@ -67,9 +70,12 @@ export default async function CoursesStudentPage() {
     if (lessonsView.error) throw new Error(lessonsView.error.message)
     if (userChats.error) throw new Error(userChats.error.message)
 
+    console.log(coursesResult)
+
     const courses = coursesResult.data.map((course) => {
         return {
             course_id: course.course_id,
+            enrolled: subscriptions.data.length > 0 ? course.enrollments.length > 0 : true,
             course: {
                 title: course.title,
                 description: course.description,
