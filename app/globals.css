@@ -215,7 +215,7 @@ html.dark .prose {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
-    color: var(--foreground);
+    color: #e6edf3;
     --basePageBg: var(--background);
     background: var(--basePageBg);
 }
