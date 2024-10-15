@@ -172,25 +172,36 @@ export default {
             spanish: 'Profesor de español',
             englishSpeech: 'Profesor de inglés (habla)',
             codeTask: '**Escribe un programa en Python que haga lo siguiente:**\n\n- Pide al usuario que introduzca su nombre.\n- Pide al usuario que introduzca su edad.\n- Imprime un mensaje de saludo personalizado que incluya su nombre y edad.\n- Dile al usuario cuántos años faltan para que cumpla 100 años.\nSi te sientes perdido, por favor pídele ayuda a la IA',
-            englishTask: `**Tarea: Mi comida favorita**
+            englishTask: `# Mi Comida Favorita
 
-**Objetivo:** Practicar la escritura de oraciones simples en inglés.
+## Objetivo:
 
-**Instrucciones:**
+Practicar la escritura de un párrafo descriptivo en español sobre tu comida favorita. Este ejercicio te ayudará a mejorar la construcción de oraciones, el vocabulario y la capacidad de expresar tus preferencias.
 
-1. **Escribe un párrafo en Inglés sobre tu comida favorita**
-    - Por favor, escribe un párrafo corto (5-7 oraciones) sobre tu comida favorita. Responde las siguientes preguntas en tu párrafo:
-        - ¿Cuál es tu comida favorita?
-        - ¿Por qué te gusta?
-        - ¿Cuándo sueles comerla?
-        - ¿Con quién disfrutas comiéndola?
+## Instrucciones:
 
-2. **Ejemplo de cómo escribir tu párrafo:**
-    \`\`\`
-    Mi comida favorita son los tacos. Me gustan los tacos porque son sabrosos y versátiles. Suelo comer tacos los fines de semana con mis amigos. Disfrutamos de diferentes rellenos como carne de res, pollo y verduras. ¡Hacer tacos juntos es divertido! Me encanta agregar salsa picante a mis tacos.
-    \`\`\`
+1. **Brainstorming:** Piensa en tu comida favorita.  Considera no solo el sabor, sino también los recuerdos y las sensaciones asociadas con ella.
 
-            `,
+2. **Escribe un Párrafo (5-7 oraciones):** Escribe un breve párrafo sobre tu comida favorita, respondiendo a las siguientes preguntas:
+
+    * **¿Cuál es tu comida favorita?**  Comienza estableciendo claramente tu comida favorita.
+    * **¿Por qué te gusta?** Describe el sabor, la textura y el aroma. ¡Sé específico! Utiliza adjetivos descriptivos. ¿Es dulce, salada, picante, crujiente, cremosa?
+    * **¿Cuándo la comes normalmente?** ¿Es un plato para ocasiones especiales, una comida diaria, o un tentempié reconfortante? Proporciona contexto.
+    * **¿Con quién disfrutas comerla?** ¿La comes con tu familia, amigos, o solo?  Comparte un poco sobre el aspecto social de disfrutar tu comida favorita.
+
+3. **Ejemplo:**
+
+    "My favorite food is pasta carbonara.  I love the rich, creamy sauce and the salty flavor of the pancetta.  The texture of the perfectly cooked pasta is also a delight – not too soft, not too firm. I usually eat it on special occasions, like birthdays or anniversaries, because it feels like a celebratory meal. I enjoy sharing this dish with my family, especially my grandmother, who taught me how to make it.  It's a tradition that brings us closer together."
+
+
+4. **Consejos para escribir un buen párrafo:**
+
+    * **Lenguaje descriptivo:** Usa palabras descriptivas para que tu párrafo sea más atractivo y envolvente.
+    * **Variedad de oraciones:** Evita empezar todas las oraciones con "Me".  Experimenta con diferentes estructuras de oraciones para hacer tu escritura más dinámica.
+    * **Revisa tu ortografía y gramática:** Revisa cuidadosamente tu párrafo antes de enviarlo.
+
+
+5. **Envía tu Párrafo:**  Envia tu párrafo completo al chat para que pueda ser revisado.  Recuerda que puedes hacer preguntas si tienes dudas. Estoy aquí para ayudarte.`,
             spanishTask: `**Tarea: Mi Pasatiempo Favorito**
 
 **Objetivo:** Practicar la escritura de oraciones simples en español.
