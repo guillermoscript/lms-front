@@ -69,6 +69,7 @@ export default {
         aiTask: 'Tarea de IA',
         aiTaskCompleted: 'Tarea de IA completada',
         aiTaksInComplete: 'Tarea incompleta',
+        content: 'Contenido',
         RetryError: {
             title: 'Error al cargar la tarea de IA',
             description: 'Hubo un problema al cargar la tarea de IA'
@@ -121,7 +122,8 @@ export default {
         edit: 'Editar'
     },
     TimelineItem: {
-        current: 'Actual'
+        current: 'Actual',
+        viewLesson: 'Ver lección',
     },
     TableOfContents: {
         title: 'Tabla de contenido'

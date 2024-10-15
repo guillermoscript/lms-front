@@ -69,6 +69,7 @@ export default {
         aiTask: 'AI Task',
         aiTaskCompleted: 'AI Task Completed',
         aiTaksInComplete: 'Task Incomplete',
+        content: 'Content',
         RetryError: {
             title: 'Error loading AI Task',
             description: 'There was an issue loading the AI Task'
@@ -122,6 +123,7 @@ export default {
     },
     TimelineItem: {
         current: 'Current',
+        viewLesson: 'View Lesson',
     },
     TableOfContents: {
         title: 'Table of Contents',
