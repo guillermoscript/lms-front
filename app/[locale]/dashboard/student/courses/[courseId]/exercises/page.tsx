@@ -32,7 +32,7 @@ export default async function ExercisesPage({
         .eq('exercise_completions.user_id', userData.data.user.id)
         .eq('exercise_messages.user_id', userData.data.user.id)
 
-        console.log(exerciseData.data)
+    console.log(exerciseData.data)
 
     return (
         <div className="container mx-auto">

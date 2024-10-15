@@ -1,13 +1,9 @@
 import { Message } from 'ai/react'
 import {
-    Check,
-    Copy,
-    Edit,
     Paperclip,
-    Recycle,
     Send,
-    Trash,
 } from 'lucide-react'
+
 import { useScopedI18n } from '@/app/locales/client'
 import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
 import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'

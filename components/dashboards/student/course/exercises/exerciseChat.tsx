@@ -7,26 +7,27 @@ import {
     Check,
     Copy,
     Edit,
-    Paperclip,
     Recycle,
-    Send,
     Trash,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { useCopyToClipboard } from 'usehooks-ts'
 
+import {
+    deleteExerciseMessageAction,
+    editExerciseMessageAction,
+} from '@/actions/dashboard/exercisesActions'
 import { useScopedI18n } from '@/app/locales/client'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
-import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
-import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
     Tooltip,
@@ -34,12 +35,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useCopyToClipboard } from 'usehooks-ts'
-import { toast } from 'sonner'
-import {
-    deleteExerciseMessageAction,
-    editExerciseMessageAction,
-} from '@/actions/dashboard/exercisesActions'
+
 import ExercisesTextEditors from './ExercisesTextEditors'
 
 interface ExerciseChatProps {
@@ -243,17 +239,17 @@ export default function ExerciseChat({
                                     onEdit={() =>
                                         handleEditMessage(m.id, m.content)
                                     }
-                                    onSave={() => handleSaveEdit(m.id)}
-                                    onDelete={() =>
-                                        handleDeleteMessage(m.id, m.content)
+                                    onSave={async () => await handleSaveEdit(m.id)}
+                                    onDelete={async () =>
+                                        await handleDeleteMessage(m.id, m.content)
                                     }
                                     onCopy={() => {
                                         copy(m.content)
                                         setCopiedMessageId(m.id)
                                         toast.success(t('copiedToClipboard'))
                                     }}
-                                    onRegenerate={() =>
-                                        regenerateAiMessage(m.id, m.content)
+                                    onRegenerate={async () =>
+                                        await regenerateAiMessage(m.id, m.content)
                                     }
                                     isLoading={isLoading}
                                     isCompleted={isCompleted}
@@ -370,10 +366,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                             >
                                                 {message.id ===
                                                 'copiedMessageId' ? (
-                                                    <Check className="h-4 w-4" />
-                                                ) : (
-                                                    <Copy className="h-4 w-4" />
-                                                )}
+                                                        <Check className="h-4 w-4" />
+                                                    ) : (
+                                                        <Copy className="h-4 w-4" />
+                                                    )}
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>

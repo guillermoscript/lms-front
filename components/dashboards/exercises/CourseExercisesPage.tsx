@@ -212,9 +212,9 @@ export default function CourseExercisesPage({
                                                 .length > 0
                                                 ? 'secondary'
                                                 : exercise.exercise_messages
-                                                      .length > 0
-                                                ? 'default'
-                                                : 'outline',
+                                                    .length > 0
+                                                    ? 'default'
+                                                    : 'outline',
                                     }),
                                     'w-full'
                                 )}
@@ -223,8 +223,8 @@ export default function CourseExercisesPage({
                                 {exercise?.exercise_completions.length > 0
                                     ? t('review')
                                     : exercise?.exercise_messages.length > 0
-                                    ? t('continue')
-                                    : t('start')}
+                                        ? t('continue')
+                                        : t('start')}
                             </Link>
                         </CardFooter>
                     </Card>
