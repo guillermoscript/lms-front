@@ -19,9 +19,9 @@ export async function POST(req: Request) {
     }
 
     const result = await streamText({
-        model: google('gemini-1.5-flash-latest'),
+        model: google('gemini-1.5-pro-002'),
         messages: convertToCoreMessages(body.messages),
-        temperature: 0.5,
+        temperature: 0.6,
         tools: {
             makeUserAssigmentCompleted: {
                 description: 'Function to mark the exercise as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the exercise. Respond using the language of the student.',
