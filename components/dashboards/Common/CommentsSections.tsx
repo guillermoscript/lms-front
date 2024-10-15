@@ -1,7 +1,6 @@
 import dayjs from 'dayjs'
 
 import { getScopedI18n } from '@/app/locales/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/utils/supabase/server'
 
 import CommentEditor from '../student/course/lessons/CommentEditor'
@@ -33,6 +32,11 @@ export default async function CommentsSections({
 
     return (
         <div className="flex flex-col gap-4 ">
+
+            <CommentEditor
+                course_id={course_id}
+                lesson_id={lesson_id}
+            />
             <h2 className="text-xl font-semibold mb-4">
                 {t('comments')} ({lesson_comments.length})
             </h2>
@@ -68,21 +72,6 @@ export default async function CommentsSections({
                         />
                     )
                 })}
-            <Card className="mt-6">
-                <CardHeader className="flex items-center gap-2 p-2 lg:p-3">
-                    <CardTitle className="text-lg font-medium">
-                        {t('CardTitle')}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent
-                    className='p-1 lg:p-3'
-                >
-                    <CommentEditor
-                        course_id={course_id}
-                        lesson_id={lesson_id}
-                    />
-                </CardContent>
-            </Card>
         </div>
     )
 }

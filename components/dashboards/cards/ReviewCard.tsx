@@ -23,8 +23,8 @@ function ReviewCard ({ rating, reviewText, reviewerName, reviewDate }: ReviewCar
                 <p className="text-sm text-gray-500 dark:text-gray-400">{rating} / 5</p>
             </div>
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{reviewText}</p>
-            <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Reviewed by {reviewerName}</p>
+            <div className="mt-4 flex items-center gap-4 justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">{reviewerName}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{reviewDate}</p>
             </div>
         </div>

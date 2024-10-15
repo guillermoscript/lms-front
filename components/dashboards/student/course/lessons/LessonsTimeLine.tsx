@@ -5,9 +5,9 @@ import { Suspense } from 'react'
 import TimelineItem from '@/components/ui/timeline'
 import { createClient } from '@/utils/supabase/server'
 
-export default async function LessonsTimeLine ({
+export default async function LessonsTimeLine({
     courseId,
-    lessonId
+    lessonId,
 }: {
     courseId: number
     lessonId: number
@@ -17,7 +17,7 @@ export default async function LessonsTimeLine ({
 
     const { data: items, error } = await supabase
         .from('lessons')
-        .select('*, lesson_completions(*)')
+        .select('title, created_at, image, id,  lesson_completions(user_id)')
         .eq('course_id', courseId)
         .eq('lesson_completions.user_id', user.data.user.id)
         .order('sequence', { ascending: true })
@@ -33,10 +33,7 @@ export default async function LessonsTimeLine ({
                 <Suspense
                     fallback={
                         <div className="flex justify-center items-center h-20">
-                            <Loader
-                                size={32}
-                                className='animate-spin'
-                            />
+                            <Loader size={32} className="animate-spin" />
                         </div>
                     }
                 >
@@ -44,9 +41,9 @@ export default async function LessonsTimeLine ({
                         key={index}
                         title={item.title}
                         date={dayjs(item.created_at).format('MMM D, YYYY')}
-                        description={item.description}
-                        latest={item.id === lessonId}
+                        image={item.image}
                         isCheck={item.lesson_completions.length > 0}
+                        isCurrent={item.id === lessonId}
                         link={`/dashboard/student/courses/${courseId}/lessons/${item.id}`}
                     />
                 </Suspense>
