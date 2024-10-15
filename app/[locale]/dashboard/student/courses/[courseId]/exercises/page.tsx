@@ -10,16 +10,29 @@ export default async function ExercisesPage({
 }) {
     const supabase = createClient()
     const t = await getI18n()
+    const userData = await supabase.auth.getUser()
 
     const exerciseData = await supabase
         .from('exercises')
         .select(
             `
-            *,
-            courses(*)
+            id, 
+            title,
+            description,
+            exercise_type,
+            difficulty_level,
+            time_limit,
+            courses(*),
+            exercise_completions(id),
+            exercise_messages(id)
         `
         )
         .eq('course_id', params.courseId)
+
+        .eq('exercise_completions.user_id', userData.data.user.id)
+        .eq('exercise_messages.user_id', userData.data.user.id)
+
+    console.log(exerciseData.data)
 
     return (
         <div className="container mx-auto">
@@ -38,11 +51,11 @@ export default async function ExercisesPage({
                         label: t('BreadcrumbComponent.course'),
                     },
                     {
-                        href: `/dashboard/student/courses/${exerciseData.data[0].course_id}/exercises`,
+                        href: `/dashboard/student/courses/${params.courseId}`,
                         label: exerciseData.data[0].courses.title,
                     },
                     {
-                        href: `/dashboard/student/courses/${exerciseData.data[0].course_id}/exercises`,
+                        href: `/dashboard/student/courses/${params.courseId}/exercises`,
                         label: t('BreadcrumbComponent.exercise'),
                     },
                 ]}
@@ -50,7 +63,7 @@ export default async function ExercisesPage({
 
             <CourseExercisesPage
                 courseId={params.courseId}
-                exercises={exerciseData.data}
+                exercises={exerciseData.data as any}
                 courseTitle={exerciseData.data[0].courses.title}
             />
         </div>

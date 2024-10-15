@@ -87,6 +87,9 @@ export default {
             simple: 'Simple',
             markdown: 'Advanced Editor',
             status: 'Success',
+            filesSelected: '{count} file(s) selected',
+            typeYourMessage: 'Type your message...',
+            remove: 'Remove',
         }
     },
     AiTaskMessage: {
@@ -176,24 +179,36 @@ export default {
             spanish: 'Spanish Teacher',
             englishSpeech: 'English Teacher (Speech)',
             codeTask: '**Write a program in Python that does the following:**\n\n- Asks the user to input their name.\n- Asks the user to input their age.\n- Prints a personalized greeting message that includes their name and age.\n- Tells the user how many years are left until they turn 100 years old.\nIf you feel lost, please ask the AI for help',
-            englishTask: `**Homework Assignment: My Favorite Food**
+            englishTask: `# Homework Assignment: My Favorite Food
 
-**Objective:** Practice writing simple sentences in English.
+## Objective:
 
-**Instructions:**
+Practice writing a descriptive paragraph in English about your favorite food. This exercise will help you improve your sentence construction, vocabulary, and ability to express your preferences.
 
-1. **Write a Paragraph in English about Your Favorite Food**
-   - Please write a short paragraph (5-7 sentences) about your favorite food. Answer the following questions in your paragraph:
-     - What is your favorite food?
-     - Why do you like it?
-     - When do you usually eat it?
-     - Who do you enjoy eating it with?
+## Instructions:
 
-2. **Example of How to Write Your Paragraph:**
-   \`\`\`
-   My favorite food is tacos. I like tacos because they are tasty and versatile. I usually eat tacos on weekends with my friends. We enjoy different fillings like beef, chicken, and vegetables. Tacos are fun to make together! I love adding spicy salsa to my tacos.
-   \`\`\`
-`,
+1. **Brainstorm:**  Think about your absolute favorite food.  Consider not only the taste but also the memories and feelings associated with it.
+
+2. **Write a Paragraph (5-7 sentences):**  Write a short paragraph about your favorite food, making sure to answer the following questions:
+
+    * **What is your favorite food?**  Start by clearly stating your favorite food.
+    * **Why do you like it?**  Describe the taste, texture, and aroma.  Be specific! Use descriptive adjectives.  Is it sweet, savory, spicy, crunchy, creamy?
+    * **When do you usually eat it?**  Is it a special occasion food, a weekday meal, or a comforting snack?  Provide context.
+    * **Who do you enjoy eating it with?** Do you enjoy this food with family, friends, or by yourself?  Share a little about the social aspect of enjoying your favorite food.
+
+3. **Example:**
+
+    "My favorite food is pasta carbonara.  I love the rich, creamy sauce and the salty flavor of the pancetta.  The texture of the perfectly cooked pasta is also a delight – not too soft, not too firm. I usually eat it on special occasions, like birthdays or anniversaries, because it feels like a celebratory meal. I enjoy sharing this dish with my family, especially my grandmother, who taught me how to make it.  It's a tradition that brings us closer together."
+
+
+4. **Tips for Writing a Great Paragraph:**
+
+    * **Use Vivid Language:**  Use descriptive words to make your paragraph more engaging and appealing.
+    * **Vary Your Sentences:**  Avoid starting every sentence with "I."  Try different sentence structures to make your writing more dynamic.
+    * **Check Your Grammar and Spelling:**  Proofread your paragraph carefully before submitting it.
+
+
+5. **Submit Your Paragraph:** Use the mini chat on our platform to submit your completed paragraph for review. Remember to ask any questions you may have. I'm here to help!`,
             spanishTask: `**Homework Assignment: My Favorite Hobby**
             
             **Objective:** Practice writing simple sentences in Spanish.
@@ -634,5 +649,36 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         sendButton: 'Send Button',
         sendButtonDescription: 'This is where you can send your response to the AI. Once you have typed your response, click the send button to send it to the AI.',
         guidedTutorialDescription: 'Here you can find a guided tutorial to help you get started with the AI Task Chat.',
+    },
+    ExerciseChat: {
+        messageDeleted: 'Message deleted successfully.',
+        messageDeleteFailed: 'Failed to delete message.',
+        aiMessageRegenerated: 'AI message regenerated.',
+        aiMessageRegenerateFailed: 'Failed to regenerate AI message.',
+        copiedToClipboard: 'Copied to clipboard',
+        exerciseCompleted: 'Exercise completed',
+        copied: 'Copied!',
+        copyToClipboard: 'Copy to clipboard',
+        save: 'Save',
+        edit: 'Edit',
+        delete: 'Delete',
+        regenerate: 'Regenerate',
+    },
+    CourseExercisesPage: {
+        exercises: 'Exercises',
+        searchPlaceholder: 'Search exercises',
+        filter: 'Filter',
+        allDifficulties: 'All Difficulties',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        sortBy: 'Sort by',
+        sortByTitle: 'Sort by Title',
+        sortByDifficulty: 'Sort by Difficulty',
+        review: 'Review',
+        continue: 'Continue',
+        start: 'Start',
+        noExercisesFound: 'No exercises found',
+        tryAdjustingSearch: 'Try adjusting your search or filter to find what you\'re looking for.',
     },
 } as const
