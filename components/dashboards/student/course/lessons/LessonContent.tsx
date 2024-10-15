@@ -1,6 +1,6 @@
 
 import dayjs from 'dayjs'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, PlayCircle } from 'lucide-react'
 import Image from 'next/image'
 
 import { getI18n } from '@/app/locales/server'
@@ -24,8 +24,9 @@ import { Separator } from '@/components/ui/separator'
 import LessonLoaderView from './LessonLoaderView'
 import ResetTaskAIConversation from './ResetTaskAIConversation'
 import TaskMessageTour from './TaskMessageTour'
+import ToggleableSection from './ToggleableSection'
 
-export default async function LessonContent({
+export default async function EnhancedLessonContent({
     lessonData,
     courseData,
     lessonsAiTasks,
@@ -33,10 +34,10 @@ export default async function LessonContent({
     isLessonAiTaskCompleted,
     userId,
 }: {
-    lessonData: any // Define proper type
-    courseData: any // Define proper type
-    lessonsAiTasks: any // Define proper type
-    lessonsAiTasksMessages: any[] // Define proper type
+    lessonData: any
+    courseData: any
+    lessonsAiTasks: any
+    lessonsAiTasksMessages: any[]
     isLessonAiTaskCompleted?: boolean
     userId: string
 }) {
@@ -46,7 +47,7 @@ export default async function LessonContent({
     )
 
     return (
-        <div className="flex flex-col gap-8 w-full">
+        <div className="max-w-6xl mx-auto px-4 py-8">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
@@ -66,139 +67,124 @@ export default async function LessonContent({
                     },
                 ]}
             />
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
-                    <div className='flex flex-row-reverse md:flex-row md:items-center items-start  gap-2'>
-                        {lessonData.image && (
-                            <Image
-                                src={lessonData.image}
-                                alt={lessonData.title}
-                                width={100}
-                                height={100}
-                                className="rounded-full object-cover "
-                                placeholder='blur'
-                                blurDataURL='/img/placeholder.svg'
-                            />
-                        )}
-                        <div className='w-full'>
-                            <h1 className="text-3xl font-bold">{lessonData.title}</h1>
-                            <p className="text-gray-500 dark:text-gray-400">
-                                {lessonData.description}
-                            </p>
+
+            <Card className="mt-8">
+                <CardHeader className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    <div className="flex-shrink-0">
+                        <Image
+                            src={lessonData.image || '/img/placeholder.svg'}
+                            alt={lessonData.title}
+                            width={100}
+                            height={100}
+                            className="rounded-full object-cover"
+                        />
+                    </div>
+                    <div className="flex-grow">
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-3xl">{lessonData.title}</CardTitle>
+                            <Badge variant="default">#{lessonData.sequence}</Badge>
+                            {isLessonAiTaskCompleted && (
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                            )}
                         </div>
+                        <CardDescription className="mt-2">{lessonData.description}</CardDescription>
                     </div>
-                    <div className="flex gap-2 min-w-[100px]">
-                        <Badge variant="default">
-                            #{lessonData.sequence}
-                        </Badge>
-                        {isLessonAiTaskCompleted && (
-                            <CheckCircle className="h-6 w-6 text-green-500" />
-                        )}
-                    </div>
-                </div>
+                </CardHeader>
+            </Card>
 
-            </div>
             {lessonData.video_url && (
-                <>
-                    <h2 className="text-2xl font-bold">
-                        {t('LessonContent.video')}
-                    </h2>
-                    <iframe
-                        width="100%"
-                        height="500"
-                        src={lessonData.video_url}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                    ></iframe>
-                </>
+                <ToggleableSection
+                    isOpen
+                    title={<><PlayCircle className="h-6 w-6" />{t('LessonContent.video')}</>}
+                >
+                    <div className="aspect-w-16 aspect-h-9">
+                        <iframe
+                            src={lessonData.video_url}
+                            title="Lesson Video"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full"
+                        ></iframe>
+                    </div>
+                </ToggleableSection>
             )}
-            <div className="prose dark:prose-invert">
-                <ViewMarkdown addLinks={true} markdown={lessonData.content} />
-            </div>
-            {lessonData?.summary && (
-                <div className="mt-8">
-                    <h3 className="text-2xl font-bold">
-                        {t('LessonContent.summary')}
-                    </h3>
-                    <ViewMarkdown markdown={lessonData.summary} />
-                </div>
-            )}
-            {lessonsAiTasks?.system_prompt && (
-                <>
-                    <Separator />
-                    <Card
-                        id='ai-task-card'
-                    >
-                        <CardHeader
-                            className='flex flex-col gap-4 p-2 md:p-4 lg:p-6'
-                        >
-                            <div className="flex items-center justify-between w-full">
-                                <CardTitle>
-                                    {t('LessonContent.aiTask')}
-                                </CardTitle>
-                                <div
-                                    id='task-status'
-                                    className="flex items-center gap-2"
-                                >
-                                    {isLessonAiTaskCompleted ? (
-                                        <Badge>
-                                            {t('LessonContent.aiTaskCompleted')}
-                                        </Badge>
-                                    ) : (
 
-                                        <Badge variant="outline">
-                                            {t('LessonContent.aiTaksInComplete')}
-                                        </Badge>
-                                    )}
+            <ToggleableSection
+                isOpen
+                title={t('LessonContent.content')}
+            >
+                <div className="prose dark:prose-invert max-w-none">
+                    <ViewMarkdown addLinks={true} markdown={lessonData.content} />
+                </div>
+            </ToggleableSection>
+
+            {lessonData?.summary && (
+                <Card className="mt-8">
+                    <CardHeader>
+                        <CardTitle className="text-2xl">{t('LessonContent.summary')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ViewMarkdown markdown={lessonData.summary} />
+                    </CardContent>
+                </Card>
+            )}
+
+            {lessonsAiTasks?.system_prompt && (
+                <ToggleableSection
+                    isOpen={false}
+                    title={t('LessonContent.aiTask')}
+                >
+                    <>
+                        <CardHeader className="flex flex-col gap-4">
+                            <div className="flex items-center justify-between w-full">
+                                <CardTitle>{t('LessonContent.aiTask')}</CardTitle>
+                                <div id="task-status" className="flex items-center gap-2">
+                                    <Badge variant={isLessonAiTaskCompleted ? 'default' : 'outline'}>
+                                        {isLessonAiTaskCompleted
+                                            ? t('LessonContent.aiTaskCompleted')
+                                            : t('LessonContent.aiTaksInComplete')}
+                                    </Badge>
                                     <TaskMessageTour />
                                 </div>
                             </div>
-                            <CardDescription
-                                id='task-instructions'
-                            >
-                                <ViewMarkdown
-                                    markdown={lessonsAiTasks.task_instructions}
-                                />
+                            <CardDescription id="task-instructions">
+                                <ViewMarkdown markdown={lessonsAiTasks.task_instructions} />
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex flex-col gap-4 p-2 md:p-4 lg:p-6">
+                        <CardContent className="flex flex-col gap-4">
                             <Separator />
-                            <ResetTaskAIConversation
-                                lessonId={lessonData.id}
-                            />
-                            <CustomErrorBoundary fallback={
-                                <RetryError
-                                    title={t('LessonContent.RetryError')}
-                                    description={t('LessonContent.RetryError.description')}
-                                />
-                            }
+                            <ResetTaskAIConversation lessonId={lessonData.id} />
+                            <CustomErrorBoundary
+                                fallback={
+                                    <RetryError
+                                        title={t('LessonContent.RetryError')}
+                                        description={t('LessonContent.RetryError.description')}
+                                    />
+                                }
                             >
                                 <AiTaskMessage
                                     userId={userId}
                                     lessonId={lessonData.id.toString()}
                                     systemPrompt={lessonsAiTasks.system_prompt}
                                     lessonsAiTasks={lessonsAiTasks}
-                                    lessonsAiTasksMessages={sortedMessages}
+                                    lessonsAiTasksMessages={lessonsAiTasksMessages}
                                 >
                                     <TaksMessages
                                         lessonId={lessonData.id}
-                                        isLessonAiTaskCompleted={
-                                            isLessonAiTaskCompleted
-                                        }
+                                        isLessonAiTaskCompleted={isLessonAiTaskCompleted}
                                     />
                                 </AiTaskMessage>
                             </CustomErrorBoundary>
                         </CardContent>
-                    </Card>
-                </>
+                    </>
+                </ToggleableSection>
             )}
-            <LessonNavigationButtons
-                courseId={lessonData.course_id}
-                lessonId={lessonData.id}
-            />
+
+            <div className="mt-8">
+                <LessonNavigationButtons courseId={lessonData.course_id} lessonId={lessonData.id} />
+            </div>
+
             <LessonLoaderView userId={userId} lessonId={lessonData.id} />
         </div>
     )
