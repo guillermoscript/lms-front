@@ -22,6 +22,7 @@ export default async function CourseSectionComponent() {
                 course_id,
             title,
             description,
+            enrollments(user_id),
             thumbnail_url,
             lessons(id, lesson_completions(*)),
             exams(exam_id)
@@ -29,6 +30,7 @@ export default async function CourseSectionComponent() {
                 )
                 .eq('status', 'published')
                 .eq('lessons.lesson_completions.user_id', user.data.user.id)
+                .eq('enrollments.user_id', user.data.user.id)
             : supabase
                 .from('enrollments')
                 .select(
@@ -58,6 +60,7 @@ export default async function CourseSectionComponent() {
                 thumbnail_url: course.thumbnail_url,
                 lessons: course.lessons,
                 exams: course.exams,
+                enrolled: subscriptions.data.length > 0 ? course.enrollments.length > 0 : true,
             },
         }
     })
