@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -38,12 +39,14 @@ interface Exercise {
     exercise_type: string
     difficulty_level: 'easy' | 'medium' | 'hard'
     time_limit?: number
+    exercise_completions: Array<Tables<'exercise_completions'>>
+    exercise_messages: Array<Tables<'exercise_messages'>>
 }
 
 interface CourseExercisesPageProps {
     courseId: string
     courseTitle: string
-    exercises: Array<Tables<'exercises'>>
+    exercises: Exercise[]
 }
 
 export default function CourseExercisesPage({
@@ -51,6 +54,7 @@ export default function CourseExercisesPage({
     courseTitle,
     exercises,
 }: CourseExercisesPageProps) {
+    const t = useScopedI18n('CourseExercisesPage')
     const [searchTerm, setSearchTerm] = useState('')
     const [difficultyFilter, setDifficultyFilter] = useState<string | null>(
         null
@@ -101,14 +105,14 @@ export default function CourseExercisesPage({
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-6">
-                {courseTitle} - Exercises
+                {courseTitle} - {t('exercises')}
             </h1>
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div className="relative w-full md:w-64">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search exercises"
+                        placeholder={t('searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8"
@@ -120,29 +124,29 @@ export default function CourseExercisesPage({
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">
                                 <Filter className="mr-2 h-4 w-4" />
-                                Filter
+                                {t('filter')}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                             <DropdownMenuItem
                                 onClick={() => setDifficultyFilter(null)}
                             >
-                                All Difficulties
+                                {t('allDifficulties')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => setDifficultyFilter('easy')}
                             >
-                                Easy
+                                {t('easy')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => setDifficultyFilter('medium')}
                             >
-                                Medium
+                                {t('medium')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => setDifficultyFilter('hard')}
                             >
-                                Hard
+                                {t('hard')}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -154,12 +158,14 @@ export default function CourseExercisesPage({
                     >
                         <SelectTrigger className="w-[180px]">
                             <SortAsc className="mr-2 h-4 w-4" />
-                            <SelectValue placeholder="Sort by" />
+                            <SelectValue placeholder={t('sortBy')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="title">Sort by Title</SelectItem>
+                            <SelectItem value="title">
+                                {t('sortByTitle')}
+                            </SelectItem>
                             <SelectItem value="difficulty">
-                                Sort by Difficulty
+                                {t('sortByDifficulty')}
                             </SelectItem>
                         </SelectContent>
                     </Select>
@@ -187,7 +193,7 @@ export default function CourseExercisesPage({
                                         exercise.difficulty_level
                                     )}
                                 >
-                                    {exercise.difficulty_level}
+                                    {t(exercise.difficulty_level)}
                                 </Badge>
                                 {exercise.time_limit && (
                                     <Badge variant="outline">
@@ -200,12 +206,25 @@ export default function CourseExercisesPage({
                         <CardFooter className="mt-auto">
                             <Link
                                 className={cn(
-                                    buttonVariants({ variant: 'default' }),
+                                    buttonVariants({
+                                        variant:
+                                            exercise.exercise_completions
+                                                .length > 0
+                                                ? 'secondary'
+                                                : exercise.exercise_messages
+                                                      .length > 0
+                                                ? 'default'
+                                                : 'outline',
+                                    }),
                                     'w-full'
                                 )}
                                 href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`}
                             >
-                                Start Exercise
+                                {exercise?.exercise_completions.length > 0
+                                    ? t('review')
+                                    : exercise?.exercise_messages.length > 0
+                                    ? t('continue')
+                                    : t('start')}
                             </Link>
                         </CardFooter>
                     </Card>
@@ -216,11 +235,10 @@ export default function CourseExercisesPage({
                 <div className="text-center py-10">
                     <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                        No exercises found
+                        {t('noExercisesFound')}
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                        Try adjusting your search or filter to find what you're
-                        looking for.
+                        {t('tryAdjustingSearch')}
                     </p>
                 </div>
             )}
