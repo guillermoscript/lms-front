@@ -126,7 +126,7 @@ html {
   --fgColor-attention: #9a6700;
   --fgColor-danger: #d1242f;
   --fgColor-done: #8250df;
-  --bgColor-default: #ffffff;
+  --bgColor-default: transparent;
   --bgColor-muted: #f6f8fa;
   --bgColor-neutral-muted: #afb8c133;
   --bgColor-attention-muted: #fff8c5;
