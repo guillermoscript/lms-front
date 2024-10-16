@@ -6,7 +6,6 @@ import {
 
 import { useScopedI18n } from '@/app/locales/client'
 import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
-import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
@@ -40,7 +39,7 @@ export default function ExercisesTextEditors({
 
     return (
         <Tabs defaultValue="simple" className="w-full py-4">
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
                 <TabsList id="tabs-list" className="gap-4">
                     <TabsTrigger id="simple-tab" value="simple">
                         {t('simple')}
@@ -49,7 +48,6 @@ export default function ExercisesTextEditors({
                         {t('markdown')}
                     </TabsTrigger>
                 </TabsList>
-                <MarkdownEditorTour />
             </div>
             <TabsContent id="markdown-content" value="markdown">
                 <MarkdownEditor
