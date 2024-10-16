@@ -11,7 +11,7 @@ const ToggleableSection = ({ title, children, isOpen }: { title: JSX.Element; ch
 
     return (
         <Card className="mt-8">
-            <CardHeader className="flex justify-between items-center cursor-pointer" onClick={toggle}>
+            <CardHeader className="flex justify-between items-center cursor-pointer md:cursor-default md:flex-row gap-2 md:justify-between" onClick={toggle}>
                 <CardTitle className="text-2xl">{title}</CardTitle>
                 {isExpanded ? <ChevronUp /> : <ChevronDown />}
             </CardHeader>
