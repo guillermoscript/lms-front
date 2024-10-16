@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const result = await streamText({
-        model: google('gemini-1.5-pro-002'),
+        model: google('gemini-1.5-pro-latest'),
         messages: convertToCoreMessages(body.messages),
         temperature: 0.6,
         tools: {

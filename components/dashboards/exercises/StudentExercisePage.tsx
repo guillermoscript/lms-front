@@ -5,9 +5,10 @@ import confetti from 'canvas-confetti'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     Award,
+    ChevronDown,
     ChevronLeft,
+    ChevronUp,
     Clock,
-    HelpCircle,
     Loader,
     Share2,
     Trash,
@@ -36,18 +37,12 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Progress } from '@/components/ui/progress'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { cn } from '@/utils'
 import { URL_OF_SITE } from '@/utils/const'
 
 import ExerciseChat from '../student/course/exercises/exerciseChat'
 
-export default function StudentExercisePage({
+export default function EnhancedStudentExercisePage({
     exercise,
     courseId,
     exerciseId,
@@ -65,6 +60,7 @@ export default function StudentExercisePage({
 }) {
     const [progress, setProgress] = useState(isExerciseCompleted ? 100 : 0)
     const [showConfetti, setShowConfetti] = useState(false)
+    const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(true)
     const router = useRouter()
     const { theme } = useTheme()
     const t = useScopedI18n('StudentExercisePage')
@@ -108,7 +104,7 @@ export default function StudentExercisePage({
     ]
 
     return (
-        <div className="container mx-auto">
+        <div className="container mx-auto px-4 py-6">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -123,48 +119,38 @@ export default function StudentExercisePage({
                     {t('backToCourse')}
                 </Link>
 
-                <Card className="mb-8">
+                <Card className="mb-4">
                     <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle className="text-3xl font-bold">
-                                {exercise.title}
-                            </CardTitle>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon">
-                                            <HelpCircle className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{t('helpTooltip')}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <CardTitle className="text-2xl md:text-3xl font-bold">
+                                    {exercise.title}
+                                </CardTitle>
+                                <p className="text-muted-foreground mt-2">
+                                    {exercise.description}
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <Badge variant="secondary">
+                                    {exercise.exercise_type}
+                                </Badge>
+                                <Badge
+                                    className={getDifficultyColor(
+                                        exercise.difficulty_level
+                                    )}
+                                >
+                                    {exercise.difficulty_level}
+                                </Badge>
+                                {exercise.time_limit && (
+                                    <Badge variant="outline">
+                                        <Clock className="mr-1 h-3 w-3" />
+                                        {exercise.time_limit} {t('minutes')}
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground mb-4">
-                            {exercise.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <Badge variant="secondary">
-                                {exercise.exercise_type}
-                            </Badge>
-                            <Badge
-                                className={getDifficultyColor(
-                                    exercise.difficulty_level
-                                )}
-                            >
-                                {exercise.difficulty_level}
-                            </Badge>
-                            {exercise.time_limit && (
-                                <Badge variant="outline">
-                                    <Clock className="mr-1 h-3 w-3" />
-                                    {exercise.time_limit} {t('minutes')}
-                                </Badge>
-                            )}
-                        </div>
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">
                                 {t('progress')}
@@ -177,31 +163,60 @@ export default function StudentExercisePage({
                     </CardContent>
                 </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+                    <div className="lg:col-span-2 space-y-4">
                         <Card>
-                            <CardHeader>
-                                <h2 className="text-xl font-bold mb-4">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-xl font-bold">
                                     {t('instructions')}
-                                </h2>
-                                <ViewMarkdown
-                                    markdown={exercise.instructions}
-                                />
+                                </CardTitle>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsInstructionsExpanded(!isInstructionsExpanded)}
+                                >
+                                    {isInstructionsExpanded ? <ChevronUp /> : <ChevronDown />}
+                                </Button>
                             </CardHeader>
-                            <CardContent className="p-1 md:p-6">
+                            <CardContent>
+                                <AnimatePresence initial={false}>
+                                    {isInstructionsExpanded && (
+                                        <motion.div
+                                            initial="collapsed"
+                                            animate="open"
+                                            exit="collapsed"
+                                            variants={{
+                                                open: { opacity: 1, height: 'auto' },
+                                                collapsed: { opacity: 0, height: 0 }
+                                            }}
+                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                        >
+                                            <ViewMarkdown
+                                                markdown={exercise.instructions}
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </CardContent>
+                        </Card>
+
+                        <Card
+                            className=' border-none shadow-none md:border md:shadow '
+                        >
+                            <CardContent className="p-0">
                                 <ExerciseChat
                                     apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
                                     exerciseId={exerciseId}
                                     initialMessages={initialMessages}
                                     isExerciseCompleted={isExerciseCompleted}
                                     profile={profile}
-                                    // onProgressUpdate={handleProgressUpdate}
                                 />
                             </CardContent>
                         </Card>
                     </div>
-                    <div>
-                        <Card className="mb-6">
+
+                    <div className="space-y-4">
+                        <Card>
                             <CardHeader>
                                 <CardTitle>{t('tips')}</CardTitle>
                             </CardHeader>
@@ -227,12 +242,10 @@ export default function StudentExercisePage({
                                         {t('shareProgress')}
                                     </Button>
                                     {isExerciseCompleted && (
-                                        <>
-                                            <DeleteModal
-                                                exerciseId={exerciseId}
-                                                t={t}
-                                            />
-                                        </>
+                                        <DeleteModal
+                                            exerciseId={exerciseId}
+                                            t={t}
+                                        />
                                     )}
                                 </div>
                             </CardContent>

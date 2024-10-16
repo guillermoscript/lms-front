@@ -663,6 +663,9 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         edit: 'Edit',
         delete: 'Delete',
         regenerate: 'Regenerate',
+        chatTitle: 'Chat with the AI',
+        startWritingToCompleteExercise: 'Start writing to complete the exercise',
+        feelFreeToAskQuestions: 'Feel free to ask questions about the exercise if it is unclear.',
     },
     CourseExercisesPage: {
         exercises: 'Exercises',
@@ -680,5 +683,14 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         start: 'Start',
         noExercisesFound: 'No exercises found',
         tryAdjustingSearch: 'Try adjusting your search or filter to find what you\'re looking for.',
+    },
+    ExerciseSuggestions: {
+        noExercisesFound: 'No Exercises Found',
+        noExercisesDescription: 'No exercises for this lesson have been found. Please check back later or try a different lesson.',
+        exerciseSuggestions: 'Exercise Suggestions',
+        exerciseSuggestionsDescription: 'Here are some exercises that you can do to improve your skills',
+        continue: 'Continue',
+        start: 'Start',
+        review: 'Review',
     },
 } as const

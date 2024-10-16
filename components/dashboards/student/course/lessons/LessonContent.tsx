@@ -21,6 +21,7 @@ import {
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 
+import ExerciseSuggestions from './ExercisesSuggestions'
 import LessonLoaderView from './LessonLoaderView'
 import ResetTaskAIConversation from './ResetTaskAIConversation'
 import TaskMessageTour from './TaskMessageTour'
@@ -174,6 +175,11 @@ export default async function EnhancedLessonContent({
                                         lessonId={lessonData.id}
                                         isLessonAiTaskCompleted={isLessonAiTaskCompleted}
                                     />
+                                    {isLessonAiTaskCompleted && (
+                                        <ExerciseSuggestions
+                                            lessonId={lessonData.id}
+                                        />
+                                    )}
                                 </AiTaskMessage>
                             </CustomErrorBoundary>
                         </CardContent>

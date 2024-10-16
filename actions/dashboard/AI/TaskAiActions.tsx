@@ -17,6 +17,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
+import ExerciseSuggestions from '@/components/dashboards/student/course/lessons/ExercisesSuggestions'
 
 export async function continueTaskAiConversation(
     input: string,
@@ -201,26 +202,33 @@ export async function continueTaskAiConversation(
                         <>
                             <Message
                                 sender={'assistant'}
-                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                time={dayjs().format(
+                                    'dddd, MMMM D, YYYY h:mm A'
+                                )}
                                 isUser={false}
                             >
                                 <MessageContentWrapper
                                     role="assistant"
                                     view={<ViewMarkdown markdown={feedback} />}
                                     edit={<></>}
-
                                     regenerate={<></>}
                                 />
                             </Message>
                             <Message
                                 sender={'assistant'}
-                                time={dayjs().format('dddd, MMMM D, YYYY h:mm A')}
+                                time={dayjs().format(
+                                    'dddd, MMMM D, YYYY h:mm A'
+                                )}
                                 isUser={false}
                             >
                                 <SuccessMessage
                                     status="success"
                                     message="Assignment marked as completed."
                                     fire
+                                />
+
+                                <ExerciseSuggestions
+                                    lessonId={aiState.get().lessonId}
                                 />
                             </Message>
                         </>
