@@ -1,20 +1,11 @@
 'use client'
 
-import { BarChart2, Clock, Filter, Search, SortAsc } from 'lucide-react'
-import Link from 'next/link'
+import { BarChart2, Filter, Search, SortAsc } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
-import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,8 +20,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/utils'
 import { Tables } from '@/utils/supabase/supabase'
+
+import ExerciseCard from './ExerciseCard'
 
 interface Exercise {
     id: string
@@ -174,60 +166,10 @@ export default function CourseExercisesPage({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredExercises.map((exercise) => (
-                    <Card key={exercise.id} className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle className="text-xl">
-                                {exercise.title}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground mb-4">
-                                {exercise.description}
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <Badge variant="secondary">
-                                    {exercise.exercise_type}
-                                </Badge>
-                                <Badge
-                                    className={getDifficultyColor(
-                                        exercise.difficulty_level
-                                    )}
-                                >
-                                    {t(exercise.difficulty_level)}
-                                </Badge>
-                                {exercise.time_limit && (
-                                    <Badge variant="outline">
-                                        <Clock className="mr-1 h-3 w-3" />
-                                        {exercise.time_limit} min
-                                    </Badge>
-                                )}
-                            </div>
-                        </CardContent>
-                        <CardFooter className="mt-auto">
-                            <Link
-                                className={cn(
-                                    buttonVariants({
-                                        variant:
-                                            exercise.exercise_completions
-                                                .length > 0
-                                                ? 'secondary'
-                                                : exercise.exercise_messages
-                                                    .length > 0
-                                                    ? 'default'
-                                                    : 'outline',
-                                    }),
-                                    'w-full'
-                                )}
-                                href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`}
-                            >
-                                {exercise?.exercise_completions.length > 0
-                                    ? t('review')
-                                    : exercise?.exercise_messages.length > 0
-                                        ? t('continue')
-                                        : t('start')}
-                            </Link>
-                        </CardFooter>
-                    </Card>
+                    <ExerciseCard key={exercise.id}
+                        t={t}
+                        exercise={exercise} courseId={courseId}
+                    />
                 ))}
             </div>
 
