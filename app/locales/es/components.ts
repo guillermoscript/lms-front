@@ -659,6 +659,9 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         edit: 'Editar',
         delete: 'Eliminar',
         regenerate: 'Regenerar',
+        chatTitle: 'Chat de Ejercicios',
+        startWritingToCompleteExercise: 'Empieza a escribir para completar el ejercicio',
+        feelFreeToAskQuestions: 'Si tienes alguna pregunta, no dudes en preguntar, El asistente de IA está aquí para ayudarte.',
     },
     CourseExercisesPage: {
         exercises: 'Ejercicios',
@@ -676,5 +679,14 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         start: 'Comenzar',
         noExercisesFound: 'No se encontraron ejercicios',
         tryAdjustingSearch: 'Intenta ajustar tu búsqueda o filtro para encontrar lo que buscas.',
+    },
+    ExerciseSuggestions: {
+        noExercisesFound: 'No se encontraron ejercicios',
+        noExercisesDescription: 'No se han encontrado ejercicios para esta lección. Por favor, vuelva más tarde o intente con una lección diferente.',
+        exerciseSuggestions: 'Sugerencias de ejercicios',
+        exerciseSuggestionsDescription: 'Aquí hay algunos ejercicios que puedes hacer para mejorar tus habilidades',
+        continue: 'Continuar',
+        start: 'Comenzar',
+        review: 'Revisar',
     },
 } as const
