@@ -3,13 +3,7 @@
 import { ToolInvocation } from 'ai'
 import { Message, useChat } from 'ai/react'
 import dayjs from 'dayjs'
-import {
-    Check,
-    Copy,
-    Edit,
-    Recycle,
-    Trash,
-} from 'lucide-react'
+import { Check, Copy, Edit, Recycle, Trash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -24,9 +18,8 @@ import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleto
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -223,45 +216,71 @@ export default function ExerciseChat({
 
     return (
         <Card className="w-full mx-auto border-none md:border">
+            <CardHeader>
+                <CardTitle>{t('chatTitle')}</CardTitle>
+            </CardHeader>
             <CardContent className="p-1 md:p-6">
-                <ScrollArea className="max-h-[600px] pr-4 overflow-y-auto">
+                <>
                     <div ref={chatContainerRef}>
-                        {messages.map((m: Message) => {
-                            if (m.role === 'system') return null
-                            return (
-                                <MessageItem
-                                    key={m.id}
-                                    message={m}
-                                    profile={profile}
-                                    isEditing={editingMessageId === m.id}
-                                    editedContent={editedContent}
-                                    setEditedContent={setEditedContent}
-                                    onEdit={() =>
-                                        handleEditMessage(m.id, m.content)
-                                    }
-                                    onSave={async () => await handleSaveEdit(m.id)}
-                                    onDelete={async () =>
-                                        await handleDeleteMessage(m.id, m.content)
-                                    }
-                                    onCopy={() => {
-                                        copy(m.content)
-                                        setCopiedMessageId(m.id)
-                                        toast.success(t('copiedToClipboard'))
-                                    }}
-                                    onRegenerate={async () =>
-                                        await regenerateAiMessage(m.id, m.content)
-                                    }
-                                    isLoading={isLoading}
-                                    isCompleted={isCompleted}
-                                    toolInvocations={m.toolInvocations}
-                                />
-                            )
-                        })}
+                        {messages.length === 1 ? (
+                            <>
+                                <div className="text-center text-gray-500 mt-4 p-4 border border-dashed border-gray-300 rounded-lg">
+                                    <h2 className="text-lg font-semibold mb-2 flex items-center justify-center">
+                                        {t('startWritingToCompleteExercise')}
+                                    </h2>
+                                    <p className="text-sm mb-4">
+                                        {t('feelFreeToAskQuestions')}
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            messages.map((m: Message) => {
+                                if (m.role === 'system') return null
+                                return (
+                                    <MessageItem
+                                        key={m.id}
+                                        message={m}
+                                        profile={profile}
+                                        isEditing={editingMessageId === m.id}
+                                        editedContent={editedContent}
+                                        setEditedContent={setEditedContent}
+                                        onEdit={() =>
+                                            handleEditMessage(m.id, m.content)
+                                        }
+                                        onSave={async () =>
+                                            await handleSaveEdit(m.id)
+                                        }
+                                        onDelete={async () =>
+                                            await handleDeleteMessage(
+                                                m.id,
+                                                m.content
+                                            )
+                                        }
+                                        onCopy={() => {
+                                            copy(m.content)
+                                            setCopiedMessageId(m.id)
+                                            toast.success(
+                                                t('copiedToClipboard')
+                                            )
+                                        }}
+                                        onRegenerate={async () =>
+                                            await regenerateAiMessage(
+                                                m.id,
+                                                m.content
+                                            )
+                                        }
+                                        isLoading={isLoading}
+                                        isCompleted={isCompleted}
+                                        toolInvocations={m.toolInvocations}
+                                    />
+                                )
+                            })
+                        )}
                         {isLoading && <ChatLoadingSkeleton />}
-                        {/* Scroll Anchor */}
                         <div ref={scrollAnchorRef}></div>
+                        {/* Scroll Anchor */}
                     </div>
-                </ScrollArea>
+                </>
                 {isCompleted ? (
                     <SuccessMessage message={t('exerciseCompleted')} />
                 ) : (
@@ -320,8 +339,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
 }) => {
     const t = useScopedI18n('ExerciseChat')
     return (
-        <div className="mb-6">
-            <div className="flex items-start gap-3">
+        <div className={'mb-6'}>
+            <div className="flex flex-col items-start gap-3">
                 <Avatar className="w-8 h-8">
                     <AvatarImage
                         src={
@@ -334,8 +353,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
                         {message.role === 'user' ? profile.full_name[0] : 'A'}
                     </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                    <div className="p-3 rounded-lg ">
+                <div className="flex-1 w-full">
+                    <div className="py-3 rounded-lg ">
                         {isEditing ? (
                             <Textarea
                                 value={editedContent}
@@ -348,10 +367,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
                         ) : (
                             <ViewMarkdown markdown={message.content} />
                         )}
-                        <div className="text-xs text-gray-500 mt-1 flex items-center justify-between">
+                        <div className="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-4 justify-between">
                             <span>
                                 {dayjs(message.createdAt).format(
-                                    'MMM D, YYYY [at] h:mm A'
+                                    'MMM D, YYYY h:mm A'
                                 )}
                             </span>
                             <div className="flex items-center space-x-2">
@@ -391,7 +410,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                                 )
                                             }
                                             tooltip={
-                                                isEditing ? t('save') : t('edit')
+                                                isEditing
+                                                    ? t('save')
+                                                    : t('edit')
                                             }
                                             onClick={
                                                 isEditing ? onSave : onEdit
