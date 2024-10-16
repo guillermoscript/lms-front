@@ -9,7 +9,7 @@ export async function getServerUserRole () {
 
     if (userData.error) {
         console.log('Error getting user data', userData.error)
-        throw new Error('Error getting user data')
+        supabase.auth.signOut()
     }
 
     if (userData.data?.session?.access_token) {
