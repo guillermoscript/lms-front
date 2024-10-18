@@ -55,16 +55,18 @@ export default async function ExerciseSuggestions({ lessonId }) {
             <p className="text-gray-500">
                 {t('exerciseSuggestionsDescription')}
             </p>
-            {exerciseData.data.map((exercise) => {
-                return (
-                    <ExerciseCard
-                        key={exercise.id}
-                        exercise={exercise as any}
-                        courseId={exercise.courses.course_id as any}
-                        t={t}
-                    />
-                )
-            })}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {exerciseData.data.map((exercise) => {
+                    return (
+                        <ExerciseCard
+                            key={exercise.id}
+                            exercise={exercise as any}
+                            courseId={exercise.courses.course_id as any}
+                            t={t}
+                        />
+                    )
+                })}
+            </div>
         </div>
     )
 }
