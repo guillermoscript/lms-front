@@ -39,6 +39,15 @@ export async function POST(req: Request) {
 
                     return feedback
                 }
+            },
+            provideHint: {
+                description: 'Function to provide a helpful hint when the student is stuck on an exercise or he ask for help. The hint should guide them towards the solution without giving it away. Respond using the language of the student.',
+                parameters: z.object({
+                    hints: z.string().describe('Markdown formatted List of hints to provide to the student.'),
+                }),
+                execute: async ({ hints }) => {
+                    return hints
+                }
             }
         },
         async onFinish({ responseMessages, text, toolResults }) {
