@@ -1,6 +1,5 @@
 import { Message } from 'ai/react'
 import {
-    Paperclip,
     Send,
 } from 'lucide-react'
 
@@ -76,9 +75,10 @@ export default function ExercisesTextEditors({
                             placeholder={t('typeYourMessage')}
                             disabled={isLoading}
                             className="flex-grow"
+                            rows={6}
                         />
                         <div className="flex items-center space-x-2">
-                            <Button
+                            {/* <Button
                                 disabled={isLoading}
                                 type="button"
                                 variant="outline"
@@ -86,20 +86,20 @@ export default function ExercisesTextEditors({
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <Paperclip className="h-4 w-4" />
-                            </Button>
+                            </Button> */}
                             <Button disabled={isLoading} type="submit">
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
-                    <input
+                    {/* <input
                         type="file"
                         className="hidden"
                         onChange={handleFileChange}
                         multiple
                         disabled={isLoading}
                         ref={fileInputRef}
-                    />
+                    /> */}
                     {files && (
                         <div className="mt-2 flex items-center">
                             <span className="text-sm text-gray-400">
