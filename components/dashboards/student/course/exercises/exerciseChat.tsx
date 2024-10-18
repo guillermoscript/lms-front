@@ -89,6 +89,9 @@ export default function ExerciseChat({
                 setIsCompleted(true)
                 router.refresh()
             }
+            if (toolCall.toolName === 'provideHint') {
+                console.log('Hint:', toolCall)
+            }
         },
     })
 
@@ -454,6 +457,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                 </div>
                             )
                         }
+
+                        if (
+                            toolInvocation.toolName === 'provideHint' &&
+                            'result' in toolInvocation
+                        ) {
+                            // show markdown formatted hint
+                            return (
+                                <ViewMarkdown key={toolInvocation.toolCallId} markdown={toolInvocation.result} />
+                            )
+                        }
+
                         return null
                     })}
                     <Separator className="mt-3" />
