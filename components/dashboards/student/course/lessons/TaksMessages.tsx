@@ -1,6 +1,6 @@
 'use client'
 import { useActions, useAIState, useUIState } from 'ai/rsc'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
 import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
@@ -14,7 +14,6 @@ import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageCo
 import MarkdownEditorTour from '@/components/dashboards/Common/tour/MarkdownEditorTour'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import useNoCopy from '@/utils/hooks/useNoCopy'
 
 import EditTaksMessage from './EditTaksMessage'
 
@@ -202,13 +201,9 @@ interface ChatListProps {
 }
 
 function ChatList({ messages, messagesEndRef }: ChatListProps) {
-    const contentRef = useRef(null)
-
-    useNoCopy(contentRef)
-
     return (
         <div
-            ref={contentRef} className="relative"
+            className="relative"
         >
             {messages.map((message, index) => (
                 <div key={index} className="flex flex-col gap-2">
