@@ -11,7 +11,7 @@ interface ExamCardProps {
     status: string
     grade?: string
     courseId: string
-    examId: string
+    exam_id: string
 }
 
 const ExamCard: React.FC<ExamCardProps> = ({
@@ -21,7 +21,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
     status,
     grade,
     courseId,
-    examId,
+    exam_id: examId,
 }) => {
     const t = useI18n()
 
