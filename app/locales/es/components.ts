@@ -434,6 +434,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         exams: 'Exámenes',
         continueCourse: 'Continuar Curso',
         noCoursesFound: 'No se encontraron cursos',
+        exercises: 'Ejercicios',
     },
     StudentDashboard: {
         welcome: '¡Bienvenido, Estudiante!',
