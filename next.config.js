@@ -6,7 +6,8 @@ const nextConfig = {
           'images.unsplash.com', 
           'tailwindui.com', 
           'villademarcos.com',
-          'wp.villademarcos.com'
+          'wp.villademarcos.com',
+          'tcqqnjfwmbfwcyhafbbt.supabase.co'
         ],
     },
     
