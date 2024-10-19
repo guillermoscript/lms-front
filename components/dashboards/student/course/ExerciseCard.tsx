@@ -12,7 +12,7 @@ interface ExerciseCardProps {
     exercise_type: Tables<'exercises'>['exercise_type']
     status: string
     courseId: string
-    exerciseId: string
+    id: string
 }
 
 const ExerciseCard: React.FC<ExerciseCardProps> = ({
@@ -22,7 +22,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
     exercise_type: type,
     status,
     courseId,
-    exerciseId,
+    id: exerciseId,
 }) => {
     const t = useI18n()
 
