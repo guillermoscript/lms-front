@@ -8,7 +8,7 @@ interface LessonCardProps {
     description: string
     status: string
     courseId: string
-    lessonId: string
+    id: string
     image?: string
 }
 
@@ -18,7 +18,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
     description,
     status,
     courseId,
-    lessonId,
+    id: lessonId,
     image,
 }) => {
     const t = useI18n()
