@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google'
+import { openai } from '@ai-sdk/openai'
 import { convertToCoreMessages, streamText } from 'ai'
 import { z } from 'zod'
 
@@ -19,7 +19,8 @@ export async function POST(req: Request) {
     }
 
     const result = await streamText({
-        model: google('gemini-1.5-pro-latest'),
+        // model: google('gemini-1.5-pro-latest'),
+        model: openai('gpt-4o-mini-2024-07-18'),
         messages: convertToCoreMessages(body.messages),
         temperature: 0.6,
         tools: {
