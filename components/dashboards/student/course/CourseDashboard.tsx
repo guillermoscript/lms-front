@@ -30,11 +30,15 @@ const CourseCard = ({
 }) => {
     const totalLessons = course.course.lessons.length
     const totalExams = course.course.exams.length
+    const totalExercises = course.course.exercises.length
     const completedLessons = course.course.lessons.filter(
         (lesson) => lesson.lesson_completions.length > 0
     ).length
     const completedExams = course.course.exams.filter(
         (exam) => exam.completed
+    ).length
+    const completedExercises = course.course.exercises.filter(
+        (exercise) => exercise.exercise_completions.length > 0
     ).length
 
     return (
@@ -82,6 +86,15 @@ const CourseCard = ({
                             </span>
                         </div>
                         <Progress value={(completedExams / totalExams) * 100} />
+                        <div className="flex justify-between text-sm">
+                            <span>{t('exercises')}</span>
+                            <span>
+                                {completedExercises}/{totalExercises}
+                            </span>
+                        </div>
+                        <Progress
+                            value={(completedExercises / totalExercises) * 100}
+                        />
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-between flex-wrap md:flex-nowrap items-center gap-4">
