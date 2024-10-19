@@ -218,7 +218,7 @@ export default function ExerciseChat({
     }
 
     return (
-        <Card className="w-full mx-auto border-none md:border">
+        <Card className="w-full dark:bg-[#03050b] mx-auto border-none md:border">
             <CardHeader>
                 <CardTitle>{t('chatTitle')}</CardTitle>
             </CardHeader>
