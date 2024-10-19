@@ -113,13 +113,13 @@ const SuccessMessage = ({
     }, [fire])
 
     return (
-        <div className="bg-[#f1f5f9] relative rounded-2xl p-8 shadow-lg">
+        <div className="relative rounded-2xl border p-8 shadow-lg bg-background">
             <div className="flex flex-col items-center justify-center text-center space-y-4">
-                <div className="text-4xl font-bold text-[#334155]">
+                <div className="text-4xl font-bold ">
                     <CheckCircle className="h-12 w-12 inline-block mr-2 text-green-500" />
                     {t('status')}
                 </div>
-                <p className="text-lg text-[#475569]">
+                <p className="text-lg ">
                     {t('message')}
                 </p>
                 {fire && (
