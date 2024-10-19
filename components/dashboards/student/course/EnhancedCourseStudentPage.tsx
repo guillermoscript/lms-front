@@ -278,6 +278,7 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
                                             : 'Waiting for Review'
                                         : 'Not Started'
                                 }
+                                exam_id={exam.exam_id}
                             />
                         ),
                         'Exams'
