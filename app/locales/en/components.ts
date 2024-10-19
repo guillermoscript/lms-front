@@ -430,6 +430,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         exams: 'Exams',
         continueCourse: 'Continue Course',
         noCoursesFound: 'No courses found',
+        exercise: 'Exercises',
     },
     StudentDashboard: {
         welcome: 'Welcome, Student!',
