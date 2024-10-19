@@ -152,6 +152,11 @@ export default {
                 noLessonsDescription: 'There are no lessons available for this course.',
                 noExams: 'No exams available',
                 noExamsDescription: 'There are no exams available for this course.',
+                sortAscending: 'Sort Ascending',
+                sortDescending: 'Sort Descending',
+                all: 'All',
+                filterByStatus: 'Filter by Status',
+                searchPlaceholder: 'Search...',
             },
             LessonPage: {
                 description: 'View and track your progress through the course lessons.',

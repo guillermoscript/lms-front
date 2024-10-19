@@ -153,6 +153,11 @@ export default {
                 noLessonsDescription: 'No hay lecciones disponibles para este curso.',
                 noExams: 'No hay exámenes disponibles',
                 noExamsDescription: 'No hay exámenes disponibles para este curso.',
+                sortAscending: 'Ordenar ascendente',
+                sortDescending: 'Ordenar descendente',
+                all: 'Todos',
+                filterByStatus: 'Filtrar por estado',
+                searchPlaceholder: 'Buscar...',
             },
             LessonPage: {
                 description: 'Ver y realizar un seguimiento de tu progreso a través de la lección.',
