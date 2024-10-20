@@ -37,87 +37,75 @@ interface EnhancedCourseStudentPageProps {
     }
 }
 
-const useDebounce = (value: string, delay: number): string => {
-    const [debouncedValue, setDebouncedValue] = useState<string>(value);
-
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-
-    return debouncedValue;
-};
-
 const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
     courseData,
 }) => {
-    const t = useI18n();
-    const [searchTerm, setSearchTerm] = useState('');
-    const debouncedSearchTerm = useDebounce(searchTerm, 500);
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [sortOrder, setSortOrder] = useState('asc');
+    const t = useI18n()
+    const [searchTerm, setSearchTerm] = useState('')
+    const [filterStatus, setFilterStatus] = useState('all')
+    const [sortOrder, setSortOrder] = useState('asc')
 
-    // States for filtered results
-    const [filteredLessons, setFilteredLessons] = useState<any[]>(courseData.lessons || []);
-    const [filteredExercises, setFilteredExercises] = useState<any[]>(courseData.exercises || []);
-    const [filteredExams, setFilteredExams] = useState<any[]>(courseData.exams || []);
+    const [filteredLessons, setFilteredLessons] = useState(courseData.lessons)
+    const [filteredExercises, setFilteredExercises] = useState(
+        courseData.exercises
+    )
+    const [filteredExams, setFilteredExams] = useState(courseData.exams)
 
     useEffect(() => {
         const filterAndSortItems = (items: any[], type: string) => {
-            if (!Array.isArray(items)) {
-                return []; // Ensure items is an array
-            }
-
+            // Define the options for fuzzy search
             const options = {
-                keys: ['title'],
-                includeScore: true,
-                threshold: 0.3, // Fuzzy matching threshold
+                keys: ['title'], // Search in the title field
+                includeScore: true, // Include score for ranking
+                threshold: 0.4, // Allow fuzzy matching (lower is stricter)
             };
-
+    
+            // Create a Fuse instance with the items
             const fuse = new Fuse(items, options);
-            const result = fuse.search(debouncedSearchTerm);
-
-            return result
-                .filter(({ item }) => {
-                    const status =
-                        type === 'lessons'
-                            ? item.lesson_completions.length > 0
+    
+            // Perform the search, which supports partial matching
+            // If no search term, just use original items
+            const searchResults = searchTerm 
+                ? fuse.search(searchTerm).map(({ item }) => item)
+                : items;
+    
+            // First, filter by status
+            const filteredItems = searchResults.filter((item) => {
+                const status =
+                    type === 'lessons'
+                        ? item.lesson_completions.length > 0
+                            ? 'Completed'
+                            : item.lessons_ai_task_messages.length > 0
+                                ? 'In Progress'
+                                : 'Not Started'
+                        : type === 'exercises'
+                            ? item.exercise_completions?.length > 0
                                 ? 'Completed'
-                                : item.lessons_ai_task_messages.length > 0
+                                : item.exercise_messages?.length > 0
                                     ? 'In Progress'
                                     : 'Not Started'
-                            : type === 'exercises'
-                                ? item.exercise_completions?.length > 0
+                            : item.exam_submissions.length > 0
+                                ? item.exam_submissions[0].exam_scores.length > 0
                                     ? 'Completed'
-                                    : item.exercise_messages?.length > 0
-                                        ? 'In Progress'
-                                        : 'Not Started'
-                                : item.exam_submissions.length > 0
-                                    ? item.exam_submissions[0].exam_scores.length > 0
-                                        ? 'Completed'
-                                        : 'Waiting for Review'
-                                    : 'Not Started';
-
-                    return filterStatus === 'all' || status === filterStatus;
-                })
-                .map(({ item }) => item) // Safely mapping over items
-                .sort((a, b) =>
-                    sortOrder === 'asc'
-                        ? a.sequence - b.sequence
-                        : b.sequence - a.sequence
-                );
+                                    : 'Waiting for Review'
+                                : 'Not Started';
+    
+                return filterStatus === 'all' || status === filterStatus;
+            });
+    
+            // Now sort the filtered results
+            return filteredItems.sort((a, b) =>
+                sortOrder === 'asc'
+                    ? a.sequence - b.sequence
+                    : b.sequence - a.sequence
+            );
         };
-
-        setFilteredLessons(filterAndSortItems(courseData.lessons || [], 'lessons'));
-        setFilteredExercises(filterAndSortItems(courseData.exercises || [], 'exercises'));
-        setFilteredExams(filterAndSortItems(courseData.exams || [], 'exams'));
-    }, [debouncedSearchTerm, filterStatus, sortOrder, courseData]);
-
+    
+        // Set filtered results for lessons, exercises, and exams
+        setFilteredLessons(filterAndSortItems(courseData.lessons, 'lessons'));
+        setFilteredExercises(filterAndSortItems(courseData.exercises, 'exercises'));
+        setFilteredExams(filterAndSortItems(courseData.exams, 'exams'));
+    }, [searchTerm, filterStatus, sortOrder, courseData]);
 
     const completedLessons = courseData.lessons.filter(
         (lesson) => lesson.lesson_completions.length > 0
