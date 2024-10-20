@@ -6,10 +6,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
     ChevronDown,
     ChevronUp,
-    ExternalLink,
     Loader2,
     MessageSquare,
-    Search,
     Send,
     X,
 } from 'lucide-react'

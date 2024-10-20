@@ -161,7 +161,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                             </div>
                         </div>
                     </div>
-                    
+
                     <Separator className="mt-3" />
                 </div>
             </div>

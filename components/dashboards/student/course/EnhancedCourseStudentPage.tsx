@@ -1,9 +1,9 @@
 'use client'
 
 import { AnimatePresence } from 'framer-motion'
+import Fuse from 'fuse.js'
 import { ArrowUpDown, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import Fuse from 'fuse.js';
 
 import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
@@ -58,17 +58,17 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
                 keys: ['title'], // Search in the title field
                 includeScore: true, // Include score for ranking
                 threshold: 0.4, // Allow fuzzy matching (lower is stricter)
-            };
-    
+            }
+
             // Create a Fuse instance with the items
-            const fuse = new Fuse(items, options);
-    
+            const fuse = new Fuse(items, options)
+
             // Perform the search, which supports partial matching
             // If no search term, just use original items
-            const searchResults = searchTerm 
+            const searchResults = searchTerm
                 ? fuse.search(searchTerm).map(({ item }) => item)
-                : items;
-    
+                : items
+
             // First, filter by status
             const filteredItems = searchResults.filter((item) => {
                 const status =
@@ -88,24 +88,24 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
                                 ? item.exam_submissions[0].exam_scores.length > 0
                                     ? 'Completed'
                                     : 'Waiting for Review'
-                                : 'Not Started';
-    
-                return filterStatus === 'all' || status === filterStatus;
-            });
-    
+                                : 'Not Started'
+
+                return filterStatus === 'all' || status === filterStatus
+            })
+
             // Now sort the filtered results
             return filteredItems.sort((a, b) =>
                 sortOrder === 'asc'
                     ? a.sequence - b.sequence
                     : b.sequence - a.sequence
-            );
-        };
-    
+            )
+        }
+
         // Set filtered results for lessons, exercises, and exams
-        setFilteredLessons(filterAndSortItems(courseData.lessons, 'lessons'));
-        setFilteredExercises(filterAndSortItems(courseData.exercises, 'exercises'));
-        setFilteredExams(filterAndSortItems(courseData.exams, 'exams'));
-    }, [searchTerm, filterStatus, sortOrder, courseData]);
+        setFilteredLessons(filterAndSortItems(courseData.lessons, 'lessons'))
+        setFilteredExercises(filterAndSortItems(courseData.exercises, 'exercises'))
+        setFilteredExams(filterAndSortItems(courseData.exams, 'exams'))
+    }, [searchTerm, filterStatus, sortOrder, courseData])
 
     const completedLessons = courseData.lessons.filter(
         (lesson) => lesson.lesson_completions.length > 0
