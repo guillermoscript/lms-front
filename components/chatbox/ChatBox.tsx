@@ -6,8 +6,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
     ChevronDown,
     ChevronUp,
+    ExternalLink,
     Loader2,
     MessageSquare,
+    Search,
     Send,
     X,
 } from 'lucide-react'
@@ -29,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import ChatLoadingSkeleton from '../dashboards/chat/ChatLoadingSkeleton'
 import MessageItem from '../dashboards/Common/chat/MesssageItem'
 import { Input } from '../ui/input'
+import WebSearchResult from './WebSearchResult'
 // Assuming you have a Separator component
 
 interface ChatBoxProps {
@@ -126,7 +129,7 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
 
     const handleQuickAccess = (question: string) => {
         append({
-            content: t(`quickAccess.${question}`),
+            content: question,
             role: 'user',
         })
     }
@@ -135,6 +138,22 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
     const handleEdit = (id: string, currentContent: string) => {
         setEditingMessageId(id)
         setEditedContent(currentContent)
+        // get the message to be edited
+        const message = messages.find((m) => m.id === id)
+        if (message) {
+            setEditedContent(message.content)
+        }
+
+        // remove all the next messasges to the one being edited
+        const index = messages.findIndex((m) => m.id === id)
+        const updatedMessages = messages.slice(0, index + 1)
+        setMessages(updatedMessages)
+
+        append({
+            id,
+            content: currentContent,
+            role: 'user', // Adjust role if necessary
+        })
     }
 
     const handleSave = async (id: string) => {
@@ -255,7 +274,9 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
                                                                 className="text-left"
                                                                 onClick={() =>
                                                                     handleQuickAccess(
-                                                                        button.label
+                                                                        t(
+                                                                            `quickAccess.${button.label}.text`
+                                                                        )
                                                                     )
                                                                 }
                                                             >
@@ -265,7 +286,7 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
                                                                     }
                                                                 </span>
                                                                 {t(
-                                                                    `quickAccess.${button.label}`
+                                                                    `quickAccess.${button.label}.title`
                                                                 )}
                                                             </Button>
                                                         )
@@ -320,10 +341,35 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
                                                             )
                                                         }
                                                         isLoading={isLoading}
-                                                        isCompleted={false} // Adjust as needed
+                                                        isCompleted={false}
                                                         toolInvocations={
                                                             <>
-                                                                {/* Tool invocations */}
+                                                                {message?.toolInvocations?.map(
+                                                                    (tool) => {
+                                                                        if (
+                                                                            tool.toolName ===
+                                                                                'tavily_web_search' &&
+                                                                            'result' in
+                                                                                tool
+                                                                        ) {
+                                                                            return (
+                                                                                <WebSearchResult
+                                                                                    key={
+                                                                                        tool.toolCallId
+                                                                                    }
+                                                                                    toolName={
+                                                                                        tool.toolName
+                                                                                    }
+                                                                                    result={
+                                                                                        tool.result
+                                                                                    }
+                                                                                />
+                                                                            )
+                                                                        }
+
+                                                                        return null
+                                                                    }
+                                                                )}
                                                             </>
                                                         }
                                                     />
