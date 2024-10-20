@@ -80,6 +80,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                         ) : (
                             <ViewMarkdown markdown={message.content} />
                         )}
+                        {toolInvocations && toolInvocations}
                         <div className="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-4 justify-between">
                             <span>
                                 {dayjs(message.createdAt).format(
@@ -160,7 +161,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                             </div>
                         </div>
                     </div>
-                    {toolInvocations && toolInvocations}
+                    
                     <Separator className="mt-3" />
                 </div>
             </div>
