@@ -562,8 +562,14 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         expand: 'Expand',
         greeting: "Hi! I'm your AI assistant. How can I help you today?",
         quickAccess: {
-            searchWeb: 'Search the web',
-            getQuestions: 'Get questions',
+            searchWeb: {
+                title: 'Search the Web',
+                description: 'Search the web for information or resources on the lesson topic.',
+            },
+            getQuestions: {
+                title: 'Get Questions',
+                description: 'Give me a set of good questions for the lesson.',
+            }
         },
         typeMessage: 'Type your message...',
         sendMessage: 'Send message',
@@ -689,5 +695,11 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         continue: 'Continue',
         start: 'Start',
         review: 'Review',
+    },
+    WebSearchResult: {
+        webSearchResults: 'Web Search Results',
+        query: 'Query',
+        hideResults: 'Hide search results',
+        showResults: 'Show search results',
     },
 } as const

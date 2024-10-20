@@ -558,8 +558,14 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         expand: 'Expandir',
         greeting: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?',
         quickAccess: {
-            searchWeb: 'Buscar en la web',
-            getQuestions: 'Obtener preguntas',
+            searchWeb: {
+                title: 'Buscar en la web',
+                text: 'Buscar en la web por información o recursos sobre la lección.',
+            },
+            getQuestions: {
+                title: 'Obtener preguntas',
+                text: 'Dame buenas preguntas para la lección.',
+            }
         },
         typeMessage: 'Escribe tu mensaje...',
         sendMessage: 'Enviar mensaje',
@@ -685,5 +691,11 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         continue: 'Continuar',
         start: 'Comenzar',
         review: 'Revisar',
+    },
+    WebSearchResult: {
+        webSearchResults: 'Resultados de Búsqueda Web',
+        query: 'Consulta',
+        hideResults: 'Ocultar resultados de búsqueda',
+        showResults: 'Mostrar resultados de búsqueda',
     },
 } as const
