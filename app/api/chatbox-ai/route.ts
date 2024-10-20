@@ -1,18 +1,35 @@
 import { createAISDKTools } from '@agentic/ai-sdk'
 import { TavilyClient } from '@agentic/tavily'
-import { google } from '@ai-sdk/google'
+import { openai } from '@ai-sdk/openai'
 import { convertToCoreMessages, Message, streamText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+
+import { createClient } from '@/utils/supabase/server'
 interface RequestBody {
     messages: Message[];
 }
 
 export async function POST(request: NextRequest) {
     try {
+        const supabase = createClient()
+
+        const { data, error } = await supabase
+            .auth.getUser()
+
+        if (error) {
+            console.error('Error fetching user:', error)
+            return NextResponse.json(
+                { message: 'Error fetching user' },
+                { status: 500 }
+            )
+        }
+
         const reqBody: RequestBody = await request.json()
         const tavilSearch = new TavilyClient()
-        const model = google('gemini-1.5-pro-latest')
+        const model = openai('gpt-4o-mini', {
+            user: data.user.id
+        })
 
         const result = await streamText({
             model,
