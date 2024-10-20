@@ -42,9 +42,23 @@ export default async function StudentLessonPage({
         .eq('lesson_completions.user_id', user.data.user.id)
         .single()
 
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id).single()
+
     const isLessonAiTaskCompleted = lessonData.data.lesson_completions.length > 0
 
-    const lessonInstructions = lessonData.data.content
+    const lessonInstructions = `Eres un tutor AI, tu mision es ayudar a los estudiantes con esta leccion. Ten en cuenta lo siguiente:
+    1. Lee la leccion y asegurate de entenderla
+    2. Responde a las preguntas de los estudiantes
+    3. trata de ser lo mas claro posible
+
+    La leccion es la siguiente: ${lessonData.data.title} - ${lessonData.data.description}
+    El contenido de la leccion es el siguiente: ${lessonData.data.content}
+
+    Recuerda que tu mision es ayudar a los estudiantes a entender la leccion
+    `
     return (
         <LessonPage
             sideBar={
@@ -74,7 +88,10 @@ export default async function StudentLessonPage({
                     userId={user.data.user.id}
                 />
             </Suspense>
-            <ChatBox instructions={lessonInstructions} />
+            <ChatBox
+                profile={profile.data}
+                instructions={lessonInstructions}
+            />
         </LessonPage>
     )
 }

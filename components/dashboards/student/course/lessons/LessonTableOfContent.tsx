@@ -49,7 +49,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({
                 {headings.map((heading, index) => (
                     <li
                         key={heading.id}
-                        className="flex items-center border border-gray-200 rounded p-2 transition duration-200 dark:hover:bg-gray-700 hover:bg-gray-100"
+                        className="flex items-center border rounded p-2 transition duration-200 dark:hover:bg-gray-700 hover:bg-gray-100"
                     >
                         <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full font-bold mr-3">
                             {index + 1}

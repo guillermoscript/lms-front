@@ -13,7 +13,7 @@ export default async function DashboardHeader () {
     const userRole = await getServerUserRole()
 
     return (
-        <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-background">
+        <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-background px-2">
             <Link href="/">
                 <Image
                     src="/img/logo.png"

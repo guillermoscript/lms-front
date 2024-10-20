@@ -10,7 +10,7 @@ interface ReviewCardProps {
 
 function ReviewCard ({ rating, reviewText, reviewerName, reviewDate }: ReviewCardProps) {
     return (
-        <div className="border border-gray-200 rounded-lg p-4 dark:border-gray-800">
+        <div className="border  rounded-lg p-4 dark:border-gray-800">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {[...Array(5)].map((_, index) => (

@@ -12,9 +12,10 @@ import {
     X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { useCopyToClipboard } from 'usehooks-ts'
 
 import { useScopedI18n } from '@/app/locales/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -23,39 +24,40 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 import ChatLoadingSkeleton from '../dashboards/chat/ChatLoadingSkeleton'
-import ViewMarkdown from '../ui/markdown/ViewMarkdown'
+import MessageItem from '../dashboards/Common/chat/MesssageItem'
+import { Input } from '../ui/input'
+import WebSearchResult from './WebSearchResult'
+// Assuming you have a Separator component
 
 interface ChatBoxProps {
     instructions: string
+    profile: {
+        avatar_url: string
+        full_name: string
+    }
 }
 
-const quickAccessButtons = [
-    { label: 'productQuestions', icon: '📦' },
-    { label: 'shareFeedback', icon: '📝' },
-    { label: 'loggingIn', icon: '🔐' },
-    { label: 'reset2FA', icon: '🔑' },
-    { label: 'abuseReport', icon: '🚫' },
-    { label: 'contactingSales', icon: '💼' },
-]
-
-export default function ChatBox({ instructions }: ChatBoxProps) {
+export default function ChatBox({ instructions, profile }: ChatBoxProps) {
     const [isChatOpen, setIsChatOpen] = useState(false)
     const [isExpanded, setIsExpanded] = useState(false)
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+    const [editedContent, setEditedContent] = useState<string>('')
     const scrollAreaRef = useRef<HTMLDivElement>(null)
     const chatBoxRef = useRef<HTMLDivElement>(null)
     const t = useScopedI18n('ChatBox')
-
+    const [copiedText, copy] = useCopyToClipboard()
     const {
         messages,
         input,
         handleInputChange,
         handleSubmit,
         isLoading,
+        setMessages,
         append,
+        reload,
     } = useChat({
         api: '/api/chatbox-ai',
         initialMessages: [
@@ -65,7 +67,25 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                 role: 'system',
             },
         ],
+        async onToolCall({ toolCall }) {
+            console.log('Tool call:', toolCall)
+            // if (toolCall.toolName === 'provideHint') {
+            //     console.log('Hint:', toolCall)
+            // }
+        },
+        maxSteps: 3,
     })
+
+    const quickAccessButtons = [
+        {
+            label: 'searchWeb',
+            icon: '🔍',
+        },
+        {
+            label: 'getQuestions',
+            icon: '❓',
+        },
+    ]
 
     const toggleChat = () => setIsChatOpen((prev) => !prev)
     const toggleExpand = () => setIsExpanded((prev) => !prev)
@@ -95,6 +115,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
             ) {
                 setIsChatOpen(false)
                 setIsExpanded(false)
+                setEditingMessageId(null) // Reset editing state
             }
         }
 
@@ -106,9 +127,66 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
 
     const handleQuickAccess = (question: string) => {
         append({
-            content: t(`quickAccess.${question}`),
+            content: question,
             role: 'user',
         })
+    }
+
+    // Handlers for editing messages
+    const handleEdit = (id: string, currentContent: string) => {
+        setEditingMessageId(id)
+        setEditedContent(currentContent)
+        // get the message to be edited
+        const message = messages.find((m) => m.id === id)
+        if (message) {
+            setEditedContent(message.content)
+        }
+
+        // remove all the next messasges to the one being edited
+        const index = messages.findIndex((m) => m.id === id)
+        const updatedMessages = messages.slice(0, index + 1)
+        setMessages(updatedMessages)
+
+        append({
+            id,
+            content: currentContent,
+            role: 'user', // Adjust role if necessary
+        })
+    }
+
+    const handleSave = async (id: string) => {
+        // Implement your save logic here, e.g., API call to save edited message
+        append({
+            id,
+            content: editedContent,
+            role: 'user', // Adjust role if necessary
+            // Add other necessary fields
+        })
+        setEditingMessageId(null)
+        setEditedContent('')
+    }
+
+    const handleDelete = async (id: string) => {
+        // delete the message from the chat
+        const messageIndex = messages.findIndex((m) => m.id === id)
+        const updatedMessages = [...messages]
+        updatedMessages.splice(messageIndex, 1)
+        setMessages(updatedMessages)
+    }
+
+    const handleCopy = (content: string) => {
+        copy(content)
+        toast.success(t('copied'))
+    }
+
+    const handleRegenerate = (id: string) => {
+        // Implement your regenerate logic here
+        // delete the message after regenerating
+        const messageIndex = messages.findIndex((m) => m.id === id)
+        const updatedMessages = [...messages]
+        updatedMessages.splice(messageIndex, 1)
+        setMessages(updatedMessages)
+        reload()
     }
 
     return (
@@ -194,7 +272,9 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                                                 className="text-left"
                                                                 onClick={() =>
                                                                     handleQuickAccess(
-                                                                        button.label
+                                                                        t(
+                                                                            `quickAccess.${button.label}.text`
+                                                                        )
                                                                     )
                                                                 }
                                                             >
@@ -204,7 +284,7 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                                                     }
                                                                 </span>
                                                                 {t(
-                                                                    `quickAccess.${button.label}`
+                                                                    `quickAccess.${button.label}.title`
                                                                 )}
                                                             </Button>
                                                         )
@@ -218,38 +298,79 @@ export default function ChatBox({ instructions }: ChatBoxProps) {
                                                 }
 
                                                 return (
-                                                    <div
+                                                    <MessageItem
                                                         key={message.id}
-                                                        className="flex items-start space-x-2"
-                                                    >
-                                                        <Avatar className="mt-0.5">
-                                                            <AvatarImage
-                                                                src={
-                                                                    message.role ===
-                                                                    'user'
-                                                                        ? '/user-avatar.png'
-                                                                        : '/img/robot.jpeg'
-                                                                }
-                                                            />
-                                                            <AvatarFallback>
-                                                                {message.role ===
-                                                                'user'
-                                                                    ? 'U'
-                                                                    : 'A'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div
-                                                            className={
-                                                                'flex-1 overflow-hidden rounded-md p-3'
-                                                            }
-                                                        >
-                                                            <ViewMarkdown
-                                                                markdown={
-                                                                    message.content
-                                                                }
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                        message={message}
+                                                        profile={profile}
+                                                        isEditing={
+                                                            editingMessageId ===
+                                                            message.id
+                                                        }
+                                                        editedContent={
+                                                            editedContent
+                                                        }
+                                                        setEditedContent={
+                                                            setEditedContent
+                                                        }
+                                                        onEdit={() =>
+                                                            handleEdit(
+                                                                message.id,
+                                                                message.content
+                                                            )
+                                                        }
+                                                        onSave={async () =>
+                                                            await handleSave(
+                                                                message.id
+                                                            )
+                                                        }
+                                                        onDelete={async () =>
+                                                            await handleDelete(
+                                                                message.id
+                                                            )
+                                                        }
+                                                        onCopy={() =>
+                                                            handleCopy(
+                                                                message.content
+                                                            )
+                                                        }
+                                                        onRegenerate={() =>
+                                                            handleRegenerate(
+                                                                message.id
+                                                            )
+                                                        }
+                                                        isLoading={isLoading}
+                                                        isCompleted={false}
+                                                        toolInvocations={
+                                                            <>
+                                                                {message?.toolInvocations?.map(
+                                                                    (tool) => {
+                                                                        if (
+                                                                            tool.toolName ===
+                                                                                'tavily_web_search' &&
+                                                                            'result' in
+                                                                                tool
+                                                                        ) {
+                                                                            return (
+                                                                                <WebSearchResult
+                                                                                    key={
+                                                                                        tool.toolCallId
+                                                                                    }
+                                                                                    toolName={
+                                                                                        tool.toolName
+                                                                                    }
+                                                                                    result={
+                                                                                        tool.result
+                                                                                    }
+                                                                                />
+                                                                            )
+                                                                        }
+
+                                                                        return null
+                                                                    }
+                                                                )}
+                                                            </>
+                                                        }
+                                                    />
                                                 )
                                             })
                                         )}

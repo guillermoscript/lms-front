@@ -35,7 +35,7 @@ export default async function SubscriptionsPage () {
             />
             <div className="flex flex-col gap-8">
                 <h1 className="text-2xl font-bold">Subscriptions</h1>
-                <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                <div className="rounded-lg border  bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                     <div className="space-y-4">
                         <h3 className="text-2xl font-bold">
                             {subscriptions.data.plans?.plan_name}
