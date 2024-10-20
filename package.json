@@ -10,6 +10,9 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@agentic/ai-sdk": "^7.0.0",
+    "@agentic/core": "^7.0.0",
+    "@agentic/tavily": "^7.0.0",
     "@ai-sdk/google": "^0.0.51",
     "@ai-sdk/openai": "^0.0.66",
     "@hookform/resolvers": "^3.9.0",
