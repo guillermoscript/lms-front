@@ -3,6 +3,7 @@
 import { AnimatePresence } from 'framer-motion'
 import { ArrowUpDown, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import Fuse from 'fuse.js';
 
 import { useI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
@@ -36,24 +37,53 @@ interface EnhancedCourseStudentPageProps {
     }
 }
 
+const useDebounce = (value: string, delay: number): string => {
+    const [debouncedValue, setDebouncedValue] = useState<string>(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+};
+
 const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
     courseData,
 }) => {
-    const t = useI18n()
-    const [searchTerm, setSearchTerm] = useState('')
-    const [filterStatus, setFilterStatus] = useState('all')
-    const [sortOrder, setSortOrder] = useState('asc')
+    const t = useI18n();
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 500);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [sortOrder, setSortOrder] = useState('asc');
 
-    const [filteredLessons, setFilteredLessons] = useState(courseData.lessons)
-    const [filteredExercises, setFilteredExercises] = useState(
-        courseData.exercises
-    )
-    const [filteredExams, setFilteredExams] = useState(courseData.exams)
+    // States for filtered results
+    const [filteredLessons, setFilteredLessons] = useState<any[]>(courseData.lessons || []);
+    const [filteredExercises, setFilteredExercises] = useState<any[]>(courseData.exercises || []);
+    const [filteredExams, setFilteredExams] = useState<any[]>(courseData.exams || []);
 
     useEffect(() => {
         const filterAndSortItems = (items: any[], type: string) => {
-            return items
-                .filter((item) => {
+            if (!Array.isArray(items)) {
+                return []; // Ensure items is an array
+            }
+
+            const options = {
+                keys: ['title'],
+                includeScore: true,
+                threshold: 0.3, // Fuzzy matching threshold
+            };
+
+            const fuse = new Fuse(items, options);
+            const result = fuse.search(debouncedSearchTerm);
+
+            return result
+                .filter(({ item }) => {
                     const status =
                         type === 'lessons'
                             ? item.lesson_completions.length > 0
@@ -71,28 +101,23 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
                                     ? item.exam_submissions[0].exam_scores.length > 0
                                         ? 'Completed'
                                         : 'Waiting for Review'
-                                    : 'Not Started'
+                                    : 'Not Started';
 
-                    return (
-                        item.title
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase()) &&
-                        (filterStatus === 'all' || status === filterStatus)
-                    )
+                    return filterStatus === 'all' || status === filterStatus;
                 })
+                .map(({ item }) => item) // Safely mapping over items
                 .sort((a, b) =>
                     sortOrder === 'asc'
                         ? a.sequence - b.sequence
                         : b.sequence - a.sequence
-                )
-        }
+                );
+        };
 
-        setFilteredLessons(filterAndSortItems(courseData.lessons, 'lessons'))
-        setFilteredExercises(
-            filterAndSortItems(courseData.exercises, 'exercises')
-        )
-        setFilteredExams(filterAndSortItems(courseData.exams, 'exams'))
-    }, [searchTerm, filterStatus, sortOrder, courseData])
+        setFilteredLessons(filterAndSortItems(courseData.lessons || [], 'lessons'));
+        setFilteredExercises(filterAndSortItems(courseData.exercises || [], 'exercises'));
+        setFilteredExams(filterAndSortItems(courseData.exams || [], 'exams'));
+    }, [debouncedSearchTerm, filterStatus, sortOrder, courseData]);
+
 
     const completedLessons = courseData.lessons.filter(
         (lesson) => lesson.lesson_completions.length > 0
