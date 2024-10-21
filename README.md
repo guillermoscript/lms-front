@@ -62,17 +62,31 @@ Our LMS offers various subscription plans tailored to different budgets and need
 
 ## Future Features
 Upcoming enhancements include:
-1. **AI Exam Review**: Soon, our AI will provide a secondary opinion on exam submissions. This feature will not only bolster the accuracy and reliability of evaluations but also offer additional feedback, allowing students to correct their mistakes before final teacher reviews. Imagine knowing where you stand instantly and being able to improve before the final grade! (almost done!!! a few details and we are good to go)
-2. **AI Customization**: We are working on enabling personalized AI training based on individual user needs. This will empower students to shape the AI’s understanding to better support their unique learning style and requirements.
-3. **Document Uploads**: Users will soon be able to upload documents directly to the AI, enhancing its knowledge base. This feature will enable custom exam creations and targeted learning experiences tailored specifically to the user’s coursework and materials.
-4. **Assignments**: After completing lessons, students are required to answer open questions to validate their understanding. Our AI not only reviews these responses but also provides detailed feedback, helping students enhance their knowledge until they get it right. This feature is **exclusive** to our LMS, ensuring that learning is effective and mistakes are corrected in real-time.
+- [] **AI Exam Review**: Soon, our AI will provide a secondary opinion on exam submissions. This feature will not only bolster the accuracy and reliability of evaluations but also offer additional feedback, allowing students to correct their mistakes before final teacher reviews. Imagine knowing where you stand instantly and being able to improve before the final grade! (almost done!!! a few details and we are good to go)
+- [] **AI Customization**: We are working on enabling personalized AI training based on individual user needs. This will empower students to shape the AI’s understanding to better support their unique learning style and requirements.
+- [] **Document Uploads**: Users will soon be able to upload documents directly to the AI, enhancing its knowledge base. This feature will enable custom exam creations and targeted learning experiences tailored specifically to the user’s coursework and materials.
+- [] **Assignments**: After completing lessons, students are required to answer open questions to validate their understanding. Our AI not only reviews these responses but also provides detailed feedback, helping students enhance their knowledge until they get it right. This feature is **exclusive** to our LMS, ensuring that learning is effective and mistakes are corrected in real-time.
+- [] **Exercises**: We are working on adding exercises to lessons, allowing students to practice and reinforce their learning. These exercises will be reviewed by the AI, providing immediate feedback and guidance to help students improve their understanding.
+- [] **AI with Voice Recognition**: Our AI will soon support voice recognition, enabling students to interact with it using voice commands. This feature will enhance the user experience, making learning more accessible and engaging.
+- [] **AI you can talk to**: We are working on a feature that allows students to have conversations with the AI, asking questions and receiving answers in real-time. This will provide a more interactive and engaging learning experience, making the AI feel like a real tutor.
+
+
+## Links on the project
+
+- [Login](https://lms-front-two.vercel.app/auth/login)
+- [Register](https://lms-front-two.vercel.app/auth/register)
+- [Student Dashboard](https://lms-front-two.vercel.app/dashboard/student)
+   - [Student Courses](https://lms-front-two.vercel.app/dashboard/student/courses)
+      - [Student Course Content](https://lms-front-two.vercel.app/dashboard/student/courses/40)
+      - [Student Course Exams](https://lms-front-two.vercel.app/dashboard/student/courses/40/exams)
+      - [Student Course Exercises](https://lms-front-two.vercel.app/dashboard/student/courses/40/exercises)
+      - [Student Chat](https://lms-front-two.vercel.app/dashboard/student/chat)
+
+- [Teacher Dashboard](https://lms-front-two.vercel.app/dashboard/teacher)
+
 
 ## Contributing
 We welcome contributions! Please fork the repository and submit a pull request. For major changes, it's best to open an issue first to discuss your ideas.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-Thank you for choosing the LMS App with AI. We are committed to revolutionizing the learning experience by integrating cutting-edge AI technology to meet and exceed your educational goals! Don’t miss out on this unique, intelligent, and engaging learning platform. Happy learning!
