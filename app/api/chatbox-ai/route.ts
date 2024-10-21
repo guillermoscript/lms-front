@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
 
         const reqBody: RequestBody = await request.json()
         const tavilSearch = new TavilyClient()
-        const model = openai('gpt-4o-mini', {
-            user: data.user.id
-        })
+        const model = openai('gpt-4o-mini')
+        // , {
+        //     user: data.user.id
+        // }
 
         const result = await streamText({
             model,
