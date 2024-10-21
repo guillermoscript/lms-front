@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -72,6 +73,8 @@ export default function TeacherAccountPage({
 }: {
     teacherData: TeacherData
 }) {
+    const t = useScopedI18n('TeacherAccountPage')
+
     return (
         <div className="container mx-auto px-4 py-8">
             <motion.div
@@ -113,14 +116,6 @@ export default function TeacherAccountPage({
                                         <Phone className="w-3 h-3" />
                                         {teacherData.phone}
                                     </Badge>
-                                    {/* <Badge variant="secondary" className="flex items-center gap-1">
-                                        <GraduationCap className="w-3 h-3" />
-                                        {teacherData.totalStudents} Students
-                                    </Badge>
-                                    <Badge variant="secondary" className="flex items-center gap-1">
-                                        <Book className="w-3 h-3" />
-                                        {teacherData.totalClasses} Classes
-                                    </Badge> */}
                                 </div>
                             </div>
                             <Link
@@ -128,7 +123,7 @@ export default function TeacherAccountPage({
                                 className={buttonVariants({ variant: 'default' })}
                             >
                                 <Edit className="w-4 h-4 mr-2" />
-                                Edit Profile
+                                {t('editProfile')}
                             </Link>
                         </div>
                     </CardContent>
@@ -136,9 +131,7 @@ export default function TeacherAccountPage({
 
                 <Tabs defaultValue="overview" className="space-y-4">
                     <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-                        <TabsTrigger value="overview">Overview</TabsTrigger>
-                        {/* <TabsTrigger value="classes">Classes</TabsTrigger>
-                        <TabsTrigger value="activity">Activity</TabsTrigger> */}
+                        <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview" className="space-y-4">
@@ -146,143 +139,39 @@ export default function TeacherAccountPage({
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">
-                                        Total Students
+                                        {t('totalStudents')}
                                     </CardTitle>
                                     <User className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                {/* <CardContent>
-                                    <div className="text-2xl font-bold">{teacherData.totalStudents}</div>
-                                    <p className="text-xs text-muted-foreground">+2% from last month</p>
-                                </CardContent> */}
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">
-                                        Total Classes
+                                        {t('totalClasses')}
                                     </CardTitle>
                                     <Book className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                {/* <CardContent>
-                                    <div className="text-2xl font-bold">{teacherData.totalClasses}</div>
-                                    <p className="text-xs text-muted-foreground">+5% from last month</p>
-                                </CardContent> */}
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">
-                                        Average Rating
+                                        {t('averageRating')}
                                     </CardTitle>
                                     <GraduationCap className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                {/* <CardContent>
-                                    <div className="text-2xl font-bold">{teacherData.rating}/5.0</div>
-                                    <Progress value={teacherData.rating * 20} className="mt-2" />
-                                </CardContent> */}
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">
-                                        Next Class
+                                        {t('nextClass')}
                                     </CardTitle>
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                {/* <CardContent>
-                                    <div className="text-2xl font-bold">{teacherData.upcomingClasses[0].title}</div>
-                                    <p className="text-xs text-muted-foreground">{teacherData.upcomingClasses[0].date} at {teacherData.upcomingClasses[0].time}</p>
-                                </CardContent> */}
                             </Card>
                         </div>
 
-                        {/* <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Activity</CardTitle>
-                                <CardDescription>
-                                    Your latest actions and updates
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-4">
-                                    {teacherData.recentActivity.map(
-                                        (activity) => (
-                                            <li
-                                                key={activity.id}
-                                                className="flex items-center"
-                                            >
-                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                                                    <Clock className="h-5 w-5 text-primary" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">
-                                                        {activity.action}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {activity.date}
-                                                    </p>
-                                                </div>
-                                            </li>
-                                        )
-                                    )}
-                                </ul>
-                            </CardContent>
-                            <CardFooter>
-                                <Button variant="outline" className="w-full">
-                                    View All Activity
-                                </Button>
-                            </CardFooter>
-                        </Card> */}
                     </TabsContent>
 
-                    {/* <TabsContent value="classes" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Upcoming Classes</CardTitle>
-                                <CardDescription>Your scheduled classes for the next few days</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-4">
-                                    {teacherData.upcomingClasses.map((class_) => (
-                                        <li key={class_.id} className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-medium">{class_.title}</p>
-                                                <p className="text-sm text-muted-foreground">{class_.date} at {class_.time}</p>
-                                            </div>
-                                            <Badge>{class_.students} students</Badge>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                            <CardFooter>
-                                <Button variant="outline" className="w-full">View Full Schedule</Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="activity" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Activity</CardTitle>
-                                <CardDescription>Your latest actions and updates</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-4">
-                                    {teacherData.recentActivity.map((activity) => (
-                                        <li key={activity.id} className="flex items-center">
-                                            <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                                                <Clock className="h-5 w-5 text-primary" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium">{activity.action}</p>
-                                                <p className="text-xs text-muted-foreground">{activity.date}</p>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                            <CardFooter>
-                                <Button variant="outline" className="w-full">View All Activity</Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent> */}
                 </Tabs>
             </motion.div>
         </div>
