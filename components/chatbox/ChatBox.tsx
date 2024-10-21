@@ -69,9 +69,6 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
         ],
         async onToolCall({ toolCall }) {
             console.log('Tool call:', toolCall)
-            // if (toolCall.toolName === 'provideHint') {
-            //     console.log('Hint:', toolCall)
-            // }
         },
         maxSteps: 3,
     })
@@ -83,6 +80,10 @@ export default function ChatBox({ instructions, profile }: ChatBoxProps) {
         },
         {
             label: 'getQuestions',
+            icon: '❓',
+        },
+        {
+            label: 'didntUnderstand',
             icon: '❓',
         },
     ]
