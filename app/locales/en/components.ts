@@ -569,6 +569,10 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
             getQuestions: {
                 title: 'Get Questions',
                 description: 'Give me a set of good questions for the lesson.',
+            },
+            didntUnderstand: {
+                title: 'Didn\'t Understand',
+                description: 'I didn\'t understand the lesson. Can you help me understand it better?',
             }
         },
         typeMessage: 'Type your message...',

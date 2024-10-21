@@ -565,6 +565,10 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
             getQuestions: {
                 title: 'Obtener preguntas',
                 text: 'Dame buenas preguntas para la lección.',
+            },
+            didntUnderstand: {
+                title: 'No entendí',
+                text: 'No entendí la lección. ¿Puedes explicármela de nuevo y de manera diferente?',
             }
         },
         typeMessage: 'Escribe tu mensaje...',
