@@ -34,9 +34,8 @@ export default async function ExercisePageTeacher({
             exercise_messages(id,message,role)
         `)
         .eq('id', params.exerciseId)
-        .eq('exercise_completions.user_id', user.data.user.id)
         .eq('exercise_messages.user_id', user.data.user.id)
-        .order('created_at', { referencedTable: 'exercise_messages', ascending: true })
+        .order('created_at', { referencedTable: 'exercise_messages', ascending: false })
         .single()
 
     const usersData = await supabase
@@ -81,8 +80,6 @@ export default async function ExercisePageTeacher({
         .eq('id', user.data.user.id)
         .single()
 
-    console.log(initialMessages, 'initialMessages')
-
     return (
         <div className="container mx-auto">
             <BreadcrumbComponent
@@ -118,7 +115,7 @@ export default async function ExercisePageTeacher({
                         <CardTitle>{t('dashboard.teacher.ExercisePageTeacher.exerciseDetails')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-gray-600 mb-4">{exercise.instructions}</p>
+                        <p className=" mb-4">{exercise.instructions}</p>
                         <div className="flex flex-wrap gap-2 mb-4">
                             <Badge variant="secondary">{exercise.exercise_type}</Badge>
                             <Badge className={getDifficultyColor(exercise.difficulty_level)}>
@@ -199,9 +196,6 @@ export default async function ExercisePageTeacher({
                                                 </p>
                                             </div>
                                         </div>
-                                        <Badge variant={exercise.exercise_completions[index]?.score >= 70 ? 'default' : 'destructive'}>
-                                            {t('dashboard.teacher.ExercisePageTeacher.score')}: {exercise.exercise_completions[index].score}%
-                                        </Badge>
                                     </div>
                                 ))}
                             </ScrollArea>
