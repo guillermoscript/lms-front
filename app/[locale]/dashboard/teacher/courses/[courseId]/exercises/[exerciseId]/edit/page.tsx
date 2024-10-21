@@ -1,4 +1,5 @@
 import { getI18n } from '@/app/locales/server'
+import ChatBox from '@/components/chatbox/ChatBox'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExerciseForm from '@/components/dashboards/teacher/exercises/ExerciseForm'
 import { createClient } from '@/utils/supabase/server'
@@ -13,26 +14,33 @@ export default async function EditLessonPage({
     params: { courseId: string; exerciseId: string }
 }) {
     const supabase = createClient()
-    const lesson = await supabase
+    const exercise = await supabase
         .from('exercises')
         .select('*, courses(*)')
         .eq('id', params.exerciseId)
         .single()
 
-    if (lesson.error != null) {
-        console.log(lesson.error.message)
+    if (exercise.error != null) {
+        console.log(exercise.error.message)
     }
+
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id).single()
 
     const t = await getI18n()
 
     const initialValues = {
-        title: lesson?.data?.title,
-        description: lesson?.data?.description,
-        instructions: lesson?.data?.instructions,
-        systemPrompt: lesson?.data?.system_prompt,
-        exerciseType: lesson?.data?.exercise_type,
-        difficultyLevel: lesson?.data?.difficulty_level,
-        timeLimit: lesson?.data?.time_limit?.toString(),
+        title: exercise?.data?.title,
+        description: exercise?.data?.description,
+        instructions: exercise?.data?.instructions,
+        systemPrompt: exercise?.data?.system_prompt,
+        exerciseType: exercise?.data?.exercise_type,
+        difficultyLevel: exercise?.data?.difficulty_level,
+        timeLimit: exercise?.data?.time_limit?.toString(),
     }
 
     return (
@@ -53,7 +61,7 @@ export default async function EditLessonPage({
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}`,
-                        label: lesson?.data?.courses?.title,
+                        label: exercise?.data?.courses?.title,
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/exercises`,
@@ -61,7 +69,7 @@ export default async function EditLessonPage({
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/exercises/${params.exerciseId}`,
-                        label: lesson?.data?.title,
+                        label: exercise?.data?.title,
                     },
                     {
                         href: `/dashboard/teacher/courses/${params.courseId}/exercises/${params.exerciseId}/edit`,
@@ -71,6 +79,13 @@ export default async function EditLessonPage({
             />
 
             <ExerciseForm initialValues={initialValues} params={params} />
+            <ChatBox
+                profile={profile.data}
+                instructions={`Eres un profesor que esta ayudando a un colega a editar este ejercicio ${exercise.data.title}.
+                El contenido del ejercicio es este: ${exercise.data.instructions}.
+                Por favor, asegúrate de que el ejercicio sea claro y conciso y apoya a tu colega en lo que necesite.
+                `}
+            />
         </div>
     )
 }
