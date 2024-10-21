@@ -44,7 +44,7 @@ const getAdditionalNavItem = (userRole: string) => {
         }
     } else if (userRole === 'teacher') {
         return {
-            href: `/dashboard/${userRole}/manage-courses`,
+            href: `/dashboard/${userRole}/courses`,
             icon: <EditIcon className="h-5 w-5" />,
             label: 'Manage Courses',
             tooltip: 'Create or view courses',
