@@ -21,6 +21,7 @@ export default {
         teacher: 'Teacher',
         edit: 'Edit',
         exercise: 'Exercises',
+        account: 'Account',
     },
     RecentlyViewed: {
         title: 'Recently Viewed',
@@ -705,5 +706,30 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         query: 'Query',
         hideResults: 'Hide search results',
         showResults: 'Show search results',
+    },
+    EditProfileForm: {
+        errorUpdatingProfile: 'Error updating profile',
+        profileUpdatedSuccessfully: 'Profile updated successfully',
+        fullName: 'Full Name',
+        fullNamePlaceholder: 'John Doe',
+        bio: 'Bio',
+        bioPlaceholder: 'Tell us about yourself',
+        profilePicture: 'Profile Picture',
+        profilePicturePlaceholder: 'https://example.com/image.jpg',
+        updatingProfile: 'Updating profile...',
+        updateProfile: 'Update Profile',
+    },
+    AccountEditPage: {
+        settings: 'Settings',
+        editProfile: 'Edit Profile',
+        updateProfileInfo: 'Update your profile information',
+    },
+    TeacherAccountPage: {
+        editProfile: 'Edit Profile',
+        overview: 'Overview',
+        totalStudents: 'Total Students',
+        totalClasses: 'Total Classes',
+        averageRating: 'Average Rating',
+        nextClass: 'Next Class',
     },
 } as const

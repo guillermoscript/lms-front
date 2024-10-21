@@ -21,6 +21,7 @@ export default {
         teacher: 'Profesor',
         edit: 'Editar',
         exercise: 'Ejercicios',
+        account: 'Cuenta',
     },
     RecentlyViewed: {
         title: 'Visto recientemente',
@@ -702,4 +703,29 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         hideResults: 'Ocultar resultados de búsqueda',
         showResults: 'Mostrar resultados de búsqueda',
     },
+    EditProfileForm: {
+        errorUpdatingProfile: 'Error al actualizar el perfil',
+        profileUpdatedSuccessfully: 'Perfil actualizado con éxito',
+        fullName: 'Nombre Completo',
+        fullNamePlaceholder: 'Juan Pérez',
+        bio: 'Biografía',
+        bioPlaceholder: 'Cuéntanos sobre ti',
+        profilePicture: 'Foto de Perfil',
+        profilePicturePlaceholder: 'https://example.com/image.jpg',
+        updatingProfile: 'Actualizando perfil...',
+        updateProfile: 'Actualizar Perfil',
+    },
+    AccountEditPage: {
+        settings: 'Configuraciones',
+        editProfile: 'Editar Perfil',
+        updateProfileInfo: 'Actualiza la información de tu perfil',
+    },
+    TeacherAccountPage: {
+        editProfile: 'Editar Perfil',
+        overview: 'Resumen',
+        totalStudents: 'Total de Estudiantes',
+        totalClasses: 'Total de Clases',
+        averageRating: 'Calificación Promedio',
+        nextClass: 'Próxima Clase',
+    }
 } as const
