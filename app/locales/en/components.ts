@@ -674,6 +674,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         chatTitle: 'Chat with the AI',
         startWritingToCompleteExercise: 'Start writing to complete the exercise',
         feelFreeToAskQuestions: 'Feel free to ask questions about the exercise if it is unclear.',
+        exerciseNotApproved: 'Exercise not approved',
     },
     CourseExercisesPage: {
         exercises: 'Exercises',
@@ -732,4 +733,15 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         averageRating: 'Average Rating',
         nextClass: 'Next Class',
     },
+    ExercisesTextEditors: {
+        errorLoadingExercise: 'Error loading exercise',
+        errorExerciseNotApproved: 'This exercise is not approved by the AI teacher. Please contact your teacher',
+        loading: 'Loading...',
+        submit: 'Submit',
+        simple: 'Simple',
+        markdown: 'Advanced Editor',
+        typeYourMessage: 'Type your message...',
+        filesSelected: '{count} file(s) selected',
+        remove: 'Remove',
+    }
 } as const
