@@ -743,5 +743,6 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         typeYourMessage: 'Type your message...',
         filesSelected: '{count} file(s) selected',
         remove: 'Remove',
+        checkAnswer: 'Check Answer',
     }
 } as const

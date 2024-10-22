@@ -739,5 +739,6 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         typeYourMessage: 'Escribe tu mensaje...',
         filesSelected: '{count} archivo(s) seleccionado(s)',
         remove: 'Eliminar',
+        checkAnswer: 'Verificar respuesta',
     }
 } as const
