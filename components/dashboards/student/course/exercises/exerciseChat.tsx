@@ -84,6 +84,8 @@ export default function ExerciseChat({
     })
 
     const [isLoading, setIsLoading] = useState(isLoadingChat)
+    const [isNotApproved, setIsNotApproved] = useState(false)
+    const [notApprovedMessage, setNotApprovedMessage] = useState('')
 
     useEffect(() => {
         setIsLoading(isLoadingChat)
@@ -172,7 +174,6 @@ export default function ExerciseChat({
                 throw new Error(isDeleted.error)
             }
 
-            reload()
             toast.success(t('messageDeleted'))
         } catch (error) {
             console.error(error)
@@ -303,6 +304,18 @@ export default function ExerciseChat({
                         {/* Scroll Anchor */}
                     </div>
                 </>
+                {
+                    isNotApproved && (
+                        <div className="text-center text-red-500 my-4 p-4 border border-dashed border-red-300 rounded-lg">
+                            <h2 className="text-lg font-semibold mb-2 flex items-center justify-center">
+                                {t('exerciseNotApproved')}
+                            </h2>
+                            <p className="text-sm mb-4">
+                                {notApprovedMessage}
+                            </p>
+                        </div>
+                    )
+                }
                 {isCompleted ? (
                     <SuccessMessage message={t('exerciseCompleted')} />
                 ) : (
@@ -318,6 +331,13 @@ export default function ExerciseChat({
                         removeFile={removeFile}
                         fileInputRef={fileInputRef}
                         append={append}
+                        exerciseId={exerciseId}
+                        messages={messages}
+                        isCompleted={isCompleted}
+                        setIsCompleted={setIsCompleted}
+                        isNotApproved={isNotApproved}
+                        setIsNotApproved={setIsNotApproved}
+                        setNotApprovedMessage={setNotApprovedMessage}
                     />
                 )}
             </CardContent>
