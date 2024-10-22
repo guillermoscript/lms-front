@@ -1,8 +1,5 @@
 import { Message } from 'ai/react'
-import {
-    Loader,
-    Send,
-} from 'lucide-react'
+import { Check, Loader, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -66,14 +63,14 @@ export default function ExercisesTextEditors({
 
     return (
         <>
-            <div>
+            {messages.length > 1 && (
                 <Button
                     onClick={async () => {
                         setIsLoading(true)
                         try {
                             const res = await actionButtonsAction({
                                 exerciseId,
-                                messages
+                                messages,
                             })
 
                             console.log(res)
@@ -99,14 +96,18 @@ export default function ExercisesTextEditors({
                         }
                     }}
                     disabled={isLoading || isCompleted}
+                    className="mt-4"
                 >
-                    {
-                        isLoading ? (
-                            <Loader className="animate-spin" />
-                        ) : t('submit')
-                    }
+                    {isLoading ? (
+                        <Loader className="animate-spin" />
+                    ) : (
+                        <>
+                            {t('checkAnswer')}
+                            <Check className="h-4 w-4 ml-2" />
+                        </>
+                    )}
                 </Button>
-            </div>
+            )}
             <Tabs defaultValue="simple" className="w-full py-4">
                 <div className="flex gap-4 flex-wrap">
                     <TabsList id="tabs-list" className="gap-4">
@@ -173,7 +174,9 @@ export default function ExercisesTextEditors({
                         {files && (
                             <div className="mt-2 flex items-center">
                                 <span className="text-sm text-gray-400">
-                                    {t('filesSelected', { count: files.length })}
+                                    {t('filesSelected', {
+                                        count: files.length,
+                                    })}
                                 </span>
                                 <Button
                                     type="button"
