@@ -1,4 +1,5 @@
 import { getI18n } from '@/app/locales/server'
+import ChatBox from '@/components/chatbox/ChatBox'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonForm from '@/components/dashboards/teacher/lessons/LessonForm'
 import { createClient } from '@/utils/supabase/server'
@@ -23,6 +24,14 @@ export default async function EditLessonPage({
         console.log(lesson.error.message)
     }
 
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id)
+        .single()
+
     const t = await getI18n()
 
     const initialValues = {
@@ -34,40 +43,55 @@ export default async function EditLessonPage({
         content: lesson?.data?.content,
         description: lesson?.data?.description,
         image: lesson?.data?.image,
-        systemPrompt:
-            lesson?.data.lessons_ai_tasks[0]?.system_prompt,
+        systemPrompt: lesson?.data.lessons_ai_tasks[0]?.system_prompt,
         task_instructions: lesson?.data.lessons_ai_tasks[0]?.task_instructions,
     }
 
     return (
         <>
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
-                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
-                    {
-                        href: `/dashboard/teacher/courses/${params.courseId}`,
-                        label: lesson?.data?.courses?.title,
-                    },
-                    {
-                        href: `/dashboard/teacher/courses/${params.courseId}/lessons`,
-                        label: t('BreadcrumbComponent.lesson'),
-                    },
-                    {
-                        href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`,
-                        label: lesson?.data?.title,
-                    },
-                    {
-                        href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`,
-                        label: t('BreadcrumbComponent.edit'),
-                    },
-                ]}
-            />
+            <div className="container mx-auto">
+                <BreadcrumbComponent
+                    links={[
+                        {
+                            href: '/dashboard',
+                            label: t('BreadcrumbComponent.dashboard'),
+                        },
+                        {
+                            href: '/dashboard/teacher',
+                            label: t('BreadcrumbComponent.teacher'),
+                        },
+                        {
+                            href: '/dashboard/teacher/courses',
+                            label: t('BreadcrumbComponent.course'),
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}`,
+                            label: lesson?.data?.courses?.title,
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}/lessons`,
+                            label: t('BreadcrumbComponent.lesson'),
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}`,
+                            label: lesson?.data?.title,
+                        },
+                        {
+                            href: `/dashboard/teacher/courses/${params.courseId}/lessons/${params.lessonId}/edit`,
+                            label: t('BreadcrumbComponent.edit'),
+                        },
+                    ]}
+                />
+            </div>
 
-            <LessonForm
-                params={params}
-                initialValues={initialValues}
+            <LessonForm params={params} initialValues={initialValues} />
+            <ChatBox
+                profile={profile.data}
+                instructions={`Eres un profesor que ayuda a un colega a editar esta leccion ${lesson.data.title}
+                el contendio de la leccion es el siguiente: ${lesson.data.content}
+
+                Ayuda a tu colega a mejorar la leccion en todo lo que te pregunte
+                `}
             />
         </>
     )

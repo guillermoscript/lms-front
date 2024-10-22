@@ -4,6 +4,7 @@ import { FormProvider, useForm } from 'react-hook-form'
 import * as yup from 'yup'
 
 import { updateUserProfile } from '@/actions/dashboard/studentActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Input } from '@/components/form/Form'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
@@ -25,6 +26,7 @@ export default function EditProfileForm ({
     bio: string
     avatarUrl: string
 }) {
+    const t = useScopedI18n('EditProfileForm')
     const form = useForm<updateUserProfileSchema>({
         resolver: yupResolver(schema)
     })
@@ -40,19 +42,19 @@ export default function EditProfileForm ({
                         console.log(response)
                         if (response.status === 'error') {
                             toast({
-                                title: 'Error updating profile',
+                                title: t('errorUpdatingProfile'),
                                 description: response.message,
                                 variant: 'destructive'
                             })
                         } else if (response.status === 'success') {
                             toast({
-                                title: 'Profile updated successfully'
+                                title: t('profileUpdatedSuccessfully')
                             })
                         }
                     } catch (error) {
                         console.log(error)
                         toast({
-                            title: 'Error updating profile',
+                            title: t('errorUpdatingProfile'),
                             description: error.message,
                             variant: 'destructive'
                         })
@@ -61,27 +63,27 @@ export default function EditProfileForm ({
                 className='flex flex-col gap-4 w-full'
             >
                 <Input
-                    displayName="Full Name"
-                    placeholder={fullName || 'John Doe'}
+                    displayName={t('fullName')}
+                    placeholder={fullName || t('fullNamePlaceholder')}
                     type="text"
                     name='fullName'
                 />
                 <Input
-                    displayName='Bio'
-                    placeholder={bio || 'Tell us about yourself'}
+                    displayName={t('bio')}
+                    placeholder={bio || t('bioPlaceholder')}
                     type='text'
                     name='bio'
                 />
                 <Input
-                    displayName='Profile Picture'
-                    placeholder={avatarUrl || 'https://example.com/image.jpg'}
+                    displayName={t('profilePicture')}
+                    placeholder={avatarUrl || t('profilePicturePlaceholder')}
                     type='text'
                     name='avatarUrl'
                 />
                 <Button
                     disabled={form.formState.isSubmitting}
                 >
-                    {form.formState.isSubmitting ? 'Updating profile...' : 'Update Profile'}
+                    {form.formState.isSubmitting ? t('updatingProfile') : t('updateProfile')}
                 </Button>
             </form>
         </FormProvider>

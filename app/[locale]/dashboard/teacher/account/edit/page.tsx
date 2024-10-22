@@ -6,17 +6,17 @@ export default async function Dashboard () {
     const t = await getScopedI18n('BreadcrumbComponent')
 
     return (
-        <div className="container mx-auto">
+        <div className="container mx-auto flex flex-col gap-4">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('dashboard') },
-                    { href: '/dashboard/student', label: t('student') },
+                    { href: '/dashboard/teacher', label: t('teacher') },
                     {
-                        href: '/dashboard/student/account/',
+                        href: '/dashboard/teacher/account/',
                         label: t('account'),
                     },
                     {
-                        href: '/dashboard/student/account/edit',
+                        href: '/dashboard/teacher/account/edit',
                         label: t('edit'),
                     },
                 ]}

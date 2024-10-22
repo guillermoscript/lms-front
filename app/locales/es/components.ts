@@ -21,6 +21,7 @@ export default {
         teacher: 'Profesor',
         edit: 'Editar',
         exercise: 'Ejercicios',
+        account: 'Cuenta',
     },
     RecentlyViewed: {
         title: 'Visto recientemente',
@@ -669,6 +670,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         chatTitle: 'Chat de Ejercicios',
         startWritingToCompleteExercise: 'Empieza a escribir para completar el ejercicio',
         feelFreeToAskQuestions: 'Si tienes alguna pregunta, no dudes en preguntar, El asistente de IA está aquí para ayudarte.',
+        exerciseNotApproved: 'Ejecicio no aprobado',
     },
     CourseExercisesPage: {
         exercises: 'Ejercicios',
@@ -702,4 +704,41 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         hideResults: 'Ocultar resultados de búsqueda',
         showResults: 'Mostrar resultados de búsqueda',
     },
+    EditProfileForm: {
+        errorUpdatingProfile: 'Error al actualizar el perfil',
+        profileUpdatedSuccessfully: 'Perfil actualizado con éxito',
+        fullName: 'Nombre Completo',
+        fullNamePlaceholder: 'Juan Pérez',
+        bio: 'Biografía',
+        bioPlaceholder: 'Cuéntanos sobre ti',
+        profilePicture: 'Foto de Perfil',
+        profilePicturePlaceholder: 'https://example.com/image.jpg',
+        updatingProfile: 'Actualizando perfil...',
+        updateProfile: 'Actualizar Perfil',
+    },
+    AccountEditPage: {
+        settings: 'Configuraciones',
+        editProfile: 'Editar Perfil',
+        updateProfileInfo: 'Actualiza la información de tu perfil',
+    },
+    TeacherAccountPage: {
+        editProfile: 'Editar Perfil',
+        overview: 'Resumen',
+        totalStudents: 'Total de Estudiantes',
+        totalClasses: 'Total de Clases',
+        averageRating: 'Calificación Promedio',
+        nextClass: 'Próxima Clase',
+    },
+    ExercisesTextEditors: {
+        errorLoadingExercise: 'Error al cargar el ejercicio',
+        errorExerciseNotApproved: 'Este ejercicio no ha sido aprobado por la IA',
+        loading: 'Cargando...',
+        submit: 'Enviar',
+        simple: 'Simple',
+        markdown: 'Editor Avanzado',
+        typeYourMessage: 'Escribe tu mensaje...',
+        filesSelected: '{count} archivo(s) seleccionado(s)',
+        remove: 'Eliminar',
+        checkAnswer: 'Verificar respuesta',
+    }
 } as const

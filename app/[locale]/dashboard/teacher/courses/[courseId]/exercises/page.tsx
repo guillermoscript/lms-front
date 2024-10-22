@@ -1,4 +1,5 @@
 import { getI18n } from '@/app/locales/server'
+import ChatBox from '@/components/chatbox/ChatBox'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExerciseForm from '@/components/dashboards/teacher/exercises/ExerciseForm'
 import { createClient } from '@/utils/supabase/server'
@@ -22,6 +23,13 @@ export default async function CreateExercisePage({
         throw new Error(course.error.message)
     }
 
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id).single()
+
     const t = await getI18n()
     console.log(course)
     return (
@@ -38,6 +46,11 @@ export default async function CreateExercisePage({
 
             <ExerciseForm
                 params={params}
+            />
+            <ChatBox
+                profile={profile.data}
+                instructions={`Eres un profesor que esta ayudando a un colega a crear Ejercicios para este curso: ${course.data.title}. 
+                Por favor, asegúrate de que los ejercicios sean claros y concisos y apoyes a tu colega en lo que necesite.`}
             />
         </div>
     )

@@ -29,6 +29,13 @@ export default async function EditTestPage ({
         console.log(test.error.message)
     }
 
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id).single()
+
     console.log(test.data)
 
     console.log(test.data?.exam_questions)
@@ -87,6 +94,15 @@ export default async function EditTestPage ({
                     }}
                 />
             </div>
+            <ChatBox
+                profile={profile.data}
+                instructions={`Eres un profesor que esta ayudando a un colega a editar este examen ${test.data.title}.
+                Por favor, asegúrate de que los exámenes sean claros y concisos y apoyes a tu colega en lo que necesite.
+                Este examen tiene ${test.data.exam_questions.length} preguntas.
+                este es el JSON de las preguntas ${JSON.stringify(fieldsForQuestions)}
+                Ayuda a tu colega a mejorar el examen en todo lo que te pregunte
+                `}
+            />
         </div>
     )
 }

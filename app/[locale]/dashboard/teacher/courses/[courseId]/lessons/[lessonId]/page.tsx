@@ -53,7 +53,7 @@ export default async function TeacherLessonPage ({
                 />
             }
         >
-            <div className="flex-1 md:p-8 overflow-y-auto w-full space-y-4">
+            <div className="flex-1 md:p-8 container mx-auto overflow-y-auto w-full space-y-4">
                 <BreadcrumbComponent
                     links={[
                         { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },

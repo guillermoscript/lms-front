@@ -1,4 +1,5 @@
 import { getI18n } from '@/app/locales/server'
+import ChatBox from '@/components/chatbox/ChatBox'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import LessonForm from '@/components/dashboards/teacher/lessons/LessonForm'
 import { createClient } from '@/utils/supabase/server'
@@ -22,10 +23,17 @@ export default async function CreateLessonPage ({
         throw new Error(course.error.message)
     }
 
+    const user = await supabase.auth.getUser()
+
+    const profile = await supabase
+        .from('profiles')
+        .select('full_name,avatar_url')
+        .eq('id', user.data.user.id).single()
+
     const t = await getI18n()
     console.log(course)
     return (
-        <>
+        <div className="container mx-auto flex flex-col gap-4">
             <BreadcrumbComponent
                 links={[
                     { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
@@ -37,6 +45,10 @@ export default async function CreateLessonPage ({
             />
 
             <LessonForm params={params} />
-        </>
+            <ChatBox
+                profile={profile.data}
+                instructions={`Eres un profesor que esta creando lecciones para este curso ${course.data.title}`}
+            />
+        </div>
     )
 }
