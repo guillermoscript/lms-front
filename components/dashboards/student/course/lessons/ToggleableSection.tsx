@@ -4,14 +4,34 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/utils'
 
-const ToggleableSection = ({ title, children, isOpen }: { title: JSX.Element; children: JSX.Element; isOpen: boolean }) => {
+const ToggleableSection = ({
+    title,
+    children,
+    isOpen,
+    cardClassName,
+}: {
+    title: JSX.Element
+    children: JSX.Element
+    isOpen: boolean
+    cardClassName?: string
+}) => {
     const [isExpanded, setIsExpanded] = useState(isOpen)
     const toggle = () => setIsExpanded(!isExpanded)
 
     return (
-        <Card className="mt-8">
-            <CardHeader className="flex justify-between items-center cursor-pointer md:cursor-default md:flex-row gap-2 md:justify-between" onClick={toggle}>
+        <Card className={
+            cn(
+                'mt-8',
+                cardClassName
+            )
+        }
+        >
+            <CardHeader
+                className="flex justify-between items-center cursor-pointer md:cursor-default md:flex-row gap-2 md:justify-between"
+                onClick={toggle}
+            >
                 <CardTitle className="text-2xl">{title}</CardTitle>
                 {isExpanded ? <ChevronUp /> : <ChevronDown />}
             </CardHeader>
