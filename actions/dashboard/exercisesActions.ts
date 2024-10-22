@@ -1,5 +1,8 @@
 'use server'
+import { openai } from '@ai-sdk/openai'
+import { convertToCoreMessages, generateText, Message } from 'ai'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
@@ -41,7 +44,6 @@ export async function deleteMessagesAndCompletitionOfExerciseAction(data: { exer
         console.log(userData.error)
         return createResponse('error', 'Error fetching user', null, 'Error fetching user')
     }
-
 
     const completionsData = await supabase
         .from('exercise_completions')
@@ -102,7 +104,6 @@ export async function editExerciseMessageAction(data: { exerciseId: string, mess
             .eq('message', message)
             .eq('user_id', userData.data.user.id)
 
-
     if (messageData.error) {
         console.log(messageData.error)
         return createResponse('error', 'Error updating message', null, 'Error updating message')
@@ -150,4 +151,89 @@ export async function deleteExerciseMessageAction(data: { exerciseId: string, me
 
     revalidatePath('/dashboard/student/courses/[courseId]/exercises/[exerciseId]')
     return createResponse('success', 'Message deleted successfully', null, null)
+}
+
+export async function actionButtonsAction(data: { exerciseId: string, messages: Message[] }) {
+    const { messages, exerciseId } = data
+
+    if (!exerciseId || !messages) {
+        return createResponse('error', 'Exercise id and action are required', null, 'Exercise id and action are required')
+    }
+
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        console.log(userData.error)
+        return createResponse('error', 'Error fetching user', null, 'Error fetching user')
+    }
+
+    let isApproved = false
+
+    const result = await generateText({
+        // model: google('gemini-1.5-pro-latest'),
+        model: openai('gpt-4o-mini-2024-07-18'),
+        messages: convertToCoreMessages(messages),
+        temperature: 0.3,
+        system: 'Evaluate the student last message. If the student answer is correct, mark the exercise as completed. If the student answer is incorrect, mark the exercise as not completed.',
+        tools: {
+            makeUserAssigmentCompleted: {
+                description: 'Function to mark the exercise as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the exercise. Respond using the language of the student.',
+                parameters: z.object({
+                    feedback: z.string().describe('Feedback for the student. Tell them what they did right and what they can improve, if needed.'),
+                }),
+                execute: async ({ feedback }) => {
+                    console.log('feedback', feedback)
+                    const save = await supabase.from('exercise_completions').insert(
+                        {
+                            exercise_id: +exerciseId,
+                            user_id: userData.data.user.id,
+                            completed_by: userData.data.user.id,
+                        }
+                    )
+
+                    const saveText = await supabase.from('exercise_messages').insert(
+                        {
+                            exercise_id: +exerciseId,
+                            user_id: userData.data.user.id,
+                            role: 'assistant',
+                            message: feedback,
+                        }
+                    )
+
+                    isApproved = true
+
+                    return feedback
+                }
+            },
+            userAssigmentIsNotCompleted: {
+                description: 'Function to mark the exercise as not completed, you must only call it when the student code is incorrect or not working properly. Respond using the language of the student.',
+                parameters: z.object({
+                    feedback: z.string().describe('Feedback for the student. Tell them what they did wrong and how they can improve.'),
+                }),
+                execute: async ({ feedback }) => {
+                    // const saveText = await supabase.from('exercise_messages').insert(
+                    //     {
+                    //         exercise_id: +exerciseId,
+                    //         user_id: userData.data.user.id,
+                    //         role: 'assistant',
+                    //         message: feedback,
+                    //     }
+                    // )
+                    console.log('feedback2', feedback)
+                    return feedback
+                }
+            },
+        },
+        toolChoice: 'required',
+    })
+
+    console.log('text', result)
+
+    return createResponse('success', 'Action buttons clicked successfully', {
+        // result: result.responseMessages,
+        isApproved,
+        toolResult: result.toolResults[0].result,
+    }, null)
 }
