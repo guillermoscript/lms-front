@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
+import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
 import DeleteExerciseAlert from '@/components/dashboards/teacher/exercises/DeleteExerciseAlert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -110,11 +111,12 @@ export default async function ExercisePageTeacher({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle>{t('dashboard.teacher.ExercisePageTeacher.exerciseDetails')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                <ToggleableSection
+                    isOpen
+                    title={t('dashboard.teacher.ExercisePageTeacher.exerciseDetails')}
+                    cardClassName='md:col-span-2'
+                >
+                    <>
                         <p className=" mb-4">{exercise.instructions}</p>
                         <div className="flex flex-wrap gap-2 mb-4">
                             <Badge variant="secondary">{exercise.exercise_type}</Badge>
@@ -134,9 +136,8 @@ export default async function ExercisePageTeacher({
                                 markdown={exercise.system_prompt || ''}
                             />
                         </div>
-                    </CardContent>
-                </Card>
-
+                    </>
+                </ToggleableSection>
                 <Card>
                     <CardHeader>
                         <CardTitle>{t('dashboard.teacher.ExercisePageTeacher.performanceMetrics')}</CardTitle>
