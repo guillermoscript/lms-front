@@ -1,10 +1,10 @@
-import { Message } from 'ai/react'
-import { Check, Loader, Send } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { actionButtonsAction } from '@/actions/dashboard/exercisesActions'
 import { useScopedI18n } from '@/app/locales/client'
+import ApprovalButton from '@/components/dashboards/Common/chat/ApprovalButton'
+import useApprovalHandler from '@/components/dashboards/Common/chat/hooks/useApprovalHandler'
 import MarkdownEditor from '@/components/dashboards/Common/chat/MarkdownEditor'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -29,84 +29,53 @@ export default function ExercisesTextEditors({
     isNotApproved,
     setIsNotApproved,
     setNotApprovedMessage,
-}: {
-    isLoading: boolean
-    stop: () => void
-    text: string
-    input: string
-    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-    handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
-    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-    files: FileList | null
-    removeFile: () => void
-    fileInputRef: React.RefObject<HTMLInputElement>
-    append: (message: Message) => void
-    messages: Message[]
-    exerciseId: string
-    isCompleted: boolean
-    setIsCompleted: (isCompleted: boolean) => void
-    isNotApproved: boolean
-    setIsNotApproved: (isNotApproved: boolean) => void
-    setNotApprovedMessage: (notApprovedMessage: string) => void
 }) {
     const t = useScopedI18n('ExercisesTextEditors')
-    const [isLoading, setIsLoading] = useState(loading)
 
-    useEffect(() => {
-        // after 5 seconds of the isNotApproved state being true, it will be set to false
-        const timeout = setTimeout(() => {
-            setIsNotApproved(false)
-        }, 15000)
+    const { isLoading, handleCheckAnswer } = useApprovalHandler({
+        exerciseId,
+        messages,
+        setIsCompleted,
+        setIsNotApproved,
+        setNotApprovedMessage,
+        t,
+        callback: async () => {
+            const res = await actionButtonsAction({
+                exerciseId,
+                messages,
+            })
 
-        return () => clearTimeout(timeout)
-    }, [isNotApproved])
+            if (res.error) {
+                toast.error(t('errorLoadingExercise'))
+            }
+            if (res.data.isApproved === false) {
+                toast.error(t('errorExerciseNotApproved'))
+                setIsNotApproved(true)
+                setNotApprovedMessage(res.data.toolResult)
+            }
+
+            if (res.data.isApproved) {
+                setIsCompleted(true)
+            }
+        },
+    })
+
+    const handleMarkdownCallback = (message) => {
+        append(message)
+        removeFile()
+    }
 
     return (
         <>
             {messages.length > 1 && (
-                <Button
-                    onClick={async () => {
-                        setIsLoading(true)
-                        try {
-                            const res = await actionButtonsAction({
-                                exerciseId,
-                                messages,
-                            })
-
-                            console.log(res)
-
-                            if (res.error) {
-                                toast.error(t('errorLoadingExercise'))
-                            }
-                            if (res.data.isApproved === false) {
-                                toast.error(t('errorExerciseNotApproved'))
-                                setIsNotApproved(true)
-                                setNotApprovedMessage(res.data.toolResult)
-                            }
-
-                            if (res.data.isApproved) {
-                                setIsCompleted(true)
-                            }
-                        } catch (error) {
-                            console.error(error)
-                            toast.error(t('errorLoadingExercise'))
-                            setIsNotApproved(true)
-                        } finally {
-                            setIsLoading(false)
-                        }
-                    }}
-                    disabled={isLoading || isCompleted}
-                    className="mt-4"
+                <ApprovalButton
+                    isLoading={isLoading}
+                    isCompleted={isCompleted}
+                    onCheckAnswer={handleCheckAnswer}
+                    disabled={loading}
                 >
-                    {isLoading ? (
-                        <Loader className="animate-spin" />
-                    ) : (
-                        <>
-                            {t('checkAnswer')}
-                            <Check className="h-4 w-4 ml-2" />
-                        </>
-                    )}
-                </Button>
+                    {t('checkAnswer')}
+                </ApprovalButton>
             )}
             <Tabs defaultValue="simple" className="w-full py-4">
                 <div className="flex gap-4 flex-wrap">
@@ -123,10 +92,7 @@ export default function ExercisesTextEditors({
                     <MarkdownEditor
                         isLoading={isLoading}
                         stop={stop}
-                        callbackFunction={(e) => {
-                            append(e as Message)
-                            removeFile()
-                        }}
+                        callbackFunction={handleMarkdownCallback}
                         text={text}
                     />
                 </TabsContent>
@@ -149,28 +115,12 @@ export default function ExercisesTextEditors({
                                 rows={6}
                             />
                             <div className="flex items-center space-x-2">
-                                {/* <Button
-                                disabled={isLoading}
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <Paperclip className="h-4 w-4" />
-                            </Button> */}
                                 <Button disabled={isLoading} type="submit">
                                     <Send className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
-                        {/* <input
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        multiple
-                        disabled={isLoading}
-                        ref={fileInputRef}
-                    /> */}
+
                         {files && (
                             <div className="mt-2 flex items-center">
                                 <span className="text-sm text-gray-400">
