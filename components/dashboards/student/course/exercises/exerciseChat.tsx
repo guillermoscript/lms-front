@@ -14,6 +14,7 @@ import { useScopedI18n } from '@/app/locales/client'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import MessageItem from '@/components/dashboards/Common/chat/MesssageItem'
+import NotApprovedMessage from '@/components/dashboards/Common/chat/NotApprovedMessage'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 
@@ -47,7 +48,6 @@ export default function ExerciseChat({
         null
     )
     const [editedContent, setEditedContent] = useState('')
-    const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
     const [copiedText, copy] = useCopyToClipboard()
 
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
@@ -250,7 +250,6 @@ export default function ExerciseChat({
                                         }
                                         onCopy={() => {
                                             copy(m.content)
-                                            setCopiedMessageId(m.id)
                                             toast.success(
                                                 t('copiedToClipboard')
                                             )
@@ -265,34 +264,50 @@ export default function ExerciseChat({
                                         isCompleted={isCompleted}
                                         toolInvocations={
                                             <>
-                                                {m.toolInvocations?.map((toolInvocation) => {
-                                                    if (
-                                                        toolInvocation.toolName ===
-                                                            'makeUserAssigmentCompleted' &&
-                                                        'result' in toolInvocation
-                                                    ) {
-                                                        return (
-                                                            <div
-                                                                key={toolInvocation.toolCallId}
-                                                                className="mt-3"
-                                                            >
-                                                                {toolInvocation.result}
-                                                            </div>
-                                                        )
-                                                    }
+                                                {m.toolInvocations?.map(
+                                                    (toolInvocation) => {
+                                                        if (
+                                                            toolInvocation.toolName ===
+                                                                'makeUserAssigmentCompleted' &&
+                                                            'result' in
+                                                                toolInvocation
+                                                        ) {
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        toolInvocation.toolCallId
+                                                                    }
+                                                                    className="mt-3"
+                                                                >
+                                                                    {
+                                                                        toolInvocation.result
+                                                                    }
+                                                                </div>
+                                                            )
+                                                        }
 
-                                                    if (
-                                                        toolInvocation.toolName === 'provideHint' &&
-                                                        'result' in toolInvocation
-                                                    ) {
-                                                        // show markdown formatted hint
-                                                        return (
-                                                            <ViewMarkdown key={toolInvocation.toolCallId} markdown={toolInvocation.result} />
-                                                        )
-                                                    }
+                                                        if (
+                                                            toolInvocation.toolName ===
+                                                                'provideHint' &&
+                                                            'result' in
+                                                                toolInvocation
+                                                        ) {
+                                                            // show markdown formatted hint
+                                                            return (
+                                                                <ViewMarkdown
+                                                                    key={
+                                                                        toolInvocation.toolCallId
+                                                                    }
+                                                                    markdown={
+                                                                        toolInvocation.result
+                                                                    }
+                                                                />
+                                                            )
+                                                        }
 
-                                                    return null
-                                                })}
+                                                        return null
+                                                    }
+                                                )}
                                             </>
                                         }
                                     />
@@ -301,21 +316,17 @@ export default function ExerciseChat({
                         )}
                         {isLoading && <ChatLoadingSkeleton />}
                         <div ref={scrollAnchorRef}></div>
-                        {/* Scroll Anchor */}
                     </div>
                 </>
-                {
-                    isNotApproved && (
-                        <div className="text-center text-red-500 my-4 p-4 border border-dashed border-red-300 rounded-lg">
-                            <h2 className="text-lg font-semibold mb-2 flex items-center justify-center">
-                                {t('exerciseNotApproved')}
-                            </h2>
-                            <p className="text-sm mb-4">
-                                {notApprovedMessage}
-                            </p>
-                        </div>
-                    )
-                }
+                {isNotApproved && (
+                    <NotApprovedMessage
+                        message={notApprovedMessage}
+                        onClose={() => {
+                            setIsNotApproved(false)
+                            setNotApprovedMessage('')
+                        }}
+                    />
+                )}
                 {isCompleted ? (
                     <SuccessMessage message={t('exerciseCompleted')} />
                 ) : (
