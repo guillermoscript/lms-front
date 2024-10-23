@@ -744,5 +744,8 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         filesSelected: '{count} file(s) selected',
         remove: 'Remove',
         checkAnswer: 'Check Answer',
+    },
+    NotApprovedMessage: {
+        tile: 'Exercise not approved',
     }
 } as const
