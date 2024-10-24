@@ -1,7 +1,10 @@
 
 'use server'
+import { openai } from '@ai-sdk/openai'
+import { convertToCoreMessages, generateText, Message } from 'ai'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
@@ -377,4 +380,76 @@ export async function studentResetAiTaskConversation({
     }
 
     return createResponse('success', 'Message updated successfully', null, null)
+}
+
+export async function actionButtonsActionLessons(data: { lessonId: number, messages: Message[] }) {
+    const { messages, lessonId } = data
+
+    if (!lessonId || !messages) {
+        return createResponse('error', 'Lesson id and action are required', null, 'Lesson id and action are required')
+    }
+
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        console.log(userData.error)
+        return createResponse('error', 'Error fetching user', null, 'Error fetching user')
+    }
+
+    let isApproved = false
+
+    const result = await generateText({
+        model: openai('gpt-4o-mini-2024-07-18'),
+        messages: convertToCoreMessages(messages),
+        temperature: 0.3,
+        system: 'Evaluate the student last message. If the student answer is correct, mark the Lesson as completed. If the student answer is incorrect, mark the Lesson as not completed.',
+        tools: {
+            makeUserAssigmentCompleted: {
+                description: 'Function to mark the Lesson as completed, you must only call it when the student code is correct and working properly satisfying the requirements of the Lesson. Respond using the language of the student.',
+                parameters: z.object({
+                    feedback: z.string().describe('Feedback for the student. Tell them what they did right and what they can improve, if needed.'),
+                }),
+                execute: async ({ feedback }) => {
+                    console.log('feedback', feedback)
+                    const save = await supabase.from('lesson_completions').insert(
+                        {
+                            lesson_id: +lessonId,
+                            user_id: userData.data.user.id,
+                        }
+                    )
+
+                    const saveText = await supabase.from('lessons_ai_task_messages').insert(
+                        {
+                            lesson_id: +lessonId,
+                            user_id: userData.data.user.id,
+                            role: 'assistant',
+                            message: feedback,
+                        }
+                    )
+
+                    isApproved = true
+
+                    return feedback
+                }
+            },
+            userAssigmentIsNotCompleted: {
+                description: 'Function to mark the Lesson as not completed, you must only call it when the student code is incorrect or not working properly. Respond using the language of the student.',
+                parameters: z.object({
+                    feedback: z.string().describe('Feedback for the student. Tell them what they did wrong and how they can improve.'),
+                }),
+                execute: async ({ feedback }) => {
+                    console.log('feedback2', feedback)
+                    return feedback
+                }
+            },
+        },
+        toolChoice: 'required',
+    })
+
+    return createResponse('success', 'Action buttons clicked successfully', {
+        isApproved,
+        toolResult: result.toolResults[0].result,
+    }, null)
 }

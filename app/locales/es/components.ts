@@ -740,5 +740,8 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         filesSelected: '{count} archivo(s) seleccionado(s)',
         remove: 'Eliminar',
         checkAnswer: 'Verificar respuesta',
+    },
+    NotApprovedMessage: {
+        tile: '¡Oh no! Este ejercicio no ha sido aprobado',
     }
 } as const
