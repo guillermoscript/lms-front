@@ -23,6 +23,7 @@ import { Separator } from '@/components/ui/separator'
 
 import ExerciseSuggestions from './ExercisesSuggestions'
 import LessonLoaderView from './LessonLoaderView'
+import MarkLessonsAsCompleted from './MarkLessonsAsCompleted'
 import ResetTaskAIConversation from './ResetTaskAIConversation'
 import TaskMessageTour from './TaskMessageTour'
 import ToggleableSection from './ToggleableSection'
@@ -131,7 +132,7 @@ export default async function EnhancedLessonContent({
                 </Card>
             )}
 
-            {lessonsAiTasks?.system_prompt && (
+            {lessonsAiTasks?.system_prompt ? (
                 <ToggleableSection
                     isOpen={false}
                     title={t('LessonContent.aiTask')}
@@ -185,6 +186,13 @@ export default async function EnhancedLessonContent({
                         </CardContent>
                     </>
                 </ToggleableSection>
+            ) : (
+                <div className="mt-8 flex justify-center">
+                    <MarkLessonsAsCompleted
+                        isLessonAiTaskCompleted={isLessonAiTaskCompleted}
+                        lessonId={lessonData.id}
+                    />
+                </div>
             )}
 
             <div className="mt-8">
