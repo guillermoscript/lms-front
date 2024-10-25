@@ -743,5 +743,11 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
     },
     NotApprovedMessage: {
         tile: '¡Oh no! Este ejercicio no ha sido aprobado',
+    },
+    MarkLessonsAsCompleted: {
+        error: 'Error al marcar la lección como completada',
+        success: 'Lección marcada como completada con éxito',
+        markAsCompleted: 'Marcar como Completada',
+        lessonCompleted: 'Lección Completada',
     }
 } as const

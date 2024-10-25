@@ -747,5 +747,11 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
     },
     NotApprovedMessage: {
         tile: 'Exercise not approved',
-    }
+    },
+    MarkLessonsAsCompleted: {
+        error: 'Error marking lesson as completed',
+        success: 'Lesson marked as completed successfully',
+        markAsCompleted: 'Mark as Completed',
+        lessonCompleted: 'Lesson Completed',
+    },
 } as const

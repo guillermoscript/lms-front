@@ -146,8 +146,8 @@ export async function continueConversation (
     })
 
     const result = await streamUI({
-        model: google('gemini-1.5-flash-latest'),
-        // model: openai('gpt-4o-mini'),
+        model: google('gemini-1.5-pro-latest'),
+        // model: openai('gpt-4o'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
