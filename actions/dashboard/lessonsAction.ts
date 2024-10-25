@@ -453,3 +453,27 @@ export async function actionButtonsActionLessons(data: { lessonId: number, messa
         toolResult: result.toolResults[0].result,
     }, null)
 }
+
+export async function markLessonAsCompleted(lessonId: number) {
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        console.log('Error getting user data', userData.error)
+        return createResponse('error', 'Error getting user data', null, 'Error getting user data')
+    }
+
+    const completionData = await supabase.from('lesson_completions').insert({
+        lesson_id: lessonId,
+        user_id: userData.data.user.id,
+        completed_at: new Date().toISOString()
+    })
+
+    if (completionData.error) {
+        console.log('Error marking lesson as completed', completionData.error)
+        return createResponse('error', 'Error marking lesson as completed', null, 'Error marking lesson as completed')
+    }
+
+    return createResponse('success', 'Lesson marked as completed', completionData.data, null)
+}
