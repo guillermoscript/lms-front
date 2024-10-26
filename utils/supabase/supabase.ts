@@ -66,15 +66,7 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "chats_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       comment_flags: {
         Row: {
@@ -243,13 +235,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "courses_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "courses_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -307,13 +292,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscriptions"
             referencedColumns: ["subscription_id"]
-          },
-          {
-            foreignKeyName: "enrollments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -425,13 +403,6 @@ export type Database = {
             referencedColumns: ["exam_id"]
           },
           {
-            foreignKeyName: "exam_scores_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "exam_scores_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
@@ -470,13 +441,6 @@ export type Database = {
             referencedRelation: "exams"
             referencedColumns: ["exam_id"]
           },
-          {
-            foreignKeyName: "exam_submissions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       exam_views: {
@@ -505,13 +469,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exams"
             referencedColumns: ["exam_id"]
-          },
-          {
-            foreignKeyName: "exam_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -563,13 +520,6 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
-          {
-            foreignKeyName: "exams_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       exercise_completions: {
@@ -599,24 +549,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "exercise_completions_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "exercise_completions_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exercise_completions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -725,13 +661,6 @@ export type Database = {
             referencedColumns: ["course_id"]
           },
           {
-            foreignKeyName: "exercises_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "exercises_lesson_id_fkey"
             columns: ["lesson_id"]
             isOneToOne: false
@@ -775,13 +704,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "grades_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "grades_submission_id_fkey"
@@ -921,13 +843,6 @@ export type Database = {
             referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lesson_passed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       lesson_views: {
@@ -955,13 +870,6 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lesson_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1053,13 +961,6 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_ai_task_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1165,15 +1066,7 @@ export type Database = {
           shrot_message?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       permissions: {
         Row: {
@@ -1359,15 +1252,7 @@ export type Database = {
           username?: string | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       question_options: {
         Row: {
@@ -1429,15 +1314,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "reviews_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       role_permissions: {
         Row: {
@@ -1514,13 +1391,6 @@ export type Database = {
             referencedRelation: "assignments"
             referencedColumns: ["assignment_id"]
           },
-          {
-            foreignKeyName: "submissions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       subscriptions: {
@@ -1593,13 +1463,6 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["transaction_id"]
           },
-          {
-            foreignKeyName: "subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       ticket_messages: {
@@ -1632,13 +1495,6 @@ export type Database = {
             referencedRelation: "tickets"
             referencedColumns: ["ticket_id"]
           },
-          {
-            foreignKeyName: "ticket_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       tickets: {
@@ -1669,15 +1525,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tickets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       transactions: {
         Row: {
@@ -1728,13 +1576,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["product_id"]
           },
-          {
-            foreignKeyName: "transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -1753,15 +1594,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -1791,25 +1624,11 @@ export type Database = {
             referencedColumns: ["exam_id"]
           },
           {
-            foreignKeyName: "exam_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "exams_course_id_fkey"
             columns: ["exam_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "exams_created_by_fkey"
-            columns: ["exam_created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1841,13 +1660,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lesson_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "lessons_course_id_fkey"
             columns: ["lesson_course_id"]
             isOneToOne: false
@@ -1867,15 +1679,7 @@ export type Database = {
           review_id: number | null
           review_text: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
@@ -1894,14 +1698,23 @@ export type Database = {
         }
         Returns: number
       }
-      create_notification: {
-        Args: {
-          _user_id: string
-          _notification_type: string
-          _message: string
-        }
-        Returns: undefined
-      }
+      create_notification:
+        | {
+            Args: {
+              _user_id: string
+              _notification_type: Database["public"]["Enums"]["notification_types"]
+              _message: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _user_id: string
+              _notification_type: string
+              _message: string
+            }
+            Returns: undefined
+          }
       create_transaction_for_renewal: {
         Args: {
           sub_id: number
@@ -2002,6 +1815,7 @@ export type Database = {
         | "comment"
         | "exam_review"
         | "order_renewal"
+        | "subscription_renewal"
       reactions: "like" | "dislike" | "boring" | "funny"
       review_status: "approved" | "pending" | "failed"
       reviewable: "lessons" | "courses" | "exams"
@@ -2101,4 +1915,19 @@ export type Enums<
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof PublicSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
