@@ -358,7 +358,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION create_notification(
     _user_id UUID,
-    _notification_type VARCHAR(50),
+    _notification_type notification_types,
     _message TEXT
 ) RETURNS VOID AS $$
 BEGIN
@@ -375,8 +375,8 @@ BEGIN
         SELECT * FROM identify_subscriptions_due_for_renewal(INTERVAL '15 days')
     LOOP
         PERFORM create_notification(
-            sub_due.user_id, 
-            'subscription_renewal', 
+            sub_due.user_id,
+            'subscription_renewal'::notification_types,  -- Explicitly cast to notification_types
             'Your subscription is nearing expiry. Click to renew.'
         );
     END LOOP;

@@ -35,7 +35,8 @@ CREATE TYPE public.notification_types AS ENUM (
     'comment_reply',
     'comment',
     'exam_review',
-    'order_renewal'
+    'order_renewal',
+    'subscription_renewal'
 );
 
 CREATE TYPE public.reactions AS ENUM (
