@@ -443,7 +443,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         totalCourses: 'Cursos Totales',
         averageProgress: 'Progreso Promedio',
         upcomingDeadlines: 'Próximas Fechas Límite',
-        unreadMessages: 'Mensajes No Leídos',
+        unreadMessages: 'Chats Creados',
         courseProgress: 'Progreso del Curso',
         viewAllCourses: 'Ver Todos los Cursos',
         recentActivity: 'Actividad Reciente',

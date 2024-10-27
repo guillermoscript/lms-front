@@ -439,7 +439,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         totalCourses: 'Total Courses',
         averageProgress: 'Average Progress',
         upcomingDeadlines: 'Upcoming Deadlines',
-        unreadMessages: 'Unread Messages',
+        unreadMessages: 'Chats Created',
         courseProgress: 'Course Progress',
         viewAllCourses: 'View All Courses',
         recentActivity: 'Recent Activity',
