@@ -66,6 +66,7 @@ export default {
     },
     LessonContent: {
         video: 'Video',
+        embed: 'Codigo',
         summary: 'Resumen',
         aiTask: 'Tarea de IA',
         aiTaskCompleted: 'Tarea de IA completada',

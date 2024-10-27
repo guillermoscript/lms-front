@@ -215,6 +215,7 @@ export default {
                 sequence: 'Sequence',
                 video: 'Video',
                 embedVideo: 'Embed Video',
+                embed: 'Embed',
                 content: 'Content',
                 systemPrompt: 'System Prompt',
                 description: 'Description',
