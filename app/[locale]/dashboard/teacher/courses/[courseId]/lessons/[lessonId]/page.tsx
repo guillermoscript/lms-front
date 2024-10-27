@@ -38,7 +38,7 @@ export default async function TeacherLessonPage ({
         throw new Error(lesson.error.message)
     }
     const initialMessages = [
-        { role: 'system', content: lesson.data?.lessons_ai_tasks[0].system_prompt, id: generateId() },
+        { role: 'system', content: lesson.data?.lessons_ai_tasks[0]?.system_prompt, id: generateId() },
     ]
 
     const t = await getI18n()
@@ -150,7 +150,7 @@ export default async function TeacherLessonPage ({
 
                     <Separator />
 
-                    {lesson.data?.lessons_ai_tasks[0].system_prompt && (
+                    {lesson.data?.lessons_ai_tasks[0]?.system_prompt && (
                         <>
                             <h3 className="text-xl font-semibold mt-4">
                                 {t('dashboard.teacher.TeacherLessonPage.systemPrompt')}
