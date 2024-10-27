@@ -1,6 +1,6 @@
 
 import dayjs from 'dayjs'
-import { CheckCircle, PlayCircle } from 'lucide-react'
+import { CheckCircle, Code2, PlayCircle } from 'lucide-react'
 import Image from 'next/image'
 
 import { getI18n } from '@/app/locales/server'
@@ -135,9 +135,12 @@ export default async function EnhancedLessonContent({
             {lessonData?.embed_code && (
                 <ToggleableSection
                     isOpen
-                    title={<div className="flex items-center gap-2">
-                        <PlayCircle className="h-6 w-6" />{t('LessonContent.embed')}
-                    </div>}
+                    title={
+                        <div className="flex items-center gap-2">
+                            <Code2 className="h-6 w-6" />{t('LessonContent.embed')}
+                        </div>
+                    }
+                    cardClassName='p-0'
                 >
                     <div className="flex flex-col mb-10 gap-4">
                         <h3 className="text-xl font-semibold mt-4">
