@@ -2,7 +2,6 @@
 import {
     BarChart,
     Book,
-    Calendar,
     ChevronRight,
     Clock,
     MessageCircle,
@@ -12,7 +11,6 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -148,6 +146,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 .includes(searchTerm.toLowerCase())
     )
 
+    const totalLessonsCompleted = userCourses.reduce((acc, course) => {
+        const totalLessons = course.course.lessons.length
+        const completedLessons = course.course.lessons.filter(
+            (lesson) => lesson.lesson_completions.length > 0
+        ).length
+        return acc + completedLessons
+    }
+    , 0)
+
+    const totalLessons = userCourses.reduce((acc, course) => {
+        return acc + course.course.lessons.length
+    }
+    , 0)
+
+    const progress = ((totalLessonsCompleted / totalLessons) * 100).toLocaleString('en-US', { maximumFractionDigits: 2 })
+
     const t = useScopedI18n('StudentDashboard')
 
     return (
@@ -157,10 +171,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <h1 className="text-3xl font-bold">{t('welcome')}</h1>
                     <p className="text-muted-foreground">{t('dashboardDescription')}</p>
                 </div>
-                <Avatar className="h-12 w-12">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="Student" />
-                    <AvatarFallback>ST</AvatarFallback>
-                </Avatar>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -179,16 +189,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <BarChart className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">68%</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">{t('upcomingDeadlines')}</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">3</div>
+                        <div className="text-2xl font-bold">{progress}%</div>
                     </CardContent>
                 </Card>
                 <Card>
