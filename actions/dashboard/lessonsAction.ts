@@ -53,9 +53,10 @@ export async function editLessonsAction (prevDate: any, data: FormData) {
     if (system_prompt) {
         const lessonAiAssignmentData = await supabase
             .from('lessons_ai_tasks')
-            .update({
+            .upsert({
                 system_prompt,
-                task_instructions
+                task_instructions,
+                lesson_id: +lessonId
             })
             .eq('lesson_id', lessonId)
 
@@ -133,6 +134,12 @@ export async function createLessonsAction (prevDate: any, data: FormData) {
             system_prompt,
             task_instructions
         })
+
+    if (lessonAiAssignmentData.error) {
+        return createResponse('error', 'Error creating lesson', null, 'Error creating lesson')
+    }
+
+    console.log('lessonData', lessonData)
 
     redirect(`/dashboard/teacher/courses/${course_id}/lessons/${lessonData.data.id}`)
 }

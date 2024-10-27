@@ -217,6 +217,7 @@ export default {
                 video: 'Video',
                 embedVideo: 'Insertar video',
                 description: 'Descripción',
+                embed: 'Embebido',
                 content: 'Contenido',
                 systemPrompt: 'Sistema de sugerencias',
                 tryItOut: 'Pruébalo',

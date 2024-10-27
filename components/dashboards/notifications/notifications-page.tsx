@@ -2,7 +2,7 @@
 
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { Bell, ChevronRight, CreditCard, Eye, EyeOff, FileText, MessageSquare, Search, Settings, X } from 'lucide-react'
+import { Bell, ChevronRight, CreditCard, Eye, EyeOff, FileText, MessageSquare, Search, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -113,9 +113,6 @@ export default function NotificationsPage() {
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">{t('title')}</h1>
-                <Button variant="outline" size="icon">
-                    <Settings className="h-4 w-4" />
-                </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
