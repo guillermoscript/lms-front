@@ -754,4 +754,12 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         markAsCompleted: 'Mark as Completed',
         lessonCompleted: 'Lesson Completed',
     },
+    EmbedCodeSection: {
+        embed: 'Embed Code',
+        description: `## This is the code section.\n
+        There is a code editor where you can write code and see the output in real-time, this way you can test your code and see the results.\n
+        Also if you want, you can go the page where the code is hosted and see the code in a bigger screen.\n
+        The idea is for you to test the code and see the results in real-time. This is an optinal section, you can use it if you want.
+        For a better experience, use a desktop or laptop computer.`,
+    },
 } as const

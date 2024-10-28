@@ -753,5 +753,13 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         success: 'Lección marcada como completada con éxito',
         markAsCompleted: 'Marcar como Completada',
         lessonCompleted: 'Lección Completada',
+    },
+    EmbedCodeSection: {
+        embed: 'Codigo Incrustado',
+        description: `Esta es la sección de código.\n
+        Hay un editor de código donde puedes escribir código y ver la salida en tiempo real, de esta manera puedes probar tu código y ver los resultados.\n
+        Además, si lo deseas, puedes ir a la página donde se aloja el código y ver el código en una pantalla más grande.\n
+        La idea es que pruebes el código y veas los resultados en tiempo real. Esta es una sección opcional, puedes usarla si lo deseas.
+        Para una mejor experiencia, te recomendamos que uses una laptop o una computadora de escritorio.`,
     }
 } as const
