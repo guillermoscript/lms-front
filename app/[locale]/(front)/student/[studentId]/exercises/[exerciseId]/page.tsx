@@ -1,6 +1,6 @@
 import { getI18n } from '@/app/locales/server'
-import { createClient } from '@/utils/supabase/server'
 import StudentPublicExercisePage from '@/components/front/StudentPublicExercisePage'
+import { createClient } from '@/utils/supabase/server'
 
 export default async function ExerciseStudentPage({
     params,
@@ -25,7 +25,6 @@ export default async function ExerciseStudentPage({
             ascending: true,
         })
         .single()
-
 
     const profile = await supabase
         .from('profiles')

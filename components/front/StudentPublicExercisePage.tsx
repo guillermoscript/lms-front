@@ -1,19 +1,19 @@
 'use client'
 
+import dayjs from 'dayjs'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Clock } from 'lucide-react'
 import React from 'react'
 
-import dayjs from 'dayjs'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { Separator } from '@/components/ui/separator'
-
 import { useScopedI18n } from '@/app/locales/client'
+import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Progress } from '@/components/ui/progress'
-import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
+import { Separator } from '@/components/ui/separator'
+
 import { SuccessMessage } from '../dashboards/Common/chat/chat'
 
 export default function StudentPublicExercisePage({

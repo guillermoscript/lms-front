@@ -1,9 +1,9 @@
 import { getI18n } from '@/app/locales/server'
+import ExerciseCard from '@/components/dashboards/exercises/ExerciseCard'
 import StudentExercisePage from '@/components/dashboards/exercises/StudentExercisePage'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import ExerciseCard from '@/components/dashboards/exercises/ExerciseCard'
-import { createClient } from '@/utils/supabase/server'
 import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
+import { createClient } from '@/utils/supabase/server'
 
 export default async function ExerciseStudentPage({
     params,
@@ -39,7 +39,7 @@ export default async function ExerciseStudentPage({
     // search for other 3 exercises
     const exercises = await supabase
         .from('exercise_view')
-        .select(`*,exercise_completions(id),exercise_messages(id)`)
+        .select('*,exercise_completions(id),exercise_messages(id)')
         .eq('course_id', params.courseId)
         .neq('id', params.exerciseId)
         .eq('exercise_completions.user_id', userData?.data.user.id)
@@ -92,9 +92,9 @@ export default async function ExerciseStudentPage({
                 isExerciseCompletedSection={
                     <>
 
-<h3 className="text-lg font-bold">
-                        {t('StudentExercisePage.exerciseSuggestionsDescription')}
-                    </h3>
+                        <h3 className="text-lg font-bold">
+                            {t('StudentExercisePage.exerciseSuggestionsDescription')}
+                        </h3>
                         {exercises.data.map((exercise) => {
                             return (
                                 <ExerciseCard
