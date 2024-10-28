@@ -1,6 +1,6 @@
 
 import dayjs from 'dayjs'
-import { CheckCircle, Code2, PlayCircle } from 'lucide-react'
+import { CheckCircle, PlayCircle } from 'lucide-react'
 import Image from 'next/image'
 
 import { getI18n } from '@/app/locales/server'
@@ -21,6 +21,7 @@ import {
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 
+import EmbedCodeSection from './EmbedCodeSection'
 import ExerciseSuggestions from './ExercisesSuggestions'
 import LessonLoaderView from './LessonLoaderView'
 import MarkLessonsAsCompleted from './MarkLessonsAsCompleted'
@@ -133,35 +134,7 @@ export default async function EnhancedLessonContent({
             )}
 
             {lessonData?.embed_code && (
-                <ToggleableSection
-                    isOpen
-                    title={
-                        <div className="flex items-center gap-2">
-                            <Code2 className="h-6 w-6" />{t('LessonContent.embed')}
-                        </div>
-                    }
-                    cardClassName='p-0'
-                >
-                    <div className="flex flex-col mb-10 gap-4">
-                        <h3 className="text-xl font-semibold mt-4">
-                            {t('LessonContent.embed')}
-                        </h3>
-                        <iframe
-                            src={lessonData.embed_code}
-                            style={{
-                                width: '100%',
-                                height: 600,
-                                border: 0,
-                                borderRadius: 4,
-                                overflow: 'hidden',
-                            }}
-                            allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-                            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-                            className="resize "
-                        />
-                        <Separator />
-                    </div>
-                </ToggleableSection>
+                <EmbedCodeSection embed_code={lessonData.embed_code} />
             )}
 
             {lessonsAiTasks?.system_prompt ? (
