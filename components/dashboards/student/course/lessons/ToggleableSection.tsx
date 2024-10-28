@@ -11,25 +11,21 @@ const ToggleableSection = ({
     children,
     isOpen,
     cardClassName,
+    cardContentClassName,
 }: {
     title: JSX.Element
     children: JSX.Element
     isOpen: boolean
     cardClassName?: string
+    cardContentClassName?: string
 }) => {
     const [isExpanded, setIsExpanded] = useState(isOpen)
     const toggle = () => setIsExpanded(!isExpanded)
 
     return (
-        <Card className={
-            cn(
-                'mt-8',
-                cardClassName
-            )
-        }
-        >
+        <Card className={cn('mt-8', cardClassName)}>
             <CardHeader
-                className="flex justify-between items-center cursor-pointer md:cursor-default md:flex-row gap-2 md:justify-between"
+                className="flex justify-between items-center cursor-pointer md:cursor-default flex-row gap-2"
                 onClick={toggle}
             >
                 <CardTitle className="text-2xl">{title}</CardTitle>
@@ -43,7 +39,9 @@ const ToggleableSection = ({
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3 }}
                     >
-                        <CardContent>{children}</CardContent>
+                        <CardContent className={cardContentClassName}>
+                            {children}
+                        </CardContent>
                     </motion.div>
                 )}
             </AnimatePresence>
