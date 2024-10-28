@@ -42,6 +42,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
+          {
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       chats: {
@@ -277,6 +284,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
             referencedColumns: ["course_id"]
           },
           {
@@ -520,6 +534,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       exercise_completions: {
@@ -548,6 +569,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exercise_completions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercise_completions_exercise_id_fkey"
             columns: ["exercise_id"]
@@ -583,6 +611,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exercise_messages_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercise_messages_exercise_id_fkey"
             columns: ["exercise_id"]
@@ -661,6 +696,13 @@ export type Database = {
             referencedColumns: ["course_id"]
           },
           {
+            foreignKeyName: "exercises_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "exercises_lesson_id_fkey"
             columns: ["lesson_id"]
             isOneToOne: false
@@ -703,6 +745,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "grades_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
             referencedColumns: ["course_id"]
           },
           {
@@ -928,6 +977,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       lessons_ai_task_messages: {
@@ -1105,6 +1161,13 @@ export type Database = {
             referencedColumns: ["course_id"]
           },
           {
+            foreignKeyName: "plan_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "plan_courses_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -1178,6 +1241,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "product_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
             referencedColumns: ["course_id"]
           },
         ]
@@ -1630,6 +1700,13 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["exam_course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       distinct_lesson_views: {
@@ -1666,7 +1743,28 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
           },
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["lesson_course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
         ]
+      }
+      exercise_view: {
+        Row: {
+          course_id: number | null
+          description: string | null
+          difficulty_level:
+            | Database["public"]["Enums"]["difficulty_level"]
+            | null
+          exercise_type: Database["public"]["Enums"]["exercise_type"] | null
+          id: number | null
+          time_limit: number | null
+          title: string | null
+        }
+        Relationships: []
       }
       get_reviews: {
         Row: {
