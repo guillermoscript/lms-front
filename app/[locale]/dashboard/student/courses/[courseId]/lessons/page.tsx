@@ -108,7 +108,6 @@ function LessonCard({
     courseId,
     lessonId,
     completedText,
-    notStartedText,
     img
 }: {
     number: number
@@ -136,7 +135,7 @@ function LessonCard({
                     className="transition-transform duration-300 hover:scale-105"
                 />
                 <div className="absolute top-2 left-2 bg-white dark:bg-gray-800 rounded-full px-2 py-1 text-sm font-semibold">
-                    {`Lesson ${number}`}
+                   <p>{`Lesson ${number}`}</p>
                 </div>
             </div>
             <div className="p-6">

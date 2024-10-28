@@ -29,6 +29,7 @@ export default function NotEnrolledMessage({
     courseThumbnail,
 }: NotEnrolledMessageProps) {
     const t = useScopedI18n('NotEnrolledMessage')
+    
     return (
         <div className="container mx-auto px-4 py-8">
             <motion.div
