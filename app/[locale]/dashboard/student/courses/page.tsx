@@ -79,7 +79,7 @@ export default async function CourseSectionComponent() {
                         { href: '/dashboard/student', label: t('student') },
                         {
                             href: '/dashboard/student/courses/',
-                            label: t('courses'),
+                            label: t('course'),
                         },
                     ]}
                 />

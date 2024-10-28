@@ -3,9 +3,9 @@
 import { useState } from 'react'
 
 import { enrollUserToCourseAction } from '@/actions/dashboard/courseActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-import { useScopedI18n } from '@/app/locales/client'
 
 export default function EnrollButton ({ courseId }: { courseId: number }) {
     const { toast } = useToast()

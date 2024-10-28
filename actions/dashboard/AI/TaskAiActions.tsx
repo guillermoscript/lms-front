@@ -12,12 +12,12 @@ import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import Message from '@/components/dashboards/Common/chat/Message'
 import MessageContentWrapper from '@/components/dashboards/Common/chat/MessageContentWrapper'
 import EditTaksMessage from '@/components/dashboards/student/course/lessons/EditTaksMessage'
+import ExerciseSuggestions from '@/components/dashboards/student/course/lessons/ExercisesSuggestions'
 import RegenerateMessage from '@/components/dashboards/student/course/lessons/RegenerateMessage'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
-import ExerciseSuggestions from '@/components/dashboards/student/course/lessons/ExercisesSuggestions'
 
 export async function continueTaskAiConversation(
     input: string,

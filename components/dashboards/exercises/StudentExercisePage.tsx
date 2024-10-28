@@ -1,22 +1,16 @@
 'use client'
 
 import { generateId } from 'ai'
-import confetti from 'canvas-confetti'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-    Award,
-    ChevronDown,
     ChevronLeft,
-    ChevronUp,
     Clock,
     Loader,
     Share2,
     Trash,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useTheme } from 'next-themes'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { toast } from 'sonner'
 
 import { deleteMessagesAndCompletitionOfExerciseAction } from '@/actions/dashboard/exercisesActions'
@@ -33,7 +27,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Progress } from '@/components/ui/progress'
@@ -41,6 +35,7 @@ import { cn } from '@/utils'
 import { URL_OF_SITE } from '@/utils/const'
 
 import ExerciseChat from '../student/course/exercises/exerciseChat'
+import ToggleableSection from '../student/course/lessons/ToggleableSection'
 
 export default function EnhancedStudentExercisePage({
     exercise,
@@ -48,6 +43,9 @@ export default function EnhancedStudentExercisePage({
     exerciseId,
     isExerciseCompleted,
     profile,
+    children,
+    isExerciseCompletedSection,
+    studentId
 }: {
     exercise: any
     courseId: string
@@ -57,25 +55,12 @@ export default function EnhancedStudentExercisePage({
         full_name: string
         avatar_url: string
     }
+    children?: React.ReactNode
+    isExerciseCompletedSection?: React.ReactNode
+    studentId: string
 }) {
-    const [progress, setProgress] = useState(isExerciseCompleted ? 100 : 0)
-    const [showConfetti, setShowConfetti] = useState(false)
-    const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(true)
-    const router = useRouter()
-    const { theme } = useTheme()
+    const progress = isExerciseCompleted ? 100 : 0
     const t = useScopedI18n('StudentExercisePage')
-
-    const handleProgressUpdate = (newProgress) => {
-        setProgress(newProgress)
-        if (newProgress === 100) {
-            setShowConfetti(true)
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-            })
-        }
-    }
 
     const getDifficultyColor = (level) => {
         switch (level) {
@@ -109,7 +94,7 @@ export default function EnhancedStudentExercisePage({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className='space-y-4'
+                className="space-y-4"
             >
                 <Link
                     className={buttonVariants({ variant: 'ghost' })}
@@ -165,44 +150,47 @@ export default function EnhancedStudentExercisePage({
 
                 <div className="md:grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 flex flex-col-reverse lg:flex-row">
                     <div className="lg:col-span-2 space-y-4">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-xl font-bold">
-                                    {t('instructions')}
-                                </CardTitle>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsInstructionsExpanded(!isInstructionsExpanded)}
-                                >
-                                    {isInstructionsExpanded ? <ChevronUp /> : <ChevronDown />}
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <AnimatePresence initial={false}>
-                                    {isInstructionsExpanded && (
+                        <ToggleableSection
+                            isOpen={false}
+                            title={ t('instructions')}
+                        >
+                            <>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-xl font-bold">
+                                        {t('instructions')}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <AnimatePresence initial={false}>
                                         <motion.div
                                             initial="collapsed"
                                             animate="open"
                                             exit="collapsed"
                                             variants={{
-                                                open: { opacity: 1, height: 'auto' },
-                                                collapsed: { opacity: 0, height: 0 }
+                                                open: {
+                                                    opacity: 1,
+                                                    height: 'auto',
+                                                },
+                                                collapsed: {
+                                                    opacity: 0,
+                                                    height: 0,
+                                                },
                                             }}
-                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                            transition={{
+                                                duration: 0.3,
+                                                ease: 'easeInOut',
+                                            }}
                                         >
                                             <ViewMarkdown
                                                 markdown={exercise.instructions}
                                             />
                                         </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </CardContent>
-                        </Card>
+                                    </AnimatePresence>
+                                </CardContent>
+                            </>
+                        </ToggleableSection>
 
-                        <Card
-                            className=' border-none shadow-none md:border md:shadow '
-                        >
+                        <Card className=" border-none shadow-none md:border md:shadow ">
                             <CardContent className="p-0">
                                 <ExerciseChat
                                     apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
@@ -213,6 +201,9 @@ export default function EnhancedStudentExercisePage({
                                 />
                             </CardContent>
                         </Card>
+                        {isExerciseCompleted && isExerciseCompletedSection && (
+                            isExerciseCompletedSection
+                        )}
                     </div>
 
                     <div className="space-y-4">
@@ -234,13 +225,13 @@ export default function EnhancedStudentExercisePage({
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
-                                    <Button
-                                        className="w-full"
-                                        variant="outline"
+                                    <Link
+                                        className={buttonVariants({ variant: 'outline' })}
+                                        href={`/student/${studentId}/exercises/${exerciseId}/`}
                                     >
                                         <Share2 className="mr-2 h-4 w-4" />
                                         {t('shareProgress')}
-                                    </Button>
+                                    </Link>
                                     {isExerciseCompleted && (
                                         <DeleteModal
                                             exerciseId={exerciseId}
@@ -250,43 +241,10 @@ export default function EnhancedStudentExercisePage({
                                 </div>
                             </CardContent>
                         </Card>
+                        {children}
                     </div>
                 </div>
             </motion.div>
-
-            <AnimatePresence>
-                {showConfetti && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="fixed inset-0 flex items-center justify-center z-50"
-                        onClick={() => setShowConfetti(false)}
-                    >
-                        <div
-                            className={`bg-${
-                                theme === 'dark' ? 'gray-800' : 'white'
-                            } p-8 rounded-lg shadow-lg text-center`}
-                        >
-                            <Award className="h-16 w-16 text-yellow-400 mx-auto mb-4" />
-                            <h2 className="text-2xl font-bold mb-2">
-                                {t('congratulations')}
-                            </h2>
-                            <p>{t('exerciseCompleted')}</p>
-                            <Button
-                                className="mt-4"
-                                onClick={() =>
-                                    router.push(
-                                        `/dashboard/student/courses/${courseId}`
-                                    )
-                                }
-                            >
-                                {t('backToCourse')}
-                            </Button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     )
 }

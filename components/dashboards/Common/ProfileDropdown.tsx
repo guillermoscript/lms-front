@@ -19,7 +19,7 @@ export default async function ProfileDropdown () {
     const userData = await supabase.auth.getUser()
 
     if (userData.error) {
-        return null
+        return <AuthButton />
     }
 
     const user = userData.data.user
