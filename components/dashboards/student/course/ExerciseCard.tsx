@@ -1,3 +1,4 @@
+'use client'
 import { Dumbbell } from 'lucide-react'
 
 import { useI18n } from '@/app/locales/client'
