@@ -527,6 +527,8 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
             success: 'Exercise deleted',
             trigger: 'Delete Progress',
         },
+        exerciseSuggestions: 'Exercise Suggestions',
+        exerciseSuggestionsDescription: 'Here are some exercises that you can work on to improve your skills.',
     },
     NotEnrolledMessage: {
         courseAccess: 'Course Access',

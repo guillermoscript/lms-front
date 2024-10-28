@@ -524,6 +524,8 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
             success: 'Ejercicio eliminado',
             trigger: 'Eliminar progreso',
         },
+        exerciseSuggestions: 'Sugerencias de Ejercicios',
+        exerciseSuggestionsDescription: 'Aquí tienes algunas sugerencias de ejercicios para ayudarte a mejorar tus habilidades.',
     },
     NotEnrolledMessage: {
         courseAccess: 'Acceso al Curso',
