@@ -101,6 +101,7 @@ export default function ExercisesTextEditors({
                         className="mt-4"
                         onSubmit={(e) => {
                             e.preventDefault()
+                            if (input === '') return
                             handleSubmit(e)
                             removeFile()
                         }}
