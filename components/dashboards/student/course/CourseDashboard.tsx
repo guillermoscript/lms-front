@@ -42,16 +42,8 @@ const CourseCard = ({
     ).length
 
     return (
-        <Card
-            className={`${
-                view === 'grid' ? 'h-full' : 'flex flex-row'
-            } overflow-hidden transition-all hover:shadow-lg`}
-        >
-            <div
-                className={`${
-                    view === 'grid' ? 'h-48' : 'w-48 h-full'
-                } relative`}
-            >
+        <Card className={`${view === 'grid' ? 'h-full' : 'flex flex-row'} overflow-hidden transition-all hover:shadow-lg h-full flex flex-col`}>
+            <div className={`${view === 'grid' ? 'h-48' : 'w-48 h-full'} relative`}>
                 <Image
                     src={course.course.thumbnail_url || '/placeholder.svg'}
                     alt={course.course.title}
@@ -59,7 +51,7 @@ const CourseCard = ({
                     objectFit="cover"
                 />
             </div>
-            <div className="flex flex-col flex-grow p-4">
+            <div className="flex flex-col flex-grow p-4 justify-between">
                 <CardHeader>
                     <CardTitle className="text-xl">
                         {course.course.title}
@@ -68,53 +60,56 @@ const CourseCard = ({
                         {course.course.description}
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                            <span>{t('lessons')}</span>
-                            <span>
-                                {completedLessons}/{totalLessons}
-                            </span>
+                <div className='flex flex-col'>
+
+                    <CardContent>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span>{t('lessons')}</span>
+                                <span>
+                                    {completedLessons}/{totalLessons}
+                                </span>
+                            </div>
+                            <Progress
+                                value={(completedLessons / totalLessons) * 100}
+                            />
+                            <div className="flex justify-between text-sm">
+                                <span>{t('exams')}</span>
+                                <span>
+                                    {completedExams}/{totalExams}
+                                </span>
+                            </div>
+                            <Progress value={(completedExams / totalExams) * 100} />
+                            <div className="flex justify-between text-sm">
+                                <span>{t('exercises')}</span>
+                                <span>
+                                    {completedExercises}/{totalExercises}
+                                </span>
+                            </div>
+                            <Progress
+                                value={(completedExercises / totalExercises) * 100}
+                            />
                         </div>
-                        <Progress
-                            value={(completedLessons / totalLessons) * 100}
-                        />
-                        <div className="flex justify-between text-sm">
-                            <span>{t('exams')}</span>
-                            <span>
-                                {completedExams}/{totalExams}
-                            </span>
+                    </CardContent>
+                    <CardFooter className="flex justify-between flex-wrap items-center gap-4">
+                        <Button asChild variant="default">
+                            <Link
+                                href={`/dashboard/student/courses/${course.course.course_id}`}
+                            >
+                                {t('continueCourse')}{' '}
+                                <ChevronRight className="ml-2 h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <div className="flex space-x-2">
+                            <Badge variant="secondary">
+                                {totalLessons} {t('lessons')}
+                            </Badge>
+                            <Badge variant="secondary">
+                                {totalExams} {t('exams')}
+                            </Badge>
                         </div>
-                        <Progress value={(completedExams / totalExams) * 100} />
-                        <div className="flex justify-between text-sm">
-                            <span>{t('exercises')}</span>
-                            <span>
-                                {completedExercises}/{totalExercises}
-                            </span>
-                        </div>
-                        <Progress
-                            value={(completedExercises / totalExercises) * 100}
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-between flex-wrap md:flex-nowrap items-center gap-4">
-                    <Button asChild variant="default">
-                        <Link
-                            href={`/dashboard/student/courses/${course.course.course_id}`}
-                        >
-                            {t('continueCourse')}{' '}
-                            <ChevronRight className="ml-2 h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div className="flex space-x-2">
-                        <Badge variant="secondary">
-                            {totalLessons} {t('lessons')}
-                        </Badge>
-                        <Badge variant="secondary">
-                            {totalExams} {t('exams')}
-                        </Badge>
-                    </div>
-                </CardFooter>
+                    </CardFooter>
+                </div>
             </div>
         </Card>
     )
@@ -136,12 +131,9 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
     )
 
     return (
-        <div
-            className='md:container'
-        >
+        <div className='md:container'>
             <h1 className="text-3xl font-bold mb-8">{t('yourCourses')}</h1>
-
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 space-x-2">
                 <div className="relative w-full max-w-sm">
                     <Input
                         type="text"
@@ -182,11 +174,10 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                 </TabsList>
                 <TabsContent value="inProgress">
                     <div
-                        className={`grid gap-6 ${
-                            view === 'grid'
-                                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                                : 'grid-cols-1'
-                        }`}
+                        className={`grid gap-6 ${view === 'grid'
+                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                            : 'grid-cols-1'
+                            }`}
                     >
                         {filteredCourses
                             .filter((course) => {
@@ -217,11 +208,10 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                 </TabsContent>
                 <TabsContent value="completed">
                     <div
-                        className={`grid gap-6 ${
-                            view === 'grid'
-                                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                                : 'grid-cols-1'
-                        }`}
+                        className={`grid gap-6 ${view === 'grid'
+                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                            : 'grid-cols-1'
+                            }`}
                     >
                         {filteredCourses
                             .filter((course) => {
@@ -249,11 +239,10 @@ const CourseDashboard: React.FC<{ userCourses: any[] }> = ({ userCourses }) => {
                 </TabsContent>
                 <TabsContent value="all">
                     <div
-                        className={`grid gap-6 ${
-                            view === 'grid'
-                                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                                : 'grid-cols-1'
-                        }`}
+                        className={`grid gap-6 ${view === 'grid'
+                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                            : 'grid-cols-1'
+                            }`}
                     >
                         {filteredCourses.map((course) => (
                             <CourseCard

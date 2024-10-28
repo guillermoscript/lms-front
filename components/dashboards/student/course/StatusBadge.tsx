@@ -47,7 +47,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     return (
         <Badge variant={getVariant()}>
             {getIcon()}
-            {getText()}
+            <p>{getText()}</p>
         </Badge>
     )
 }

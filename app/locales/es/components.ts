@@ -531,6 +531,9 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         enrollPrompt: '¡Estás a solo un paso de acceder a este increíble curso! Inscríbete ahora para desbloquear todas las lecciones y comenzar tu viaje de aprendizaje.',
         aboutThisCourse: 'Sobre este curso:',
         enrollNow: 'Inscribirse Ahora',
+        enrolling: 'Inscribiendo...',
+        userEnrolled: 'Se ha inscrito con éxito',
+        errorEnrollingUser: 'Error al inscribir al usuario',
     },
     NoCourseOrSubAlert: {
         unlockLearningJourney: 'Desbloquea Tu Viaje de Aprendizaje',
