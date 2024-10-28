@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -9,8 +8,6 @@ import { createClient } from '@/utils/supabase/server'
 export default async function AuthButton () {
     const signOut = async () => {
         'use server'
-
-        const cookieStore = cookies()
         const supabase = createClient()
         await supabase.auth.signOut()
         return redirect('/auth/login')
