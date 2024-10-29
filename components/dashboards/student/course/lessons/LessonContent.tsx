@@ -1,4 +1,3 @@
-
 import dayjs from 'dayjs'
 import { CheckCircle, PlayCircle } from 'lucide-react'
 import Image from 'next/image'
@@ -53,9 +52,18 @@ export default async function EnhancedLessonContent({
         <div className="max-w-6xl mx-auto px-4 py-8">
             <BreadcrumbComponent
                 links={[
-                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                    { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
-                    { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
+                    {
+                        href: '/dashboard',
+                        label: t('BreadcrumbComponent.dashboard'),
+                    },
+                    {
+                        href: '/dashboard/student',
+                        label: t('BreadcrumbComponent.student'),
+                    },
+                    {
+                        href: '/dashboard/student/courses/',
+                        label: t('BreadcrumbComponent.course'),
+                    },
                     {
                         href: `/dashboard/student/courses/${lessonData.course_id}`,
                         label: courseData?.title,
@@ -84,13 +92,19 @@ export default async function EnhancedLessonContent({
                     </div>
                     <div className="flex-grow">
                         <div className="flex items-center gap-2">
-                            <CardTitle className="text-3xl">{lessonData.title}</CardTitle>
-                            <Badge variant="default">#{lessonData.sequence}</Badge>
+                            <CardTitle className="text-3xl">
+                                {lessonData.title}
+                            </CardTitle>
+                            <Badge variant="default">
+                                #{lessonData.sequence}
+                            </Badge>
                             {isLessonAiTaskCompleted && (
                                 <CheckCircle className="h-6 w-6 text-green-500" />
                             )}
                         </div>
-                        <CardDescription className="mt-2">{lessonData.description}</CardDescription>
+                        <CardDescription className="mt-2">
+                            {lessonData.description}
+                        </CardDescription>
                     </div>
                 </CardHeader>
             </Card>
@@ -98,7 +112,12 @@ export default async function EnhancedLessonContent({
             {lessonData.video_url && (
                 <ToggleableSection
                     isOpen
-                    title={<><PlayCircle className="h-6 w-6" />{t('LessonContent.video')}</>}
+                    title={
+                        <>
+                            <PlayCircle className="h-6 w-6" />
+                            {t('LessonContent.video')}
+                        </>
+                    }
                 >
                     <div className="aspect-w-16 aspect-h-9">
                         <iframe
@@ -113,19 +132,21 @@ export default async function EnhancedLessonContent({
                 </ToggleableSection>
             )}
 
-            <ToggleableSection
-                isOpen
-                title={t('LessonContent.content')}
-            >
+            <ToggleableSection isOpen title={t('LessonContent.content')}>
                 <div className="prose dark:prose-invert max-w-none">
-                    <ViewMarkdown addLinks={true} markdown={lessonData.content} />
+                    <ViewMarkdown
+                        addLinks={true}
+                        markdown={lessonData.content}
+                    />
                 </div>
             </ToggleableSection>
 
             {lessonData?.summary && (
                 <Card className="mt-8">
                     <CardHeader>
-                        <CardTitle className="text-2xl">{t('LessonContent.summary')}</CardTitle>
+                        <CardTitle className="text-2xl">
+                            {t('LessonContent.summary')}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <ViewMarkdown markdown={lessonData.summary} />
@@ -143,43 +164,71 @@ export default async function EnhancedLessonContent({
                     title={t('LessonContent.aiTask')}
                 >
                     <>
-                        <CardHeader className="flex flex-col gap-4">
-                            <div className="flex items-center justify-between w-full">
-                                <CardTitle>{t('LessonContent.aiTask')}</CardTitle>
-                                <div id="task-status" className="flex items-center gap-2">
-                                    <Badge variant={isLessonAiTaskCompleted ? 'default' : 'outline'}>
-                                        {isLessonAiTaskCompleted
-                                            ? t('LessonContent.aiTaskCompleted')
-                                            : t('LessonContent.aiTaksInComplete')}
-                                    </Badge>
-                                    <TaskMessageTour />
+                        <CustomErrorBoundary
+                            fallback={
+                                <RetryError
+                                    title={t('LessonContent.RetryError')}
+                                    description={t(
+                                        'LessonContent.RetryError.description'
+                                    )}
+                                />
+                            }
+                        >
+                            <CardHeader className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between w-full">
+                                    <CardTitle>
+                                        {t('LessonContent.aiTask')}
+                                    </CardTitle>
+                                    <div
+                                        id="task-status"
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Badge
+                                            variant={
+                                                isLessonAiTaskCompleted
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
+                                        >
+                                            {isLessonAiTaskCompleted
+                                                ? t(
+                                                    'LessonContent.aiTaskCompleted'
+                                                )
+                                                : t(
+                                                    'LessonContent.aiTaksInComplete'
+                                                )}
+                                        </Badge>
+                                        <TaskMessageTour />
+                                    </div>
                                 </div>
-                            </div>
-                            <CardDescription id="task-instructions">
-                                <ViewMarkdown markdown={lessonsAiTasks.task_instructions} />
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            <Separator />
-                            <ResetTaskAIConversation lessonId={lessonData.id} />
-                            <CustomErrorBoundary
-                                fallback={
-                                    <RetryError
-                                        title={t('LessonContent.RetryError')}
-                                        description={t('LessonContent.RetryError.description')}
+                                <CardDescription id="task-instructions">
+                                    <ViewMarkdown
+                                        markdown={
+                                            lessonsAiTasks.task_instructions
+                                        }
                                     />
-                                }
-                            >
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4">
+                                <Separator />
+                                <ResetTaskAIConversation
+                                    lessonId={lessonData.id}
+                                />
+
                                 <AiTaskMessage
                                     userId={userId}
                                     lessonId={lessonData.id.toString()}
                                     systemPrompt={lessonsAiTasks.system_prompt}
                                     lessonsAiTasks={lessonsAiTasks}
-                                    lessonsAiTasksMessages={lessonsAiTasksMessages}
+                                    lessonsAiTasksMessages={
+                                        lessonsAiTasksMessages
+                                    }
                                 >
                                     <TaksMessages
                                         lessonId={lessonData.id}
-                                        isLessonAiTaskCompleted={isLessonAiTaskCompleted}
+                                        isLessonAiTaskCompleted={
+                                            isLessonAiTaskCompleted
+                                        }
                                     />
                                     {isLessonAiTaskCompleted && (
                                         <ExerciseSuggestions
@@ -187,8 +236,8 @@ export default async function EnhancedLessonContent({
                                         />
                                     )}
                                 </AiTaskMessage>
-                            </CustomErrorBoundary>
-                        </CardContent>
+                            </CardContent>
+                        </CustomErrorBoundary>
                     </>
                 </ToggleableSection>
             ) : (
@@ -201,7 +250,10 @@ export default async function EnhancedLessonContent({
             )}
 
             <div className="mt-8">
-                <LessonNavigationButtons courseId={lessonData.course_id} lessonId={lessonData.id} />
+                <LessonNavigationButtons
+                    courseId={lessonData.course_id}
+                    lessonId={lessonData.id}
+                />
             </div>
 
             <LessonLoaderView userId={userId} lessonId={lessonData.id} />
