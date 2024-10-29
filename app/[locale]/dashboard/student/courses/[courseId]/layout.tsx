@@ -47,12 +47,14 @@ export default async function CoursesPageLayout ({
                 .single()
 
             return (
-                <EnrollCard
-                    courseName={courseTitle.data.title}
-                    courseId={Number(params.courseId)}
-                    courseDescription={courseTitle.data.description}
-                    courseThumbnail={courseTitle.data.thumbnail_url}
-                />
+                <>
+                    <EnrollCard
+                        courseName={courseTitle.data.title}
+                        courseId={Number(params.courseId)}
+                        courseDescription={courseTitle.data.description}
+                        courseThumbnail={courseTitle.data.thumbnail_url}
+                    />
+                </>
             )
         }
         throw new Error(isUserEnrolled.error.message)
@@ -70,12 +72,14 @@ export default async function CoursesPageLayout ({
             .single()
 
         return (
-            <EnrollCard
-                courseName={courseTitle.data.title}
-                courseId={Number(params.courseId)}
-                courseDescription={courseTitle.data.description}
-                courseThumbnail={courseTitle.data.thumbnail_url}
-            />
+            <>
+                <EnrollCard
+                    courseName={courseTitle.data.title}
+                    courseId={Number(params.courseId)}
+                    courseDescription={courseTitle.data.description}
+                    courseThumbnail={courseTitle.data.thumbnail_url}
+                />
+            </>
         )
     }
 
