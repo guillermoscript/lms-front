@@ -123,22 +123,20 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
         noDataKey: string
     ) => (
         <AnimatePresence>
-            <>
-                {items.length > 0 ? (
-                    items.map((item) => renderCard(item))
-                ) : (
-                    <NoDataPlaceholder
-                        iconSrc="/img/404(2).jpeg"
-                        iconAlt="No Data"
-                        message={t(
-                            `dashboard.student.CourseStudentPage.no${noDataKey}`
-                        )}
-                        description={t(
-                            `dashboard.student.CourseStudentPage.no${noDataKey}Description`
-                        )}
-                    />
-                )}
-            </>
+            {items.length > 0 ? (
+                items.map((item) => renderCard(item))
+            ) : (
+                <NoDataPlaceholder
+                    iconSrc="/img/404(2).jpeg"
+                    iconAlt="No Data"
+                    message={t(
+                        `dashboard.student.CourseStudentPage.no${noDataKey}`
+                    )}
+                    description={t(
+                        `dashboard.student.CourseStudentPage.no${noDataKey}Description`
+                    )}
+                />
+            )}
         </AnimatePresence>
     )
 
@@ -171,27 +169,23 @@ const EnhancedCourseStudentPage: React.FC<EnhancedCourseStudentPageProps> = ({
                     />
                     <Search className="absolute right-3 top-3 h-4 w-4 text-gray-500" />
                 </div>
-                <>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="w-full md:w-[180px]">
-                            <>
-                                <SelectValue placeholder={t('dashboard.student.CourseStudentPage.filterByStatus')} />
-                            </>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">{t('dashboard.student.CourseStudentPage.all')}</SelectItem>
-                            <SelectItem value="Completed">
-                                {t('dashboard.student.CourseStudentPage.completed')}
-                            </SelectItem>
-                            <SelectItem value="In Progress">
-                                {t('dashboard.student.CourseStudentPage.inProgress')}
-                            </SelectItem>
-                            <SelectItem value="Not Started">
-                                {t('dashboard.student.CourseStudentPage.notStarted')}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-full md:w-[180px]">
+                        <SelectValue placeholder={t('dashboard.student.CourseStudentPage.filterByStatus')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t('dashboard.student.CourseStudentPage.all')}</SelectItem>
+                        <SelectItem value="Completed">
+                            {t('dashboard.student.CourseStudentPage.completed')}
+                        </SelectItem>
+                        <SelectItem value="In Progress">
+                            {t('dashboard.student.CourseStudentPage.inProgress')}
+                        </SelectItem>
+                        <SelectItem value="Not Started">
+                            {t('dashboard.student.CourseStudentPage.notStarted')}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
                 <Button
                     variant="outline"
                     onClick={() =>
