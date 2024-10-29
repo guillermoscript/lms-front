@@ -36,6 +36,7 @@ export default async function LessonsTimeLine({
                             <Loader size={32} className="animate-spin" />
                         </div>
                     }
+                    key={index}
                 >
                     <TimelineItem
                         key={index}
