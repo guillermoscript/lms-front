@@ -70,8 +70,6 @@ export default async function CoursesStudentPage() {
     if (lessonsView.error) throw new Error(lessonsView.error.message)
     if (userChats.error) throw new Error(userChats.error.message)
 
-    console.log(coursesResult)
-
     const courses = coursesResult.data.map((course) => {
         return {
             course_id: course.course_id,

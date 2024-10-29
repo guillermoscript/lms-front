@@ -362,5 +362,20 @@ export default {
     },
     chatPage: {
         title: 'Selecciona un chat o comienza uno nuevo',
+    },
+    errorPages: {
+        dashboard: {
+            student: 'Error cargando el dashboard del estudiante',
+            teacher: 'Error cargando el dashboard del profesor',
+            courses: 'Error cargando los cursos',
+            course: 'Error cargando el curso',
+            lessons: 'Error cargando las lecciones',
+            lesson: 'Error cargando la lección',
+            exams: 'Error cargando los exámenes',
+            exam: 'Error cargando el examen',
+            exercises: 'Error cargando los ejercicios',
+            exercise: 'Error cargando el ejercicio',
+            examReview: 'Error cargando la revisión del examen',
+        }
     }
 } as const

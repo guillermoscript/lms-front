@@ -22,7 +22,7 @@ export default function Error ({
     return (
         <GenericError
             retry={reset}
-            title={t('lesson')}
+            title={t('examReview')}
             description={error.message}
         />
     )
