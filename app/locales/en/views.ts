@@ -354,7 +354,6 @@ export default {
             errorTitle: 'An error occurred',
         }
     },
-
     waitingRoom: {
         title: 'Waiting Room',
         description: "You've been placed in a queue due to high traffic. We'll get you back to the site shortly.",
@@ -363,5 +362,20 @@ export default {
     },
     chatPage: {
         title: 'Select a chat or start a new one',
+    },
+    errorPages: {
+        dashboard: {
+            student: 'Error loading student dashboard',
+            teacher: 'Error loading teacher dashboard',
+            courses: 'Error loading courses',
+            course: 'Error loading course',
+            lessons: 'Error loading lessons',
+            lesson: 'Error loading lesson',
+            exams: 'Error loading exams',
+            exam: 'Error loading exam',
+            exercises: 'Error loading exercises',
+            exercise: 'Error loading exercise',
+            examReview: 'Error loading exam review',
+        }
     }
 } as const
