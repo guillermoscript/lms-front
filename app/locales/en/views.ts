@@ -311,8 +311,8 @@ export default {
                 password_required: 'Password is required',
             },
             errors: {
-                password_or_email_incorrect: 'Password or email is incorrect',
-                generic_error: 'An error occurred, please try again later.',
+                passwordOrEmailIncorrect: 'Password or email is incorrect',
+                genericError: 'An error occurred, please try again later.',
             }
         },
         forgotPassword: {

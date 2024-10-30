@@ -312,8 +312,8 @@ export default {
                 password_required: 'La contraseña es requerida',
             },
             errors: {
-                invalid_credentials: 'Credenciales inválidas',
-                generic_error: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
+                passwordOrEmailIncorrect: 'Correo o contraseña incorrectos',
+                genericError: 'Ha ocurrido un error, por favor intenta de nuevo mas tarde',
             }
         },
         forgotPassword: {
