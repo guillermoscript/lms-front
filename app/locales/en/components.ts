@@ -118,6 +118,7 @@ export default {
         tooltipContentEdit: 'Edit Message',
         tooltipContentView: 'Go back to view mode',
         tooltipContentRegenerate: 'Regenerate Message',
+        copied: 'Text copied',
     },
     EditMessage: {
         simple: 'Simple',
