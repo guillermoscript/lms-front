@@ -226,7 +226,12 @@ export default function EnhancedStudentExercisePage({
                             <CardContent>
                                 <div className="space-y-2">
                                     <Link
-                                        className={buttonVariants({ variant: 'outline' })}
+                                        className={
+                                            cn(
+                                                buttonVariants({ variant: 'outline' }),
+                                                'w-full'
+                                            )
+                                        }
                                         href={`/student/${studentId}/exercises/${exerciseId}/`}
                                     >
                                         <Share2 className="mr-2 h-4 w-4" />
