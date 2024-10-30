@@ -9,6 +9,7 @@ interface MessageContentWrapperProps {
     edit: ReactNode
     regenerate?: ReactNode
     role: 'assistant' | 'user'
+    content?: string
 }
 
 export type ViewMode = 'view' | 'edit' | 'regenerate'
@@ -17,7 +18,8 @@ export default function MessageContentWrapper({
     view,
     edit,
     regenerate,
-    role
+    role,
+    content
 }: MessageContentWrapperProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('view')
 
@@ -45,6 +47,7 @@ export default function MessageContentWrapper({
                 setViewMode={setViewMode}
                 viewMode={viewMode}
                 role={role}
+                content={content}
             />
         </>
     )
