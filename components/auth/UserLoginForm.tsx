@@ -60,8 +60,8 @@ export default function UserLoginForm({ redirect }: { redirect?: string }) {
             })
         } catch (error: any) {
             // Handle login errors (e.g., display error messages)
-            setError(t('auth.login.errors.password_or_email_incorrect') || 'An error occurred. Please try again.')
-            toast.error(t('auth.login.errors.password_or_email_incorrect') || 'An error occurred. Please try again.')
+            setError(t('auth.login.errors.passwordOrEmailIncorrect') || 'An error occurred. Please try again.')
+            toast.error(t('auth.login.errors.passwordOrEmailIncorrect') || 'An error occurred. Please try again.')
         }
     }
 
