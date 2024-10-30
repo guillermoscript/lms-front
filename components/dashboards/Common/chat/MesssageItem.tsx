@@ -132,12 +132,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                                 isEditing ? onSave : onEdit
                                             }
                                             disabled={isLoading || isCompleted}
+                                            variant={
+                                                isEditing ? 'default' : 'ghost'
+                                            }
                                         />
                                         <ActionButton
                                             icon={<Trash className="h-4 w-4" />}
                                             tooltip={t('delete')}
                                             onClick={onDelete}
                                             disabled={isLoading || isCompleted}
+                                            variant='ghost'
                                         />
                                     </>
                                 )}
@@ -149,12 +153,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
                                             tooltip={t('regenerate')}
                                             onClick={onRegenerate}
                                             disabled={isLoading || isCompleted}
+                                            variant="ghost"
                                         />
                                         <ActionButton
                                             icon={<Trash className="h-4 w-4" />}
                                             tooltip={t('delete')}
                                             onClick={onDelete}
                                             disabled={isLoading || isCompleted}
+                                            variant="ghost"
                                         />
                                     </>
                                 )}
@@ -175,6 +181,7 @@ interface ActionButtonProps {
     icon: React.ReactNode
     tooltip: string
     onClick: () => void
+    variant: 'default' | 'ghost'
     disabled?: boolean
 }
 
@@ -182,13 +189,14 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     icon,
     tooltip,
     onClick,
+    variant,
     disabled = false,
 }) => (
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button
-                    variant="ghost"
+                    variant={variant}
                     size="sm"
                     onClick={onClick}
                     disabled={disabled}
