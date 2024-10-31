@@ -20,33 +20,7 @@ const ExerciseCode = ({ initialCode, tests }) => {
             </CardHeader>
             <CardContent className="flex flex-col  gap-4">
                 <CodeEditor initialCode={code} onChange={setCode} />
-                <CodeRunner code={code} tests={[
-                    {
-                        id: 1,
-                        functionName: 'sum',
-                        input: '1, 2',
-                        expected: 3
-                    },
-                    {
-                        id: 2,
-                        functionName: 'sum',
-                        input: '-1, 1',
-                        expected: 0
-                    },
-                    {
-                        id: 3,
-                        functionName: 'sum',
-                        input: '0, 0',
-                        expected: 0
-                    },
-                    {
-                        id: 4,
-                        functionName: 'sum',
-                        input: '100, 200',
-                        expected: 300
-                    }
-                ]}
-                />
+                <CodeRunner code={code} tests={tests}/>
             </CardContent>
         </Card>
     )
