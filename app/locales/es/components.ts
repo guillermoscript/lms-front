@@ -772,6 +772,8 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         needHint: '¿Necesitas una pista?',
         hintMessage: 'Aquí tienes una pista útil para resolver este problema...',
         showHint: 'Mostrar Pista',
+        congratulations: '¡Felicidades!',
+        youDidGreat: 'Lo hiciste genial',
     },
     CompletedMessage: {
         title: '¡Completado!',

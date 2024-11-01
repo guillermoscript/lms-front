@@ -772,6 +772,8 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         needHint: 'Need a hint?',
         hintMessage: "Here's a helpful hint for solving this problem...",
         showHint: 'Show Hint',
+        congratulations: 'Congratulations!',
+        youDidGreat: 'You did great!',
     },
     CompletedMessage: {
         title: 'Exercise Completed',
