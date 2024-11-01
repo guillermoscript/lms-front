@@ -332,6 +332,7 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                                         />
                                     }
                                     role="user"
+                                    content={message.content}
                                 />
                             </Message>
                         ) : message.role === 'assistant' &&
@@ -356,6 +357,7 @@ export const getUIStateFromTaskAIState = (aiState: Chat) => {
                                                 message={message.content}
                                             />
                                         }
+                                        content={message.content}
                                         role="assistant"
                                     />
                                 </Message>

@@ -1,8 +1,13 @@
+import { generateId } from 'ai'
+
 import { getI18n } from '@/app/locales/server'
 import ExerciseCard from '@/components/dashboards/exercises/ExerciseCard'
 import StudentExercisePage from '@/components/dashboards/exercises/StudentExercisePage'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
+import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
+import ExerciseCode from '@/components/dashboards/student/course/exercises/ExerciseCode'
+import { Card, CardContent } from '@/components/ui/card'
+import { URL_OF_SITE } from '@/utils/const'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExerciseStudentPage({
@@ -50,6 +55,19 @@ export default async function ExerciseStudentPage({
 
     const isExerciseCompleted = exercise.data?.exercise_completions.length > 0
 
+    const initialMessages = [
+        {
+            id: generateId().toString(),
+            role: 'system',
+            content: exercise.data?.system_prompt,
+        },
+        ...exercise.data?.exercise_messages.map((message) => ({
+            id: message.id.toString(),
+            role: message.role,
+            content: message.message,
+        })),
+    ]
+
     return (
         <div className="md:container mx-auto space-y-4">
             <div className="container">
@@ -91,9 +109,10 @@ export default async function ExerciseStudentPage({
                 studentId={userData.data.user.id}
                 isExerciseCompletedSection={
                     <>
-
                         <h3 className="text-lg font-bold">
-                            {t('StudentExercisePage.exerciseSuggestionsDescription')}
+                            {t(
+                                'StudentExercisePage.exerciseSuggestionsDescription'
+                            )}
                         </h3>
                         {exercises.data.map((exercise) => {
                             return (
@@ -108,23 +127,54 @@ export default async function ExerciseStudentPage({
                     </>
                 }
             >
-                <ToggleableSection
-                    isOpen={false}
-                    title={t('StudentExercisePage.exerciseSuggestions')}
-                >
-                    <>
-                        {exercises.data.map((exercise) => {
-                            return (
-                                <ExerciseCard
-                                    key={exercise.id}
-                                    exercise={exercise as any}
-                                    courseId={exercise.course_id as any}
-                                    t={t}
+                <>
+                    <Card className=" border-none shadow-none md:border md:shadow ">
+                        <CardContent className="p-0">
+                            {exercise.data.exercise_type === 'essay' && (
+                                <ExerciseChat
+                                    apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
+                                    exerciseId={params.exerciseId}
+                                    initialMessages={initialMessages as any}
+                                    isExerciseCompleted={isExerciseCompleted}
+                                    profile={profile.data}
                                 />
-                            )
-                        })}
-                    </>
-                </ToggleableSection>
+                            )}
+
+                            {exercise.data.exercise_type === 'coding_challenge' && (
+                                <ExerciseCode
+                                    initialCode={`function sum(a, b) {
+                                    }`}
+                                    tests={[
+                                        {
+                                            id: 1,
+                                            functionName: 'sum',
+                                            input: '1, 2',
+                                            expected: 3
+                                        },
+                                        {
+                                            id: 2,
+                                            functionName: 'sum',
+                                            input: '-1, 1',
+                                            expected: 0
+                                        },
+                                        {
+                                            id: 3,
+                                            functionName: 'sum',
+                                            input: '0, 0',
+                                            expected: 0
+                                        },
+                                        {
+                                            id: 4,
+                                            functionName: 'sum',
+                                            input: '100, 200',
+                                            expected: 300
+                                        }
+                                    ]}
+                                />
+                            )}
+                        </CardContent>
+                    </Card>
+                </>
             </StudentExercisePage>
         </div>
     )

@@ -1,6 +1,5 @@
 'use client'
 
-import { generateId } from 'ai'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ChevronLeft,
@@ -32,9 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/utils'
-import { URL_OF_SITE } from '@/utils/const'
 
-import ExerciseChat from '../student/course/exercises/exerciseChat'
 import ToggleableSection from '../student/course/lessons/ToggleableSection'
 
 export default function EnhancedStudentExercisePage({
@@ -74,19 +71,6 @@ export default function EnhancedStudentExercisePage({
                 return 'bg-gray-100 text-gray-800'
         }
     }
-
-    const initialMessages = [
-        {
-            id: generateId(),
-            role: 'system',
-            content: exercise.system_prompt,
-        },
-        ...exercise.exercise_messages.map((message) => ({
-            id: message.id,
-            role: message.role,
-            content: message.message,
-        })),
-    ]
 
     return (
         <div className="container mx-auto px-4 py-6">
@@ -190,17 +174,7 @@ export default function EnhancedStudentExercisePage({
                             </>
                         </ToggleableSection>
 
-                        <Card className=" border-none shadow-none md:border md:shadow ">
-                            <CardContent className="p-0">
-                                <ExerciseChat
-                                    apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
-                                    exerciseId={exerciseId}
-                                    initialMessages={initialMessages}
-                                    isExerciseCompleted={isExerciseCompleted}
-                                    profile={profile}
-                                />
-                            </CardContent>
-                        </Card>
+                        {children}
                         {isExerciseCompleted && isExerciseCompletedSection && (
                             isExerciseCompletedSection
                         )}
@@ -241,7 +215,6 @@ export default function EnhancedStudentExercisePage({
                                 </div>
                             </CardContent>
                         </Card>
-                        {children}
                     </div>
                 </div>
             </motion.div>

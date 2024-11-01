@@ -161,7 +161,14 @@ export default async function EnhancedLessonContent({
             {lessonsAiTasks?.system_prompt ? (
                 <ToggleableSection
                     isOpen={false}
-                    title={t('LessonContent.aiTask')}
+                    title={
+                        <div className="flex items-center gap-2">
+                            {t('LessonContent.aiTask')}
+                            {isLessonAiTaskCompleted && (
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                            )}
+                        </div>
+                    }
                 >
                     <>
                         <CustomErrorBoundary

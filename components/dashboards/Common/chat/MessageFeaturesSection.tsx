@@ -1,8 +1,11 @@
 'use client'
 
-import { Eye, Loader, Pencil, Sparkle } from 'lucide-react'
+import { Copy, Eye, Loader, Pencil, Sparkle } from 'lucide-react'
+import { toast } from 'sonner'
+import { useCopyToClipboard } from 'usehooks-ts'
 
 import { useScopedI18n } from '@/app/locales/client'
+import { Button } from '@/components/ui/button'
 import {
     Tooltip,
     TooltipContent,
@@ -16,56 +19,74 @@ export default function MessageFeatureSection({
     viewMode,
     setViewMode,
     role,
+    content
 }: {
     viewMode: ViewMode
     setViewMode: (value: ViewMode) => void
     role: 'assistant' | 'user'
+    content?: string
 }) {
     const t = useScopedI18n('MessageFeatureSection')
+    const [copiedText, copy] = useCopyToClipboard()
 
     return (
         <div className="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 svelte-1u5gq5j">
             <div className="flex">
                 {role === 'user' && (
-                    <button
-                        onClick={() => {
-                            console.log('Edit')
-                            if (viewMode === 'view') {
-                                setViewMode('edit')
-                            } else {
-                                setViewMode('view')
-                            }
-                        }}
-                        className="visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-                    >
-                        {viewMode === 'edit' ? (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <Eye className="w-4 h-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>
-                                            {t('tooltipContentView')}
-                                        </p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        ) : (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <Pencil className="w-4 h-4" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>
-                                            {t('tooltipContentEdit')}
-                                        </p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                    <>
+                        {content && (
+                            <Button
+                                variant='ghost'
+                                onClick={() => {
+                                    console.log('Copy')
+                                    copy(content)
+
+                                    toast.success(t('copied'))
+                                }}
+                            >
+                                <Copy className="w-4 h-4" />
+                            </Button>
                         )}
-                    </button>
+                        <button
+                            onClick={() => {
+                                console.log('Edit')
+                                if (viewMode === 'view') {
+                                    setViewMode('edit')
+                                } else {
+                                    setViewMode('view')
+                                }
+                            }}
+                            className="visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+                        >
+                            {viewMode === 'edit' ? (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Eye className="w-4 h-4" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>
+                                                {t('tooltipContentView')}
+                                            </p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            ) : (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Pencil className="w-4 h-4" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>
+                                                {t('tooltipContentEdit')}
+                                            </p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </button>
+                    </>
                 )}
 
                 {role === 'assistant' && (

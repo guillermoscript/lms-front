@@ -70,6 +70,7 @@ async function handleSubmitMessage({
                                 sender='user'
                             />
                         }
+                        content={input}
                     />
                 </Message>
             ),

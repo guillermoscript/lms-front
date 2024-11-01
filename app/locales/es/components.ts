@@ -118,7 +118,8 @@ export default {
     MessageFeatureSection: {
         tooltipContentEdit: 'Editar mensaje',
         tooltipContentView: 'Volver al modo de vista',
-        tooltipContentRegenerate: 'Regenerar mensaje'
+        tooltipContentRegenerate: 'Regenerar mensaje',
+        copied: 'Texto copiado',
     },
     EditMessage: {
         simple: 'Simple',
