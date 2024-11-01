@@ -178,8 +178,7 @@ export default async function ExerciseStudentPage({
                 )}
                 {exercise.data.exercise_type === 'coding_challenge' && (
                     <StudentExerciseCodePage
-                        exercise={exercise.data}
-                        profile={profile.data}
+                        exercise={exercise.data as any}
                         isExerciseCompleted={isExerciseCompleted}
                     >
                         <StudentExerciseCodeWrapper
