@@ -131,7 +131,6 @@ export default async function ExerciseStudentPage({
                 </div>
 
                 {exercise.data.exercise_type === 'essay' && (
-
                     <StudentExercisePage
                         exercise={exercise.data}
                         exerciseId={params.exerciseId}
@@ -162,15 +161,15 @@ export default async function ExerciseStudentPage({
                         <>
                             <Card className=" border-none shadow-none md:border md:shadow ">
                                 <CardContent className="p-0">
-
                                     <ExerciseChat
                                         apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
                                         exerciseId={params.exerciseId}
                                         initialMessages={initialMessages as any}
-                                        isExerciseCompleted={isExerciseCompleted}
+                                        isExerciseCompleted={
+                                            isExerciseCompleted
+                                        }
                                         profile={profile.data}
                                     />
-
                                 </CardContent>
                             </Card>
                         </>
@@ -187,8 +186,27 @@ export default async function ExerciseStudentPage({
                             exerciseId={+params.exerciseId}
                             isExerciseCompleted={isExerciseCompleted}
                             userCode={lastSubmission?.submission_code}
-
                         />
+
+                        {exercises.data.length > 0 && (
+                            <div className="flex flex-col gap-4">
+                                <h3 className="text-lg font-bold">
+                                    {t(
+                                        'StudentExercisePage.exerciseSuggestionsDescription'
+                                    )}
+                                </h3>
+                                {exercises.data.map((exercise) => {
+                                    return (
+                                        <ExerciseCard
+                                            key={exercise.id}
+                                            exercise={exercise as any}
+                                            courseId={exercise.course_id as any}
+                                            t={t}
+                                        />
+                                    )
+                                })}
+                            </div>
+                        )}
                     </StudentExerciseCodePage>
                 )}
             </div>
