@@ -1,6 +1,6 @@
 'use client'
 
-import { Star, CheckCircle } from 'lucide-react'
+import { CheckCircle, Star } from 'lucide-react'
 import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/utils'
+
 import ToggleableSection from '../student/course/lessons/ToggleableSection'
 
 interface ExercisePageProps {
