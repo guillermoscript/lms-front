@@ -188,7 +188,7 @@ export default async function ExerciseStudentPage({
                             exerciseId={+params.exerciseId}
                             isExerciseCompleted={isExerciseCompleted}
                             userCode={lastSubmission?.submission_code}
-                            
+
                         />
                     </StudentExerciseCodePage>
                 )}

@@ -1,23 +1,19 @@
 'use client'
 
 import {
-    SandpackConsole,
     SandpackLayout,
     SandpackPreview,
     SandpackStack,
-    SandpackTests,
     useActiveCode,
 } from '@codesandbox/sandpack-react'
-
-import MonacoEditor from './MonacoEditor'
-import SaveCode from '../../exercises/SaveCode'
-import axios from 'axios'
 import { useState } from 'react'
-import { Star } from 'lucide-react'
-import Confetti from '@/components/magicui/confetti'
-import CompletedMessage from './CompletedMessage'
-import TestCompletionHandler from './TestCompletionHandler'
 
+import Confetti from '@/components/magicui/confetti'
+
+import SaveCode from '../../exercises/SaveCode'
+import CompletedMessage from './CompletedMessage'
+import MonacoEditor from './MonacoEditor'
+import TestCompletionHandler from './TestCompletionHandler'
 
 interface MySandpackProps {
     autoHiddenFiles: boolean

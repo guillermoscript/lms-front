@@ -1,9 +1,9 @@
 'use client'
-import MySandpack from '../Common/Editor/MySandpackEditor'
-
 import {
     SandpackProvider,
 } from '@codesandbox/sandpack-react'
+
+import MySandpack from '../Common/Editor/MySandpackEditor'
 
 export default function StudentExerciseCodeWrapper({
     exercise,
@@ -18,7 +18,6 @@ export default function StudentExerciseCodeWrapper({
     exerciseId: number
     userCode?: string
 }) {
-
     return (
         <SandpackProvider
             files={files}

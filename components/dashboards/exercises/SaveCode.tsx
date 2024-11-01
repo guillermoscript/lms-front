@@ -1,10 +1,11 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Code2, Settings, Check, Loader } from 'lucide-react'
 import { useActiveCode } from '@codesandbox/sandpack-react'
+import { Check, Code2, Loader, Settings } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+
 import { saveUserSubmissionAction } from '@/actions/dashboard/exercisesActions'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 export default function SaveCode({
     exerciseId,

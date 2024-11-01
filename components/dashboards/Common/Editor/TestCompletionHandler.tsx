@@ -1,4 +1,4 @@
-import { SandpackTests, SandpackConsole } from '@codesandbox/sandpack-react'
+import { SandpackConsole, SandpackTests } from '@codesandbox/sandpack-react'
 import axios from 'axios'
 
 interface TestCompletionHandlerProps {

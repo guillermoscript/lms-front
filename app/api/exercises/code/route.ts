@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from '@/utils/supabase/server';
-import { markExerciseCompletedAction } from "@/actions/dashboard/exercisesActions";
+import { NextRequest, NextResponse } from 'next/server'
+
+import { markExerciseCompletedAction } from '@/actions/dashboard/exercisesActions'
+import { createClient } from '@/utils/supabase/server'
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const { exerciseId, submissionCode } = body;
+        const body = await req.json()
+        const { exerciseId, submissionCode } = body
 
         if (!exerciseId || !submissionCode) {
             return NextResponse.json(
@@ -14,11 +15,11 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const supabase = createClient();
-        const userData = await supabase.auth.getUser();
+        const supabase = createClient()
+        const userData = await supabase.auth.getUser()
 
         if (userData.error) {
-            console.log(userData.error);
+            console.log(userData.error)
             return NextResponse.json(
                 { status: 'error', message: 'Unauthorized access' },
                 { status: 403 }
@@ -33,10 +34,10 @@ export async function POST(req: NextRequest) {
                     user_id: userData.data.user.id,
                     submission_code: submissionCode,
                 },
-            );
+            )
 
         if (error) {
-            console.log(error);
+            console.log(error)
             return NextResponse.json(
                 { status: 'error', message: 'Error submitting code' },
                 { status: 500 }
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
             { status: 200 }
         )
     } catch (e) {
-        console.log(e);
+        console.log(e)
         return NextResponse.json(
             { status: 'error', message: 'Error submitting code' },
             { status: 500 }
