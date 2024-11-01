@@ -10,6 +10,7 @@ import ExerciseChat from '@/components/dashboards/student/course/exercises/exerc
 import { Card, CardContent } from '@/components/ui/card'
 import { URL_OF_SITE } from '@/utils/const'
 import { createClient } from '@/utils/supabase/server'
+import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
 
 export default async function ExerciseStudentPage({
     params,
@@ -189,23 +190,29 @@ export default async function ExerciseStudentPage({
                         />
 
                         {exercises.data.length > 0 && (
-                            <div className="flex flex-col gap-4">
-                                <h3 className="text-lg font-bold">
-                                    {t(
-                                        'StudentExercisePage.exerciseSuggestionsDescription'
-                                    )}
-                                </h3>
-                                {exercises.data.map((exercise) => {
-                                    return (
-                                        <ExerciseCard
-                                            key={exercise.id}
-                                            exercise={exercise as any}
-                                            courseId={exercise.course_id as any}
-                                            t={t}
-                                        />
-                                    )
-                                })}
-                            </div>
+                            <ToggleableSection
+                                isOpen={false}
+                                title={
+                                    <h3 className="text-lg font-bold">
+                                        {t(
+                                            'StudentExercisePage.exerciseSuggestionsDescription'
+                                        )}
+                                    </h3>
+                                }
+                            >
+                                <>
+                                    {exercises.data.map((exercise) => {
+                                        return (
+                                            <ExerciseCard
+                                                key={exercise.id}
+                                                exercise={exercise as any}
+                                                courseId={exercise.course_id as any}
+                                                t={t}
+                                            />
+                                        )
+                                    })}
+                                </>
+                            </ToggleableSection>
                         )}
                     </StudentExerciseCodePage>
                 )}
