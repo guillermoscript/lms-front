@@ -1,10 +1,9 @@
 'use client'
 
-import {
-    Star
-} from 'lucide-react'
+import { Star } from 'lucide-react'
 import { useState } from 'react'
 
+import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,8 +28,12 @@ interface ExercisePageProps {
     children: React.ReactNode
 }
 
-export default function StudentExerciseCodePage({ exercise, isExerciseCompleted, children }: ExercisePageProps) {
-    const [activeTab, setActiveTab] = useState('instructions')
+export default function StudentExerciseCodePage({
+    exercise,
+    isExerciseCompleted,
+    children,
+}: ExercisePageProps) {
+    const t = useScopedI18n('StudentExerciseCodePage')
     const [showHint, setShowHint] = useState(false)
 
     const getDifficultyColor = (level: string) => {
@@ -48,52 +51,63 @@ export default function StudentExerciseCodePage({ exercise, isExerciseCompleted,
 
     return (
         <div className="flex flex-col gap-4">
-
             {/* Instructions Panel */}
-            <div className="w-full border-r overflow-auto">
+            <div className="w-full overflow-auto">
                 <div className="p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <Badge variant="outline" className={cn('px-2 py-1', getDifficultyColor(exercise.difficulty_level))}>
-                            {exercise.difficulty_level}
+                        <Badge
+                            variant="outline"
+                            className={cn(
+                                'px-2 py-1',
+                                getDifficultyColor(exercise.difficulty_level)
+                            )}
+                        >
+                            {t(exercise.difficulty_level)}
                         </Badge>
                         <div className="flex items-center space-x-2">
                             <Badge variant="secondary">
                                 <Star className="w-4 h-4 mr-1" />
-                                {exercise.points} points
+                                {exercise.points} {t('points')}
                             </Badge>
                         </div>
                     </div>
 
-                    <h1 className="text-2xl font-bold mb-2">{exercise.title}</h1>
-                    <p className="text-muted-foreground mb-4">{exercise.description}</p>
+                    <h1 className="text-2xl font-bold mb-2">
+                        {exercise.title}
+                    </h1>
+                    <p className="text-muted-foreground mb-4">
+                        {exercise.description}
+                    </p>
 
                     <Tabs defaultValue="problem" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="problem">Problem</TabsTrigger>
-                            <TabsTrigger value="hints">Hints</TabsTrigger>
-                            <TabsTrigger value="tests">Tests</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="problem">
+                                {t('problem')}
+                            </TabsTrigger>
+                            <TabsTrigger value="hints">
+                                {t('hints')}
+                            </TabsTrigger>
                         </TabsList>
                         <TabsContent value="problem" className="space-y-4">
-                            <ViewMarkdown markdown={ exercise.instructions } />
+                            <ViewMarkdown markdown={exercise.instructions} />
                         </TabsContent>
                         <TabsContent value="hints">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Need a hint?</CardTitle>
+                                    <CardTitle>{t('needHint')}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     {showHint ? (
-                                        <p>Here's a helpful hint for solving this problem...</p>
+                                        <p>{t('hintMessage')}</p>
                                     ) : (
-                                        <Button onClick={() => setShowHint(true)}>Show Hint</Button>
+                                        <Button
+                                            onClick={() => setShowHint(true)}
+                                        >
+                                            {t('showHint')}
+                                        </Button>
                                     )}
                                 </CardContent>
                             </Card>
-                        </TabsContent>
-                        <TabsContent value="tests" className="space-y-4">
-                            <pre className="p-4 bg-muted rounded-lg overflow-auto">
-                                <code>{exercise.test_cases}</code>
-                            </pre>
                         </TabsContent>
                     </Tabs>
                 </div>
@@ -101,43 +115,8 @@ export default function StudentExerciseCodePage({ exercise, isExerciseCompleted,
 
             {/* Code Editor Area */}
             <div className="flex-1 flex flex-col">
-                {/* <div className="border-b p-2 flex items-center justify-between bg-muted/50">
-                        <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="font-mono">
-                                <Code2 className="w-4 h-4 mr-1" />
-                JavaScript
-                            </Badge>
-                            <Badge variant="outline" className="font-mono">
-                                <Settings className="w-4 h-4 mr-1" />
-                Node v18
-                            </Badge>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button variant="ghost" size="sm">
-                                <RefreshCw className="w-4 h-4 mr-1" />
-                Reset
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                                <SkipForward className="w-4 h-4 mr-1" />
-                Skip
-                            </Button>
-                            <Button variant="default" size="sm">
-                                <Play className="w-4 h-4 mr-1" />
-                Run Tests
-                            </Button>
-                            <Button variant="secondary" size="sm">
-                                <Check className="w-4 h-4 mr-1" />
-                Submit
-                            </Button>
-                        </div>
-                    </div> */}
-
-                <div className="flex-1 p-4">
-                    {/* Code Editor will be placed here */}
-                    {children}
-                </div>
+                <div className="flex-1 p-4">{children}</div>
             </div>
-
         </div>
     )
 }
