@@ -543,6 +543,45 @@ export type Database = {
           },
         ]
       }
+      exercise_code_student_submissions: {
+        Row: {
+          created_at: string | null
+          exercise_id: number
+          id: number
+          submission_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: number
+          id?: number
+          submission_code: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: number
+          id?: number
+          submission_code?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_code_student_submissions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_code_student_submissions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_completions: {
         Row: {
           completed_at: string | null
@@ -578,6 +617,45 @@ export type Database = {
           },
           {
             foreignKeyName: "exercise_completions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_files: {
+        Row: {
+          content: string
+          exercise_id: number
+          file_path: string
+          file_type: Database["public"]["Enums"]["exercise_file_type"]
+          id: number
+        }
+        Insert: {
+          content: string
+          exercise_id: number
+          file_path: string
+          file_type?: Database["public"]["Enums"]["exercise_file_type"]
+          id?: number
+        }
+        Update: {
+          content?: string
+          exercise_id?: number
+          file_path?: string
+          file_type?: Database["public"]["Enums"]["exercise_file_type"]
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_files_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_files_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
@@ -643,6 +721,7 @@ export type Database = {
       }
       exercises: {
         Row: {
+          active_file: string | null
           course_id: number
           created_at: string | null
           created_by: string
@@ -656,8 +735,10 @@ export type Database = {
           time_limit: number | null
           title: string
           updated_at: string | null
+          visible_files: string[] | null
         }
         Insert: {
+          active_file?: string | null
           course_id: number
           created_at?: string | null
           created_by: string
@@ -671,8 +752,10 @@ export type Database = {
           time_limit?: number | null
           title: string
           updated_at?: string | null
+          visible_files?: string[] | null
         }
         Update: {
+          active_file?: string | null
           course_id?: number
           created_at?: string | null
           created_by?: string
@@ -686,6 +769,7 @@ export type Database = {
           time_limit?: number | null
           title?: string
           updated_at?: string | null
+          visible_files?: string[] | null
         }
         Relationships: [
           {
@@ -1900,6 +1984,7 @@ export type Database = {
       currency_type: "usd" | "eur"
       difficulty_level: "easy" | "medium" | "hard"
       enrollement_status: "active" | "disabled"
+      exercise_file_type: "code" | "test" | "solution" | "config"
       exercise_type:
         | "quiz"
         | "coding_challenge"
