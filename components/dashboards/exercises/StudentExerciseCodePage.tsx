@@ -1,6 +1,6 @@
 'use client'
 
-import { Star } from 'lucide-react'
+import { Star, CheckCircle } from 'lucide-react'
 import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/utils'
+import ToggleableSection from '../student/course/lessons/ToggleableSection'
 
 interface ExercisePageProps {
     exercise: {
@@ -51,6 +52,20 @@ export default function StudentExerciseCodePage({
 
     return (
         <div className="flex flex-col gap-4">
+            {/* Congratulatory Message */}
+            {isExerciseCompleted && (
+                <div className="w-full p-4 rounded-lg flex items-center justify-center space-x-4 bg-green-100 border border-green-300 dark:bg-green-900 dark:border-green-700">
+                    <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold text-green-700 dark:text-green-400">
+                            {t('congratulations')}
+                        </h2>
+                        <p className="text-green-600 dark:text-green-400">
+                            {t('youDidGreat')}
+                        </p>
+                    </div>
+                </div>
+            )}
             {/* Instructions Panel */}
             <div className="w-full overflow-auto">
                 <div className="p-4">
@@ -80,7 +95,7 @@ export default function StudentExerciseCodePage({
                     </p>
 
                     <Tabs defaultValue="problem" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full md:grid-cols-2 grid-cols-1 gap-4 h-full my-2">
                             <TabsTrigger value="problem">
                                 {t('problem')}
                             </TabsTrigger>
@@ -89,7 +104,18 @@ export default function StudentExerciseCodePage({
                             </TabsTrigger>
                         </TabsList>
                         <TabsContent value="problem" className="space-y-4">
-                            <ViewMarkdown markdown={exercise.instructions} />
+                            <ToggleableSection
+                                title={
+                                    <h2 className="text-xl font-semibold">
+                                        {t('problem')}
+                                    </h2>
+                                }
+                                isOpen
+                            >
+                                <ViewMarkdown
+                                    markdown={exercise.instructions}
+                                />
+                            </ToggleableSection>
                         </TabsContent>
                         <TabsContent value="hints">
                             <Card>
