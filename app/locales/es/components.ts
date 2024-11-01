@@ -764,5 +764,19 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         Además, si lo deseas, puedes ir a la página donde se aloja el código y ver el código en una pantalla más grande.\n
         La idea es que pruebes el código y veas los resultados en tiempo real. Esta es una sección opcional, puedes usarla si lo deseas.
         Para una mejor experiencia, te recomendamos que uses una laptop o una computadora de escritorio.`,
+    },
+    StudentExerciseCodePage: {
+        points: 'puntos',
+        problem: 'Problema',
+        hints: 'Pistas',
+        needHint: '¿Necesitas una pista?',
+        hintMessage: 'Aquí tienes una pista útil para resolver este problema...',
+        showHint: 'Mostrar Pista',
+        congratulations: '¡Felicidades!',
+        youDidGreat: 'Lo hiciste genial',
+    },
+    CompletedMessage: {
+        title: '¡Completado!',
+        description: 'Has completado este ejercicio con éxito.',
     }
 } as const

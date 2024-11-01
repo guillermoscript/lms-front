@@ -96,6 +96,10 @@ CREATE TYPE public.exercise_type AS ENUM(
   'discussion'
 );
 
+-- Create an enum type for file_type
+CREATE TYPE public.exercise_file_type AS ENUM('code', 'test', 'solution', 'config');
+
+
 CREATE TYPE public.difficulty_level AS ENUM('easy', 'medium', 'hard');
 
 create table
@@ -694,6 +698,8 @@ create table
     title text not null,
     description text null,
     course_id integer not null,
+    active_file text null,
+    visible_files text[] null,
     constraint exercises_pkey primary key (id),
     constraint exercises_course_id_fkey foreign key (course_id) references courses (course_id) on update cascade on delete cascade,
     constraint exercises_created_by_fkey foreign key (created_by) references auth.users (id) on delete cascade,
@@ -726,3 +732,14 @@ create table
     constraint exercise_completions_exercise_id_fkey foreign key (exercise_id) references exercises (id) on delete cascade,
     constraint exercise_completions_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
   ) tablespace pg_default;
+
+-- Create the exercise_files table
+CREATE TABLE public.exercise_files (
+  id BIGSERIAL PRIMARY KEY,
+  exercise_id BIGINT NOT NULL REFERENCES public.exercises(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  file_path TEXT NOT NULL,          -- e.g., '/calculatePrice.ts'
+  content TEXT NOT NULL,            -- The code content
+  file_type public.exercise_file_type NOT NULL DEFAULT 'code',
+  CONSTRAINT unique_file_per_exercise UNIQUE (exercise_id, file_path)
+);
+
