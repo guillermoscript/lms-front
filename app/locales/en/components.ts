@@ -765,4 +765,16 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         The idea is for you to test the code and see the results in real-time. This is an optinal section, you can use it if you want.
         For a better experience, use a desktop or laptop computer.`,
     },
+    StudentExerciseCodePage: {
+        points: 'points',
+        problem: 'Problem',
+        hints: 'Hints',
+        needHint: 'Need a hint?',
+        hintMessage: "Here's a helpful hint for solving this problem...",
+        showHint: 'Show Hint',
+    },
+    CompletedMessage: {
+        title: 'Exercise Completed',
+        description: 'You have successfully completed the exercise.',
+    }
 } as const
