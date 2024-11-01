@@ -237,3 +237,88 @@ export async function actionButtonsAction(data: { exerciseId: string, messages: 
         toolResult: result.toolResults[0].result,
     }, null)
 }
+
+export async function markExerciseCompletedAction(data: { exerciseId: number }) {
+    const exerciseId = data.exerciseId
+
+    if (!exerciseId) {
+        return createResponse('error', 'Exercise id is required', null, 'Exercise id is required')
+    }
+
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        console.log(userData.error)
+        return createResponse('error', 'Error fetching user', null, 'Error fetching user')
+    }
+
+    // Check if completion already exists
+    const { data: existingCompletion, error: existingCompletionError } = await supabase
+        .from('exercise_completions')
+        .select('*')
+        .eq('exercise_id', exerciseId)
+        .eq('user_id', userData.data.user.id)
+        .single()
+
+    if (existingCompletionError && existingCompletionError.code !== 'PGRST116') {
+        console.log(existingCompletionError)
+        return createResponse('error', 'Error checking existing completion', null, 'Error checking existing completion')
+    }
+
+    if (existingCompletion) {
+        return createResponse('error', 'Exercise already marked as completed', null, 'Exercise already marked as completed')
+    }
+
+    const completionData = await supabase
+        .from('exercise_completions')
+        .insert({
+            exercise_id: exerciseId,
+            user_id: userData.data.user.id,
+            completed_by: userData.data.user.id,
+        })
+
+    if (completionData.error) {
+        console.log(completionData.error)
+        return createResponse('error', 'Error marking exercise as completed', null, 'Error marking exercise as completed')
+    }
+
+    revalidatePath('/dashboard/student/courses/[courseId]/exercises/[exerciseId]')
+    return createResponse('success', 'Exercise marked as completed successfully', null, null)
+}
+
+export async function saveUserSubmissionAction(data: { exerciseId: number, submissionCode: string }) {
+    const { exerciseId, submissionCode } = data
+
+    if (!exerciseId || !submissionCode) {
+        return createResponse('error', 'Exercise id and submission code are required', null, 'Exercise id and submission code are required')
+    }
+
+    const supabase = createClient()
+
+    const userData = await supabase.auth.getUser()
+
+    if (userData.error) {
+        console.log(userData.error)
+        return createResponse('error', 'Error fetching user', null, 'Error fetching user')
+    }
+
+    const { data: submissionData, error } = await supabase
+        .from('exercise_code_student_submissions')
+        .insert([
+            {
+                exercise_id: exerciseId,
+                user_id: userData.data.user.id,
+                submission_code: submissionCode,
+            },
+        ])
+
+    if (error) {
+        console.log(error)
+        return createResponse('error', 'Error saving submission', null, 'Error saving submission')
+    }
+
+    revalidatePath('/dashboard/student/courses/[courseId]/exercises/[exerciseId]')
+    return createResponse('success', 'Submission saved successfully', null, null)
+}
