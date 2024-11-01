@@ -7,10 +7,10 @@ import StudentExerciseCodeWrapper from '@/components/dashboards/exercises/Studen
 import StudentExercisePage from '@/components/dashboards/exercises/StudentExercisePage'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
+import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
 import { Card, CardContent } from '@/components/ui/card'
 import { URL_OF_SITE } from '@/utils/const'
 import { createClient } from '@/utils/supabase/server'
-import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
 
 export default async function ExerciseStudentPage({
     params,
