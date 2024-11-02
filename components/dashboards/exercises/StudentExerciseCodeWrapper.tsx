@@ -20,7 +20,10 @@ export default function StudentExerciseCodeWrapper({
 }) {
     return (
         <SandpackProvider
-            files={files}
+            files={{
+                ...files,
+                'add.test.ts': ''
+            }}
             theme="dark"
             template="test-ts"
             options={{
