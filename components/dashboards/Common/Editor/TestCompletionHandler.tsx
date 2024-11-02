@@ -36,7 +36,7 @@ export default function TestCompletionHandler({
         <>
             <SandpackTests
                 style={{ height: '30%' }}
-                hideTestsAndSupressLogs
+                // hideTestsAndSupressLogs
                 watchMode={false}
                 onComplete={async (results) => {
                     if (allTestsPassed(results)) {
@@ -54,8 +54,12 @@ export default function TestCompletionHandler({
                         console.log('Some tests did not pass.')
                     }
                 }}
+                verbose={true}
             />
-            <SandpackConsole />
+            <SandpackConsole
+                style={{ height: '20%' }}
+                // hideTestsAndSupressLogs
+            />
         </>
     )
 }

@@ -40,7 +40,7 @@ export default function MySandpack({
                     />
                     <SandpackStack style={{ height: '100vh', margin: 0 }}>
                         <>
-                            <SandpackPreview style={{ height: '70%' }} />
+                            <SandpackPreview style={{ height: '50%' }} />
                             <TestCompletionHandler
                                 exerciseId={exerciseId}
                                 code={code}

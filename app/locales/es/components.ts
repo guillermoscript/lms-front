@@ -774,6 +774,9 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         showHint: 'Mostrar Pista',
         congratulations: '¡Felicidades!',
         youDidGreat: 'Lo hiciste genial',
+        thisExerciseWasCompleted: 'Este ejercicio fue completado con éxito.',
+        actions: 'Acciones',
+        shareProgress: 'Compartir Progreso',
     },
     CompletedMessage: {
         title: '¡Completado!',

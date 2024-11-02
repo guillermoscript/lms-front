@@ -774,6 +774,9 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         showHint: 'Show Hint',
         congratulations: 'Congratulations!',
         youDidGreat: 'You did great!',
+        thisExerciseWasCompleted: 'This exercise was completed.',
+        actions: 'Actions',
+        shareProgress: 'Share Progress',
     },
     CompletedMessage: {
         title: 'Exercise Completed',

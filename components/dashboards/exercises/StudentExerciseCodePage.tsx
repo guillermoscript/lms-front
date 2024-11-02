@@ -1,11 +1,12 @@
 'use client'
 
-import { CheckCircle, Star } from 'lucide-react'
+import { CheckCircle, Share2, Star } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -21,19 +22,22 @@ interface ExercisePageProps {
         difficulty_level: string
         instructions: string
         system_prompt: string
-        initial_code: string
         test_cases: string
         exercise_type: string
         points: number
     }
     isExerciseCompleted: boolean
     children: React.ReactNode
+    studentId: string
+    readOnly?: boolean
 }
 
 export default function StudentExerciseCodePage({
     exercise,
     isExerciseCompleted,
     children,
+    studentId,
+    readOnly = false,
 }: ExercisePageProps) {
     const t = useScopedI18n('StudentExerciseCodePage')
     const [showHint, setShowHint] = useState(false)
@@ -64,6 +68,11 @@ export default function StudentExerciseCodePage({
                         <p className="text-green-600 dark:text-green-400">
                             {t('youDidGreat')}
                         </p>
+                        {readOnly && (
+                            <p className="text-green-600 dark:text-green-400">
+                                {t('thisExerciseWasCompleted')}
+                            </p>
+                        )}
                     </div>
                 </div>
             )}
@@ -142,8 +151,32 @@ export default function StudentExerciseCodePage({
 
             {/* Code Editor Area */}
             <div className="flex-1 flex flex-col">
-                <div className="flex-1 p-4">{children}</div>
+                <div className="flex-1 p-4">
+                    {children}
+                </div>
             </div>
+
+            {/* Share Exercise Section */}
+            {!readOnly && (
+                <div className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{t('actions')}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <Link
+                                    className={buttonVariants({ variant: 'outline' })}
+                                    href={`/student/${studentId}/exercises/${exercise.id}/`}
+                                >
+                                    <Share2 className="mr-2 h-4 w-4" />
+                                    {t('shareProgress')}
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     )
 }
