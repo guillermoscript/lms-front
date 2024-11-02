@@ -64,7 +64,10 @@ export default function SaveCode({
                     ) : isLoading ? (
                         <Loader className="w-4 h-4" />
                     ) : (
-                        <Settings className="w-4 h-4" />
+                        <>
+                            Save
+                            <Settings className="w-4 h-4 ml-2" />
+                        </>
                     )}
                 </Button>
             </div>
