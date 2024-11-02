@@ -1,5 +1,6 @@
-import { getI18n } from '@/app/locales/server'
+import StudentExerciseCodePage from '@/components/dashboards/exercises/StudentExerciseCodePage'
 import StudentPublicExercisePage from '@/components/front/StudentPublicExercisePage'
+import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function ExerciseStudentPage({
@@ -32,17 +33,59 @@ export default async function ExerciseStudentPage({
         .eq('id', params.studentId)
         .single()
 
-    const t = await getI18n()
+    // Fetch the exercise files
+    const { data: exerciseFiles, error: filesError } = await supabase
+        .from('exercise_files')
+        .select('file_path, content')
+        .eq('exercise_id', params.exerciseId)
+
+    if (filesError) {
+        console.error('Error fetching exercise files:', filesError)
+        // Handle the error appropriately
+    }
+
+    const { data: lastSubmission, error: fetchError } = await supabase
+        .from('exercise_code_student_submissions')
+        .select('submission_code')
+        .eq('exercise_id', params.exerciseId)
+        .eq('user_id', params.studentId)
+        .order('created_at', { ascending: false })
+        .single()
+
+    // Construct the files object for MySandpack
+    const files = {}
+    exerciseFiles?.forEach((file) => {
+        files[file.file_path] = file.content
+    })
 
     const isExerciseCompleted = exercise.data?.exercise_completions.length > 0
 
     return (
         <div className="md:container mx-auto space-y-4">
-            <StudentPublicExercisePage
-                exercise={exercise.data}
-                profile={profile.data}
-                isExerciseCompleted={isExerciseCompleted}
-            />
+            {exercise.data.exercise_type === 'essay' && (
+                <>
+                    <StudentPublicExercisePage
+                        exercise={exercise.data}
+                        profile={profile.data}
+                        isExerciseCompleted={isExerciseCompleted}
+                    />
+                </>
+            )}
+
+            {exercise.data.exercise_type === 'coding_challenge' && (
+                <StudentExerciseCodePage
+                    exercise={exercise.data as any}
+                    isExerciseCompleted={isExerciseCompleted}
+                    studentId={params.studentId}
+                    readOnly
+                >
+                    <ViewMarkdown
+                        markdown={`\`\`\`typescript\n${lastSubmission?.submission_code}\n
+                    
+                    `}
+                    />
+                </StudentExerciseCodePage>
+            )}
         </div>
     )
 }
