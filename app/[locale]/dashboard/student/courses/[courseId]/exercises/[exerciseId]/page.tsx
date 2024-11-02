@@ -81,9 +81,7 @@ export default async function ExerciseStudentPage({
     console.log(fetchError)
 
     const t = await getI18n()
-
     const isExerciseCompleted = exercise.data?.exercise_completions.length > 0
-
     const initialMessages = [
         {
             id: generateId().toString(),
@@ -180,6 +178,8 @@ export default async function ExerciseStudentPage({
                     <StudentExerciseCodePage
                         exercise={exercise.data as any}
                         isExerciseCompleted={isExerciseCompleted}
+                        studentId={userData.data.user.id}
+
                     >
                         <StudentExerciseCodeWrapper
                             exercise={exercise.data}
