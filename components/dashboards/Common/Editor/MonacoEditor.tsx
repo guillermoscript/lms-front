@@ -2,6 +2,7 @@
 // Dynamically import the code editor to avoid SSR issues
 import {
     FileTabs,
+    SandpackFileExplorer,
     SandpackStack,
     useActiveCode,
     useSandpack,
@@ -20,9 +21,10 @@ export default function MonacoEditor({
 
     return (
         <SandpackStack style={{ height: '100vh', margin: 0 }}>
-            <FileTabs
-                closableTabs
+            <SandpackFileExplorer
+                autoHiddenFiles
             />
+            <FileTabs />
             <div style={{ flex: 1, paddingTop: 8, background: '#1e1e1e' }}>
                 <Editor
                     width="100%"
