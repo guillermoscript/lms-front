@@ -45,7 +45,7 @@ export default function SaveCode({
     }
 
     return (
-        <div className="p-2 flex items-center justify-between border  rounded-lg mb-4">
+        <div className="p-2 flex gap-4 mb-4">
             <div className="flex items-center space-x-2">
                 <Badge variant="default">
                     <Code2 className="w-4 h-4 mr-1" />
