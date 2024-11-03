@@ -179,7 +179,7 @@ export default async function ExerciseStudentPage({
                         exercise={exercise.data as any}
                         isExerciseCompleted={isExerciseCompleted}
                         studentId={userData.data.user.id}
-
+                        courseId={params.courseId}
                     >
                         <StudentExerciseCodeWrapper
                             exercise={exercise.data}
