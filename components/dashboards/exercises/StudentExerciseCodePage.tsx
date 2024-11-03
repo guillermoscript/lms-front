@@ -1,18 +1,15 @@
 'use client'
 
-import { CheckCircle, Share2, Star } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { CheckCircle, ChevronLeft, Share2, Star } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/utils'
-
-import ToggleableSection from '../student/course/lessons/ToggleableSection'
 
 interface ExercisePageProps {
     exercise: {
@@ -40,7 +37,6 @@ export default function StudentExerciseCodePage({
     readOnly = false,
 }: ExercisePageProps) {
     const t = useScopedI18n('StudentExerciseCodePage')
-    const [showHint, setShowHint] = useState(false)
 
     const getDifficultyColor = (level: string) => {
         switch (level.toLowerCase()) {
@@ -57,96 +53,69 @@ export default function StudentExerciseCodePage({
 
     return (
         <div className="flex flex-col gap-4">
-            {/* Congratulatory Message */}
-            {isExerciseCompleted && (
-                <div className="w-full p-4 rounded-lg flex items-center justify-center space-x-4 bg-green-100 border border-green-300 dark:bg-green-900 dark:border-green-700">
-                    <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-                    <div className="text-center">
-                        <h2 className="text-xl font-bold text-green-700 dark:text-green-400">
-                            {t('congratulations')}
-                        </h2>
-                        <p className="text-green-600 dark:text-green-400">
-                            {t('youDidGreat')}
-                        </p>
-                        {readOnly && (
-                            <p className="text-green-600 dark:text-green-400">
-                                {t('thisExerciseWasCompleted')}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            )}
-            {/* Instructions Panel */}
-            <div className="w-full overflow-auto">
-                <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
+            {/* Top Navigation */}
+            <div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="container flex h-14 max-w-screen-2xl items-center">
+                    <div className="flex items-center space-x-4">
+                        <Link
+                            href="/exercises"
+                            className="flex items-center space-x-2 hover:text-primary"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span>{t('backToExercises')}</span>
+                        </Link>
+                        <Separator orientation="vertical" className="h-6" />
                         <Badge
                             variant="outline"
-                            className={cn(
-                                'px-2 py-1',
-                                getDifficultyColor(exercise.difficulty_level)
-                            )}
+                            className={cn('px-2 py-1', getDifficultyColor(exercise.difficulty_level))}
                         >
                             {t(exercise.difficulty_level)}
                         </Badge>
-                        <div className="flex items-center space-x-2">
-                            <Badge variant="secondary">
-                                <Star className="w-4 h-4 mr-1" />
-                                {exercise.points} {t('points')}
-                            </Badge>
-                        </div>
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                            <Star className="h-3 w-3" />
+                            {exercise.points} {t('points')}
+                        </Badge>
+
                     </div>
-
-                    <h1 className="text-2xl font-bold mb-2">
-                        {exercise.title}
-                    </h1>
-                    <p className="text-muted-foreground mb-4">
-                        {exercise.description}
-                    </p>
-
-                    <Tabs defaultValue="problem" className="w-full">
-                        <TabsList className="grid w-full md:grid-cols-2 grid-cols-1 gap-4 h-full my-2">
-                            <TabsTrigger value="problem">
-                                {t('problem')}
-                            </TabsTrigger>
-                            <TabsTrigger value="hints">
-                                {t('hints')}
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="problem" className="space-y-4">
-                            <ToggleableSection
-                                title={
-                                    <h2 className="text-xl font-semibold">
-                                        {t('problem')}
-                                    </h2>
-                                }
-                                isOpen
-                            >
-                                <ViewMarkdown
-                                    markdown={exercise.instructions}
-                                />
-                            </ToggleableSection>
-                        </TabsContent>
-                        <TabsContent value="hints">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>{t('needHint')}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {showHint ? (
-                                        <p>{t('hintMessage')}</p>
-                                    ) : (
-                                        <Button
-                                            onClick={() => setShowHint(true)}
-                                        >
-                                            {t('showHint')}
-                                        </Button>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
+                    <div className="ml-auto flex items-center space-x-4">
+                        {!readOnly && (
+                            <Button variant="outline" size="sm">
+                                <Share2 className="mr-2 h-4 w-4" />
+                                {t('shareProgress')}
+                            </Button>
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            {/* Success Message */}
+            <AnimatePresence>
+                {isExerciseCompleted && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="mb-6"
+                    >
+                        <Card className="bg-green-500/10 border-green-500/20">
+                            <CardContent className="flex items-center justify-center py-6">
+                                <div className="flex items-center space-x-4">
+                                    <CheckCircle className="h-8 w-8 text-green-500" />
+                                    <div>
+                                        <h2 className="text-xl font-bold text-green-500">{t('congratulations')}</h2>
+                                        <p className="text-green-600">{t('youDidGreat')}</p>
+                                        {readOnly && <p className="text-green-600">{t('thisExerciseWasCompleted')}</p>}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="space-y-4 px-4">
+                <h1 className="text-3xl font-bold tracking-tight">{exercise.title}</h1>
+                <p className="text-muted-foreground mt-2">{exercise.description}</p>
             </div>
 
             {/* Code Editor Area */}
@@ -155,28 +124,6 @@ export default function StudentExerciseCodePage({
                     {children}
                 </div>
             </div>
-
-            {/* Share Exercise Section */}
-            {!readOnly && (
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('actions')}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <Link
-                                    className={buttonVariants({ variant: 'outline' })}
-                                    href={`/student/${studentId}/exercises/${exercise.id}/`}
-                                >
-                                    <Share2 className="mr-2 h-4 w-4" />
-                                    {t('shareProgress')}
-                                </Link>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </div>
     )
 }
