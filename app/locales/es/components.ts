@@ -778,6 +778,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         actions: 'Acciones',
         shareProgress: 'Compartir Progreso',
         backToExercises: 'Volver a Ejercicios',
+        copiedToClipboard: 'Copiado al portapapeles',
     },
     CompletedMessage: {
         title: '¡Completado!',
