@@ -777,6 +777,7 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
         thisExerciseWasCompleted: 'This exercise was completed.',
         actions: 'Actions',
         shareProgress: 'Share Progress',
+        backToExercises: 'Back to Exercises',
     },
     CompletedMessage: {
         title: 'Exercise Completed',

@@ -777,6 +777,7 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         thisExerciseWasCompleted: 'Este ejercicio fue completado con éxito.',
         actions: 'Acciones',
         shareProgress: 'Compartir Progreso',
+        backToExercises: 'Volver a Ejercicios',
     },
     CompletedMessage: {
         title: '¡Completado!',
