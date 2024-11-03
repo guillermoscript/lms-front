@@ -3,6 +3,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle, ChevronLeft, Share2, Star } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
+import { useCopyToClipboard } from 'usehooks-ts'
 
 import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +39,8 @@ export default function StudentExerciseCodePage({
     readOnly = false,
 }: ExercisePageProps) {
     const t = useScopedI18n('StudentExerciseCodePage')
+
+    const [copiedText, copy] = useCopyToClipboard()
 
     const getDifficultyColor = (level: string) => {
         switch (level.toLowerCase()) {
@@ -79,7 +83,13 @@ export default function StudentExerciseCodePage({
                     </div>
                     <div className="ml-auto flex items-center space-x-4">
                         {!readOnly && (
-                            <Button variant="outline" size="sm">
+                            <Button
+                                onClick={ () => {
+                                    copy(window.location.hostname + `/student/${studentId}/exercises/${exercise.id}/`)
+                                    toast.success(t('copiedToClipboard'))
+                                }}
+                                variant="outline" size="sm"
+                            >
                                 <Share2 className="mr-2 h-4 w-4" />
                                 {t('shareProgress')}
                             </Button>
