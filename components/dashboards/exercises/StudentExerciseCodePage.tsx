@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle, ChevronLeft, Share2, Star } from 'lucide-react'
+import { CheckCircle, ChevronLeft, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useCopyToClipboard } from 'usehooks-ts'
@@ -29,6 +29,7 @@ interface ExercisePageProps {
     children: React.ReactNode
     studentId: string
     readOnly?: boolean
+    courseId: string
 }
 
 export default function StudentExerciseCodePage({
@@ -37,6 +38,7 @@ export default function StudentExerciseCodePage({
     children,
     studentId,
     readOnly = false,
+    courseId,
 }: ExercisePageProps) {
     const t = useScopedI18n('StudentExerciseCodePage')
 
@@ -62,7 +64,7 @@ export default function StudentExerciseCodePage({
                 <div className="container flex h-14 max-w-screen-2xl items-center">
                     <div className="flex items-center space-x-4">
                         <Link
-                            href="/exercises"
+                            href={`/dashboard/student/courses/${courseId}/exercises`}
                             className="flex items-center space-x-2 hover:text-primary"
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -75,11 +77,6 @@ export default function StudentExerciseCodePage({
                         >
                             {t(exercise.difficulty_level)}
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                            <Star className="h-3 w-3" />
-                            {exercise.points} {t('points')}
-                        </Badge>
-
                     </div>
                     <div className="ml-auto flex items-center space-x-4">
                         {!readOnly && (
