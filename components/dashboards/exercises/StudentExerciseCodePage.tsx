@@ -29,7 +29,7 @@ interface ExercisePageProps {
     children: React.ReactNode
     studentId: string
     readOnly?: boolean
-    courseId: string
+    courseId?: string
 }
 
 export default function StudentExerciseCodePage({
@@ -63,13 +63,15 @@ export default function StudentExerciseCodePage({
             <div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center">
                     <div className="flex items-center space-x-4">
-                        <Link
-                            href={`/dashboard/student/courses/${courseId}/exercises`}
-                            className="flex items-center space-x-2 hover:text-primary"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            <span>{t('backToExercises')}</span>
-                        </Link>
+                        {!readOnly && (
+                            <Link
+                                href={`/dashboard/student/courses/${courseId}/exercises`}
+                                className="flex items-center space-x-2 hover:text-primary"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                <span>{t('backToExercises')}</span>
+                            </Link>
+                        )}
                         <Separator orientation="vertical" className="h-6" />
                         <Badge
                             variant="outline"
