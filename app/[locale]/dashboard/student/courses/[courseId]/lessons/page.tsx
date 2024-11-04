@@ -1,4 +1,5 @@
 import { CheckCircle, ChevronRight, Clock } from 'lucide-react'
+import type { Metadata, ResolvingMetadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -8,9 +9,33 @@ import { Progress } from '@/components/ui/progress'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
-export const metadata = {
-    title: 'Student Course Lessons',
-    description: 'View and track your progress through the course lessons.'
+interface Props {
+    params: { courseId: string }
+}
+
+export async function generateMetadata(
+    { params }: Props,
+    parent: ResolvingMetadata
+): Promise<Metadata> {
+    const supabase = createClient()
+
+    const courseData = await supabase
+        .from('courses')
+        .select('title, description, thumbnail_url')
+        .eq('course_id', params.courseId)
+        .single()
+
+    const course = courseData.data
+
+    const previousImages = (await parent).openGraph?.images || []
+
+    return {
+        title: course?.title || 'Student Course Lessons',
+        description: course?.description || 'View and track your progress through the course lessons.',
+        openGraph: {
+            images: [course?.thumbnail_url || '/img/robot.jpeg', ...previousImages],
+        },
+    }
 }
 
 export default async function StudentCourseLessonsPage({

@@ -1,7 +1,48 @@
+import type { Metadata, ResolvingMetadata } from 'next'
+
 import { getScopedI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import CourseDashboard from '@/components/dashboards/student/course/CourseDashboard'
 import { createClient } from '@/utils/supabase/server'
+
+export async function generateMetadata(
+    _props: any,
+    parent: ResolvingMetadata
+): Promise<Metadata> {
+    const supabase = createClient()
+    const user = await supabase.auth.getUser()
+
+    const subscriptions = await supabase
+        .from('subscriptions')
+        .select('subscription_id')
+        .eq('user_id', user.data.user.id)
+
+    const coursesQuery =
+        subscriptions.data.length > 0
+            ? supabase
+                .from('courses')
+                .select('title, thumbnail_url')
+                .eq('status', 'published')
+                .eq('enrollments.user_id', user.data.user.id)
+            : supabase
+                .from('enrollments')
+                .select('course:course_id(title, thumbnail_url)')
+                .eq('user_id', user.data.user.id)
+
+    const coursesResult = await coursesQuery
+
+    const course = (coursesResult.data[0] as any)?.course || coursesResult.data[0]
+
+    const previousImages = (await parent).openGraph?.images || []
+
+    return {
+        title: 'Student Courses',
+        description: 'Dashboard for student courses',
+        openGraph: {
+            images: [course?.thumbnail_url || '/img/robot.jpeg', ...previousImages],
+        },
+    }
+}
 
 export default async function CourseSectionComponent() {
     const supabase = createClient()

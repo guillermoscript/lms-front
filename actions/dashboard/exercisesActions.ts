@@ -306,13 +306,12 @@ export async function saveUserSubmissionAction(data: { exerciseId: number, submi
 
     const { data: submissionData, error } = await supabase
         .from('exercise_code_student_submissions')
-        .insert([
-            {
-                exercise_id: exerciseId,
-                user_id: userData.data.user.id,
-                submission_code: submissionCode,
-            },
-        ])
+        .upsert({
+            exercise_id: exerciseId,
+            user_id: userData.data.user.id,
+            submission_code: submissionCode,
+        })
+        .eq('exercise_id', exerciseId)
 
     if (error) {
         console.log(error)
