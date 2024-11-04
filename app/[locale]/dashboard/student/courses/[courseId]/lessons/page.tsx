@@ -9,11 +9,6 @@ import { Progress } from '@/components/ui/progress'
 import { cn } from '@/utils'
 import { createClient } from '@/utils/supabase/server'
 
-export const metadata = {
-    title: 'Student Course Lessons',
-    description: 'View and track your progress through the course lessons.'
-}
-
 interface Props {
     params: { courseId: string }
 }
