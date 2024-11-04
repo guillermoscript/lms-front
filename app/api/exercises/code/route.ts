@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
                     submission_code: submissionCode,
                 },
             )
+            .eq('exercise_id', exerciseId)
 
         if (error) {
             console.log(error)
