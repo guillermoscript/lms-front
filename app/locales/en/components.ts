@@ -783,5 +783,12 @@ If you have doubts, try saying: "Could you give me a fake scenario to practice m
     CompletedMessage: {
         title: 'Exercise Completed',
         description: 'You have successfully completed the exercise.',
+    },
+    SaveCode: {
+        noChangesToSave: 'No changes to save',
+        failedToSaveCode: 'Failed to save code',
+        codeSavedSuccessfully: 'Code saved successfully',
+        save: 'Save',
+        javascript: 'JavaScript',
     }
 } as const

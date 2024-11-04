@@ -1,8 +1,6 @@
 'use client'
 
 import {
-    SandpackLayout,
-    SandpackPreview,
     SandpackStack,
     useActiveCode,
 } from '@codesandbox/sandpack-react'
@@ -33,22 +31,19 @@ export default function MySandpack({
         <>
             <SaveCode isCompleted={isCompleted} exerciseId={exerciseId} />
             {!isCompleted && (
-                <SandpackLayout>
+                <SandpackStack style={{ height: '100vh', margin: 0 }}>
                     <MonacoEditor
                         readOnly={isCompleted}
                         userCode={userCode}
                     />
-                    <SandpackStack style={{ height: '100vh', margin: 0 }}>
-                        <>
-                            <SandpackPreview style={{ height: '50%' }} />
-                            <TestCompletionHandler
-                                exerciseId={exerciseId}
-                                code={code}
-                                setIsCompleted={setIsCompleted}
-                            />
-                        </>
-                    </SandpackStack>
-                </SandpackLayout>
+                    <>
+                        <TestCompletionHandler
+                            exerciseId={exerciseId}
+                            code={code}
+                            setIsCompleted={setIsCompleted}
+                        />
+                    </>
+                </SandpackStack>
             )}
             {isCompleted && (
                 <div className='flex flex-col gap-4 py-4'>
