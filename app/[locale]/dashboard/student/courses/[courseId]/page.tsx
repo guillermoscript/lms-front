@@ -1,9 +1,39 @@
+import type { Metadata, ResolvingMetadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
 import EnhancedCourseStudentPage from '@/components/dashboards/student/course/EnhancedCourseStudentPage'
 import { createClient } from '@/utils/supabase/server'
+
+interface Props {
+    params: { courseId: string }
+}
+
+export async function generateMetadata(
+    { params }: Props,
+    parent: ResolvingMetadata
+): Promise<Metadata> {
+    const supabase = createClient()
+
+    const courseData = await supabase
+        .from('courses')
+        .select('title, description, thumbnail_url')
+        .eq('course_id', params.courseId)
+        .single()
+
+    const course = courseData.data
+
+    const previousImages = (await parent).openGraph?.images || []
+
+    return {
+        title: course?.title || 'Course Student Page',
+        description: course?.description || 'Course Student Page',
+        openGraph: {
+            images: [course?.thumbnail_url || '/img/robot.jpeg', ...previousImages],
+        },
+    }
+}
 
 export default async function CourseStudentPage({
     params,
@@ -62,9 +92,7 @@ export default async function CourseStudentPage({
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <div
-                className='pb-6'
-            >
+            <div className='pb-6'>
                 <BreadcrumbComponent
                     links={[
                         { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
