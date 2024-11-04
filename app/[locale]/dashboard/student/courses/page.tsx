@@ -21,7 +21,7 @@ export async function generateMetadata(
         subscriptions.data.length > 0
             ? supabase
                 .from('courses')
-                .select('title, thumbnail_url')
+                .select('title, thumbnail_url, enrollments(user_id)')
                 .eq('status', 'published')
                 .eq('enrollments.user_id', user.data.user.id)
             : supabase
