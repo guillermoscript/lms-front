@@ -11,12 +11,10 @@ import Editor from '@monaco-editor/react'
 
 export default function MonacoEditor({
     readOnly,
-    userCode,
-    setCodeState
+    userCode
 }: {
     readOnly: boolean
     userCode?: string
-    setCodeState: (code: string) => void
 }) {
     const { code, updateCode } = useActiveCode()
     const { sandpack } = useSandpack()
@@ -40,7 +38,6 @@ export default function MonacoEditor({
                             return
                         }
                         updateCode(value || '')
-                        setCodeState(value || '')
                     }}
                 />
             </div>

@@ -1,13 +1,11 @@
 import { SandpackConsole, SandpackTests, useActiveCode } from '@codesandbox/sandpack-react'
 import axios from 'axios'
-import { useEffect } from 'react'
 
 import { useSaveCode } from '../../exercises/hooks/useSaveCode'
 
 interface TestCompletionHandlerProps {
     exerciseId: number
     setIsCompleted: (completed: boolean) => void
-    codeState: string
 }
 
 const allTestsPassed = (results: any) => {
@@ -33,19 +31,9 @@ const allTestsPassed = (results: any) => {
 export default function TestCompletionHandler({
     exerciseId,
     setIsCompleted,
-    codeState: code,
 }: TestCompletionHandlerProps) {
-    const { saveCode, isLoading } = useSaveCode(exerciseId, code)
-
-    const { code: codeState } = useActiveCode()
-
-    useEffect(() => {
-        console.log('code form useActiveCode', codeState)
-    }, [codeState])
-
-    useEffect(() => {
-        console.log('Code from props', code)
-    }, [code])
+    const { code } = useActiveCode()
+    const { saveCode, isLoading } = useSaveCode(exerciseId)
 
     return (
         <>
