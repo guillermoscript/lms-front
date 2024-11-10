@@ -1,12 +1,11 @@
 import { useActiveCode } from '@codesandbox/sandpack-react'
 import { Check, Code2, Loader, Settings } from 'lucide-react'
-import { useState } from 'react'
-import { toast } from 'sonner'
 
-import { saveUserSubmissionAction } from '@/actions/dashboard/exercisesActions'
 import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+
+import { useSaveCode } from './hooks/useSaveCode'
 
 export default function SaveCode({
     exerciseId,
@@ -17,34 +16,7 @@ export default function SaveCode({
 }) {
     const t = useScopedI18n('SaveCode')
     const { code } = useActiveCode()
-    const [isLoading, setIsLoading] = useState(false)
-    const [lastSavedCode, setLastSavedCode] = useState(code)
-
-    const saveCode = async () => {
-        if (code === lastSavedCode) {
-            toast.info(t('noChangesToSave'))
-            return
-        }
-        setIsLoading(true)
-        try {
-            const res = await saveUserSubmissionAction({
-                exerciseId,
-                submissionCode: code,
-            })
-
-            if (res.error) {
-                toast.error(t('failedToSaveCode'))
-                return
-            }
-            setLastSavedCode(code)
-            toast.success(t('codeSavedSuccessfully'))
-        } catch (error) {
-            console.error('Error:', error)
-            toast.error(t('failedToSaveCode'))
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    const { saveCode, isLoading } = useSaveCode(exerciseId, code)
 
     return (
         <div className="p-2 flex items-center justify-between border  rounded-lg mb-4">
@@ -56,7 +28,7 @@ export default function SaveCode({
             </div>
             <div className="flex items-center space-x-2">
                 <Button
-                    onClick={saveCode}
+                    onClick={async () => await saveCode(code)}
                     variant="secondary"
                     size="sm"
                     disabled={isCompleted || isLoading}
