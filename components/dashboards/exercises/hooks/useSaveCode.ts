@@ -12,6 +12,8 @@ export function useSaveCode(exerciseId: number, initialCode: string) {
 
     const saveCode = async (code: string) => {
         if (code === lastSavedCode) {
+            console.log(code, 'code')
+            console.log(lastSavedCode, 'lastSavedCode')
             toast.info(t('noChangesToSave'))
             return
         }
