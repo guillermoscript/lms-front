@@ -36,7 +36,7 @@ export default function SaveCode({
                     {isCompleted ? (
                         <Check className="w-4 h-4" />
                     ) : isLoading ? (
-                        <Loader className="w-4 h-4" />
+                        <Loader className="w-4 h-4 animate-spin" />
                     ) : (
                         <>
                             {t('save')}
