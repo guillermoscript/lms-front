@@ -1,5 +1,6 @@
 import { useActiveCode } from '@codesandbox/sandpack-react'
 import { Check, Code2, Loader, Settings } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +18,10 @@ export default function SaveCode({
     const t = useScopedI18n('SaveCode')
     const { code } = useActiveCode()
     const { saveCode, isLoading } = useSaveCode(exerciseId, code)
+
+    useEffect(() => {
+        console.log('code', code)
+    }, [code])
 
     return (
         <div className="p-2 flex items-center justify-between border  rounded-lg mb-4">

@@ -24,6 +24,7 @@ export default function MySandpack({
     isExerciseCompleted,
 }: MySandpackProps) {
     const [isCompleted, setIsCompleted] = useState(isExerciseCompleted)
+    const [code, setCode] = useState(userCode)
 
     return (
         <>
@@ -33,11 +34,13 @@ export default function MySandpack({
                     <MonacoEditor
                         readOnly={isCompleted}
                         userCode={userCode}
+                        setCodeState={setCode}
                     />
                     <>
                         <TestCompletionHandler
                             exerciseId={exerciseId}
                             setIsCompleted={setIsCompleted}
+                            codeState={code}
                         />
                     </>
                 </SandpackStack>
@@ -48,6 +51,7 @@ export default function MySandpack({
                     <MonacoEditor
                         readOnly={isCompleted}
                         userCode={userCode}
+                        setCodeState={setCode}
                     />
                 </div>
             )}
