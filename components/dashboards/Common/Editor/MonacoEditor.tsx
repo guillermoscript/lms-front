@@ -19,6 +19,8 @@ export default function MonacoEditor({
     const { code, updateCode } = useActiveCode()
     const { sandpack } = useSandpack()
 
+    console.log(userCode, 'userCode')
+
     return (
         <SandpackStack style={{ height: '100vh', margin: 0 }}>
             <SandpackFileExplorer

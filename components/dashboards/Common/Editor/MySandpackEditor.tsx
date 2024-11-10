@@ -2,7 +2,6 @@
 
 import {
     SandpackStack,
-    useActiveCode,
 } from '@codesandbox/sandpack-react'
 import { useState } from 'react'
 
@@ -25,7 +24,6 @@ export default function MySandpack({
     isExerciseCompleted,
 }: MySandpackProps) {
     const [isCompleted, setIsCompleted] = useState(isExerciseCompleted)
-    const { code } = useActiveCode()
 
     return (
         <>
@@ -39,7 +37,6 @@ export default function MySandpack({
                     <>
                         <TestCompletionHandler
                             exerciseId={exerciseId}
-                            code={code}
                             setIsCompleted={setIsCompleted}
                         />
                     </>
