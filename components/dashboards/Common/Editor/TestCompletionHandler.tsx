@@ -1,11 +1,10 @@
-import { SandpackConsole, SandpackTests } from '@codesandbox/sandpack-react'
+import { SandpackConsole, SandpackTests, useActiveCode } from '@codesandbox/sandpack-react'
 import axios from 'axios'
 
 import { useSaveCode } from '../../exercises/hooks/useSaveCode'
 
 interface TestCompletionHandlerProps {
     exerciseId: number
-    code: string
     setIsCompleted: (completed: boolean) => void
 }
 
@@ -31,10 +30,11 @@ const allTestsPassed = (results: any) => {
 
 export default function TestCompletionHandler({
     exerciseId,
-    code,
     setIsCompleted,
 }: TestCompletionHandlerProps) {
+    const { code } = useActiveCode()
     const { saveCode, isLoading } = useSaveCode(exerciseId, code)
+
     return (
         <>
             <SandpackTests
