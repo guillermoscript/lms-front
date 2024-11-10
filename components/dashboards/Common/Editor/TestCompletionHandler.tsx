@@ -54,7 +54,7 @@ export default function TestCompletionHandler({
                             console.error('Error:', error)
                         }
                     } else {
-                        console.log('Some tests did not pass.')
+                        console.log('Code To Save: ', code)
                         await saveCode(code)
                     }
                 }}
