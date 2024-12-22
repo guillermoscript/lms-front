@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { markExerciseCompletedAction } from '@/actions/dashboard/exercisesActions'
+import { markExerciseCompletedAction, saveUserSubmissionAction } from '@/actions/dashboard/exercisesActions'
 import { createClient } from '@/utils/supabase/server'
 
 export async function POST(req: NextRequest) {
@@ -26,21 +26,16 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const { data: submissionData, error } = await supabase
-            .from('exercise_code_student_submissions')
-            .upsert(
-                {
-                    exercise_id: exerciseId,
-                    user_id: userData.data.user.id,
-                    submission_code: submissionCode,
-                },
-            )
-            .eq('exercise_id', exerciseId)
+        // search for the last submission
+        const savedCode = await saveUserSubmissionAction({
+            exerciseId,
+            submissionCode,
+        })
 
-        if (error) {
-            console.log(error)
+        if (savedCode.status === 'error') {
+            console.error('Failed to save code')
             return NextResponse.json(
-                { status: 'error', message: 'Error submitting code' },
+                { status: 'error', message: 'Failed to save code' },
                 { status: 500 }
             )
         }
@@ -52,7 +47,10 @@ export async function POST(req: NextRequest) {
 
         if (res2.status === 'error') {
             console.error('Failed to save code')
-            return
+            return NextResponse.json(
+                { status: 'error', message: 'Failed to save code' },
+                { status: 500 }
+            )
         }
 
         console.log(res2)

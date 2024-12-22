@@ -304,20 +304,55 @@ export async function saveUserSubmissionAction(data: { exerciseId: number, submi
         return createResponse('error', 'Error fetching user', null, 'Error fetching user')
     }
 
-    const { data: submissionData, error } = await supabase
+    // search for the last submission
+    const { data: lastSubmission, error } = await supabase
         .from('exercise_code_student_submissions')
-        .upsert({
-            exercise_id: exerciseId,
-            user_id: userData.data.user.id,
-            submission_code: submissionCode,
-        })
+        .select('id')
         .eq('exercise_id', exerciseId)
+        .eq('user_id', userData.data.user.id)
+        .order('created_at', { ascending: false })
+        .single()
 
-    if (error) {
-        console.log(error)
-        return createResponse('error', 'Error saving submission', null, 'Error saving submission')
+    // if no sub is found, insert a new one
+    if (!lastSubmission || error) {
+        console.log('Is a new submission')
+        const { data: submissionData, error } = await supabase
+            .from('exercise_code_student_submissions')
+            .insert(
+                {
+                    exercise_id: exerciseId,
+                    user_id: userData.data.user.id,
+                    submission_code: submissionCode,
+                }
+            )
+
+        console.log(submissionData)
+
+        if (error) {
+            console.log(error)
+            return createResponse('error', 'Error saving submission', null, 'Error saving submission')
+        }
+
+        return createResponse('success', 'Submission saved successfully', null, null)
+    } else {
+        // if a sub is found, update it
+
+        console.log('lastSubmission', lastSubmission)
+        console.log('Is an update')
+        const { data: submissionData, error } = await supabase
+            .from('exercise_code_student_submissions')
+            .update(
+                {
+                    submission_code: submissionCode,
+                }
+            )
+            .eq('id', lastSubmission.id)
+
+        if (error) {
+            console.log(error)
+            return createResponse('error', 'Error saving submission', null, 'Error saving submission')
+        }
+
+        return createResponse('success', 'Submission saved successfully', null, null)
     }
-
-    revalidatePath('/dashboard/student/courses/[courseId]/exercises/[exerciseId]')
-    return createResponse('success', 'Submission saved successfully', null, null)
 }

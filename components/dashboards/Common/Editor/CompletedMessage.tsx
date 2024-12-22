@@ -1,15 +1,13 @@
 'use client'
 import confetti from 'canvas-confetti'
 import { Star } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
-import { ConfettiRef } from '@/components/magicui/confetti'
 
 export default function CompletedMessage() {
     const t = useScopedI18n('CompletedMessage')
 
-    const confettiRef = useRef<ConfettiRef>(null)
     const handleClick = () => {
         const duration = 5 * 1000
         const animationEnd = Date.now() + duration
