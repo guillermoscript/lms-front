@@ -4,9 +4,7 @@ import Image from 'next/image'
 
 import { getI18n } from '@/app/locales/server'
 import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import AiTaskMessage from '@/components/dashboards/student/course/lessons/AiTaskMessage'
 import LessonNavigationButtons from '@/components/dashboards/student/course/lessons/LessonNavigationButtons'
-import TaksMessages from '@/components/dashboards/student/course/lessons/TaksMessages'
 import CustomErrorBoundary from '@/components/errors/CustomErrorBoundary'
 import RetryError from '@/components/errors/RetryError'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +19,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Separator } from '@/components/ui/separator'
 
 import EmbedCodeSection from './EmbedCodeSection'
+import LessonTaskMessageWrapper from './excersice/LessonTaskMessageWrapper'
 import ExerciseSuggestions from './ExercisesSuggestions'
 import LessonLoaderView from './LessonLoaderView'
 import MarkLessonsAsCompleted from './MarkLessonsAsCompleted'
@@ -216,33 +215,22 @@ export default async function EnhancedLessonContent({
                                     />
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="flex flex-col gap-4">
+                            <CardContent className="flex flex-col gap-4 p-0">
                                 <Separator />
                                 <ResetTaskAIConversation
                                     lessonId={lessonData.id}
                                 />
-
-                                <AiTaskMessage
-                                    userId={userId}
-                                    lessonId={lessonData.id.toString()}
+                                <LessonTaskMessageWrapper
                                     systemPrompt={lessonsAiTasks.system_prompt}
-                                    lessonsAiTasks={lessonsAiTasks}
-                                    lessonsAiTasksMessages={
-                                        lessonsAiTasksMessages
-                                    }
-                                >
-                                    <TaksMessages
+                                    lessonsAiTasksMessages={lessonsAiTasksMessages}
+                                    lessonId={lessonData.id}
+                                    isLessonAiTaskCompleted={isLessonAiTaskCompleted}
+                                />
+                                {isLessonAiTaskCompleted && (
+                                    <ExerciseSuggestions
                                         lessonId={lessonData.id}
-                                        isLessonAiTaskCompleted={
-                                            isLessonAiTaskCompleted
-                                        }
                                     />
-                                    {isLessonAiTaskCompleted && (
-                                        <ExerciseSuggestions
-                                            lessonId={lessonData.id}
-                                        />
-                                    )}
-                                </AiTaskMessage>
+                                )}
                             </CardContent>
                         </CustomErrorBoundary>
                     </>
