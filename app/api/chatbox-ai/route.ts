@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         //     user: data.user.id
         // }
 
-        const result = await streamText({
+        const result = streamText({
             model,
             messages: convertToCoreMessages(reqBody.messages),
             temperature: 0.7,

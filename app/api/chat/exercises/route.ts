@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         throw new Error(userData.error.message)
     }
 
-    const result = await streamText({
+    const result = streamText({
         model: google('gemini-1.5-flash-latest'),
         messages: convertToCoreMessages(body.messages),
         temperature: 0.5,

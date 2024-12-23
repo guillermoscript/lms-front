@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         throw new Error(userData.error.message)
     }
 
-    const result = await streamText({
+    const result = streamText({
         // model: google('gemini-1.5-pro-latest'),
         model: openai('gpt-4o-mini-2024-07-18'),
         messages: convertToCoreMessages(body.messages),
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
                 }
             }
         },
-        async onFinish({ responseMessages, text, toolResults }) {
+        async onFinish({ text, toolResults }) {
             const lastMessage = body.messages[body.messages.length - 1]
 
             const save = await supabase.from('exercise_messages').insert([
