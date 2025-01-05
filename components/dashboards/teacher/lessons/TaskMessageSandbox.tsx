@@ -17,7 +17,7 @@ function useChatLogic (systemPrompt: string) {
     const { messages, input, handleInputChange, stop, append, isLoading } =
     useChat({
         api: '/api/lessons/chat/teacher',
-        maxAutomaticRoundtrips: 5,
+        maxSteps: 5,
         initialMessages: [
             { role: 'system', content: systemPrompt, id: generateId() }
         ],
