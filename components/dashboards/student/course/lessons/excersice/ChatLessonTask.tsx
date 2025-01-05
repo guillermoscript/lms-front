@@ -5,14 +5,12 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { actionButtonsActionLessons, studentSubmitAiTaskMessage } from '@/actions/dashboard/lessonsAction'
+import ChatInput from '@/components/dashboards/chat/Chatsv2/ChatInput'
+import ChatMessages from '@/components/dashboards/chat/Chatsv2/ChatMessages'
 import ApprovalButton from '@/components/dashboards/Common/chat/ApprovalButton'
 import { SuccessMessage } from '@/components/dashboards/Common/chat/chat'
 import useApprovalHandler from '@/components/dashboards/Common/chat/hooks/useApprovalHandler'
 import NotApprovedMessage from '@/components/dashboards/Common/chat/NotApprovedMessage'
-import ChatInput from '@/components/dashboards/chat/Chatsv2/ChatInput'
-import ChatMessages from '@/components/dashboards/chat/Chatsv2/ChatMessages'
-
-
 
 export default function ChatLessonTask({
     lessonId,
