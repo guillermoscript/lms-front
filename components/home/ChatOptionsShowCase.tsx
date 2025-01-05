@@ -1,4 +1,3 @@
-import { ShowCaseChatAI } from '@/actions/dashboard/AI/ShowCaseActions'
 import { getScopedI18n } from '@/app/locales/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -162,14 +161,12 @@ Eres un tutor virtual que ayuda a estudiantes de español a mejorar sus habilida
                     </TabsTrigger> */}
                 </TabsList>
                 <TabsContent className="w-full" value="code">
-                    <ShowCaseChatAI>
-                        <ChatOption
-                            title={t('tabs.code')}
-                            task={t('tabs.codeTask')}
-                        >
-                            <ShowCaseChat systemPrompt={codePrompt} />
-                        </ChatOption>
-                    </ShowCaseChatAI>
+                    <ChatOption
+                        title={t('tabs.code')}
+                        task={t('tabs.codeTask')}
+                    >
+                        <ShowCaseChat systemPrompt={codePrompt} />
+                    </ChatOption>
                 </TabsContent>
                 {/* <TabsContent className="w-full" value="english-speech">
                     <ChatOption
@@ -180,14 +177,14 @@ Eres un tutor virtual que ayuda a estudiantes de español a mejorar sus habilida
                     </ChatOption>
                 </TabsContent> */}
                 <TabsContent className="w-full" value="english">
-                    <ShowCaseChatAI>
-                        <ChatOption
-                            title={t('tabs.english')}
-                            task={t('tabs.englishTask')}
-                        >
-                            <ShowCaseChat systemPrompt={englishPrompt} />
-                        </ChatOption>
-                    </ShowCaseChatAI>
+
+                    <ChatOption
+                        title={t('tabs.english')}
+                        task={t('tabs.englishTask')}
+                    >
+                        <ShowCaseChat systemPrompt={englishPrompt} />
+                    </ChatOption>
+
                 </TabsContent>
                 {/* <TabsContent className="w-full" value="spanish">
                     <ShowCaseChatAI>
