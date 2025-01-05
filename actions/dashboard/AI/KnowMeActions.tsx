@@ -15,7 +15,6 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
-import { Chat, UIState } from './FreeChatPreparation'
 
 const AIResponseSchema = z.object({
     learningOverview: z
@@ -491,7 +490,7 @@ interface AIState {
     messages: MessageType[]
 }
 
-export const KnowMeChatAI = createAI<AIState, UIState>({
+export const KnowMeChatAI = createAI<AIState, any >({
     actions: {
         continueKnowMeChatConversation,
     },
@@ -499,7 +498,7 @@ export const KnowMeChatAI = createAI<AIState, UIState>({
     initialAIState: { chatId: generateId(), messages: [] },
 })
 
-export const getUIStateFromKnowMeChatAIState = (aiState: Chat) => {
+export const getUIStateFromKnowMeChatAIState = (aiState: any) => {
     return aiState.messages
         .filter((message) => message.role !== 'system')
         .map((message, index) => ({

@@ -2,7 +2,6 @@
 import { useAIState, useUIState } from 'ai/rsc'
 import { useEffect } from 'react'
 
-import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import { KnowMeChatAI } from '@/actions/dashboard/AI/KnowMeActions'
 import useScrollAnchor from '@/utils/hooks/useScrollAnchor'
 
@@ -34,11 +33,7 @@ export default function KnowMeChat() {
     )
 }
 
-interface ChatListProps {
-    messages: UIState
-}
-
-function ChatList({ messages }: ChatListProps) {
+function ChatList({ messages }) {
     return (
         <div className="relative">
             {messages.map((message, index) => (
