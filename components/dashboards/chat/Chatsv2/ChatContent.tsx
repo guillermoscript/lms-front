@@ -1,15 +1,16 @@
 'use client'
 import { generateId, Message } from 'ai'
 import { useChat } from 'ai/react'
-import ChatMessages from './ChatMessages'
-import { studentCreateNewChat, studentCreateNewChatAndRedirect, studentInsertChatMessage } from '@/actions/dashboard/chatActions'
 import { useState } from 'react'
-import { Tables } from '@/utils/supabase/supabase'
-import { ChatTextArea } from '../../Common/chat/chat'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import MarkdownEditorTour from '../../Common/tour/MarkdownEditorTour'
-import MarkdowEditorInput from './MarkdowEditorInput'
 
+import { studentCreateNewChat, studentInsertChatMessage } from '@/actions/dashboard/chatActions'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tables } from '@/utils/supabase/supabase'
+
+import { ChatTextArea } from '../../Common/chat/chat'
+import MarkdownEditorTour from '../../Common/tour/MarkdownEditorTour'
+import ChatMessages from './ChatMessages'
+import MarkdowEditorInput from './MarkdowEditorInput'
 
 export default function ChatContent({
     chatIdProp,
@@ -90,7 +91,7 @@ export default function ChatContent({
                     />
                 </div>
                 {/* <div className="w-full p-4">
-                    
+
                 </div> */}
                 <Tabs defaultValue="markdown" className="w-full py-4">
                     <div className="flex gap-4">
