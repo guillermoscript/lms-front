@@ -1,5 +1,5 @@
-import ChatContent from "@/components/dashboards/chat/Chatsv2/ChatContent"
-import { createClient } from "@/utils/supabase/server"
+import ChatContent from '@/components/dashboards/chat/Chatsv2/ChatContent'
+import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -11,7 +11,6 @@ export default async function FreeChatPage({
         chatId: string
     }
 }) {
-
     const supabase = await createClient()
     const userData = await supabase.auth.getUser()
 

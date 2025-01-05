@@ -27,8 +27,8 @@ export default async function ChatPage() {
                     <ExamLink />
                 </div>
             </div>
-            <ChatContent 
-                chatType="free_chat" 
+            <ChatContent
+                chatType="free_chat"
             />
         </>
     )
