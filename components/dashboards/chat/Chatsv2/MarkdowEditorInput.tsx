@@ -3,13 +3,11 @@ import { generateId, Message as MessageType } from 'ai'
 import { useRef } from 'react'
 
 import { useScopedI18n } from '@/app/locales/client'
-
 import { Button } from '@/components/ui/button'
 import { ForwardRefEditor } from '@/components/ui/markdown/ForwardRefEditor'
 import { cn } from '@/utils'
+
 import { DisclaimerForUser } from '../../Common/chat/chat'
-
-
 
 const MarkdowEditorInput = ({
     isLoading,
