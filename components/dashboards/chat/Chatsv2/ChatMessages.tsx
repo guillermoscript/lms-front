@@ -13,11 +13,11 @@ export default function ChatMessages({ messages, isLoading, reload, disabled }: 
 }) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-        }
-    }, [messages, isLoading])
+    // useEffect(() => {
+    //     if (messagesEndRef.current) {
+    //         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    //     }
+    // }, [messages, isLoading])
 
     const filteredMessages = messages.filter(message => message.role !== 'system')
 
