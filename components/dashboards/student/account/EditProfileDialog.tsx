@@ -1,6 +1,3 @@
-'use client'
-
-import { useScopedI18n } from '@/app/locales/client'
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
@@ -15,7 +12,6 @@ export default function EditProfileDialog({
 }: {
     children: React.ReactNode
 }) {
-    const { t } = useScopedI18n('EnhancedProfilePage')
     return (
         <Dialog>
             <DialogTrigger asChild>
