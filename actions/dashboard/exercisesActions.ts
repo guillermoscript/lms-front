@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
+import { google } from '@ai-sdk/google'
 
 export async function deleteExerciseAction(data: { exerciseId: string }) {
     const exerciseId = data.exerciseId
@@ -172,8 +173,8 @@ export async function actionButtonsAction(data: { exerciseId: string, messages: 
     let isApproved = false
 
     const result = await generateText({
-        // model: google('gemini-1.5-pro-latest'),
-        model: openai('gpt-4o-mini-2024-07-18'),
+        model: google('gemini-2.0-pro-exp-02-05'),
+        // model: openai('gpt-4o-mini-2024-07-18'),
         messages: convertToCoreMessages(messages),
         temperature: 0.3,
         system: 'Evaluate the student last message. If the student answer is correct, mark the exercise as completed. If the student answer is incorrect, mark the exercise as not completed.',
