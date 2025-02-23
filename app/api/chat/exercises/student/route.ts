@@ -1,5 +1,5 @@
-import { openai } from '@ai-sdk/openai'
-import { convertToCoreMessages, streamText } from 'ai'
+import { google } from '@ai-sdk/google'
+import { streamText } from 'ai'
 import { z } from 'zod'
 
 import { createClient } from '@/utils/supabase/server'
@@ -19,9 +19,10 @@ export async function POST(req: Request) {
     }
 
     const result = streamText({
-        // model: google('gemini-1.5-pro-latest'),
-        model: openai('gpt-4o-mini-2024-07-18'),
-        messages: convertToCoreMessages(body.messages),
+        model: google('gemini-2.0-pro-exp-02-05'),
+        // model: openai('gpt-4o-mini-2024-07-18'),
+        messages: body.messages,
+        // experimental_transform: smoothStream(),
         temperature: 0.6,
         tools: {
             makeUserAssigmentCompleted: {

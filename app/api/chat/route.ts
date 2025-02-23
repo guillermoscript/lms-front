@@ -17,7 +17,7 @@ export async function POST (req: Request) {
     }
 
     const result = streamText({
-        model: google('gemini-2.0-flash-exp'),
+        model: google('gemini-2.0-pro-exp-02-05'),
         messages,
         temperature: 0,
         async onFinish (event) {
