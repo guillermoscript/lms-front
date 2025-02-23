@@ -9,11 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 import EditProfileDialog from './EditProfileDialog'
 
-interface EditCardProfileProps {
-
-}
-
-const EditCardProfile: React.FC<EditCardProfileProps> = () => {
+const EditCardProfile: React.FC = () => {
     const t = useScopedI18n('EnhancedProfilePage')
 
     return (
