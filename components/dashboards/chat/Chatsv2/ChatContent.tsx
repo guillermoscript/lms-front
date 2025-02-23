@@ -1,6 +1,6 @@
 'use client'
 import { generateId, Message } from 'ai'
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 import { useState } from 'react'
 
 import { studentCreateNewChat, studentInsertChatMessage } from '@/actions/dashboard/chatActions'
