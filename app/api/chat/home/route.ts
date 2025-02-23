@@ -20,7 +20,7 @@ export async function POST(req: Request) {
                     feedback: z.string().describe('Retroalimentacion para el estudiante. Dile lo que hizo bien y en que puede mejorar, si es necesario.'),
                 }),
                 execute: async ({ feedback }) => {
-                    return 
+
                 }
             },
             provideHint: {

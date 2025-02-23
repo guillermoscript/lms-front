@@ -1,7 +1,7 @@
 'use client'
 
-import { generateId } from 'ai'
 import { useChat } from '@ai-sdk/react'
+import { generateId } from 'ai'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ChevronDown,

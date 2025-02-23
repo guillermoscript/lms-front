@@ -1,15 +1,14 @@
 'use client'
-import { useState } from 'react'
 import { useChat } from '@ai-sdk/react'
+import { useState } from 'react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+import { ChatTextArea, SuccessMessage } from '../Common/chat/chat'
 import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
 import ChatMessages from './Chatsv2/ChatMessages'
 import MarkdowEditorInput from './Chatsv2/MarkdowEditorInput'
-import { ChatTextArea, SuccessMessage } from '../Common/chat/chat'
-import Confetti from '@/components/magicui/confetti'
 
 interface FreeChatProps {
     children?: React.ReactNode

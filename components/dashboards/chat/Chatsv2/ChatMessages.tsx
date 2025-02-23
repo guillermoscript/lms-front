@@ -1,5 +1,5 @@
 import { Message } from 'ai'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 

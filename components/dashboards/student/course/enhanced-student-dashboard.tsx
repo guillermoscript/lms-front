@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { useScopedI18n } from '@/app/locales/client'
 
 export function CourseCard({ course, t }: { course: any, t: any }) {
     const totalLessons = course.course.lessons.length
@@ -62,11 +61,10 @@ export function CourseCard({ course, t }: { course: any, t: any }) {
 }
 
 export function RecentActivityCard({ activity, t }: { activity: any, t: any }) {
-    
     return (
         <Card className="overflow-hidden">
             <div className="flex gap-4 flex-col md:flex-row">
-                <div className="relative w-full md:w-[120px] h-[120px]"> 
+                <div className="relative w-full md:w-[120px] h-[120px]">
                     <Image
                         src={activity.lesson_image || '/placeholder.svg?height=120&width=120'}
                         alt={activity.lesson_title}

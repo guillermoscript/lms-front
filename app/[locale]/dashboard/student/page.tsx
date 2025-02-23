@@ -1,14 +1,14 @@
-import { ArrowRight, BookOpen, CalendarDays, LayoutDashboard, MessageSquare, Trophy } from 'lucide-react'
+import { ArrowRight, BookOpen, LayoutDashboard, MessageSquare, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { getI18n } from '@/app/locales/server'
 import { CourseCard, RecentActivityCard, StatCard } from '@/components/dashboards/student/course/enhanced-student-dashboard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { createClient } from '@/utils/supabase/server'
-import { getI18n, getScopedI18n } from '@/app/locales/server'
 
 async function getData(userId: string) {
     const supabase = createClient()
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
                     value={`${overallProgress}%`}
                     description={t('DashboardPage.totalProgressDescription', {
                         completedLessons: totalLessonsCompleted,
-                        totalLessons: totalLessons
+                        totalLessons
                     })}
                     icon={Trophy}
                 />

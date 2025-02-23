@@ -1,6 +1,6 @@
 'use client'
-import { Message } from 'ai'
 import { useChat } from '@ai-sdk/react'
+import { Message } from 'ai'
 import { useState } from 'react'
 import { toast } from 'sonner'
 

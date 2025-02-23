@@ -1,6 +1,5 @@
 
 import HeroVideoDialogDemoTopInBottomOut from '@/components/example/hero-video-dialog-demo-top-in-bottom-out'
-import { RetroGridDemo } from '@/components/example/RetroGridDemo'
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
 import ChatOptionsShowcase from '@/components/home/ChatOptionsShowCase'
