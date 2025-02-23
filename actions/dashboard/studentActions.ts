@@ -1,8 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
-import { updateUserProfileSchema } from '@/components/dashboards/student/account/EditProfileForm'
+import { updateUserProfileSchema } from '@/components/dashboards/student/account/EditProfile'
 import { createResponse } from '@/utils/functions'
 import { createClient } from '@/utils/supabase/server'
 import { Tables } from '@/utils/supabase/supabase'
@@ -90,31 +91,31 @@ export async function cancelSubscription ({
     return createResponse('success', 'Subscription cancelled successfully', null, null)
 }
 
-export async function updateUserProfile ({
+type updateUserProfileSchema = z.infer<typeof updateUserProfileSchema>
+
+export async function updateUserProfile({
     fullName,
     bio,
     avatarUrl
 }: updateUserProfileSchema) {
     const supabase = createClient()
     const userData = await supabase.auth.getUser()
-
     if (userData.error) {
         return createResponse('error', 'Error updating profile', null, 'Error updating profile')
     }
-
+    // Parse and trim values
+    const updateData = {
+        full_name: fullName.trim(),
+        bio: bio?.trim(),
+        avatar_url: avatarUrl.trim()
+    }
     const profileUpdate = await supabase
         .from('profiles')
-        .update({
-            full_name: fullName,
-            bio,
-            avatar_url: avatarUrl
-        })
+        .update(updateData)
         .eq('id', userData.data.user?.id)
-
     if (profileUpdate.error) {
         return createResponse('error', 'Error updating profile', null, 'Error updating profile')
     }
-
     revalidatePath('/dashboard/student/account/profile', 'layout')
     return createResponse('success', 'Profile updated successfully', null, null)
 }

@@ -70,7 +70,7 @@ export default async function ExercisePageTeacher({
         },
         ...exercise.exercise_messages.map((message) => ({
             id: message.id.toString(),
-            role: message.role as 'system' | 'user' | 'assistant' | 'data' | 'tool',
+            role: message.role as 'system' | 'user' | 'assistant' | 'data',
             content: message.message
         }))
     ]

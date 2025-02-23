@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google'
-import { StreamingTextResponse, streamText } from 'ai'
+import { streamText } from 'ai'
 
 import { createClient } from '@/utils/supabase/server'
 // Allow streaming responses up to 30 seconds
@@ -16,8 +16,8 @@ export async function POST (req: Request) {
         return Response.redirect('/login')
     }
 
-    const result = await streamText({
-        model: google('models/gemini-1.5-pro-latest'),
+    const result = streamText({
+        model: google('gemini-2.0-pro-exp-02-05'),
         messages,
         temperature: 0,
         async onFinish (event) {
@@ -25,8 +25,7 @@ export async function POST (req: Request) {
 
             const chat_id = chatId ?? (await supabase.from('chats').select('chat_id').eq('title', lastUserMessage.content).single()).data.chat_id
 
-            console.log(chat_id)
-
+            console.log('chat_id', chat_id)
             const messageInsert = await supabase.from('messages').insert([
                 {
                     chat_id,
@@ -49,5 +48,5 @@ export async function POST (req: Request) {
         }
     })
 
-    return new StreamingTextResponse(result.toAIStream())
+    return result.toDataStreamResponse()
 }

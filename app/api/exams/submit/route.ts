@@ -56,7 +56,7 @@ async function processAIReview(aiData: any, submissionId: number, supabase: any)
 
 async function generateAIReview({ input }: { input: string }) {
     const { object } = await generateObject({
-        model: google('models/gemini-1.5-pro-latest'),
+        model: google('gemini-2.0-pro-exp-02-05'),
         schema: z.object({
             userSubmission: z
                 .array(

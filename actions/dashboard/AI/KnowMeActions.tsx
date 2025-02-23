@@ -15,7 +15,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { createClient } from '@/utils/supabase/server'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
-import { Chat, UIState } from './FreeChatPreparation'
+import { google } from '@ai-sdk/google'
 
 const AIResponseSchema = z.object({
     learningOverview: z
@@ -106,8 +106,8 @@ export async function continueKnowMeChatConversation(
     })
 
     const result = await streamUI({
-        // model: google('models/gemini-1.5-pro-latest'),
-        model: openai('gpt-4o-mini'),
+        model: google('gemini-2.0-pro-exp-02-05'),
+        // model: openai('gpt-4o-mini'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,
@@ -491,7 +491,7 @@ interface AIState {
     messages: MessageType[]
 }
 
-export const KnowMeChatAI = createAI<AIState, UIState>({
+export const KnowMeChatAI = createAI<AIState, any >({
     actions: {
         continueKnowMeChatConversation,
     },
@@ -499,7 +499,7 @@ export const KnowMeChatAI = createAI<AIState, UIState>({
     initialAIState: { chatId: generateId(), messages: [] },
 })
 
-export const getUIStateFromKnowMeChatAIState = (aiState: Chat) => {
+export const getUIStateFromKnowMeChatAIState = (aiState: any) => {
     return aiState.messages
         .filter((message) => message.role !== 'system')
         .map((message, index) => ({

@@ -1,18 +1,14 @@
 'use client'
-import { generateId } from 'ai'
-import { useActions, useUIState } from 'ai/rsc'
+import { useChat } from '@ai-sdk/react'
 import { useState } from 'react'
 
-import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
-import { ShowCaseChatAI } from '@/actions/dashboard/AI/ShowCaseActions'
-import { ChatInput, ChatTextArea } from '@/components/dashboards/Common/chat/chat'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import Message from '../Common/chat/Message'
-import MessageContentWrapper from '../Common/chat/MessageContentWrapper'
+import { ChatTextArea, SuccessMessage } from '../Common/chat/chat'
 import MarkdownEditorTour from '../Common/tour/MarkdownEditorTour'
 import ChatLoadingSkeleton from './ChatLoadingSkeleton'
+import ChatMessages from './Chatsv2/ChatMessages'
+import MarkdowEditorInput from './Chatsv2/MarkdowEditorInput'
 
 interface FreeChatProps {
     children?: React.ReactNode
@@ -20,150 +16,102 @@ interface FreeChatProps {
 }
 
 export default function ShowCaseChat({ systemPrompt }: FreeChatProps) {
-    const [conversation, setConversation] = useUIState<typeof ShowCaseChatAI>()
-    const { continueShowCaseChatConversation } = useActions()
-    const [isLoading, setIsLoading] = useState(false)
+    const [completed, setCompleted] = useState(false)
 
-    console.log(conversation, '<  conversation')
+    const { messages, stop, append, isLoading, reload, setInput, setMessages } = useChat({
+        initialMessages: [
+            {
+                id: '1',
+                role: 'system',
+                content: systemPrompt,
+                createdAt: new Date(),
+            },
+        ], // Set initial messages if any
+        api: '/api/chat/home', // Update API endpoint as needed
+        maxSteps: 3, // Set max steps if needed
+        onToolCall({ toolCall }) {
+            // Handle tool call
+            console.log(toolCall)
+            if (toolCall.toolName === 'makeUserAssignmentCompleted') {
+                setCompleted(true)
+            }
+        }
+    })
 
     return (
         <div className="h-full relative overflow-auto pt-4">
-            <div className="pb-[380px] lg:pb-[360px]">
-                {conversation.length > 0 ? (
-                    <ChatList messages={conversation} />
+            <div className="py-4">
+                {messages.length > 1 ? (
+                    <ChatMessages messages={messages}
+                        isLoading={isLoading}
+                        reload={reload}
+                        disabled={false}
+                    />
                 ) : (
-                    // <EmptyState
-                    //     setIsLoading={setIsLoading}
-                    //     continueFreeChatConversation={continueFreeChatConversation}
-                    //     setConversation={setConversation}
-                    //     chatId={chatId}
-                    // />
-                    <>
-                    </>
+                    <></>
                 )}
                 {isLoading && <ChatLoadingSkeleton />}
                 <div className="w-full h-px" />
             </div>
-            <div className='w-full absolute bottom-0'>
-                <Tabs defaultValue="simple" className="w-full py-4">
-                    <div className="flex gap-4">
-                        <TabsList
-                            id='tabs-list'
-                            className='gap-4'
-                        >
-                            <TabsTrigger
-                                id='simple-tab'
-                                value="simple"
+            <div className='w-full '>
+                {completed ? (
+                    <>
+                        <SuccessMessage />
+                    </>
+                ) : (
+                    <Tabs defaultValue="simple" className="w-full py-4">
+                        <div className="flex gap-4">
+                            <TabsList
+                                id='tabs-list'
+                                className='gap-4'
                             >
+                                <TabsTrigger
+                                    id='simple-tab'
+                                    value="simple"
+                                >
                                     Simple
-                            </TabsTrigger>
-                            <TabsTrigger
-                                id='markdown-tab'
-                                value="markdown"
-                            >
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    id='markdown-tab'
+                                    value="markdown"
+                                >
                                     Markdown
-                            </TabsTrigger>
-                        </TabsList>
-                        <MarkdownEditorTour />
-                    </div>
-                    <TabsContent
-                        id='markdown-content'
-                        value="markdown"
-                    >
-                        <ChatInput
-                            isLoading={isLoading}
-                            callbackFunction={async (input) => {
-                                setIsLoading(true)
-
-                                console.log(input, '<  input.content')
-
-                                setConversation([
-                                    ...conversation,
-                                    {
-                                        id: generateId(),
-                                        role: 'user',
-                                        display: (
-                                            <Message
-                                                sender={'user'}
-                                                time={new Date().toDateString()}
-                                                isUser={true}
-                                            >
-                                                <MessageContentWrapper
-                                                    role="user"
-                                                    view={<ViewMarkdown markdown={input.content} />}
-                                                    edit={<></>
-                                                    }
-                                                />
-                                            </Message>
-                                        ),
-                                    },
-                                ])
-
-                                const result = await continueShowCaseChatConversation(input.content, systemPrompt)
-
-                                setConversation((currentConversation) => [
-                                    ...currentConversation,
-                                    result
-                                ])
-
-                                setIsLoading(false)
-                            }}
-                        />
-                    </TabsContent>
-                    <TabsContent
-                        id='simple-content'
-                        value="simple"
-                    >
-                        <ChatTextArea
-                            isLoading={isLoading}
-                            callbackFunction={async (input) => {
-                                setIsLoading(true)
-                                setConversation([
-                                    ...conversation,
-                                    {
-                                        id: generateId(),
-                                        role: 'user',
-                                        display: (
-                                            <Message
-                                                sender={'user'}
-                                                time={new Date().toDateString()}
-                                                isUser={true}
-                                            >
-
-                                                <MessageContentWrapper
-                                                    role="user"
-                                                    view={<ViewMarkdown markdown={input.content} />}
-                                                    edit={<></>
-                                                    }
-                                                />
-                                            </Message>
-                                        ),
-                                    },
-                                ])
-
-                                const result = await continueShowCaseChatConversation(input.content, systemPrompt)
-
-                                setConversation((currentConversation) => [
-                                    ...currentConversation,
-                                    result
-                                ])
-
-                                setIsLoading(false)
-                            }}
-                        />
-                    </TabsContent>
-                </Tabs>
+                                </TabsTrigger>
+                            </TabsList>
+                            <MarkdownEditorTour />
+                        </div>
+                        <TabsContent
+                            id='markdown-content'
+                            value="markdown"
+                        >
+                            <MarkdowEditorInput
+                                isLoading={isLoading}
+                                stop={() => stop()}
+                                callbackFunction={(message) => {
+                                    // handleSendMessage(message.content)
+                                    console.log(message)
+                                    append(message)
+                                }}
+                                isTemplatePresent={true}
+                            />
+                        </TabsContent>
+                        <TabsContent
+                            id='simple-content'
+                            value="simple"
+                        >
+                            <ChatTextArea
+                                isLoading={isLoading}
+                                stop={() => stop()}
+                                callbackFunction={async (message) => {
+                                    // handleSendMessage(message.content)
+                                    console.log(message)
+                                    append(message)
+                                }}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                )}
             </div>
         </div>
     )
 }
-
-const ChatList: React.FC<{ messages: UIState }> = ({ messages }) => (
-    <div className="relative px-4">
-        {messages.map((message, index) => (
-            <div key={index} className="flex flex-col gap-2">
-                {message.display}
-            </div>
-        ))}
-    </div>
-)

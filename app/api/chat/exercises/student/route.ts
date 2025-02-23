@@ -1,5 +1,5 @@
-import { openai } from '@ai-sdk/openai'
-import { convertToCoreMessages, streamText } from 'ai'
+import { google } from '@ai-sdk/google'
+import { streamText } from 'ai'
 import { z } from 'zod'
 
 import { createClient } from '@/utils/supabase/server'
@@ -18,10 +18,11 @@ export async function POST(req: Request) {
         throw new Error(userData.error.message)
     }
 
-    const result = await streamText({
-        // model: google('gemini-1.5-pro-latest'),
-        model: openai('gpt-4o-mini-2024-07-18'),
-        messages: convertToCoreMessages(body.messages),
+    const result = streamText({
+        model: google('gemini-2.0-pro-exp-02-05'),
+        // model: openai('gpt-4o-mini-2024-07-18'),
+        messages: body.messages,
+        // experimental_transform: smoothStream(),
         temperature: 0.6,
         tools: {
             makeUserAssigmentCompleted: {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
                 }
             }
         },
-        async onFinish({ responseMessages, text, toolResults }) {
+        async onFinish({ text, toolResults }) {
             const lastMessage = body.messages[body.messages.length - 1]
 
             const save = await supabase.from('exercise_messages').insert([

@@ -14,6 +14,7 @@ import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
 
 import { ClientMessage, Message as MessageType } from './ExamPreparationActions'
+import { google } from '@ai-sdk/google'
 
 export async function continueTaskAiSandBoxConversation(
     input: string
@@ -46,8 +47,8 @@ export async function continueTaskAiSandBoxConversation(
     console.log(systemMessage)
 
     const result = await streamUI({
-        // model: google('gemini-1.5-pro-latest'),
-        model: openai('gpt-4o-mini'),
+        model: google('gemini-2.0-pro-exp-02-05'),
+        // model: openai('gpt-4o-mini'),
         messages: [
             ...aiState.get().messages.map((message: any) => ({
                 role: message.role,

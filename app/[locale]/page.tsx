@@ -1,6 +1,5 @@
 
 import HeroVideoDialogDemoTopInBottomOut from '@/components/example/hero-video-dialog-demo-top-in-bottom-out'
-import { RetroGridDemo } from '@/components/example/RetroGridDemo'
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
 import ChatOptionsShowcase from '@/components/home/ChatOptionsShowCase'
@@ -25,9 +24,6 @@ export default async function Index() {
                 <GeminiHeroSection />
                 <OptionsSection />
                 <WaitingList />
-            </div>
-            <div className="w-full ">
-                <RetroGridDemo />
             </div>
             <Footer />
         </>

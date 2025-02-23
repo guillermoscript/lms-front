@@ -1,6 +1,6 @@
 'use client'
+import { useChat } from '@ai-sdk/react'
 import { generateId } from 'ai'
-import { useChat } from 'ai/react'
 import { useState } from 'react'
 
 import {
@@ -17,7 +17,7 @@ function useChatLogic (systemPrompt: string) {
     const { messages, input, handleInputChange, stop, append, isLoading } =
     useChat({
         api: '/api/lessons/chat/teacher',
-        maxAutomaticRoundtrips: 5,
+        maxSteps: 5,
         initialMessages: [
             { role: 'system', content: systemPrompt, id: generateId() }
         ],

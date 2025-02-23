@@ -4,7 +4,6 @@ import { useActions, useUIState } from 'ai/rsc'
 import { useState } from 'react'
 
 import { ClientMessage } from '@/actions/dashboard/AI/ExamPreparationActions'
-import { UIState } from '@/actions/dashboard/AI/FreeChatPreparation'
 import { TaskSandboxActions } from '@/actions/dashboard/AI/TaskSandboxActions'
 import ChatLoadingSkeleton from '@/components/dashboards/chat/ChatLoadingSkeleton'
 import {
@@ -123,7 +122,7 @@ export default function TaskSandboxMessage() {
 }
 
 interface ChatListProps {
-    messages: UIState
+    messages: any[]
     messagesEndRef?: React.RefObject<HTMLDivElement>
 }
 

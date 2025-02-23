@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
         //     user: data.user.id
         // }
 
-        const result = await streamText({
+        const result = streamText({
             model,
             messages: convertToCoreMessages(reqBody.messages),
             temperature: 0.7,
             tools: {
-                ...createAISDKTools(tavilSearch),
+                ...createAISDKTools(),
                 foolowUpQuestions: {
                     description: 'Function to provide a helpful set of follow-up questions to ask the teacher about the topic. Respond using the language of the student.',
                     parameters: z.object({

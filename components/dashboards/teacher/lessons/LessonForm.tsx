@@ -39,7 +39,7 @@ const lessonSchema = yup.object({
     embed: yup.string().nullable(),
     content: yup.string().required('Content is required'),
     status: yup.string().oneOf(['draft', 'published', 'archived']).required(),
-    systemPrompt: yup.string().required('System Prompt is required'),
+    systemPrompt: yup.string().nullable(),
     description: yup.string(),
     image: yup.string().nullable().url(),
     task_instructions: yup.string().nullable()

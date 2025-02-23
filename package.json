@@ -10,11 +10,11 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@agentic/ai-sdk": "^7.1.0",
+    "@agentic/ai-sdk": "^7.3.2",
     "@agentic/core": "^7.1.0",
     "@agentic/tavily": "^7.1.0",
-    "@ai-sdk/google": "^0.0.55",
-    "@ai-sdk/openai": "^0.0.70",
+    "@ai-sdk/google": "^1.1.16",
+    "@ai-sdk/openai": "^1.1.13",
     "@codesandbox/sandpack-react": "^2.19.9",
     "@hookform/resolvers": "^3.9.1",
     "@mdxeditor/editor": "^3.14.0",
@@ -56,7 +56,7 @@
     "@upstash/redis": "^1.34.3",
     "@vapi-ai/web": "^2.1.6",
     "add": "^2.0.6",
-    "ai": "^3.4.27",
+    "ai": "^4.1.45",
     "autoprefixer": "10.4.20",
     "axios": "^1.7.7",
     "bignumber.js": "^9.1.2",
