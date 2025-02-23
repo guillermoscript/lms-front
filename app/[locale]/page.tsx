@@ -26,9 +26,6 @@ export default async function Index() {
                 <OptionsSection />
                 <WaitingList />
             </div>
-            <div className="w-full ">
-                <RetroGridDemo />
-            </div>
             <Footer />
         </>
     )
