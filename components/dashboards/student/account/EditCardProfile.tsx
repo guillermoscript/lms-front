@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 import EditProfileDialog from './EditProfileDialog'
+import PasswordEdit from './PasswordEdit'
 
 const EditCardProfile: React.FC = () => {
     const t = useScopedI18n('EnhancedProfilePage')
@@ -43,7 +44,7 @@ const EditCardProfile: React.FC = () => {
                                         <p className="text-sm text-muted-foreground">{t('passwordDesc')}</p>
                                     </div>
                                 </div>
-                                <Button variant="ghost">{t('update')}</Button>
+                                <PasswordEdit />
                             </div>
                         </div>
                     </div>
