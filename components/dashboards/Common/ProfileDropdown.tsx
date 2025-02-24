@@ -13,6 +13,7 @@ import {
 import LocaleButtons from '@/components/ui/LocaleButtons'
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
+import { getScopedI18n } from '@/app/locales/server'
 
 export default async function ProfileDropdown () {
     const supabase = createClient()
@@ -36,6 +37,8 @@ export default async function ProfileDropdown () {
         return null
     }
 
+    const t = await getScopedI18n('ProfileDropdown')
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -50,11 +53,13 @@ export default async function ProfileDropdown () {
 
             </DropdownMenuTrigger>
             <DropdownMenuContent className="flex flex-col gap-2 p-2" align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                    {t('myProfile')}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <Link href={`/dashboard/${userRole}/account`}>
-                        Account
+                        {t('account')}
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

@@ -807,4 +807,8 @@ Si tienes dudas, intenta diciendo: "Could you give me a fake scenario to practic
         lastViewed: 'Última vista {date}',
         continueLabel: 'Continuar'
     },
+    ProfileDropdown: {
+        myProfile: 'Mi Perfil',
+        account: 'Cuenta',
+    }
 } as const
