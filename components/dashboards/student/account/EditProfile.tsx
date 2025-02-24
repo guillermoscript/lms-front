@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Loader } from 'lucide-react'
 
 export const updateUserProfileSchema = z.object({
     fullName: z.string().min(1, { message: 'Full name is required.' }),
@@ -31,7 +32,7 @@ type FormValues = z.infer<typeof updateUserProfileSchema>
 
 export default function EditProfile() {
     const router = useRouter()
-    const t = useScopedI18n('EnhancedProfilePage')
+    const t = useScopedI18n('EditProfileForm')
     const form = useForm<FormValues>({
         resolver: zodResolver(updateUserProfileSchema),
         defaultValues: {
@@ -46,17 +47,17 @@ export default function EditProfile() {
     const onSubmit = async (data: FormValues) => {
         const result = await updateUserProfile(data)
         if (result.status === 'success') {
-            toast.success(t('profileUpdated'))
+            toast.success(t('profileUpdatedSuccessfully'))
             router.refresh()
         } else {
-            toast.error(t('profileUpdateError'))
+            toast.error(t('errorUpdatingProfile'))
             console.error(result.message)
         }
     }
 
     return (
         <section className="max-w-lg mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Edit Profile</h1>
+            <h1 className="text-2xl font-bold mb-4">{t('updateProfile')}</h1>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -64,9 +65,9 @@ export default function EditProfile() {
                         name="fullName"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Full Name</FormLabel>
+                                <FormLabel>{t('fullName')}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Enter your full name" {...field} />
+                                    <Input placeholder={t('fullNamePlaceholder')} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -77,11 +78,11 @@ export default function EditProfile() {
                         name="avatarUrl"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Avatar URL</FormLabel>
+                                <FormLabel>{t('profilePicture')}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Enter your avatar URL" {...field} />
+                                    <Input placeholder={t('profilePicturePlaceholder')} {...field} />
                                 </FormControl>
-                                <FormDescription>This should be a valid URL.</FormDescription>
+                                <FormDescription>{t('validUrl')}</FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -91,16 +92,18 @@ export default function EditProfile() {
                         name="bio"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Bio</FormLabel>
+                                <FormLabel>{t('bio')}</FormLabel>
                                 <FormControl>
-                                    <Textarea placeholder="Tell us about yourself" {...field} />
+                                    <Textarea placeholder={t('bioPlaceholder')} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
                     <Button type="submit" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
+                        {loading ? <>
+                            <Loader className="animate-spin" size={20} />
+                        </> : t('updateProfile')}
                     </Button>
                 </form>
             </Form>
