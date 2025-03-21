@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { getScopedI18n } from '@/app/locales/server'
 import AuthButton from '@/components/AuthButton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -13,7 +14,6 @@ import {
 import LocaleButtons from '@/components/ui/LocaleButtons'
 import { getServerUserRole } from '@/utils/supabase/getUserRole'
 import { createClient } from '@/utils/supabase/server'
-import { getScopedI18n } from '@/app/locales/server'
 
 export default async function ProfileDropdown () {
     const supabase = createClient()

@@ -1,22 +1,23 @@
 'use client'
 
-import React from 'react'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import React from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { z } from 'zod'
+
+import { updatePassword } from '@/actions/dashboard/userActions'
+import { useScopedI18n } from '@/app/locales/client'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
     Form,
-    FormField,
     FormControl,
+    FormField,
     FormItem,
     FormLabel,
     FormMessage
 } from '@/components/ui/form'
-import { updatePassword } from '@/actions/dashboard/userActions'
-import { useScopedI18n } from '@/app/locales/client'
+import { Input } from '@/components/ui/input'
 // import { supabase } from '@/lib/supabaseClient' // Replace with your actual supabase client
 
 const updatePasswordSchema = z
@@ -32,7 +33,6 @@ const updatePasswordSchema = z
 type FormValues = z.infer<typeof updatePasswordSchema>
 
 const PasswordEdit: React.FC = () => {
-
     const t = useScopedI18n('PasswordEdit')
 
     const form = useForm<FormValues>({
@@ -50,7 +50,6 @@ const PasswordEdit: React.FC = () => {
 
         if (res.status === 'success') {
             toast.success('Password updated')
-
         } else {
             toast.error('Error updating password')
         }
