@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { getScopedI18n } from '@/app/locales/server'
 import AuthButton from '@/components/AuthButton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -36,6 +37,8 @@ export default async function ProfileDropdown () {
         return null
     }
 
+    const t = await getScopedI18n('ProfileDropdown')
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -50,11 +53,13 @@ export default async function ProfileDropdown () {
 
             </DropdownMenuTrigger>
             <DropdownMenuContent className="flex flex-col gap-2 p-2" align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                    {t('myProfile')}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <Link href={`/dashboard/${userRole}/account`}>
-                        Account
+                        {t('account')}
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

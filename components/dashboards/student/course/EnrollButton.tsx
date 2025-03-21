@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { enrollUserToCourseAction } from '@/actions/dashboard/courseActions'
@@ -10,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast'
 export default function EnrollButton ({ courseId }: { courseId: number }) {
     const { toast } = useToast()
     const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
     const t = useScopedI18n('NotEnrolledMessage')
 
@@ -34,6 +36,7 @@ export default function EnrollButton ({ courseId }: { courseId: number }) {
                     toast({
                         title: t(enrollUser.message),
                     })
+                    router.refresh()
                 } catch (error) {
                     toast({
                         title: t('errorEnrollingUser'),
