@@ -11,6 +11,7 @@ import {
   IconCircle,
   IconClock,
   IconPlayerPlay,
+  IconFileText,
 } from '@tabler/icons-react'
 
 interface PageProps {
@@ -84,6 +85,15 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   // Find next lesson to continue
   const nextLesson = lessons?.find((l) => !completedLessonIds.has(l.id)) || lessons?.[0]
 
+  // Get exams count
+  const { data: exams } = await supabase
+    .from('exams')
+    .select('exam_id')
+    .eq('course_id', parseInt(courseId))
+    .eq('status', 'published')
+
+  const examCount = exams?.length || 0
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header with course info */}
@@ -140,15 +150,25 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Continue button */}
-              {nextLesson && (
-                <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`}>
-                  <Button className="mt-6" size="lg">
-                    <IconPlayerPlay className="mr-2 h-5 w-5" />
-                    {completedCount > 0 ? 'Continue Learning' : 'Start Course'}
-                  </Button>
-                </Link>
-              )}
+              {/* Action buttons */}
+              <div className="mt-6 flex flex-wrap gap-3">
+                {nextLesson && (
+                  <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`}>
+                    <Button size="lg">
+                      <IconPlayerPlay className="mr-2 h-5 w-5" />
+                      {completedCount > 0 ? 'Continue Learning' : 'Start Course'}
+                    </Button>
+                  </Link>
+                )}
+                {examCount > 0 && (
+                  <Link href={`/dashboard/student/courses/${courseId}/exams`}>
+                    <Button variant="outline" size="lg">
+                      <IconFileText className="mr-2 h-5 w-5" />
+                      View Exams ({examCount})
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
