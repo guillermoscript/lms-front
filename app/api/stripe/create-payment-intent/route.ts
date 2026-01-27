@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     let stripeCustomerId = profile?.stripe_customer_id
 
     if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email,
         name: profile?.full_name || undefined,
         metadata: { supabase_user_id: user.id },
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Stripe PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await getStripe().paymentIntents.create({
       amount,
       currency: 'usd',
       customer: stripeCustomerId,

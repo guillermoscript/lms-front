@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, webhookSecret } from '@/lib/stripe'
+import { getStripe, getWebhookSecret } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-// Use service role for webhook (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialize Supabase admin client
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    throw new Error('Supabase environment variables not set')
+  }
+  return createClient(url, serviceKey)
+}
 
 export async function POST(req: NextRequest) {
   const payload = await req.text()
@@ -20,7 +24,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret)
+    event = getStripe().webhooks.constructEvent(payload, signature, getWebhookSecret())
   } catch (err) {
     console.error('Webhook signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
@@ -36,7 +40,7 @@ export async function POST(req: NextRequest) {
         // Update transaction to successful
         // This triggers the database function `trigger_manage_transactions`
         // which automatically calls `enroll_user` or `handle_new_subscription`
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
           .from('transactions')
           .update({ status: 'successful' })
           .eq('transaction_id', parseInt(transactionId))
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
       const { transactionId } = paymentIntent.metadata
 
       if (transactionId) {
-        await supabaseAdmin
+        await getSupabaseAdmin()
           .from('transactions')
           .update({ status: 'failed' })
           .eq('transaction_id', parseInt(transactionId))
