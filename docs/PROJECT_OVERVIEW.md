@@ -202,29 +202,61 @@ const { data } = await supabase
 - Database migrations via Supabase CLI
 - Environment variables managed in Vercel
 
-## 📈 Future Enhancements
+## 📈 Project Phases & Status
 
-### Phase 1 (Current)
-- ✅ Core dashboards (student, teacher, admin)
-- ✅ Authentication and authorization
-- ✅ Database setup
+### Phase 1 - Fresh Setup ✅
+- Next.js 16 + Shadcn UI (Lyra theme)
+- Tailwind CSS v4 with @theme syntax
+- Tabler Icons + JetBrains Mono font
 
-### Phase 2 (Next)
-- 🔄 Course creation and management
-- 🔄 Lesson viewer and completion tracking
-- 🔄 Exam creation and submission
+### Phase 2 - Database Setup ✅
+- Supabase connection
+- Complete schema (44 tables)
+- Database functions preserved
 
-### Phase 3 (Future)
-- AI-powered exam grading
-- Exercise assistance chat
-- Progress analytics
-- Comments and discussions
+### Phase 3 - Authentication ✅
+- Supabase Auth with email/password
+- JWT role claims (`custom_access_token_hook`)
+- Role-based routing via proxy.ts
+- Protected dashboard routes
 
-### Phase 4 (Future)
-- Advanced analytics
-- Certificates
-- Gamification
-- Mobile app
+### Phase 4 - Stripe Integration ✅
+- Payment intent creation
+- Webhook handling
+- Automatic enrollment via triggers
+
+### Phase 5 - Student Dashboard ✅
+- Main dashboard with enrolled courses
+- Course overview with progress tracking
+- Lesson viewer (markdown, video, navigation)
+- Lesson completion tracking
+- Exam system (take exam, submit, review results)
+
+### Phase 6 - Teacher Dashboard 🔄 (Next)
+- Course creation and management
+- Lesson editor (MDX)
+- Exam builder
+- Student submission review
+
+### Phase 7 - Admin Dashboard (Pending)
+- User management
+- Course oversight
+- Transaction monitoring
+
+### Phase 8 - Additional Features (Pending)
+- Comments on lessons
+- Reviews/ratings
+- Notifications
+
+### Phase 9 - Internationalization (Pending)
+- Multi-language support
+
+### Phase 10 - AI Documentation (Pending)
+- Document AI integration points
+
+### Phase 11 - Testing (Pending)
+- Playwright E2E tests
+- Flow documentation
 
 ## 🤝 Development Team
 

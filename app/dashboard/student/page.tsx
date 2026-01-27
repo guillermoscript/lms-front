@@ -19,7 +19,7 @@ export default async function StudentDashboard() {
     .from('enrollments')
     .select(`
       enrollment_id,
-      enrolled_at,
+      enrollment_date,
       course:courses (
         course_id,
         title,

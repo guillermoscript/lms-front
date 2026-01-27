@@ -388,6 +388,36 @@ If query returns empty when it shouldn't:
 
 ## 📚 Reference Quick Links
 
+### Existing Implementation Examples
+
+**Student Dashboard (Phase 5 - Complete)**
+
+The student dashboard is fully implemented and serves as a reference for patterns:
+
+```
+app/dashboard/student/
+├── page.tsx                    # Main dashboard with course cards
+├── courses/[courseId]/
+│   ├── page.tsx                # Course overview with lessons list
+│   ├── lessons/[lessonId]/
+│   │   ├── page.tsx            # Lesson viewer (server component)
+│   │   ├── lesson-content.tsx  # Markdown/video rendering (client)
+│   │   └── lesson-navigation.tsx # Prev/Next/Complete (client)
+│   └── exams/
+│       ├── page.tsx            # Exams list
+│       ├── [examId]/
+│       │   ├── page.tsx        # Take exam entry point
+│       │   ├── exam-taker.tsx  # Interactive exam (client)
+│       │   └── review/
+│       │       └── page.tsx    # Exam results with AI feedback
+```
+
+Reusable components:
+- `components/student/course-card.tsx` - Course card with progress
+- `components/student/lesson-sidebar.tsx` - Lesson navigation sidebar
+
+See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes.
+
 ### When working on...
 
 **Student features** → Check:
