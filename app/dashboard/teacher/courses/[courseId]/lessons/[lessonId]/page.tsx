@@ -56,6 +56,8 @@ export default async function EditLessonPage({ params }: PageProps) {
           video_url: lesson.video_url,
           sequence: lesson.sequence,
           status: lesson.status as 'draft' | 'published' | 'archived',
+          ai_task_description: lesson.ai_task_description || null,
+          ai_task_instructions: lesson.ai_task_instructions || null,
         }}
       />
     </div>

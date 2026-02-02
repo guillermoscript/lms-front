@@ -11,11 +11,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   IconArrowLeft,
-  IconArrowRight,
   IconClock,
   IconLoader2,
+  IconChevronLeft,
+  IconChevronRight,
   IconSend,
+  IconFileText,
+  IconMessageChatbot,
+  IconCheck
 } from '@tabler/icons-react'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 
 interface Question {
   id: number
@@ -73,8 +79,10 @@ export function ExamTaker({
   }
 
   const currentQuestion = questions[currentQuestionIndex]
+  const isFirstQuestion = currentQuestionIndex === 0
   const isLastQuestion = currentQuestionIndex === questions.length - 1
-  const allQuestionsAnswered = questions.every((q) => answers[q.id])
+  const answeredCount = Object.keys(answers).length
+  const progressPercent = (answeredCount / questions.length) * 100
 
   const handleAnswerChange = (questionId: number, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
@@ -126,8 +134,8 @@ export function ExamTaker({
         return
       }
 
-      // Redirect to review page
-      router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/review`)
+      // Redirect to result page
+      router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
     } catch (error) {
       console.error('Submission error:', error)
       setSubmitting(false)
@@ -136,165 +144,203 @@ export function ExamTaker({
 
   if (questions.length === 0) {
     return (
-      <div className="container mx-auto max-w-2xl py-8 px-4">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">This exam has no questions yet.</p>
-            <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-              <Button variant="outline" className="mt-4">
-                <IconArrowLeft className="mr-2 h-4 w-4" />
-                Back to Exams
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
+        <div className="bg-card border rounded-3xl p-12 shadow-soft">
+          <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
+          <h2 className="text-2xl font-bold mb-2">No Questions Found</h2>
+          <p className="text-muted-foreground mb-8 text-lg">This exam doesn't have any questions yet. Please check back later.</p>
+          <Link href={`/dashboard/student/courses/${courseId}/exams`}>
+            <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
+              <IconChevronLeft className="mr-2 h-5 w-5" />
+              Return to Assessments
+            </Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 px-4">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">{title}</h1>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </div>
-        {timeLeft !== null && (
-          <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2">
-            <IconClock className="h-4 w-4 text-muted-foreground" />
-            <span className={`font-mono ${timeLeft < 60 ? 'text-destructive' : ''}`}>
-              {formatTime(timeLeft)}
-            </span>
+    <div className="min-h-[calc(100vh-80px)] flex flex-col pt-6 pb-12">
+      <div className="container max-w-4xl flex-1 flex flex-col gap-8">
+        {/* Top bar with stats and timer */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-4 z-20">
+          <div className="bg-background/80 backdrop-blur-md border border-muted-foreground/10 rounded-2xl p-4 flex flex-1 items-center gap-6 shadow-xl">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary">
+              <IconFileText size={20} />
+            </div>
+            <div className="flex-1 space-y-1">
+              <h1 className="font-bold tracking-tight line-clamp-1">{title}</h1>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  Progress: {answeredCount}/{questions.length}
+                </span>
+                <Progress value={progressPercent} className="h-1.5 w-24" />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Progress indicator */}
-      <div className="mb-6">
-        <div className="flex justify-between text-sm text-muted-foreground mb-2">
-          <span>
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </span>
-          <span>
-            {Object.keys(answers).length} of {questions.length} answered
-          </span>
+          {timeLeft !== null && (
+            <div className={cn(
+              "p-4 rounded-2xl flex items-center gap-3 shadow-xl border animate-pulse-subtle",
+              timeLeft < 300 ? "bg-red-500 text-white border-red-400" : "bg-card text-foreground border-muted-foreground/10"
+            )}>
+              <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-white" : "text-muted-foreground")} />
+              <div className="flex flex-col -space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Time Left</span>
+                <span className="font-mono text-xl font-black">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex gap-1">
-          {questions.map((q, i) => (
-            <button
-              key={q.id}
-              onClick={() => setCurrentQuestionIndex(i)}
-              className={`h-2 flex-1 rounded-full transition-colors ${
-                i === currentQuestionIndex
-                  ? 'bg-primary'
-                  : answers[q.id]
-                  ? 'bg-primary/40'
-                  : 'bg-muted'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
 
-      {/* Question Card */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {currentQuestionIndex + 1}. {currentQuestion.text}
-          </CardTitle>
-          <CardDescription>
-            {currentQuestion.type === 'multiple_choice' && 'Select one option'}
-            {currentQuestion.type === 'true_false' && 'Select True or False'}
-            {currentQuestion.type === 'free_text' && 'Write your answer'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {currentQuestion.type === 'multiple_choice' && (
-            <RadioGroup
-              value={answers[currentQuestion.id] || ''}
-              onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-            >
-              {currentQuestion.options.map((option) => (
-                <div key={option.id} className="flex items-center space-x-3 py-2">
-                  <RadioGroupItem
-                    value={option.id.toString()}
-                    id={`option-${option.id}`}
-                  />
-                  <Label htmlFor={`option-${option.id}`} className="flex-1 cursor-pointer">
-                    {option.text}
-                  </Label>
-                </div>
+        {/* Question Area */}
+        <div className="flex-1 flex flex-col gap-8">
+          <Card className="border-none shadow-soft rounded-[32px] overflow-hidden flex-1 flex flex-col">
+            <div className="h-2 w-full flex">
+              {questions.map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex-1 transition-all duration-500",
+                    i === currentQuestionIndex ? "bg-primary" : i < currentQuestionIndex ? "bg-primary/30" : "bg-muted"
+                  )}
+                />
               ))}
-            </RadioGroup>
-          )}
+            </div>
 
-          {currentQuestion.type === 'true_false' && (
-            <RadioGroup
-              value={answers[currentQuestion.id] || ''}
-              onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-            >
-              <div className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value="true" id="true" />
-                <Label htmlFor="true" className="cursor-pointer">True</Label>
+            <div className="flex-1 p-8 md:p-12 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
+              <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm">
+                  <span className="h-[1px] w-8 bg-current opacity-20" />
+                  Question {currentQuestionIndex + 1}
+                </div>
+
+                <h2 className="text-2xl md:text-3xl font-black leading-tight text-center md:text-left">
+                  {currentQuestion.text}
+                </h2>
+
+                <div className="space-y-4 pt-4">
+                  {currentQuestion.type === 'multiple_choice' && (
+                    <RadioGroup
+                      value={answers[currentQuestion.id] || ''}
+                      onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                      className="grid gap-3"
+                    >
+                      {currentQuestion.options.map((option) => (
+                        <Label
+                          key={option.id}
+                          htmlFor={`option-${option.id}`}
+                          className={cn(
+                            "flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50",
+                            answers[currentQuestion.id] === option.id.toString()
+                              ? "border-primary bg-primary/5 shadow-inner"
+                              : "border-muted-foreground/5 hover:bg-muted/30"
+                          )}
+                        >
+                          <RadioGroupItem
+                            value={option.id.toString()}
+                            id={`option-${option.id}`}
+                            className="h-6 w-6 border-2"
+                          />
+                          <span className="text-lg font-bold">{option.text}</span>
+                        </Label>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {currentQuestion.type === 'true_false' && (
+                    <RadioGroup
+                      value={answers[currentQuestion.id] || ''}
+                      onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      {['true', 'false'].map((val) => (
+                        <Label
+                          key={val}
+                          htmlFor={val}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-4 p-8 rounded-2xl border-2 cursor-pointer transition-all",
+                            answers[currentQuestion.id] === val
+                              ? "border-primary bg-primary/5 shadow-xl"
+                              : "border-muted-foreground/5 bg-background hover:bg-muted/30"
+                          )}
+                        >
+                          <RadioGroupItem value={val} id={val} className="sr-only" />
+                          <span className="text-2xl font-black capitalize">{val}</span>
+                          <div className={cn(
+                            "h-8 w-8 rounded-full border-2 flex items-center justify-center",
+                            answers[currentQuestion.id] === val ? "bg-primary border-primary text-white" : "border-muted-foreground/20"
+                          )}>
+                            {answers[currentQuestion.id] === val && <IconCheck size={20} stroke={4} />}
+                          </div>
+                        </Label>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {currentQuestion.type === 'free_text' && (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={answers[currentQuestion.id] || ''}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                        placeholder="Share your knowledge here..."
+                        className="min-h-[250px] p-6 text-lg rounded-3xl border-2 border-muted-foreground/10 focus-visible:ring-primary focus-visible:border-primary shadow-inner"
+                      />
+                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 justify-end px-2">
+                        <IconMessageChatbot size={14} />
+                        AI will evaluate your reasoning
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value="false" id="false" />
-                <Label htmlFor="false" className="cursor-pointer">False</Label>
-              </div>
-            </RadioGroup>
-          )}
+            </div>
+          </Card>
+        </div>
 
-          {currentQuestion.type === 'free_text' && (
-            <Textarea
-              value={answers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-              placeholder="Type your answer here..."
-              rows={5}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
-          disabled={currentQuestionIndex === 0}
-        >
-          <IconArrowLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
-
-        {isLastQuestion ? (
+        {/* Footer Navigation */}
+        <div className="flex items-center justify-between gap-4">
           <Button
-            onClick={handleSubmit}
-            disabled={submitting || !allQuestionsAnswered}
+            variant="ghost"
+            size="lg"
+            className="rounded-2xl h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
+            disabled={currentQuestionIndex === 0}
           >
-            {submitting ? (
-              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <IconSend className="mr-2 h-4 w-4" />
-            )}
-            Submit Exam
+            <IconChevronLeft size={20} stroke={3} />
+            Previous
           </Button>
-        ) : (
-          <Button onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}>
-            Next
-            <IconArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        )}
-      </div>
 
-      {/* Submit anyway button if not all answered */}
-      {isLastQuestion && !allQuestionsAnswered && (
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Answer all questions to submit the exam.
-        </p>
-      )}
+          <div className="flex gap-4">
+            {isLastQuestion ? (
+              <Button
+                size="lg"
+                className="rounded-2xl h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <IconLoader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <IconSend size={20} stroke={3} />
+                )}
+                Finish & Submit
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="rounded-2xl h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
+                onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
+              >
+                Next Question
+                <IconChevronRight size={20} stroke={3} />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
+

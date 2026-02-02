@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { IconArrowLeft, IconClock, IconFileText, IconCheck } from '@tabler/icons-react'
+import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
+import ExamCard from '@/components/exercises/exam-card'
+import { IconCertificate, IconProgress } from '@tabler/icons-react'
+import { Progress } from '@/components/ui/progress'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -14,151 +13,124 @@ export default async function ExamsPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
-  if (!user) {
-    redirect('/auth/login')
-  }
-
-  // Verify enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', user.id)
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'active')
-    .single()
-
-  if (!enrollment) {
-    redirect('/dashboard/student')
-  }
-
-  // Get course info
-  const { data: course } = await supabase
-    .from('courses')
-    .select('title')
-    .eq('course_id', parseInt(courseId))
-    .single()
-
-  if (!course) {
-    notFound()
-  }
-
-  // Get all published exams for this course
-  const { data: exams } = await supabase
+  // Consolidated query as requested by the user
+  const { data: exams, error } = await supabase
     .from('exams')
     .select(`
-      exam_id,
-      title,
-      description,
-      duration,
-      sequence
+        *,
+        courses(*),
+        exam_submissions (
+            submission_id,
+            student_id,
+            submission_date,
+            exam_answers (
+                answer_id,
+                question_id,
+                answer_text,
+                is_correct,
+                feedback
+            ),
+            exam_scores (
+                score_id,
+                score
+            )
+        )
     `)
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
-    .order('sequence', { ascending: true })
+    .eq('exam_submissions.student_id', user.id)
+    .order('sequence')
 
-  // Get user's exam submissions to check which are completed
-  const { data: submissions } = await supabase
-    .from('exam_submissions')
-    .select('exam_id, submission_id')
-    .eq('student_id', user.id)
+  if (error) {
+    console.error('Error fetching exams:', error)
+    throw new Error(error.message)
+  }
 
-  // Get exam scores
-  const { data: scores } = await supabase
-    .from('exam_scores')
-    .select('exam_id, score')
-    .eq('student_id', user.id)
+  if (!exams || exams.length === 0) {
+    // Check if course exists
+    const { data: course } = await supabase.from('courses').select('title').eq('course_id', parseInt(courseId)).single();
+    if (!course) notFound();
 
-  const submissionMap = new Map(submissions?.map(s => [s.exam_id, s.submission_id]) || [])
-  const scoreMap = new Map(scores?.map(s => [s.exam_id, s.score]) || [])
+    return (
+      <div className="container mx-auto py-8 px-4 space-y-8">
+        <BreadcrumbComponent links={[
+          { href: '/dashboard/student', label: 'Dashboard' },
+          { href: `/dashboard/student/courses/${courseId}`, label: course.title },
+          { href: '#', label: 'Exams' },
+        ]} />
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed rounded-3xl">
+          <IconCertificate className="h-16 w-16 text-muted-foreground/30 mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground">No exams available</h3>
+          <p className="text-muted-foreground text-center max-w-xs mt-2">
+            Evaluations for this course will appear here when published.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const firstExam = exams[0];
+  const courseData = firstExam?.courses;
+  const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || "Course";
+
+  const completedExams = exams.filter(exam => {
+    const subs = exam.exam_submissions;
+    const submission = Array.isArray(subs) ? subs[0] : (subs as any);
+    if (!submission) return false;
+    const scores = submission.exam_scores;
+    const score = Array.isArray(scores) ? scores[0]?.score : (scores as any)?.score;
+    return score !== undefined;
+  }).length;
+  const totalExams = exams.length
+  const progressPercent = (completedExams / totalExams) * 100
+
+  const breadcrumbLinks = [
+    { href: '/dashboard/student', label: 'Dashboard' },
+    { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
+    { href: '#', label: 'Exams' },
+  ]
 
   return (
-    <div className="container mx-auto max-w-4xl py-8 px-4">
-      {/* Header */}
-      <div className="mb-8">
-        <Link href={`/dashboard/student/courses/${courseId}`}>
-          <Button variant="ghost" size="sm" className="mb-4">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to Course
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">{course.title}</h1>
-        <p className="text-muted-foreground">Course Exams</p>
+    <div className="container mx-auto py-8 px-4 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-4 flex-1">
+          <BreadcrumbComponent links={breadcrumbLinks} />
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+              <IconCertificate size={28} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Assessments</h1>
+              <p className="text-muted-foreground">Demonstrate your knowledge and earn your certification.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-2xl p-4 min-w-[240px] shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <IconProgress size={16} />
+              Completion Progress
+            </span>
+            <span className="text-sm font-bold">{completedExams}/{totalExams}</span>
+          </div>
+          <Progress value={progressPercent} className="h-2" />
+        </div>
       </div>
 
-      {/* Exams List */}
-      {exams && exams.length > 0 ? (
-        <div className="space-y-4">
-          {exams.map((exam) => {
-            const hasSubmission = submissionMap.has(exam.exam_id)
-            const score = scoreMap.get(exam.exam_id)
-
-            return (
-              <Card key={exam.exam_id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        <IconFileText className="h-5 w-5" />
-                        {exam.title}
-                        {hasSubmission && (
-                          <Badge variant="secondary" className="ml-2">
-                            <IconCheck className="mr-1 h-3 w-3" />
-                            Completed
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      {exam.description && (
-                        <CardDescription className="mt-2">
-                          {exam.description}
-                        </CardDescription>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {exam.duration && (
-                        <span className="flex items-center gap-1">
-                          <IconClock className="h-4 w-4" />
-                          {exam.duration} minutes
-                        </span>
-                      )}
-                      {score !== undefined && (
-                        <span className="font-medium text-foreground">
-                          Score: {Number(score).toFixed(0)}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {hasSubmission ? (
-                        <Link href={`/dashboard/student/courses/${courseId}/exams/${exam.exam_id}/review`}>
-                          <Button variant="outline">View Results</Button>
-                        </Link>
-                      ) : (
-                        <Link href={`/dashboard/student/courses/${courseId}/exams/${exam.exam_id}`}>
-                          <Button>Take Exam</Button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <IconFileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">No exams available for this course yet.</p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 gap-4">
+        {exams.map((exam) => (
+          <ExamCard
+            key={exam.exam_id}
+            exam={exam}
+            courseId={courseId}
+          />
+        ))}
+      </div>
     </div>
   )
 }
+

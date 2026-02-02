@@ -13,6 +13,7 @@ import {
   IconPlayerPlay,
   IconFileText,
 } from '@tabler/icons-react'
+import { CourseReviews } from '@/components/student/course-reviews'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -43,7 +44,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/dashboard/student')
   }
 
-  // Get course with lessons
+  // Get course
   const { data: course, error } = await supabase
     .from('courses')
     .select(`
@@ -51,13 +52,21 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       title,
       description,
       thumbnail_url,
-      author:profiles!courses_author_id_fkey (
-        full_name,
-        avatar_url
-      )
+      author_id
     `)
     .eq('course_id', parseInt(courseId))
     .single()
+
+  // Get author profile separately
+  let authorProfile = null
+  if (course && course.author_id) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', course.author_id)
+      .single()
+    authorProfile = data
+  }
 
   if (error || !course) {
     notFound()
@@ -94,6 +103,16 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
   const examCount = exams?.length || 0
 
+  // Check if user has already reviewed this course
+  const { data: userReview } = await supabase
+    .from('reviews')
+    .select('review_id')
+    .eq('course_id', parseInt(courseId))
+    .eq('user_id', user.id)
+    .single()
+
+  const userHasReviewed = !!userReview
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header with course info */}
@@ -122,9 +141,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             <div className="flex-1">
               <h1 className="text-2xl font-bold md:text-3xl">{course.title}</h1>
 
-              {course.author && (
+              {authorProfile && (
                 <p className="mt-2 text-muted-foreground">
-                  By {(course.author as any).full_name || 'Unknown Instructor'}
+                  By {authorProfile.full_name || 'Unknown Instructor'}
                 </p>
               )}
 
@@ -231,6 +250,15 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               </p>
             </div>
           )}
+        </div>
+
+        {/* Course Reviews */}
+        <div className="mt-8">
+          <CourseReviews
+            courseId={parseInt(courseId)}
+            userId={user.id}
+            userHasReviewed={userHasReviewed}
+          />
         </div>
       </main>
     </div>

@@ -40,52 +40,38 @@ export default async function TakeExamPage({ params }: PageProps) {
     .single()
 
   if (existingSubmission) {
-    redirect(`/dashboard/student/courses/${courseId}/exams/${examId}/review`)
+    redirect(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
   }
 
-  // Get exam details
-  const { data: exam } = await supabase
+  // Get exam details with questions and options in one query as requested
+  const { data: exam, error: examError } = await supabase
     .from('exams')
     .select(`
-      exam_id,
-      title,
-      description,
-      duration
-    `)
-    .eq('exam_id', parseInt(examId))
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'published')
-    .single()
-
-  if (!exam) {
-    notFound()
-  }
-
-  // Get questions with options
-  const { data: questions } = await supabase
-    .from('exam_questions')
-    .select(`
-      question_id,
-      question_text,
-      question_type,
-      question_options (
-        option_id,
-        option_text
+      *,
+      courses (*),
+      exam_questions (
+        *,
+        question_options (*)
       )
     `)
     .eq('exam_id', parseInt(examId))
-    .order('question_id', { ascending: true })
+    .eq('status', 'published')
+    .single()
+
+  if (examError || !exam) {
+    notFound()
+  }
 
   // Format questions for the client component
-  const formattedQuestions = questions?.map(q => ({
+  const formattedQuestions = (exam.exam_questions || []).map((q: any) => ({
     id: q.question_id,
     text: q.question_text,
     type: q.question_type as 'multiple_choice' | 'true_false' | 'free_text',
-    options: q.question_options?.map(o => ({
+    options: (q.question_options || []).map((o: any) => ({
       id: o.option_id,
       text: o.option_text,
-    })) || [],
-  })) || []
+    })),
+  }))
 
   return (
     <ExamTaker
