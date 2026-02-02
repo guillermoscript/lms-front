@@ -1,14 +1,30 @@
+import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession } from '@/lib/supabase/proxy'
 import { getRoleFromClaims } from '@/lib/supabase/get-user-role'
 import { createServerClient } from '@supabase/ssr'
+import { locales, defaultLocale } from './i18n'
 
-export async function proxy(request: NextRequest) {
+// Create i18n middleware
+const intlMiddleware = createIntlMiddleware({
+  locales,
+  defaultLocale,
+  localePrefix: 'as-needed',
+})
+
+// Next.js 16: Function renamed from 'middleware' to 'proxy'
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  console.log('Proxy trace:', pathname)
+
+  // Check if the current path is public (ignore locale prefix)
+  const pathnameWithoutLocale = pathname.replace(/^\/(en|es)/, '')
 
   // Public routes that don't require authentication
   const publicRoutes = [
     '/auth/login',
+    '/en/auth/login',
+    '/es/auth/login',
     '/auth/sign-up',
     '/auth/sign-up-success',
     '/auth/forgot-password',
@@ -18,14 +34,16 @@ export async function proxy(request: NextRequest) {
     '/',
   ]
 
-  // Check if the current path is public
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some(route =>
+    pathnameWithoutLocale === route || pathnameWithoutLocale.startsWith(route)
+  )
 
   // Update session (handles auth state)
   const supabaseResponse = await updateSession(request)
 
-  // If it's a public route, allow access
+  // If it's a public route, just update session and continue
   if (isPublicRoute) {
+    // For now, skip i18n until app structure supports [locale]
     return supabaseResponse
   }
 
@@ -60,23 +78,24 @@ export async function proxy(request: NextRequest) {
   const userRole = getRoleFromClaims(claims)
 
   // Role-based route protection
-  if (pathname.startsWith('/dashboard/student') && userRole !== 'student') {
+  if (pathnameWithoutLocale.startsWith('/dashboard/student') && userRole !== 'student') {
     return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
   }
 
-  if (pathname.startsWith('/dashboard/teacher') && userRole !== 'teacher' && userRole !== 'admin') {
+  if (pathnameWithoutLocale.startsWith('/dashboard/teacher') && userRole !== 'teacher' && userRole !== 'admin') {
     return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
   }
 
-  if (pathname.startsWith('/dashboard/admin') && userRole !== 'admin') {
+  if (pathnameWithoutLocale.startsWith('/dashboard/admin') && userRole !== 'admin') {
     return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
   }
 
   // Redirect /dashboard to the appropriate role-specific dashboard
-  if (pathname === '/dashboard') {
+  if (pathnameWithoutLocale === '/dashboard') {
     return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
   }
 
+  // Apply i18n to protected routes
   return supabaseResponse
 }
 
