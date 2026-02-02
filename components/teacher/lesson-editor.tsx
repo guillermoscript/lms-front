@@ -16,9 +16,12 @@ import {
   IconEye,
   IconCode,
   IconDeviceFloppy,
+  IconRobot,
 } from '@tabler/icons-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { PromptTemplateSelector } from './prompt-template-selector'
+import { AIPreviewModal } from './ai-preview-modal'
 
 interface LessonEditorProps {
   courseId: number
@@ -32,6 +35,8 @@ interface LessonEditorProps {
     video_url: string | null
     sequence: number
     status: 'draft' | 'published' | 'archived'
+    ai_task_description: string | null
+    ai_task_instructions: string | null
   }
 }
 
@@ -52,6 +57,8 @@ export function LessonEditor({
     content: initialData?.content || '',
     video_url: initialData?.video_url || '',
     sequence: initialData?.sequence || initialSequence,
+    ai_task_description: initialData?.ai_task_description || '',
+    ai_task_instructions: initialData?.ai_task_instructions || '',
   })
 
   const handleSave = async (publish: boolean) => {
@@ -69,6 +76,8 @@ export function LessonEditor({
         status: publish ? ('published' as const) : ('draft' as const),
       }
 
+      let lessonId: number | undefined = initialData?.id
+
       if (initialData) {
         // Update existing lesson
         const { error: updateError } = await supabase
@@ -79,11 +88,27 @@ export function LessonEditor({
         if (updateError) throw updateError
       } else {
         // Create new lesson
-        const { error: insertError } = await supabase
+        const { data: newLesson, error: insertError } = await supabase
           .from('lessons')
           .insert([lessonData])
+          .select('id')
+          .single()
 
         if (insertError) throw insertError
+        lessonId = newLesson.id
+      }
+
+      // Handle AI Task (Fixed column names)
+      if (lessonId && (formData.ai_task_description || formData.ai_task_instructions)) {
+        const { error: taskError } = await supabase
+          .from('lessons_ai_tasks')
+          .upsert({
+            lesson_id: lessonId,
+            task_instructions: formData.ai_task_description || '', // Fixed: was task_description
+            system_prompt: formData.ai_task_instructions || '', // Fixed: was ai_instructions
+          }, { onConflict: 'lesson_id' })
+
+        if (taskError) throw taskError
       }
 
       router.push(`/dashboard/teacher/courses/${courseId}`)
@@ -180,6 +205,67 @@ export function LessonEditor({
                   <p className="text-xs text-muted-foreground">
                     The order in which this lesson appears in the course
                   </p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t">
+                <div className="flex items-center gap-2 mb-4">
+                  <IconRobot className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold text-lg">AI Task Configuration</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ai_task_description">Task Prompt (for Students)</Label>
+                    <Textarea
+                      id="ai_task_description"
+                      value={formData.ai_task_description}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ai_task_description: e.target.value })
+                      }
+                      placeholder="e.g. Present yourself in English"
+                      rows={2}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This is the task challenge that will be presented to the student to solve using the chatbot.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai_task_instructions">AI Grading Instructions (Hidden)</Label>
+                    <Textarea
+                      id="ai_task_instructions"
+                      value={formData.ai_task_instructions}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ai_task_instructions: e.target.value })
+                      }
+                      placeholder="e.g. Ensure the user uses correct grammar and includes their name, age, and hobbies."
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Specific instructions for the AI on how to evaluate if the task is completed correctly.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 mt-2">
+                    <PromptTemplateSelector
+                      category="lesson_task"
+                      onSelect={(template) => {
+                        setFormData({
+                          ...formData,
+                          ai_task_description: template.task_description_template || formData.ai_task_description,
+                          ai_task_instructions: template.system_prompt_template || formData.ai_task_instructions,
+                        })
+                      }}
+                    />
+                    <AIPreviewModal
+                      type="lesson"
+                      config={{
+                        task_description: formData.ai_task_description,
+                        system_prompt: formData.ai_task_instructions
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -287,6 +373,6 @@ Write your lesson content here using Markdown...
           </Card>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
