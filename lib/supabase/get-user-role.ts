@@ -7,18 +7,24 @@ import { createClient } from '@/lib/supabase/server'
 export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | null> {
   const supabase = await createClient()
 
+  // Get the session to access JWT claims
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  if (!user) {
+  if (!session) {
     return null
   }
 
-  // Get the role from app_metadata which is set by the custom_access_token_hook
-  const role = user.app_metadata?.user_role as 'student' | 'teacher' | 'admin' | undefined
-
-  return role || 'student' // Default to student if no role is set
+  // Decode the JWT to get custom claims set by custom_access_token_hook
+  // The access_token is a JWT that contains our custom claims
+  try {
+    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    const role = payload.user_role as 'student' | 'teacher' | 'admin' | undefined
+    return role || 'student'
+  } catch {
+    return 'student'
+  }
 }
 
 /**
