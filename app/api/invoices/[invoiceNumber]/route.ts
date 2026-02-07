@@ -4,10 +4,11 @@ import { generateInvoiceHTML, getInvoiceConfig } from '@/lib/invoice-generator'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { invoiceNumber: string } }
+  { params }: { params: Promise<{ invoiceNumber: string }> }
 ) {
   try {
     const supabase = await createClient()
+    const { invoiceNumber } = await params
 
     // Verify user is logged in
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -32,7 +33,7 @@ export async function GET(
           currency
         )
       `)
-      .eq('invoice_number', params.invoiceNumber)
+      .eq('invoice_number', invoiceNumber)
       .single()
 
     if (requestError || !paymentRequest) {

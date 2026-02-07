@@ -201,7 +201,7 @@ export function PaymentRequestDialog({
               <Label htmlFor="status">Status</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
+                onValueChange={(value: string | null) => setFormData({ ...formData, status: value || 'pending' })}
                 disabled={loading}
               >
                 <SelectTrigger>
