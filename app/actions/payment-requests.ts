@@ -200,39 +200,8 @@ export async function confirmPaymentAndEnroll(
       throw new Error('This request has already been completed')
     }
 
-    // Get courses linked to the product
-    const { data: productCourses } = await adminClient
-      .from('product_courses')
-      .select('course_id')
-      .eq('product_id', request.product.product_id)
-
-    // Enroll student in all courses linked to the product
-    const courseIds = productCourses?.map((c: any) => c.course_id) || []
-
-    for (const courseId of courseIds) {
-      // Check if enrollment already exists
-      const { data: existing } = await adminClient
-        .from('enrollments')
-        .select('enrollment_id')
-        .eq('user_id', request.user_id)
-        .eq('course_id', courseId)
-        .single()
-
-      if (!existing) {
-        // Create enrollment
-        await adminClient
-          .from('enrollments')
-          .insert({
-            user_id: request.user_id,
-            course_id: courseId,
-            status: 'active',
-            enrolled_at: new Date().toISOString()
-          })
-      }
-    }
-
-    // Create transaction record
-    await adminClient
+    // Create transaction record (required for enroll_user RPC)
+    const { data: transaction, error: txError } = await adminClient
       .from('transactions')
       .insert({
         user_id: request.user_id,
@@ -240,13 +209,25 @@ export async function confirmPaymentAndEnroll(
         amount: request.payment_amount,
         currency: request.payment_currency,
         payment_method: request.payment_method || 'manual',
-        status: 'succeeded',
-        metadata: {
-          payment_request_id: requestId,
-          invoice_number: request.invoice_number,
-          processed_manually: true
-        }
+        status: 'successful' // Fixed: must match enroll_user check
       })
+      .select()
+      .single()
+
+    if (txError) {
+      throw new Error('Failed to create transaction: ' + txError.message)
+    }
+
+    // Use enroll_user RPC function to handle enrollment
+    // This automatically enrolls user in all courses linked to the product
+    const { error: enrollError } = await adminClient.rpc('enroll_user', {
+      _user_id: request.user_id,
+      _product_id: request.product.product_id
+    })
+
+    if (enrollError) {
+      throw new Error('Failed to enroll user: ' + enrollError.message)
+    }
 
     // Update request status
     await adminClient

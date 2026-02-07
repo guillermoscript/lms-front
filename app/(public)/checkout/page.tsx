@@ -25,35 +25,36 @@ export default async function CheckoutPage(props: { searchParams: Promise<Search
     if (courseId) {
         const { data: course } = await supabase
             .from("courses")
-            .select("title, price")
-            .eq("id", courseId)
+            .select("title")
+            .eq("course_id", courseId)
             .single();
 
         if (course) {
             title = course.title;
-            price = course.price || "Free";
+            
+            // Get product price from product_courses
+            const { data: productCourse } = await supabase
+                .from("product_courses")
+                .select("product:products(price, currency)")
+                .eq("course_id", courseId)
+                .single();
+
+            if (productCourse?.product) {
+                const product = productCourse.product as any;
+                price = parseFloat(product.price);
+            }
         }
     } else if (planId) {
-        // Mock plan data since we hardcoded plans in PricingPage
-        const plans: Record<string, { name: string, price: number }> = {
-            "monthly": { name: "Monthly Access", price: 29 },
-            "yearly": { name: "Yearly Pro", price: 290 }
-        };
-        const plan = plans[planId];
-        if (plan) {
-            title = plan.name;
-            price = plan.price;
-        } else {
-            // Try fetch DB
-            const { data: dbPlan } = await supabase
-                .from("plans")
-                .select("name, price")
-                .eq("id", planId)
-                .single();
-            if (dbPlan) {
-                title = dbPlan.name;
-                price = dbPlan.price;
-            }
+        // Fetch plan from database
+        const { data: dbPlan } = await supabase
+            .from("plans")
+            .select("plan_name, price")
+            .eq("plan_id", planId)
+            .single();
+            
+        if (dbPlan) {
+            title = dbPlan.plan_name;
+            price = parseFloat(dbPlan.price);
         }
     }
 
