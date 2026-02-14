@@ -9,6 +9,9 @@ import {
   IconCurrencyDollar,
   IconChecklist,
   IconReceipt,
+  IconChartBar,
+  IconCrown,
+  IconSettings,
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -32,6 +35,7 @@ export default async function AdminDashboardPage() {
     { count: totalEnrollments },
     { count: totalTransactions },
     { count: pendingPaymentRequests },
+    { count: activeSubscriptions },
     { data: recentTransactions },
     { data: recentUsers },
   ] = await Promise.all([
@@ -47,6 +51,10 @@ export default async function AdminDashboardPage() {
       .from('payment_requests')
       .select('*', { count: 'exact', head: true })
       .in('status', ['pending', 'contacted', 'payment_received']),
+    supabase
+      .from('subscriptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscription_status', 'active'),
     supabase
       .from('transactions')
       .select('transaction_id, amount, status, created_at, user_id')
@@ -89,6 +97,14 @@ export default async function AdminDashboardPage() {
       color: 'text-blue-500',
     },
     {
+      title: 'Active Subscriptions',
+      value: activeSubscriptions || 0,
+      subtitle: 'Monthly recurring',
+      icon: IconCrown,
+      link: '/dashboard/admin/subscriptions',
+      color: 'text-purple-500',
+    },
+    {
       title: 'Total Courses',
       value: totalCourses || 0,
       subtitle: `${publishedCourses || 0} published`,
@@ -117,7 +133,7 @@ export default async function AdminDashboardPage() {
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
       {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.link}>
             <Card className="transition-all hover:border-primary/50 hover:shadow-sm">
@@ -149,7 +165,13 @@ export default async function AdminDashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
+            <Link href="/dashboard/admin/analytics">
+              <Button variant="outline" className="w-full">
+                <IconChartBar className="mr-2 h-4 w-4" />
+                Analytics
+              </Button>
+            </Link>
             <Link href="/dashboard/admin/users">
               <Button variant="outline" className="w-full">
                 <IconUsers className="mr-2 h-4 w-4" />
@@ -160,6 +182,12 @@ export default async function AdminDashboardPage() {
               <Button variant="outline" className="w-full">
                 <IconBook className="mr-2 h-4 w-4" />
                 Manage Courses
+              </Button>
+            </Link>
+            <Link href="/dashboard/admin/subscriptions">
+              <Button variant="outline" className="w-full">
+                <IconCrown className="mr-2 h-4 w-4" />
+                Subscriptions
               </Button>
             </Link>
             <Link href="/dashboard/admin/payment-requests">
@@ -178,6 +206,12 @@ export default async function AdminDashboardPage() {
               <Button variant="outline" className="w-full">
                 <IconCertificate className="mr-2 h-4 w-4" />
                 View Enrollments
+              </Button>
+            </Link>
+            <Link href="/dashboard/admin/settings">
+              <Button variant="outline" className="w-full">
+                <IconSettings className="mr-2 h-4 w-4" />
+                Settings
               </Button>
             </Link>
           </div>

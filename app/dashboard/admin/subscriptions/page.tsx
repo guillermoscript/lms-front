@@ -1,0 +1,339 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getUserRole } from '@/lib/supabase/get-user-role'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  IconCrown,
+  IconSearch,
+  IconCalendar,
+  IconCurrencyDollar,
+  IconUser,
+  IconRefresh,
+} from '@tabler/icons-react'
+import Link from 'next/link'
+import { SubscriptionActions } from '@/components/admin/subscription-actions'
+
+interface SearchParams {
+  search?: string
+  status?: string
+}
+
+export default async function SubscriptionsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/auth/login')
+  }
+
+  const role = await getUserRole()
+  if (role !== 'admin') {
+    redirect('/dashboard/student')
+  }
+
+  const search = searchParams.search || ''
+  const statusFilter = searchParams.status || 'all'
+
+  // Build query
+  let query = supabase
+    .from('subscriptions')
+    .select(
+      `
+      subscription_id,
+      user_id,
+      plan_id,
+      subscription_status,
+      start_date,
+      end_date,
+      cancel_at,
+      canceled_at,
+      cancel_at_period_end,
+      current_period_start,
+      current_period_end,
+      created,
+      profiles!subscriptions_user_id_fkey (
+        full_name,
+        email
+      ),
+      plans (
+        plan_name,
+        price,
+        currency,
+        duration_type
+      )
+    `
+    )
+    .order('created', { ascending: false })
+
+  // Apply status filter
+  if (statusFilter !== 'all') {
+    query = query.eq('subscription_status', statusFilter)
+  }
+
+  const { data: subscriptions, error } = await query
+
+  // Filter by search on client side (for user names/emails)
+  const filteredSubscriptions = subscriptions?.filter((sub) => {
+    if (!search) return true
+    const profile = sub.profiles as any
+    const searchLower = search.toLowerCase()
+    return (
+      profile?.full_name?.toLowerCase().includes(searchLower) ||
+      profile?.email?.toLowerCase().includes(searchLower) ||
+      sub.subscription_id.toString().includes(searchLower)
+    )
+  })
+
+  // Calculate statistics
+  const activeCount =
+    subscriptions?.filter((s) => s.subscription_status === 'active').length || 0
+  const canceledCount =
+    subscriptions?.filter((s) => s.subscription_status === 'cancelled').length || 0
+  const expiredCount =
+    subscriptions?.filter((s) => s.subscription_status === 'expired').length || 0
+
+  const totalRevenue = subscriptions?.reduce((sum, sub) => {
+    const plan = sub.plans as any
+    if (sub.subscription_status === 'active' && plan?.price) {
+      return sum + plan.price
+    }
+    return sum
+  }, 0)
+
+  const stats = [
+    {
+      title: 'Active Subscriptions',
+      value: activeCount,
+      icon: IconCrown,
+      color: 'text-green-500',
+    },
+    {
+      title: 'Cancelled',
+      value: canceledCount,
+      icon: IconRefresh,
+      color: 'text-orange-500',
+    },
+    {
+      title: 'Expired',
+      value: expiredCount,
+      icon: IconCalendar,
+      color: 'text-red-500',
+    },
+    {
+      title: 'Monthly Revenue',
+      value: `$${(totalRevenue || 0).toFixed(2)}`,
+      icon: IconCurrencyDollar,
+      color: 'text-blue-500',
+    },
+  ]
+
+  return (
+    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <IconCrown className="h-8 w-8" />
+          Subscription Management
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Manage all active and historical subscriptions
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <Card key={stat.title}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+                </div>
+                <stat.icon className={`h-10 w-10 ${stat.color}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-sm">
+              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <form method="get">
+                <Input
+                  type="search"
+                  name="search"
+                  placeholder="Search by user name, email, or ID..."
+                  defaultValue={search}
+                  className="pl-10"
+                />
+                {statusFilter !== 'all' && (
+                  <input type="hidden" name="status" value={statusFilter} />
+                )}
+              </form>
+            </div>
+            <div className="flex gap-2">
+              <Link href="?status=all">
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  All
+                </Button>
+              </Link>
+              <Link href="?status=active">
+                <Button
+                  variant={statusFilter === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  Active
+                </Button>
+              </Link>
+              <Link href="?status=cancelled">
+                <Button
+                  variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  Cancelled
+                </Button>
+              </Link>
+              <Link href="?status=expired">
+                <Button
+                  variant={statusFilter === 'expired' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  Expired
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subscriptions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Subscriptions ({filteredSubscriptions?.length || 0})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredSubscriptions && filteredSubscriptions.length > 0 ? (
+            <div className="space-y-3">
+              {filteredSubscriptions.map((subscription) => {
+                const profile = subscription.profiles as any
+                const plan = subscription.plans as any
+                const isActive = subscription.subscription_status === 'active'
+                const isCancelled = subscription.subscription_status === 'cancelled'
+                const isExpired = subscription.subscription_status === 'expired'
+
+                return (
+                  <div
+                    key={subscription.subscription_id}
+                    className="rounded-lg border p-4"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      {/* User & Plan Info */}
+                      <div className="flex-1">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-full bg-primary/10 p-2">
+                            <IconUser className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/dashboard/admin/users/${subscription.user_id}`}
+                                className="font-medium hover:underline"
+                              >
+                                {profile?.full_name || 'Unknown User'}
+                              </Link>
+                              <Badge
+                                variant={
+                                  isActive
+                                    ? 'default'
+                                    : isCancelled
+                                      ? 'secondary'
+                                      : 'destructive'
+                                }
+                              >
+                                {subscription.subscription_status}
+                              </Badge>
+                              {subscription.cancel_at_period_end && (
+                                <Badge variant="outline">
+                                  Cancels at period end
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {profile?.email}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <IconCrown className="h-4 w-4" />
+                                {plan?.plan_name || 'Unknown Plan'}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <IconCurrencyDollar className="h-4 w-4" />
+                                {plan?.currency} {plan?.price?.toFixed(2)}/
+                                {plan?.duration_type}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <IconCalendar className="h-4 w-4" />
+                                Started:{' '}
+                                {new Date(subscription.start_date).toLocaleDateString()}
+                              </span>
+                              {subscription.current_period_end && (
+                                <span className="flex items-center gap-1">
+                                  <IconCalendar className="h-4 w-4" />
+                                  {isCancelled ? 'Ended' : 'Renews'}:{' '}
+                                  {new Date(
+                                    subscription.current_period_end
+                                  ).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <SubscriptionActions
+                          subscriptionId={subscription.subscription_id}
+                          userId={subscription.user_id}
+                          status={subscription.subscription_status}
+                          cancelAtPeriodEnd={subscription.cancel_at_period_end}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <IconCrown className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">
+                {search || statusFilter !== 'all'
+                  ? 'No subscriptions found matching your filters'
+                  : 'No subscriptions yet'}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </main>
+  )
+}
