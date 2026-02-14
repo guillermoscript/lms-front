@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+npm-debug.log
+package-lock.json
+
+# Source files (only ship built code)
+src
+*.ts
+tsconfig.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Tests
+tests
+__tests__
+*.test.ts
+*.spec.ts
+
+# Documentation
+*.md
+docs
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build artifacts
+*.log
+.DS_Store

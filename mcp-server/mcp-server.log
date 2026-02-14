@@ -1,0 +1,32 @@
+
+> lms-mcp-server@1.0.0 start:http
+> node build/http-server.js
+
+[dotenv@17.3.1] injecting env (7) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[Config] Proxy secret configured: c723abe3...
+╔════════════════════════════════════════════════════════════╗
+║  LMS MCP HTTP Server                                       ║
+╠════════════════════════════════════════════════════════════╣
+║  Status:   READY                                           ║
+║  Address:  http://127.0.0.1:3001                                  ║
+║  Mode:     Proxy Authentication                            ║
+╠════════════════════════════════════════════════════════════╣
+║  Registered:                                               ║
+║    • 27 tools (courses, lessons, exams, etc.)              ║
+║    • 3 resources (course, lesson, exam data)               ║
+║    • 4 prompts (course creation, content gen, etc.)        ║
+╠════════════════════════════════════════════════════════════╣
+║  Security:                                                 ║
+║    ✓ Shared secret validation enabled                      ║
+║    ✓ Per-user authentication required                      ║
+║    ✓ Audit logging enabled                                 ║
+╚════════════════════════════════════════════════════════════╝
+[Proxy Auth] teacher (user: test-user-id)
+[2026-02-14T13:38:57.121Z] ping by teacher (test-user-id) - 10ms
+[Proxy Auth] teacher (user: test-teacher-123)
+[2026-02-14T13:39:37.524Z] tools/list by teacher (test-teacher-123) - 3ms
+[Proxy Auth] teacher (user: test-teacher-123)
+[2026-02-14T13:39:43.839Z] tools/list by teacher (test-teacher-123) - 2ms
+
+[Shutdown] Received SIGTERM, shutting down gracefully...
+[Shutdown] Server closed
