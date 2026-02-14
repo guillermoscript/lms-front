@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backup-course": "tsx scripts/backup-english-course.ts",
+    "restore-course": "tsx scripts/restore-english-course.ts",
+    "show-jwt-fix": "tsx scripts/show-jwt-fix.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.18",
@@ -34,6 +37,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "lru-cache": "^11.2.6",
     "lucide-react": "^0.563.0",
     "media-chrome": "^4.17.2",
     "motion": "^12.29.2",
@@ -45,6 +49,7 @@
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
     "shadcn": "^3.7.0",
     "shiki": "^3.22.0",
@@ -67,6 +72,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.5",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

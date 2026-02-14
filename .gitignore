@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 # next-agents-md
 .next-docs/
+
+
+mcp-server/node_modules
+mcp-server/build

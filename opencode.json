@@ -1,0 +1,27 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "lms": {
+      "type": "local",
+      "command": [
+        "node",
+        "/Users/guillermomarin/Documents/GitHub/lms-front/mcp-server/build/index.js"
+      ],
+      "enabled": true,
+      "environment": {
+        "SUPABASE_URL": "http://127.0.0.1:54321",
+        "SUPABASE_ANON_KEY": "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+        "SUPABASE_USER_EMAIL": "teacher@test.com",
+        "SUPABASE_USER_PASSWORD": "password123"
+      }
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": true
+    }
+  }
+}

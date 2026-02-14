@@ -20,6 +20,11 @@ export default async function proxy(request: NextRequest) {
   // Check if the current path is public (ignore locale prefix)
   const pathnameWithoutLocale = pathname.replace(/^\/(en|es)/, '')
 
+  // Skip authentication for API routes (they handle their own auth)
+  if (pathnameWithoutLocale.startsWith('/api/')) {
+    return NextResponse.next({ request })
+  }
+
   // Public routes that don't require authentication
   const publicRoutes = [
     '/auth/login',
@@ -41,13 +46,7 @@ export default async function proxy(request: NextRequest) {
   // Update session (handles auth state)
   const supabaseResponse = await updateSession(request)
 
-  // If it's a public route, just update session and continue
-  if (isPublicRoute) {
-    // For now, skip i18n until app structure supports [locale]
-    return supabaseResponse
-  }
-
-  // For protected routes, check authentication
+  // Get user from session
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
@@ -57,25 +56,47 @@ export default async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Not needed here, just for reading
+          // Handled by updateSession
         },
       },
     }
   )
 
-  const { data } = await supabase.auth.getClaims()
-  const claims = data?.claims
+  // Use getSession instead of getClaims for better compatibility with current schema issues
+  let session = null
+  try {
+    const { data } = await supabase.auth.getSession()
+    session = data.session
+  } catch (e) {
+    console.error('Error in proxy getSession:', e)
+  }
+  
+  let userRole: 'student' | 'teacher' | 'admin' = 'student'
+  if (session?.access_token) {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      userRole = payload.user_role || 'student'
+    } catch (e) {
+      console.error('Error parsing token for role:', e)
+    }
+  }
 
-  // If no user and trying to access protected route, redirect to login
-  if (!claims) {
+  // If it's a public route
+  if (isPublicRoute) {
+    // If user is already logged in and trying to access auth pages, redirect to their dashboard
+    if (session && (pathnameWithoutLocale.startsWith('/auth/login') || pathnameWithoutLocale.startsWith('/auth/sign-up'))) {
+      return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+    }
+    return supabaseResponse
+  }
+
+  // For protected routes, check authentication
+  if (!session) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/auth/login'
     redirectUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(redirectUrl)
   }
-
-  // Get user role from claims
-  const userRole = getRoleFromClaims(claims)
 
   // Role-based route protection
   if (pathnameWithoutLocale.startsWith('/dashboard/student') && userRole !== 'student') {
@@ -95,7 +116,6 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
   }
 
-  // Apply i18n to protected routes
   return supabaseResponse
 }
 

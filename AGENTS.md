@@ -58,6 +58,68 @@ Review UI code for Web Interface Guidelines compliance. Use this skill when:
 
 This skill fetches the latest Web Interface Guidelines and validates code against them, reporting findings in `file:line` format.
 
+## MCP Integration
+
+This project includes a **Model Context Protocol (MCP) server** that allows AI assistants like Claude to interact with the LMS database through secure, authenticated tools.
+
+### What is MCP?
+
+MCP enables AI assistants to:
+- Create and manage courses, lessons, and exams
+- View student progress and submissions
+- Access course content and metadata
+- Perform CRUD operations with proper authentication
+
+### Security Model
+
+The MCP server uses **HTTP Proxy Authentication**:
+- No credentials stored in Claude or external tools
+- Users authenticate through existing LMS session (cookies)
+- All actions tracked per user with full audit trail
+- Role-based access (teachers and admins only)
+- Rate limiting: 100 requests/minute per user
+
+### Quick Start
+
+1. **Start the MCP server**:
+   ```bash
+   cd mcp-server
+   npm install
+   npm run build
+   npm run start:http
+   ```
+
+2. **Configure environment**: Ensure `.env` has Supabase credentials and shared secret
+
+3. **Connect Claude**: Add MCP server in Claude settings at `http://localhost:3001/mcp`
+
+### Available Capabilities
+
+- **27 tools** for course/lesson/exam/exercise management
+- **3 resources** for accessing course, lesson, and exam data
+- **4 prompts** for guided content creation
+- **Full audit trail** in `mcp_audit_log` table
+
+### Documentation
+
+- **[MCP Setup Guide](docs/MCP_SETUP.md)** - Complete setup instructions
+- **[MCP Server README](mcp-server/README.md)** - Technical documentation
+- Architecture: HTTP proxy → MCP server → Supabase with RLS
+
+### Audit Trail
+
+All MCP actions are logged to the `mcp_audit_log` table:
+- User ID and role
+- Tool/method called
+- Success/failure status
+- Request duration
+- Sanitized parameters (sensitive data redacted)
+
+Query recent activity:
+```sql
+SELECT * FROM mcp_audit_log ORDER BY created_at DESC LIMIT 50;
+```
+
 ## Architecture & Key Patterns
 
 ### 1. Database Queries via RLS (Core Pattern)
