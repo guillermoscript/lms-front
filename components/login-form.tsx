@@ -35,8 +35,21 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       })
       if (error) throw error
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/dashboard/student')
+
+      // Get user role to redirect to the correct dashboard
+      const { data: { session } } = await supabase.auth.getSession()
+      let userRole = 'student'
+      
+      if (session?.access_token) {
+        try {
+          const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+          userRole = payload.user_role || 'student'
+        } catch (e) {
+          console.error('Error parsing token for role:', e)
+        }
+      }
+
+      router.push(`/dashboard/${userRole}`)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

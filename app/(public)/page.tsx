@@ -35,7 +35,7 @@ export default async function LandingPage() {
                             </p>
 
                             <div className="flex flex-wrap gap-4 pt-2">
-                                <Link href="/auth/signup">
+                                <Link href="/auth/sign-up">
                                     <Button size="lg" className="h-12 px-8 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg text-base shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.45)] transition-shadow">
                                         Get Started Free
                                     </Button>

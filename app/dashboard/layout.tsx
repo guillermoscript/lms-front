@@ -2,6 +2,9 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { getUserRole } from "@/lib/supabase/get-user-role"
+import { createClient } from "@/lib/supabase/server"
+import { ModeToggle } from "@/components/mode-toggle"
+import { UserNav } from "@/components/user-nav"
 
 export default async function DashboardLayout({
     children,
@@ -9,6 +12,8 @@ export default async function DashboardLayout({
     children: React.ReactNode
 }) {
     const role = await getUserRole()
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     return (
         <SidebarProvider>
@@ -18,6 +23,10 @@ export default async function DashboardLayout({
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 h-4" />
                     {/* We can add Breadcrumbs here later if needed */}
+                    <div className="ml-auto flex items-center gap-4">
+                        <ModeToggle />
+                        <UserNav user={user} />
+                    </div>
                 </header>
                 <div className="flex flex-1 flex-col">
                     {children}
