@@ -15,7 +15,6 @@ import {
     IconCrown,
     IconEdit
 } from "@tabler/icons-react"
-import { DashboardHeader } from '@/components/student/dashboard-header'
 import { ProfileForm } from '@/components/student/profile-form'
 import { cn } from "@/lib/utils"
 
@@ -73,8 +72,6 @@ export default async function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-20">
-            <DashboardHeader user={user} />
-
             <main className="container mx-auto px-4 md:px-8 py-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="flex flex-col lg:row gap-8">
                     {/* Sidebar / Profile Card */}

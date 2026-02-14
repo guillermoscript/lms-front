@@ -4,7 +4,7 @@ import { PROMPTS } from '@/lib/ai/prompts'
 import { createAITools } from '@/lib/ai/tools'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 
-export const maxDuration = AI_CONFIG.maxDuration
+export const maxDuration = 120
 
 export async function POST(req: Request) {
     const supabase = await createClient()
@@ -12,29 +12,43 @@ export async function POST(req: Request) {
 
     if (!user) return new Response('Unauthorized', { status: 401 })
 
-    const { messages, lessonId } = await req.json()
+    const body = await req.json()
+    console.log('Received request body:', JSON.stringify(body, null, 2))
+    
+    const { messages, lessonId } = body
     if (!lessonId) return new Response('Lesson ID is required', { status: 400 })
 
     // 1. Fetch lesson details
     const { data: lesson, error } = await supabase
         .from('lessons')
-        .select('title, description, content, course_id, lessons_ai_tasks(task_description, ai_instructions)')
+        .select('title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt)')
         .eq('id', lessonId)
         .single()
 
     if (error || !lesson) return new Response('Lesson not found', { status: 404 })
 
-    const aiTask = lesson.lessons_ai_tasks?.[0]
+    // Handle both array and object response from Supabase (one-to-one relationship)
+    const aiTask = Array.isArray(lesson.lessons_ai_tasks) 
+        ? lesson.lessons_ai_tasks?.[0]
+        : lesson.lessons_ai_tasks
 
     // 2. Save user message
     const lastMessage = messages[messages.length - 1]
     if (lastMessage?.role === 'user') {
-        await supabase.from('lessons_ai_task_messages').insert({
-            lesson_id: lessonId,
-            user_id: user.id,
-            role: 'user',
-            content: lastMessage.content,
-        })
+        // Handle AI SDK message format with parts
+        const messageText = lastMessage.parts
+            ?.filter((part: any) => part.type === 'text')
+            .map((part: any) => part.text)
+            .join(' ') || lastMessage.content || ''
+            
+        if (messageText) {
+            await supabase.from('lessons_ai_task_messages').insert({
+                lesson_id: lessonId,
+                user_id: user.id,
+                sender: 'user',
+                message: messageText,
+            })
+        }
     }
 
     // 3. Stream Response
@@ -44,13 +58,17 @@ export async function POST(req: Request) {
         messages: await convertToModelMessages(messages),
         tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id }),
         onFinish: async (event) => {
-            await supabase.from('lessons_ai_task_messages').insert({
+            const messageData: any = {
                 lesson_id: lessonId,
                 user_id: user.id,
-                role: 'assistant',
-                content: event.text,
-                tool_invocations: event.toolCalls as any,
-            })
+                sender: 'assistant',
+                message: event.text,
+            };
+            
+            // Only add tool_invocations if the column exists (check schema)
+            // For now, skip it as the column doesn't exist in the current schema
+            
+            await supabase.from('lessons_ai_task_messages').insert(messageData)
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
     })

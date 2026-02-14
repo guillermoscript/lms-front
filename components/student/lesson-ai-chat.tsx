@@ -29,7 +29,7 @@ import {
     usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
 import { useChat } from "@ai-sdk/react";
-import { IconCheck, IconRobot, IconRotateClockwise2 } from "@tabler/icons-react";
+import { IconCheck, IconRobot, IconRotateClockwise2, IconTrophy } from "@tabler/icons-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ import { DefaultChatTransport } from "ai";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { Skeleton } from "../ui/skeleton";
 
 const PromptInputAttachmentsDisplay = () => {
     const attachments = usePromptInputAttachments();
@@ -136,7 +137,7 @@ function InnerLessonAIChat({
     };
 
     const handleRestart = async () => {
-        if (!confirm("Are you sure you want to restart the conversation? This will clear your chat history.")) return;
+        if (!confirm("Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.")) return;
 
         setIsRestarting(true);
         try {
@@ -148,7 +149,9 @@ function InnerLessonAIChat({
 
             if (res.ok) {
                 setMessages([]);
-                toast.success("Chat restarted");
+                setIsCompleted(false);
+                toast.success("Chat restarted successfully");
+                router.refresh();
             } else {
                 toast.error("Failed to restart chat");
             }
@@ -161,8 +164,75 @@ function InnerLessonAIChat({
 
     return (
         <div className="relative flex flex-col h-[600px] divide-y overflow-hidden bg-background rounded-xl border shadow-sm">
+            {/* Completion Banner - Positioned at bottom, doesn't block messages */}
+            {isCompleted && (
+                <div className="absolute bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
+                    <div className="pointer-events-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-500">
+                        {/* Success Header */}
+                        <div className="flex items-center gap-4">
+                            <div className="relative shrink-0">
+                                <div className="absolute inset-0 bg-white rounded-full blur-lg opacity-30 animate-pulse"></div>
+                                <div className="relative p-3 bg-white/20 backdrop-blur-sm rounded-full border-2 border-white/30">
+                                    <IconCheck className="h-8 w-8 text-white stroke-[3]" />
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-xl font-bold text-white">
+                                    Lesson Completed! 🎉
+                                </h3>
+                                <p className="text-white/90 text-sm">
+                                    Great job! You've successfully completed this task.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                                <div className="text-2xl font-bold text-white">
+                                    {messages.length}
+                                </div>
+                                <div className="text-xs text-white/80">
+                                    Messages Exchanged
+                                </div>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                                <div className="text-2xl font-bold text-white flex items-center justify-center">
+                                    <IconTrophy className="h-6 w-6" />
+                                </div>
+                                <div className="text-xs text-white/80">
+                                    Task Completed
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleRestart}
+                                disabled={isRestarting}
+                                variant="secondary"
+                                className="flex-1 h-10 bg-white text-green-600 hover:bg-white/90 font-semibold"
+                            >
+                                {isRestarting ? (
+                                    <>
+                                        <IconRotateClockwise2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Restarting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <IconRotateClockwise2 className="mr-2 h-4 w-4" />
+                                        Try Again
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Conversation>
-                <ConversationContent>
+                <ConversationContent className={isCompleted ? "pb-64" : ""}>
                     {messages.length === 0 && !isCompleted && (
                         <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-8 text-center bg-muted/5">
                             <IconRobot className="h-12 w-12 mb-4 opacity-20" />
@@ -203,20 +273,35 @@ function InnerLessonAIChat({
                             </MessageContent>
                         </Message>
                     ))}
+                    {
+                        status === 'streaming' && (
+                            <Message
+                                from='assistant'
+                            >
+                                <MessageContent>
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-20" />
+                                    <Skeleton className="h-4 w-full" />
+                                </MessageContent>
+                            </Message>
+                        )
+                    }
                 </ConversationContent>
                 <ConversationScrollButton />
             </Conversation>
 
             <div className="grid shrink-0 gap-4 pt-4 bg-background">
-                <Suggestions className="px-4">
-                    {suggestions.map((suggestion) => (
-                        <Suggestion
-                            key={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            suggestion={suggestion}
-                        />
-                    ))}
-                </Suggestions>
+                {!isCompleted && (
+                    <Suggestions className="px-4">
+                        {suggestions.map((suggestion) => (
+                            <Suggestion
+                                key={suggestion}
+                                onClick={() => handleSuggestionClick(suggestion)}
+                                suggestion={suggestion}
+                            />
+                        ))}
+                    </Suggestions>
+                )}
 
                 <div className="w-full px-4 pb-4">
                     <PromptInput
@@ -228,24 +313,27 @@ function InnerLessonAIChat({
                         </div>
                         <PromptInputBody>
                             <PromptInputTextarea
-                                placeholder="Type your answer here..."
+                                placeholder={isCompleted ? "Lesson completed! Restart to continue practicing." : "Type your answer here..."}
                                 className="min-h-[60px]"
+                                disabled={isCompleted}
                             />
                         </PromptInputBody>
                         <PromptInputFooter>
                             <PromptInputTools>
                                 <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
-                                        onClick={handleRestart}
-                                        disabled={isRestarting || isLoading}
-                                        title="Restart Conversation"
-                                    >
-                                        <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
-                                    </Button>
+                                    {!isCompleted && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
+                                            onClick={handleRestart}
+                                            disabled={isRestarting || isLoading}
+                                            title="Restart Conversation"
+                                        >
+                                            <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    )}
 
                                     {isCompleted && (
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
@@ -255,7 +343,7 @@ function InnerLessonAIChat({
                                     )}
                                 </div>
                             </PromptInputTools>
-                            <PromptInputSubmit status={status as any} />
+                            {!isCompleted && <PromptInputSubmit status={status as any} />}
                         </PromptInputFooter>
                     </PromptInput>
                 </div>

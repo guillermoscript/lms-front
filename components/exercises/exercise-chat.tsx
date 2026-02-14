@@ -1,8 +1,8 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
-import { IconRobot, IconCheck, IconRotateClockwise2 } from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+import { IconRobot, IconCheck, IconRotateClockwise2, IconSparkles } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
@@ -40,9 +40,9 @@ interface ExerciseChatProps {
 }
 
 const suggestions = [
-    "I need help starting this exercise",
-    "Can you explain the instructions?",
-    "Is my current answer correct?",
+    "Help me get started",
+    "Explain the instructions",
+    "Check my answer",
     "Give me a hint"
 ];
 
@@ -71,12 +71,22 @@ function InnerExerciseChat({
             },
         }),
         messages: initialMessages,
-        onToolCall: async ({ toolCall }) => {
-            if (toolCall.toolName === "markExerciseCompleted") {
-                setIsCompleted(true);
-                const args = (toolCall as any).args || {};
+    });
 
-                // Trigger confetti
+    const isLoading = status === 'submitted' || status === 'streaming';
+
+    // Watch for exercise completion tool invocation
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === 'assistant') {
+            const completionPart = lastMessage.parts.find(
+                (part: any) => part.type === 'tool-markExerciseCompleted' && part.state === 'output-available'
+            );
+            
+            if (completionPart && !isCompleted) {
+                setIsCompleted(true);
+                const feedback = (completionPart as any).output?.feedback || "Great job!";
+
                 confetti({
                     particleCount: 150,
                     spread: 70,
@@ -85,14 +95,12 @@ function InnerExerciseChat({
                 });
 
                 toast.success("Exercise Completed!", {
-                    description: args.feedback || "Great job!",
+                    description: feedback,
                 });
                 router.refresh();
             }
-        },
-    });
-
-    const isLoading = status === 'submitted' || status === 'streaming';
+        }
+    }, [messages, isCompleted, router]);
 
     const onSubmit = (message: PromptInputMessage) => {
         if (!message.text) return;
@@ -107,7 +115,7 @@ function InnerExerciseChat({
     };
 
     const handleRestart = async () => {
-        if (!confirm("Are you sure you want to restart the conversation? This will clear your chat history.")) return;
+        if (!confirm("Are you sure you want to restart? This will clear your chat history.")) return;
 
         setIsRestarting(true);
         try {
@@ -130,17 +138,59 @@ function InnerExerciseChat({
         }
     };
 
+    const firstName = profile?.full_name?.split(' ')[0] || 'there';
+
     return (
-        <div className="relative flex flex-col h-[600px] divide-y overflow-hidden bg-background rounded-xl border shadow-sm">
+        <div className="relative flex flex-col h-[500px] sm:h-[600px] md:h-[650px] overflow-hidden bg-background rounded-2xl border-2 shadow-sm">
+            {/* Chat Header */}
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-muted/30">
+                <div className="flex items-center gap-2 sm:gap-2.5">
+                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <IconSparkles size={14} className="sm:size-4 text-primary" aria-hidden="true" />
+                    </div>
+                    <div>
+                        <h3 className="text-xs sm:text-sm font-bold leading-none">AI Coach</h3>
+                        <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                            {isLoading ? "Thinking..." : "Ready to help"}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    {isCompleted && (
+                        <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-emerald-500/20">
+                            <IconCheck size={10} className="sm:size-3 stroke-[3]" aria-hidden="true" />
+                            <span className="hidden sm:inline">Completed</span>
+                            <span className="sm:hidden">Done</span>
+                        </div>
+                    )}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                        onClick={handleRestart}
+                        disabled={isRestarting || isLoading}
+                        aria-label="Restart conversation"
+                    >
+                        <IconRotateClockwise2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isRestarting ? 'animate-spin' : ''}`} />
+                    </Button>
+                </div>
+            </div>
+
+            {/* Messages Area */}
             <Conversation>
                 <ConversationContent>
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-8 text-center bg-muted/5">
-                            <IconRobot className="h-12 w-12 mb-4 opacity-20" />
-                            <h3 className="text-lg font-medium text-foreground mb-2">
-                                Hi {profile?.full_name?.split(' ')[0] || 'there'}!
+                        <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-4 sm:p-6 md:p-8 text-center">
+                            <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 md:mb-5">
+                                <IconRobot className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary/60" aria-hidden="true" />
+                            </div>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1 sm:mb-1.5">
+                                Hi {firstName}!
                             </h3>
-                            <p className="max-w-xs mx-auto">I'm your AI Coach. I'm here to help you guide through this exercise. How can I assist you today?</p>
+                            <p className="max-w-sm mx-auto text-xs sm:text-sm leading-relaxed">
+                                I&rsquo;m your AI Coach. I&rsquo;ll guide you through this exercise, provide hints, and evaluate your work. Start by asking a question or use a suggestion below.
+                            </p>
                         </div>
                     )}
 
@@ -154,24 +204,22 @@ function InnerExerciseChat({
                                     if (part.type === 'text') {
                                         return <MessageResponse key={index}>{part.text}</MessageResponse>;
                                     }
-                                    if (part.type === 'tool-invocation') {
-                                        const toolInvocation = (part as any).toolInvocation;
-                                        if (toolInvocation && toolInvocation.toolName === 'markExerciseCompleted') {
-                                            if (toolInvocation.state === 'result') {
-                                                return (
-                                                    <div key={toolInvocation.toolCallId} className="mt-4 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-2xl text-green-700 dark:text-green-400 text-sm shadow-sm ring-1 ring-inset ring-green-500/10">
-                                                        <div className="flex items-start gap-4">
-                                                            <div className="p-2 bg-green-500 rounded-lg shadow-lg shadow-green-500/20">
-                                                                <IconCheck className="h-5 w-5 text-white" />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="font-bold text-base text-green-900 dark:text-green-300">Exercise Mastered!</p>
-                                                                <p className="opacity-90 leading-relaxed text-sm">{(toolInvocation.result as any).feedback}</p>
-                                                            </div>
+                                    // Handle tool invocation parts with proper type checking
+                                    if (part.type === 'tool-markExerciseCompleted') {
+                                        if (part.state === 'output-available') {
+                                            return (
+                                                <div key={part.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
+                                                    <div className="flex items-start gap-2 sm:gap-3">
+                                                        <div className="p-1 sm:p-1.5 bg-emerald-500 rounded-lg shrink-0">
+                                                            <IconCheck className="h-3 w-3 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
+                                                        </div>
+                                                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                                                            <p className="font-bold text-emerald-900 dark:text-emerald-300 text-sm sm:text-base">Exercise Mastered!</p>
+                                                            <p className="opacity-90 leading-relaxed">{(part.output as any).feedback}</p>
                                                         </div>
                                                     </div>
-                                                )
-                                            }
+                                                </div>
+                                            )
                                         }
                                     }
                                     return null;
@@ -183,47 +231,31 @@ function InnerExerciseChat({
                 <ConversationScrollButton />
             </Conversation>
 
-            <div className="grid shrink-0 gap-4 pt-4 bg-background">
-                <Suggestions className="px-4">
-                    {suggestions.map((suggestion) => (
-                        <Suggestion
-                            key={suggestion}
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            suggestion={suggestion}
-                        />
-                    ))}
-                </Suggestions>
+            {/* Input Area */}
+            <div className="grid shrink-0 gap-2 sm:gap-3 pt-2 sm:pt-3 bg-background border-t">
+                {messages.length === 0 && (
+                    <Suggestions className="px-3 sm:px-4">
+                        {suggestions.map((suggestion) => (
+                            <Suggestion
+                                key={suggestion}
+                                onClick={() => handleSuggestionClick(suggestion)}
+                                suggestion={suggestion}
+                            />
+                        ))}
+                    </Suggestions>
+                )}
 
-                <div className="w-full px-4 pb-4">
+                <div className="w-full px-3 sm:px-4 pb-3 sm:pb-4">
                     <PromptInput onSubmit={onSubmit}>
                         <PromptInputBody>
                             <PromptInputTextarea
-                                placeholder="Type your response here..."
-                                className="min-h-[60px]"
+                                placeholder="Type your response..."
+                                className="min-h-[48px] sm:min-h-[52px] text-sm"
                             />
                         </PromptInputBody>
                         <PromptInputFooter>
                             <PromptInputTools>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
-                                        onClick={handleRestart}
-                                        disabled={isRestarting || isLoading}
-                                        title="Restart Conversation"
-                                    >
-                                        <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
-                                    </Button>
-
-                                    {isCompleted && (
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
-                                            <IconCheck size={14} className="stroke-[3]" />
-                                            <span>Exercise Completed</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <span />
                             </PromptInputTools>
                             <PromptInputSubmit status={status as any} />
                         </PromptInputFooter>

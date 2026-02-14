@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronRight } from "@tabler/icons-react";
+import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronRight, IconMessageCircle, IconListCheck, IconCircleCheck, IconTextSize } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 interface ExerciseCardProps {
@@ -12,8 +12,19 @@ interface ExerciseCardProps {
 }
 
 export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) {
-    const isCoding = exercise.exercise_type === "coding_challenge";
     const isCompleted = exercise.exercise_completions?.length > 0;
+
+    const typeConfig: Record<string, { icon: typeof IconCode; label: string }> = {
+        coding_challenge: { icon: IconCode, label: "Code" },
+        essay: { icon: IconMessage, label: "Essay" },
+        discussion: { icon: IconMessageCircle, label: "Discussion" },
+        quiz: { icon: IconListCheck, label: "Quiz" },
+        multiple_choice: { icon: IconCircleCheck, label: "Multiple Choice" },
+        fill_in_the_blank: { icon: IconTextSize, label: "Fill in Blank" },
+    };
+
+    const config = typeConfig[exercise.exercise_type] || typeConfig.essay;
+    const TypeIcon = config.icon;
 
     const difficultyColor = {
         easy: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -38,7 +49,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                             "p-3 rounded-2xl transition-all duration-300",
                             isCompleted ? "bg-emerald-100 text-emerald-600" : "bg-primary/10 text-primary group-hover:scale-110"
                         )}>
-                            {isCoding ? <IconCode size={24} /> : <IconMessage size={24} />}
+                            <TypeIcon size={24} />
                         </div>
                         <Badge variant="outline" className={cn("rounded-md font-bold px-2 py-0", difficultyColor)}>
                             {exercise.difficulty_level}
@@ -62,7 +73,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <IconChartBar size={16} />
-                                {exercise.exercise_type === "coding_challenge" ? "Code" : "Essay"}
+                                {config.label}
                             </div>
                         </div>
                         <div className="text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">

@@ -2,9 +2,9 @@
 
 import { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { IconBook, IconMessageCircle, IconInfoCircle } from "@tabler/icons-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { IconCheck, IconClock, IconFlame, IconInfoCircle, IconSparkles } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
+import Markdown from "react-markdown";
 
 interface EssayExerciseProps {
     exercise: any;
@@ -17,69 +17,99 @@ interface EssayExerciseProps {
     isExerciseCompletedSection?: ReactNode;
 }
 
+const difficultyConfig: Record<string, { label: string; color: string; icon: typeof IconFlame }> = {
+    easy: { label: "Beginner", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: IconSparkles },
+    medium: { label: "Intermediate", color: "text-amber-600 bg-amber-500/10 border-amber-500/20", icon: IconFlame },
+    hard: { label: "Advanced", color: "text-rose-600 bg-rose-500/10 border-rose-500/20", icon: IconFlame },
+};
+
+const typeLabels: Record<string, string> = {
+    essay: "Essay",
+    discussion: "Discussion",
+    quiz: "Quiz",
+    multiple_choice: "Multiple Choice",
+    fill_in_the_blank: "Fill in the Blank",
+    coding_challenge: "Coding Challenge",
+};
+
 export default function EssayExercise({
     exercise,
     isExerciseCompleted,
     children,
     isExerciseCompletedSection,
 }: EssayExerciseProps) {
+    const difficulty = difficultyConfig[exercise.difficulty_level] || difficultyConfig.easy;
+    const DifficultyIcon = difficulty.icon;
+    const typeLabel = typeLabels[exercise.exercise_type] || "Exercise";
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
-            {/* Left Column: Instructions & Context */}
-            <div className="lg:col-span-4 space-y-6">
-                <Card className="border-none shadow-sm bg-primary/5">
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                                Essay Activity
-                            </Badge>
-                            {isExerciseCompleted && (
-                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                                    Done
-                                </Badge>
-                            )}
-                        </div>
-                        <CardTitle className="text-2xl font-bold">{exercise.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="text-muted-foreground leading-relaxed">
-                            {exercise.description}
-                        </div>
+        <div className="space-y-4 sm:space-y-6">
+            {/* Exercise Header */}
+            <div className="space-y-3 sm:space-y-4">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5">
+                        {typeLabel}
+                    </Badge>
+                    <Badge variant="outline" className={cn("font-bold border text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5 uppercase tracking-wider", difficulty.color)}>
+                        <DifficultyIcon size={11} className="mr-1 sm:size-3" aria-hidden="true" />
+                        {difficulty.label}
+                    </Badge>
+                    {exercise.time_limit && (
+                        <Badge variant="outline" className="font-bold border text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5 uppercase tracking-wider text-muted-foreground">
+                            <IconClock size={11} className="mr-1 sm:size-3" aria-hidden="true" />
+                            {exercise.time_limit} min
+                        </Badge>
+                    )}
+                    {isExerciseCompleted && (
+                        <Badge className="bg-emerald-500 text-white font-bold text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5 uppercase tracking-wider">
+                            <IconCheck size={11} className="mr-1 sm:size-3" aria-hidden="true" />
+                            Completed
+                        </Badge>
+                    )}
+                </div>
 
-                        <div className="pt-4 border-t border-primary/10">
-                            <h4 className="font-semibold flex items-center gap-2 mb-2 text-primary">
-                                <IconInfoCircle size={18} />
-                                Instructions
-                            </h4>
-                            <div className="prose prose-sm prose-slate max-w-none dark:prose-invert">
-                                {exercise.instructions}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-balance leading-tight">
+                    {exercise.title}
+                </h1>
 
-                {isExerciseCompletedSection && (
-                    <div className="space-y-4 px-1">
-                        {isExerciseCompletedSection}
+                {exercise.description && (
+                    <div className="text-muted-foreground text-sm md:text-base leading-relaxed max-w-2xl prose prose-sm prose-slate dark:prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed">
+                        <Markdown>{exercise.description}</Markdown>
                     </div>
                 )}
             </div>
 
-            {/* Right Column: Interaction */}
-            <div className="lg:col-span-8">
-                <div className="sticky top-6">
-                    {children}
-
-                    {/* Progress indicator */}
-                    {!isExerciseCompleted && (
-                        <div className="mt-4 px-2">
-                            <div className="flex justify-between text-xs mb-1 text-muted-foreground">
-                                <span>Exercise Progress</span>
-                                <span>AI is evaluating your response...</span>
+            {/* Main Layout: Instructions + Chat */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+                {/* Left Column: Instructions */}
+                <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+                    <div className="rounded-xl sm:rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
+                        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-primary/10 bg-primary/[0.03]">
+                            <h2 className="font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 text-primary uppercase tracking-wider">
+                                <IconInfoCircle size={14} className="sm:size-4" aria-hidden="true" />
+                                Instructions
+                            </h2>
+                        </div>
+                        <div className="px-4 sm:px-5 py-3 sm:py-4">
+                            <div className="prose prose-sm prose-slate max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:text-muted-foreground prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-bold prose-li:text-muted-foreground prose-headings:text-sm prose-headings:sm:text-base prose-headings:mt-0">
+                                <Markdown>{exercise.instructions}</Markdown>
                             </div>
-                            <Progress value={33} className="h-1.5" />
+                        </div>
+                    </div>
+
+                    {/* Other Exercises */}
+                    {isExerciseCompletedSection && (
+                        <div className="space-y-3 sm:space-y-4">
+                            {isExerciseCompletedSection}
                         </div>
                     )}
+                </div>
+
+                {/* Right Column: AI Chat */}
+                <div className="lg:col-span-8">
+                    <div className="lg:sticky lg:top-6">
+                        {children}
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
-import { generateId } from 'ai'
-import { getTranslations } from 'next-intl/server'
 
 // Components
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
@@ -20,7 +18,6 @@ interface PageProps {
 export default async function ExercisePage({ params }: PageProps) {
     const { courseId, exerciseId } = await params
     const supabase = await createClient()
-    const t = await getTranslations('Dashboard.Student')
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/auth/login')
@@ -58,8 +55,13 @@ export default async function ExercisePage({ params }: PageProps) {
     // Find other exercises for suggestions
     const { data: otherExercises } = await supabase
         .from('exercises')
-        .select('*')
+        .select(`
+            *,
+            exercise_completions(id)
+        `)
         .eq('course_id', parseInt(courseId))
+        .eq('status', 'published')
+        .eq('exercise_completions.user_id', user.id)
         .neq('id', parseInt(exerciseId))
         .limit(3)
 
@@ -86,7 +88,7 @@ export default async function ExercisePage({ params }: PageProps) {
 
     const isExerciseCompleted = exercise.exercise_completions?.length > 0
 
-    // Format initial messages and include system prompt if necessary
+    // Format initial messages
     const initialMessages = [
         ...(exercise.exercise_messages || []).map((m: any) => ({
             id: m.id.toString(),
@@ -95,55 +97,47 @@ export default async function ExercisePage({ params }: PageProps) {
         }))
     ]
 
+    const courseTitle = Array.isArray(exercise.courses)
+        ? exercise.courses[0]?.title
+        : (exercise.courses as any)?.title || 'Course'
+
     const breadcrumbLinks = [
         { href: '/dashboard/student', label: 'Dashboard' },
-        { href: `/dashboard/student/courses/${courseId}`, label: exercise.courses.title },
+        { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
         { href: `/dashboard/student/courses/${courseId}/exercises`, label: 'Exercises' },
         { href: '#', label: exercise.title },
     ]
 
+    const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
+        <>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">More Exercises</h3>
+            <div className="grid gap-3">
+                {otherExercises.map((ex: any) => (
+                    <ExerciseCard
+                        key={ex.id}
+                        exercise={ex}
+                        courseId={courseId}
+                    />
+                ))}
+            </div>
+        </>
+    ) : null
+
+    const chatComponent = (
+        <ExerciseChat
+            apiEndpoint="/api/chat/exercises/student"
+            exerciseId={exerciseId}
+            initialMessages={initialMessages}
+            isExerciseCompleted={isExerciseCompleted}
+            profile={profile}
+        />
+    )
+
     return (
-        <div className="container mx-auto py-8 px-4 space-y-8">
+        <div className="mx-auto max-w-7xl py-4 px-3 sm:py-6 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
-            {exercise.exercise_type === 'essay' && (
-                <EssayExercise
-                    exercise={exercise}
-                    exerciseId={exerciseId}
-                    courseId={courseId}
-                    isExerciseCompleted={isExerciseCompleted}
-                    profile={profile}
-                    studentId={user.id}
-                    isExerciseCompletedSection={
-                        <>
-                            <h3 className="text-lg font-bold mb-4">You might also like</h3>
-                            <div className="grid gap-4">
-                                {otherExercises?.map((ex) => (
-                                    <ExerciseCard
-                                        key={ex.id}
-                                        exercise={ex}
-                                        courseId={courseId}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    }
-                >
-                    <Card className="border shadow-soft overflow-hidden">
-                        <CardContent className="p-0">
-                            <ExerciseChat
-                                apiEndpoint="/api/chat/exercises/student"
-                                exerciseId={exerciseId}
-                                initialMessages={initialMessages}
-                                isExerciseCompleted={isExerciseCompleted}
-                                profile={profile}
-                            />
-                        </CardContent>
-                    </Card>
-                </EssayExercise>
-            )}
-
-            {exercise.exercise_type === 'coding_challenge' && (
+            {exercise.exercise_type === 'coding_challenge' ? (
                 <CodeExercise
                     exercise={exercise}
                     isExerciseCompleted={isExerciseCompleted}
@@ -163,7 +157,7 @@ export default async function ExercisePage({ params }: PageProps) {
                             title={<h3 className="font-semibold">Recommended Exercises</h3>}
                         >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {otherExercises.map((ex) => (
+                                {otherExercises.map((ex: any) => (
                                     <ExerciseCard
                                         key={ex.id}
                                         exercise={ex}
@@ -174,6 +168,18 @@ export default async function ExercisePage({ params }: PageProps) {
                         </ToggleableSection>
                     )}
                 </CodeExercise>
+            ) : (
+                <EssayExercise
+                    exercise={exercise}
+                    exerciseId={exerciseId}
+                    courseId={courseId}
+                    isExerciseCompleted={isExerciseCompleted}
+                    profile={profile}
+                    studentId={user.id}
+                    isExerciseCompletedSection={otherExercisesSection}
+                >
+                    {chatComponent}
+                </EssayExercise>
             )}
         </div>
     )

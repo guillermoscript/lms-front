@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
 import { IconBarbell } from '@tabler/icons-react'
@@ -12,7 +11,6 @@ interface PageProps {
 export default async function ExercisesListPage({ params }: PageProps) {
     const { courseId } = await params
     const supabase = await createClient()
-    const t = await getTranslations('Dashboard.Student')
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/auth/login')
@@ -32,6 +30,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
         exercise_messages(id)
     `)
         .eq('course_id', parseInt(courseId))
+        .eq('status', 'published')
         .eq('exercise_completions.user_id', user.id)
         .eq('exercise_messages.user_id', user.id)
 

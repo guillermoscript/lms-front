@@ -150,18 +150,30 @@ export async function gradeExamWithAI(
           ? 'Correct answer!'
           : `Incorrect. The correct answer is: ${correctOption?.option_text}`
       } else if (q.question_type === 'true_false') {
-        isCorrect = studentAnswer?.toLowerCase() === q.correct_answer?.toLowerCase()
+        // true/false: student answers with 'true'/'false' string
+        // Match against correct_answer field if set, otherwise use question_options
+        if (q.correct_answer) {
+          isCorrect = studentAnswer?.toLowerCase() === q.correct_answer.toLowerCase()
+        } else {
+          // Use question_options - find the correct option and check if its text matches
+          const correctOption = q.options.find((opt: any) => opt.is_correct)
+          if (correctOption) {
+            isCorrect = studentAnswer?.toLowerCase() === correctOption.option_text?.toLowerCase()
+          }
+        }
+        const correctAnswer = q.correct_answer || q.options.find((opt: any) => opt.is_correct)?.option_text || 'Unknown'
         feedback = isCorrect
           ? 'Correct!'
-          : `Incorrect. The correct answer is: ${q.correct_answer}`
+          : `Incorrect. The correct answer is: ${correctAnswer}`
       }
 
+      const questionPoints = q.points || 10
       autoGradedScores[q.question_id] = {
         question_id: q.question_id,
         student_answer: studentAnswer || 'No answer provided',
         is_correct: isCorrect,
-        points_earned: isCorrect ? q.points : 0,
-        points_possible: q.points,
+        points_earned: isCorrect ? questionPoints : 0,
+        points_possible: questionPoints,
         feedback,
         confidence: 1.0, // 100% confidence for programmatic grading
       }
@@ -170,7 +182,7 @@ export async function gradeExamWithAI(
     // If there are no free-text questions, skip AI grading
     if (freeTextQuestions.length === 0) {
       // Calculate total score
-      const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + q.points, 0)
+      const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + (q.points || 10), 0)
       const earnedPoints = Object.values(autoGradedScores).reduce(
         (sum: number, q: any) => sum + (q.points_earned || 0),
         0
@@ -204,32 +216,13 @@ export async function gradeExamWithAI(
     }
 
     // Get AI configuration for free-text grading
-    const { data: aiConfig, error: configError } = await supabase
+    const { data: aiConfig } = await supabase
       .from('exam_ai_configs')
       .select('*')
       .eq('exam_id', params.examId)
       .single()
 
-    // If no config exists, create default one
-    if (configError || !aiConfig) {
-      const { data: newConfig } = await supabase
-        .from('exam_ai_configs')
-        .insert({
-          exam_id: params.examId,
-          ai_grading_enabled: true,
-          ai_persona: 'professional_educator',
-          ai_feedback_tone: 'encouraging',
-          ai_feedback_detail_level: 'detailed',
-        })
-        .select()
-        .single()
-
-      if (!newConfig) {
-        return { success: false, error: 'Failed to create AI config' }
-      }
-    }
-
-    // Use config or default values
+    // Use config or sensible defaults (don't try to insert — student won't have RLS permission)
     const config = aiConfig || {
       ai_grading_enabled: true,
       ai_persona: 'professional_educator',
@@ -238,21 +231,57 @@ export async function gradeExamWithAI(
       ai_grading_prompt: null,
     }
 
-    // Check if AI grading is enabled
+    // Check if AI grading is enabled for free-text questions
     if (!config.ai_grading_enabled) {
-      return { success: false, error: 'AI grading is not enabled for this exam' }
-    }
+      // AI grading disabled — save auto-graded results only, mark free-text as pending teacher review
+      const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + (q.points || 10), 0)
+      const earnedPoints = Object.values(autoGradedScores).reduce(
+        (sum: number, q: any) => sum + (q.points_earned || 0),
+        0
+      )
+      // Score only from auto-graded questions; free-text will be scored by teacher
+      const scorePercentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0
 
-    // Verify submission belongs to user
-    const { data: submission, error: submissionError } = await supabase
-      .from('exam_submissions')
-      .select('id, student_id')
-      .eq('id', params.submissionId)
-      .eq('student_id', user.id)
-      .single()
+      // Add placeholder feedback for free-text questions
+      const pendingFeedback: Record<string, QuestionFeedback> = {}
+      freeTextQuestions.forEach((q: any) => {
+        pendingFeedback[q.question_id] = {
+          question_id: q.question_id,
+          student_answer: params.answers[q.question_id] || 'No answer provided',
+          is_correct: false,
+          points_earned: 0,
+          points_possible: q.points || 10,
+          feedback: 'Pending teacher review.',
+          confidence: 0,
+        }
+      })
 
-    if (submissionError || !submission) {
-      return { success: false, error: 'Submission not found or unauthorized' }
+      const allFeedback = { ...autoGradedScores, ...pendingFeedback }
+      const processingTime = Date.now() - startTime
+      await supabase.rpc('save_exam_feedback', {
+        p_submission_id: params.submissionId,
+        p_exam_id: params.examId,
+        p_student_id: user.id,
+        p_answers: params.answers,
+        p_overall_feedback: 'Multiple choice and true/false questions have been auto-graded. Free-text questions are pending teacher review.',
+        p_score: scorePercentage,
+        p_question_feedback: allFeedback,
+        p_ai_model: 'programmatic',
+        p_processing_time_ms: processingTime,
+      })
+
+      // Mark submission as needing teacher attention
+      await supabase
+        .from('exam_submissions')
+        .update({ review_status: 'pending_teacher_review', requires_attention: true })
+        .eq('submission_id', params.submissionId)
+
+      return {
+        success: true,
+        score: scorePercentage,
+        overall_feedback: 'Multiple choice and true/false questions have been auto-graded. Free-text questions are pending teacher review.',
+        question_feedback: allFeedback,
+      }
     }
 
     // Build AI grading prompt using config
@@ -265,8 +294,9 @@ export async function gradeExamWithAI(
       .map((q: any, index: number) => {
         const studentAnswer = params.answers[q.question_id] || 'No answer provided'
 
+        const qPoints = q.points || 10
         let questionContext = `
-**Question ${index + 1}** (${q.points} points)
+**Question ${index + 1}** (${qPoints} points)
 Type: Free Text
 Question: ${q.question_text}
 Student Answer: ${studentAnswer}
@@ -389,7 +419,7 @@ Evaluate these free-text answers now:`
     const questionFeedback = { ...autoGradedScores, ...aiScores }
 
     // Calculate total score from all questions
-    const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + q.points, 0)
+    const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + (q.points || 10), 0)
     const earnedPoints = Object.values(questionFeedback).reduce(
       (sum: number, q: any) => sum + (q.points_earned || 0),
       0

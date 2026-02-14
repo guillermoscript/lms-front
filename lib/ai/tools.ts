@@ -33,17 +33,21 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
 
             const { data: existing } = await supabase
                 .from('lesson_completions')
-                .select('*')
+                .select('id')
                 .eq('user_id', context.userId)
                 .eq('lesson_id', context.lessonId)
                 .single();
 
             if (!existing) {
-                await supabase.from('lesson_completions').insert({
+                const { error: insertError } = await supabase.from('lesson_completions').insert({
                     user_id: context.userId,
                     lesson_id: context.lessonId,
-                    course_id: context.courseId,
                 });
+
+                if (insertError) {
+                    console.error("Failed to insert lesson completion:", insertError);
+                    throw new Error('Failed to mark lesson as completed: ' + insertError.message);
+                }
             }
 
             return { success: true, message: 'Lesson marked as completed!', feedback };

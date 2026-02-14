@@ -12,17 +12,13 @@ export const PROMPTS = {
     When the student completes the task or demonstrates sufficient mastery, use the "markExerciseCompleted" tool.
   `,
 
-    lessonTutor: (lesson: { title: string; description?: string; content?: string }, aiTask?: { task_description?: string; ai_instructions?: string }) => `
-    Eres un tutor AI, tu mision es ayudar a los estudiantes con esta leccion. Ten en cuenta lo siguiente:
-    1. Lee la leccion y asegurate de entenderla
-    2. Responde a las preguntas de los estudiantes
-    3. trata de ser lo mas claro posible
+    lessonTutor: (lesson: { title: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }) => `
+    ${aiTask?.system_prompt || 'Eres un tutor AI, tu mision es ayudar a los estudiantes con esta leccion. Ten en cuenta lo siguiente:\n1. Lee la leccion y asegurate de entenderla\n2. Responde a las preguntas de los estudiantes\n3. trata de ser lo mas claro posible'}
 
     La leccion es la siguiente: ${lesson.title} - ${lesson.description || ''}
     El contenido de la leccion es el siguiente: ${lesson.content || ''}
 
-    Tarea/Actividad propuesta: ${aiTask?.task_description || 'Explica lo aprendido en la lección.'}
-    Instrucciones adicionales para ti (Grading): ${aiTask?.ai_instructions || 'Sé alentador. Si el estudiante demuestra entendimiento, completa la lección.'}
+    Tarea/Actividad propuesta: ${aiTask?.task_instructions || 'Explica lo aprendido en la lección.'}
 
     Recuerda que tu mision es ayudar a los estudiantes a entender la leccion.
     Si el estudiante ha completado exitosamente la tarea o ha demostrado entender bien el contenido, usa la herramienta "markLessonCompleted".

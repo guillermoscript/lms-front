@@ -17,15 +17,27 @@ export async function POST(req: Request) {
         }
 
         // Delete all messages for this lesson and user
-        const { error } = await supabase
+        const { error: messagesError } = await supabase
             .from('lessons_ai_task_messages')
             .delete()
             .eq('lesson_id', lessonId)
             .eq('user_id', user.id)
 
-        if (error) {
-            console.error('Error restarting lesson chat:', error)
-            return new NextResponse(error.message, { status: 500 })
+        if (messagesError) {
+            console.error('Error deleting messages:', messagesError)
+            return new NextResponse(messagesError.message, { status: 500 })
+        }
+
+        // Also delete lesson completion to allow retrying
+        const { error: completionError } = await supabase
+            .from('lesson_completions')
+            .delete()
+            .eq('lesson_id', lessonId)
+            .eq('user_id', user.id)
+
+        if (completionError) {
+            console.error('Error deleting completion:', completionError)
+            // Don't fail if completion deletion fails, just log it
         }
 
         return new NextResponse('Restarted successfully', { status: 200 })

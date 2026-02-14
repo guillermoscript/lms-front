@@ -1,105 +1,96 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { DashboardHeader } from '@/components/student/dashboard-header'
-import { DashboardSummary } from '@/components/student/dashboard-summary'
-import { ActivitySection } from '@/components/student/activity-section'
-import { NotificationsSummary } from '@/components/student/notifications-summary'
-import { CourseCard } from '@/components/student/course-card'
-import { IconRocket, IconBook, IconLayoutDashboard, IconChevronRight, IconArrowRight, IconSparkles } from '@tabler/icons-react'
+import { WelcomeHero } from '@/components/student/welcome-hero'
+import { StatsCards } from '@/components/student/stats-cards'
+import { CourseProgressCard } from '@/components/student/course-progress-card'
+import { UpcomingExams } from '@/components/student/upcoming-exams'
+import { RecentActivity } from '@/components/student/recent-activity'
+import { IconRocket, IconSparkles } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 
 async function getData(userId: string) {
   const supabase = await createClient()
 
-  const [lessonsView, userChats, subscriptions, notifications] = await Promise.all([
+  const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription] = await Promise.all([
     supabase
-      .from('distinct_lesson_views')
-      .select(`
-                view_id,
-                lesson_id,
-                viewed_at,
-                lesson_title,
-                lesson_description,
-                lesson_course_id,
-                lesson_image,
-                lesson_sequence
-            `)
-      .eq('user_id', userId)
-      .order('viewed_at', { ascending: false })
-      .limit(6),
-
-    supabase.from('chats').select('*').eq('user_id', userId),
-
-    supabase.from('subscriptions').select('subscription_id').eq('user_id', userId),
-
-    supabase.from('notifications').select('*').eq('user_id', userId).eq('read', false).limit(5),
-  ])
-
-  const coursesQuery = subscriptions.data?.length
-    ? supabase
-      .from('courses')
-      .select(`
-                course_id,
-                title,
-                enrollments(user_id),
-                description,
-                thumbnail_url,
-                lessons(id, title, lesson_completions(id, user_id)),
-                exams(exam_id, title, exam_date)
-            `)
-      .eq('status', 'published')
-      .eq('lessons.lesson_completions.user_id', userId)
-      .eq('enrollments.user_id', userId)
-    : supabase
       .from('enrollments')
       .select(`
-                course_id,
-                user_id,
-                course:courses(
-                    course_id,
-                    title,
-                    description,
-                    thumbnail_url,
-                    lessons(id, title, lesson_completions(id, user_id)),
-                    exams(exam_id, title, exam_date)
-                )
-            `)
+        *,
+        course:courses (
+          course_id,
+          title,
+          description,
+          thumbnail_url,
+          lessons (id, title, lesson_completions(id, user_id)),
+          exams (exam_id, title, exam_date)
+        )
+      `)
       .eq('user_id', userId)
-      .eq('status', 'active') // Changed 'published' to 'active' for enrollment status
-      .eq('course.lessons.lesson_completions.user_id', userId)
+      .eq('status', 'active')
+      .eq('course.lessons.lesson_completions.user_id', userId),
 
-  const coursesResult = await coursesQuery
+    supabase
+      .from('exam_submissions')
+      .select('*')
+      .eq('student_id', userId)
+      .order('submission_date', { ascending: false })
+      .limit(5),
 
-  if (coursesResult.error) throw new Error(coursesResult.error.message)
-  if (lessonsView.error) throw new Error(lessonsView.error.message)
-  if (userChats.error) throw new Error(userChats.error.message)
-  if (notifications.error) throw new Error(notifications.error.message)
+    supabase
+      .from('lesson_completions')
+      .select('*')
+      .eq('user_id', userId),
 
-  const courses = (coursesResult.data as any[])?.map((course) => {
-    const isSubscription = subscriptions.data ? subscriptions.data.length > 0 : false;
+    supabase
+      .from('exams')
+      .select(`
+        *,
+        course:courses(title)
+      `)
+      .gte('exam_date', new Date().toISOString())
+      .order('exam_date', { ascending: true })
+      .limit(5),
+
+    supabase
+      .from('subscriptions')
+      .select('subscription_id, plan:plans!subscriptions_plan_id_fkey(plan_name)')
+      .eq('user_id', userId)
+      .eq('subscription_status', 'active')
+      .gte('end_date', new Date().toISOString())
+      .order('end_date', { ascending: false })
+      .limit(1),
+  ])
+
+  if (enrollments.error) throw new Error(enrollments.error.message)
+
+  const courses = (enrollments.data as any[])?.map((enrollment) => {
+    const course = enrollment.course
+    const lessons = course?.lessons || []
+    const completedLessons = lessons.filter((l: any) =>
+      l.lesson_completions?.some((lc: any) => lc.user_id === userId)
+    ).length
 
     return {
-      course_id: course.course_id,
-      enrolled: isSubscription ? (course.enrollments?.length > 0) : true,
-      course: {
-        title: course.title || course.course?.title,
-        description: course.description || course.course?.description,
-        thumbnail_url: course.thumbnail_url || course.course?.thumbnail_url,
-        lessons: course.lessons || course.course?.lessons || [],
-        exams: course.exams || course.course?.exams || [],
-      },
-    };
+      course_id: course?.course_id,
+      title: course?.title,
+      description: course?.description,
+      thumbnail_url: course?.thumbnail_url,
+      instructor: 'Instructor Name', // TODO: Add instructor data
+      completedLessons,
+      totalLessons: lessons.length,
+      progress: lessons.length > 0 ? Math.round((completedLessons / lessons.length) * 100) : 0,
+    }
   }) || []
 
   return {
     courses,
-    lessonsView: lessonsView.data || [],
-    userChats: userChats.data || [],
-    notifications: notifications.data || [],
+    examSubmissions: examSubmissions.data || [],
+    lessonCompletions: lessonCompletions.data || [],
+    upcomingExams: upcomingExams.data || [],
+    hasActiveSubscription: (activeSubscription.data?.length ?? 0) > 0,
+    planName: (activeSubscription.data?.[0]?.plan as any)?.plan_name || null,
   }
 }
 
@@ -116,138 +107,90 @@ export default async function StudentDashboard() {
   const data = await getData(user.id)
   const t = await getTranslations('dashboard.student')
 
-  const totalLessonsCompleted = data.courses.reduce((acc, course) => {
-    const completedLessons = (course.course.lessons || []).filter((lesson: any) =>
-      lesson.lesson_completions && lesson.lesson_completions.length > 0
-    ).length
-    return acc + completedLessons
-  }, 0)
-
-  const totalLessons = data.courses.reduce((acc, course) => {
-    return acc + (course.course.lessons?.length || 0)
-  }, 0)
-
-  const progressCalc = totalLessons > 0 ? (totalLessonsCompleted / totalLessons) * 100 : 0
-  const overallProgress = Number(progressCalc.toFixed(1))
-
-  const nextLesson = data.lessonsView?.[0];
+  // Calculate stats
+  const totalCoursesCompleted = data.courses.filter(c => c.progress === 100).length
+  const totalLessonsCompleted = data.lessonCompletions.length
+  const hoursStudied = (totalLessonsCompleted * 0.5).toFixed(1) // Estimate 30 min per lesson
+  const certificatesEarned = totalCoursesCompleted
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-20">
-      <DashboardHeader user={user} />
-
-      <main className="container mx-auto px-4 md:px-8 py-10 space-y-12 animate-in fade-in duration-700">
-        {/* Visual Highlights Summary */}
-        <DashboardSummary
-          user={user}
-          overallProgress={overallProgress}
-          completedLessons={totalLessonsCompleted}
-          nextLesson={nextLesson}
+    <div className="min-h-screen bg-background">
+      <main className="container mx-auto px-4 md:px-8 py-8 space-y-8">
+        {/* Welcome Hero Section */}
+        <WelcomeHero
+          userName={user?.user_metadata?.full_name || user.email?.split('@')[0] || 'Student'}
+          weeklyGoalProgress={80}
         />
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 items-start">
-          {/* Activity Section - Left Side */}
-          <div className="xl:col-span-2 space-y-12">
-            {data.lessonsView.length > 0 ? (
-              <ActivitySection lessons={data.lessonsView} />
-            ) : (
-              <section className="bg-card border-none shadow-soft rounded-[32px] p-12 text-center overflow-hidden relative group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
-                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
-                  <IconRocket className="h-10 w-10" />
-                </div>
-                <h3 className="text-2xl font-black mb-2">{t('emptyStateTitle')}</h3>
-                <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
-                  {t('emptyStateDescription')}
-                </p>
-                <div className="flex justify-center gap-4">
-                  <Link href="/">
-                    <Button className="rounded-2xl h-12 px-8 font-bold gap-2">
-                      Start Exploring
-                      <IconArrowRight size={18} />
-                    </Button>
-                  </Link>
-                </div>
-              </section>
-            )}
+        {/* Stats Cards */}
+        <StatsCards
+          hoursStudied={hoursStudied}
+          coursesCompleted={totalCoursesCompleted}
+          certificatesEarned={certificatesEarned}
+        />
 
-            {/* Courses Progress Section */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-1 bg-emerald-500 rounded-full" />
-                  <h2 className="text-2xl font-black tracking-tight">Your Courses</h2>
-                </div>
-                <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                  {data.courses.length} Active Tracks
-                </span>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - In Progress Courses */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">In-Progress Courses</h2>
+              <Link href="/dashboard/student/courses" className="text-sm text-cyan-400 hover:text-cyan-300 font-medium">
+                View All
+              </Link>
+            </div>
+
+            {data.courses.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {data.courses
+                  .filter(course => course.progress < 100)
+                  .slice(0, 4)
+                  .map((course) => (
+                    <CourseProgressCard key={course.course_id} course={course} />
+                  ))}
               </div>
-
-              {data.courses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {data.courses.map((item: any) => {
-                    const progress = (item.course.lessons || []).filter((l: any) => l.lesson_completions?.length > 0).length;
-                    const total = item.course.lessons?.length || 0;
-
-                    return (
-                      <CourseCard
-                        key={item.course_id}
-                        course={{
-                          course_id: item.course_id,
-                          title: item.course.title,
-                          description: item.course.description,
-                          thumbnail_url: item.course.thumbnail_url
-                        }}
-                        progress={{
-                          completedLessons: progress,
-                          totalLessons: total
-                        }}
-                      />
-                    )
-                  })}
+            ) : data.hasActiveSubscription ? (
+              <div className="bg-card border border-primary/20 rounded-2xl p-12 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <IconSparkles className="h-8 w-8" />
                 </div>
-              ) : (
-                <div className="p-10 border-2 border-dashed rounded-3xl text-center text-muted-foreground">
-                  Enrolling in a course will track your progress here.
+                <h3 className="text-xl font-bold text-foreground mb-2">
+                  Your {data.planName || 'subscription'} is active!
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Browse available courses and enroll in the ones that interest you
+                </p>
+                <Link href="/dashboard/student/browse">
+                  <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                    Browse & Enroll in Courses
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-2xl p-12 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <IconRocket className="h-8 w-8" />
                 </div>
-              )}
-            </section>
+                <h3 className="text-xl font-bold text-foreground mb-2">No courses yet</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Start your learning journey by enrolling in a course
+                </p>
+                <Link href="/courses">
+                  <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                    Browse Courses
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar Side - Notifications & Quick Links */}
-          <div className="space-y-10 sticky top-24">
-            <NotificationsSummary notifications={data.notifications} />
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Upcoming Exams */}
+            <UpcomingExams exams={data.upcomingExams} />
 
-            {/* Quick Navigation Card */}
-            <Card className="border-none shadow-soft rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 text-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <IconLayoutDashboard size={20} className="text-indigo-400" />
-                  Quick Access
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pb-6">
-                <Link href="/dashboard/student/profile" className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors group">
-                  <span className="text-sm font-bold">My Transcripts</span>
-                  <IconChevronRight size={16} className="text-indigo-400 opacity-0 group-hover:opacity-100 transition-all" />
-                </Link>
-                <Link href="/dashboard/student/settings" className="flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-colors group">
-                  <span className="text-sm font-bold">Billing & Plans</span>
-                  <IconChevronRight size={16} className="text-indigo-400 opacity-0 group-hover:opacity-100 transition-all" />
-                </Link>
-                <div className="pt-4 px-3">
-                  <div className="bg-indigo-500/20 rounded-xl p-4 border border-indigo-500/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <IconSparkles size={16} className="text-indigo-400" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">AI Assistant</span>
-                    </div>
-                    <p className="text-xs text-indigo-100 leading-relaxed">
-                      Got questions? Our AI tutor is available in any lesson to help you out!
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Recent Activity */}
+            <RecentActivity submissions={data.examSubmissions} />
           </div>
         </div>
       </main>

@@ -134,6 +134,19 @@ export function ExamTaker({
         return
       }
 
+      // Trigger AI grading
+      try {
+        const { gradeExamWithAI } = await import('@/app/actions/exam-grading')
+        await gradeExamWithAI({
+          examId,
+          submissionId: submission.submission_id,
+          answers,
+        })
+      } catch (gradingError) {
+        console.error('AI grading failed (non-blocking):', gradingError)
+        // Continue to results page even if AI grading fails
+      }
+
       // Redirect to result page
       router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
     } catch (error) {

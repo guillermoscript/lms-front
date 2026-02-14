@@ -47,18 +47,54 @@ export default async function TakeExamPage({ params }: PageProps) {
   const { data: exam, error: examError } = await supabase
     .from('exams')
     .select(`
-      *,
-      courses (*),
-      exam_questions (
-        *,
-        question_options (*)
+      exam_id,
+      course_id,
+      title,
+      description,
+      duration,
+      status,
+      exam_date,
+      courses (
+        course_id,
+        title
+      ),
+      exam_questions!exam_questions_exam_id_fkey (
+        question_id,
+        exam_id,
+        question_text,
+        question_type,
+        question_options (
+          option_id,
+          question_id,
+          option_text,
+          is_correct
+        )
       )
     `)
     .eq('exam_id', parseInt(examId))
     .eq('status', 'published')
+    .order('question_id', { foreignTable: 'exam_questions', ascending: true })
     .single()
 
+  console.log('🔍 Exam query result:', {
+    examId,
+    error: examError,
+    hasExam: !!exam,
+    questionsCount: exam?.exam_questions?.length || 0,
+    examKeys: exam ? Object.keys(exam) : [],
+    examData: exam ? {
+      exam_id: exam.exam_id,
+      title: exam.title,
+      status: exam.status,
+      hasQuestionsKey: 'exam_questions' in exam,
+      questionsType: typeof exam.exam_questions,
+      questionsIsArray: Array.isArray(exam.exam_questions),
+      questionsPreview: exam.exam_questions
+    } : null
+  })
+
   if (examError || !exam) {
+    console.error('❌ Exam not found or error:', examError)
     notFound()
   }
 
@@ -72,6 +108,8 @@ export default async function TakeExamPage({ params }: PageProps) {
       text: o.option_text,
     })),
   }))
+
+  console.log('✅ Formatted questions:', formattedQuestions.length, 'questions')
 
   return (
     <ExamTaker

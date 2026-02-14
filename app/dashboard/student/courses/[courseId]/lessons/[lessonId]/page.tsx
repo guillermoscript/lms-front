@@ -2,10 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
 import { LessonContent } from './lesson-content'
-import { IconRobot, IconCheck } from '@tabler/icons-react'
+import { IconRobot, IconMenu2 } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
 import { LessonAIChat } from '@/components/student/lesson-ai-chat'
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -45,6 +47,10 @@ export default async function LessonPage({ params }: PageProps) {
     .eq('id', parseInt(lessonId))
     .eq('lessons_ai_task_messages.user_id', user.id)
     .eq('lesson_completions.user_id', user.id)
+    .order('created_at', {
+      ascending: true,
+      referencedTable: 'lessons_ai_task_messages'
+    })
     .single()
 
   console.log("Lesson Data:", lessonData ? "Found" : "Not Found", "Error:", lessonError);
@@ -56,9 +62,49 @@ export default async function LessonPage({ params }: PageProps) {
 
   const lesson = lessonData;
   const course = lessonData.courses;
-  const aiTask = lessonData.lessons_ai_tasks?.[0]; // It's a one-to-one mapping in the table, but Select returns array
-  const initialMessages = lessonData.lessons_ai_task_messages || [];
+  // Handle both array and object response from Supabase (one-to-one relationship can return either)
+  const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
+    ? lessonData.lessons_ai_tasks?.[0]
+    : lessonData.lessons_ai_tasks;
+
+  // Convert database messages to AI SDK format
+  const dbMessages = lessonData.lessons_ai_task_messages || [];
+  const initialMessages = dbMessages.map((msg: any, index: number) => {
+    const parts = [];
+
+    // Add text content as a part
+    if (msg.message) {
+      parts.push({
+        type: 'text',
+        text: msg.message
+      });
+    }
+
+    // Add tool invocations if present
+    if (msg.tool_invocations) {
+      const invocations = Array.isArray(msg.tool_invocations)
+        ? msg.tool_invocations
+        : [msg.tool_invocations];
+
+      invocations.forEach((invocation: any) => {
+        parts.push({
+          type: 'tool-invocation',
+          toolInvocation: invocation
+        });
+      });
+    }
+
+    return {
+      id: msg.id.toString(),
+      role: msg.sender, // sender is 'user' | 'assistant' | 'system'
+      parts: parts,
+      createdAt: msg.created_at
+    };
+  });
+
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
+
+  console.log(lessonData.lesson_completions, "lessonData.lesson_completions")
 
   // Get all lessons for sidebar
   const { data: allLessons } = await supabase
@@ -92,32 +138,50 @@ export default async function LessonPage({ params }: PageProps) {
     currentIndex < (allLessons?.length ?? 0) - 1 ? allLessons?.[currentIndex + 1] : null
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <LessonSidebar
-        courseId={parseInt(courseId)}
-        courseTitle={course.title}
-        lessons={sidebarLessons}
-        currentLessonId={lesson.id}
-      />
+    <div className="flex h-screen bg-background overflow-hidden">
 
       {/* Main content */}
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Lesson header */}
-        <header className="shrink-0 border-b bg-card px-6 py-4">
+        <header className="shrink-0 border-b bg-card px-4 py-3 md:px-6 md:py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 Lesson {lesson.sequence}
               </p>
-              <h1 className="text-xl font-bold">{lesson.title}</h1>
+              <h1 className="text-lg md:text-xl font-bold line-clamp-1">{lesson.title}</h1>
+            </div>
+
+            {/* Mobile Sidebar Toggle */}
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger
+                  render={
+                    <Button variant="ghost" size="icon">
+                      <IconMenu2 className="h-5 w-5" />
+                    </Button>
+                  }
+                />
+                <SheetContent side="left" className="p-0 w-80">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Course Content</SheetTitle>
+                    <SheetDescription>Navigate through course lessons</SheetDescription>
+                  </SheetHeader>
+                  <LessonSidebar
+                    courseId={parseInt(courseId)}
+                    courseTitle={course.title}
+                    lessons={sidebarLessons}
+                    currentLessonId={lesson.id}
+                  />
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </header>
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-4xl px-6 py-8 space-y-8">
+          <div className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 space-y-6 md:space-y-8">
             <LessonContent
               content={lesson.content}
               videoUrl={lesson.video_url}
@@ -127,20 +191,20 @@ export default async function LessonPage({ params }: PageProps) {
             {/* AI Task Section */}
             {aiTask && (
               <div className="space-y-4">
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 md:p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                       <IconRobot className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg text-foreground">AI Tutor Session</h3>
-                      <p className="text-sm text-muted-foreground">Complete the following task to finish this lesson</p>
+                      <h3 className="font-semibold text-base md:text-lg text-foreground">AI Tutor Session</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground">Complete the task to finish this lesson</p>
                     </div>
                   </div>
 
-                  <div className="bg-card border rounded-lg p-4 shadow-sm mb-6">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Current Task</h4>
-                    <p className="text-foreground leading-relaxed">
+                  <div className="bg-card border rounded-lg p-3 md:p-4 shadow-sm mb-6">
+                    <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Current Task</h4>
+                    <p className="text-sm md:text-base text-foreground leading-relaxed">
                       {aiTask.task_instructions}
                     </p>
                   </div>
@@ -169,6 +233,16 @@ export default async function LessonPage({ params }: PageProps) {
           nextLessonId={nextLesson?.id}
         />
       </main>
+
+      {/* Sidebar - Hidden on mobile, shown on md+ */}
+      <div className="hidden md:block">
+        <LessonSidebar
+          courseId={parseInt(courseId)}
+          courseTitle={course.title}
+          lessons={sidebarLessons}
+          currentLessonId={lesson.id}
+        />
+      </div>
     </div>
   )
 }
