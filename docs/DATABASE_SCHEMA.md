@@ -1,5 +1,7 @@
 # Database Schema Documentation
 
+> ⚠️ **IMPORTANT**: This documentation may contain outdated information. For the **actual, verified** database schema with correct column names discovered from the live database, see **[ACTUAL_SCHEMA.md](./ACTUAL_SCHEMA.md)**.
+
 ## 📊 Overview
 
 The LMS database is built on PostgreSQL 15 via Supabase. It consists of 44 tables organized into logical domains:
@@ -61,11 +63,11 @@ System-wide role definitions and permissions (not actively used in V2, kept for 
 ### Courses
 
 #### `courses`
-Main course table
+Course catalog
 
 ```sql
 CREATE TABLE courses (
-  id SERIAL PRIMARY KEY,
+  course_id SERIAL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
   thumbnail_url TEXT,
@@ -74,6 +76,106 @@ CREATE TABLE courses (
   status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'published', 'archived'
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+**RLS Policy**:
+- Students: Read published courses they're enrolled in
+- Teachers: Full access to their own courses
+- Admins: Full access to all courses
+
+#### `course_categories`
+Course categorization
+
+```sql
+CREATE TABLE course_categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT
+)
+```
+
+---
+
+### Lessons
+
+#### `lessons`
+Course lessons
+
+```sql
+CREATE TABLE lessons (
+  id SERIAL PRIMARY KEY,
+  course_id INTEGER REFERENCES courses(course_id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  content TEXT, -- MDX/Markdown content
+  video_url TEXT,
+  sequence INTEGER NOT NULL, -- Order within course
+  status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'published'
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(course_id, sequence)
+)
+```
+
+#### `lesson_completions`
+Tracking student progress
+
+```sql
+CREATE TABLE lesson_completions (
+  id SERIAL PRIMARY KEY,
+  student_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(student_id, lesson_id)
+)
+```
+
+---
+
+### Exams & Exercises
+
+#### `exams`
+Course assessments
+
+```sql
+CREATE TABLE exams (
+  exam_id SERIAL PRIMARY KEY,
+  course_id INTEGER REFERENCES courses(course_id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  duration INTEGER NOT NULL, -- minutes
+  exam_date TIMESTAMPTZ,
+  status VARCHAR(50) DEFAULT 'draft',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+#### `exam_questions`
+Questions within an exam
+
+```sql
+CREATE TABLE exam_questions (
+  question_id SERIAL PRIMARY KEY,
+  exam_id INTEGER REFERENCES exams(exam_id) ON DELETE CASCADE,
+  question_text TEXT NOT NULL,
+  question_type VARCHAR(50) NOT NULL, -- 'multiple_choice', 'true_false', 'free_text'
+  points INTEGER DEFAULT 1,
+  sequence INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+#### `question_options`
+Options for multiple choice/true-false
+
+```sql
+CREATE TABLE question_options (
+  option_id SERIAL PRIMARY KEY,
+  question_id INTEGER REFERENCES exam_questions(question_id) ON DELETE CASCADE,
+  option_text TEXT NOT NULL,
+  is_correct BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 )
 ```
 
