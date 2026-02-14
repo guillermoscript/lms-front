@@ -1,12 +1,8 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
+import { Check } from "lucide-react";
+import PricingClient from "./pricing-client";
 
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { useState, useEffect } from "react";
+export const dynamic = 'force-dynamic';
 
 interface Plan {
     plan_id: number;
@@ -18,34 +14,47 @@ interface Plan {
     payment_provider?: string;
 }
 
-export default function PricingPage() {
-    const [isYearly, setIsYearly] = useState(false);
-    const [plans, setPlans] = useState<Plan[]>([]);
-    const [loading, setLoading] = useState(true);
+export default async function PricingPage() {
+    const supabase = await createClient();
+    
+    // Fetch plans from database
+    const { data: plans, error } = await supabase
+        .from('plans')
+        .select('*')
+        .order('price', { ascending: true });
 
-    useEffect(() => {
-        async function fetchPlans() {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('plans')
-                .select('*')
-                .order('price', { ascending: true });
+    if (error) {
+        console.error('Error fetching plans:', error);
+    }
 
-            if (data && !error) {
-                setPlans(data);
+    // Sanitize features field - ensure it's always valid
+    const sanitizedPlans = plans?.map(plan => {
+        let features: string[] = [];
+        
+        if (typeof plan.features === 'string' && plan.features.trim()) {
+            try {
+                const trimmed = plan.features.trim();
+                if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+                    const parsed = JSON.parse(trimmed);
+                    features = Array.isArray(parsed) ? parsed : [];
+                }
+            } catch (error) {
+                console.error(`Failed to parse features for plan "${plan.plan_name}":`, plan.features, error);
+                features = [];
             }
-            setLoading(false);
+        } else if (Array.isArray(plan.features)) {
+            features = plan.features;
         }
-
-        fetchPlans();
-    }, []);
+        
+        return {
+            ...plan,
+            features
+        };
+    }) || [];
 
     // Group plans by duration
-    const monthlyPlans = plans.filter(p => p.duration_in_days === 30);
-    const yearlyPlans = plans.filter(p => p.duration_in_days === 365);
-
-    // Get the appropriate plans based on toggle
-    const displayPlans = isYearly ? yearlyPlans : monthlyPlans;
+    const monthlyPlans = sanitizedPlans.filter(p => p.duration_in_days === 30);
+    const yearlyPlans = sanitizedPlans.filter(p => p.duration_in_days === 365);
 
     // Hardcoded free plan (not in database)
     const freePlan = {
@@ -61,12 +70,6 @@ export default function PricingPage() {
         ]
     };
 
-    // Combine free plan with database plans
-    const allPlans = [freePlan, ...displayPlans];
-
-    // Determine which plan is most popular (middle one typically)
-    const popularIndex = Math.floor(allPlans.length / 2);
-
     return (
         <div className="min-h-screen bg-[#09090b] text-white font-sans">
             {/* Header */}
@@ -81,102 +84,18 @@ export default function PricingPage() {
                     <p className="max-w-[700px] text-zinc-400 md:text-xl">
                         Unlock your potential with our flexible pricing plans designed for learners of all levels. Upgrade anytime as your skills grow.
                     </p>
-
-                    {(monthlyPlans.length > 0 || yearlyPlans.length > 0) && (
-                        <div className="flex items-center space-x-4 mt-8 bg-zinc-900/50 p-1.5 rounded-full border border-zinc-800">
-                            <span className={`text-sm font-medium px-3 cursor-pointer ${!isYearly ? "text-white" : "text-zinc-500"}`} onClick={() => setIsYearly(false)}>Monthly</span>
-                            <Switch
-                                checked={isYearly}
-                                onCheckedChange={setIsYearly}
-                                className="data-[state=checked]:bg-blue-600"
-                            />
-                            <span className={`text-sm font-medium px-3 cursor-pointer ${isYearly ? "text-white" : "text-zinc-500"}`} onClick={() => setIsYearly(true)}>
-                                Yearly <span className="text-blue-400 text-xs ml-1 font-bold">Save 20%</span>
-                            </span>
-                        </div>
-                    )}
                 </div>
 
-                {loading ? (
+                {sanitizedPlans.length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-zinc-400">Loading plans...</p>
+                        <p className="text-zinc-400">No plans available at the moment.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto relative z-10">
-                        {allPlans.map((plan, index) => {
-                            const isPopular = index === popularIndex;
-                            const parsedFeatures = typeof plan.features === 'string' 
-                                ? JSON.parse(plan.features) 
-                                : plan.features;
-
-                            return (
-                                <div key={plan.plan_id} className="relative group">
-                                    {isPopular && (
-                                        <div className="absolute -top-4 inset-x-0 flex justify-center z-10">
-                                            <div className="bg-cyan-400 text-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                                                Most Popular
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <Card className={`h-full flex flex-col bg-zinc-900/50 backdrop-blur-sm border transition-all duration-300 ${isPopular
-                                            ? "border-cyan-500/50 shadow-lg shadow-cyan-500/10 scale-105 z-10"
-                                            : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
-                                        }`}>
-                                        <CardHeader>
-                                            <CardTitle className="text-xl font-bold text-white">{plan.plan_name}</CardTitle>
-                                            <CardDescription className="text-zinc-400 h-10">{plan.description}</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="flex-1">
-                                            <div className="mb-8">
-                                                <div className="flex items-baseline">
-                                                    <span className="text-5xl font-bold text-white">
-                                                        ${plan.price}
-                                                    </span>
-                                                    <span className="text-zinc-400 ml-1">
-                                                        /{plan.duration_in_days === 30 ? 'mo' : plan.duration_in_days === 365 ? 'yr' : 'free'}
-                                                    </span>
-                                                </div>
-                                                {plan.plan_id === 0 ? (
-                                                    <Link href="/auth/register">
-                                                        <Button className="w-full mt-6 bg-transparent border border-zinc-700 hover:bg-zinc-800 text-white">
-                                                            Sign Up Free
-                                                        </Button>
-                                                    </Link>
-                                                ) : (
-                                                    <Link href={`/checkout?planId=${plan.plan_id}`}>
-                                                        <Button className={`w-full mt-6 ${isPopular 
-                                                            ? 'bg-cyan-400 hover:bg-cyan-300 text-black font-bold shadow-lg shadow-cyan-400/25'
-                                                            : 'bg-transparent border border-zinc-700 hover:bg-zinc-800 text-white'
-                                                        }`}>
-                                                            Get Started
-                                                        </Button>
-                                                    </Link>
-                                                )}
-                                            </div>
-                                            <div className="space-y-4">
-                                                {parsedFeatures?.map((feature: string, i: number) => {
-                                                    const isCrossed = feature === "Certificates" && plan.plan_id === 0;
-                                                    return (
-                                                        <li key={i} className="flex items-center text-zinc-300 list-none">
-                                                            {isCrossed ? (
-                                                                <X className="h-5 w-5 text-zinc-600 mr-3 flex-shrink-0" />
-                                                            ) : (
-                                                                <div className="h-5 w-5 bg-blue-500/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                                                    <Check className="h-3 w-3 text-blue-400" />
-                                                                </div>
-                                                            )}
-                                                            <span className={isCrossed ? "text-zinc-600 line-through" : ""}>{feature}</span>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <PricingClient 
+                        monthlyPlans={monthlyPlans} 
+                        yearlyPlans={yearlyPlans} 
+                        freePlan={freePlan}
+                    />
                 )}
 
                 {/* FAQ or Footer Section */}

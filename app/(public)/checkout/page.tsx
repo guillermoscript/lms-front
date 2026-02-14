@@ -21,6 +21,7 @@ export default async function CheckoutPage(props: { searchParams: Promise<Search
 
     let title = "Product";
     let price: number | string = "Free";
+    let productId: number | undefined = undefined;
 
     if (courseId) {
         const { data: course } = await supabase
@@ -32,29 +33,32 @@ export default async function CheckoutPage(props: { searchParams: Promise<Search
         if (course) {
             title = course.title;
             
-            // Get product price from product_courses
-            const { data: productCourse } = await supabase
+            // Get product price from product_courses (pick first match)
+            const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product:products(price, currency)")
+                .select("product_id, product:products(price, currency)")
                 .eq("course_id", courseId)
-                .single();
+                .limit(1);
 
-            if (productCourse?.product) {
-                const product = productCourse.product as any;
+            if (productCourses?.[0]?.product) {
+                const product = productCourses[0].product as any;
                 price = parseFloat(product.price);
+                productId = productCourses[0].product_id;
             }
         }
     } else if (planId) {
         // Fetch plan from database
         const { data: dbPlan } = await supabase
             .from("plans")
-            .select("plan_name, price")
+            .select("plan_name, price, plan_id")
             .eq("plan_id", planId)
             .single();
             
         if (dbPlan) {
             title = dbPlan.plan_name;
             price = parseFloat(dbPlan.price);
+            // Plans don't use productId in this context, but we might need it for manual payment if it's treated as a product
+            // For now, let's keep it undefined for plans unless we have a specific manual payment product for plans
         }
     }
 
@@ -65,6 +69,7 @@ export default async function CheckoutPage(props: { searchParams: Promise<Search
                 planId={planId}
                 title={title}
                 price={price}
+                productId={productId}
             />
         </div>
     );

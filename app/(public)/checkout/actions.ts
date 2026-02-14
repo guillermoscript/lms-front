@@ -12,7 +12,7 @@ import { revalidatePath } from 'next/cache';
  * 2. Calls enroll_user RPC (for products) or handle_new_subscription (for plans)
  * 3. Enrolls user in associated courses
  */
-export async function enrollUser(courseId?: string, planId?: string) {
+export async function enrollUser(courseId?: string, planId?: string, paymentMethod: string = 'mock_test') {
     // 1. Authenticate user
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -23,18 +23,18 @@ export async function enrollUser(courseId?: string, planId?: string) {
 
     try {
         if (courseId) {
-            // Get product for this course
-            const { data: productCourse } = await supabase
+            // Get product for this course (pick first match)
+            const { data: productCourses } = await supabase
                 .from('product_courses')
                 .select('product_id, product:products(*)')
                 .eq('course_id', parseInt(courseId))
-                .single();
+                .limit(1);
 
-            if (!productCourse) {
+            if (!productCourses || productCourses.length === 0) {
                 throw new Error("No product found for this course.");
             }
 
-            const product = productCourse.product as any;
+            const product = productCourses[0].product as any;
 
             // Create transaction record (mock payment)
             const { data: transaction, error: txError } = await supabase
@@ -44,7 +44,7 @@ export async function enrollUser(courseId?: string, planId?: string) {
                     product_id: product.product_id,
                     amount: product.price,
                     currency: product.currency,
-                    payment_method: 'mock_test',
+                    payment_method: paymentMethod,
                     status: 'successful' // Note: must be 'successful' not 'succeeded'
                 })
                 .select()
@@ -90,7 +90,7 @@ export async function enrollUser(courseId?: string, planId?: string) {
                     plan_id: plan.plan_id,
                     amount: plan.price,
                     currency: plan.currency,
-                    payment_method: 'mock_test',
+                    payment_method: paymentMethod,
                     status: 'successful'
                 })
                 .select()
@@ -121,6 +121,93 @@ export async function enrollUser(courseId?: string, planId?: string) {
 
     } catch (error) {
         console.error("Enrollment failed:", error);
+        throw error;
+    }
+}
+
+/**
+ * Enroll user in a free course or plan
+ */
+export async function enrollFree(courseId?: string, planId?: string) {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error("You must be logged in to enroll.");
+    }
+
+    try {
+        if (courseId) {
+            // Check if the course is actually free
+            const { data: productCourses } = await supabase
+                .from('product_courses')
+                .select('product:products(product_id, price)')
+                .eq('course_id', parseInt(courseId))
+                .limit(1);
+
+            const courseProduct = productCourses?.[0]?.product as any;
+            const isFree = courseProduct ? parseFloat(courseProduct.price) === 0 : true;
+
+            if (!isFree) {
+                throw new Error("This course is not free. Please use the paid enrollment flow.");
+            }
+
+            // For free courses, we need a product_id to satisfy the constraint
+            let productId: number;
+
+            if (courseProduct?.product_id) {
+                productId = courseProduct.product_id;
+            } else {
+                // Create a free product if one doesn't exist
+                const { data: freeProduct, error: createError } = await supabase
+                    .from('products')
+                    .insert({
+                        name: `Free Access - ${courseId}`,
+                        price: 0,
+                        currency: 'usd',
+                        status: 'active',
+                        payment_provider: 'stripe'
+                    })
+                    .select('product_id')
+                    .single();
+
+                if (createError) throw createError;
+
+                // Link product to course
+                await supabase
+                    .from('product_courses')
+                    .insert({
+                        product_id: freeProduct.product_id,
+                        course_id: parseInt(courseId)
+                    });
+
+                productId = freeProduct.product_id;
+            }
+
+            // Create enrollment with product_id
+            const { error } = await supabase
+                .from('enrollments')
+                .insert({
+                    user_id: user.id,
+                    course_id: parseInt(courseId),
+                    product_id: productId,
+                    status: 'active',
+                    enrollment_date: new Date().toISOString()
+                });
+
+            if (error) {
+                // If already enrolled, that's fine
+                if (error.code === '23505') return { success: true, alreadyEnrolled: true };
+                throw error;
+            }
+
+            revalidatePath('/dashboard/student');
+            return { success: true };
+        }
+        
+        throw new Error("Free enrollment only supported for courses currently.");
+    } catch (error) {
+        console.error("Free enrollment failed:", error);
         throw error;
     }
 }
