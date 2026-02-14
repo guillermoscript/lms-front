@@ -37,7 +37,15 @@ import { DefaultChatTransport } from "ai";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { Skeleton } from "../ui/skeleton";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import {
+    Tool,
+    ToolContent,
+    ToolHeader,
+    ToolInput,
+    ToolOutput,
+} from "@/components/ai-elements/tool";
+import { useTranslations } from "next-intl";
 
 const PromptInputAttachmentsDisplay = () => {
     const attachments = usePromptInputAttachments();
@@ -69,13 +77,6 @@ interface LessonAIChatProps {
     initialMessages?: any[];
 }
 
-const suggestions = [
-    "I have a question about the task",
-    "Can you give me a hint?",
-    "Check my understanding",
-    "Summarize what I've learned"
-];
-
 function InnerLessonAIChat({
     lessonId,
     taskDescription,
@@ -83,9 +84,17 @@ function InnerLessonAIChat({
     initialMessages = [],
 }: LessonAIChatProps) {
     const router = useRouter();
+    const t = useTranslations('components.lessonAIChat');
     const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
     const { textInput } = usePromptInputController();
+
+    const suggestions = [
+        t('suggestions.question'),
+        t('suggestions.hint'),
+        t('suggestions.understanding'),
+        t('suggestions.summarize')
+    ];
 
     const {
         messages,
@@ -113,8 +122,8 @@ function InnerLessonAIChat({
                     colors: ['#3b82f6', '#10b981', '#f59e0b']
                 });
 
-                toast.success("Lesson Completed!", {
-                    description: args.feedback || "Great job! You have successfully completed the task.",
+                toast.success(t('toast.completed'), {
+                    description: args.feedback || t('toast.completedDetail'),
                 });
                 router.refresh();
             }
@@ -137,7 +146,7 @@ function InnerLessonAIChat({
     };
 
     const handleRestart = async () => {
-        if (!confirm("Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.")) return;
+        if (!confirm(t('confirmRestart'))) return;
 
         setIsRestarting(true);
         try {
@@ -150,13 +159,13 @@ function InnerLessonAIChat({
             if (res.ok) {
                 setMessages([]);
                 setIsCompleted(false);
-                toast.success("Chat restarted successfully");
+                toast.success(t('toast.restartSuccess'));
                 router.refresh();
             } else {
-                toast.error("Failed to restart chat");
+                toast.error(t('toast.restartFailed'));
             }
         } catch (error) {
-            toast.error("Error restarting chat");
+            toast.error(t('toast.restartError'));
         } finally {
             setIsRestarting(false);
         }
@@ -178,10 +187,10 @@ function InnerLessonAIChat({
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold text-white">
-                                    Lesson Completed! 🎉
+                                    {t('successHeader')} 🎉
                                 </h3>
                                 <p className="text-white/90 text-sm">
-                                    Great job! You've successfully completed this task.
+                                    {t('successDescription')}
                                 </p>
                             </div>
                         </div>
@@ -193,7 +202,7 @@ function InnerLessonAIChat({
                                     {messages.length}
                                 </div>
                                 <div className="text-xs text-white/80">
-                                    Messages Exchanged
+                                    {t('stats.messages')}
                                 </div>
                             </div>
                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
@@ -201,7 +210,7 @@ function InnerLessonAIChat({
                                     <IconTrophy className="h-6 w-6" />
                                 </div>
                                 <div className="text-xs text-white/80">
-                                    Task Completed
+                                    {t('stats.taskCompleted')}
                                 </div>
                             </div>
                         </div>
@@ -217,12 +226,12 @@ function InnerLessonAIChat({
                                 {isRestarting ? (
                                     <>
                                         <IconRotateClockwise2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Restarting...
+                                        {t('buttons.restarting')}
                                     </>
                                 ) : (
                                     <>
                                         <IconRotateClockwise2 className="mr-2 h-4 w-4" />
-                                        Try Again
+                                        {t('buttons.tryAgain')}
                                     </>
                                 )}
                             </Button>
@@ -236,8 +245,8 @@ function InnerLessonAIChat({
                     {messages.length === 0 && !isCompleted && (
                         <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-8 text-center bg-muted/5">
                             <IconRobot className="h-12 w-12 mb-4 opacity-20" />
-                            <h3 className="text-lg font-medium text-foreground mb-2">AI Tutor Ready</h3>
-                            <p className="max-w-xs mx-auto">I'm ready to review your work! Type your answer below based on the task description.</p>
+                            <h3 className="text-lg font-medium text-foreground mb-2">{t('emptyState.title')}</h3>
+                            <p className="max-w-xs mx-auto">{t('emptyState.description')}</p>
                         </div>
                     )}
 
@@ -250,7 +259,10 @@ function InnerLessonAIChat({
                                     }
                                     if (part.type === 'tool-invocation') {
                                         const toolInvocation = (part as any).toolInvocation;
-                                        if (toolInvocation && toolInvocation.toolName === 'markLessonCompleted') {
+                                        if (!toolInvocation) return null;
+
+                                        // Special handling for markLessonCompleted
+                                        if (toolInvocation.toolName === 'markLessonCompleted') {
                                             if (toolInvocation.state === 'result') {
                                                 return (
                                                     <div key={toolInvocation.toolCallId} className="mt-4 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-2xl text-green-700 dark:text-green-400 text-sm shadow-sm ring-1 ring-inset ring-green-500/10">
@@ -259,14 +271,35 @@ function InnerLessonAIChat({
                                                                 <IconCheck className="h-5 w-5 text-white" />
                                                             </div>
                                                             <div className="space-y-1">
-                                                                <p className="font-bold text-base text-green-900 dark:text-green-300">Target Achieved!</p>
+                                                                <p className="font-bold text-base text-green-900 dark:text-green-300">{t('targetAchieved')}</p>
                                                                 <p className="opacity-90 leading-relaxed text-sm">{(toolInvocation.result as any).feedback}</p>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 )
                                             }
+                                            return null;
                                         }
+
+                                        // Generic Tool Handling
+                                        const state = toolInvocation.state === 'result' ? 'output-available' : 'input-available';
+
+                                        return (
+                                            <Tool key={toolInvocation.toolCallId} defaultOpen={state === 'output-available'}>
+                                                <ToolHeader
+                                                    type="dynamic-tool"
+                                                    toolName={toolInvocation.toolName}
+                                                    state={state}
+                                                />
+                                                <ToolContent>
+                                                    <ToolInput input={toolInvocation.args} />
+                                                    <ToolOutput
+                                                        output={toolInvocation.result}
+                                                        errorText={undefined}
+                                                    />
+                                                </ToolContent>
+                                            </Tool>
+                                        );
                                     }
                                     return null;
                                 })}
@@ -279,9 +312,7 @@ function InnerLessonAIChat({
                                 from='assistant'
                             >
                                 <MessageContent>
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-20" />
-                                    <Skeleton className="h-4 w-full" />
+                                    <Shimmer className="text-sm">{t('generating')}</Shimmer>
                                 </MessageContent>
                             </Message>
                         )
@@ -313,7 +344,7 @@ function InnerLessonAIChat({
                         </div>
                         <PromptInputBody>
                             <PromptInputTextarea
-                                placeholder={isCompleted ? "Lesson completed! Restart to continue practicing." : "Type your answer here..."}
+                                placeholder={isCompleted ? t('placeholders.completed') : t('placeholders.typeAnswer')}
                                 className="min-h-[60px]"
                                 disabled={isCompleted}
                             />
@@ -329,7 +360,7 @@ function InnerLessonAIChat({
                                             className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
                                             onClick={handleRestart}
                                             disabled={isRestarting || isLoading}
-                                            title="Restart Conversation"
+                                            title={t('tooltips.restart')}
                                         >
                                             <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
                                         </Button>
@@ -338,7 +369,7 @@ function InnerLessonAIChat({
                                     {isCompleted && (
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
                                             <IconCheck size={14} className="stroke-[3]" />
-                                            <span>Lesson Completed</span>
+                                            <span>{t('successHeader')}</span>
                                         </div>
                                     )}
                                 </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { IconCircleCheck, IconFileText } from "@tabler/icons-react"
+import { useTranslations } from "next-intl"
 
 interface ExamSubmission {
   submission_id: number
@@ -14,28 +15,30 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ submissions }: RecentActivityProps) {
+  const t = useTranslations('recentActivity')
+
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
     const diffTime = Math.abs(now.getTime() - date.getTime())
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60))
-    
+
     if (diffHours < 1) {
       const diffMinutes = Math.floor(diffTime / (1000 * 60))
-      return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`
+      return `${diffMinutes} ${diffMinutes === 1 ? t('minute') : t('minutes')} ${t('ago')}`
     }
-    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
-    
+    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? t('hour') : t('hours')} ${t('ago')}`
+
     const diffDays = Math.floor(diffHours / 24)
-    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
-    
+    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? t('day') : t('days')} ${t('ago')}`
+
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-      <h2 className="text-xl font-bold text-foreground">Recent Activity</h2>
-      
+      <h2 className="text-xl font-bold text-foreground">{t('title')}</h2>
+
       {submissions.length > 0 ? (
         <div className="space-y-3">
           {submissions.slice(0, 4).map((submission) => (
@@ -50,12 +53,12 @@ export function RecentActivity({ submissions }: RecentActivityProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-foreground">
-                  Assignment Graded
+                  {t('assignmentGraded')}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {submission.score !== null 
-                    ? `Score: ${submission.score}/100` 
-                    : 'Pending grade'}
+                  {submission.score !== null
+                    ? t('score', { score: submission.score })
+                    : t('pendingGrade')}
                 </p>
                 <p className="text-xs text-muted-foreground/80 mt-1">
                   {getTimeAgo(submission.submitted_at)}
@@ -69,7 +72,7 @@ export function RecentActivity({ submissions }: RecentActivityProps) {
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
             <IconFileText className="w-6 h-6 text-muted-foreground/50" />
           </div>
-          <p className="text-sm text-muted-foreground">No recent activity</p>
+          <p className="text-sm text-muted-foreground">{t('noActivity')}</p>
         </div>
       )}
     </div>

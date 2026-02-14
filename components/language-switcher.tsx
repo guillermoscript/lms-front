@@ -1,47 +1,53 @@
-'use client'
+'use client';
 
-import { useLocale } from 'next-intl'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation';
+import { buttonVariants } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { locales, localeNames, type Locale } from '@/i18n'
-import { IconLanguage } from '@tabler/icons-react'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function LanguageSwitcher() {
-  const locale = useLocale() as Locale
-  const router = useRouter()
-  const pathname = usePathname()
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const handleChange = (newLocale: string | null) => {
-    if (!newLocale) return;
+  const switchLocale = (newLocale: string) => {
+    const currentPath = pathname;
+    const parts = currentPath.split('/');
+    // Parts: ["", "en", "dashboard"]
 
-    // Remove current locale from pathname
-    const pathnameWithoutLocale = pathname.replace(`/${locale}`, '') || '/'
+    // Check if parts[1] is a locale
+    if (['en', 'es'].includes(parts[1])) {
+      parts[1] = newLocale;
+    } else {
+      // Should not happen with 'always' prefix providing middleware works.
+      // But if we are at root /, and middleware didn't redirect for some reason?
+      // Just insert it.
+      parts.splice(1, 0, newLocale);
+    }
 
-    // Redirect to new locale
-    router.push(`/${newLocale}${pathnameWithoutLocale}`)
-  }
+    const newPath = parts.join('/').replace('//', '/');
+    router.push(newPath);
+  };
 
   return (
-    <div className="flex items-center gap-2">
-      <IconLanguage className="h-4 w-4 text-muted-foreground" />
-      <Select value={locale} onValueChange={handleChange}>
-        <SelectTrigger className="w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {locales.map((loc) => (
-            <SelectItem key={loc} value={loc}>
-              {localeNames[loc]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
+    <DropdownMenu>
+      <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "w-9 px-0")}>
+        <Globe className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+        <span className="sr-only">Toggle language</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => switchLocale('en')}>
+          English
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => switchLocale('es')}>
+          Español
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

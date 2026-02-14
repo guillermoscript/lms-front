@@ -12,20 +12,23 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface NotificationsSummaryProps {
     notifications: any[];
 }
 
 export function NotificationsSummary({ notifications }: NotificationsSummaryProps) {
+    const t = useTranslations('components.notifications');
+
     if (!notifications || notifications.length === 0) {
         return (
             <Card className="border-none shadow-soft h-full flex flex-col items-center justify-center p-8 text-center bg-muted/20">
                 <div className="bg-background p-4 rounded-full mb-4 shadow-sm text-muted-foreground/30">
                     <IconBell size={40} />
                 </div>
-                <h3 className="font-bold text-lg">All caught up!</h3>
-                <p className="text-sm text-muted-foreground">No new notifications for you right now.</p>
+                <h3 className="font-bold text-lg">{t('empty.title')}</h3>
+                <p className="text-sm text-muted-foreground">{t('empty.description')}</p>
             </Card>
         );
     }
@@ -54,11 +57,11 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
                         <div className="p-2 rounded-lg bg-primary/10 text-primary">
                             <IconBell size={18} />
                         </div>
-                        <CardTitle className="text-xl font-black">Inbox</CardTitle>
+                        <CardTitle className="text-xl font-black">{t('title')}</CardTitle>
                     </div>
                     {notifications.length > 5 && (
                         <Button variant="link" size="sm" className="text-primary font-bold">
-                            View All
+                            {t('viewAll')}
                         </Button>
                     )}
                 </div>
@@ -102,7 +105,7 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
             {notifications.length > 0 && (
                 <div className="p-4 bg-muted/10 border-t border-muted/30">
                     <Button variant="outline" className="w-full rounded-xl gap-2 font-bold h-11">
-                        Mark all as read
+                        {t('markAllAsRead')}
                     </Button>
                 </div>
             )}

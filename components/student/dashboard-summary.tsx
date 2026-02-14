@@ -12,6 +12,7 @@ import {
     IconSparkles
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface DashboardSummaryProps {
     user: any;
@@ -26,6 +27,7 @@ export function DashboardSummary({
     completedLessons,
     nextLesson
 }: DashboardSummaryProps) {
+    const t = useTranslations('components.dashboardSummary');
     const userName = user?.user_metadata?.full_name || "Achiever";
 
     return (
@@ -40,20 +42,20 @@ export function DashboardSummary({
                     <div className="relative z-10 space-y-6">
                         <div className="space-y-2">
                             <Badge variant="outline" className="text-white border-white/30 bg-white/10 px-3 py-1 font-bold tracking-widest uppercase text-[10px]">
-                                Your Progress
+                                {t('yourProgress')}
                             </Badge>
                             <h1 className="text-3xl md:text-4xl font-black">
-                                Welcome back, {userName}! <span className="inline-block animate-bounce-subtle">👋</span>
+                                {t('welcomeBack', { userName })} <span className="inline-block animate-bounce-subtle">👋</span>
                             </h1>
                             <p className="text-indigo-100/80 max-w-md font-medium">
-                                You're doing great! You've completed {completedLessons} lessons so far. Keep the momentum going.
+                                {t('progressMessage', { count: completedLessons })}
                             </p>
                         </div>
 
                         <div className="pt-4 flex flex-col md:flex-row items-start md:items-end gap-8">
                             <div className="flex-1 w-full space-y-3">
                                 <div className="flex justify-between text-sm font-black uppercase tracking-widest text-indigo-100">
-                                    <span>Course Completion</span>
+                                    <span>{t('courseCompletion')}</span>
                                     <span>{overallProgress}%</span>
                                 </div>
                                 <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden border border-white/5 backdrop-blur-sm">
@@ -66,7 +68,7 @@ export function DashboardSummary({
 
                             {nextLesson && (
                                 <Button className="bg-white text-indigo-950 hover:bg-indigo-50 rounded-2xl h-14 px-8 font-black gap-2 shrink-0 shadow-xl transition-all hover:translate-y-[-2px]">
-                                    Continue Learning
+                                    {t('continueLearning')}
                                     <IconArrowRight size={18} />
                                 </Button>
                             )}
@@ -83,11 +85,11 @@ export function DashboardSummary({
                             <IconFlame size={80} />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-100">Daily Streak</p>
-                            <h3 className="text-4xl font-black">12 Days</h3>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-100">{t('dailyStreak')}</p>
+                            <h3 className="text-4xl font-black">{t('daysCount', { count: 12 })}</h3>
                         </div>
                         <p className="text-sm font-medium text-amber-100 mt-4 italic">
-                            "You're in the top 5% of learners this week!"
+                            {t('topLearner')}
                         </p>
                     </CardContent>
                 </Card>
@@ -98,8 +100,8 @@ export function DashboardSummary({
                             <IconTrophy size={80} />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Achievements</p>
-                            <h3 className="text-4xl font-black">24 Badges</h3>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">{t('achievements')}</p>
+                            <h3 className="text-4xl font-black">{t('badgesCount', { count: 24 })}</h3>
                         </div>
                         <div className="flex gap-1 mt-4">
                             <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">🥇</div>

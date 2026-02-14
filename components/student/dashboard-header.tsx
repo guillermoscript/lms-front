@@ -22,12 +22,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslations } from "next-intl";
 
 interface DashboardHeaderProps {
     user: any;
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
+    const t = useTranslations('components.dashboardHeader');
     const supabase = createClient();
     const router = useRouter();
 
@@ -50,7 +52,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                         <input
                             type="text"
                             className="bg-muted border border-input focus:bg-muted focus:border-cyan-500/50 text-foreground placeholder:text-muted-foreground rounded-xl py-2 pl-10 pr-4 text-sm w-64 transition-all duration-300 outline-none"
-                            placeholder="Search courses, exams, or resources..."
+                            placeholder={t('searchPlaceholder')}
                         />
                     </div>
                 </div>
@@ -88,11 +90,11 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="rounded-xl m-1 cursor-pointer gap-2 focus:bg-cyan-500/10 text-muted-foreground focus:text-accent-foreground" render={<Link href="/dashboard/student/profile" />}>
                                     <IconUser size={16} />
-                                    <span>Profile</span>
+                                    <span>{t('profile')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="rounded-xl m-1 cursor-pointer gap-2 focus:bg-cyan-500/10 text-muted-foreground focus:text-accent-foreground">
                                     <IconSettings size={16} />
-                                    <span>Settings</span>
+                                    <span>{t('settings')}</span>
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator className="bg-border" />
@@ -101,7 +103,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                                 onClick={handleLogout}
                             >
                                 <IconLogout size={16} />
-                                <span>Logout</span>
+                                <span>{t('logout')}</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

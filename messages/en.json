@@ -13,7 +13,9 @@
     "next": "Next",
     "previous": "Previous",
     "continue": "Continue",
-    "close": "Close"
+    "close": "Close",
+    "viewAll": "View All",
+    "browseCourses": "Browse Courses"
   },
   "auth": {
     "login": "Login",
@@ -48,7 +50,54 @@
       "unlimitedAccessDescription": "Unlock every course, exam, and our AI learning assistant for one monthly price.",
       "viewPlans": "View Plans",
       "suggestedCourses": "Suggested for You",
-      "recommended": "Recommended"
+      "recommended": "Recommended",
+      "inProgressCourses": "In-Progress Courses",
+      "activeSubscriptionTitle": "Your {planName} is active!",
+      "activeSubscriptionDesc": "Browse available courses and enroll in the ones that interest you",
+      "browseAndEnroll": "Browse & Enroll in Courses",
+      "noCoursesYet": "No courses yet",
+      "startJourneyDesc": "Start your learning journey by enrolling in a course",
+      "courses": {
+        "title": "My Courses",
+        "enrolledMessage": "You're enrolled in {count} course{s}",
+        "startJourney": "Start your learning journey by enrolling in courses",
+        "upgradePlan": "Upgrade Plan",
+        "noCoursesTitle": "No Courses Yet",
+        "noCoursesDesc": "You haven't enrolled in any courses yet. Browse our course catalog to get started!",
+        "browseCatalog": "Browse Course Catalog",
+        "viewPlans": "View Subscription Plans",
+        "noFilterMatch": "No courses found matching your filters. Try adjusting your search or filters.",
+        "errorLoading": "Error loading your courses. Please try again."
+      },
+      "browse": {
+        "title": "Browse All Courses",
+        "subtitle": "Discover new courses and expand your knowledge",
+        "noSubscriptionTitle": "No Active Subscription",
+        "noSubscriptionDesc": "You need an active subscription to enroll in courses. Subscribe now to get unlimited access to all courses!",
+        "activeSubscriptionTitle": "Active Subscription",
+        "activeSubscriptionDesc": "You have access to all courses with your {planName} plan. Click \"Enroll Now\" to start learning any course!",
+        "noCoursesAvailable": "No courses available at the moment.",
+        "showingCourses": "Showing {count} course{s}"
+      },
+      "profile": {
+        "billingHistory": "Billing History",
+        "records": "{count} Records",
+        "id": "ID",
+        "date": "Date",
+        "amount": "Amount",
+        "status": "Status",
+        "noTransactions": "No transactions found.",
+        "accountDetails": "Account Details",
+        "editProfile": "Edit Profile",
+        "signedUp": "Signed Up",
+        "userStatus": "Status",
+        "active": "Active",
+        "currentPlan": "Current Plan",
+        "renewsOn": "Renews on {date}",
+        "manageSubscription": "Manage Subscription",
+        "noActiveSubscription": "You don't have an active subscription yet.",
+        "viewPlans": "View Plans"
+      }
     },
     "teacher": {
       "title": "My Courses",
@@ -207,5 +256,289 @@
     "errorOccurred": "An error occurred. Please try again.",
     "confirmDelete": "Are you sure you want to delete this?",
     "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
+  },
+  "landing": {
+    "poweredBy": "Powered by Next.js 16",
+    "heroTitle": "Master Your <br /> Future with <br /> <span class='text-zinc-500'>LMS V2</span>",
+    "heroDescription": "The ultimate learning platform powered by Next.js 16 and Supabase. Interactive, fast, and scalable for modern developers.",
+    "getStarted": "Get Started Free",
+    "viewGithub": "View Github",
+    "trustedBy": "Trusted by developers at",
+    "featuresTitle": "Why Choose LMS V2?",
+    "featuresDescription": "Built for performance and developer experience. We focus on the features that matter for technical education.",
+    "feature1Title": "AI-Powered Feedback",
+    "feature1Description": "Get instant, intelligent code reviews and suggestions on your assignments powered by the latest LLMs.",
+    "feature2Title": "MDX Lesson Support",
+    "feature2Description": "Write interactive lessons with MDX. Embed React components directly inside your course content securely.",
+    "feature3Title": "Role-Based Dashboards",
+    "feature3Description": "Dedicated interfaces for Students, Instructors, and Admins to manage progress, content, and analytics."
+  },
+  "navbar": {
+    "brand": "LMS V2",
+    "courses": "Courses",
+    "plans": "Plans",
+    "about": "About",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "signup": "Sign Up"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "allCourses": "All Courses",
+    "enrollments": "Enrollments",
+    "transactions": "Transactions",
+    "myCourses": "My Courses",
+    "createCourse": "Create Course",
+    "browseCourses": "Browse Courses",
+    "courseCatalog": "Course Catalog",
+    "continueLearning": "Continue Learning",
+    "completed": "Completed",
+    "myCertificates": "My Certificates",
+    "progressReport": "Progress Report",
+    "settings": "Settings",
+    "logout": "Logout",
+    "platform": "LMS Platform",
+    "guest": "Guest",
+    "main": "Main",
+    "discover": "Discover",
+    "learning": "Learning",
+    "resources": "Resources",
+    "contentManagement": "Content Management",
+    "management": "Management"
+  },
+  "userNav": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "welcomeHero": {
+    "welcomeBack": "Welcome Back, {userName}!",
+    "progressMessage": "You're {progress}% through your weekly study goal. Keep pushing to earn your next badge!",
+    "viewReport": "View Report",
+    "updateGoals": "Update Goals"
+  },
+  "statsCards": {
+    "hoursStudied": "Hours Studied",
+    "coursesCompleted": "Courses Completed",
+    "certificatesEarned": "Certificates Earned"
+  },
+  "upcomingExams": {
+    "title": "Upcoming Exams",
+    "noExams": "No upcoming exams",
+    "viewSchedule": "VIEW SCHEDULE",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "in {days} days"
+  },
+  "recentActivity": {
+    "title": "Recent Activity",
+    "assignmentGraded": "Assignment Graded",
+    "score": "Score: {score}/100",
+    "pendingGrade": "Pending grade",
+    "noActivity": "No recent activity",
+    "minute": "minute",
+    "minutes": "minutes",
+    "hour": "hour",
+    "hours": "hours",
+    "day": "day",
+    "days": "days",
+    "ago": "ago"
+  },
+  "components": {
+    "courseProgress": {
+      "progress": "Progress"
+    },
+    "enrolledCourse": {
+      "overallProgress": "Overall Progress",
+      "lessons": "Lessons",
+      "exams": "Exams",
+      "upNext": "Up Next",
+      "enrolled": "Enrolled {date}",
+      "renew": "Renew Subscription",
+      "review": "Review Course",
+      "continue": "Continue Learning",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started",
+      "expired": "Your subscription has expired. Renew to continue learning."
+    },
+    "courseFilters": {
+      "searchPlaceholder": "Search your courses...",
+      "allCourses": "All Courses",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "notStarted": "Not Started",
+      "sortBy": "Sort by",
+      "mostRecent": "Most Recent",
+      "titleAZ": "Title (A-Z)",
+      "progress": "Progress"
+    },
+    "browseCourse": {
+      "goCourse": "Go to Course",
+      "enrollNow": "Enroll Now",
+      "enrolling": "Enrolling...",
+      "subscribeAccess": "Subscribe to Access",
+      "enrolled": "Enrolled"
+    },
+    "profileForm": {
+      "fullName": "Full Name",
+      "username": "Username",
+      "website": "Website",
+      "bio": "Bio",
+      "save": "Save Profile Details",
+      "saving": "Saving Changes...",
+      "success": "Profile updated successfully!",
+      "error": "Failed to update profile",
+      "placeholders": {
+        "fullName": "Your full name",
+        "username": "unique_username",
+        "website": "https://yourwebsite.com",
+        "bio": "Tell us a bit about yourself..."
+      }
+    },
+    "lessons": {
+      "lessonIndex": "Lesson {count}",
+      "sidebarTitle": "Course Content",
+      "sidebarDescription": "Navigate through course lessons",
+      "aiTutorTitle": "AI Tutor Session",
+      "aiTutorDescription": "Complete the task to finish this lesson",
+      "currentTask": "Current Task"
+    },
+    "lessonAIChat": {
+      "suggestions": {
+        "question": "I have a question about the task",
+        "hint": "Can you give me a hint?",
+        "understanding": "Check my understanding",
+        "summarize": "Summarize what I've learned"
+      },
+      "toast": {
+        "completed": "Lesson Completed!",
+        "completedDetail": "Great job! You have successfully completed the task.",
+        "restartSuccess": "Chat restarted successfully",
+        "restartFailed": "Failed to restart chat",
+        "restartError": "Error restarting chat"
+      },
+      "confirmRestart": "Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.",
+      "successHeader": "Lesson Completed!",
+      "successDescription": "Great job! You've successfully completed this task.",
+      "stats": {
+        "messages": "Messages Exchanged",
+        "taskCompleted": "Task Completed"
+      },
+      "buttons": {
+        "restarting": "Restarting...",
+        "tryAgain": "Try Again"
+      },
+      "emptyState": {
+        "title": "AI Tutor Ready",
+        "description": "I'm ready to review your work! Type your answer below based on the task description."
+      },
+      "targetAchieved": "Target Achieved!",
+      "generating": "Generating response...",
+      "placeholders": {
+        "completed": "Lesson completed! Restart to continue practicing.",
+        "typeAnswer": "Type your answer here..."
+      },
+      "tooltips": {
+        "restart": "Restart Conversation"
+      }
+    },
+    "lessonSidebar": {
+      "backToCourse": "Back to course"
+    },
+    "lessonNavigation": {
+      "previous": "Previous",
+      "backToCourse": "Back to Course",
+      "completed": "Completed",
+      "markAsComplete": "Mark as Complete",
+      "done": "Done",
+      "complete": "Complete",
+      "next": "Next",
+      "finishCourse": "Finish Course"
+    },
+    "lessonComments": {
+      "title": "Comments ({count})",
+      "placeholder": "Share your thoughts or ask a question...",
+      "post": "Post Comment",
+      "posting": "Posting...",
+      "loading": "Loading comments...",
+      "noComments": "No comments yet. Be the first to comment!",
+      "unknown": "Unknown",
+      "error": "Failed to post comment. Please try again."
+    },
+    "dashboardSummary": {
+      "yourProgress": "Your Progress",
+      "welcomeBack": "Welcome back, {userName}!",
+      "progressMessage": "You're doing great! You've completed {count} lessons so far. Keep the momentum going.",
+      "courseCompletion": "Course Completion",
+      "continueLearning": "Continue Learning",
+      "dailyStreak": "Daily Streak",
+      "daysCount": "{count} Days",
+      "topLearner": "\"You're in the top 5% of learners this week!\"",
+      "achievements": "Achievements",
+      "badgesCount": "{count} Badges"
+    },
+    "manualPayment": {
+      "title": "Request Payment Information",
+      "description": "Fill out this form to receive payment instructions for <strong>{productName}</strong> ({symbol}{price})",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "John Doe",
+      "email": "Email",
+      "emailPlaceholder": "john@example.com",
+      "phone": "Phone Number (optional)",
+      "phonePlaceholder": "+1 234 567 8900",
+      "message": "Additional Message (optional)",
+      "messagePlaceholder": "Any questions or special requests...",
+      "whatHappensNext": "What happens next?",
+      "step1": "We'll send you payment instructions via email",
+      "step2": "Choose your preferred payment method (bank transfer, invoice, etc.)",
+      "step3": "Once payment is confirmed, you'll get instant access",
+      "sending": "Sending...",
+      "submit": "Request Payment Info",
+      "cancel": "Cancel",
+      "success": "Payment request sent! We will contact you shortly with payment instructions.",
+      "error": "Failed to send request. Please try again."
+    },
+    "notifications": {
+      "title": "Inbox",
+      "viewAll": "View All",
+      "markAllAsRead": "Mark all as read",
+      "empty": {
+        "title": "All caught up!",
+        "description": "No new notifications for you right now."
+      }
+    },
+    "activitySection": {
+      "title": "Continue Learning",
+      "recentSessions": "{count} Recent Sessions",
+      "lastViewed": "Last viewed {date}",
+      "part": "Part {sequence}",
+      "defaultDescription": "Continue where you left off in this lesson.",
+      "resume": "Resume Session"
+    },
+    "dashboardHeader": {
+      "searchPlaceholder": "Search courses, exams, or resources...",
+      "profile": "Profile",
+      "settings": "Settings",
+      "logout": "Logout"
+    }
+  },
+  "courseDetails": {
+    "backToLearning": "Back to My Learning",
+    "instructor": "Instructor:",
+    "unknownInstructor": "Unknown Instructor",
+    "courseProgress": "Course Progress",
+    "lessonsCount": "{count} LESSONS",
+    "continue": "Continue",
+    "startNow": "Start Now",
+    "exercises": "Exercises ({count})",
+    "exams": "Exams ({count})",
+    "curriculum": "Curriculum",
+    "mins": "{count} MIN",
+    "videoText": "VIDEO + TEXT",
+    "completed": "COMPLETED",
+    "study": "STUDY",
+    "noLessons": "No lessons available yet."
   }
 }

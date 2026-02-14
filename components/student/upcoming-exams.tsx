@@ -2,6 +2,7 @@
 
 import { IconFileText, IconCalendar } from "@tabler/icons-react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 
 interface Exam {
   exam_id: number
@@ -17,16 +18,18 @@ interface UpcomingExamsProps {
 }
 
 export function UpcomingExams({ exams }: UpcomingExamsProps) {
+  const t = useTranslations('upcomingExams')
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
     const diffTime = date.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 0) return "Today"
-    if (diffDays === 1) return "Tomorrow"
-    if (diffDays < 7) return `in ${diffDays} days`
-    
+
+    if (diffDays === 0) return t('today')
+    if (diffDays === 1) return t('tomorrow')
+    if (diffDays < 7) return t('inDays', { days: diffDays })
+
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
@@ -37,8 +40,8 @@ export function UpcomingExams({ exams }: UpcomingExamsProps) {
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-      <h2 className="text-xl font-bold text-foreground">Upcoming Exams</h2>
-      
+      <h2 className="text-xl font-bold text-foreground">{t('title')}</h2>
+
       {exams.length > 0 ? (
         <div className="space-y-3">
           {exams.slice(0, 3).map((exam) => (
@@ -69,16 +72,16 @@ export function UpcomingExams({ exams }: UpcomingExamsProps) {
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
             <IconCalendar className="w-6 h-6 text-muted-foreground/50" />
           </div>
-          <p className="text-sm text-muted-foreground">No upcoming exams</p>
+          <p className="text-sm text-muted-foreground">{t('noExams')}</p>
         </div>
       )}
 
       {exams.length > 0 && (
-        <Link 
+        <Link
           href="/dashboard/student/exams"
           className="block text-center text-sm text-cyan-400 hover:text-cyan-300 font-medium pt-2"
         >
-          VIEW SCHEDULE
+          {t('viewSchedule')}
         </Link>
       )}
     </div>

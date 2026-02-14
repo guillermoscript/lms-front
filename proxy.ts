@@ -1,7 +1,6 @@
 import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
-import { getRoleFromClaims } from '@/lib/supabase/get-user-role'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -9,27 +8,58 @@ import { locales, defaultLocale } from './i18n'
 const intlMiddleware = createIntlMiddleware({
   locales,
   defaultLocale,
-  localePrefix: 'as-needed',
+  localePrefix: 'always', // Force prefix to make routing predictable for auth checks
 })
 
-// Next.js 16: Function renamed from 'middleware' to 'proxy'
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  console.log('Proxy trace:', pathname)
 
-  // Check if the current path is public (ignore locale prefix)
-  const pathnameWithoutLocale = pathname.replace(/^\/(en|es)/, '')
-
-  // Skip authentication for API routes (they handle their own auth)
-  if (pathnameWithoutLocale.startsWith('/api/')) {
-    return NextResponse.next({ request })
+  // 1. Handle ignore paths (api, static, etc) is done by config matcher, 
+  // but we double check API here just in case.
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+    return NextResponse.next()
   }
 
-  // Public routes that don't require authentication
+  // 2. Run Intl Middleware to handle locale routing and rewriting
+  // This helps ensure we are working with a consistent URL structure
+  const intlResponse = intlMiddleware(request)
+
+  // If intlMiddleware redirects (e.g. / -> /en), we should follow it immediately
+  // unless we want to check auth first? 
+  // Standard pattern: let intl normalize the URL first.
+  if (intlResponse.headers.get('x-middleware-rewrite')) {
+    // It's a rewrite, continue to auth check
+  } else if (intlResponse.status >= 300 && intlResponse.status < 400) {
+    // It's a redirect (e.g. adding locale prefix)
+    return intlResponse
+  }
+
+  // 3. Auth Logic
+
+  // We need to strip locale to check logic against "clean" paths
+  // pathname might look like /en/dashboard
+  const pathnameIsMissingLocale = locales.every(
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
+  );
+
+  // If we are here, next-intl didn't redirect, so we likely have a locale or it's a public path that doesn't need one?
+  // But we set localePrefix: 'always', so it should have redirected if missing.
+
+  // Normalize path for auth checks: remove locale
+  // e.g. /en/dashboard -> /dashboard
+  const segments = pathname.split('/')
+  const locale = segments[1]
+  // if segments[1] is a locale, remove it
+  const cleanPath = locales.includes(locale as any)
+    ? `/${segments.slice(2).join('/')}`
+    : pathname // Should technically not happen if 'always' prefix is enforcing, unless it's a file
+
+  // Fix cleanPath to ensure it starts with / if empty
+  const normalizedPath = cleanPath === '' ? '/' : cleanPath
+
+  // Public routes
   const publicRoutes = [
     '/auth/login',
-    '/en/auth/login',
-    '/es/auth/login',
     '/auth/sign-up',
     '/auth/sign-up-success',
     '/auth/forgot-password',
@@ -37,97 +67,100 @@ export default async function proxy(request: NextRequest) {
     '/auth/confirm',
     '/auth/error',
     '/',
+    '/auth/callback' // Add callback if needed
   ]
 
   const isPublicRoute = publicRoutes.some(route =>
-    pathnameWithoutLocale === route || pathnameWithoutLocale.startsWith(route)
+    normalizedPath === route || normalizedPath.startsWith(route + '/')
   )
 
-  // Update session (handles auth state)
+  // Update session
   const supabaseResponse = await updateSession(request)
 
-  // Get user from session
+  // Create client to check session
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          // Handled by updateSession
-        },
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) { /* handled by updateSession */ },
       },
     }
   )
 
-  // Use getSession instead of getClaims for better compatibility with current schema issues
-  let session = null
-  try {
-    const { data } = await supabase.auth.getSession()
-    session = data.session
-  } catch (e) {
-    console.error('Error in proxy getSession:', e)
-  }
-  
+  const { data: { session } } = await supabase.auth.getSession()
+
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
   if (session?.access_token) {
     try {
       const payload = JSON.parse(atob(session.access_token.split('.')[1]))
       userRole = payload.user_role || 'student'
     } catch (e) {
-      console.error('Error parsing token for role:', e)
+      // ignore
     }
   }
 
-  // If it's a public route
+  // Auth Guards
   if (isPublicRoute) {
-    // If user is already logged in and trying to access auth pages, redirect to their dashboard
-    if (session && (pathnameWithoutLocale.startsWith('/auth/login') || pathnameWithoutLocale.startsWith('/auth/sign-up'))) {
-      return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+    // If logged in and at login/signup, redirect to dashboard
+    if (session && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
+      const dashboardUrl = new URL(`/${locale}/dashboard/${userRole}`, request.url)
+      return NextResponse.redirect(dashboardUrl)
     }
-    return supabaseResponse
+    // Return intlResponse to preserve locale cookies/headers, but wait, supabaseResponse sets cookies too.
+    // We need to merge them.
+    // Actually, supabaseResponse is just a `NextResponse.next()` with cookies set.
+    // intlResponse is also a response.
+    // It's tricky to merge.
+    // Pattern: return intlResponse, but Copy cookies from supabaseResponse?
+
+    // Simplest working pattern for Supabase + (Next-Intl or other MW):
+    // 1. intlResponse handles the routing/headers for locale.
+    // 2. We copy the set-cookie header from supabaseResponse to intlResponse.
+
+    // Copy cookies from updateSession response to intlResponse
+    const supabaseCookies = supabaseResponse.headers.get('set-cookie')
+    if (supabaseCookies) {
+      intlResponse.headers.set('set-cookie', supabaseCookies)
+    }
+
+    return intlResponse
   }
 
-  // For protected routes, check authentication
+  // Protected Routes
   if (!session) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/auth/login'
-    redirectUrl.searchParams.set('redirectTo', pathname)
+    const redirectUrl = new URL(`/${locale}/auth/login`, request.url)
+    redirectUrl.searchParams.set('redirectTo', normalizedPath)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Role-based route protection
-  if (pathnameWithoutLocale.startsWith('/dashboard/student') && userRole !== 'student') {
-    return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+  // Role Checks
+  if (normalizedPath.startsWith('/dashboard/student') && userRole !== 'student') {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+  }
+  if (normalizedPath.startsWith('/dashboard/teacher') && userRole !== 'teacher' && userRole !== 'admin') {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+  }
+  if (normalizedPath.startsWith('/dashboard/admin') && userRole !== 'admin') {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+  }
+  if (normalizedPath === '/dashboard') {
+    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
   }
 
-  if (pathnameWithoutLocale.startsWith('/dashboard/teacher') && userRole !== 'teacher' && userRole !== 'admin') {
-    return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
+  // Allow access, return intlResponse (with supabase cookies)
+  const finalResponse = intlResponse;
+  const supabaseCookies = supabaseResponse.headers.get('set-cookie')
+  if (supabaseCookies) {
+    finalResponse.headers.set('set-cookie', supabaseCookies)
   }
 
-  if (pathnameWithoutLocale.startsWith('/dashboard/admin') && userRole !== 'admin') {
-    return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
-  }
-
-  // Redirect /dashboard to the appropriate role-specific dashboard
-  if (pathnameWithoutLocale === '/dashboard') {
-    return NextResponse.redirect(new URL(`/dashboard/${userRole}`, request.url))
-  }
-
-  return supabaseResponse
+  return finalResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

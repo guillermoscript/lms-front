@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Avatar } from '@/components/ui/avatar'
 import { IconSend, IconMessage, IconUser } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface Comment {
   comment_id: number
@@ -31,6 +32,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const t = useTranslations('components.lessonComments')
 
   useEffect(() => {
     loadComments()
@@ -59,7 +61,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
       const commentsWithUsers =
         data?.map((c) => ({
           ...c,
-          user: usersMap.get(c.user_id) || { full_name: null, email: 'Unknown' },
+          user: usersMap.get(c.user_id) || { full_name: null, email: t('unknown') },
         })) || []
 
       setComments(commentsWithUsers as Comment[])
@@ -89,7 +91,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
       router.refresh()
     } catch (error) {
       console.error('Error posting comment:', error)
-      alert('Failed to post comment. Please try again.')
+      alert(t('error'))
     } finally {
       setSubmitting(false)
     }
@@ -100,7 +102,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <IconMessage className="h-5 w-5" />
-          Comments ({comments.length})
+          {t('title', { count: comments.length })}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -109,23 +111,23 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
           <Textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Share your thoughts or ask a question..."
+            placeholder={t('placeholder')}
             rows={3}
             className="mb-3"
           />
           <Button type="submit" disabled={submitting || !newComment.trim()}>
             <IconSend className="mr-2 h-4 w-4" />
-            {submitting ? 'Posting...' : 'Post Comment'}
+            {submitting ? t('posting') : t('post')}
           </Button>
         </form>
 
         {/* Comments List */}
         <div className="space-y-4">
           {loading ? (
-            <p className="py-8 text-center text-muted-foreground">Loading comments...</p>
+            <p className="py-8 text-center text-muted-foreground">{t('loading')}</p>
           ) : comments.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
-              No comments yet. Be the first to comment!
+              {t('noComments')}
             </p>
           ) : (
             comments.map((comment) => (

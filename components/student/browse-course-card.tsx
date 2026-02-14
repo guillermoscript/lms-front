@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,13 +21,14 @@ interface BrowseCourseCardProps {
   subscriptionId?: number
 }
 
-export function BrowseCourseCard({ 
-  course, 
-  isEnrolled, 
+export function BrowseCourseCard({
+  course,
+  isEnrolled,
   hasActiveSubscription,
-  subscriptionId 
+  subscriptionId
 }: BrowseCourseCardProps) {
   const { enrollInCourse, loading } = useEnrollment()
+  const t = useTranslations('components.browseCourse')
 
   const handleEnroll = async () => {
     if (!subscriptionId) return
@@ -54,13 +56,13 @@ export function BrowseCourseCard({
               <IconTrophy className="w-12 h-12 text-muted-foreground" />
             </div>
           )}
-          
+
           {/* Enrolled badge */}
           {isEnrolled && (
             <div className="absolute top-3 right-3">
               <Badge className="gap-1 bg-green-500 hover:bg-green-600">
                 <IconCheck className="w-3 h-3" />
-                Enrolled
+                {t('enrolled')}
               </Badge>
             </div>
           )}
@@ -98,21 +100,21 @@ export function BrowseCourseCard({
       <CardFooter className="pt-3 border-t">
         {isEnrolled ? (
           <Link href={`/dashboard/student/courses/${course.course_id}`} className="w-full">
-            <Button className="w-full">Go to Course</Button>
+            <Button className="w-full">{t('goCourse')}</Button>
           </Link>
         ) : hasActiveSubscription ? (
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             onClick={handleEnroll}
             disabled={loading}
           >
-            {loading ? 'Enrolling...' : 'Enroll Now'}
+            {loading ? t('enrolling') : t('enrollNow')}
           </Button>
         ) : (
           <Link href="/pricing" className="w-full">
             <Button variant="outline" className="w-full gap-2">
               <IconLock className="w-4 h-4" />
-              Subscribe to Access
+              {t('subscribeAccess')}
             </Button>
           </Link>
         )}

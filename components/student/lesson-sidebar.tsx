@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { IconCheck, IconCircle, IconPlayerPlay } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 
 interface Lesson {
   id: number
@@ -25,6 +26,8 @@ export function LessonSidebar({
   lessons,
   currentLessonId,
 }: LessonSidebarProps) {
+  const t = useTranslations('components.lessonSidebar')
+
   return (
     <aside className="h-full w-64 shrink-0 border-r bg-card overflow-y-auto">
       <div className="sticky top-0 bg-card border-b p-4">
@@ -32,7 +35,7 @@ export function LessonSidebar({
           href={`/dashboard/student/courses/${courseId}`}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          &larr; Back to course
+          &larr; {t('backToCourse')}
         </Link>
         <h2 className="mt-2 font-semibold line-clamp-2">{courseTitle}</h2>
       </div>

@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import {
     IconBook,
     IconBookmark,
@@ -52,6 +53,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
     const pathname = usePathname()
     const supabase = createClient()
+    const t = useTranslations('sidebar')
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
@@ -61,40 +63,40 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
     const navigation = {
         admin: {
             main: [
-                { title: "Dashboard", href: "/dashboard/admin", icon: IconDashboard },
+                { title: t('dashboard'), href: "/dashboard/admin", icon: IconDashboard },
             ],
             management: [
-                { title: "Users", href: "/dashboard/admin/users", icon: IconUsers },
-                { title: "All Courses", href: "/dashboard/admin/courses", icon: IconBook },
-                { title: "Enrollments", href: "/dashboard/admin/enrollments", icon: IconCertificate },
-                { title: "Transactions", href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
+                { title: t('users'), href: "/dashboard/admin/users", icon: IconUsers },
+                { title: t('allCourses'), href: "/dashboard/admin/courses", icon: IconBook },
+                { title: t('enrollments'), href: "/dashboard/admin/enrollments", icon: IconCertificate },
+                { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
             ],
         },
         teacher: {
             main: [
-                { title: "Dashboard", href: "/dashboard/teacher", icon: IconDashboard },
+                { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
             ],
             content: [
-                { title: "My Courses", href: "/dashboard/teacher/courses", icon: IconBook },
-                { title: "Create Course", href: "/dashboard/teacher/courses/new", icon: IconPlus },
+                { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook },
+                { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus },
             ],
         },
         student: {
             main: [
-                { title: "Dashboard", href: "/dashboard/student", icon: IconDashboard },
-                { title: "My Courses", href: "/dashboard/student/courses", icon: IconBookmark },
+                { title: t('dashboard'), href: "/dashboard/student", icon: IconDashboard },
+                { title: t('myCourses'), href: "/dashboard/student/courses", icon: IconBookmark },
             ],
             discover: [
-                { title: "Browse Courses", href: "/dashboard/student/browse", icon: IconSearch },
-                { title: "Course Catalog", href: "/courses", icon: IconBook },
+                { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch },
+                { title: t('courseCatalog'), href: "/courses", icon: IconBook },
             ],
             learning: [
-                { title: "Continue Learning", href: "/dashboard/student/courses?status=in_progress", icon: IconClock },
-                { title: "Completed", href: "/dashboard/student/courses?status=completed", icon: IconTrophy },
+                { title: t('continueLearning'), href: "/dashboard/student/courses?status=in_progress", icon: IconClock },
+                { title: t('completed'), href: "/dashboard/student/courses?status=completed", icon: IconTrophy },
             ],
             resources: [
-                { title: "My Certificates", href: "/dashboard/student/certificates", icon: IconCertificate },
-                { title: "Progress Report", href: "/dashboard/student/progress", icon: IconChartBar },
+                { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
+                { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar },
             ],
         },
     }
@@ -111,19 +113,19 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                                 <IconSchool className="size-4" />
                             </div>
                             <div className="flex flex-col gap-0.5 leading-none">
-                                <span className="font-semibold">LMS Platform</span>
-                                <span className="text-xs text-muted-foreground uppercase">{userRole || 'Guest'}</span>
+                                <span className="font-semibold">{t('platform')}</span>
+                                <span className="text-xs text-muted-foreground uppercase">{userRole || t('guest')}</span>
                             </div>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
-            
+
             <SidebarContent>
                 {/* Main Navigation */}
                 {currentNav?.main && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Main</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('main')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.main.map((item) => (
@@ -146,7 +148,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {/* Student: Discover Section */}
                 {userRole === 'student' && currentNav && 'discover' in currentNav && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Discover</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('discover')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.discover.map((item: NavItem) => (
@@ -169,7 +171,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {/* Student: Learning Section */}
                 {userRole === 'student' && currentNav && 'learning' in currentNav && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Learning</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('learning')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.learning.map((item: NavItem) => (
@@ -192,7 +194,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {/* Student: Resources Section */}
                 {userRole === 'student' && currentNav && 'resources' in currentNav && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Resources</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('resources')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.resources.map((item: NavItem) => (
@@ -215,7 +217,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {/* Teacher: Content Section */}
                 {userRole === 'teacher' && currentNav && 'content' in currentNav && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Content Management</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('contentManagement')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.content.map((item: NavItem) => (
@@ -238,7 +240,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {/* Admin: Management Section */}
                 {userRole === 'admin' && currentNav && 'management' in currentNav && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Management</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('management')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.management.map((item: NavItem) => (
@@ -258,19 +260,19 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     </SidebarGroup>
                 )}
             </SidebarContent>
-            
+
             <SidebarFooter>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton render={<Link href="/dashboard/settings" />} tooltip="Settings">
+                        <SidebarMenuButton render={<Link href="/dashboard/settings" />} tooltip={t('settings')}>
                             <IconSettings />
-                            <span>Settings</span>
+                            <span>{t('settings')}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+                        <SidebarMenuButton onClick={handleLogout} tooltip={t('logout')}>
                             <IconLogout />
-                            <span>Logout</span>
+                            <span>{t('logout')}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { createPaymentRequest } from '@/app/actions/payment-requests'
+import { useTranslations } from 'next-intl'
 
 interface ManualPaymentDialogProps {
   open: boolean
@@ -32,6 +33,7 @@ export function ManualPaymentDialog({
   productCurrency,
   productId
 }: ManualPaymentDialogProps) {
+  const t = useTranslations('components.manualPayment')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -53,12 +55,12 @@ export function ManualPaymentDialog({
     })
 
     if (result.success) {
-      toast.success('Payment request sent! We will contact you shortly with payment instructions.')
+      toast.success(t('success'))
       onOpenChange(false)
       // Reset form
       setFormData({ name: '', email: '', phone: '', message: '' })
     } else {
-      toast.error(result.error || 'Failed to send request. Please try again.')
+      toast.error(result.error || t('error'))
     }
 
     setLoading(false)
@@ -70,22 +72,27 @@ export function ManualPaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Request Payment Information</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            Fill out this form to receive payment instructions for <strong>{productName}</strong> ({currencySymbol}{productPrice})
+            {t.rich('description', {
+              productName: productName,
+              symbol: currencySymbol,
+              price: productPrice,
+              strong: (chunks) => <strong>{chunks}</strong>
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">
-              Full Name <span className="text-destructive">*</span>
+              {t('fullName')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="John Doe"
+              placeholder={t('fullNamePlaceholder')}
               required
               disabled={loading}
             />
@@ -93,55 +100,55 @@ export function ManualPaymentDialog({
 
           <div className="space-y-2">
             <Label htmlFor="email">
-              Email <span className="text-destructive">*</span>
+              {t('email')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="john@example.com"
+              placeholder={t('emailPlaceholder')}
               required
               disabled={loading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number (optional)</Label>
+            <Label htmlFor="phone">{t('phone')}</Label>
             <Input
               id="phone"
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+1 234 567 8900"
+              placeholder={t('phonePlaceholder')}
               disabled={loading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="message">Additional Message (optional)</Label>
+            <Label htmlFor="message">{t('message')}</Label>
             <Textarea
               id="message"
               value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder="Any questions or special requests..."
+              placeholder={t('messagePlaceholder')}
               rows={3}
               disabled={loading}
             />
           </div>
 
           <div className="rounded-lg bg-muted p-4 text-sm">
-            <p className="font-semibold mb-2">What happens next?</p>
+            <p className="font-semibold mb-2">{t('whatHappensNext')}</p>
             <ul className="space-y-1 text-muted-foreground">
-              <li>• We'll send you payment instructions via email</li>
-              <li>• Choose your preferred payment method (bank transfer, invoice, etc.)</li>
-              <li>• Once payment is confirmed, you'll get instant access</li>
+              <li>• {t('step1')}</li>
+              <li>• {t('step2')}</li>
+              <li>• {t('step3')}</li>
             </ul>
           </div>
 
           <div className="flex gap-3">
             <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'Sending...' : 'Request Payment Info'}
+              {loading ? t('sending') : t('submit')}
             </Button>
             <Button
               type="button"
@@ -149,7 +156,7 @@ export function ManualPaymentDialog({
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         </form>

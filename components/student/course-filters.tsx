@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -20,19 +21,20 @@ interface CourseFiltersProps {
   currentSearch: string
 }
 
-export function CourseFilters({ 
-  currentStatus, 
-  currentSort, 
-  currentSearch 
+export function CourseFilters({
+  currentStatus,
+  currentSort,
+  currentSearch
 }: CourseFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
   const [searchValue, setSearchValue] = useState(currentSearch)
+  const t = useTranslations('components.courseFilters')
 
   const updateFilters = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
-    
+
     Object.entries(updates).forEach(([key, value]) => {
       if (value && value !== 'all') {
         params.set(key, value)
@@ -73,7 +75,7 @@ export function CourseFilters({
         <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search your courses..."
+          placeholder={t('searchPlaceholder')}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           className="pl-10 pr-10"
@@ -94,22 +96,22 @@ export function CourseFilters({
         {/* Status Filter Tabs */}
         <Tabs value={currentStatus} onValueChange={handleStatusChange} className="w-full sm:w-auto">
           <TabsList>
-            <TabsTrigger value="all">All Courses</TabsTrigger>
-            <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="not_started">Not Started</TabsTrigger>
+            <TabsTrigger value="all">{t('allCourses')}</TabsTrigger>
+            <TabsTrigger value="in_progress">{t('inProgress')}</TabsTrigger>
+            <TabsTrigger value="completed">{t('completed')}</TabsTrigger>
+            <TabsTrigger value="not_started">{t('notStarted')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
         {/* Sort Dropdown */}
         <Select value={currentSort} onValueChange={handleSortChange}>
           <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Sort by" />
+            <SelectValue placeholder={t('sortBy')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="recent">Most Recent</SelectItem>
-            <SelectItem value="title">Title (A-Z)</SelectItem>
-            <SelectItem value="progress">Progress</SelectItem>
+            <SelectItem value="recent">{t('mostRecent')}</SelectItem>
+            <SelectItem value="title">{t('titleAZ')}</SelectItem>
+            <SelectItem value="progress">{t('progress')}</SelectItem>
           </SelectContent>
         </Select>
       </div>

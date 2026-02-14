@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { IconDeviceFloppy, IconLoader2 } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 interface ProfileFormProps {
     profile: any;
@@ -15,14 +16,15 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile }: ProfileFormProps) {
     const [isPending, startTransition] = useTransition();
+    const t = useTranslations('components.profileForm');
 
     async function handleSubmit(formData: FormData) {
         startTransition(async () => {
             try {
                 await updateProfile(formData);
-                toast.success("Profile updated successfully!");
+                toast.success(t('success'));
             } catch (error: any) {
-                toast.error(error.message || "Failed to update profile");
+                toast.error(error.message || t('error'));
             }
         });
     }
@@ -32,25 +34,25 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="full_name" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                        Full Name
+                        {t('fullName')}
                     </Label>
                     <Input
                         id="full_name"
                         name="full_name"
                         defaultValue={profile?.full_name}
-                        placeholder="Your full name"
+                        placeholder={t('placeholders.fullName')}
                         className="rounded-xl border-muted/30 focus:border-primary/50"
                     />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                        Username
+                        {t('username')}
                     </Label>
                     <Input
                         id="username"
                         name="username"
                         defaultValue={profile?.username}
-                        placeholder="unique_username"
+                        placeholder={t('placeholders.username')}
                         className="rounded-xl border-muted/30 focus:border-primary/50"
                     />
                 </div>
@@ -58,26 +60,26 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
             <div className="space-y-2">
                 <Label htmlFor="website" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                    Website
+                    {t('website')}
                 </Label>
                 <Input
                     id="website"
                     name="website"
                     defaultValue={profile?.website}
-                    placeholder="https://yourwebsite.com"
+                    placeholder={t('placeholders.website')}
                     className="rounded-xl border-muted/30 focus:border-primary/50"
                 />
             </div>
 
             <div className="space-y-2">
                 <Label htmlFor="bio" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                    Bio
+                    {t('bio')}
                 </Label>
                 <Textarea
                     id="bio"
                     name="bio"
                     defaultValue={profile?.bio}
-                    placeholder="Tell us a bit about yourself..."
+                    placeholder={t('placeholders.bio')}
                     className="rounded-xl border-muted/30 focus:border-primary/50 min-h-[120px] resize-none"
                 />
             </div>
@@ -93,7 +95,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                     ) : (
                         <IconDeviceFloppy size={18} />
                     )}
-                    {isPending ? "Saving Changes..." : "Save Profile Details"}
+                    {isPending ? t('saving') : t('save')}
                 </Button>
             </div>
         </form>

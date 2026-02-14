@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { IconBook } from "@tabler/icons-react"
+import { useTranslations } from "next-intl"
 
 interface CourseProgressCardProps {
   course: {
@@ -17,6 +18,8 @@ interface CourseProgressCardProps {
 }
 
 export function CourseProgressCard({ course }: CourseProgressCardProps) {
+  const t = useTranslations('components.courseProgress')
+
   return (
     <Link href={`/dashboard/student/courses/${course.course_id}`}>
       <div className="group bg-card border border-border hover:border-accent rounded-2xl overflow-hidden transition-all hover:shadow-xl hover:shadow-cyan-500/10">
@@ -47,7 +50,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
 
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
+                <span className="text-muted-foreground">{t('progress')}</span>
                 <span className="text-foreground font-semibold">{course.progress}%</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">

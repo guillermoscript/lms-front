@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +24,7 @@ interface UserNavProps {
 export function UserNav({ user }: UserNavProps) {
   const supabase = createClient()
   const router = useRouter()
+  const t = useTranslations('userNav')
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -59,17 +61,17 @@ export function UserNav({ user }: UserNavProps) {
         <DropdownMenuGroup>
           <DropdownMenuItem render={<Link href="/dashboard/profile" />}>
             <IconUser className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+            <span>{t('profile')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem render={<Link href="/dashboard/settings" />}>
             <IconSettings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>{t('settings')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <IconLogout className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{t('logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

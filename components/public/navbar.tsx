@@ -2,10 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { getTranslations } from 'next-intl/server';
 
 export async function Navbar() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const t = await getTranslations('navbar');
 
     return (
         <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
@@ -17,41 +20,43 @@ export async function Navbar() {
                         <span className="font-bold text-white">L</span>
                     </div>
                     <span className="font-bold text-lg text-white tracking-tight">
-                        LMS V2
+                        {t('brand')}
                     </span>
                 </Link>
 
                 {/* Center Links */}
                 <div className="hidden md:flex items-center space-x-8">
                     <Link href="/courses" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        Courses
+                        {t('courses')}
                     </Link>
                     <Link href="/pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        Plans
+                        {t('plans')}
                     </Link>
                     <Link href="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        About
+                        {t('about')}
                     </Link>
                 </div>
 
                 {/* Right Actions */}
                 <div className="flex items-center space-x-4">
+                    <LanguageSwitcher />
+
                     {user ? (
                         <Link href="/dashboard/student">
                             <Button variant="default" className="bg-white text-black hover:bg-zinc-200">
-                                Dashboard
+                                {t('dashboard')}
                             </Button>
                         </Link>
                     ) : (
                         <>
                             <Link href="/auth/login" className="hidden sm:inline-block">
                                 <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-white/5">
-                                    Login
+                                    {t('login')}
                                 </Button>
                             </Link>
-                            <Link href="/auth/signup">
+                            <Link href="/auth/sign-up">
                                 <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
-                                    Sign Up
+                                    {t('signup')}
                                 </Button>
                             </Link>
                         </>
