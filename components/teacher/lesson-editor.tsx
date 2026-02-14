@@ -20,8 +20,9 @@ import {
 } from '@tabler/icons-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { PromptTemplateSelector } from './prompt-template-selector'
+import { ImprovedTemplateSelector } from './improved-template-selector'
 import { AIPreviewModal } from './ai-preview-modal'
+import { VersionHistorySheet } from './version-history-sheet'
 
 interface LessonEditorProps {
   courseId: number
@@ -129,9 +130,19 @@ export function LessonEditor({
             Back to {courseTitle}
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">
-          {initialData ? 'Edit Lesson' : 'Create New Lesson'}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            {initialData ? 'Edit Lesson' : 'Create New Lesson'}
+          </h1>
+          {initialData && (
+            <VersionHistorySheet
+              contentType="lesson"
+              contentId={initialData.id}
+              currentSnapshot={formData}
+              onRestore={() => router.refresh()}
+            />
+          )}
+        </div>
       </div>
 
       {error && (
@@ -248,13 +259,13 @@ export function LessonEditor({
                   </div>
 
                   <div className="flex gap-2 mt-2">
-                    <PromptTemplateSelector
+                    <ImprovedTemplateSelector
                       category="lesson_task"
-                      onSelect={(template) => {
+                      onApply={(data) => {
                         setFormData({
                           ...formData,
-                          ai_task_description: template.task_description_template || formData.ai_task_description,
-                          ai_task_instructions: template.system_prompt_template || formData.ai_task_instructions,
+                          ai_task_description: data.instructions,
+                          ai_task_instructions: data.system_prompt,
                         })
                       }}
                     />

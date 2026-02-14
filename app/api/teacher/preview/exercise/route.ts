@@ -3,7 +3,7 @@ import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 
-export const maxDuration = AI_CONFIG.maxDuration
+export const maxDuration = 120
 
 export async function POST(req: Request) {
   const supabase = await createClient()

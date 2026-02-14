@@ -18,12 +18,17 @@ import {
   IconDeviceFloppy,
   IconEye,
 } from '@tabler/icons-react'
+import { VersionHistorySheet } from './version-history-sheet'
 
 interface Question {
   id: string
   text: string
   type: 'multiple_choice' | 'true_false' | 'free_text'
   options: { id: string; text: string; is_correct: boolean }[]
+  points?: number
+  grading_rubric?: string
+  ai_grading_criteria?: string
+  expected_keywords?: string[]
 }
 
 interface ExamBuilderProps {
@@ -75,6 +80,10 @@ export function ExamBuilder({
               { id: `opt-2`, text: '', is_correct: false },
             ]
           : [],
+      points: 10, // Default points
+      grading_rubric: '',
+      ai_grading_criteria: '',
+      expected_keywords: [],
     }
     setQuestions([...questions, newQuestion])
   }
@@ -200,6 +209,10 @@ export function ExamBuilder({
             exam_id: examId,
             question_text: question.text,
             question_type: question.type,
+            points: question.points || 10,
+            grading_rubric: question.grading_rubric || null,
+            ai_grading_criteria: question.ai_grading_criteria || null,
+            expected_keywords: question.expected_keywords || null,
           })
           .select('question_id')
           .single()
@@ -240,9 +253,19 @@ export function ExamBuilder({
             Back to {courseTitle}
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">
-          {initialData ? 'Edit Exam' : 'Create New Exam'}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            {initialData ? 'Edit Exam' : 'Create New Exam'}
+          </h1>
+          {initialData && (
+            <VersionHistorySheet
+              contentType="exam"
+              contentId={initialData.exam_id}
+              currentSnapshot={{ ...formData, questions }}
+              onRestore={() => router.refresh()}
+            />
+          )}
+        </div>
       </div>
 
       {error && (
@@ -394,6 +417,20 @@ export function ExamBuilder({
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Points</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={question.points || 10}
+                    onChange={(e) =>
+                      updateQuestion(question.id, { points: parseInt(e.target.value) || 10 })
+                    }
+                    placeholder="10"
+                    className="w-32"
+                  />
+                </div>
+
                 {question.type === 'multiple_choice' && (
                   <div className="space-y-3">
                     <Label>Answer Options</Label>
@@ -453,10 +490,61 @@ export function ExamBuilder({
                 )}
 
                 {question.type === 'free_text' && (
-                  <div className="rounded-lg border bg-muted/50 p-4">
-                    <p className="text-sm text-muted-foreground">
-                      Students will write a free-form answer. This will require AI grading.
-                    </p>
+                  <div className="space-y-4">
+                    <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 p-4">
+                      <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                        This question will be graded automatically by AI. Configure grading criteria below.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Grading Rubric (Optional)</Label>
+                      <Textarea
+                        value={question.grading_rubric || ''}
+                        onChange={(e) =>
+                          updateQuestion(question.id, { grading_rubric: e.target.value })
+                        }
+                        placeholder="Describe what makes a complete answer..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        General guidelines for grading this answer
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>AI Grading Criteria (Optional)</Label>
+                      <Textarea
+                        value={question.ai_grading_criteria || ''}
+                        onChange={(e) =>
+                          updateQuestion(question.id, { ai_grading_criteria: e.target.value })
+                        }
+                        placeholder="Check for specific concepts or reasoning..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Specific criteria for AI to evaluate
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Expected Keywords (Optional)</Label>
+                      <Input
+                        value={(question.expected_keywords || []).join(', ')}
+                        onChange={(e) =>
+                          updateQuestion(question.id, {
+                            expected_keywords: e.target.value
+                              .split(',')
+                              .map((k) => k.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        placeholder="keyword1, keyword2, keyword3"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Comma-separated list of key terms expected in the answer
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>

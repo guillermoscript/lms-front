@@ -46,6 +46,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     description: initialData?.description || '',
     thumbnail_url: initialData?.thumbnail_url || '',
     category_id: initialData?.category_id?.toString() || '',
+    status: initialData?.status || 'draft',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +70,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         thumbnail_url: formData.thumbnail_url || null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         author_id: user.id,
-        status: 'draft' as const,
+        status: formData.status,
       }
 
       if (initialData) {
@@ -173,6 +174,30 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value: any) =>
+                setFormData({ ...formData, status: value })
+              }
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {formData.status === 'draft' && 'Only you can see this course.'}
+              {formData.status === 'published' && 'Course is visible to students and ready for enrollment.'}
+              {formData.status === 'archived' && 'Course is hidden from catalog but existing students retain access.'}
+            </p>
           </div>
 
           <div className="flex gap-3 pt-4">

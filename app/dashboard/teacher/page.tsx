@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   IconPlus,
   IconBook,
+  IconTemplate,
   IconUsers,
   IconFileText,
   IconEdit,
@@ -110,6 +111,12 @@ export default async function TeacherDashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Link href="/dashboard/teacher/templates">
+            <Button variant="outline" className="transition-all active:scale-95">
+              <IconTemplate className="mr-2 h-4 w-4" />
+              Prompt Templates
+            </Button>
+          </Link>
           <Link href="/dashboard/teacher/courses/new">
             <Button className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95">
               <IconPlus className="mr-2 h-4 w-4" />
