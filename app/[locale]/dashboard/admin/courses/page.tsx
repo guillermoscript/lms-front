@@ -9,8 +9,10 @@ import {
   IconBook,
 } from '@tabler/icons-react'
 import { CoursesTable } from '@/components/admin/courses-table'
+import { getTranslations } from 'next-intl/server'
 
 export default async function AdminCoursesPage() {
+  const t = await getTranslations('dashboard.admin.courses')
   const supabase = await createClient()
 
   const {
@@ -67,14 +69,14 @@ export default async function AdminCoursesPage() {
           <Link href="/dashboard/admin">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('backToDashboard')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Course Management</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
               <p className="mt-1 text-muted-foreground">
-                View and manage all platform courses
+                {t('description')}
               </p>
             </div>
           </div>
@@ -88,7 +90,7 @@ export default async function AdminCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Courses</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{courses?.length || 0}</p>
                 </div>
                 <IconBook className="h-10 w-10 text-blue-500" />
@@ -100,7 +102,7 @@ export default async function AdminCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Published</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.published')}</p>
                   <p className="mt-2 text-3xl font-bold">{publishedCount}</p>
                 </div>
                 <IconBook className="h-10 w-10 text-green-500" />
@@ -112,7 +114,7 @@ export default async function AdminCoursesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Drafts</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.drafts')}</p>
                   <p className="mt-2 text-3xl font-bold">{draftCount}</p>
                 </div>
                 <IconBook className="h-10 w-10 text-yellow-500" />
@@ -124,7 +126,7 @@ export default async function AdminCoursesPage() {
         {/* Courses Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Courses</CardTitle>
+            <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <CoursesTable

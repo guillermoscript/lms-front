@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   LineChart,
@@ -26,6 +28,7 @@ interface UserGrowthChartProps {
 }
 
 export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartProps) {
+  const t = useTranslations('dashboard.admin.analytics.userGrowth')
   const newUsersInPeriod = data.reduce((sum, d) => sum + d.newUsers, 0)
 
   return (
@@ -35,17 +38,17 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
           <div>
             <CardTitle className="flex items-center gap-2">
               <IconUserPlus className="h-5 w-5 text-blue-500" />
-              User Growth
+              {t('title')}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              User registration trends for the {period}
+              {t('description', { period })}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Users</p>
+            <p className="text-sm text-muted-foreground">{t('total')}</p>
             <p className="text-2xl font-bold text-blue-600">{totalUsers}</p>
             <p className="text-xs text-muted-foreground">
-              +{newUsersInPeriod} new in period
+              {t('newInPeriod', { count: newUsersInPeriod })}
             </p>
           </div>
         </div>
@@ -78,7 +81,7 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
                 dataKey="newUsers"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                name="New Users"
+                name={t('newUsersTooltip')}
                 dot={{ fill: '#3b82f6', r: 4 }}
                 activeDot={{ r: 6 }}
               />
@@ -87,7 +90,7 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
                 dataKey="totalUsers"
                 stroke="#10b981"
                 strokeWidth={2}
-                name="Total Users"
+                name={t('totalUsersTooltip')}
                 dot={{ fill: '#10b981', r: 4 }}
                 activeDot={{ r: 6 }}
               />
@@ -95,7 +98,7 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
           </ResponsiveContainer>
         ) : (
           <div className="flex h-[300px] items-center justify-center">
-            <p className="text-muted-foreground">No user growth data available</p>
+            <p className="text-muted-foreground">{t('noData')}</p>
           </div>
         )}
       </CardContent>

@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,10 +25,14 @@ interface SearchParams {
 }
 
 export default async function SubscriptionsPage({
+  params: { locale },
   searchParams,
 }: {
+  params: { locale: string }
   searchParams: SearchParams
 }) {
+  const t = await getTranslations('dashboard.admin.subscriptions')
+  const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
   const {
@@ -112,25 +119,25 @@ export default async function SubscriptionsPage({
 
   const stats = [
     {
-      title: 'Active Subscriptions',
+      title: t('stats.active'),
       value: activeCount,
       icon: IconCrown,
       color: 'text-green-500',
     },
     {
-      title: 'Cancelled',
+      title: t('stats.cancelled'),
       value: canceledCount,
       icon: IconRefresh,
       color: 'text-orange-500',
     },
     {
-      title: 'Expired',
+      title: t('stats.expired'),
       value: expiredCount,
       icon: IconCalendar,
       color: 'text-red-500',
     },
     {
-      title: 'Monthly Revenue',
+      title: t('stats.revenue'),
       value: `$${(totalRevenue || 0).toFixed(2)}`,
       icon: IconCurrencyDollar,
       color: 'text-blue-500',
@@ -143,10 +150,10 @@ export default async function SubscriptionsPage({
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-3xl font-bold">
           <IconCrown className="h-8 w-8" />
-          Subscription Management
+          {t('title')}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Manage all active and historical subscriptions
+          {t('description')}
         </p>
       </div>
 
@@ -177,7 +184,7 @@ export default async function SubscriptionsPage({
                 <Input
                   type="search"
                   name="search"
-                  placeholder="Search by user name, email, or ID..."
+                  placeholder={t('filters.search')}
                   defaultValue={search}
                   className="pl-10"
                 />
@@ -192,7 +199,7 @@ export default async function SubscriptionsPage({
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  All
+                  {t('filters.all')}
                 </Button>
               </Link>
               <Link href="?status=active">
@@ -200,7 +207,7 @@ export default async function SubscriptionsPage({
                   variant={statusFilter === 'active' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  Active
+                  {t('filters.active')}
                 </Button>
               </Link>
               <Link href="?status=cancelled">
@@ -208,7 +215,7 @@ export default async function SubscriptionsPage({
                   variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  Cancelled
+                  {t('filters.cancelled')}
                 </Button>
               </Link>
               <Link href="?status=expired">
@@ -216,7 +223,7 @@ export default async function SubscriptionsPage({
                   variant={statusFilter === 'expired' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  Expired
+                  {t('filters.expired')}
                 </Button>
               </Link>
             </div>
@@ -227,7 +234,7 @@ export default async function SubscriptionsPage({
       {/* Subscriptions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Subscriptions ({filteredSubscriptions?.length || 0})</CardTitle>
+          <CardTitle>{t('table.title', { count: filteredSubscriptions?.length || 0 })}</CardTitle>
         </CardHeader>
         <CardContent>
           {filteredSubscriptions && filteredSubscriptions.length > 0 ? (
@@ -257,7 +264,7 @@ export default async function SubscriptionsPage({
                                 href={`/dashboard/admin/users/${subscription.user_id}`}
                                 className="font-medium hover:underline"
                               >
-                                {profile?.full_name || 'Unknown User'}
+                                {profile?.full_name || t('table.unknownUser')}
                               </Link>
                               <Badge
                                 variant={
@@ -268,11 +275,11 @@ export default async function SubscriptionsPage({
                                       : 'destructive'
                                 }
                               >
-                                {subscription.subscription_status}
+                                {t(`status.${subscription.subscription_status}`)}
                               </Badge>
                               {subscription.cancel_at_period_end && (
                                 <Badge variant="outline">
-                                  Cancels at period end
+                                  {t('table.cancelsAtEnd')}
                                 </Badge>
                               )}
                             </div>
@@ -282,7 +289,7 @@ export default async function SubscriptionsPage({
                             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <IconCrown className="h-4 w-4" />
-                                {plan?.plan_name || 'Unknown Plan'}
+                                {plan?.plan_name || t('table.unknownPlan')}
                               </span>
                               <span className="flex items-center gap-1">
                                 <IconCurrencyDollar className="h-4 w-4" />
@@ -291,16 +298,14 @@ export default async function SubscriptionsPage({
                               </span>
                               <span className="flex items-center gap-1">
                                 <IconCalendar className="h-4 w-4" />
-                                Started:{' '}
-                                {new Date(subscription.start_date).toLocaleDateString()}
+                                {t('table.started')}{' '}
+                                {format(new Date(subscription.start_date), 'MMM d, yyyy', { locale: dateLocale })}
                               </span>
                               {subscription.current_period_end && (
                                 <span className="flex items-center gap-1">
                                   <IconCalendar className="h-4 w-4" />
-                                  {isCancelled ? 'Ended' : 'Renews'}:{' '}
-                                  {new Date(
-                                    subscription.current_period_end
-                                  ).toLocaleDateString()}
+                                  {isCancelled ? t('table.ended') : t('table.renews')}:{' '}
+                                  {format(new Date(subscription.current_period_end), 'MMM d, yyyy', { locale: dateLocale })}
                                 </span>
                               )}
                             </div>
@@ -327,8 +332,8 @@ export default async function SubscriptionsPage({
               <IconCrown className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">
                 {search || statusFilter !== 'all'
-                  ? 'No subscriptions found matching your filters'
-                  : 'No subscriptions yet'}
+                  ? t('table.noFilteredSubscriptions')
+                  : t('table.noSubscriptions')}
               </p>
             </div>
           )}

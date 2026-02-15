@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { IconArrowLeft, IconFolderOpen } from '@tabler/icons-react'
 import { CategoriesTable } from '@/components/admin/categories-table'
+import { getTranslations } from 'next-intl/server'
 
 export default async function AdminCategoriesPage() {
+  const t = await getTranslations('dashboard.admin.categories')
   const supabase = await createClient()
 
   const {
@@ -35,14 +37,14 @@ export default async function AdminCategoriesPage() {
           <Link href="/dashboard/admin">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('backToDashboard')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Course Categories</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
               <p className="mt-1 text-muted-foreground">
-                Manage course categories and organization
+                {t('description')}
               </p>
             </div>
           </div>
@@ -56,7 +58,7 @@ export default async function AdminCategoriesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Categories</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{categories?.length || 0}</p>
                 </div>
                 <IconFolderOpen className="h-10 w-10 text-blue-500" />
@@ -68,7 +70,7 @@ export default async function AdminCategoriesPage() {
         {/* Categories Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Categories</CardTitle>
+            <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <CategoriesTable categories={categories || []} />

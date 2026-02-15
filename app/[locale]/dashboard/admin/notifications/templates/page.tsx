@@ -1,5 +1,6 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getNotificationTemplates } from '@/app/actions/admin/notification-templates'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -8,6 +9,7 @@ import { CreateTemplateButton } from '@/components/admin/create-template-button'
 import { TemplatesClient } from '@/components/admin/templates-client'
 
 export default async function NotificationTemplatesPage() {
+  const t = await getTranslations('dashboard.admin.notifications.templates')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -26,16 +28,16 @@ export default async function NotificationTemplatesPage() {
           <Link href="/dashboard/admin/notifications">
             <Button variant="outline" size="sm">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t('back')}
             </Button>
           </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <IconTemplate className="h-8 w-8" />
-              Notification Templates
+              {t('title')}
             </h1>
             <p className="text-muted-foreground mt-2">
-              Create reusable templates with dynamic variables for common notifications
+              {t('description')}
             </p>
           </div>
         </div>

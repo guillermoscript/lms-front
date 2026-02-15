@@ -8,18 +8,25 @@ import { UserGrowthChart } from '@/components/admin/user-growth-chart'
 import { EngagementMetrics } from '@/components/admin/engagement-metrics'
 import { CoursePopularityChart } from '@/components/admin/course-popularity-chart'
 import { ExportButton } from '@/components/admin/export-button'
-import { IconChartBar, IconDownload } from '@tabler/icons-react'
+import { IconChartBar, IconDownload, IconCalendar } from '@tabler/icons-react'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 
 interface SearchParams {
   period?: string
 }
 
 export default async function AnalyticsPage({
+  params: { locale },
   searchParams,
 }: {
+  params: { locale: string }
   searchParams: SearchParams
 }) {
+  const t = await getTranslations('dashboard.admin.analytics')
+  const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
   const {
@@ -54,10 +61,7 @@ export default async function AnalyticsPage({
   let totalRevenue = 0
 
   transactions?.forEach((t) => {
-    const date = new Date(t.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
+    const date = format(new Date(t.created_at), 'MMM d', { locale: dateLocale })
     const existing = revenueByDate.get(date) || { revenue: 0, transactions: 0 }
     revenueByDate.set(date, {
       revenue: existing.revenue + (t.amount || 0),
@@ -88,10 +92,7 @@ export default async function AnalyticsPage({
   let runningTotal = (totalUsers || 0) - (profiles?.length || 0)
 
   profiles?.forEach((p) => {
-    const date = new Date(p.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
+    const date = format(new Date(p.created_at), 'MMM d', { locale: dateLocale })
     const existing = usersByDate.get(date) || 0
     usersByDate.set(date, existing + 1)
   })
@@ -248,14 +249,7 @@ export default async function AnalyticsPage({
 
   coursePopularityData.sort((a, b) => b.enrollments - a.enrollments)
 
-  const periodLabels: Record<string, string> = {
-    '7': 'last 7 days',
-    '30': 'last 30 days',
-    '90': 'last 90 days',
-    '365': 'last year',
-  }
-
-  const periodLabel = periodLabels[period] || `last ${period} days`
+  const periodLabel = t(`periodLabels.${period === '7' ? 'last7days' : period === '30' ? 'last30days' : period === '90' ? 'last90days' : period === '365' ? 'lastYear' : 'generic'}`, { days: period })
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -264,10 +258,10 @@ export default async function AnalyticsPage({
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             <IconChartBar className="h-8 w-8" />
-            Analytics & Reports
+            {t('title')}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Platform performance and engagement insights
+            {t('description')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -291,22 +285,22 @@ export default async function AnalyticsPage({
           <div className="flex gap-2">
             <Link href="?period=7">
               <Button variant={period === '7' ? 'default' : 'outline'} size="sm">
-                7 Days
+                {t('periods.7days')}
               </Button>
             </Link>
             <Link href="?period=30">
               <Button variant={period === '30' ? 'default' : 'outline'} size="sm">
-                30 Days
+                {t('periods.30days')}
               </Button>
             </Link>
             <Link href="?period=90">
               <Button variant={period === '90' ? 'default' : 'outline'} size="sm">
-                90 Days
+                {t('periods.90days')}
               </Button>
             </Link>
             <Link href="?period=365">
               <Button variant={period === '365' ? 'default' : 'outline'} size="sm">
-                1 Year
+                {t('periods.1year')}
               </Button>
             </Link>
           </div>

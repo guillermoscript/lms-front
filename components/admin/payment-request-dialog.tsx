@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -68,6 +69,7 @@ export function PaymentRequestDialog({
   open,
   onOpenChange
 }: PaymentRequestDialogProps) {
+  const t = useTranslations('dashboard.admin.paymentRequests')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -89,18 +91,18 @@ export function PaymentRequestDialog({
     })
 
     if (result.success) {
-      toast.success('Payment request updated successfully')
+      toast.success(t('dialog.toasts.updateSuccess'))
       router.refresh()
       onOpenChange(false)
     } else {
-      toast.error(result.error || 'Failed to update request')
+      toast.error(result.error || t('dialog.toasts.updateError'))
     }
 
     setLoading(false)
   }
 
   const handleEnroll = async () => {
-    if (!confirm('Are you sure you want to enroll this student? This will grant them access to the courses.')) {
+    if (!confirm(t('dialog.confirmations.enroll'))) {
       return
     }
 
@@ -109,11 +111,11 @@ export function PaymentRequestDialog({
     const result = await confirmPaymentAndEnroll(request.request_id)
 
     if (result.success) {
-      toast.success('Student enrolled successfully!')
+      toast.success(t('dialog.toasts.enrollSuccess'))
       router.refresh()
       onOpenChange(false)
     } else {
-      toast.error(result.error || 'Failed to enroll student')
+      toast.error(result.error || t('dialog.toasts.enrollError'))
     }
 
     setLoading(false)
@@ -125,10 +127,10 @@ export function PaymentRequestDialog({
     const result = await generateInvoice(request.request_id)
 
     if (result.success && result.data) {
-      toast.success(`Invoice ${result.data.invoiceNumber} generated!`)
+      toast.success(t('dialog.toasts.invoiceSuccess', { number: result.data.invoiceNumber }))
       router.refresh()
     } else {
-      toast.error('error' in result ? result.error : 'Failed to generate invoice')
+      toast.error('error' in result ? result.error : t('dialog.toasts.invoiceError'))
     }
 
     setLoading(false)
@@ -140,46 +142,46 @@ export function PaymentRequestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Payment Request #{request.request_id}</DialogTitle>
+          <DialogTitle>{t('dialog.title', { id: request.request_id })}</DialogTitle>
           <DialogDescription>
-            Manage payment request from {request.user.full_name}
+            {t('dialog.description', { name: request.user.full_name })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Request Details */}
           <div className="space-y-3">
-            <h3 className="font-semibold">Request Details</h3>
+            <h3 className="font-semibold">{t('dialog.details.title')}</h3>
             <div className="grid gap-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Student:</span>
+                <span className="text-muted-foreground">{t('dialog.details.student')}:</span>
                 <span className="font-medium">{request.user.full_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Email:</span>
+                <span className="text-muted-foreground">{t('dialog.details.email')}:</span>
                 <span>{request.user.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Phone:</span>
-                <span>{request.contact_phone ?? 'Not provided'}</span>
+                <span className="text-muted-foreground">{t('dialog.details.phone')}:</span>
+                <span>{request.contact_phone ?? t('dialog.details.notProvided')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Product:</span>
+                <span className="text-muted-foreground">{t('dialog.details.product')}:</span>
                 <span className="font-medium">{request.product.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount:</span>
+                <span className="text-muted-foreground">{t('dialog.details.amount')}:</span>
                 <span className="font-semibold">
                   {currencySymbol}{request.payment_amount.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Request Date:</span>
+                <span className="text-muted-foreground">{t('dialog.details.date')}:</span>
                 <span>{format(new Date(request.created_at), 'PPp')}</span>
               </div>
               {request.invoice_number && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Invoice:</span>
+                  <span className="text-muted-foreground">{t('dialog.details.invoice')}:</span>
                   <span className="font-mono text-xs">{request.invoice_number}</span>
                 </div>
               )}
@@ -187,7 +189,7 @@ export function PaymentRequestDialog({
 
             {request.message && (
               <div className="mt-3 p-3 rounded-lg bg-muted">
-                <p className="text-sm font-medium mb-1">Student Message:</p>
+                <p className="text-sm font-medium mb-1">{t('dialog.details.messageTitle')}:</p>
                 <p className="text-sm text-muted-foreground">{request.message}</p>
               </div>
             )}
@@ -198,7 +200,7 @@ export function PaymentRequestDialog({
           {/* Management Form */}
           <form onSubmit={handleUpdate} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">{t('dialog.form.status')}</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value: string | null) => setFormData({ ...formData, status: value || 'pending' })}
@@ -208,48 +210,48 @@ export function PaymentRequestDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="payment_received">Payment Received</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                  <SelectItem value="contacted">{t('status.contacted')}</SelectItem>
+                  <SelectItem value="payment_received">{t('status.payment_received')}</SelectItem>
+                  <SelectItem value="completed">{t('status.completed')}</SelectItem>
+                  <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Label htmlFor="paymentMethod">{t('dialog.form.method')}</Label>
               <Input
                 id="paymentMethod"
                 value={formData.paymentMethod}
                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                placeholder="e.g., Bank Transfer, Wire, Cash"
+                placeholder={t('dialog.form.methodPlaceholder')}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="paymentInstructions">Payment Instructions</Label>
+              <Label htmlFor="paymentInstructions">{t('dialog.form.instructions')}</Label>
               <Textarea
                 id="paymentInstructions"
                 value={formData.paymentInstructions}
                 onChange={(e) => setFormData({ ...formData, paymentInstructions: e.target.value })}
-                placeholder="Enter payment instructions to send to the student..."
+                placeholder={t('dialog.form.instructionsPlaceholder')}
                 rows={4}
                 disabled={loading}
               />
               <p className="text-xs text-muted-foreground">
-                Include bank details, wire instructions, or payment address
+                {t('dialog.form.instructionsDesc')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="adminNotes">Internal Notes</Label>
+              <Label htmlFor="adminNotes">{t('dialog.form.internalNotes')}</Label>
               <Textarea
                 id="adminNotes"
                 value={formData.adminNotes}
                 onChange={(e) => setFormData({ ...formData, adminNotes: e.target.value })}
-                placeholder="Internal notes (not visible to student)..."
+                placeholder={t('dialog.form.internalNotesPlaceholder')}
                 rows={2}
                 disabled={loading}
               />
@@ -257,7 +259,7 @@ export function PaymentRequestDialog({
 
             <div className="flex gap-2">
               <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Updating...' : 'Update Request'}
+                {loading ? t('dialog.form.updatingButton') : t('dialog.form.updateButton')}
               </Button>
               <Button
                 type="button"
@@ -265,7 +267,7 @@ export function PaymentRequestDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
               >
-                Cancel
+                {t('dialog.form.cancel')}
               </Button>
             </div>
           </form>
@@ -274,7 +276,7 @@ export function PaymentRequestDialog({
 
           {/* Quick Actions */}
           <div className="space-y-3">
-            <h3 className="font-semibold">Quick Actions</h3>
+            <h3 className="font-semibold">{t('dialog.actions.title')}</h3>
             <div className="grid gap-2">
               {!request.invoice_number && (
                 <Button
@@ -283,7 +285,7 @@ export function PaymentRequestDialog({
                   disabled={loading}
                   className="w-full"
                 >
-                  Generate Invoice
+                  {t('dialog.actions.generateInvoice')}
                 </Button>
               )}
 
@@ -293,7 +295,7 @@ export function PaymentRequestDialog({
                   disabled={loading}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  Confirm Payment & Enroll Student
+                  {t('dialog.actions.confirmEnroll')}
                 </Button>
               )}
 
@@ -307,14 +309,14 @@ export function PaymentRequestDialog({
                       status: 'contacted'
                     })
                     if (result.success) {
-                      toast.success('Marked as contacted')
+                      toast.success(t('dialog.toasts.contactedSuccess'))
                       router.refresh()
                     }
                   }}
                   disabled={loading}
                   className="w-full"
                 >
-                  Mark as Contacted
+                  {t('dialog.actions.markContacted')}
                 </Button>
               )}
             </div>

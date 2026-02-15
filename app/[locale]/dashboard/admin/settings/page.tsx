@@ -1,5 +1,6 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +10,7 @@ import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 
 export default async function SettingsPage() {
+  const t = await getTranslations('dashboard.admin.settings')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -17,15 +19,15 @@ export default async function SettingsPage() {
 
   // Fetch all settings grouped by category
   const result = await getAllSettingsByCategory()
-  
+
   if (!result.success || !result.data) {
     return (
       <div className="p-8">
         <Card>
           <CardHeader>
-            <CardTitle>Error Loading Settings</CardTitle>
+            <CardTitle>{t('errorTitle')}</CardTitle>
             <CardDescription>
-              {result.error || 'Failed to load platform settings'}
+              {result.error || t('errorDesc')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -39,28 +41,28 @@ export default async function SettingsPage() {
     <div className="space-y-6 p-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Platform Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Configure your platform settings, email, payments, and enrollment policies.
+          {t('description')}
         </p>
       </div>
 
       {/* Tabbed Settings Interface */}
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="payment">Payment</TabsTrigger>
-          <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
+          <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
+          <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
+          <TabsTrigger value="payment">{t('tabs.payment')}</TabsTrigger>
+          <TabsTrigger value="enrollment">{t('tabs.enrollment')}</TabsTrigger>
         </TabsList>
 
         {/* General Settings */}
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
+              <CardTitle>{t('sections.general.title')}</CardTitle>
               <CardDescription>
-                Basic platform information and global configurations
+                {t('sections.general.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -73,9 +75,9 @@ export default async function SettingsPage() {
         <TabsContent value="email" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Email Settings</CardTitle>
+              <CardTitle>{t('sections.email.title')}</CardTitle>
               <CardDescription>
-                Configure SMTP server and email notification preferences
+                {t('sections.email.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -88,9 +90,9 @@ export default async function SettingsPage() {
         <TabsContent value="payment" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Payment Settings</CardTitle>
+              <CardTitle>{t('sections.payment.title')}</CardTitle>
               <CardDescription>
-                Manage payment processors, currency, and transaction settings
+                {t('sections.payment.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -103,9 +105,9 @@ export default async function SettingsPage() {
         <TabsContent value="enrollment" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Enrollment Settings</CardTitle>
+              <CardTitle>{t('sections.enrollment.title')}</CardTitle>
               <CardDescription>
-                Configure course enrollment rules and student access policies
+                {t('sections.enrollment.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>

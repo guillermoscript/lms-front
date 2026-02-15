@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { updateUserRoles } from '@/app/actions/admin/users'
+import { useTranslations } from 'next-intl'
 
 interface RoleAssignmentDialogProps {
   userId: string
@@ -23,12 +24,6 @@ interface RoleAssignmentDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-const AVAILABLE_ROLES = [
-  { value: 'admin', label: 'Admin', description: 'Full system access' },
-  { value: 'teacher', label: 'Teacher', description: 'Can create and manage courses' },
-  { value: 'student', label: 'Student', description: 'Can enroll in and complete courses' }
-] as const
-
 export function RoleAssignmentDialog({
   userId,
   userName,
@@ -36,8 +31,16 @@ export function RoleAssignmentDialog({
   open,
   onOpenChange
 }: RoleAssignmentDialogProps) {
+  const t = useTranslations('dashboard.admin.users.actions.dialogs.roles')
+  const tt = useTranslations('dashboard.admin.users.actions.toasts')
   const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles)
   const [loading, setLoading] = useState(false)
+
+  const roles = [
+    { value: 'admin', label: t('admin.label'), description: t('admin.description') },
+    { value: 'teacher', label: t('teacher.label'), description: t('teacher.description') },
+    { value: 'student', label: t('student.label'), description: t('student.description') }
+  ] as const
 
   const handleRoleToggle = (role: string) => {
     setSelectedRoles(prev =>
@@ -56,10 +59,10 @@ export function RoleAssignmentDialog({
     )
 
     if (result.success) {
-      toast.success(`Roles updated for ${userName}`)
+      toast.success(tt('rolesSuccess', { name: userName }))
       onOpenChange(false)
     } else {
-      toast.error(result.error || 'Failed to update roles')
+      toast.error(result.error || tt('rolesError'))
     }
 
     setLoading(false)
@@ -69,14 +72,14 @@ export function RoleAssignmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Manage Roles</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            Update roles for {userName}. Users can have multiple roles.
+            {t('description', { name: userName })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {AVAILABLE_ROLES.map(role => (
+          {roles.map(role => (
             <div key={role.value} className="flex items-start space-x-3">
               <Checkbox
                 id={`role-${role.value}`}
@@ -105,10 +108,10 @@ export function RoleAssignmentDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            Cancel
+            {useTranslations('dashboard.admin.users.actions.dialogs')('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Changes'}
+            {loading ? t('saving') : t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

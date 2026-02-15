@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,11 +18,14 @@ import {
 import { UserActions } from '@/components/admin/user-actions'
 
 interface PageProps {
-  params: Promise<{ userId: string }>
+  params: Promise<{ userId: string; locale: string }>
 }
 
 export default async function UserDetailPage({ params }: PageProps) {
-  const { userId } = await params
+  const { userId, locale } = await params
+  const t = await getTranslations('dashboard.admin.users.details')
+  const tu = await getTranslations('dashboard.admin.users.table')
+  const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
   const {
@@ -99,7 +105,7 @@ export default async function UserDetailPage({ params }: PageProps) {
           <Link href="/dashboard/admin/users">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Users
+              {t('back')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
@@ -109,7 +115,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <h1 className="text-2xl font-bold md:text-3xl">
-                  {profile.full_name || 'Unknown User'}
+                  {profile.full_name || t('unknown')}
                 </h1>
                 <p className="mt-1 text-muted-foreground">{profile.email}</p>
               </div>
@@ -131,13 +137,13 @@ export default async function UserDetailPage({ params }: PageProps) {
             {/* Profile Details */}
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle>{t('profile')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
                   <IconMail className="mt-1 h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Email</p>
+                    <p className="text-sm font-medium">{t('email')}</p>
                     <p className="text-sm text-muted-foreground">{profile.email}</p>
                   </div>
                 </div>
@@ -145,13 +151,9 @@ export default async function UserDetailPage({ params }: PageProps) {
                 <div className="flex items-start gap-3">
                   <IconCalendar className="mt-1 h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Joined</p>
+                    <p className="text-sm font-medium">{t('joined')}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(profile.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {format(new Date(profile.created_at), 'MMMM d, yyyy', { locale: dateLocale })}
                     </p>
                   </div>
                 </div>
@@ -159,7 +161,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                 <div className="flex items-start gap-3">
                   <IconUser className="mt-1 h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">User ID</p>
+                    <p className="text-sm font-medium">{t('userId')}</p>
                     <p className="text-sm text-muted-foreground font-mono">
                       {userId.slice(0, 20)}...
                     </p>
@@ -168,7 +170,7 @@ export default async function UserDetailPage({ params }: PageProps) {
 
                 {profile.bio && (
                   <div>
-                    <p className="text-sm font-medium mb-1">Bio</p>
+                    <p className="text-sm font-medium mb-1">{t('bio')}</p>
                     <p className="text-sm text-muted-foreground">{profile.bio}</p>
                   </div>
                 )}
@@ -178,7 +180,7 @@ export default async function UserDetailPage({ params }: PageProps) {
             {/* Roles */}
             <Card>
               <CardHeader>
-                <CardTitle>Roles</CardTitle>
+                <CardTitle>{t('roles')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
@@ -194,11 +196,11 @@ export default async function UserDetailPage({ params }: PageProps) {
                               : 'outline'
                         }
                       >
-                        {role}
+                        {tu(`roles.${role}`)}
                       </Badge>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No roles assigned</p>
+                    <p className="text-sm text-muted-foreground">{t('rolesPlaceholder')}</p>
                   )}
                 </div>
               </CardContent>
@@ -207,23 +209,23 @@ export default async function UserDetailPage({ params }: PageProps) {
             {/* Status */}
             <Card>
               <CardHeader>
-                <CardTitle>Account Status</CardTitle>
+                <CardTitle>{t('status')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isDeactivated ? (
                   <div>
-                    <Badge variant="destructive" className="mb-2">Deactivated</Badge>
+                    <Badge variant="destructive" className="mb-2">{t('statusDeactivated')}</Badge>
                     <p className="text-sm text-muted-foreground">
-                      Deactivated on {new Date(profile.deactivated_at).toLocaleDateString()}
+                      {t('statusDeactivatedDesc', { date: format(new Date(profile.deactivated_at!), 'P', { locale: dateLocale }) })}
                     </p>
                   </div>
                 ) : (
                   <div>
                     <Badge variant="outline" className="mb-2 bg-green-50 text-green-700 border-green-200">
-                      Active
+                      {t('statusActive')}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
-                      Account is active and in good standing
+                      {t('statusActiveDesc')}
                     </p>
                   </div>
                 )}
@@ -238,7 +240,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <IconBook className="h-5 w-5" />
-                  Enrollments ({enrollments?.length || 0})
+                  {t('enrollments', { count: enrollments?.length || 0 })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -252,20 +254,20 @@ export default async function UserDetailPage({ params }: PageProps) {
                         <div>
                           <p className="font-medium">{enrollment.course?.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            Enrolled {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                            {t('enrolled', { date: format(new Date(enrollment.enrolled_at), 'P', { locale: dateLocale }) })}
                           </p>
                         </div>
                         <Badge
                           variant={enrollment.status === 'active' ? 'default' : 'secondary'}
                         >
-                          {enrollment.status}
+                          {tu(`status.${enrollment.status}`) || enrollment.status}
                         </Badge>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground py-8">
-                    No enrollments yet
+                    {t('noEnrollments')}
                   </p>
                 )}
               </CardContent>
@@ -274,7 +276,7 @@ export default async function UserDetailPage({ params }: PageProps) {
             {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle>{t('recentActivity')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {recentActivity && recentActivity.length > 0 ? (
@@ -284,13 +286,13 @@ export default async function UserDetailPage({ params }: PageProps) {
                         <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
                         <div className="flex-1">
                           <p className="font-medium">
-                            Completed: {activity.lesson?.title}
+                            {t('completed', { title: activity.lesson?.title })}
                           </p>
                           <p className="text-muted-foreground">
                             {activity.lesson?.course?.title}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(activity.completed_at).toLocaleDateString()}
+                            {format(new Date(activity.completed_at), 'PP', { locale: dateLocale })}
                           </p>
                         </div>
                       </div>
@@ -298,7 +300,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                   </div>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground py-8">
-                    No recent activity
+                    {t('noActivity')}
                   </p>
                 )}
               </CardContent>
@@ -309,7 +311,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <IconCreditCard className="h-5 w-5" />
-                  Recent Transactions
+                  {t('recentTransactions')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -322,29 +324,29 @@ export default async function UserDetailPage({ params }: PageProps) {
                       >
                         <div>
                           <p className="font-medium">
-                            ${transaction.amount} {transaction.currency?.toUpperCase()}
+                            {new Intl.NumberFormat(locale, { style: 'currency', currency: transaction.currency?.toUpperCase() || 'USD' }).format(transaction.amount)}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(transaction.created_at).toLocaleDateString()}
+                            {format(new Date(transaction.created_at), 'P', { locale: dateLocale })}
                           </p>
                         </div>
                         <Badge
                           variant={
-                            transaction.status === 'completed'
+                            transaction.status === 'completed' || transaction.status === 'successful'
                               ? 'default'
                               : transaction.status === 'pending'
                                 ? 'secondary'
                                 : 'destructive'
                           }
                         >
-                          {transaction.status}
+                          {tu(`status.${transaction.status}`) || transaction.status}
                         </Badge>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-center text-sm text-muted-foreground py-8">
-                    No transactions yet
+                    {t('noTransactions')}
                   </p>
                 )}
               </CardContent>

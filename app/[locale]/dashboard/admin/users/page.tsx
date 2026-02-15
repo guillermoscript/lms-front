@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -12,6 +12,7 @@ import {
 import { UsersTable } from '@/components/admin/users-table'
 
 export default async function AdminUsersPage() {
+  const t = await getTranslations('dashboard.admin.users')
   const supabase = await createClient()
 
   const {
@@ -58,14 +59,14 @@ export default async function AdminUsersPage() {
           <Link href="/dashboard/admin">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('backToDashboard')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">User Management</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
               <p className="mt-1 text-muted-foreground">
-                View and manage all platform users
+                {t('description')}
               </p>
             </div>
           </div>
@@ -79,7 +80,7 @@ export default async function AdminUsersPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Users</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.totalUsers')}</p>
                   <p className="mt-2 text-3xl font-bold">{profiles?.length || 0}</p>
                 </div>
                 <IconUser className="h-10 w-10 text-blue-500" />
@@ -91,7 +92,7 @@ export default async function AdminUsersPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Teachers</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.teachers')}</p>
                   <p className="mt-2 text-3xl font-bold">
                     {Array.from(rolesMap.values()).filter((roles) =>
                       roles.includes('teacher')
@@ -107,7 +108,7 @@ export default async function AdminUsersPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Students</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.students')}</p>
                   <p className="mt-2 text-3xl font-bold">
                     {Array.from(rolesMap.values()).filter((roles) =>
                       roles.includes('student')
@@ -123,7 +124,7 @@ export default async function AdminUsersPage() {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Users</CardTitle>
+            <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <UsersTable

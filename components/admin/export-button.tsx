@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { Button } from '@/components/ui/button'
 import { IconDownload } from '@tabler/icons-react'
 import {
@@ -33,6 +35,7 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ data, period }: ExportButtonProps) {
+  const t = useTranslations('dashboard.admin.analytics.export')
   const downloadCSV = (content: string, filename: string) => {
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
@@ -110,18 +113,18 @@ export function ExportButton({ data, period }: ExportButtonProps) {
       <DropdownMenuTrigger>
         <Button variant="outline" size="sm">
           <IconDownload className="mr-2 h-4 w-4" />
-          Export
+          {t('button')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={exportAll}>Export All Data</DropdownMenuItem>
-        <DropdownMenuItem onClick={exportSummary}>Export Summary</DropdownMenuItem>
-        <DropdownMenuItem onClick={exportRevenue}>Export Revenue Data</DropdownMenuItem>
+        <DropdownMenuItem onClick={exportAll}>{t('all')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={exportSummary}>{t('summary')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={exportRevenue}>{t('revenue')}</DropdownMenuItem>
         <DropdownMenuItem onClick={exportUserGrowth}>
-          Export User Growth
+          {t('userGrowth')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={exportCoursePopularity}>
-          Export Course Popularity
+          {t('coursePopularity')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -24,31 +26,32 @@ export function EngagementMetrics({
   totalLessonCompletions,
   totalExamSubmissions,
 }: EngagementMetricsProps) {
+  const t = useTranslations('dashboard.admin.analytics.engagement')
   const metrics = [
     {
-      title: 'Total Enrollments',
+      title: t('metrics.enrollments'),
       value: totalEnrollments,
       icon: IconCertificate,
       color: 'text-purple-500',
       bgColor: 'bg-purple-50 dark:bg-purple-950',
     },
     {
-      title: 'Active Students',
+      title: t('metrics.activeStudents'),
       value: activeStudents,
-      subtitle: 'Last 30 days',
+      subtitle: t('metrics.activePeriod'),
       icon: IconUsers,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50 dark:bg-blue-950',
     },
     {
-      title: 'Lesson Completions',
+      title: t('metrics.lessonCompletions'),
       value: totalLessonCompletions,
       icon: IconCheckbox,
       color: 'text-green-500',
       bgColor: 'bg-green-50 dark:bg-green-950',
     },
     {
-      title: 'Exam Submissions',
+      title: t('metrics.examSubmissions'),
       value: totalExamSubmissions,
       icon: IconTrendingUp,
       color: 'text-orange-500',
@@ -59,9 +62,9 @@ export function EngagementMetrics({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Engagement Metrics</CardTitle>
+        <CardTitle>{t('title')}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Platform engagement and activity statistics
+          {t('description')}
         </p>
       </CardHeader>
       <CardContent>
@@ -69,7 +72,7 @@ export function EngagementMetrics({
         <div className="mb-6 rounded-lg border p-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium">
-              Average Course Completion Rate
+              {t('completionRate')}
             </span>
             <span className="text-2xl font-bold text-green-600">
               {averageCompletionRate.toFixed(1)}%
@@ -77,7 +80,7 @@ export function EngagementMetrics({
           </div>
           <Progress value={averageCompletionRate} className="h-2" />
           <p className="mt-2 text-xs text-muted-foreground">
-            Based on lesson completions across all enrolled courses
+            {t('completionRateDesc')}
           </p>
         </div>
 

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import {
   IconArrowLeft,
   IconPlus,
@@ -16,6 +17,7 @@ import {
 import { ProductActions } from '@/components/admin/product-actions'
 
 export default async function AdminProductsPage() {
+  const t = await getTranslations('dashboard.admin.products')
   const supabase = await createClient()
 
   const {
@@ -52,20 +54,20 @@ export default async function AdminProductsPage() {
           <Link href="/dashboard/admin">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('back')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Product Management</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
               <p className="mt-1 text-muted-foreground">
-                Manage products and Stripe integration
+                {t('description')}
               </p>
             </div>
             <Link href="/dashboard/admin/products/new">
               <Button>
                 <IconPlus className="mr-2 h-4 w-4" />
-                Create Product
+                {t('create')}
               </Button>
             </Link>
           </div>
@@ -79,7 +81,7 @@ export default async function AdminProductsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Products</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{products?.length || 0}</p>
                 </div>
                 <IconShoppingCart className="h-10 w-10 text-blue-500" />
@@ -91,7 +93,7 @@ export default async function AdminProductsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.active')}</p>
                   <p className="mt-2 text-3xl font-bold">{activeCount}</p>
                 </div>
                 <IconShoppingCart className="h-10 w-10 text-green-500" />
@@ -103,7 +105,7 @@ export default async function AdminProductsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Archived</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.archived')}</p>
                   <p className="mt-2 text-3xl font-bold">{inactiveCount}</p>
                 </div>
                 <IconArchive className="h-10 w-10 text-yellow-500" />
@@ -130,7 +132,7 @@ export default async function AdminProductsPage() {
                             {product.status}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
-                            {courseCount} {courseCount === 1 ? 'course' : 'courses'}
+                            {courseCount} {courseCount === 1 ? t('card.course') : t('card.courses')}
                           </span>
                         </div>
                       </div>
@@ -138,15 +140,15 @@ export default async function AdminProductsPage() {
                   </CardHeader>
                   <CardContent className="flex-1">
                     <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                      {product.description || 'No description'}
+                      {product.description || t('card.noDescription')}
                     </p>
                     <div className="mb-4">
                       <p className="text-2xl font-bold">
                         {product.currency === 'usd' ? '$' : '€'}
                         {product.price.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {product.currency.toUpperCase()}
+                      <p className="text-xs text-muted-foreground text-uppercase">
+                        {product.currency}
                       </p>
                     </div>
 
@@ -154,7 +156,7 @@ export default async function AdminProductsPage() {
                     {product.product_courses && product.product_courses.length > 0 && (
                       <div className="mb-4">
                         <p className="text-xs font-medium text-muted-foreground mb-2">
-                          Included Courses:
+                          {t('card.includedCourses')}
                         </p>
                         <ul className="space-y-1">
                           {product.product_courses.slice(0, 3).map((pc: any) => (
@@ -164,7 +166,7 @@ export default async function AdminProductsPage() {
                           ))}
                           {product.product_courses.length > 3 && (
                             <li className="text-xs text-muted-foreground">
-                              • +{product.product_courses.length - 3} more
+                              • {t('card.more', { count: product.product_courses.length - 3 })}
                             </li>
                           )}
                         </ul>
@@ -176,7 +178,7 @@ export default async function AdminProductsPage() {
                       <Link href={`/dashboard/admin/products/${product.product_id}/edit`} className="flex-1">
                         <Button variant="outline" size="sm" className="w-full">
                           <IconEdit className="mr-1 h-4 w-4" />
-                          Edit
+                          {t('card.edit')}
                         </Button>
                       </Link>
                       <ProductActions
@@ -194,14 +196,14 @@ export default async function AdminProductsPage() {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <IconShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">No products yet</p>
+                  <p className="text-lg font-medium mb-2">{t('empty.title')}</p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Create your first product to get started
+                    {t('empty.description')}
                   </p>
                   <Link href="/dashboard/admin/products/new">
                     <Button>
                       <IconPlus className="mr-2 h-4 w-4" />
-                      Create Product
+                      {t('create')}
                     </Button>
                   </Link>
                 </CardContent>

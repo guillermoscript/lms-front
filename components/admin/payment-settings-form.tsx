@@ -15,12 +15,14 @@ import {
 import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface PaymentSettingsFormProps {
   settings: Record<string, any>
 }
 
 export default function PaymentSettingsForm({ settings }: PaymentSettingsFormProps) {
+  const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Extract current values
@@ -47,12 +49,12 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
       const result = await updateSettings(updatedSettings)
 
       if (result.success) {
-        toast.success('Payment settings updated successfully')
+        toast.success(t('success'))
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings')
+      toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -62,14 +64,14 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
     <form action={handleSubmit} className="space-y-6">
       {/* Payment Processors */}
       <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">Payment Processors</h3>
+        <h3 className="font-semibold">{t('payment.processors')}</h3>
 
         {/* Stripe */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="stripe_enabled">Stripe</Label>
+            <Label htmlFor="stripe_enabled">{t('payment.stripe')}</Label>
             <p className="text-sm text-muted-foreground">
-              Enable Stripe payment processing
+              {t('payment.stripeHint')}
             </p>
           </div>
           <Switch
@@ -82,9 +84,9 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
         {/* PayPal */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="paypal_enabled">PayPal</Label>
+            <Label htmlFor="paypal_enabled">{t('payment.paypal')}</Label>
             <p className="text-sm text-muted-foreground">
-              Enable PayPal payment processing
+              {t('payment.paypalHint')}
             </p>
           </div>
           <Switch
@@ -97,10 +99,10 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
 
       {/* Currency Settings */}
       <div className="space-y-2">
-        <Label htmlFor="currency">Default Currency</Label>
+        <Label htmlFor="currency">{t('payment.currency')}</Label>
         <Select name="currency" defaultValue={currency}>
           <SelectTrigger>
-            <SelectValue placeholder="Select currency" />
+            <SelectValue placeholder={t('payment.currencyPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="USD">USD - US Dollar</SelectItem>
@@ -114,13 +116,13 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
-          Default currency for all transactions
+          {t('payment.currencyHint')}
         </p>
       </div>
 
       {/* Tax Rate */}
       <div className="space-y-2">
-        <Label htmlFor="tax_rate">Tax Rate (%)</Label>
+        <Label htmlFor="tax_rate">{t('payment.taxRate')}</Label>
         <Input
           id="tax_rate"
           name="tax_rate"
@@ -132,17 +134,17 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
           placeholder="0"
         />
         <p className="text-sm text-muted-foreground">
-          Default tax rate percentage applied to transactions (0 = no tax)
+          {t('payment.taxRateHint')}
         </p>
       </div>
 
       {/* Invoice Settings */}
       <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">Invoice Settings</h3>
+        <h3 className="font-semibold">{t('payment.invoiceSettings')}</h3>
 
         {/* Invoice Prefix */}
         <div className="space-y-2">
-          <Label htmlFor="invoice_prefix">Invoice Prefix</Label>
+          <Label htmlFor="invoice_prefix">{t('payment.invoicePrefix')}</Label>
           <Input
             id="invoice_prefix"
             name="invoice_prefix"
@@ -151,7 +153,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             required
           />
           <p className="text-sm text-muted-foreground">
-            Prefix for invoice numbers (e.g., INV-001, INV-002)
+            {t('payment.invoicePrefixHint')}
           </p>
         </div>
       </div>
@@ -159,9 +161,9 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
       {/* Payment Approval */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="require_payment_approval">Require Payment Approval</Label>
+          <Label htmlFor="require_payment_approval">{t('payment.approval')}</Label>
           <p className="text-sm text-muted-foreground">
-            Require admin approval before processing payments
+            {t('payment.approvalHint')}
           </p>
         </div>
         <Switch
@@ -175,7 +177,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
+          {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>
     </form>

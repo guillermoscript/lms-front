@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -22,6 +24,7 @@ interface CategoriesTableProps {
 }
 
 export function CategoriesTable({ categories }: CategoriesTableProps) {
+  const t = useTranslations('dashboard.admin.categories')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
@@ -35,11 +38,11 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
     const result = await deleteCategory(deletingCategory.id)
 
     if (result.success) {
-      toast.success(`Category "${deletingCategory.name}" deleted`)
+      toast.success(t('toasts.deleteSuccess', { name: deletingCategory.name }))
       setDeletingCategory(null)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to delete category')
+      toast.error(result.error || t('toasts.deleteError'))
     }
 
     setLoading(false)
@@ -55,7 +58,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
       <div className="mb-4 flex justify-end">
         <Button onClick={() => setShowCreateDialog(true)}>
           <IconPlus className="mr-2 h-4 w-4" />
-          Add Category
+          {t('table.addCategory')}
         </Button>
       </div>
 
@@ -64,10 +67,10 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
         <table className="w-full">
           <thead className="border-b">
             <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-3 font-medium">Name</th>
-              <th className="pb-3 font-medium">Description</th>
-              <th className="pb-3 font-medium">Courses</th>
-              <th className="pb-3 font-medium">Actions</th>
+              <th className="pb-3 font-medium">{t('table.headers.name')}</th>
+              <th className="pb-3 font-medium">{t('table.headers.description')}</th>
+              <th className="pb-3 font-medium">{t('table.headers.courses')}</th>
+              <th className="pb-3 font-medium">{t('table.headers.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -82,12 +85,12 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                     </td>
                     <td className="py-4">
                       <p className="text-muted-foreground max-w-md truncate">
-                        {category.description || 'No description'}
+                        {category.description || t('table.noDescription')}
                       </p>
                     </td>
                     <td className="py-4">
                       <Badge variant="outline">
-                        {courseCount} {courseCount === 1 ? 'course' : 'courses'}
+                        {t('table.courseCount', { count: courseCount })}
                       </Badge>
                     </td>
                     <td className="py-4">
@@ -98,7 +101,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                           onClick={() => setEditingCategory(category)}
                         >
                           <IconEdit className="mr-1 h-4 w-4" />
-                          Edit
+                          {t('table.actions.edit')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -107,7 +110,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                           className="text-destructive hover:text-destructive"
                         >
                           <IconTrash className="mr-1 h-4 w-4" />
-                          Delete
+                          {t('table.actions.delete')}
                         </Button>
                       </div>
                     </td>
@@ -117,7 +120,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
             ) : (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-muted-foreground">
-                  No categories found. Create your first category to get started.
+                  {t('table.empty')}
                 </td>
               </tr>
             )}
@@ -155,13 +158,16 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
           onOpenChange={(open) => {
             if (!open) setDeletingCategory(null)
           }}
-          title="Delete Category"
+          title={t('dialogs.delete.title')}
           description={
             getCourseCount(deletingCategory) > 0
-              ? `Cannot delete "${deletingCategory.name}" because ${getCourseCount(deletingCategory)} ${getCourseCount(deletingCategory) === 1 ? 'course is' : 'courses are'} using it. Please reassign or delete those courses first.`
-              : `Are you sure you want to delete "${deletingCategory.name}"? This action cannot be undone.`
+              ? t('dialogs.delete.cannotDelete', {
+                name: deletingCategory.name,
+                count: getCourseCount(deletingCategory),
+              })
+              : t('dialogs.delete.description', { name: deletingCategory.name })
           }
-          confirmText="Delete"
+          confirmText={t('dialogs.delete.confirm')}
           variant="destructive"
           onConfirm={handleDelete}
         />

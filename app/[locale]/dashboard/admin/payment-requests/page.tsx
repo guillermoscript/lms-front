@@ -1,12 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getTranslations } from 'next-intl/server'
 import { PaymentRequestsTable } from '@/components/admin/payment-requests-table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export default async function PaymentRequestsPage() {
-
+export default async function PaymentRequestsPage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
+  const t = await getTranslations('dashboard.admin.paymentRequests')
   const supabase = await createClient()
 
   // Fetch all payment requests with related data
@@ -44,9 +48,9 @@ export default async function PaymentRequestsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Payment Requests</h1>
+        <h1 className="text-3xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground mt-1">
-          Manage manual payment requests from students
+          {t('description')}
         </p>
       </div>
 
@@ -54,48 +58,50 @@ export default async function PaymentRequestsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pending</CardDescription>
+            <CardDescription>{t('stats.pending')}</CardDescription>
             <CardTitle className="text-3xl">{pendingCount}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              Awaiting your response
+              {t('stats.pendingDesc')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Contacted</CardDescription>
+            <CardDescription>{t('stats.contacted')}</CardDescription>
             <CardTitle className="text-3xl">{contactedCount}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              Payment instructions sent
+              {t('stats.contactedDesc')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Payment Received</CardDescription>
+            <CardDescription>{t('stats.received')}</CardDescription>
             <CardTitle className="text-3xl">{paymentReceivedCount}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              Ready to enroll
+              {t('stats.receivedDesc')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Completed</CardDescription>
+            <CardDescription>{t('stats.completed')}</CardDescription>
             <CardTitle className="text-3xl">{completedCount}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              ${totalRevenue.toFixed(2)} total
+              {t('stats.completedTotal', {
+                amount: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)
+              })}
             </p>
           </CardContent>
         </Card>
@@ -105,19 +111,19 @@ export default async function PaymentRequestsPage() {
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pending">
-            Pending ({pendingCount})
+            {t('tabs.pending', { count: pendingCount })}
           </TabsTrigger>
           <TabsTrigger value="contacted">
-            Contacted ({contactedCount})
+            {t('tabs.contacted', { count: contactedCount })}
           </TabsTrigger>
           <TabsTrigger value="payment_received">
-            Payment Received ({paymentReceivedCount})
+            {t('tabs.received', { count: paymentReceivedCount })}
           </TabsTrigger>
           <TabsTrigger value="completed">
-            Completed ({completedCount})
+            {t('tabs.completed', { count: completedCount })}
           </TabsTrigger>
           <TabsTrigger value="all">
-            All ({requests.length})
+            {t('tabs.all', { count: requests.length })}
           </TabsTrigger>
         </TabsList>
 

@@ -9,12 +9,14 @@ import { Switch } from '@/components/ui/switch'
 import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface GeneralSettingsFormProps {
   settings: Record<string, any>
 }
 
 export default function GeneralSettingsForm({ settings }: GeneralSettingsFormProps) {
+  const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Extract current values
@@ -45,12 +47,12 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
       const result = await updateSettings(updatedSettings)
 
       if (result.success) {
-        toast.success('General settings updated successfully')
+        toast.success(t('success'))
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings')
+      toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -60,37 +62,37 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
     <form action={handleSubmit} className="space-y-6">
       {/* Site Name */}
       <div className="space-y-2">
-        <Label htmlFor="site_name">Site Name</Label>
+        <Label htmlFor="site_name">{t('general.siteName')}</Label>
         <Input
           id="site_name"
           name="site_name"
           defaultValue={siteName}
-          placeholder="My LMS Platform"
+          placeholder={t('general.siteNamePlaceholder')}
           required
         />
         <p className="text-sm text-muted-foreground">
-          The name of your platform displayed across the site
+          {t('general.siteNameHint')}
         </p>
       </div>
 
       {/* Site Description */}
       <div className="space-y-2">
-        <Label htmlFor="site_description">Site Description</Label>
+        <Label htmlFor="site_description">{t('general.siteDescription')}</Label>
         <Textarea
           id="site_description"
           name="site_description"
           defaultValue={siteDescription}
-          placeholder="A modern learning management system..."
+          placeholder={t('general.siteDescriptionPlaceholder')}
           rows={3}
         />
         <p className="text-sm text-muted-foreground">
-          Used for SEO and about pages
+          {t('general.siteDescriptionHint')}
         </p>
       </div>
 
       {/* Contact Email */}
       <div className="space-y-2">
-        <Label htmlFor="contact_email">Contact Email</Label>
+        <Label htmlFor="contact_email">{t('general.contactEmail')}</Label>
         <Input
           id="contact_email"
           name="contact_email"
@@ -100,13 +102,13 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
           required
         />
         <p className="text-sm text-muted-foreground">
-          Main contact email for the platform
+          {t('general.contactEmailHint')}
         </p>
       </div>
 
       {/* Support Email */}
       <div className="space-y-2">
-        <Label htmlFor="support_email">Support Email</Label>
+        <Label htmlFor="support_email">{t('general.supportEmail')}</Label>
         <Input
           id="support_email"
           name="support_email"
@@ -116,13 +118,13 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
           required
         />
         <p className="text-sm text-muted-foreground">
-          Support email for user inquiries
+          {t('general.supportEmailHint')}
         </p>
       </div>
 
       {/* Timezone */}
       <div className="space-y-2">
-        <Label htmlFor="timezone">Timezone</Label>
+        <Label htmlFor="timezone">{t('general.timezone')}</Label>
         <Input
           id="timezone"
           name="timezone"
@@ -131,7 +133,7 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
           required
         />
         <p className="text-sm text-muted-foreground">
-          Default timezone for the platform (e.g., America/New_York, Europe/London)
+          {t('general.timezoneHint')}
         </p>
       </div>
 
@@ -139,9 +141,9 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
       <div className="space-y-4 rounded-lg border p-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="maintenance_mode">Maintenance Mode</Label>
+            <Label htmlFor="maintenance_mode">{t('general.maintenanceMode')}</Label>
             <p className="text-sm text-muted-foreground">
-              Enable to show maintenance message to users
+              {t('general.maintenanceModeHint')}
             </p>
           </div>
           <Switch
@@ -152,12 +154,12 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="maintenance_message">Maintenance Message</Label>
+          <Label htmlFor="maintenance_message">{t('general.maintenanceMessage')}</Label>
           <Textarea
             id="maintenance_message"
             name="maintenance_message"
             defaultValue={maintenanceMessage}
-            placeholder="We're currently performing maintenance. Please check back soon."
+            placeholder={t('general.maintenanceMessagePlaceholder')}
             rows={3}
           />
         </div>
@@ -167,7 +169,7 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
+          {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>
     </form>

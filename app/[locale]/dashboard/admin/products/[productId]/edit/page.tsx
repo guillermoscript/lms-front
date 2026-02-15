@@ -4,6 +4,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ProductForm } from '@/components/admin/product-form'
 
@@ -12,6 +13,7 @@ interface PageProps {
 }
 
 export default async function EditProductPage({ params }: PageProps) {
+  const t = await getTranslations('dashboard.admin.products.edit')
   const { productId } = await params
   const supabase = await createClient()
 
@@ -47,13 +49,13 @@ export default async function EditProductPage({ params }: PageProps) {
           <Link href="/dashboard/admin/products">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Products
+              {t('back')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Edit Product</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
             <p className="mt-1 text-muted-foreground">
-              Update product details and Stripe configuration
+              {t('description')}
             </p>
           </div>
         </div>
@@ -64,7 +66,7 @@ export default async function EditProductPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle>{product.name}</CardTitle>
             <CardDescription>
-              Changes to price or currency will create a new Stripe price.
+              {t('details.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>

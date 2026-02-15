@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { createNotificationTemplate, updateNotificationTemplate } from "@/app/actions/admin/notification-templates"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 type TemplateCategory = 'system' | 'course' | 'payment' | 'enrollment' | 'exam' | 'custom'
 
@@ -53,9 +54,10 @@ const CATEGORIES: { value: TemplateCategory; label: string }[] = [
 ]
 
 export function CreateTemplateButton({ template, mode = "create" }: CreateTemplateButtonProps) {
+  const t = useTranslations('dashboard.admin.notifications.templates')
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   const [name, setName] = useState(template?.name || "")
   const [title, setTitle] = useState(template?.title || "")
   const [content, setContent] = useState(template?.content || "")
@@ -79,7 +81,7 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
     e.preventDefault()
 
     if (!name.trim() || !title.trim() || !content.trim() || !category) {
-      toast.error("Please fill in all required fields")
+      toast.error(t('form.toasts.error'))
       return
     }
 
@@ -91,7 +93,7 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
         .split(",")
         .map((v) => v.trim())
         .filter((v) => v.length > 0)
-      
+
       const variables = inputVars.length > 0 ? inputVars : detectedVariables
 
       const templateData = {
@@ -112,23 +114,25 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
       if (result.success) {
         toast.success(
           mode === "edit"
-            ? "Template updated successfully"
-            : "Template created successfully"
+            ? t('form.toasts.updated')
+            : t('form.toasts.success')
         )
         setOpen(false)
         // Reset form
-        setName("")
-        setTitle("")
-        setContent("")
-        setCategory("")
-        setVariablesInput("")
+        if (mode === "create") {
+          setName("")
+          setTitle("")
+          setContent("")
+          setCategory("")
+          setVariablesInput("")
+        }
         // Refresh the page to update the list
         window.location.reload()
       } else {
-        toast.error(result.error || "Failed to save template")
+        toast.error(result.error || t('form.toasts.error'))
       }
     } catch (error) {
-      toast.error("An error occurred while saving the template")
+      toast.error(t('form.toasts.error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -139,11 +143,11 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
       <DialogTrigger>
         <Button>
           {mode === "edit" ? (
-            <>Edit Template</>
+            <>{t('form.submit.update')}</>
           ) : (
             <>
               <IconPlus className="h-4 w-4 mr-2" />
-              Create Template
+              {t('create')}
             </>
           )}
         </Button>
@@ -151,37 +155,30 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {mode === "edit" ? "Edit Template" : "Create Notification Template"}
+            {mode === "edit" ? t('form.dialog.editTitle') : t('form.dialog.title')}
           </DialogTitle>
           <DialogDescription>
-            Create a reusable template for notifications. Use{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">
-              {"{{variable}}"}
-            </code>{" "}
-            syntax for dynamic content.
+            {t('form.dialog.description')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Template Name *</Label>
+            <Label htmlFor="name">{t('form.name')} *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., welcome_student"
+              placeholder={t('form.namePlaceholder')}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Unique identifier for this template (lowercase, underscores)
-            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
+            <Label htmlFor="category">{t('form.type')} *</Label>
             <Select value={category} onValueChange={(value) => setCategory(value as TemplateCategory | "")} required>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
@@ -194,32 +191,26 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">{t('form.subject')} *</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Welcome to {{platform_name}}!"
+              placeholder={t('form.subjectPlaceholder')}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              The notification title (can include variables)
-            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
+            <Label htmlFor="content">{t('form.content')} *</Label>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="e.g., Hi {{user_name}}, welcome to our platform! We're excited to have you here."
+              placeholder={t('form.contentPlaceholder')}
               rows={6}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              The notification message content (supports variables)
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -230,9 +221,6 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
               onChange={(e) => setVariablesInput(e.target.value)}
               placeholder="e.g., user_name, course_title, date"
             />
-            <p className="text-xs text-muted-foreground">
-              Comma-separated list of variables (auto-detected if not specified)
-            </p>
           </div>
 
           {detectedVariables.length > 0 && (
@@ -251,17 +239,15 @@ export function CreateTemplateButton({ template, mode = "create" }: CreateTempla
           <DialogFooter>
             <DialogClose>
               <Button type="button" variant="outline" disabled={isSubmitting}>
-                Cancel
+                {t('back')}
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting
-                ? mode === "edit"
-                  ? "Updating..."
-                  : "Creating..."
+                ? "..."
                 : mode === "edit"
-                  ? "Update Template"
-                  : "Create Template"}
+                  ? t('form.submit.update')
+                  : t('form.submit.create')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getTranslations } from 'next-intl/server'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   IconUsers,
@@ -16,7 +18,13 @@ import {
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
+  const t = await getTranslations('dashboard.admin.main')
+  const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
   const {
@@ -90,40 +98,40 @@ export default async function AdminDashboardPage() {
 
   const stats = [
     {
-      title: 'Total Users',
+      title: t('stats.totalUsers'),
       value: totalUsers || 0,
       icon: IconUsers,
       link: '/dashboard/admin/users',
       color: 'text-blue-500',
     },
     {
-      title: 'Active Subscriptions',
+      title: t('stats.activeSubscriptions'),
       value: activeSubscriptions || 0,
-      subtitle: 'Monthly recurring',
+      subtitle: t('stats.monthly'),
       icon: IconCrown,
       link: '/dashboard/admin/subscriptions',
       color: 'text-purple-500',
     },
     {
-      title: 'Total Courses',
+      title: t('stats.totalCourses'),
       value: totalCourses || 0,
-      subtitle: `${publishedCourses || 0} published`,
+      subtitle: t('stats.published', { count: publishedCourses || 0 }),
       icon: IconBook,
       link: '/dashboard/admin/courses',
       color: 'text-green-500',
     },
     {
-      title: 'Pending Payments',
+      title: t('stats.pendingPayments'),
       value: pendingPaymentRequests || 0,
-      subtitle: 'Awaiting action',
+      subtitle: t('stats.awaiting'),
       icon: IconReceipt,
       link: '/dashboard/admin/payment-requests',
       color: 'text-orange-500',
     },
     {
-      title: 'Total Revenue',
-      value: `$${totalRevenue.toFixed(2)}`,
-      subtitle: `${totalTransactions || 0} transactions`,
+      title: t('stats.totalRevenue'),
+      value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue),
+      subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
       icon: IconCurrencyDollar,
       link: '/dashboard/admin/transactions',
       color: 'text-yellow-500',
@@ -161,57 +169,57 @@ export default async function AdminDashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <IconChecklist className="h-5 w-5" />
-            Quick Actions
+            {t('quickActions.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
             <Link href="/dashboard/admin/analytics">
-              <Button variant="outline" className="w-full">
-                <IconChartBar className="mr-2 h-4 w-4" />
-                Analytics
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconChartBar className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.analytics')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/users">
-              <Button variant="outline" className="w-full">
-                <IconUsers className="mr-2 h-4 w-4" />
-                Manage Users
+              <Button variant="outline" className="w-full text-xs px-2" id="quick-action-users">
+                <IconUsers className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.manageUsers')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/courses">
-              <Button variant="outline" className="w-full">
-                <IconBook className="mr-2 h-4 w-4" />
-                Manage Courses
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconBook className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.manageCourses')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/subscriptions">
-              <Button variant="outline" className="w-full">
-                <IconCrown className="mr-2 h-4 w-4" />
-                Subscriptions
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconCrown className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.subscriptions')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/payment-requests">
-              <Button variant="outline" className="w-full">
-                <IconReceipt className="mr-2 h-4 w-4" />
-                Payment Requests
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconReceipt className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.paymentRequests')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/transactions">
-              <Button variant="outline" className="w-full">
-                <IconCurrencyDollar className="mr-2 h-4 w-4" />
-                View Transactions
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconCurrencyDollar className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.viewTransactions')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/enrollments">
-              <Button variant="outline" className="w-full">
-                <IconCertificate className="mr-2 h-4 w-4" />
-                View Enrollments
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconCertificate className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.viewEnrollments')}</span>
               </Button>
             </Link>
             <Link href="/dashboard/admin/settings">
-              <Button variant="outline" className="w-full">
-                <IconSettings className="mr-2 h-4 w-4" />
-                Settings
+              <Button variant="outline" className="w-full text-xs px-2">
+                <IconSettings className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">{t('quickActions.settings')}</span>
               </Button>
             </Link>
           </div>
@@ -224,10 +232,10 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Recent Users</span>
+              <span>{t('recentActivity.users')}</span>
               <Link href="/dashboard/admin/users">
                 <Button variant="ghost" size="sm">
-                  View All
+                  {t('recentActivity.viewAll')}
                 </Button>
               </Link>
             </CardTitle>
@@ -241,17 +249,17 @@ export default async function AdminDashboardPage() {
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium">{user.full_name || 'Unknown'}</p>
+                      <p className="font-medium">{user.full_name || t('recentActivity.unknown')}</p>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {format(new Date(user.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                     </p>
                   </div>
                 ))
               ) : (
                 <p className="py-8 text-center text-muted-foreground">
-                  No recent users
+                  {t('recentActivity.noUsers')}
                 </p>
               )}
             </div>
@@ -262,10 +270,10 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Recent Transactions</span>
+              <span>{t('recentActivity.transactions')}</span>
               <Link href="/dashboard/admin/transactions">
                 <Button variant="ghost" size="sm">
-                  View All
+                  {t('recentActivity.viewAll')}
                 </Button>
               </Link>
             </CardTitle>
@@ -280,14 +288,16 @@ export default async function AdminDashboardPage() {
                   >
                     <div>
                       <p className="font-medium">
-                        {transaction.user?.full_name || 'Unknown User'}
+                        {transaction.user?.full_name || t('recentActivity.unknown')}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {transaction.user?.email}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">${transaction.amount.toFixed(2)}</p>
+                      <p className="font-medium">
+                        {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
+                      </p>
                       <p
                         className={`text-xs ${transaction.status === 'successful'
                           ? 'text-green-500'
@@ -296,14 +306,14 @@ export default async function AdminDashboardPage() {
                             : 'text-red-500'
                           }`}
                       >
-                        {transaction.status}
+                        {t(`recentActivity.status.${transaction.status}`)}
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
                 <p className="py-8 text-center text-muted-foreground">
-                  No recent transactions
+                  {t('recentActivity.noTransactions')}
                 </p>
               )}
             </div>

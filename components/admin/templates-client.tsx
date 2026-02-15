@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { IconTemplate } from "@tabler/icons-react"
 import { TemplatesList } from "@/components/admin/templates-list"
@@ -26,6 +27,7 @@ interface TemplatesClientProps {
 
 export function TemplatesClient({ templates }: TemplatesClientProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.admin.notifications')
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null)
 
   // Group templates by category
@@ -59,17 +61,16 @@ export function TemplatesClient({ templates }: TemplatesClientProps) {
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <IconTemplate className="mx-auto mb-4 h-12 w-12 opacity-50" />
-              <p>No templates found</p>
-              <p className="text-sm mt-2">Create your first template to get started</p>
+              <p>{t('templates.empty')}</p>
             </CardContent>
           </Card>
         ) : (
           Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
             <Card key={category}>
               <CardHeader>
-                <CardTitle className="capitalize">{category} Templates</CardTitle>
+                <CardTitle className="capitalize">{category} {t('templates.title')}</CardTitle>
                 <CardDescription>
-                  {(categoryTemplates as any[]).length} template(s) in this category
+                  {(categoryTemplates as any[]).length} {t('list.metadata.created')}
                 </CardDescription>
               </CardHeader>
               <CardContent>

@@ -24,6 +24,7 @@ import {
   cancelSubscription,
   reactivateSubscription,
 } from '@/app/actions/admin/subscriptions'
+import { useTranslations } from 'next-intl'
 
 interface SubscriptionActionsProps {
   subscriptionId: number
@@ -38,6 +39,7 @@ export function SubscriptionActions({
   status,
   cancelAtPeriodEnd,
 }: SubscriptionActionsProps) {
+  const t = useTranslations('dashboard.admin.subscriptions')
   const router = useRouter()
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false)
@@ -51,16 +53,16 @@ export function SubscriptionActions({
       if (result.success) {
         toast.success(
           immediate
-            ? 'Subscription cancelled immediately'
-            : 'Subscription will cancel at period end'
+            ? t('toasts.cancelImmediate')
+            : t('toasts.cancelAtEnd')
         )
         setCancelDialogOpen(false)
         router.refresh()
       } else {
-        toast.error(result.error || 'Failed to cancel subscription')
+        toast.error(result.error || t('toasts.cancelError'))
       }
     } catch (error) {
-      toast.error('An error occurred while cancelling the subscription')
+      toast.error(t('toasts.generalError'))
       console.error('Cancel subscription error:', error)
     } finally {
       setLoading(false)
@@ -73,14 +75,14 @@ export function SubscriptionActions({
       const result = await reactivateSubscription(subscriptionId)
 
       if (result.success) {
-        toast.success('Subscription reactivated successfully')
+        toast.success(t('toasts.reactivateSuccess'))
         setReactivateDialogOpen(false)
         router.refresh()
       } else {
-        toast.error(result.error || 'Failed to reactivate subscription')
+        toast.error(result.error || t('toasts.reactivateError'))
       }
     } catch (error) {
-      toast.error('An error occurred while reactivating the subscription')
+      toast.error(t('toasts.generalError'))
       console.error('Reactivate subscription error:', error)
     } finally {
       setLoading(false)
@@ -101,7 +103,7 @@ export function SubscriptionActions({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => router.push(`/dashboard/admin/users/${userId}`)}>
             <IconEye className="mr-2 h-4 w-4" />
-            View User
+            {t('actions.viewUser')}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -112,7 +114,7 @@ export function SubscriptionActions({
               className="text-orange-600"
             >
               <IconX className="mr-2 h-4 w-4" />
-              Cancel Subscription
+              {t('actions.cancel')}
             </DropdownMenuItem>
           )}
 
@@ -122,14 +124,14 @@ export function SubscriptionActions({
               className="text-green-600"
             >
               <IconRefresh className="mr-2 h-4 w-4" />
-              Reactivate Subscription
+              {t('actions.reactivate')}
             </DropdownMenuItem>
           )}
 
           {isCancelled && (
             <DropdownMenuItem disabled className="text-muted-foreground">
               <IconRefresh className="mr-2 h-4 w-4" />
-              Cannot Reactivate (Expired)
+              {t('actions.cannotReactivate')}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -139,24 +141,21 @@ export function SubscriptionActions({
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogTitle>{t('dialogs.cancel.title')}</DialogTitle>
             <DialogDescription>
-              Choose how you want to cancel this subscription. This action will be
-              synced with Stripe.
+              {t('dialogs.cancel.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <h4 className="font-medium">Cancellation Options:</h4>
+              <h4 className="font-medium">{t('dialogs.cancel.options')}</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  <strong>Cancel at Period End:</strong> User keeps access until the
-                  current billing period ends. Recommended for better user experience.
+                  <strong>{t('dialogs.cancel.atEnd')}:</strong> {t('dialogs.cancel.atEndDesc')}
                 </p>
                 <p>
-                  <strong>Cancel Immediately:</strong> User loses access immediately.
-                  Use only for urgent situations (fraud, violations, etc.).
+                  <strong>{t('dialogs.cancel.immediate')}:</strong> {t('dialogs.cancel.immediateDesc')}
                 </p>
               </div>
             </div>
@@ -168,21 +167,21 @@ export function SubscriptionActions({
               onClick={() => setCancelDialogOpen(false)}
               disabled={loading}
             >
-              Cancel
+              {t('dialogs.cancel.close')}
             </Button>
             <Button
               variant="secondary"
               onClick={() => handleCancel(false)}
               disabled={loading}
             >
-              Cancel at Period End
+              {t('dialogs.cancel.atEnd')}
             </Button>
             <Button
               variant="destructive"
               onClick={() => handleCancel(true)}
               disabled={loading}
             >
-              {loading ? 'Cancelling...' : 'Cancel Immediately'}
+              {loading ? t('actions.cancelling') : t('dialogs.cancel.immediate')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -192,10 +191,9 @@ export function SubscriptionActions({
       <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reactivate Subscription</DialogTitle>
+            <DialogTitle>{t('dialogs.reactivate.title')}</DialogTitle>
             <DialogDescription>
-              This will reactivate the subscription that was scheduled to cancel at
-              period end. The user will continue to be billed.
+              {t('dialogs.reactivate.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -205,10 +203,10 @@ export function SubscriptionActions({
               onClick={() => setReactivateDialogOpen(false)}
               disabled={loading}
             >
-              Cancel
+              {t('dialogs.cancel.close')}
             </Button>
             <Button onClick={handleReactivate} disabled={loading}>
-              {loading ? 'Reactivating...' : 'Reactivate Subscription'}
+              {loading ? t('actions.reactivating') : t('actions.reactivate')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -14,6 +14,7 @@ import { IconDots, IconSettings, IconBan, IconCheck } from '@tabler/icons-react'
 import { RoleAssignmentDialog } from './role-assignment-dialog'
 import { ConfirmDialog } from './confirm-dialog'
 import { deactivateUser, reactivateUser } from '@/app/actions/admin/users'
+import { useTranslations } from 'next-intl'
 
 interface UserActionsProps {
   userId: string
@@ -28,6 +29,7 @@ export function UserActions({
   currentRoles,
   isDeactivated
 }: UserActionsProps) {
+  const t = useTranslations('dashboard.admin.users.actions')
   const [showRoleDialog, setShowRoleDialog] = useState(false)
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
   const [showReactivateDialog, setShowReactivateDialog] = useState(false)
@@ -39,11 +41,11 @@ export function UserActions({
     const result = await deactivateUser(userId)
 
     if (result.success) {
-      toast.success(`${userName} has been deactivated`)
+      toast.success(t('toasts.deactivateSuccess', { name: userName }))
       setShowDeactivateDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to deactivate user')
+      toast.error(result.error || t('toasts.deactivateError'))
     }
 
     setLoading(false)
@@ -54,11 +56,11 @@ export function UserActions({
     const result = await reactivateUser(userId)
 
     if (result.success) {
-      toast.success(`${userName} has been reactivated`)
+      toast.success(t('toasts.reactivateSuccess', { name: userName }))
       setShowReactivateDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to reactivate user')
+      toast.error(result.error || t('toasts.reactivateError'))
     }
 
     setLoading(false)
@@ -75,12 +77,12 @@ export function UserActions({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setShowRoleDialog(true)}>
             <IconSettings className="mr-2 h-4 w-4" />
-            Manage Roles
+            {t('manageRoles')}
           </DropdownMenuItem>
           {isDeactivated ? (
             <DropdownMenuItem onClick={() => setShowReactivateDialog(true)}>
               <IconCheck className="mr-2 h-4 w-4" />
-              Reactivate User
+              {t('reactivate')}
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
@@ -88,7 +90,7 @@ export function UserActions({
               className="text-destructive"
             >
               <IconBan className="mr-2 h-4 w-4" />
-              Deactivate User
+              {t('deactivate')}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -110,9 +112,10 @@ export function UserActions({
       <ConfirmDialog
         open={showDeactivateDialog}
         onOpenChange={setShowDeactivateDialog}
-        title="Deactivate User"
-        description={`Are you sure you want to deactivate ${userName}? They will no longer be able to access the platform.`}
-        confirmText="Deactivate"
+        title={t('dialogs.deactivate.title')}
+        description={t('dialogs.deactivate.description', { name: userName })}
+        confirmText={t('dialogs.deactivate.confirm')}
+        cancelText={t('dialogs.cancel')}
         variant="destructive"
         onConfirm={handleDeactivate}
       />
@@ -121,9 +124,10 @@ export function UserActions({
       <ConfirmDialog
         open={showReactivateDialog}
         onOpenChange={setShowReactivateDialog}
-        title="Reactivate User"
-        description={`Are you sure you want to reactivate ${userName}? They will regain access to the platform.`}
-        confirmText="Reactivate"
+        title={t('dialogs.reactivate.title')}
+        description={t('dialogs.reactivate.description', { name: userName })}
+        confirmText={t('dialogs.reactivate.confirm')}
+        cancelText={t('dialogs.cancel')}
         onConfirm={handleReactivate}
       />
     </>

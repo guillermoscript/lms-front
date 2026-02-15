@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
+import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   Table,
   TableBody,
@@ -41,9 +44,9 @@ interface PaymentRequest {
   }
 }
 
-interface PaymentRequestsTableProps {
-  requests: PaymentRequest[]
-}
+// Assuming PaymentRequestWithUser is equivalent to PaymentRequest for this context,
+// or that it's defined elsewhere. If not, this type will be undefined.
+type PaymentRequestWithUser = PaymentRequest;
 
 const statusColors = {
   pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
@@ -53,21 +56,20 @@ const statusColors = {
   cancelled: 'bg-red-500/10 text-red-500 border-red-500/20',
 }
 
-const statusLabels = {
-  pending: 'Pending',
-  contacted: 'Contacted',
-  payment_received: 'Payment Received',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
-
-export function PaymentRequestsTable({ requests }: PaymentRequestsTableProps) {
+export function PaymentRequestsTable({
+  requests,
+}: {
+  requests: PaymentRequestWithUser[]
+}) {
+  const { locale } = useParams()
+  const dateLocale = locale === 'es' ? es : enUS
+  const t = useTranslations('dashboard.admin.paymentRequests')
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null)
 
   if (requests.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg">
-        <p className="text-muted-foreground">No payment requests found</p>
+        <p className="text-muted-foreground">{t('table.noRequests')}</p>
       </div>
     )
   }
@@ -78,14 +80,14 @@ export function PaymentRequestsTable({ requests }: PaymentRequestsTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Request ID</TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Invoice</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>{t('table.headers.id')}</TableHead>
+              <TableHead>{t('table.headers.student')}</TableHead>
+              <TableHead>{t('table.headers.product')}</TableHead>
+              <TableHead>{t('table.headers.amount')}</TableHead>
+              <TableHead>{t('table.headers.status')}</TableHead>
+              <TableHead>{t('table.headers.invoice')}</TableHead>
+              <TableHead>{t('table.headers.date')}</TableHead>
+              <TableHead>{t('table.headers.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,7 +120,7 @@ export function PaymentRequestsTable({ requests }: PaymentRequestsTableProps) {
                     variant="outline"
                     className={statusColors[request.status as keyof typeof statusColors]}
                   >
-                    {statusLabels[request.status as keyof typeof statusLabels]}
+                    {t(`status.${request.status}`)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -132,10 +134,10 @@ export function PaymentRequestsTable({ requests }: PaymentRequestsTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {format(new Date(request.created_at), 'MMM d, yyyy')}
+                    {format(new Date(request.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {format(new Date(request.created_at), 'h:mm a')}
+                    {format(new Date(request.created_at), 'h:mm a', { locale: dateLocale })}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -144,7 +146,7 @@ export function PaymentRequestsTable({ requests }: PaymentRequestsTableProps) {
                     size="sm"
                     onClick={() => setSelectedRequest(request)}
                   >
-                    Manage
+                    {t('table.manage')}
                   </Button>
                 </TableCell>
               </TableRow>

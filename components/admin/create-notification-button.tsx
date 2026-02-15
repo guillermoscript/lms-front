@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { IconPlus } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -15,20 +16,21 @@ import NotificationForm from './notification-form'
 
 export default function CreateNotificationButton() {
   const [open, setOpen] = useState(false)
+  const t = useTranslations('dashboard.admin.notifications')
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>
         <Button>
           <IconPlus className="mr-2 h-4 w-4" />
-          Create Notification
+          {t('buttons.create')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Notification</DialogTitle>
+          <DialogTitle>{t('form.dialog.title')}</DialogTitle>
           <DialogDescription>
-            Send a notification to specific users, groups, or the entire platform
+            {t('form.dialog.description')}
           </DialogDescription>
         </DialogHeader>
         <NotificationForm onSuccess={() => setOpen(false)} />

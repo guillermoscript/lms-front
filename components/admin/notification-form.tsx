@@ -15,12 +15,14 @@ import {
 import { createNotification, dispatchNotification } from '@/app/actions/admin/notifications'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface NotificationFormProps {
   onSuccess?: () => void
 }
 
 export default function NotificationForm({ onSuccess }: NotificationFormProps) {
+  const t = useTranslations('dashboard.admin.notifications')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [targetType, setTargetType] = useState<string>('all')
   const [sendNow, setSendNow] = useState(true)
@@ -35,10 +37,10 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
         notification_type: formData.get('notification_type') as any,
         priority: formData.get('priority') as any,
         target_type: targetType as any,
-        target_roles: targetType === 'role' 
+        target_roles: targetType === 'role'
           ? (formData.get('target_roles') as string).split(',').map(r => r.trim()).filter(Boolean)
           : undefined,
-        target_course_id: targetType === 'course' 
+        target_course_id: targetType === 'course'
           ? parseInt(formData.get('target_course_id') as string)
           : undefined,
         delivery_channels: ['in_app'], // Default to in-app for now
@@ -53,13 +55,13 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
           await dispatchNotification(result.data.id)
         }
 
-        toast.success(sendNow ? 'Notification sent successfully' : 'Notification saved as draft')
+        toast.success(sendNow ? t('form.toasts.success') : t('form.toasts.draft'))
         onSuccess?.()
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create notification')
+      toast.error(error instanceof Error ? error.message : t('form.toasts.error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -69,60 +71,60 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
     <form action={handleSubmit} className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
+        <Label htmlFor="title">{t('form.title')}</Label>
         <Input
           id="title"
           name="title"
-          placeholder="Notification title"
+          placeholder={t('form.titlePlaceholder')}
           required
         />
       </div>
 
       {/* Content */}
       <div className="space-y-2">
-        <Label htmlFor="content">Message</Label>
+        <Label htmlFor="content">{t('form.message')}</Label>
         <Textarea
           id="content"
           name="content"
-          placeholder="Enter your notification message..."
+          placeholder={t('form.messagePlaceholder')}
           rows={6}
           required
         />
         <p className="text-sm text-muted-foreground">
-          Use double curly braces for dynamic content with templates
+          {t('form.messageHint')}
         </p>
       </div>
 
       {/* Type & Priority */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="notification_type">Type</Label>
+          <Label htmlFor="notification_type">{t('form.type')}</Label>
           <Select name="notification_type" defaultValue="info" required>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="announcement">Announcement</SelectItem>
-              <SelectItem value="alert">Alert</SelectItem>
-              <SelectItem value="info">Info</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="warning">Warning</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
+              <SelectItem value="announcement">{t('types.announcement')}</SelectItem>
+              <SelectItem value="alert">{t('types.alert')}</SelectItem>
+              <SelectItem value="info">{t('types.info')}</SelectItem>
+              <SelectItem value="success">{t('types.success')}</SelectItem>
+              <SelectItem value="warning">{t('types.warning')}</SelectItem>
+              <SelectItem value="error">{t('types.error')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
+          <Label htmlFor="priority">{t('form.priority')}</Label>
           <Select name="priority" defaultValue="normal" required>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="low">{t('priorityOptions.low')}</SelectItem>
+              <SelectItem value="normal">{t('priorityOptions.normal')}</SelectItem>
+              <SelectItem value="high">{t('priorityOptions.high')}</SelectItem>
+              <SelectItem value="urgent">{t('priorityOptions.urgent')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -130,10 +132,10 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
 
       {/* Target Type */}
       <div className="space-y-2">
-        <Label htmlFor="target_type">Send To</Label>
-        <Select 
-          name="target_type" 
-          value={targetType} 
+        <Label htmlFor="target_type">{t('form.sendTo')}</Label>
+        <Select
+          name="target_type"
+          value={targetType}
           onValueChange={(value) => value && setTargetType(value)}
           required
         >
@@ -141,9 +143,9 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            <SelectItem value="role">Specific Role</SelectItem>
-            <SelectItem value="course">Course Students</SelectItem>
+            <SelectItem value="all">{t('targets.all')}</SelectItem>
+            <SelectItem value="role">{t('targets.role')}</SelectItem>
+            <SelectItem value="course">{t('targets.course')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -151,31 +153,31 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
       {/* Conditional Target Fields */}
       {targetType === 'role' && (
         <div className="space-y-2">
-          <Label htmlFor="target_roles">Roles (comma-separated)</Label>
+          <Label htmlFor="target_roles">{t('form.roles')}</Label>
           <Input
             id="target_roles"
             name="target_roles"
-            placeholder="student, teacher"
+            placeholder={t('form.rolesPlaceholder')}
             required
           />
           <p className="text-sm text-muted-foreground">
-            Example: student, teacher, admin
+            {t('form.rolesHint')}
           </p>
         </div>
       )}
 
       {targetType === 'course' && (
         <div className="space-y-2">
-          <Label htmlFor="target_course_id">Course ID</Label>
+          <Label htmlFor="target_course_id">{t('form.courseId')}</Label>
           <Input
             id="target_course_id"
             name="target_course_id"
             type="number"
-            placeholder="Enter course ID"
+            placeholder={t('form.courseIdPlaceholder')}
             required
           />
           <p className="text-sm text-muted-foreground">
-            Find course ID in the courses management page
+            {t('form.courseIdHint')}
           </p>
         </div>
       )}
@@ -184,9 +186,9 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
       <div className="space-y-4 rounded-lg border p-4">
         <div className="flex items-center justify-between">
           <div>
-            <Label>Delivery</Label>
+            <Label>{t('form.delivery')}</Label>
             <p className="text-sm text-muted-foreground">
-              Send immediately or schedule for later
+              {t('form.deliveryDesc')}
             </p>
           </div>
           <Select
@@ -197,15 +199,15 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="now">Send Now</SelectItem>
-              <SelectItem value="schedule">Schedule</SelectItem>
+              <SelectItem value="now">{t('form.deliveryOptions.now')}</SelectItem>
+              <SelectItem value="schedule">{t('form.deliveryOptions.schedule')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {!sendNow && (
           <div className="space-y-2">
-            <Label htmlFor="scheduled_for">Schedule For</Label>
+            <Label htmlFor="scheduled_for">{t('form.scheduleFor')}</Label>
             <Input
               id="scheduled_for"
               name="scheduled_for"
@@ -220,7 +222,7 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {sendNow ? 'Send Notification' : 'Save Draft'}
+          {sendNow ? t('form.submit.send') : t('form.submit.save')}
         </Button>
       </div>
     </form>

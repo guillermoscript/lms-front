@@ -19,6 +19,7 @@ import { createProduct, updateProduct } from '@/app/actions/admin/products'
 import { PaymentProvider } from '@/lib/payments'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IconAlertCircle } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 
 interface Product {
   product_id: number
@@ -36,6 +37,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ mode, initialData }: ProductFormProps) {
+  const t = useTranslations('dashboard.admin.products.form')
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -57,19 +59,19 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
 
     // Validate
     if (!formData.name.trim()) {
-      setError('Product name is required')
+      setError(t('errors.nameRequired'))
       setLoading(false)
       return
     }
 
     if (formData.price <= 0) {
-      setError('Price must be greater than 0')
+      setError(t('errors.priceGreater'))
       setLoading(false)
       return
     }
 
     if (formData.courseIds.length === 0) {
-      setError('Please select at least one course')
+      setError(t('errors.courseRequired'))
       setLoading(false)
       return
     }
@@ -79,12 +81,12 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
       : await updateProduct(initialData!.product_id, formData)
 
     if (result.success) {
-      toast.success(`Product ${mode === 'create' ? 'created' : 'updated'} successfully`)
+      toast.success(mode === 'create' ? t('toasts.createSuccess') : t('toasts.updateSuccess'))
       router.push('/dashboard/admin/products')
       router.refresh()
     } else {
-      setError(result.error || 'An error occurred')
-      toast.error(result.error || 'An error occurred')
+      setError(result.error || t('errors.generic'))
+      toast.error(result.error || t('errors.generic'))
     }
 
     setLoading(false)
@@ -95,13 +97,13 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
       {/* Product Name */}
       <div className="space-y-2">
         <Label htmlFor="name">
-          Product Name <span className="text-destructive">*</span>
+          {t('name')} <span className="text-destructive">*</span>
         </Label>
         <Input
           id="name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="e.g., Complete Web Development Bundle"
+          placeholder={t('namePlaceholder')}
           required
           disabled={loading}
         />
@@ -109,12 +111,12 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('description')}</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Describe what's included in this product..."
+          placeholder={t('descriptionPlaceholder')}
           rows={4}
           disabled={loading}
         />
@@ -123,7 +125,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
       {/* Payment Provider */}
       <div className="space-y-2">
         <Label htmlFor="paymentProvider">
-          Payment Method <span className="text-destructive">*</span>
+          {t('method')} <span className="text-destructive">*</span>
         </Label>
         <Select
           value={formData.paymentProvider}
@@ -134,15 +136,15 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="manual">Manual/Offline Payment (Bank Transfer, Invoice)</SelectItem>
-            <SelectItem value="stripe">Stripe (Credit Card, Online)</SelectItem>
-            <SelectItem value="paypal">PayPal (Coming Soon)</SelectItem>
+            <SelectItem value="manual">{t('methodManual')}</SelectItem>
+            <SelectItem value="stripe">{t('methodStripe')}</SelectItem>
+            <SelectItem value="paypal">{t('methodPayPal')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
           {formData.paymentProvider === 'manual'
-            ? 'Students will contact you to arrange offline payment (bank transfer, invoice, etc.)'
-            : 'Students can pay online instantly'}
+            ? t('methodManualHint')
+            : t('methodStripeHint')}
         </p>
       </div>
 
@@ -150,7 +152,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="price">
-            Price <span className="text-destructive">*</span>
+            {t('price')} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="price"
@@ -166,7 +168,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="currency">
-            Currency <span className="text-destructive">*</span>
+            {t('currency')} <span className="text-destructive">*</span>
           </Label>
           <Select
             value={formData.currency}
@@ -186,13 +188,13 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
 
       {/* Image URL */}
       <div className="space-y-2">
-        <Label htmlFor="image">Image URL (optional)</Label>
+        <Label htmlFor="image">{t('image')}</Label>
         <Input
           id="image"
           type="url"
           value={formData.image}
           onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          placeholder="https://example.com/image.jpg"
+          placeholder={t('imagePlaceholder')}
           disabled={loading}
         />
       </div>
@@ -214,7 +216,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
       {/* Actions */}
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : mode === 'create' ? 'Create Product' : 'Save Changes'}
+          {loading ? t('saving') : mode === 'create' ? t('create') : t('save')}
         </Button>
         <Button
           type="button"
@@ -222,7 +224,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
           onClick={() => router.back()}
           disabled={loading}
         >
-          Cancel
+          {t('cancel')}
         </Button>
       </div>
     </form>

@@ -11,6 +11,7 @@ import {
 import { deleteNotification, dispatchNotification, updateNotificationStatus } from '@/app/actions/admin/notifications'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface Notification {
   id: number
@@ -38,6 +39,7 @@ interface NotificationsListProps {
 
 export default function NotificationsList({ notifications }: NotificationsListProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.admin.notifications')
 
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
@@ -75,31 +77,31 @@ export default function NotificationsList({ notifications }: NotificationsListPr
     try {
       const result = await dispatchNotification(id)
       if (result.success) {
-        toast.success(`Notification sent to ${result.data?.usersNotified || 0} users`)
+        toast.success(t('list.toasts.sent', { count: result.data?.usersNotified || 0 }))
         router.refresh()
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send notification')
+      toast.error(error instanceof Error ? error.message : t('list.toasts.error'))
     }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('Are you sure you want to delete this notification?')) {
+    if (!confirm(t('list.confirmDelete'))) {
       return
     }
 
     try {
       const result = await deleteNotification(id)
       if (result.success) {
-        toast.success('Notification deleted successfully')
+        toast.success(t('list.toasts.deleted'))
         router.refresh()
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete notification')
+      toast.error(error instanceof Error ? error.message : t('list.toasts.deleteError'))
     }
   }
 
@@ -107,7 +109,7 @@ export default function NotificationsList({ notifications }: NotificationsListPr
     return (
       <div className="py-12 text-center text-muted-foreground">
         <IconBell className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>No notifications found</p>
+        <p>{t('list.empty')}</p>
       </div>
     )
   }
@@ -125,16 +127,16 @@ export default function NotificationsList({ notifications }: NotificationsListPr
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold">{notification.title}</h3>
                 <Badge className={`${getTypeBadgeColor(notification.notification_type)} text-white`}>
-                  {notification.notification_type}
+                  {t(`types.${notification.notification_type}`)}
                 </Badge>
                 <Badge className={`${getStatusBadgeColor(notification.status)} text-white`}>
-                  {notification.status}
+                  {t(`list.status.${notification.status}`)}
                 </Badge>
                 {notification.priority === 'urgent' && (
-                  <Badge variant="destructive">Urgent</Badge>
+                  <Badge variant="destructive">{t('priority.urgent')}</Badge>
                 )}
                 {notification.priority === 'high' && (
-                  <Badge className="bg-orange-500 text-white">High Priority</Badge>
+                  <Badge className="bg-orange-500 text-white">{t('priority.high')}</Badge>
                 )}
               </div>
 
@@ -146,22 +148,22 @@ export default function NotificationsList({ notifications }: NotificationsListPr
               {/* Metadata */}
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span>
-                  Target: <strong>{notification.target_type}</strong>
+                  {t('list.metadata.target')}: <strong>{t(`targets.${notification.target_type}`)}</strong>
                   {notification.course && ` - ${notification.course.title}`}
                 </span>
                 {notification.sent_at && (
                   <span>
-                    Sent: {new Date(notification.sent_at).toLocaleString()}
+                    {t('list.metadata.sent')}: {new Date(notification.sent_at).toLocaleString()}
                   </span>
                 )}
                 {notification.scheduled_for && !notification.sent_at && (
                   <span>
                     <IconClock className="inline h-3 w-3 mr-1" />
-                    Scheduled: {new Date(notification.scheduled_for).toLocaleString()}
+                    {t('list.metadata.scheduled')}: {new Date(notification.scheduled_for).toLocaleString()}
                   </span>
                 )}
                 <span>
-                  Created: {new Date(notification.created_at).toLocaleDateString()}
+                  {t('list.metadata.created')}: {new Date(notification.created_at).toLocaleDateString()}
                 </span>
               </div>
             </div>

@@ -8,12 +8,14 @@ import { Switch } from '@/components/ui/switch'
 import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface EmailSettingsFormProps {
   settings: Record<string, any>
 }
 
 export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) {
+  const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -43,12 +45,12 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
       const result = await updateSettings(updatedSettings)
 
       if (result.success) {
-        toast.success('Email settings updated successfully')
+        toast.success(t('success'))
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings')
+      toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -59,9 +61,9 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
       {/* Email Notifications Toggle */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="email_notifications">Email Notifications</Label>
+          <Label htmlFor="email_notifications">{t('email.notifications')}</Label>
           <p className="text-sm text-muted-foreground">
-            Enable or disable all email notifications globally
+            {t('email.notificationsHint')}
           </p>
         </div>
         <Switch
@@ -73,11 +75,11 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
 
       {/* SMTP Settings */}
       <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">SMTP Configuration</h3>
+        <h3 className="font-semibold">{t('email.smtpConfig')}</h3>
 
         {/* SMTP Host */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_host">SMTP Host</Label>
+          <Label htmlFor="smtp_host">{t('email.smtpHost')}</Label>
           <Input
             id="smtp_host"
             name="smtp_host"
@@ -85,13 +87,13 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             placeholder="smtp.example.com"
           />
           <p className="text-sm text-muted-foreground">
-            Your email provider's SMTP server address
+            {t('email.smtpHostHint')}
           </p>
         </div>
 
         {/* SMTP Port */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_port">SMTP Port</Label>
+          <Label htmlFor="smtp_port">{t('email.smtpPort')}</Label>
           <Input
             id="smtp_port"
             name="smtp_port"
@@ -100,13 +102,13 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             placeholder="587"
           />
           <p className="text-sm text-muted-foreground">
-            Common ports: 587 (TLS), 465 (SSL), 25 (unencrypted)
+            {t('email.smtpPortHint')}
           </p>
         </div>
 
         {/* SMTP Username */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_username">SMTP Username</Label>
+          <Label htmlFor="smtp_username">{t('email.smtpUsername')}</Label>
           <Input
             id="smtp_username"
             name="smtp_username"
@@ -115,13 +117,13 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             autoComplete="username"
           />
           <p className="text-sm text-muted-foreground">
-            Usually your email address or account username
+            {t('email.smtpUsernameHint')}
           </p>
         </div>
 
         {/* SMTP Password */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_password">SMTP Password</Label>
+          <Label htmlFor="smtp_password">{t('email.smtpPassword')}</Label>
           <div className="relative">
             <Input
               id="smtp_password"
@@ -147,18 +149,18 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Your SMTP password or app-specific password
+            {t('email.smtpPasswordHint')}
           </p>
         </div>
       </div>
 
       {/* Sender Settings */}
       <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">Sender Information</h3>
+        <h3 className="font-semibold">{t('email.senderInfo')}</h3>
 
         {/* From Email */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_from_email">From Email</Label>
+          <Label htmlFor="smtp_from_email">{t('email.fromEmail')}</Label>
           <Input
             id="smtp_from_email"
             name="smtp_from_email"
@@ -168,13 +170,13 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             required
           />
           <p className="text-sm text-muted-foreground">
-            Email address used as the sender for outgoing emails
+            {t('email.fromEmailHint')}
           </p>
         </div>
 
         {/* From Name */}
         <div className="space-y-2">
-          <Label htmlFor="smtp_from_name">From Name</Label>
+          <Label htmlFor="smtp_from_name">{t('email.fromName')}</Label>
           <Input
             id="smtp_from_name"
             name="smtp_from_name"
@@ -183,7 +185,7 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
             required
           />
           <p className="text-sm text-muted-foreground">
-            Name displayed as the sender in emails
+            {t('email.fromNameHint')}
           </p>
         </div>
       </div>
@@ -192,7 +194,7 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
+          {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>
     </form>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BarChart,
@@ -38,6 +40,7 @@ const COLORS = [
 ]
 
 export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
+  const t = useTranslations('dashboard.admin.analytics.coursePopularity')
   const topCourses = data.slice(0, 8) // Show top 8 courses
 
   return (
@@ -47,15 +50,15 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
           <div>
             <CardTitle className="flex items-center gap-2">
               <IconTrophy className="h-5 w-5 text-yellow-500" />
-              Most Popular Courses
+              {t('title')}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Top courses by enrollment count
+              {t('description')}
             </p>
           </div>
           <Link href="/dashboard/admin/courses">
             <Button variant="ghost" size="sm">
-              View All Courses
+              {t('viewAll')}
             </Button>
           </Link>
         </div>
@@ -83,7 +86,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
                   formatter={(value: number | undefined) => {
                     if (value === undefined) return 'N/A'
-                    return [value, 'Enrollments']
+                    return [value, t('enrollmentsTooltip')]
                   }}
                 />
                 <Bar dataKey="enrollments" radius={[0, 4, 4, 0]}>
@@ -96,7 +99,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
 
             {/* Course Details Table */}
             <div className="mt-6 space-y-2">
-              <h4 className="text-sm font-medium">Course Details</h4>
+              <h4 className="text-sm font-medium">{t('detailsTitle')}</h4>
               <div className="space-y-2">
                 {topCourses.map((course, index) => (
                   <div
@@ -111,7 +114,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                       <div>
                         <p className="text-sm font-medium">{course.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {course.enrollments} enrollments
+                          {t('enrollmentsCount', { count: course.enrollments })}
                         </p>
                       </div>
                     </div>
@@ -119,7 +122,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                       <p className="text-sm font-medium text-green-600">
                         {course.completionRate.toFixed(0)}%
                       </p>
-                      <p className="text-xs text-muted-foreground">completion</p>
+                      <p className="text-xs text-muted-foreground">{t('completionLabel')}</p>
                     </div>
                   </div>
                 ))}
@@ -128,7 +131,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
           </>
         ) : (
           <div className="flex h-[300px] items-center justify-center">
-            <p className="text-muted-foreground">No course data available</p>
+            <p className="text-muted-foreground">{t('noData')}</p>
           </div>
         )}
       </CardContent>

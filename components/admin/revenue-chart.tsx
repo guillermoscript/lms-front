@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   LineChart,
@@ -28,6 +30,7 @@ interface RevenueChartProps {
 }
 
 export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) {
+  const t = useTranslations('dashboard.admin.analytics.revenue')
   const averageRevenue = data.length > 0 ? totalRevenue / data.length : 0
 
   return (
@@ -37,19 +40,19 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
           <div>
             <CardTitle className="flex items-center gap-2">
               <IconCurrencyDollar className="h-5 w-5 text-green-500" />
-              Revenue Over Time
+              {t('title')}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Revenue trends for the {period}
+              {t('description', { period })}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-sm text-muted-foreground">{t('total')}</p>
             <p className="text-2xl font-bold text-green-600">
               ${totalRevenue.toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Avg: ${averageRevenue.toFixed(2)}/day
+              {t('avg', { amount: averageRevenue.toFixed(2) })}
             </p>
           </div>
         </div>
@@ -84,7 +87,7 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                 formatter={(value: number | undefined, name: string | undefined) => {
                   if (value === undefined || name === undefined) return ['N/A', 'Unknown']
-                  if (name === 'revenue') return [`$${value.toFixed(2)}`, 'Revenue']
+                  if (name === 'revenue') return [`$${value.toFixed(2)}`, t('tooltip')]
                   return [value, 'Transactions']
                 }}
               />
@@ -95,13 +98,13 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
                 stroke="#10b981"
                 strokeWidth={2}
                 fill="url(#revenueGradient)"
-                name="Revenue"
+                name={t('tooltip')}
               />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex h-[300px] items-center justify-center">
-            <p className="text-muted-foreground">No revenue data available</p>
+            <p className="text-muted-foreground">{t('noData')}</p>
           </div>
         )}
       </CardContent>

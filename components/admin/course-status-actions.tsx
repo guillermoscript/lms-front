@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -19,6 +21,7 @@ export function CourseStatusActions({
   currentStatus,
   courseTitle
 }: CourseStatusActionsProps) {
+  const t = useTranslations('dashboard.admin.courses.statusActions')
   const [loading, setLoading] = useState(false)
   const [showApproveDialog, setShowApproveDialog] = useState(false)
   const [showArchiveDialog, setShowArchiveDialog] = useState(false)
@@ -30,11 +33,11 @@ export function CourseStatusActions({
     const result = await approveCourse(courseId)
 
     if (result.success) {
-      toast.success(`Course "${courseTitle}" approved and published`)
+      toast.success(t('toasts.approveSuccess', { title: courseTitle }))
       setShowApproveDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to approve course')
+      toast.error(result.error || t('toasts.approveError'))
     }
 
     setLoading(false)
@@ -45,11 +48,11 @@ export function CourseStatusActions({
     const result = await archiveCourse(courseId)
 
     if (result.success) {
-      toast.success(`Course "${courseTitle}" archived`)
+      toast.success(t('toasts.archiveSuccess', { title: courseTitle }))
       setShowArchiveDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to archive course')
+      toast.error(result.error || t('toasts.archiveError'))
     }
 
     setLoading(false)
@@ -60,11 +63,11 @@ export function CourseStatusActions({
     const result = await restoreCourse(courseId)
 
     if (result.success) {
-      toast.success(`Course "${courseTitle}" restored`)
+      toast.success(t('toasts.restoreSuccess', { title: courseTitle }))
       setShowRestoreDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to restore course')
+      toast.error(result.error || t('toasts.restoreError'))
     }
 
     setLoading(false)
@@ -80,7 +83,7 @@ export function CourseStatusActions({
             disabled={loading}
           >
             <IconCheck className="mr-2 h-4 w-4" />
-            Approve
+            {t('approve')}
           </Button>
         )}
 
@@ -92,7 +95,7 @@ export function CourseStatusActions({
             disabled={loading}
           >
             <IconArchive className="mr-2 h-4 w-4" />
-            Archive
+            {t('archive')}
           </Button>
         )}
 
@@ -104,7 +107,7 @@ export function CourseStatusActions({
             disabled={loading}
           >
             <IconRestore className="mr-2 h-4 w-4" />
-            Restore
+            {t('restore')}
           </Button>
         )}
       </div>
@@ -113,9 +116,9 @@ export function CourseStatusActions({
       <ConfirmDialog
         open={showApproveDialog}
         onOpenChange={setShowApproveDialog}
-        title="Approve Course"
-        description={`Are you sure you want to approve and publish "${courseTitle}"? It will be visible to all students.`}
-        confirmText="Approve & Publish"
+        title={t('dialogs.approve.title')}
+        description={t('dialogs.approve.description', { title: courseTitle })}
+        confirmText={t('dialogs.approve.confirm')}
         onConfirm={handleApprove}
       />
 
@@ -123,9 +126,9 @@ export function CourseStatusActions({
       <ConfirmDialog
         open={showArchiveDialog}
         onOpenChange={setShowArchiveDialog}
-        title="Archive Course"
-        description={`Are you sure you want to archive "${courseTitle}"? It will no longer be visible to students.`}
-        confirmText="Archive"
+        title={t('dialogs.archive.title')}
+        description={t('dialogs.archive.description', { title: courseTitle })}
+        confirmText={t('dialogs.archive.confirm')}
         variant="destructive"
         onConfirm={handleArchive}
       />
@@ -134,9 +137,9 @@ export function CourseStatusActions({
       <ConfirmDialog
         open={showRestoreDialog}
         onOpenChange={setShowRestoreDialog}
-        title="Restore Course"
-        description={`Are you sure you want to restore "${courseTitle}"? It will be published and visible to students again.`}
-        confirmText="Restore"
+        title={t('dialogs.restore.title')}
+        description={t('dialogs.restore.description', { title: courseTitle })}
+        confirmText={t('dialogs.restore.confirm')}
         onConfirm={handleRestore}
       />
     </>

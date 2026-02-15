@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteNotificationTemplate } from "@/app/actions/admin/notification-templates"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 type TemplateCategory = 'system' | 'course' | 'payment' | 'enrollment' | 'exam' | 'custom'
 
@@ -45,6 +46,7 @@ interface TemplatesListProps {
 }
 
 export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) {
+  const t = useTranslations('dashboard.admin.notifications')
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -54,17 +56,17 @@ export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) 
     setIsDeleting(true)
     try {
       const result = await deleteNotificationTemplate(deleteId)
-      
+
       if (result.success) {
-        toast.success("Template deleted successfully")
+        toast.success(t('templates.form.toasts.deleted'))
         setDeleteId(null)
         // Refresh the page to update the list
         window.location.reload()
       } else {
-        toast.error(result.error || "Failed to delete template")
+        toast.error(result.error || t('templates.form.toasts.error'))
       }
     } catch (error) {
-      toast.error("An error occurred while deleting the template")
+      toast.error(t('templates.form.toasts.error'))
     } finally {
       setIsDeleting(false)
     }
@@ -75,7 +77,7 @@ export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) 
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground text-center">
-            No templates found in this category
+            {t('templates.empty')}
           </p>
         </CardContent>
       </Card>
@@ -107,7 +109,7 @@ export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) 
               {template.variables && template.variables.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Variables:
+                    {t('templates.form.content')} Variables:
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {template.variables.map((variable) => (
@@ -131,7 +133,7 @@ export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) 
                 onClick={() => onUse(template)}
               >
                 <IconCopy className="h-4 w-4 mr-1" />
-                Use
+                {t('templates.table.actions')}
               </Button>
               <Button
                 variant="outline"
@@ -156,20 +158,19 @@ export function TemplatesList({ templates, onEdit, onUse }: TemplatesListProps) 
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogTitle>{t('templates.form.dialog.editTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this template? This action cannot be
-              undone.
+              {t('list.confirmDelete')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('templates.back')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "..." : t('list.actions.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

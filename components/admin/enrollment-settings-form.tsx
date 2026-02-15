@@ -8,12 +8,14 @@ import { Switch } from '@/components/ui/switch'
 import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface EnrollmentSettingsFormProps {
   settings: Record<string, any>
 }
 
 export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsFormProps) {
+  const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Extract current values
@@ -40,12 +42,12 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
       const result = await updateSettings(updatedSettings)
 
       if (result.success) {
-        toast.success('Enrollment settings updated successfully')
+        toast.success(t('success'))
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update settings')
+      toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -56,9 +58,9 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
       {/* Auto Enrollment */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="auto_enrollment">Auto Enrollment</Label>
+          <Label htmlFor="auto_enrollment">{t('enrollment.auto')}</Label>
           <p className="text-sm text-muted-foreground">
-            Automatically enroll new users in designated courses
+            {t('enrollment.autoHint')}
           </p>
         </div>
         <Switch
@@ -71,9 +73,9 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
       {/* Self Enrollment */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="allow_self_enrollment">Allow Self Enrollment</Label>
+          <Label htmlFor="allow_self_enrollment">{t('enrollment.self')}</Label>
           <p className="text-sm text-muted-foreground">
-            Allow students to enroll themselves in courses
+            {t('enrollment.selfHint')}
           </p>
         </div>
         <Switch
@@ -86,9 +88,9 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
       {/* Require Approval */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="require_enrollment_approval">Require Enrollment Approval</Label>
+          <Label htmlFor="require_enrollment_approval">{t('enrollment.approval')}</Label>
           <p className="text-sm text-muted-foreground">
-            Require admin approval before students can access courses
+            {t('enrollment.approvalHint')}
           </p>
         </div>
         <Switch
@@ -100,7 +102,7 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
 
       {/* Max Enrollments */}
       <div className="space-y-2">
-        <Label htmlFor="max_enrollments_per_user">Maximum Enrollments Per User</Label>
+        <Label htmlFor="max_enrollments_per_user">{t('enrollment.max')}</Label>
         <Input
           id="max_enrollments_per_user"
           name="max_enrollments_per_user"
@@ -110,13 +112,13 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
           placeholder="0"
         />
         <p className="text-sm text-muted-foreground">
-          Maximum number of courses a user can enroll in (0 = unlimited)
+          {t('enrollment.maxHint')}
         </p>
       </div>
 
       {/* Enrollment Expiration */}
       <div className="space-y-2">
-        <Label htmlFor="enrollment_expiration_days">Enrollment Expiration (Days)</Label>
+        <Label htmlFor="enrollment_expiration_days">{t('enrollment.expiration')}</Label>
         <Input
           id="enrollment_expiration_days"
           name="enrollment_expiration_days"
@@ -126,16 +128,16 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
           placeholder="365"
         />
         <p className="text-sm text-muted-foreground">
-          Number of days until enrollment expires (0 = never expires)
+          {t('enrollment.expirationHint')}
         </p>
       </div>
 
       {/* Course Capacity */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="course_capacity_enabled">Enable Course Capacity</Label>
+          <Label htmlFor="course_capacity_enabled">{t('enrollment.capacity')}</Label>
           <p className="text-sm text-muted-foreground">
-            Allow setting maximum student limits for courses
+            {t('enrollment.capacityHint')}
           </p>
         </div>
         <Switch
@@ -149,7 +151,7 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save Changes
+          {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>
     </form>

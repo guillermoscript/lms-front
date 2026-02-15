@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +28,9 @@ interface UsersTableProps {
 }
 
 export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableProps) {
+  const t = useTranslations('dashboard.admin.users.table')
+  const { locale } = useParams()
+  const dateLocale = locale === 'es' ? es : enUS
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<{
     id: string
@@ -56,7 +63,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
       <div className="mb-4">
         <Input
           type="text"
-          placeholder="Search by name, email, or ID..."
+          placeholder={t('searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-md"
@@ -68,13 +75,13 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
         <table className="w-full">
           <thead className="border-b">
             <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-3 font-medium">User</th>
-              <th className="pb-3 font-medium">Email</th>
-              <th className="pb-3 font-medium">Roles</th>
-              <th className="pb-3 font-medium">Enrollments</th>
-              <th className="pb-3 font-medium">Status</th>
-              <th className="pb-3 font-medium">Joined</th>
-              <th className="pb-3 font-medium">Actions</th>
+              <th className="pb-3 font-medium">{t('headers.user')}</th>
+              <th className="pb-3 font-medium">{t('headers.email')}</th>
+              <th className="pb-3 font-medium">{t('headers.roles')}</th>
+              <th className="pb-3 font-medium">{t('headers.enrollments')}</th>
+              <th className="pb-3 font-medium">{t('headers.status')}</th>
+              <th className="pb-3 font-medium">{t('headers.joined')}</th>
+              <th className="pb-3 font-medium">{t('headers.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -93,7 +100,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                         </div>
                         <div>
                           <p className="font-medium">
-                            {profile.full_name || 'Unknown'}
+                            {profile.full_name || t('unknown')}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {profile.id.slice(0, 8)}...
@@ -112,30 +119,30 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                                 role === 'admin'
                                   ? 'default'
                                   : role === 'teacher'
-                                  ? 'secondary'
-                                  : 'outline'
+                                    ? 'secondary'
+                                    : 'outline'
                               }
                             >
-                              {role}
+                              {t(`roles.${role}`)}
                             </Badge>
                           ))
                         ) : (
-                          <Badge variant="outline">No roles</Badge>
+                          <Badge variant="outline">{t('roles.noRoles')}</Badge>
                         )}
                       </div>
                     </td>
                     <td className="py-4">{enrollmentCount}</td>
                     <td className="py-4">
                       {isDeactivated ? (
-                        <Badge variant="destructive">Deactivated</Badge>
+                        <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Active
+                          {t('status.active')}
                         </Badge>
                       )}
                     </td>
                     <td className="py-4 text-muted-foreground">
-                      {new Date(profile.created_at).toLocaleDateString()}
+                      {format(new Date(profile.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                     </td>
                     <td className="py-4">
                       <div className="flex gap-2">
@@ -145,11 +152,11 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                           onClick={() => handleManageRoles(profile)}
                         >
                           <IconSettings className="mr-1 h-4 w-4" />
-                          Roles
+                          {t('actions.roles')}
                         </Button>
                         <Link href={`/dashboard/admin/users/${profile.id}`}>
                           <Button variant="ghost" size="sm">
-                            View
+                            {t('actions.view')}
                           </Button>
                         </Link>
                       </div>
@@ -160,7 +167,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
             ) : (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                  No users found
+                  {t('noUsers')}
                 </td>
               </tr>
             )}

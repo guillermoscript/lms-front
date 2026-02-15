@@ -4,10 +4,12 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ProductForm } from '@/components/admin/product-form'
 
 export default async function NewProductPage() {
+  const t = await getTranslations('dashboard.admin.products.new')
   const supabase = await createClient()
 
   const {
@@ -26,13 +28,13 @@ export default async function NewProductPage() {
           <Link href="/dashboard/admin/products">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Products
+              {t('back')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Create Product</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
             <p className="mt-1 text-muted-foreground">
-              Create a new product with Stripe integration
+              {t('description')}
             </p>
           </div>
         </div>
@@ -41,9 +43,9 @@ export default async function NewProductPage() {
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <Card>
           <CardHeader>
-            <CardTitle>Product Details</CardTitle>
+            <CardTitle>{t('details.title')}</CardTitle>
             <CardDescription>
-              Products will be automatically created in Stripe. Link courses to create bundles.
+              {t('details.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>

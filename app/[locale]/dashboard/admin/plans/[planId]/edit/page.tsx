@@ -4,6 +4,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { PlanForm } from '@/components/admin/plan-form'
 
@@ -13,6 +14,7 @@ interface PageProps {
 
 export default async function EditPlanPage({ params }: PageProps) {
   const { planId } = await params
+  const t = await getTranslations('dashboard.admin.plans.edit')
   const supabase = await createClient()
 
   const {
@@ -48,13 +50,13 @@ export default async function EditPlanPage({ params }: PageProps) {
           <Link href="/dashboard/admin/plans">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Plans
+              {t('back')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Edit Subscription Plan</h1>
+            <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
             <p className="mt-1 text-muted-foreground">
-              Update plan details and recurring billing configuration
+              {t('description')}
             </p>
           </div>
         </div>
@@ -65,7 +67,7 @@ export default async function EditPlanPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle>{plan.plan_name}</CardTitle>
             <CardDescription>
-              Changes to price, currency, or duration will create a new Stripe price.
+              {t('description')}
             </CardDescription>
           </CardHeader>
           <CardContent>

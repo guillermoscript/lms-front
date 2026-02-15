@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useTranslations } from 'next-intl'
 import { IconSearch } from '@tabler/icons-react'
 
 interface Course {
@@ -20,6 +21,7 @@ interface CourseSelectorProps {
 }
 
 export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProps) {
+  const t = useTranslations('common.courseSelector')
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -56,9 +58,9 @@ export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProp
   if (loading) {
     return (
       <div className="space-y-2">
-        <Label>Courses Included</Label>
+        <Label>{t('label')}</Label>
         <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-          Loading courses...
+          {t('loading')}
         </div>
       </div>
     )
@@ -66,14 +68,14 @@ export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProp
 
   return (
     <div className="space-y-2">
-      <Label>Courses Included</Label>
+      <Label>{t('label')}</Label>
 
       {/* Search */}
       <div className="relative">
         <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search courses..."
+          placeholder={t('search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -102,13 +104,13 @@ export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProp
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {searchQuery ? 'No courses found' : 'No published courses available'}
+            {searchQuery ? t('noResults') : t('noAvailable')}
           </div>
         )}
       </ScrollArea>
 
       <p className="text-sm text-muted-foreground">
-        {selectedCourses.length} course{selectedCourses.length !== 1 ? 's' : ''} selected
+        {t('selected', { count: selectedCourses.length })}
       </p>
     </div>
   )

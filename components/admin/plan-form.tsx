@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -36,6 +37,7 @@ interface PlanFormProps {
 }
 
 export function PlanForm({ mode, initialData }: PlanFormProps) {
+  const t = useTranslations('dashboard.admin.plans.form')
   const [formData, setFormData] = useState({
     plan_name: initialData?.plan_name || '',
     description: initialData?.description || '',
@@ -57,13 +59,13 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
     // Validate
     if (!formData.plan_name.trim()) {
-      setError('Plan name is required')
+      setError(t('errors.nameRequired'))
       setLoading(false)
       return
     }
 
     if (formData.price <= 0) {
-      setError('Price must be greater than 0')
+      setError(t('errors.priceGreater'))
       setLoading(false)
       return
     }
@@ -73,12 +75,12 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
       : await updatePlan(initialData!.plan_id, formData)
 
     if (result.success) {
-      toast.success(`Plan ${mode === 'create' ? 'created' : 'updated'} successfully`)
+      toast.success(mode === 'create' ? t('toasts.createSuccess') : t('toasts.updateSuccess'))
       router.push('/dashboard/admin/plans')
       router.refresh()
     } else {
-      setError(result.error || 'An error occurred')
-      toast.error(result.error || 'An error occurred')
+      setError(result.error || t('errors.generic'))
+      toast.error(result.error || t('errors.generic'))
     }
 
     setLoading(false)
@@ -89,13 +91,13 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
       {/* Plan Name */}
       <div className="space-y-2">
         <Label htmlFor="plan_name">
-          Plan Name <span className="text-destructive">*</span>
+          {t('name')} <span className="text-destructive">*</span>
         </Label>
         <Input
           id="plan_name"
           value={formData.plan_name}
           onChange={(e) => setFormData({ ...formData, plan_name: e.target.value })}
-          placeholder="e.g., Premium Monthly Plan"
+          placeholder={t('namePlaceholder')}
           required
           disabled={loading}
         />
@@ -103,12 +105,12 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('description')}</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Describe what's included in this plan..."
+          placeholder={t('descriptionPlaceholder')}
           rows={4}
           disabled={loading}
         />
@@ -118,7 +120,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="price">
-            Price <span className="text-destructive">*</span>
+            {t('price')} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="price"
@@ -134,7 +136,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="currency">
-            Currency <span className="text-destructive">*</span>
+            {t('currency')} <span className="text-destructive">*</span>
           </Label>
           <Select
             value={formData.currency}
@@ -153,7 +155,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="duration">
-            Duration <span className="text-destructive">*</span>
+            {t('duration')} <span className="text-destructive">*</span>
           </Label>
           <Select
             value={formData.duration_in_days.toString()}
@@ -164,8 +166,8 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="30">Monthly</SelectItem>
-              <SelectItem value="365">Yearly</SelectItem>
+              <SelectItem value="30">{t('durationMonthly')}</SelectItem>
+              <SelectItem value="365">{t('durationYearly')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -173,17 +175,17 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
       {/* Features */}
       <div className="space-y-2">
-        <Label htmlFor="features">Features (comma-separated)</Label>
+        <Label htmlFor="features">{t('features')}</Label>
         <Textarea
           id="features"
           value={formData.features}
           onChange={(e) => setFormData({ ...formData, features: e.target.value })}
-          placeholder="Unlimited access, Priority support, Downloadable resources"
+          placeholder={t('featuresPlaceholder')}
           rows={3}
           disabled={loading}
         />
         <p className="text-sm text-muted-foreground">
-          Enter features separated by commas. These will be displayed to customers.
+          {t('featuresHint')}
         </p>
       </div>
 
@@ -204,7 +206,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
       {/* Actions */}
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : mode === 'create' ? 'Create Plan' : 'Save Changes'}
+          {loading ? t('saving') : mode === 'create' ? t('create') : t('save')}
         </Button>
         <Button
           type="button"
@@ -212,7 +214,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
           onClick={() => router.back()}
           disabled={loading}
         >
-          Cancel
+          {t('cancel')}
         </Button>
       </div>
     </form>

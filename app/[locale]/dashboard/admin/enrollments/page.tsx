@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { format } from 'date-fns'
+import { es, enUS } from 'date-fns/locale'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +15,13 @@ import {
   IconClock,
 } from '@tabler/icons-react'
 
-export default async function AdminEnrollmentsPage() {
+export default async function AdminEnrollmentsPage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
+  const t = await getTranslations('dashboard.admin.enrollments')
+  const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
   const {
@@ -58,14 +67,14 @@ export default async function AdminEnrollmentsPage() {
           <Link href="/dashboard/admin">
             <Button variant="ghost" size="sm" className="mb-4">
               <IconArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('backToDashboard')}
             </Button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Enrollments</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
               <p className="mt-1 text-muted-foreground">
-                View all student course enrollments
+                {t('description')}
               </p>
             </div>
           </div>
@@ -79,7 +88,7 @@ export default async function AdminEnrollmentsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Enrollments</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{enrollments?.length || 0}</p>
                 </div>
                 <IconCertificate className="h-10 w-10 text-blue-500" />
@@ -91,7 +100,7 @@ export default async function AdminEnrollmentsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.active')}</p>
                   <p className="mt-2 text-3xl font-bold">{activeCount}</p>
                 </div>
                 <IconClock className="h-10 w-10 text-green-500" />
@@ -103,7 +112,7 @@ export default async function AdminEnrollmentsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Completed</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.completed')}</p>
                   <p className="mt-2 text-3xl font-bold">{completedCount}</p>
                 </div>
                 <IconCheck className="h-10 w-10 text-purple-500" />
@@ -115,18 +124,18 @@ export default async function AdminEnrollmentsPage() {
         {/* Enrollments Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Enrollments</CardTitle>
+            <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b">
                   <tr className="text-left text-sm text-muted-foreground">
-                    <th className="pb-3 font-medium">Student</th>
-                    <th className="pb-3 font-medium">Course</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Enrolled</th>
-                    <th className="pb-3 font-medium">Actions</th>
+                    <th className="pb-3 font-medium">{t('table.headers.student')}</th>
+                    <th className="pb-3 font-medium">{t('table.headers.course')}</th>
+                    <th className="pb-3 font-medium">{t('table.headers.status')}</th>
+                    <th className="pb-3 font-medium">{t('table.headers.enrolled')}</th>
+                    <th className="pb-3 font-medium">{t('table.headers.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -139,7 +148,7 @@ export default async function AdminEnrollmentsPage() {
                         <tr key={enrollment.enrollment_id} className="text-sm">
                           <td className="py-4">
                             <div>
-                              <p className="font-medium">{user?.full_name || 'Unknown'}</p>
+                              <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
                               <p className="text-xs text-muted-foreground">
                                 {user?.email}
                               </p>
@@ -147,7 +156,7 @@ export default async function AdminEnrollmentsPage() {
                           </td>
                           <td className="py-4">
                             <p className="font-medium line-clamp-1">
-                              {course?.title || 'Unknown Course'}
+                              {course?.title || t('table.unknownCourse')}
                             </p>
                           </td>
                           <td className="py-4">
@@ -160,18 +169,16 @@ export default async function AdminEnrollmentsPage() {
                                     : 'outline'
                               }
                             >
-                              {enrollment.status}
+                              {enrollment.status === 'active' ? t('stats.active') : t('stats.completed')}
                             </Badge>
                           </td>
                           <td className="py-4 text-muted-foreground">
-                            {new Date(enrollment.enrollment_date).toLocaleDateString()}
+                            {format(new Date(enrollment.enrollment_date), 'MMM d, yyyy', { locale: dateLocale })}
                           </td>
                           <td className="py-4">
-                            <Link
-                              href={`/dashboard/student/courses/${enrollment.course_id}`}
-                            >
+                            <Link href={`/dashboard/student/courses/${enrollment.course_id}`}>
                               <Button variant="ghost" size="sm">
-                                View Course
+                                {t('table.viewCourse')}
                               </Button>
                             </Link>
                           </td>
@@ -181,7 +188,7 @@ export default async function AdminEnrollmentsPage() {
                   ) : (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                        No enrollments found
+                        {t('table.empty')}
                       </td>
                     </tr>
                   )}
@@ -191,6 +198,6 @@ export default async function AdminEnrollmentsPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </div >
   )
 }

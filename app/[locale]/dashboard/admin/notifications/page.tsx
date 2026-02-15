@@ -1,5 +1,5 @@
-import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getNotifications, getNotificationStats } from '@/app/actions/admin/notifications'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -17,6 +17,7 @@ import NotificationsList from '@/components/admin/notifications-list'
 import CreateNotificationButton from '@/components/admin/create-notification-button'
 
 export default async function NotificationsPage() {
+  const t = await getTranslations('dashboard.admin.notifications')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin' && role !== 'teacher') {
@@ -43,16 +44,16 @@ export default async function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Send announcements and messages to students and teachers
+            {t('description')}
           </p>
         </div>
         <div className="flex gap-2">
           <Link href="/dashboard/admin/notifications/templates">
             <Button variant="outline">
               <IconTemplate className="mr-2 h-4 w-4" />
-              Templates
+              {t('buttons.templates')}
             </Button>
           </Link>
           <CreateNotificationButton />
@@ -66,7 +67,7 @@ export default async function NotificationsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Notifications</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.total}</p>
                 </div>
                 <IconBell className="h-10 w-10 text-blue-500" />
@@ -78,7 +79,7 @@ export default async function NotificationsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Sent</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.sent')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.sent}</p>
                 </div>
                 <IconSend className="h-10 w-10 text-green-500" />
@@ -90,7 +91,7 @@ export default async function NotificationsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Scheduled</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.scheduled')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.scheduled}</p>
                 </div>
                 <IconClock className="h-10 w-10 text-orange-500" />
@@ -102,7 +103,7 @@ export default async function NotificationsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Drafts</p>
+                  <p className="text-sm text-muted-foreground">{t('stats.drafts')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.draft}</p>
                 </div>
                 <IconFile className="h-10 w-10 text-gray-500" />
@@ -115,25 +116,25 @@ export default async function NotificationsPage() {
       {/* Notifications Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>Manage Notifications</CardTitle>
+          <CardTitle>{t('manage.title')}</CardTitle>
           <CardDescription>
-            View and manage system notifications, announcements, and targeted messages
+            {t('manage.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="space-y-4">
             <TabsList>
               <TabsTrigger value="all">
-                All ({allNotifications.length})
+                {t('tabs.all')} ({allNotifications.length})
               </TabsTrigger>
               <TabsTrigger value="sent">
-                Sent ({sentNotifications.length})
+                {t('tabs.sent')} ({sentNotifications.length})
               </TabsTrigger>
               <TabsTrigger value="scheduled">
-                Scheduled ({scheduledNotifications.length})
+                {t('tabs.scheduled')} ({scheduledNotifications.length})
               </TabsTrigger>
               <TabsTrigger value="draft">
-                Drafts ({draftNotifications.length})
+                {t('tabs.drafts')} ({draftNotifications.length})
               </TabsTrigger>
             </TabsList>
 
