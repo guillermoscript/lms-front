@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { enrollUser, enrollFree } from '@/app/(public)/checkout/actions';
+import { enrollUser, enrollFree } from '@/app/[locale]/(public)/checkout/actions';
 import { createPaymentRequest } from '@/app/actions/payment-requests';
 import { useRouter } from 'next/navigation';
 import { Loader2, CreditCard, Banknote, CheckCircle2 } from "lucide-react";

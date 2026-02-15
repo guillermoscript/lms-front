@@ -19,6 +19,9 @@ import {
 } from "@/app/actions/admin/notifications"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
+import { es, enUS } from "date-fns/locale"
+import { useTranslations } from "next-intl"
+import { useParams } from "next/navigation"
 
 type UserNotification = {
   id: number
@@ -40,6 +43,10 @@ interface NotificationsClientProps {
 }
 
 export function NotificationsClient({ notifications: initialNotifications }: NotificationsClientProps) {
+  const t = useTranslations('dashboard.student.notifications')
+  const { locale } = useParams()
+  const dateLocale = locale === 'es' ? es : enUS
+
   const [notifications, setNotifications] = useState(initialNotifications)
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all")
 
@@ -61,12 +68,12 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
             n.id === notificationId ? { ...n, in_app_read: true } : n
           )
         )
-        toast.success("Notification marked as read")
+        toast.success(t('toasts.markAsReadSuccess'))
       } else {
-        toast.error(result.error || "Failed to mark as read")
+        toast.error(result.error || t('toasts.markAsReadError'))
       }
     } catch (error) {
-      toast.error("An error occurred")
+      toast.error(t('toasts.error'))
     }
   }
 
@@ -77,12 +84,12 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
         setNotifications((prev) =>
           prev.map((n) => ({ ...n, in_app_read: true }))
         )
-        toast.success("All notifications marked as read")
+        toast.success(t('toasts.markAllAsReadSuccess'))
       } else {
-        toast.error(result.error || "Failed to mark all as read")
+        toast.error(result.error || t('toasts.markAllAsReadError'))
       }
     } catch (error) {
-      toast.error("An error occurred")
+      toast.error(t('toasts.error'))
     }
   }
 
@@ -97,12 +104,12 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
               : n
           )
         )
-        toast.success("Notification dismissed")
+        toast.success(t('toasts.dismissSuccess'))
       } else {
-        toast.error(result.error || "Failed to dismiss notification")
+        toast.error(result.error || t('toasts.dismissError'))
       }
     } catch (error) {
-      toast.error("An error occurred")
+      toast.error(t('toasts.error'))
     }
   }
 
@@ -141,16 +148,15 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
   return (
     <div className="space-y-6">
       {/* Actions Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-auto">
           <TabsList>
             <TabsTrigger value="all">
-              All ({notifications.filter((n) => !n.dismissed_at).length})
+              {t('tabs.all')} ({notifications.filter((n) => !n.dismissed_at).length})
             </TabsTrigger>
-            <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
+            <TabsTrigger value="unread">{t('tabs.unread')} ({unreadCount})</TabsTrigger>
             <TabsTrigger value="read">
-              Read (
-              {notifications.filter((n) => n.in_app_read && !n.dismissed_at).length})
+              {t('tabs.read')} ({notifications.filter((n) => n.in_app_read && !n.dismissed_at).length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -158,7 +164,7 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
             <IconCheck className="h-4 w-4 mr-2" />
-            Mark all as read
+            {t('actions.markAllAsRead')}
           </Button>
         )}
       </div>
@@ -166,13 +172,13 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
       {/* Notifications List */}
       {filteredNotifications.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <IconInbox className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">No notifications</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
             <p className="text-sm text-muted-foreground">
               {filter === "unread"
-                ? "You're all caught up!"
-                : "No notifications to display"}
+                ? t('empty.caughtUp')
+                : t('empty.none')}
             </p>
           </CardContent>
         </Card>
@@ -199,14 +205,15 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
                         variant={getPriorityColor(notification.notification.priority) as any}
                         className="text-xs"
                       >
-                        {notification.notification.priority}
+                        {t(`priority.${notification.notification.priority}`) || notification.notification.priority}
                       </Badge>
                       <Badge variant="outline" className={`text-xs ${getTypeColor(notification.notification.type)}`}>
-                        {notification.notification.type}
+                        {t(`types.${notification.notification.type}`) || notification.notification.type}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(notification.created_at), {
                           addSuffix: true,
+                          locale: dateLocale,
                         })}
                       </span>
                     </div>
@@ -233,7 +240,7 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                   {notification.notification.content}
                 </p>
               </CardContent>

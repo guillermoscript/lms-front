@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { updateProfile } from "@/app/dashboard/student/profile/actions";
+import { updateProfile } from "@/app/[locale]/dashboard/student/profile/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
