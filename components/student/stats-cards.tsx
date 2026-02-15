@@ -1,50 +1,57 @@
 "use client"
 
+import { IconBook, IconCircleCheck, IconClock } from "@tabler/icons-react"
 import { useTranslations } from "next-intl"
 
 interface StatsCardsProps {
-  hoursStudied: string
+  totalLessonsCompleted: number
+  coursesInProgress: number
   coursesCompleted: number
-  certificatesEarned: number
 }
 
-export function StatsCards({ hoursStudied, coursesCompleted, certificatesEarned }: StatsCardsProps) {
+export function StatsCards({ totalLessonsCompleted, coursesInProgress, coursesCompleted }: StatsCardsProps) {
   const t = useTranslations('statsCards')
 
+  const stats = [
+    {
+      label: t('hoursStudied'),
+      value: totalLessonsCompleted,
+      suffix: ' lessons',
+      icon: IconBook,
+      color: "text-blue-500 bg-blue-500/10",
+    },
+    {
+      label: 'In Progress',
+      value: coursesInProgress,
+      suffix: coursesInProgress === 1 ? ' course' : ' courses',
+      icon: IconClock,
+      color: "text-amber-500 bg-amber-500/10",
+    },
+    {
+      label: t('coursesCompleted'),
+      value: coursesCompleted,
+      suffix: coursesCompleted === 1 ? ' course' : ' courses',
+      icon: IconCircleCheck,
+      color: "text-emerald-500 bg-emerald-500/10",
+    },
+  ]
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Hours Studied */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">{t('hoursStudied')}</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-4xl font-bold text-foreground">{hoursStudied}h</h3>
-            <span className="text-sm text-emerald-400 font-medium">+2.1%</span>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {stats.map((stat) => (
+        <div key={stat.label} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
+          <div className={`p-2.5 rounded-xl ${stat.color}`}>
+            <stat.icon size={22} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">{stat.label}</p>
+            <p className="text-2xl font-black tabular-nums leading-tight">
+              {stat.value}
+              <span className="text-sm font-medium text-muted-foreground">{stat.suffix}</span>
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Courses Completed */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">{t('coursesCompleted')}</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-4xl font-bold text-foreground">{coursesCompleted}</h3>
-            <span className="text-sm text-muted-foreground font-medium">0%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Certificates Earned */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">{t('certificatesEarned')}</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-4xl font-bold text-foreground">{certificatesEarned}</h3>
-            <span className="text-sm text-emerald-400 font-medium">+1</span>
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   )
 }

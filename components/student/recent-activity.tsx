@@ -7,7 +7,7 @@ interface ExamSubmission {
   submission_id: number
   exam_id: number
   score: number | null
-  submitted_at: string
+  submission_date: string
 }
 
 interface RecentActivityProps {
@@ -17,64 +17,65 @@ interface RecentActivityProps {
 export function RecentActivity({ submissions }: RecentActivityProps) {
   const t = useTranslations('recentActivity')
 
+  const relativeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+  const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60))
+    const diffMs = now.getTime() - date.getTime()
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-    if (diffHours < 1) {
-      const diffMinutes = Math.floor(diffTime / (1000 * 60))
-      return `${diffMinutes} ${diffMinutes === 1 ? t('minute') : t('minutes')} ${t('ago')}`
-    }
-    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? t('hour') : t('hours')} ${t('ago')}`
+    if (diffMinutes < 60) return relativeFormatter.format(-diffMinutes, 'minute')
+    if (diffHours < 24) return relativeFormatter.format(-diffHours, 'hour')
+    if (diffDays < 7) return relativeFormatter.format(-diffDays, 'day')
 
-    const diffDays = Math.floor(diffHours / 24)
-    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? t('day') : t('days')} ${t('ago')}`
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return dateFormatter.format(date)
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-      <h2 className="text-xl font-bold text-foreground">{t('title')}</h2>
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="p-4 border-b border-border">
+        <h2 className="font-bold text-sm">{t('title')}</h2>
+      </div>
 
-      {submissions.length > 0 ? (
-        <div className="space-y-3">
-          {submissions.slice(0, 4).map((submission) => (
-            <div
-              key={submission.submission_id}
-              className="flex gap-3 py-2"
-            >
-              <div className="mt-1">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <IconCircleCheck className="w-5 h-5 text-emerald-400" />
+      <div className="p-2">
+        {submissions.length > 0 ? (
+          <div className="space-y-1">
+            {submissions.slice(0, 4).map((submission) => (
+              <div
+                key={submission.submission_id}
+                className="flex items-center gap-3 p-3 rounded-xl"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <IconCircleCheck className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold truncate">
+                    {t('assignmentGraded')}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {submission.score !== null
+                      ? t('score', { score: submission.score })
+                      : t('pendingGrade')}
+                    {' · '}
+                    {getTimeAgo(submission.submission_date)}
+                  </p>
                 </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {t('assignmentGraded')}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {submission.score !== null
-                    ? t('score', { score: submission.score })
-                    : t('pendingGrade')}
-                </p>
-                <p className="text-xs text-muted-foreground/80 mt-1">
-                  {getTimeAgo(submission.submitted_at)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-            <IconFileText className="w-6 h-6 text-muted-foreground/50" />
+            ))}
           </div>
-          <p className="text-sm text-muted-foreground">{t('noActivity')}</p>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto mb-2">
+              <IconFileText className="w-5 h-5 text-muted-foreground/40" />
+            </div>
+            <p className="text-xs text-muted-foreground">{t('noActivity')}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
