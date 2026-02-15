@@ -135,7 +135,11 @@
         "status": "Status",
         "noTransactions": "No transactions found.",
         "accountDetails": "Account Details",
+        "accountDetailsSubtitle": "Update your personal information",
         "editProfile": "Edit Profile",
+        "editProfileSubtitle": "Manage your account, subscription, and achievements",
+        "learningStats": "Learning Stats",
+        "achievementsTitle": "Achievements",
         "signedUp": "Signed Up",
         "userStatus": "Status",
         "active": "Active",
@@ -144,6 +148,10 @@
         "manageSubscription": "Manage Subscription",
         "noActiveSubscription": "You don't have an active subscription yet.",
         "viewPlans": "View Plans"
+      },
+      "store": {
+        "title": "Point Store",
+        "subtitle": "Exchange your coins for exclusive rewards and power-ups"
       }
     },
     "teacher": {
@@ -311,6 +319,7 @@
       "lessonEditor": {
         "editTitle": "Edit Lesson",
         "createTitle": "Create New Lesson",
+        "backToCourse": "Back to {course}",
         "details": "Lesson Details",
         "titleLabel": "Lesson Title",
         "titlePlaceholder": "Introduction to Variables",
@@ -1499,18 +1508,6 @@
     "published": "Published",
     "draft": "Draft"
   },
-  "actions": {
-    "preview": "Preview",
-    "publish": "Publish",
-    "unpublish": "Unpublish",
-    "archive": "Archive",
-    "restore": "Restore",
-    "duplicate": "Duplicate",
-    "export": "Export",
-    "import": "Import",
-    "viewAll": "View All",
-    "viewDetails": "View Details"
-  },
   "validation": {
     "required": "This field is required",
     "emailInvalid": "Please enter a valid email address",
@@ -1566,6 +1563,7 @@
     "completed": "Completed",
     "myCertificates": "My Certificates",
     "progressReport": "Progress Report",
+    "pointStore": "Point Store",
     "settings": "Settings",
     "logout": "Logout",
     "platform": "LMS Platform",
@@ -1823,6 +1821,53 @@
       "profile": "Profile",
       "settings": "Settings",
       "logout": "Logout"
+    },
+    "gamification": {
+      "leaderboardTitle": "Leaderboard",
+      "viewFullRankings": "View Full Rankings",
+      "level": "Level",
+      "xp": "XP",
+      "coins": "Coins",
+      "streak": "Day Streak",
+      "days": "Days",
+      "activeStreak": "Active Streak",
+      "stats": "Learning Stats",
+      "totalXP": "Total XP Earned",
+      "currentStreak": "Current Streak",
+      "longestStreak": "Longest Streak",
+      "availableFreezes": "Streak Freezes",
+      "recentXP": "Recent XP Activities",
+      "viewAllAchievements": "View All Achievements",
+      "leaderboard": {
+        "title": "Top Learners",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "allTime": "All Time",
+        "rank": "Rank",
+        "learner": "Learner",
+        "xp": "XP",
+        "empty": "No rankings yet. Start learning to appear here!"
+      },
+      "achievements": {
+        "title": "Your Achievements",
+        "earned": "{earned} of {total} unlocked",
+        "recent": "Recent",
+        "bronze": "Bronze",
+        "silver": "Silver",
+        "gold": "Gold",
+        "platinum": "Platinum"
+      },
+      "store": {
+        "title": "Point Store",
+        "subtitle": "Spend your hard-earned coins on rewards and power-ups",
+        "balance": "Your Balance",
+        "purchase": "Purchase",
+        "purchasing": "Purchasing...",
+        "notEnough": "Not enough coins",
+        "success": "Purchase successful!",
+        "error": "Failed to complete purchase",
+        "empty": "The store is currently empty. Check back later!"
+      }
     }
   },
   "courseDetails": {
@@ -1840,6 +1885,37 @@
     "videoText": "VIDEO + TEXT",
     "completed": "COMPLETED",
     "study": "STUDY",
-    "noLessons": "No lessons available yet."
+    "noLessons": "No lessons available yet.",
+    "lessonComments": {
+      "title": "{count} Comments",
+      "placeholder": "Add a comment...",
+      "post": "Post",
+      "posting": "Posting...",
+      "reply": "Reply",
+      "writeReply": "Write a reply...",
+      "like": "Like",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this comment?",
+      "posted": "Comment posted",
+      "errorPosting": "Error posting comment",
+      "errorLoading": "Error loading comments",
+      "unknown": "Unknown User",
+      "noComments": "No comments yet",
+      "beFirst": "Be the first to comment!"
+    },
+    "courseReviews": {
+      "title": "Course Reviews",
+      "reviewsCount": "{count} reviews",
+      "yourRating": "Your Rating",
+      "yourReview": "Your Review (Optional)",
+      "placeholder": "Share your experience with this course...",
+      "submit": "Submit Review",
+      "submitting": "Submitting...",
+      "alreadyReviewed": "You have already reviewed this course. Thank you for your feedback!",
+      "loading": "Loading reviews...",
+      "noReviews": "No reviews yet. Be the first to review this course!",
+      "selectRating": "Please select a rating",
+      "errorSubmitting": "Failed to submit review. Please try again."
+    }
   }
 }

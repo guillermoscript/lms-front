@@ -135,8 +135,12 @@
         "status": "Estado",
         "noTransactions": "No se encontraron transacciones.",
         "accountDetails": "Detalles de la Cuenta",
+        "accountDetailsSubtitle": "Actualiza tu información personal",
         "editProfile": "Editar Perfil",
-        "signedUp": "Registrado",
+        "editProfileSubtitle": "Gestiona tu cuenta, suscripción y logros",
+        "learningStats": "Estadísticas de Aprendizaje",
+        "achievementsTitle": "Logros",
+        "signedUp": "Registrado el",
         "userStatus": "Estado",
         "active": "Activo",
         "currentPlan": "Plan Actual",
@@ -144,6 +148,10 @@
         "manageSubscription": "Gestionar Suscripción",
         "noActiveSubscription": "Aún no tienes una suscripción activa.",
         "viewPlans": "Ver Planes"
+      },
+      "store": {
+        "title": "Tienda de Puntos",
+        "subtitle": "Canjea tus monedas por recompensas exclusivas y mejoras"
       }
     },
     "teacher": {
@@ -303,6 +311,7 @@
       "lessonEditor": {
         "editTitle": "Editar Lección",
         "createTitle": "Crear Nueva Lección",
+        "backToCourse": "Volver a {course}",
         "details": "Detalles de la Lección",
         "titleLabel": "Título de la Lección",
         "titlePlaceholder": "Introducción a las Variables",
@@ -1482,18 +1491,6 @@
       "published": "Publicado",
       "draft": "Borrador"
     },
-    "actions": {
-      "preview": "Vista Previa",
-      "publish": "Publicar",
-      "unpublish": "Despublicar",
-      "archive": "Archivar",
-      "restore": "Restaurar",
-      "duplicate": "Duplicar",
-      "export": "Exportar",
-      "import": "Importar",
-      "viewAll": "Ver Todos",
-      "viewDetails": "Ver Detalles"
-    },
     "validation": {
       "required": "Este campo es obligatorio",
       "emailInvalid": "Por favor ingresa un correo electrónico válido",
@@ -1509,322 +1506,401 @@
       "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
       "confirmDelete": "¿Estás seguro de que quieres eliminar esto?",
       "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?"
+    }
+  },
+  "navbar": {
+    "brand": "LMS V2",
+    "courses": "Cursos",
+    "plans": "Planes",
+    "about": "Acerca de",
+    "dashboard": "Panel",
+    "login": "Ingresar",
+    "signup": "Registrarse"
+  },
+  "sidebar": {
+    "dashboard": "Panel de Control",
+    "users": "Usuarios",
+    "allCourses": "Todos los Cursos",
+    "enrollments": "Inscripciones",
+    "transactions": "Transacciones",
+    "myCourses": "Mis Cursos",
+    "createCourse": "Crear Curso",
+    "browseCourses": "Explorar Cursos",
+    "courseCatalog": "Catálogo de Cursos",
+    "continueLearning": "Continuar Aprendiendo",
+    "completed": "Completados",
+    "myCertificates": "Mis Certificados",
+    "progressReport": "Informe de Progreso",
+    "pointStore": "Tienda de Puntos",
+    "settings": "Configuración",
+    "logout": "Cerrar Sesión",
+    "platform": "Plataforma LMS",
+    "guest": "Invitado",
+    "main": "Principal",
+    "discover": "Descubrir",
+    "learning": "Aprendizaje",
+    "resources": "Recursos",
+    "contentManagement": "Gestión de Contenido",
+    "management": "Gestión",
+    "profile": "Perfil"
+  },
+  "userNav": {
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar Sesión"
+  },
+  "welcomeHero": {
+    "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
+    "progressMessage": "Llevas un {progress}% de tu meta semanal. ¡Sigue así para ganar tu próxima insignia!",
+    "viewReport": "Ver Informe",
+    "updateGoals": "Actualizar Metas"
+  },
+  "statsCards": {
+    "hoursStudied": "Horas Estudiadas",
+    "coursesCompleted": "Cursos Completados",
+    "certificatesEarned": "Certificados Ganados"
+  },
+  "upcomingExams": {
+    "title": "Próximos Exámenes",
+    "noExams": "No hay exámenes con fecha próxima",
+    "viewSchedule": "VER HORARIO",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "inDays": "en {days} días"
+  },
+  "recentActivity": {
+    "title": "Actividad Reciente",
+    "assignmentGraded": "Tarea Calificada",
+    "score": "Calificación: {score}/100",
+    "pendingGrade": "Calificación pendiente",
+    "noActivity": "Sin actividad reciente",
+    "minute": "minuto",
+    "minutes": "minutos",
+    "hour": "hora",
+    "hours": "horas",
+    "day": "día",
+    "days": "días",
+    "ago": "atrás"
+  },
+  "components": {
+    "courseProgress": {
+      "progress": "Progreso"
     },
-    "landing": {
-      "poweredBy": "Impulsado por Next.js 16",
-      "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
-      "heroDescription": "La plataforma de aprendizaje definitiva impulsada por Next.js 16 y Supabase. Interactiva, rápida y escalable para desarrolladores modernos.",
-      "getStarted": "Empieza Gratis",
-      "viewGithub": "Ver en Github",
-      "trustedBy": "Confían en nosotros desarrolladores en",
-      "featuresTitle": "¿Por qué elegir LMS V2?",
-      "featuresDescription": "Construido para el rendimiento y la experiencia del desarrollador. Nos enfocamos en las características que importan para la educación técnica.",
-      "feature1Title": "Retroalimentación con IA",
-      "feature1Description": "Obtén revisiones de código inteligentes y sugerencias instantáneas en tus tareas impulsadas por los últimos LLMs.",
-      "feature2Title": "Soporte para Lecciones MDX",
-      "feature2Description": "Escribe lecciones interactivas con MDX. Incrusta componentes de React directamente dentro de tu contenido de curso de forma segura.",
-      "feature3Title": "Paneles Basados en Roles",
-      "feature3Description": "Interfaces dedicadas para Estudiantes, Instructores y Administradores para gestionar el progreso, el contenido y las analíticas."
+    "enrolledCourse": {
+      "overallProgress": "Progreso General",
+      "lessons": "Lecciones",
+      "exams": "Exámenes",
+      "upNext": "Siguiente",
+      "enrolled": "Inscrito hace {date}",
+      "renew": "Renovar Suscripción",
+      "review": "Repasar Curso",
+      "continue": "Continuar Aprendiendo",
+      "completed": "Completado",
+      "inProgress": "En Progreso",
+      "notStarted": "No Iniciado",
+      "expired": "Tu suscripción ha expirado. Renueva para continuar."
     },
-    "navbar": {
-      "brand": "LMS V2",
-      "courses": "Cursos",
-      "plans": "Planes",
-      "about": "Acerca de",
-      "dashboard": "Panel",
-      "login": "Ingresar",
-      "signup": "Registrarse"
-    },
-    "sidebar": {
-      "dashboard": "Panel de Control",
-      "users": "Usuarios",
+    "courseFilters": {
+      "searchPlaceholder": "Buscar tus cursos...",
       "allCourses": "Todos los Cursos",
-      "enrollments": "Inscripciones",
-      "transactions": "Transacciones",
-      "myCourses": "Mis Cursos",
-      "createCourse": "Crear Curso",
-      "browseCourses": "Explorar Cursos",
-      "courseCatalog": "Catálogo de Cursos",
-      "continueLearning": "Continuar Aprendiendo",
+      "inProgress": "En Progreso",
       "completed": "Completados",
-      "myCertificates": "Mis Certificados",
-      "progressReport": "Informe de Progreso",
-      "settings": "Configuración",
-      "logout": "Cerrar Sesión",
-      "platform": "Plataforma LMS",
-      "guest": "Invitado",
-      "main": "Principal",
-      "discover": "Descubrir",
-      "learning": "Aprendizaje",
-      "resources": "Recursos",
-      "contentManagement": "Gestión de Contenido",
-      "management": "Gestión",
-      "profile": "Perfil"
+      "notStarted": "No Iniciados",
+      "sortBy": "Ordenar por",
+      "mostRecent": "Más Recientes",
+      "titleAZ": "Título (A-Z)",
+      "progress": "Progreso"
     },
-    "userNav": {
+    "browseCourse": {
+      "goCourse": "Ir al Curso",
+      "enrollNow": "Inscribirse",
+      "enrolling": "Inscribiendo...",
+      "subscribeAccess": "Suscribirse para Acceder",
+      "enrolled": "Inscrito"
+    },
+    "profileForm": {
+      "fullName": "Nombre Completo",
+      "username": "Usuario",
+      "website": "Sitio Web",
+      "bio": "Biografía",
+      "save": "Guardar Detalles",
+      "saving": "Guardando...",
+      "success": "¡Perfil actualizado con éxito!",
+      "error": "Error al actualizar perfil",
+      "placeholders": {
+        "fullName": "Tu nombre completo",
+        "username": "usuario_unico",
+        "website": "https://tusitio.com",
+        "bio": "Cuéntanos un poco sobre ti..."
+      }
+    },
+    "lessons": {
+      "lessonIndex": "Lección {count}",
+      "sidebarTitle": "Contenido del Curso",
+      "sidebarDescription": "Navega por las lecciones del curso",
+      "aiTutorTitle": "Sesión de Tutor de IA",
+      "aiTutorDescription": "Completa la tarea para terminar esta lección",
+      "currentTask": "Tarea Actual"
+    },
+    "lessonAIChat": {
+      "suggestions": {
+        "question": "Tengo una pregunta sobre la tarea",
+        "hint": "¿Puedes darme una pista?",
+        "understanding": "Verifica mi comprensión",
+        "summarize": "Resume lo que he aprendido"
+      },
+      "toast": {
+        "completed": "¡Lección Completada!",
+        "completedDetail": "¡Buen trabajo! Has completado la tarea con éxito.",
+        "restartSuccess": "Chat reiniciado con éxito",
+        "restartFailed": "Error al reiniciar el chat",
+        "restartError": "Error al reiniciar el chat"
+      },
+      "confirmRestart": "¿Estás seguro de que quieres reiniciar la conversación? Esto borrará tu historial de chat y restablecerá el estado de finalización.",
+      "successHeader": "¡Lección Completada!",
+      "successDescription": "¡Buen trabajo! Has completado esta tarea con éxito.",
+      "stats": {
+        "messages": "Mensajes Intercambiados",
+        "taskCompleted": "Tarea Completada"
+      },
+      "buttons": {
+        "restarting": "Reiniciando...",
+        "tryAgain": "Intentar de Nuevo"
+      },
+      "emptyState": {
+        "title": "Tutor de IA listo",
+        "description": "¡Estoy listo para revisar tu trabajo! Escribe tu respuesta a continuación según la descripción de la tarea."
+      },
+      "targetAchieved": "¡Objetivo Logrado!",
+      "generating": "Generando respuesta...",
+      "placeholders": {
+        "completed": "¡Lección completada! Reinicia para seguir practicando.",
+        "typeAnswer": "Escribe tu respuesta aquí..."
+      },
+      "tooltips": {
+        "restart": "Reiniciar Conversación"
+      }
+    },
+    "lessonSidebar": {
+      "backToCourse": "Volver al curso"
+    },
+    "lessonNavigation": {
+      "previous": "Anterior",
+      "backToCourse": "Volver al Curso",
+      "completed": "Completado",
+      "markAsComplete": "Marcar como Completado",
+      "done": "Hecho",
+      "complete": "Completar",
+      "next": "Siguiente",
+      "finishCourse": "Finalizar Curso"
+    },
+    "lessonComments": {
+      "title": "Comentarios ({count})",
+      "placeholder": "Comparte tus pensamientos o haz una pregunta...",
+      "post": "Publicar Comentario",
+      "posting": "Publicando...",
+      "loading": "Cargando comentarios...",
+      "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+      "unknown": "Desconocido",
+      "error": "Error al publicar el comentario. Por favor, inténtalo de nuevo."
+    },
+    "dashboardSummary": {
+      "yourProgress": "Tu Progreso",
+      "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
+      "progressMessage": "¡Lo estás haciendo genial! Has completado {count} lecciones hasta ahora. Mantén el impulso.",
+      "courseCompletion": "Finalización del Curso",
+      "continueLearning": "Continuar Aprendiendo",
+      "dailyStreak": "Racha Diaria",
+      "daysCount": "{count} Días",
+      "topLearner": "\"¡Estás en el top 5% de los estudiantes esta semana!\"",
+      "achievements": "Logros",
+      "badgesCount": "{count} Insignias"
+    },
+    "manualPayment": {
+      "title": "Solicitar Información de Pago",
+      "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({symbol}{price})",
+      "fullName": "Nombre Completo",
+      "fullNamePlaceholder": "Juan Pérez",
+      "email": "Correo Electrónico",
+      "emailPlaceholder": "juan@ejemplo.com",
+      "phone": "Número de Teléfono (opcional)",
+      "phonePlaceholder": "+34 600 000 000",
+      "message": "Mensaje Adicional (opcional)",
+      "messagePlaceholder": "Cualquier pregunta o petición especial...",
+      "whatHappensNext": "¿Qué sucede después?",
+      "step1": "Te enviaremos las instrucciones de pago por correo electrónico",
+      "step2": "Elige tu método de pago preferido (transferencia bancaria, factura, etc.)",
+      "step3": "Una vez confirmado el pago, obtendrás acceso instantáneo",
+      "sending": "Enviando...",
+      "submit": "Solicitar Info de Pago",
+      "cancel": "Cancelar",
+      "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
+      "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo."
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "description": "Mantente al día con tus últimas notificaciones",
+      "tabs": {
+        "all": "Todas",
+        "unread": "No leídas",
+        "read": "Leídas"
+      },
+      "actions": {
+        "markAllAsRead": "Marcar todas como leídas"
+      },
+      "empty": {
+        "title": "Sin notificaciones",
+        "caughtUp": "¡Estás al día!",
+        "none": "No hay notificaciones para mostrar"
+      },
+      "toasts": {
+        "markAsReadSuccess": "Notificación marcada como leída",
+        "markAsReadError": "Error al marcar como leída",
+        "markAllAsReadSuccess": "Todas las notificaciones marcadas como leídas",
+        "markAllAsReadError": "Error al marcar todas como leídas",
+        "dismissSuccess": "Notificación descartada",
+        "dismissError": "Error al descartar la notificación",
+        "error": "Ha ocurrido un error"
+      },
+      "types": {
+        "announcement": "Anuncio",
+        "alert": "Alerta",
+        "info": "Información",
+        "success": "Éxito",
+        "warning": "Advertencia",
+        "error": "Error"
+      },
+      "priority": {
+        "low": "Baja",
+        "normal": "Normal",
+        "high": "Alta",
+        "urgent": "Urgente"
+      }
+    },
+    "activitySection": {
+      "title": "Continuar Aprendiendo",
+      "recentSessions": "{count} Sesiones Recientes",
+      "lastViewed": "Última vez visto el {date}",
+      "part": "Parte {sequence}",
+      "defaultDescription": "Continúa por donde lo dejaste en esta lección.",
+      "resume": "Reanudar Sesión"
+    },
+    "dashboardHeader": {
+      "searchPlaceholder": "Buscar cursos, exámenes o recursos...",
       "profile": "Perfil",
       "settings": "Configuración",
       "logout": "Cerrar Sesión"
     },
-    "welcomeHero": {
-      "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
-      "progressMessage": "Llevas un {progress}% de tu meta semanal. ¡Sigue así para ganar tu próxima insignia!",
-      "viewReport": "Ver Informe",
-      "updateGoals": "Actualizar Metas"
-    },
-    "statsCards": {
-      "hoursStudied": "Horas Estudiadas",
-      "coursesCompleted": "Cursos Completados",
-      "certificatesEarned": "Certificados Ganados"
-    },
-    "upcomingExams": {
-      "title": "Próximos Exámenes",
-      "noExams": "No hay exámenes con fecha próxima",
-      "viewSchedule": "VER HORARIO",
-      "today": "Hoy",
-      "tomorrow": "Mañana",
-      "inDays": "en {days} días"
-    },
-    "recentActivity": {
-      "title": "Actividad Reciente",
-      "assignmentGraded": "Tarea Calificada",
-      "score": "Calificación: {score}/100",
-      "pendingGrade": "Calificación pendiente",
-      "noActivity": "Sin actividad reciente",
-      "minute": "minuto",
-      "minutes": "minutos",
-      "hour": "hora",
-      "hours": "horas",
-      "day": "día",
-      "days": "días",
-      "ago": "atrás"
-    },
-    "components": {
-      "courseProgress": {
-        "progress": "Progreso"
+    "gamification": {
+      "leaderboardTitle": "Tabla de Clasificación",
+      "viewFullRankings": "Ver Clasificación Completa",
+      "level": "Nivel",
+      "xp": "XP",
+      "coins": "Monedas",
+      "streak": "Racha de Días",
+      "days": "Días",
+      "activeStreak": "Racha Activa",
+      "stats": "Estadísticas de Aprendizaje",
+      "totalXP": "XP Total Ganado",
+      "currentStreak": "Racha Actual",
+      "longestStreak": "Mejor Racha",
+      "availableFreezes": "Protectores de Racha",
+      "recentXP": "Actividades Recientes de XP",
+      "viewAllAchievements": "Ver Todos los Logros",
+      "leaderboard": {
+        "title": "Top Estudiantes",
+        "weekly": "Semanal",
+        "monthly": "Mensual",
+        "allTime": "Histórico",
+        "rank": "Rango",
+        "learner": "Estudiante",
+        "xp": "XP",
+        "empty": "Aún no hay clasificaciones. ¡Empieza a aprender para aparecer aquí!"
       },
-      "enrolledCourse": {
-        "overallProgress": "Progreso General",
-        "lessons": "Lecciones",
-        "exams": "Exámenes",
-        "upNext": "Siguiente",
-        "enrolled": "Inscrito hace {date}",
-        "renew": "Renovar Suscripción",
-        "review": "Repasar Curso",
-        "continue": "Continuar Aprendiendo",
-        "completed": "Completado",
-        "inProgress": "En Progreso",
-        "notStarted": "No Iniciado",
-        "expired": "Tu suscripción ha expirado. Renueva para continuar."
+      "achievements": {
+        "title": "Tus Logros",
+        "earned": "{earned} de {total} desbloqueados",
+        "recent": "Recientes",
+        "bronze": "Bronce",
+        "silver": "Plata",
+        "gold": "Oro",
+        "platinum": "Platino"
       },
-      "courseFilters": {
-        "searchPlaceholder": "Buscar tus cursos...",
-        "allCourses": "Todos los Cursos",
-        "inProgress": "En Progreso",
-        "completed": "Completados",
-        "notStarted": "No Iniciados",
-        "sortBy": "Ordenar por",
-        "mostRecent": "Más Recientes",
-        "titleAZ": "Título (A-Z)",
-        "progress": "Progreso"
-      },
-      "browseCourse": {
-        "goCourse": "Ir al Curso",
-        "enrollNow": "Inscribirse",
-        "enrolling": "Inscribiendo...",
-        "subscribeAccess": "Suscribirse para Acceder",
-        "enrolled": "Inscrito"
-      },
-      "profileForm": {
-        "fullName": "Nombre Completo",
-        "username": "Usuario",
-        "website": "Sitio Web",
-        "bio": "Biografía",
-        "save": "Guardar Detalles",
-        "saving": "Guardando...",
-        "success": "¡Perfil actualizado con éxito!",
-        "error": "Error al actualizar perfil",
-        "placeholders": {
-          "fullName": "Tu nombre completo",
-          "username": "usuario_unico",
-          "website": "https://tusitio.com",
-          "bio": "Cuéntanos un poco sobre ti..."
-        }
-      },
-      "lessons": {
-        "lessonIndex": "Lección {count}",
-        "sidebarTitle": "Contenido del Curso",
-        "sidebarDescription": "Navega por las lecciones del curso",
-        "aiTutorTitle": "Sesión de Tutor de IA",
-        "aiTutorDescription": "Completa la tarea para terminar esta lección",
-        "currentTask": "Tarea Actual"
-      },
-      "lessonAIChat": {
-        "suggestions": {
-          "question": "Tengo una pregunta sobre la tarea",
-          "hint": "¿Puedes darme una pista?",
-          "understanding": "Verifica mi comprensión",
-          "summarize": "Resume lo que he aprendido"
-        },
-        "toast": {
-          "completed": "¡Lección Completada!",
-          "completedDetail": "¡Buen trabajo! Has completado la tarea con éxito.",
-          "restartSuccess": "Chat reiniciado con éxito",
-          "restartFailed": "Error al reiniciar el chat",
-          "restartError": "Error al reiniciar el chat"
-        },
-        "confirmRestart": "¿Estás seguro de que quieres reiniciar la conversación? Esto borrará tu historial de chat y restablecerá el estado de finalización.",
-        "successHeader": "¡Lección Completada!",
-        "successDescription": "¡Buen trabajo! Has completado esta tarea con éxito.",
-        "stats": {
-          "messages": "Mensajes Intercambiados",
-          "taskCompleted": "Tarea Completada"
-        },
-        "buttons": {
-          "restarting": "Reiniciando...",
-          "tryAgain": "Intentar de Nuevo"
-        },
-        "emptyState": {
-          "title": "Tutor de IA listo",
-          "description": "¡Estoy listo para revisar tu trabajo! Escribe tu respuesta a continuación según la descripción de la tarea."
-        },
-        "targetAchieved": "¡Objetivo Logrado!",
-        "generating": "Generando respuesta...",
-        "placeholders": {
-          "completed": "¡Lección completada! Reinicia para seguir practicando.",
-          "typeAnswer": "Escribe tu respuesta aquí..."
-        },
-        "tooltips": {
-          "restart": "Reiniciar Conversación"
-        }
-      },
-      "lessonSidebar": {
-        "backToCourse": "Volver al curso"
-      },
-      "lessonNavigation": {
-        "previous": "Anterior",
-        "backToCourse": "Volver al Curso",
-        "completed": "Completado",
-        "markAsComplete": "Marcar como Completado",
-        "done": "Hecho",
-        "complete": "Completar",
-        "next": "Siguiente",
-        "finishCourse": "Finalizar Curso"
-      },
-      "lessonComments": {
-        "title": "Comentarios ({count})",
-        "placeholder": "Comparte tus pensamientos o haz una pregunta...",
-        "post": "Publicar Comentario",
-        "posting": "Publicando...",
-        "loading": "Cargando comentarios...",
-        "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
-        "unknown": "Desconocido",
-        "error": "Error al publicar el comentario. Por favor, inténtalo de nuevo."
-      },
-      "dashboardSummary": {
-        "yourProgress": "Tu Progreso",
-        "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
-        "progressMessage": "¡Lo estás haciendo genial! Has completado {count} lecciones hasta ahora. Mantén el impulso.",
-        "courseCompletion": "Finalización del Curso",
-        "continueLearning": "Continuar Aprendiendo",
-        "dailyStreak": "Racha Diaria",
-        "daysCount": "{count} Días",
-        "topLearner": "\"¡Estás en el top 5% de los estudiantes esta semana!\"",
-        "achievements": "Logros",
-        "badgesCount": "{count} Insignias"
-      },
-      "manualPayment": {
-        "title": "Solicitar Información de Pago",
-        "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({symbol}{price})",
-        "fullName": "Nombre Completo",
-        "fullNamePlaceholder": "Juan Pérez",
-        "email": "Correo Electrónico",
-        "emailPlaceholder": "juan@ejemplo.com",
-        "phone": "Número de Teléfono (opcional)",
-        "phonePlaceholder": "+34 600 000 000",
-        "message": "Mensaje Adicional (opcional)",
-        "messagePlaceholder": "Cualquier pregunta o petición especial...",
-        "whatHappensNext": "¿Qué sucede después?",
-        "step1": "Te enviaremos las instrucciones de pago por correo electrónico",
-        "step2": "Elige tu método de pago preferido (transferencia bancaria, factura, etc.)",
-        "step3": "Una vez confirmado el pago, obtendrás acceso instantáneo",
-        "sending": "Enviando...",
-        "submit": "Solicitar Info de Pago",
-        "cancel": "Cancelar",
-        "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
-        "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo."
-      },
-      "notifications": {
-        "title": "Notificaciones",
-        "description": "Mantente al día con tus últimas notificaciones",
-        "tabs": {
-          "all": "Todas",
-          "unread": "No leídas",
-          "read": "Leídas"
-        },
-        "actions": {
-          "markAllAsRead": "Marcar todas como leídas"
-        },
-        "empty": {
-          "title": "Sin notificaciones",
-          "caughtUp": "¡Estás al día!",
-          "none": "No hay notificaciones para mostrar"
-        },
-        "toasts": {
-          "markAsReadSuccess": "Notificación marcada como leída",
-          "markAsReadError": "Error al marcar como leída",
-          "markAllAsReadSuccess": "Todas las notificaciones marcadas como leídas",
-          "markAllAsReadError": "Error al marcar todas como leídas",
-          "dismissSuccess": "Notificación descartada",
-          "dismissError": "Error al descartar la notificación",
-          "error": "Ha ocurrido un error"
-        },
-        "types": {
-          "announcement": "Anuncio",
-          "alert": "Alerta",
-          "info": "Información",
-          "success": "Éxito",
-          "warning": "Advertencia",
-          "error": "Error"
-        },
-        "priority": {
-          "low": "Baja",
-          "normal": "Normal",
-          "high": "Alta",
-          "urgent": "Urgente"
-        }
-      },
-      "activitySection": {
-        "title": "Continuar Aprendiendo",
-        "recentSessions": "{count} Sesiones Recientes",
-        "lastViewed": "Última vez visto el {date}",
-        "part": "Parte {sequence}",
-        "defaultDescription": "Continúa por donde lo dejaste en esta lección.",
-        "resume": "Reanudar Sesión"
-      },
-      "dashboardHeader": {
-        "searchPlaceholder": "Buscar cursos, exámenes o recursos...",
-        "profile": "Perfil",
-        "settings": "Configuración",
-        "logout": "Cerrar Sesión"
+      "store": {
+        "title": "Tienda de Puntos",
+        "subtitle": "Canjea tus monedas por recompensas y mejoras",
+        "balance": "Tu Saldo",
+        "purchase": "Comprar",
+        "purchasing": "Comprando...",
+        "notEnough": "Monedas insuficientes",
+        "success": "¡Compra exitosa!",
+        "error": "Error al completar la compra",
+        "empty": "La tienda está vacía por el momento. ¡Vuelve más tarde!"
       }
+    }
+  },
+  "landing": {
+    "poweredBy": "Impulsado por Next.js 16",
+    "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
+    "heroDescription": "La plataforma de aprendizaje definitiva impulsada por Next.js 16 y Supabase. Interactiva, rápida y escalable para desarrolladores modernos.",
+    "getStarted": "Empieza Gratis",
+    "viewGithub": "Ver en Github",
+    "trustedBy": "Confían en nosotros desarrolladores en",
+    "featuresTitle": "¿Por qué elegir LMS V2?",
+    "featuresDescription": "Construido para el rendimiento y la experiencia del desarrollador. Nos enfocamos en las características que importan para la educación técnica.",
+    "feature1Title": "Retroalimentación con IA",
+    "feature1Description": "Obtén revisiones de código inteligentes y sugerencias instantáneas en tus tareas impulsadas por los últimos LLMs.",
+    "feature2Title": "Soporte para Lecciones MDX",
+    "feature2Description": "Escribe lecciones interactivas con MDX. Incrusta componentes de React directamente dentro de tu contenido de curso de forma segura.",
+    "feature3Title": "Paneles Basados en Roles",
+    "feature3Description": "Interfaces dedicadas para Estudiantes, Instructores y Administradores para gestionar el progreso, el contenido y las analíticas."
+  },
+  "courseDetails": {
+    "backToLearning": "Volver a Mi Aprendizaje",
+    "instructor": "Instructor:",
+    "unknownInstructor": "Instructor Desconocido",
+    "courseProgress": "Progreso del Curso",
+    "lessonsCount": "{count} LECCIONES",
+    "continue": "Continuar",
+    "startNow": "Comenzar",
+    "exercises": "Ejercicios ({count})",
+    "exams": "Exámenes ({count})",
+    "curriculum": "Plan de Estudios",
+    "mins": "{count} MIN",
+    "videoText": "VIDEO + TEXTO",
+    "completed": "COMPLETADO",
+    "study": "ESTUDIAR",
+    "noLessons": "No hay lecciones disponibles aún.",
+    "lessonComments": {
+      "title": "{count} Comentarios",
+      "placeholder": "Agrega un comentario...",
+      "post": "Publicar",
+      "posting": "Publicando...",
+      "reply": "Responder",
+      "writeReply": "Escribe una respuesta...",
+      "like": "Me gusta",
+      "delete": "Eliminar",
+      "confirmDelete": "¿Estás seguro de que quieres eliminar este comentario?",
+      "posted": "Comentario publicado",
+      "errorPosting": "Error al publicar el comentario",
+      "errorLoading": "Error al cargar los comentarios",
+      "unknown": "Usuario Desconocido",
+      "noComments": "Aún no hay comentarios",
+      "beFirst": "¡Sé el primero en comentar!"
     },
-    "courseDetails": {
-      "backToLearning": "Volver a Mi Aprendizaje",
-      "instructor": "Instructor:",
-      "unknownInstructor": "Instructor Desconocido",
-      "courseProgress": "Progreso del Curso",
-      "lessonsCount": "{count} LECCIONES",
-      "continue": "Continuar",
-      "startNow": "Comenzar",
-      "exercises": "Ejercicios ({count})",
-      "exams": "Exámenes ({count})",
-      "curriculum": "Plan de Estudios",
-      "mins": "{count} MIN",
-      "videoText": "VIDEO + TEXTO",
-      "completed": "COMPLETADO",
-      "study": "ESTUDIAR",
-      "noLessons": "No hay lecciones disponibles aún."
+    "courseReviews": {
+      "title": "Reseñas del Curso",
+      "reviewsCount": "{count} reseñas",
+      "yourRating": "Tu Calificación",
+      "yourReview": "Tu Reseña (Opcional)",
+      "placeholder": "Comparte tu experiencia con este curso...",
+      "submit": "Enviar Reseña",
+      "submitting": "Enviando...",
+      "alreadyReviewed": "Ya has reseñado este curso. ¡Gracias por tus comentarios!",
+      "loading": "Cargando reseñas...",
+      "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
+      "selectRating": "Por favor selecciona una calificación",
+      "errorSubmitting": "Error al enviar la reseña. Por favor intenta de nuevo."
     }
   }
 }
