@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>¿Cuántas lecciones tiene el curso "Introducción a JavaScript"?</question>
+    <answer>5</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es el ID del curso "HTML for Beginners (Free)"?</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es el estado de la lección "MDX: Componentes interactivos" en el curso de JavaScript?</question>
+    <answer>draft</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué componente MDX se recomienda usar para mostrar una solución oculta según la lista de componentes?</question>
+    <answer>Spoiler</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuántos exámenes tiene el curso "Introducción a JavaScript"?</question>
+    <answer>0</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Busca el curso con ID 2. ¿Qué etiquetas (tags) tiene asignadas?</question>
+    <answer>javascript, programación, web</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Lista las lecciones del curso 2. ¿En qué posición (sequence) está la lección "Variables y Tipos de Datos"?</question>
+    <answer>2</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué tipo de ejercicio es el que tiene ID 1 si es que existe? (Usa lms_list_exercises para el curso 2 primero)</question>
+    <answer>quiz</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Cuál es la duración en minutos del examen con ID 1 en el curso 2 (si existe)?</question>
+    <answer>0</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>¿Qué componente MDX se usa para listas numeradas de pasos?</question>
+    <answer>Steps</answer>
+  </qa_pair>
+</evaluation>
