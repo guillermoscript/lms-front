@@ -198,11 +198,34 @@
         "notAuthor": "No eres el autor de este curso.",
         "enrolledCount": "{count} {count, plural, one {estudiante inscrito} other {estudiantes inscritos}}",
         "settings": "Configuración",
+        "min": "min",
+        "video": "Video",
+        "status": {
+          "draft": "Borrador",
+          "published": "Publicado",
+          "archived": "Archivado"
+        },
+        "difficulty": {
+          "easy": "Fácil",
+          "medium": "Intermedio",
+          "hard": "Difícil"
+        },
+        "exerciseTypes": {
+          "essay": "Ensayo",
+          "coding": "Programación",
+          "coding_challenge": "Desafío de Código",
+          "multiple_choice": "Opción Múltiple",
+          "true_false": "Verdadero/Falso",
+          "short_answer": "Respuesta Corta",
+          "quiz": "Cuestionario",
+          "discussion": "Discusión"
+        },
         "tabs": {
           "lessons": "Lecciones",
           "exercises": "Ejercicios",
           "exams": "Exámenes",
-          "students": "Estudiantes"
+          "students": "Estudiantes",
+          "preview": "Vista Previa"
         },
         "curriculum": {
           "title": "Plan de Estudios",
@@ -219,6 +242,14 @@
           "createFirst": "Crear Primer Ejercicio",
           "noDescription": "No se proporcionó descripción.",
           "edit": "Editar"
+        },
+        "assessments": {
+          "title": "Evaluaciones",
+          "description": "Pruebas formales y cuestionarios para calificación.",
+          "addExam": "Añadir Examen",
+          "noExams": "No se encontraron exámenes para este curso.",
+          "createFirst": "Crear Primer Examen",
+          "submissions": "Entregas"
         },
         "studentList": {
           "title": "Estudiantes Inscritos",
@@ -1842,18 +1873,32 @@
   "landing": {
     "poweredBy": "Impulsado por Next.js 16",
     "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroDescription": "La plataforma de aprendizaje definitiva impulsada por Next.js 16 y Supabase. Interactiva, rápida y escalable para desarrolladores modernos.",
+    "heroSubtitle": "La plataforma de aprendizaje definitiva para desarrolladores",
+    "heroDescription": "Domina las últimas tecnologías con nuestra plataforma impulsada por IA. Interactiva, rápida y diseñada para el aprendizaje moderno.",
     "getStarted": "Empieza Gratis",
+    "exploreCourses": "Explorar Cursos",
     "viewGithub": "Ver en Github",
-    "trustedBy": "Confían en nosotros desarrolladores en",
-    "featuresTitle": "¿Por qué elegir LMS V2?",
-    "featuresDescription": "Construido para el rendimiento y la experiencia del desarrollador. Nos enfocamos en las características que importan para la educación técnica.",
-    "feature1Title": "Retroalimentación con IA",
-    "feature1Description": "Obtén revisiones de código inteligentes y sugerencias instantáneas en tus tareas impulsadas por los últimos LLMs.",
-    "feature2Title": "Soporte para Lecciones MDX",
-    "feature2Description": "Escribe lecciones interactivas con MDX. Incrusta componentes de React directamente dentro de tu contenido de curso de forma segura.",
-    "feature3Title": "Paneles Basados en Roles",
-    "feature3Description": "Interfaces dedicadas para Estudiantes, Instructores y Administradores para gestionar el progreso, el contenido y las analíticas."
+    "trustedBy": "Confían en nosotros desarrolladores de",
+    "featuresTitle": "Características que Potencian tu Aprendizaje",
+    "featuresDescription": "Hemos diseñado LMS V2 para ofrecerte la mejor experiencia educativa posible con tecnología de vanguardia.",
+    "feature1Title": "Asistente de IA Inteligente",
+    "feature1Description": "Obtén ayuda instantánea y revisiones de código profundas impulsadas por modelos de IA de última generación.",
+    "feature2Title": "Contenido Interactivo MDX",
+    "feature2Description": "Lecciones que cobran vida. Interactúa con el código directamente en la plataforma de forma segura.",
+    "feature3Title": "Progreso y Gamificación",
+    "feature3Description": "Gana puntos, desbloquea logros y mantén tu racha de aprendizaje con nuestro sistema de incentivos.",
+    "feature4Title": "Certificados Verificables",
+    "feature4Description": "Valida tus habilidades con certificados digitales que puedes compartir en tus perfiles profesionales.",
+    "stats": {
+      "students": "10k+ Estudiantes",
+      "courses": "500+ Cursos",
+      "rating": "4.9/5 Calificación"
+    },
+    "cta": {
+      "title": "¿Listo para comenzar tu viaje?",
+      "description": "Únete a miles de desarrolladores que ya están mejorando sus habilidades con LMS V2.",
+      "button": "Crea tu Cuenta Gratis"
+    }
   },
   "courseDetails": {
     "backToLearning": "Volver a Mi Aprendizaje",
@@ -1901,6 +1946,216 @@
       "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
       "selectRating": "Por favor selecciona una calificación",
       "errorSubmitting": "Error al enviar la reseña. Por favor intenta de nuevo."
+    }
+  },
+  "about": {
+    "title": "Construido para aprender, por educadores",
+    "description": "LMS V2 es una plataforma de aprendizaje moderna que ayuda a los profesores a crear cursos y a los estudiantes a aprender con claridad. Nos enfocamos en la velocidad, la accesibilidad y una UX encantadora.",
+    "visitHome": "Volver al inicio",
+    "contact": "Contacto",
+    "missionTitle": "Nuestra misión",
+    "missionDescription": "Hacer que el aprendizaje de alta calidad sea accesible. Construimos herramientas que empoderan a los profesores y mantienen a los estudiantes comprometidos a través de contenido claro, retroalimentación progresiva y evaluaciones confiables.",
+    "whatWeBuild": "Qué construimos",
+    "feature1": "Cursos y lecciones con soporte MDX",
+    "feature2": "Seguimiento del progreso del estudiante y evaluaciones",
+    "feature3": "Herramientas para profesores para construir y calificar exámenes",
+    "stats": {
+      "students": "Estudiantes Activos",
+      "courses": "Cursos Premium",
+      "teachers": "Instructores Expertos"
+    },
+    "values": {
+      "title": "Nuestros Valores Core",
+      "innovation": {
+        "title": "Innovación Constante",
+        "desc": "Utilizamos las últimas tecnologías para ofrecer una experiencia de aprendizaje de vanguardia."
+      },
+      "accessibility": {
+        "title": "Accesibilidad Universal",
+        "desc": "Diseñamos para que todos puedan aprender, sin importar sus capacidades o ubicación."
+      },
+      "quality": {
+        "title": "Calidad Educativa",
+        "desc": "Nos comprometemos con la excelencia en cada lección y recurso que ofrecemos."
+      }
+    },
+    "cta": {
+      "title": "¿Listo para transformar tu aprendizaje?",
+      "button": "Comenzar Ahora"
+    }
+  },
+  "coursesCatalog": {
+    "title": "Cursos Educativos",
+    "description": "Domina las últimas tecnologías y avanza en tu carrera con nuestros tutoriales de desarrollo premium guiados por expertos y lecciones interactivas.",
+    "filters": {
+      "title": "Filtros",
+      "clearAll": "Limpiar Todo"
+    },
+    "toolbar": {
+      "showing": "Mostrando {count} cursos publicados",
+      "sort": "Ordenar:",
+      "latest": "Más Recientes"
+    },
+    "emptyState": {
+      "title": "No hay cursos listados aún",
+      "description": "Actualmente estamos preparando más contenido educativo para ti. ¡Vuelve pronto!"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente"
+    },
+    "courseCard": {
+      "popular": "POPULAR",
+      "free": "Gratis",
+      "getStarted": "Comenzar",
+      "defaults": {
+        "duration": "12h 30m",
+        "instructor": "Sarah Jenkins",
+        "category": "Desarrollo Web"
+      }
+    },
+    "filterSidebar": {
+      "categories": "Categorías",
+      "level": "Nivel",
+      "priceRange": "Rango de Precio",
+      "priceMin": "$0",
+      "priceMax": "$200+",
+      "courseCount": "{count}",
+      "categoryList": {
+        "all": "Todas las Categorías",
+        "dev": "Desarrollo",
+        "design": "Diseño",
+        "business": "Negocios",
+        "marketing": "Marketing"
+      },
+      "levels": {
+        "beginner": "Principiante",
+        "intermediate": "Intermedio",
+        "advanced": "Avanzado"
+      }
+    }
+  },
+  "coursePublicDetails": {
+    "breadcrumbs": {
+      "home": "Inicio",
+      "courses": "Cursos"
+    },
+    "hero": {
+      "lessons": "{count} lecciones",
+      "duration": "{h}h {m}m",
+      "published": "Publicado el {date}",
+      "language": "Español",
+      "createdBy": "Creado por {name}"
+    },
+    "sections": {
+      "whatYoullLearn": "Lo que aprenderás",
+      "about": "Sobre este curso",
+      "content": {
+        "title": "Contenido del Curso",
+        "lectures": "{count} clases",
+        "totalLength": "{h}h {m}m de duración total",
+        "allLessons": "Todas las Lecciones",
+        "noLessons": "No hay lecciones disponibles todavía."
+      },
+      "instructor": {
+        "title": "Instructor",
+        "experience": "Instructor Experimentado",
+        "defaultBio": "Instructor apasionado por la enseñanza."
+      }
+    },
+    "pricing": {
+      "preview": "Previsualizar este curso",
+      "free": "Gratis",
+      "enrollFree": "Inscribirse Gratis",
+      "enrollNow": "Inscribirse Ahora",
+      "goToCourse": "Ir al Curso",
+      "buyNow": "Comprar Ahora",
+      "or": "o",
+      "subscription": "Obtén acceso mediante Suscripción",
+      "includes": {
+        "title": "Este curso incluye:",
+        "lessons": "{count} lecciones",
+        "duration": "{h}h {m}m de contenido",
+        "lifetime": "Acceso de por vida",
+        "mobile": "Acceso en móvil y escritorio",
+        "certificate": "Certificado de finalización"
+      }
+    }
+  },
+  "pricing": {
+    "title": "Elige tu camino de aprendizaje",
+    "description": "Desbloquea tu potencial con nuestros planes de precios flexibles diseñados para estudiantes de todos los niveles. Mejora en cualquier momento a medida que crecen tus habilidades.",
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "save": "Ahorra {percent}%",
+    "mostPopular": "Más Popular",
+    "mo": "mes",
+    "yr": "año",
+    "free": "gratis",
+    "signUpFree": "Regístrate Gratis",
+    "getStarted": "Comenzar Ahora",
+    "billedMonthly": "Facturado mensualmente",
+    "billedYearly": "Facturado anualmente",
+    "empty": {
+      "title": "Nuevos planes pronto",
+      "description": "Estamos actualizando nuestras opciones de suscripción para ofrecerte más valor. Vuelve pronto para ver los precios actualizados.",
+      "backToCourses": "Explorar Cursos"
+    },
+    "freePlan": {
+      "name": "Básico",
+      "description": "Ideal para proyectos personales de hobby.",
+      "features": [
+        "Acceso a cursos gratuitos",
+        "Soporte comunitario",
+        "Certificados"
+      ]
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "questions": {
+        "changePlan": "¿Puedo cambiar de plan más tarde?",
+        "discounts": "¿Ofrecen descuentos para estudiantes?",
+        "paymentMethods": "¿Qué métodos de pago aceptan?"
+      }
+    }
+  },
+  "checkout": {
+    "title": "Finalizar Compra",
+    "description": "Elige tu método de pago para continuar.",
+    "item": "Artículo",
+    "product": "Producto",
+    "free": "Gratis",
+    "enrollment": {
+      "title": "Completar Inscripción",
+      "description": "Este curso es gratuito. Haz clic abajo para comenzar a aprender.",
+      "button": "Inscribirse Gratis",
+      "enrolling": "Inscribiendo..."
+    },
+    "payment": {
+      "card": "Tarjeta",
+      "offline": "Pago Manual",
+      "cardholder": "Nombre del Titular",
+      "cardNumber": "Número de Tarjeta (Prueba)",
+      "expiry": "Vencimiento",
+      "cvc": "CVC",
+      "offlineInstructions": "Solicita instrucciones de pago. Te enviaremos los detalles para transferencia bancaria u otros métodos manuales.",
+      "contactName": "Nombre de Contacto",
+      "contactEmail": "Correo para Instrucciones",
+      "contactPhone": "Teléfono (Opcional)",
+      "button": "Pagar e Inscribirse (Prueba)",
+      "requestButton": "Solicitar Instrucciones",
+      "processing": "Procesando..."
+    },
+    "empty": {
+      "title": "No hay producto seleccionado",
+      "description": "Parece que no has seleccionado un curso o plan para comprar.",
+      "button": "Volver a Cursos"
+    },
+    "toasts": {
+      "success": "¡Inscripción exitosa!",
+      "paymentSuccess": "¡Pago exitoso! Ya estás inscrito.",
+      "requestSent": "¡Solicitud enviada! Revisa tu correo.",
+      "error": "Error: {message}"
     }
   }
 }

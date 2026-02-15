@@ -198,11 +198,34 @@
         "notAuthor": "You are not the author of this course.",
         "enrolledCount": "{count} {count, plural, one {student} other {students}} enrolled",
         "settings": "Settings",
+        "min": "min",
+        "video": "Video",
+        "status": {
+          "draft": "Draft",
+          "published": "Published",
+          "archived": "Archived"
+        },
+        "difficulty": {
+          "easy": "Easy",
+          "medium": "Medium",
+          "hard": "Hard"
+        },
+        "exerciseTypes": {
+          "essay": "Essay",
+          "coding": "Coding",
+          "coding_challenge": "Coding Challenge",
+          "multiple_choice": "Multiple Choice",
+          "true_false": "True/False",
+          "short_answer": "Short Answer",
+          "quiz": "Quiz",
+          "discussion": "Discussion"
+        },
         "tabs": {
           "lessons": "Lessons",
           "exercises": "Exercises",
           "exams": "Exams",
-          "students": "Students"
+          "students": "Students",
+          "preview": "Preview"
         },
         "curriculum": {
           "title": "Curriculum",
@@ -1526,19 +1549,33 @@
   },
   "landing": {
     "poweredBy": "Powered by Next.js 16",
-    "heroTitle": "Master Your <br /> Future with <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroDescription": "The ultimate learning platform powered by Next.js 16 and Supabase. Interactive, fast, and scalable for modern developers.",
-    "getStarted": "Get Started Free",
-    "viewGithub": "View Github",
-    "trustedBy": "Trusted by developers at",
-    "featuresTitle": "Why Choose LMS V2?",
-    "featuresDescription": "Built for performance and developer experience. We focus on the features that matter for technical education.",
-    "feature1Title": "AI-Powered Feedback",
-    "feature1Description": "Get instant, intelligent code reviews and suggestions on your assignments powered by the latest LLMs.",
-    "feature2Title": "MDX Lesson Support",
-    "feature2Description": "Write interactive lessons with MDX. Embed React components directly inside your course content securely.",
-    "feature3Title": "Role-Based Dashboards",
-    "feature3Description": "Dedicated interfaces for Students, Instructors, and Admins to manage progress, content, and analytics."
+    "heroTitle": "Master your <br /> Future with <br /> <span class='text-zinc-500'>LMS V2</span>",
+    "heroSubtitle": "The ultimate learning platform for developers",
+    "heroDescription": "Master the latest technologies with our AI-powered platform. Interactive, fast, and designed for modern learning.",
+    "getStarted": "Get Started for Free",
+    "exploreCourses": "Explore Courses",
+    "viewGithub": "View on Github",
+    "trustedBy": "Trusted by developers from",
+    "featuresTitle": "Features that Power your Learning",
+    "featuresDescription": "We've designed LMS V2 to provide you with the best possible educational experience using cutting-edge technology.",
+    "feature1Title": "Smart AI Assistant",
+    "feature1Description": "Get instant help and deep code reviews powered by state-of-the-art AI models.",
+    "feature2Title": "Interactive MDX Content",
+    "feature2Description": "Lessons that come to life. Interact with code directly on the platform securely.",
+    "feature3Title": "Progress and Gamification",
+    "feature3Description": "Earn points, unlock achievements, and maintain your learning streak with our incentive system.",
+    "feature4Title": "Verifiable Certificates",
+    "feature4Description": "Validate your skills with digital certificates you can share on your professional profiles.",
+    "stats": {
+      "students": "10k+ Students",
+      "courses": "500+ Courses",
+      "rating": "4.9/5 Rating"
+    },
+    "cta": {
+      "title": "Ready to start your journey?",
+      "description": "Join thousands of developers who are already improving their skills with LMS V2.",
+      "button": "Create your Free Account"
+    }
   },
   "navbar": {
     "brand": "LMS V2",
@@ -1916,6 +1953,216 @@
       "noReviews": "No reviews yet. Be the first to review this course!",
       "selectRating": "Please select a rating",
       "errorSubmitting": "Failed to submit review. Please try again."
+    }
+  },
+  "about": {
+    "title": "Built for learning, by educators",
+    "description": "LMS V2 is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",
+    "visitHome": "Back to Home",
+    "contact": "Contact",
+    "missionTitle": "Our mission",
+    "missionDescription": "Make high-quality learning accessible. We build tools that empower teachers and keep students engaged through clear content, progressive feedback, and reliable assessments.",
+    "whatWeBuild": "What we build",
+    "feature1": "Courses and lessons with MDX support",
+    "feature2": "Student progress tracking and assessments",
+    "feature3": "Teacher tools for building and grading exams",
+    "stats": {
+      "students": "Active Students",
+      "courses": "Premium Courses",
+      "teachers": "Expert Instructors"
+    },
+    "values": {
+      "title": "Our Core Values",
+      "innovation": {
+        "title": "Constant Innovation",
+        "desc": "We use the latest technologies to offer a cutting-edge learning experience."
+      },
+      "accessibility": {
+        "title": "Universal Accessibility",
+        "desc": "We design so that everyone can learn, regardless of their abilities or location."
+      },
+      "quality": {
+        "title": "Educational Quality",
+        "desc": "We are committed to excellence in every lesson and resource we offer."
+      }
+    },
+    "cta": {
+      "title": "Ready to transform your learning?",
+      "button": "Start Now"
+    }
+  },
+  "coursesCatalog": {
+    "title": "Educational Courses",
+    "description": "Master the latest technologies and advance your career with our premium, expert-led development tutorials and interactive lessons.",
+    "filters": {
+      "title": "Filters",
+      "clearAll": "Clear All"
+    },
+    "toolbar": {
+      "showing": "Showing {count} published courses",
+      "sort": "Sort:",
+      "latest": "Latest"
+    },
+    "emptyState": {
+      "title": "No courses listed yet",
+      "description": "We are currently preparing more educational content for you. Please check back later!"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "courseCard": {
+      "popular": "POPULAR",
+      "free": "Free",
+      "getStarted": "Get Started",
+      "defaults": {
+        "duration": "12h 30m",
+        "instructor": "Sarah Jenkins",
+        "category": "Web Development"
+      }
+    },
+    "filterSidebar": {
+      "categories": "Categories",
+      "level": "Level",
+      "priceRange": "Price Range",
+      "priceMin": "$0",
+      "priceMax": "$200+",
+      "courseCount": "{count}",
+      "categoryList": {
+        "all": "All Categories",
+        "dev": "Development",
+        "design": "Design",
+        "business": "Business",
+        "marketing": "Marketing"
+      },
+      "levels": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      }
+    },
+    "coursePublicDetails": {
+      "breadcrumbs": {
+        "home": "Home",
+        "courses": "Courses"
+      },
+      "hero": {
+        "lessons": "{count} lessons",
+        "duration": "{h}h {m}m",
+        "published": "Published {date}",
+        "language": "English",
+        "createdBy": "Created by {name}"
+      },
+      "sections": {
+        "whatYoullLearn": "What you'll learn",
+        "about": "About This Course",
+        "content": {
+          "title": "Course Content",
+          "lectures": "{count} lectures",
+          "totalLength": "{h}h {m}m total length",
+          "allLessons": "All Lessons",
+          "noLessons": "No lessons available yet."
+        },
+        "instructor": {
+          "title": "Instructor",
+          "experience": "Experienced Instructor",
+          "defaultBio": "Instructor passionate about teaching."
+        }
+      },
+      "pricing": {
+        "preview": "Preview this course",
+        "free": "Free",
+        "enrollFree": "Enroll for Free",
+        "enrollNow": "Enroll Now",
+        "goToCourse": "Go to Course",
+        "buyNow": "Buy Now",
+        "or": "or",
+        "subscription": "Get access via Subscription",
+        "includes": {
+          "title": "This course includes:",
+          "lessons": "{count} lessons",
+          "duration": "{h}h {m}m of content",
+          "lifetime": "Full lifetime access",
+          "mobile": "Access on mobile and desktop",
+          "certificate": "Certificate of completion"
+        }
+      }
+    }
+  },
+  "pricing": {
+    "title": "Choose Your Learning Path",
+    "description": "Unlock your potential with our flexible pricing plans designed for learners of all levels. Upgrade anytime as your skills grow.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save {percent}%",
+    "mostPopular": "Most Popular",
+    "mo": "mo",
+    "yr": "yr",
+    "free": "free",
+    "signUpFree": "Sign Up Free",
+    "getStarted": "Get Started",
+    "billedMonthly": "Billed monthly",
+    "billedYearly": "Billed yearly",
+    "empty": {
+      "title": "New Plans Coming Soon",
+      "description": "We're currently updating our subscription options to bring you more value. Check back shortly for updated pricing.",
+      "backToCourses": "Explore Courses"
+    },
+    "freePlan": {
+      "name": "Basic",
+      "description": "Best for personal hobby projects.",
+      "features": [
+        "Access to free courses",
+        "Community support",
+        "Certificates"
+      ]
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "questions": {
+        "changePlan": "Can I change plans later?",
+        "discounts": "Do you offer discounts for students?",
+        "paymentMethods": "What payment methods do you accept?"
+      }
+    }
+  },
+  "checkout": {
+    "title": "Checkout",
+    "description": "Choose your payment method to continue.",
+    "item": "Item",
+    "product": "Product",
+    "free": "Free",
+    "enrollment": {
+      "title": "Complete Enrollment",
+      "description": "This course is free. Click below to start learning.",
+      "button": "Enroll for Free",
+      "enrolling": "Enrolling..."
+    },
+    "payment": {
+      "card": "Card",
+      "offline": "Offline",
+      "cardholder": "Cardholder Name",
+      "cardNumber": "Card Number (Mock)",
+      "expiry": "Expiry",
+      "cvc": "CVC",
+      "offlineInstructions": "Request payment instructions. We'll send you details for bank transfer or other offline methods.",
+      "contactName": "Contact Name",
+      "contactEmail": "Email for Instructions",
+      "contactPhone": "Phone (Optional)",
+      "button": "Pay & Enroll (Test)",
+      "requestButton": "Request Payment Instructions",
+      "processing": "Processing..."
+    },
+    "empty": {
+      "title": "No Product Selected",
+      "description": "It seems you haven't selected a course or plan to purchase.",
+      "button": "Back to Courses"
+    },
+    "toasts": {
+      "success": "Successfully enrolled!",
+      "paymentSuccess": "Payment successful! You are now enrolled.",
+      "requestSent": "Payment request sent! Check your email for instructions.",
+      "error": "Error: {message}"
     }
   }
 }
