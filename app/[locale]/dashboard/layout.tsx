@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { GamificationHeaderCard } from "@/components/gamification/gamification-header-card"
 
 export default async function DashboardLayout({
     children,
@@ -25,6 +26,7 @@ export default async function DashboardLayout({
                     <Separator orientation="vertical" className="mr-2 h-4" />
                     {/* We can add Breadcrumbs here later if needed */}
                     <div className="ml-auto flex items-center gap-4">
+                        {role === 'student' && <GamificationHeaderCard />}
                         <LanguageSwitcher />
                         <ModeToggle />
                         <UserNav user={user} />

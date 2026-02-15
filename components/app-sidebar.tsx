@@ -12,6 +12,7 @@ import {
     IconChartBar,
     IconClipboardList,
     IconClock,
+    IconCoins,
     IconCurrencyDollar,
     IconDashboard,
     IconFileText,
@@ -97,6 +98,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             resources: [
                 { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
                 { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar },
+                { title: t('pointStore'), href: "/dashboard/student/store", icon: IconCoins },
             ],
         },
     }
