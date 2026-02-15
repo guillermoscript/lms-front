@@ -115,8 +115,8 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                                 <IconSchool className="size-4" />
                             </div>
                             <div className="flex flex-col gap-0.5 leading-none">
-                                <span className="font-semibold">{t('platform')}</span>
-                                <span className="text-xs text-muted-foreground uppercase">{userRole || t('guest')}</span>
+                                <span className="font-semibold" data-testid="sidebar-platform">{t('platform')}</span>
+                                <span className="text-xs text-muted-foreground uppercase" data-testid="sidebar-role">{userRole || t('guest')}</span>
                             </div>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

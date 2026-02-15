@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Star, BarChart, User } from "lucide-react";
+import { Clock, Star, User } from "lucide-react";
+import { useTranslations } from 'next-intl';
 
 interface CourseCardProps {
     course: {
@@ -22,13 +25,14 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course }: CourseCardProps) {
-    // Default values for missing data to match the visual design
+    const t = useTranslations('coursesCatalog.courseCard');
+
+    // Default values for missing data using translations
     const rating = course.rating || 4.8;
     const reviewCount = course.reviewCount || 120;
-    const duration = course.duration || "12h 30m";
-    const instructor = course.instructor || "Sarah Jenkins";
-    const category = course.category || "Web Development";
-    const level = course.level || "Beginner";
+    const duration = course.duration || t('defaults.duration');
+    const instructor = course.instructor || t('defaults.instructor');
+    const category = course.category || t('defaults.category');
 
     return (
         <Card className="flex flex-col overflow-hidden bg-[#18181b]/60 border-zinc-800/50 hover:border-blue-500/30 transition-all duration-300 group shadow-lg hover:shadow-blue-500/5 backdrop-blur-sm">
@@ -50,7 +54,7 @@ export function CourseCard({ course }: CourseCardProps) {
                 <div className="absolute top-3 left-3">
                     {course.course_id % 2 === 0 && (
                         <Badge className="bg-blue-600 hover:bg-blue-500 text-white font-bold border-0 shadow-lg">
-                            POPULAR
+                            {t('popular')}
                         </Badge>
                     )}
                 </div>
@@ -91,13 +95,13 @@ export function CourseCard({ course }: CourseCardProps) {
             <CardFooter className="p-5 pt-0 mt-auto flex items-center justify-between border-t border-zinc-800/30 pt-4 bg-white/[0.02]">
                 <div>
                     <span className="text-xl font-bold text-white">
-                        {course.price ? `$${course.price}` : 'Free'}
+                        {course.price ? `$${course.price}` : t('free')}
                     </span>
                 </div>
 
                 <Link href={`/courses/${course.course_id}`}>
                     <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-9 font-bold px-4 rounded-lg transition-all active:scale-95">
-                        Get Started
+                        {t('getStarted')}
                     </Button>
                 </Link>
             </CardFooter>

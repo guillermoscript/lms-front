@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { IconLogout, IconSettings, IconUser } from "@tabler/icons-react"
+import { GamificationHeaderCard } from "./gamification/gamification-header-card"
+import { CurrentUserAvatar } from "./current-user-avatar"
+import { useCurrentUserName } from "@/hooks/use-current-user-name"
 
 interface UserNavProps {
   user: any
@@ -25,6 +27,7 @@ export function UserNav({ user }: UserNavProps) {
   const supabase = createClient()
   const router = useRouter()
   const t = useTranslations('userNav')
+  const currentName = useCurrentUserName()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -32,47 +35,55 @@ export function UserNav({ user }: UserNavProps) {
     router.refresh()
   }
 
-  const userInitial = user?.email?.[0].toUpperCase() || "U"
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar size="sm">
-              <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-              <AvatarFallback>{userInitial}</AvatarFallback>
-            </Avatar>
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full border border-border/50 overflow-hidden hover:scale-105 transition-transform">
+            <CurrentUserAvatar />
           </Button>
         }
       />
-      <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user?.user_metadata?.full_name || "User"}
-            </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user?.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-2xl border-border bg-popover/90 backdrop-blur-xl overflow-hidden" align="end" sideOffset={8}>
         <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/dashboard/profile" />}>
-            <IconUser className="mr-2 h-4 w-4" />
+          <DropdownMenuLabel className="font-normal p-4">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-black leading-none text-foreground">
+                {currentName || user?.user_metadata?.full_name || "User"}
+              </p>
+              <p className="text-xs leading-none text-muted-foreground truncate font-medium">
+                {user?.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+        </DropdownMenuGroup>
+        <DropdownMenuGroup>
+          <DropdownMenuItem className="rounded-xl m-1 cursor-pointer gap-2 focus:bg-primary/10 text-muted-foreground focus:text-accent-foreground font-medium" render={<Link href="/dashboard/student/profile" />}>
+            <IconUser className="h-4 w-4" />
             <span>{t('profile')}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/dashboard/settings" />}>
-            <IconSettings className="mr-2 h-4 w-4" />
+          <DropdownMenuItem className="rounded-xl m-1 cursor-pointer gap-2 focus:bg-primary/10 text-muted-foreground focus:text-accent-foreground font-medium" render={<Link href="/dashboard/settings" />}>
+            <IconSettings className="h-4 w-4" />
             <span>{t('settings')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <IconLogout className="mr-2 h-4 w-4" />
-          <span>{t('logout')}</span>
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            className="rounded-xl m-1 cursor-pointer gap-2 text-red-500/80 focus:bg-red-500/10 focus:text-red-500 font-bold transition-colors"
+            onClick={handleLogout}
+          >
+            <IconLogout className="h-4 w-4" />
+            <span>{t('logout')}</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator className="flex md:hidden" />
+        <DropdownMenuGroup
+          className="flex md:hidden p-2"
+        >
+          <GamificationHeaderCard />
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

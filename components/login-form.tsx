@@ -73,6 +73,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 <Label htmlFor="email">{t('email')}</Label>
                 <Input
                   id="email"
+                  data-testid="login-email"
                   type="email"
                   placeholder="m@example.com"
                   required
@@ -92,6 +93,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 </div>
                 <Input
                   id="password"
+                  data-testid="login-password"
                   type="password"
                   required
                   value={password}
@@ -99,7 +101,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} data-testid="login-submit">
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
             </div>

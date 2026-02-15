@@ -106,7 +106,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
       {/* Thumbnail */}
-      <Link href={`/dashboard/student/courses/${course.course_id}`}>
+      <Link href={`/dashboard/student/courses/${course.course_id}`} data-testid={`course-link-${course.course_id}`}>
         <div className="relative aspect-video w-full overflow-hidden bg-muted">
           {course.thumbnail_url || course.image_url ? (
             <Image
@@ -131,7 +131,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
           </Badge>
         </div>
         <Link href={`/dashboard/student/courses/${course.course_id}`}>
-          <h3 className="font-semibold text-lg line-clamp-2 hover:text-primary transition-colors">
+          <h3 data-testid={`course-title-${course.course_id}`} className="font-semibold text-lg line-clamp-2 hover:text-primary transition-colors">
             {course.title}
           </h3>
         </Link>
@@ -142,7 +142,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t('overallProgress')}</span>
-            <span className="font-semibold">{progress.overallPercentage}%</span>
+            <span data-testid={`course-progress-${course.course_id}`} className="font-semibold">{progress.overallPercentage}%</span>
           </div>
           <Progress value={progress.overallPercentage} className="h-2" />
 

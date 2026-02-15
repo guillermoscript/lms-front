@@ -2,38 +2,32 @@
 
 import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
+import { useTranslations } from 'next-intl';
 
 export function FilterSidebar() {
+    const t = useTranslations('coursesCatalog.filterSidebar');
     const [priceRange, setPriceRange] = useState([0, 200]);
 
     const categories = [
-        { id: "all", label: "All Categories" },
-        { id: "dev", label: "Development" },
-        { id: "design", label: "Design" },
-        { id: "business", label: "Business" },
-        { id: "marketing", label: "Marketing" },
+        { id: "all", label: t('categoryList.all') },
+        { id: "dev", label: t('categoryList.dev') },
+        { id: "design", label: t('categoryList.design') },
+        { id: "business", label: t('categoryList.business') },
+        { id: "marketing", label: t('categoryList.marketing') },
     ];
 
     const levels = [
-        { id: "beginner", label: "Beginner" },
-        { id: "intermediate", label: "Intermediate" },
-        { id: "advanced", label: "Advanced" },
+        { id: "beginner", label: t('levels.beginner') },
+        { id: "intermediate", label: t('levels.intermediate') },
+        { id: "advanced", label: t('levels.advanced') },
     ];
 
     return (
         <div className="space-y-8">
-            {/* View Toggle (Visual Only) */}
-            <div className="hidden">
-                {/* This could be state-driven in a real app */}
-            </div>
-
             {/* Categories */}
             <div className="space-y-4">
-                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Categories</h3>
+                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">{t('categories')}</h3>
                 <div className="space-y-2">
                     {categories.map((cat) => (
                         <div key={cat.id} className="flex items-center space-x-2 group cursor-pointer">
@@ -42,7 +36,9 @@ export function FilterSidebar() {
                                 {cat.label}
                             </span>
                             {cat.id === "dev" && (
-                                <span className="ml-auto text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">124</span>
+                                <span className="ml-auto text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                    {t('courseCount', { count: 124 })}
+                                </span>
                             )}
                         </div>
                     ))}
@@ -53,7 +49,7 @@ export function FilterSidebar() {
 
             {/* Level */}
             <div className="space-y-4">
-                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Level</h3>
+                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">{t('level')}</h3>
                 <div className="space-y-3">
                     {levels.map((level) => (
                         <div key={level.id} className="flex items-center space-x-2">
@@ -71,7 +67,7 @@ export function FilterSidebar() {
 
             {/* Price Range */}
             <div className="space-y-4">
-                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Price Range</h3>
+                <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">{t('priceRange')}</h3>
                 <Slider
                     defaultValue={[0]}
                     max={200}
@@ -80,8 +76,8 @@ export function FilterSidebar() {
                 // Customize slider colors via globals.css or class overrides if needed
                 />
                 <div className="flex justify-between text-xs text-zinc-400">
-                    <span>$0</span>
-                    <span>$200+</span>
+                    <span>{t('priceMin')}</span>
+                    <span>{t('priceMax')}</span>
                 </div>
             </div>
         </div>
