@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getTranslations } from 'next-intl/server'
 import { redirect, notFound } from 'next/navigation'
 import { ExamBuilder } from '@/components/teacher/exam-builder'
 
@@ -9,6 +10,7 @@ interface PageProps {
 export default async function NewExamPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.manageCourse')
 
   const {
     data: { user },
@@ -45,7 +47,7 @@ export default async function NewExamPage({ params }: PageProps) {
       <ExamBuilder
         courseId={parseInt(courseId)}
         courseTitle={course.title}
-        initialSequence={nextSequence}
+        initialData={{ sequence: nextSequence }}
       />
     </div>
   )

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +21,7 @@ import * as motion from 'motion/react-client'
 
 export default async function TeacherCoursesPage() {
     const supabase = await createClient()
+    const t = await getTranslations('dashboard.teacher.courses')
 
     const {
         data: { user },
@@ -48,16 +50,16 @@ export default async function TeacherCoursesPage() {
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight text-foreground">
-                        Your Courses
+                        {t('title')}
                     </h2>
                     <p className="text-muted-foreground">
-                        Manage, edit and track performance for all your educational content.
+                        {t('description')}
                     </p>
                 </div>
                 <Link href="/dashboard/teacher/courses/new">
                     <Button className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95">
                         <IconPlus className="mr-2 h-4 w-4" />
-                        Create New Course
+                        {t('createFirstBtn')}
                     </Button>
                 </Link>
             </div>
@@ -67,14 +69,14 @@ export default async function TeacherCoursesPage() {
                 <div className="relative flex-1 max-w-md">
                     <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search courses..."
+                        placeholder={t('searchPlaceholder')}
                         className="pl-9 bg-background/50 border-none ring-1 ring-border focus-visible:ring-primary/50"
                     />
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="h-9 gap-2">
                         <IconFilter size={16} />
-                        Filter
+                        {t('filter')}
                     </Button>
                     <div className="h-9 w-px bg-border mx-1" />
                     <Button variant="ghost" size="icon" className="h-9 w-9 bg-accent/50 text-primary">
@@ -138,19 +140,19 @@ export default async function TeacherCoursesPage() {
                                             <p className="text-lg font-bold text-foreground leading-none">
                                                 {course.enrollments?.[0]?.count || 0}
                                             </p>
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Students</p>
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{t('students')}</p>
                                         </div>
                                         <div className="text-center border-x border-border/50">
                                             <p className="text-lg font-bold text-foreground leading-none">
                                                 {course.lessons?.[0]?.count || 0}
                                             </p>
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Lessons</p>
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{t('lessons')}</p>
                                         </div>
                                         <div className="text-center">
                                             <p className="text-lg font-bold text-foreground leading-none">
                                                 {course.exams?.[0]?.count || 0}
                                             </p>
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Exams</p>
+                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{t('exams')}</p>
                                         </div>
                                     </div>
 
@@ -162,7 +164,7 @@ export default async function TeacherCoursesPage() {
                                         >
                                             <Button variant="outline" size="sm" className="w-full h-10 border-border/50 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all">
                                                 <IconEdit className="mr-2 h-4 w-4" />
-                                                Edit
+                                                {t('edit')}
                                             </Button>
                                         </Link>
                                         <Link
@@ -171,7 +173,7 @@ export default async function TeacherCoursesPage() {
                                         >
                                             <Button variant="ghost" size="sm" className="w-full h-10 hover:bg-accent/50 group/preview">
                                                 <IconEye className="mr-2 h-4 w-4" />
-                                                Preview
+                                                {t('preview')}
                                             </Button>
                                         </Link>
                                     </div>
@@ -186,14 +188,14 @@ export default async function TeacherCoursesPage() {
                                 <div className="p-4 bg-primary/10 rounded-full mb-6 text-primary">
                                     <IconBook size={48} className="opacity-40" />
                                 </div>
-                                <h3 className="text-2xl font-bold mb-2">No courses found</h3>
+                                <h3 className="text-2xl font-bold mb-2">{t('noCoursesFound')}</h3>
                                 <p className="text-muted-foreground mb-8 text-center max-w-sm">
-                                    You haven't created any courses yet. Start your teaching journey today!
+                                    {t('noCoursesDesc')}
                                 </p>
                                 <Link href="/dashboard/teacher/courses/new">
                                     <Button size="lg" className="px-8 shadow-xl shadow-primary/20">
                                         <IconPlus className="mr-2" />
-                                        Create Your First Course
+                                        {t('createFirstBtn')}
                                     </Button>
                                 </Link>
                             </CardContent>

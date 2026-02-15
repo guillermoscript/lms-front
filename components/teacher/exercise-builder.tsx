@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,7 @@ interface ExerciseBuilderProps {
 
 export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBuilderProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.exerciseBuilder')
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
 
@@ -36,6 +38,8 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
     system_prompt: initialData?.system_prompt || '',
     status: initialData?.status || 'draft',
   })
+
+  // ... handleTemplateApply and handleSave remain similar but using t('updateExercise') etc if needed
 
   const handleTemplateApply = (data: { instructions: string; system_prompt: string }) => {
     setFormData({
@@ -96,60 +100,60 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Exercise Details</CardTitle>
+              <CardTitle>{t('details')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Title <span className="text-destructive">*</span></Label>
-                <Input 
-                  value={formData.title} 
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })} 
-                  placeholder="e.g. Introduction to React Hooks"
+                <Label>{t('titleLabel')} <span className="text-destructive">*</span></Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder={t('titlePlaceholder')}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Exercise Type</Label>
+                <Label>{t('typeLabel')}</Label>
                 <Select value={formData.exercise_type} onValueChange={(val) => setFormData({ ...formData, exercise_type: val })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="essay">Essay</SelectItem>
-                    <SelectItem value="coding_challenge">Coding Challenge</SelectItem>
-                    <SelectItem value="quiz">Quiz</SelectItem>
-                    <SelectItem value="discussion">Discussion</SelectItem>
+                    <SelectItem value="essay">{t('typeEssay')}</SelectItem>
+                    <SelectItem value="coding_challenge">{t('typeCoding')}</SelectItem>
+                    <SelectItem value="quiz">{t('typeQuiz')}</SelectItem>
+                    <SelectItem value="discussion">{t('typeDiscussion')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t('descriptionLabel')}</Label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Short summary of the exercise"
+                  placeholder={t('descriptionPlaceholder')}
                   rows={2}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Difficulty</Label>
+                  <Label>{t('difficultyLabel')}</Label>
                   <Select value={formData.difficulty_level} onValueChange={(val) => setFormData({ ...formData, difficulty_level: val })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
+                      <SelectItem value="easy">{t('difficultyEasy')}</SelectItem>
+                      <SelectItem value="medium">{t('difficultyMedium')}</SelectItem>
+                      <SelectItem value="hard">{t('difficultyHard')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Time Limit (min)</Label>
+                  <Label>{t('timeLimitLabel')}</Label>
                   <Input
                     type="number"
                     value={formData.time_limit}
@@ -159,7 +163,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
               </div>
 
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{t('statusLabel')}</Label>
                 <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -174,13 +178,13 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
             </CardContent>
           </Card>
 
-          <Button 
-            className="w-full h-12 gap-2 shadow-lg" 
-            onClick={handleSave} 
+          <Button
+            className="w-full h-12 gap-2 shadow-lg"
+            onClick={handleSave}
             disabled={loading || !formData.title}
           >
             {loading ? <IconLoader2 className="animate-spin" size={20} /> : <IconDeviceFloppy size={20} />}
-            {initialData ? 'Update Exercise' : 'Create Exercise'}
+            {initialData ? t('updateExercise') : t('createExercise')}
           </Button>
         </div>
 
@@ -192,8 +196,8 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
                   <IconRobot className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">AI Configuration</CardTitle>
-                  <p className="text-xs text-muted-foreground">Setup prompts and evaluation rules</p>
+                  <CardTitle className="text-lg">{t('aiConfigTitle')}</CardTitle>
+                  <p className="text-xs text-muted-foreground">{t('aiConfigDesc')}</p>
                 </div>
                 <div className="ml-auto">
                   <ImprovedTemplateSelector category="exercise" onApply={handleTemplateApply} />
@@ -204,46 +208,46 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-1.5">
-                    Student Instructions
+                    {t('studentInsLabel')}
                     <Badge variant="outline" className="text-[10px] py-0 h-4">Visible</Badge>
                   </Label>
                 </div>
                 <Textarea
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  placeholder="What the student needs to do..."
+                  placeholder={t('studentInsPlaceholder')}
                   rows={6}
                   className="resize-none"
                 />
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <IconInfoCircle size={12} />
-                  Use templates to quickly fill these fields with proven prompts.
+                  {t('studentInsHint')}
                 </p>
               </div>
 
               <div className="space-y-2 pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-1.5">
-                    AI System Prompt
+                    {t('aiSystemPromptLabel')}
                     <Badge variant="secondary" className="text-[10px] py-0 h-4 bg-amber-500/10 text-amber-600 border-amber-200">Hidden</Badge>
                   </Label>
                 </div>
                 <Textarea
                   value={formData.system_prompt}
                   onChange={(e) => setFormData({ ...formData, system_prompt: e.target.value })}
-                  placeholder="Define how the AI should behave and grade..."
+                  placeholder={t('aiSystemPromptPlaceholder')}
                   rows={8}
                   className="resize-none font-mono text-xs bg-muted/30"
                 />
               </div>
 
               <div className="pt-2">
-                <AIPreviewModal 
-                  type="exercise" 
-                  config={{ 
-                    system_prompt: formData.system_prompt, 
-                    instructions: formData.instructions 
-                  }} 
+                <AIPreviewModal
+                  type="exercise"
+                  config={{
+                    system_prompt: formData.system_prompt,
+                    instructions: formData.instructions
+                  }}
                 />
               </div>
             </CardContent>

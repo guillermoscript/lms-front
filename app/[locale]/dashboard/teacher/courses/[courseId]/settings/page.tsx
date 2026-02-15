@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
@@ -13,6 +14,8 @@ interface PageProps {
 export default async function CourseSettingsPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tForm = await getTranslations('dashboard.teacher.courseForm')
 
   const {
     data: { user },
@@ -41,10 +44,10 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-        <p className="mt-2 text-muted-foreground">You are not the author of this course.</p>
+        <h1 className="text-2xl font-bold text-red-600">{t('accessDenied')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('notAuthor')}</p>
         <Link href="/dashboard/teacher/courses" className="mt-4 inline-block">
-          <Button variant="outline">Back to My Courses</Button>
+          <Button variant="outline">{t('backToCourses')}</Button>
         </Link>
       </div>
     )
@@ -62,20 +65,20 @@ export default async function CourseSettingsPage({ params }: PageProps) {
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
           <Button variant="ghost" size="sm" className="mb-4">
             <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to Course
+            {t('backToCourses')}
           </Button>
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Course Settings</h1>
+          <h1 className="text-3xl font-bold">{t('settings')}</h1>
           <p className="mt-2 text-muted-foreground">
-            Edit your course information and visibility
+            {tForm('descriptionPlaceholder')}
           </p>
         </div>
 
-        <CourseForm 
-          categories={categories || []} 
-          initialData={course as any} 
+        <CourseForm
+          categories={categories || []}
+          initialData={course as any}
         />
       </div>
     </div>

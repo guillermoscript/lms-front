@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { ExerciseBuilder } from '@/components/teacher/exercise-builder'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,8 @@ interface PageProps {
 export default async function EditExercisePage({ params }: PageProps) {
   const { courseId, exerciseId } = await params
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -46,10 +49,10 @@ export default async function EditExercisePage({ params }: PageProps) {
   if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-        <p className="mt-2 text-muted-foreground">You are not the author of this course.</p>
+        <h1 className="text-2xl font-bold text-red-600">{t('accessDenied')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('notAuthor')}</p>
         <Link href="/dashboard/teacher/courses" className="mt-4 inline-block">
-          <Button variant="outline">Back to My Courses</Button>
+          <Button variant="outline">{t('backToCourses')}</Button>
         </Link>
       </div>
     )
@@ -60,13 +63,13 @@ export default async function EditExercisePage({ params }: PageProps) {
       <Link href={`/dashboard/teacher/courses/${courseId}`}>
         <Button variant="ghost" size="sm" className="mb-4">
           <IconArrowLeft className="mr-2 h-4 w-4" />
-          Back to Course
+          {t('backToCourses')}
         </Button>
       </Link>
-      <h1 className="text-3xl font-bold mb-6">Edit Exercise</h1>
-      <ExerciseBuilder 
-        courseId={parseInt(courseId)} 
-        initialData={exercise} 
+      <h1 className="text-3xl font-bold mb-6">{tEx('updateExercise')}</h1>
+      <ExerciseBuilder
+        courseId={parseInt(courseId)}
+        initialData={exercise}
       />
     </div>
   )

@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
 
 export default async function NewCoursePage() {
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.newCourse')
 
   const {
     data: { user },
@@ -23,9 +25,9 @@ export default async function NewCoursePage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Create New Course</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="mt-2 text-muted-foreground">
-            Fill in the basic information about your course
+            {t('description')}
           </p>
         </div>
 

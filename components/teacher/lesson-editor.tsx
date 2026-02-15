@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,12 +18,15 @@ import {
   IconCode,
   IconDeviceFloppy,
   IconRobot,
+  IconLayoutGrid,
 } from '@tabler/icons-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ImprovedTemplateSelector } from './improved-template-selector'
 import { AIPreviewModal } from './ai-preview-modal'
 import { VersionHistorySheet } from './version-history-sheet'
+import { BlockEditor } from './block-editor'
+import MarkdownEditor from './markdown-editor'
 
 interface LessonEditorProps {
   courseId: number
@@ -48,6 +52,7 @@ export function LessonEditor({
   initialData,
 }: LessonEditorProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.lessonEditor')
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +60,8 @@ export function LessonEditor({
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    content: initialData?.content || '',
+    // Prefill new lessons with a tiny starter MDX to help teachers get going
+    content: initialData?.content ?? (initialData ? '' : `# Nuevo tema\n\nEscribe el contenido de la lección aquí...\n\n<Callout type="info">Añade los objetivos de aprendizaje aquí</Callout>`),
     video_url: initialData?.video_url || '',
     sequence: initialData?.sequence || initialSequence,
     ai_task_description: initialData?.ai_task_description || '',
@@ -105,8 +111,8 @@ export function LessonEditor({
           .from('lessons_ai_tasks')
           .upsert({
             lesson_id: lessonId,
-            task_instructions: formData.ai_task_description || '', // Fixed: was task_description
-            system_prompt: formData.ai_task_instructions || '', // Fixed: was ai_instructions
+            task_instructions: formData.ai_task_description || '',
+            system_prompt: formData.ai_task_instructions || '',
           }, { onConflict: 'lesson_id' })
 
         if (taskError) throw taskError
@@ -127,12 +133,12 @@ export function LessonEditor({
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
           <Button variant="ghost" size="sm" className="mb-4">
             <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to {courseTitle}
+            {t('backToCourse', { course: courseTitle })}
           </Button>
         </Link>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">
-            {initialData ? 'Edit Lesson' : 'Create New Lesson'}
+            {initialData ? t('editTitle') : t('createTitle')}
           </h1>
           {initialData && (
             <VersionHistorySheet
@@ -159,32 +165,32 @@ export function LessonEditor({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">
-                    Lesson Title <span className="text-destructive">*</span>
+                    {t('titleLabel')} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Introduction to Variables"
+                    placeholder={t('titlePlaceholder')}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Short Description</Label>
+                  <Label htmlFor="description">{t('descriptionLabel')}</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    placeholder="Brief overview of what this lesson covers"
+                    placeholder={t('descriptionPlaceholder')}
                     rows={2}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="video_url">Video URL (YouTube)</Label>
+                  <Label htmlFor="video_url">{t('videoUrlLabel')}</Label>
                   <Input
                     id="video_url"
                     type="url"
@@ -192,16 +198,16 @@ export function LessonEditor({
                     onChange={(e) =>
                       setFormData({ ...formData, video_url: e.target.value })
                     }
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder={t('videoUrlPlaceholder')}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional: Add a YouTube video to this lesson
+                    {t('videoUrlHint')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="sequence">
-                    Lesson Order <span className="text-destructive">*</span>
+                    {t('sequenceLabel')} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="sequence"
@@ -214,7 +220,7 @@ export function LessonEditor({
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    The order in which this lesson appears in the course
+                    {t('sequenceHint')}
                   </p>
                 </div>
               </div>
@@ -222,39 +228,39 @@ export function LessonEditor({
               <div className="pt-6 border-t">
                 <div className="flex items-center gap-2 mb-4">
                   <IconRobot className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">AI Task Configuration</h3>
+                  <h3 className="font-semibold text-lg">{t('aiTaskTitle')}</h3>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ai_task_description">Task Prompt (for Students)</Label>
+                    <Label htmlFor="ai_task_description">{t('aiTaskPromptLabel')}</Label>
                     <Textarea
                       id="ai_task_description"
                       value={formData.ai_task_description}
                       onChange={(e) =>
                         setFormData({ ...formData, ai_task_description: e.target.value })
                       }
-                      placeholder="e.g. Present yourself in English"
+                      placeholder={t('aiTaskPromptPlaceholder')}
                       rows={2}
                     />
                     <p className="text-xs text-muted-foreground">
-                      This is the task challenge that will be presented to the student to solve using the chatbot.
+                      {t('aiTaskPromptHint')}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai_task_instructions">AI Grading Instructions (Hidden)</Label>
+                    <Label htmlFor="ai_task_instructions">{t('aiGradingInsLabel')}</Label>
                     <Textarea
                       id="ai_task_instructions"
                       value={formData.ai_task_instructions}
                       onChange={(e) =>
                         setFormData({ ...formData, ai_task_instructions: e.target.value })
                       }
-                      placeholder="e.g. Ensure the user uses correct grammar and includes their name, age, and hobbies."
+                      placeholder={t('aiGradingInsPlaceholder')}
                       rows={3}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Specific instructions for the AI on how to evaluate if the task is completed correctly.
+                      {t('aiGradingInsHint')}
                     </p>
                   </div>
 
@@ -282,31 +288,41 @@ export function LessonEditor({
             </CardContent>
           </Card>
 
-          {/* Markdown Editor */}
+          {/* Content Editor */}
           <Card>
             <CardContent className="pt-6">
-              <div className="space-y-2">
-                <Label htmlFor="content">Lesson Content (Markdown)</Label>
-                <Textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="# Lesson Content
-
-Write your lesson content here using Markdown...
-
-## What You'll Learn
-- Point 1
-- Point 2
-
-## Step 1: Getting Started
-..."
-                  rows={20}
-                  className="font-mono text-sm"
-                />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>{t('contentLabel')}</Label>
+                  <Tabs defaultValue="visual" className="w-auto">
+                    <TabsList className="h-8">
+                      <TabsTrigger value="visual" className="text-xs px-3 gap-1">
+                        <IconLayoutGrid className="h-3 w-3" />
+                        Visual
+                      </TabsTrigger>
+                      <TabsTrigger value="code" className="text-xs px-3 gap-1">
+                        <IconCode className="h-3 w-3" />
+                        MDX
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="visual" className="mt-4">
+                      <BlockEditor
+                        initialContent={formData.content || ''}
+                        onChange={(mdx) => setFormData({ ...formData, content: mdx })}
+                      />
+                    </TabsContent>
+                    <TabsContent value="code" className="mt-4">
+                      <MarkdownEditor
+                        value={formData.content || ''}
+                        onChange={(val) => setFormData({ ...formData, content: val })}
+                        placeholder={t('contentPlaceholder') as string}
+                        rows={20}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Use Markdown to format your content. Supports headings, lists, links, images,
-                  code blocks, and more.
+                  {t('contentHint')}
                 </p>
               </div>
             </CardContent>
@@ -326,7 +342,7 @@ Write your lesson content here using Markdown...
               ) : (
                 <IconDeviceFloppy className="mr-2 h-4 w-4" />
               )}
-              Save as Draft
+              {t('saveDraft')}
             </Button>
             <Button
               type="button"
@@ -339,7 +355,7 @@ Write your lesson content here using Markdown...
               ) : (
                 <IconEye className="mr-2 h-4 w-4" />
               )}
-              Publish Lesson
+              {t('publishLesson')}
             </Button>
           </div>
         </div>
@@ -350,7 +366,7 @@ Write your lesson content here using Markdown...
             <CardContent className="pt-6">
               <div className="mb-4 flex items-center gap-2 border-b pb-4">
                 <IconEye className="h-5 w-5 text-muted-foreground" />
-                <h2 className="font-semibold">Preview</h2>
+                <h2 className="font-semibold">{t('previewTitle')}</h2>
               </div>
 
               {formData.title && (
@@ -377,7 +393,7 @@ Write your lesson content here using Markdown...
                 </div>
               ) : (
                 <p className="text-center text-muted-foreground">
-                  Start writing to see a preview...
+                  {t('previewWriting')}
                 </p>
               )}
             </CardContent>

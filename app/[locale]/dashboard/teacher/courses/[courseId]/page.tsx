@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +27,7 @@ interface PageProps {
 export default async function CourseManagementPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.manageCourse')
 
   const {
     data: { user },
@@ -48,15 +50,15 @@ export default async function CourseManagementPage({ params }: PageProps) {
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
-              <IconArrowLeft /> Course Not Found
+              <IconArrowLeft /> {t('notFound')}
             </CardTitle>
             <CardDescription>
-              The course with ID {courseId} could not be found or you don't have permission to view it.
+              {t('notFoundDesc', { courseId })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/teacher/courses">
-              <Button variant="outline">Back to My Courses</Button>
+              <Button variant="outline">{t('backToCourses')}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -66,17 +68,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
 
   // Ownership check - simplified for debugging but keeping security in mind
   const isOwner = course.author_id === user.id
-  
+
   if (!isOwner) {
     return (
       <div className="p-8">
         <Card className="border-warning">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              Access Denied
+              {t('accessDenied')}
             </CardTitle>
             <CardDescription>
-              You are not the author of this course.
+              {t('notAuthor')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -85,7 +87,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
               <p>Course Author: {course.author_id}</p>
             </div>
             <Link href="/dashboard/teacher/courses">
-              <Button variant="outline">Back to My Courses</Button>
+              <Button variant="outline">{t('backToCourses')}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -141,7 +143,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground ml-10">
-                {enrollments.length} {enrollments.length === 1 ? 'student' : 'students'} enrolled
+                {t('enrolledCount', { count: enrollments.length })}
               </p>
             </div>
 
@@ -149,13 +151,13 @@ export default async function CourseManagementPage({ params }: PageProps) {
               <Link href={`/dashboard/student/courses/${courseId}`}>
                 <Button variant="outline" size="sm">
                   <IconEye className="mr-2 h-4 w-4" />
-                  Preview
+                  {t('tabs.preview') || 'Preview'}
                 </Button>
               </Link>
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`}>
                 <Button variant="outline" size="sm">
                   <IconSettings className="mr-2 h-4 w-4" />
-                  Settings
+                  {t('settings')}
                 </Button>
               </Link>
             </div>
@@ -167,16 +169,16 @@ export default async function CourseManagementPage({ params }: PageProps) {
         <Tabs defaultValue="lessons" className="space-y-6">
           <TabsList className="bg-muted/50 p-1">
             <TabsTrigger value="lessons" className="flex items-center gap-2">
-              <IconBook size={16} /> Lessons
+              <IconBook size={16} /> {t('tabs.lessons')}
             </TabsTrigger>
             <TabsTrigger value="exercises" className="flex items-center gap-2">
-              <IconTarget size={16} /> Exercises
+              <IconTarget size={16} /> {t('tabs.exercises')}
             </TabsTrigger>
             <TabsTrigger value="exams" className="flex items-center gap-2">
-              <IconFileText size={16} /> Exams
+              <IconFileText size={16} /> {t('tabs.exams')}
             </TabsTrigger>
             <TabsTrigger value="students" className="flex items-center gap-2">
-              <IconUsers size={16} /> Students
+              <IconUsers size={16} /> {t('tabs.students')}
             </TabsTrigger>
           </TabsList>
 
@@ -184,13 +186,13 @@ export default async function CourseManagementPage({ params }: PageProps) {
           <TabsContent value="lessons" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Curriculum</h2>
-                <p className="text-sm text-muted-foreground">Manage your course lessons and content.</p>
+                <h2 className="text-xl font-semibold">{t('curriculum.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('curriculum.description')}</p>
               </div>
               <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
                 <Button size="sm">
                   <IconPlus className="mr-2 h-4 w-4" />
-                  Add Lesson
+                  {t('curriculum.addLesson')}
                 </Button>
               </Link>
             </div>
@@ -230,9 +232,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                     <IconBook className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">No lessons found for this course.</p>
+                    <p className="text-muted-foreground">{t('curriculum.noLessons')}</p>
                     <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`} className="mt-4">
-                      <Button variant="outline" size="sm">Create First Lesson</Button>
+                      <Button variant="outline" size="sm">{t('curriculum.createFirst')}</Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -244,13 +246,13 @@ export default async function CourseManagementPage({ params }: PageProps) {
           <TabsContent value="exercises" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Practice Exercises</h2>
-                <p className="text-sm text-muted-foreground">Interactive tasks and challenges for students.</p>
+                <h2 className="text-xl font-semibold">{t('practice.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('practice.description')}</p>
               </div>
               <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>
                 <Button size="sm">
                   <IconPlus className="mr-2 h-4 w-4" />
-                  Add Exercise
+                  {t('practice.addExercise')}
                 </Button>
               </Link>
             </div>
@@ -268,8 +270,8 @@ export default async function CourseManagementPage({ params }: PageProps) {
                           </Badge>
                         </div>
                         <Badge variant={
-                          exercise.difficulty_level === 'hard' ? 'destructive' : 
-                          exercise.difficulty_level === 'medium' ? 'default' : 'secondary'
+                          exercise.difficulty_level === 'hard' ? 'destructive' :
+                            exercise.difficulty_level === 'medium' ? 'default' : 'secondary'
                         } className="capitalize">
                           {exercise.difficulty_level}
                         </Badge>
@@ -278,7 +280,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                     </CardHeader>
                     <CardContent className="p-4 pt-0 space-y-4">
                       <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                        {exercise.description || 'No description provided.'}
+                        {exercise.description || t('practice.noDescription')}
                       </p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -286,7 +288,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                         </span>
                         <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`}>
                           <Button variant="ghost" size="sm" className="h-8">
-                            Edit <IconEdit className="ml-2 h-3 w-3" />
+                            {t('practice.edit')} <IconEdit className="ml-2 h-3 w-3" />
                           </Button>
                         </Link>
                       </div>
@@ -297,9 +299,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 <Card className="col-span-full border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                     <IconTarget className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">No exercises created yet.</p>
+                    <p className="text-muted-foreground">{t('practice.noExercises')}</p>
                     <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`} className="mt-4">
-                      <Button variant="outline" size="sm">Create First Exercise</Button>
+                      <Button variant="outline" size="sm">{t('practice.createFirst')}</Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -311,13 +313,13 @@ export default async function CourseManagementPage({ params }: PageProps) {
           <TabsContent value="exams" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Assessments</h2>
-                <p className="text-sm text-muted-foreground">Formal tests and quizzes for grading.</p>
+                <h2 className="text-xl font-semibold">{t('assessments.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('assessments.description')}</p>
               </div>
               <Link href={`/dashboard/teacher/courses/${courseId}/exams/new`}>
                 <Button size="sm">
                   <IconPlus className="mr-2 h-4 w-4" />
-                  Add Exam
+                  {t('assessments.addExam')}
                 </Button>
               </Link>
             </div>
@@ -346,7 +348,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                       <div className="flex items-center gap-2">
                         <Link href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}/submissions`}>
                           <Button variant="ghost" size="sm" className="h-8">
-                            Submissions
+                            {t('assessments.submissions')}
                           </Button>
                         </Link>
                         <Link href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`}>
@@ -362,9 +364,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                     <IconFileText className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">No exams found for this course.</p>
+                    <p className="text-muted-foreground">{t('assessments.noExams')}</p>
                     <Link href={`/dashboard/teacher/courses/${courseId}/exams/new`} className="mt-4">
-                      <Button variant="outline" size="sm">Create First Exam</Button>
+                      <Button variant="outline" size="sm">{t('assessments.createFirst')}</Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -376,8 +378,8 @@ export default async function CourseManagementPage({ params }: PageProps) {
           <TabsContent value="students" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Enrolled Students</h2>
-                <p className="text-sm text-muted-foreground">View and manage students enrolled in this course.</p>
+                <h2 className="text-xl font-semibold">{t('studentList.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('studentList.description')}</p>
               </div>
             </div>
 
@@ -387,10 +389,10 @@ export default async function CourseManagementPage({ params }: PageProps) {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left font-medium">Student</th>
-                        <th className="px-4 py-3 text-left font-medium">Enrollment Date</th>
-                        <th className="px-4 py-3 text-left font-medium">Status</th>
-                        <th className="px-4 py-3 text-right font-medium">Actions</th>
+                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.student')}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.date')}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.status')}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t('studentList.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -406,7 +408,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                                     <IconUsers className="h-4 w-4 text-muted-foreground" />
                                   )}
                                 </div>
-                                <span className="font-medium">{enrollment.profiles?.full_name || 'Unknown Student'}</span>
+                                <span className="font-medium">{enrollment.profiles?.full_name || t('studentList.unknownStudent')}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
@@ -416,14 +418,14 @@ export default async function CourseManagementPage({ params }: PageProps) {
                               <Badge variant="outline" className="capitalize">{enrollment.status}</Badge>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <Button variant="ghost" size="sm">View Progress</Button>
+                              <Button variant="ghost" size="sm">{t('studentList.viewProgress')}</Button>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
                           <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                            No students enrolled in this course yet.
+                            {t('studentList.noStudents')}
                           </td>
                         </tr>
                       )}

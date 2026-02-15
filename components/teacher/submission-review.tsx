@@ -1,262 +1,257 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useTranslations } from 'next-intl'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   IconCheck,
   IconX,
-  IconPencil,
-  IconLoader2,
   IconRobot,
   IconUser,
+  IconMessage,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconLoader2,
   IconHourglass,
+  IconPencil,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-
-interface QuestionData {
-  question_id: number
-  question_text: string
-  question_type: string
-  points_possible: number
-  ai_grading_criteria: string | null
-  expected_keywords: string[] | null
-  options: { option_id: number; option_text: string; is_correct: boolean }[]
-  answer_text: string
-  answer_is_correct: boolean | null
-  answer_feedback: string | null
-  score_id: number | null
-  points_earned: number | null
-  is_correct: boolean | null
-  ai_feedback: string
-  ai_confidence: number | null
-  teacher_notes: string
-  is_overridden: boolean
-}
-
-interface SubmissionData {
-  submission_id: number
-  exam_id: number
-  student_id: string
-  student_name: string
-  submission_date: string
-  score: number | null
-  review_status: string
-  ai_data: any
-  ai_model_used: string | null
-  overall_feedback: string
-  teacher_notes: string
-  questions: QuestionData[]
-}
 
 interface SubmissionReviewProps {
-  submission: SubmissionData
-  onSave: (overrides: {
-    score: number
-    feedback: string
-    teacher_notes: string
-    question_overrides: {
-      question_id: number
-      points_earned: number
-      is_correct: boolean
-      teacher_notes: string
-    }[]
-  }) => Promise<void>
+  submission: any
+  questions?: any[]
+  answers?: any[]
+  onSave?: (overrides: any) => Promise<void>
 }
 
-export function SubmissionReview({ submission, onSave }: SubmissionReviewProps) {
-  // Initialize question overrides from existing data
-  const [questionOverrides, setQuestionOverrides] = useState<
-    Record<number, { points_earned: number; is_correct: boolean; teacher_notes: string }>
-  >(() => {
-    const initial: Record<number, { points_earned: number; is_correct: boolean; teacher_notes: string }> = {}
-    for (const q of submission.questions) {
-      initial[q.question_id] = {
-        points_earned: q.points_earned ?? 0,
-        is_correct: q.is_correct ?? false,
-        teacher_notes: q.teacher_notes || '',
+export function SubmissionReview({
+  submission: initialSubmission,
+  questions,
+  answers,
+  onSave,
+}: SubmissionReviewProps) {
+  const t = useTranslations('dashboard.teacher.submissionReview')
+  const supabase = createClient()
+  const [submission, setSubmission] = useState(initialSubmission)
+  const [loading, setLoading] = useState(false)
+  const [teacherFeedback, setTeacherFeedback] = useState(
+    submission.teacher_feedback || ''
+  )
+  const initialAnswers = answers || []
+  const [overrides, setOverrides] = useState<Record<number, any>>(
+    initialAnswers.reduce((acc, ans) => {
+      acc[ans.question_id] = {
+        points_earned: ans.teacher_score_override !== null ? ans.teacher_score_override : ans.points_earned,
+        is_correct: ans.is_correct,
+        teacher_notes: ans.teacher_notes || '',
+        is_overridden: ans.teacher_score_override !== null,
       }
-    }
-    return initial
-  })
+      return acc
+    }, {} as Record<number, any>)
+  )
 
-  const [overallFeedback, setOverallFeedback] = useState(submission.overall_feedback)
-  const [teacherNotes, setTeacherNotes] = useState(submission.teacher_notes)
-  const [editingQuestion, setEditingQuestion] = useState<number | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null)
 
-  // Calculate total score from question overrides
-  const totalPointsPossible = submission.questions.reduce((sum, q) => sum + q.points_possible, 0)
-  const totalPointsEarned = Object.values(questionOverrides).reduce((sum, q) => sum + q.points_earned, 0)
-  const calculatedScore = totalPointsPossible > 0 ? (totalPointsEarned / totalPointsPossible) * 100 : 0
-
-  const handleSave = async () => {
-    setSaving(true)
+  const handleSaveReview = async () => {
+    setLoading(true)
     try {
-      await onSave({
-        score: calculatedScore,
-        feedback: overallFeedback,
-        teacher_notes: teacherNotes,
-        question_overrides: Object.entries(questionOverrides).map(([qid, override]) => ({
-          question_id: parseInt(qid),
-          ...override,
-        })),
-      })
+      // Update submission status and feedback
+      const { error: subError } = await supabase
+        .from('exam_submissions')
+        .update({
+          teacher_feedback: teacherFeedback,
+          status: 'teacher_reviewed',
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', submission.id)
+
+      if (subError) throw subError
+
+      // Update question overrides
+      for (const [questionId, data] of Object.entries(overrides)) {
+        const { error: ansError } = await supabase
+          .from('exam_answers')
+          .update({
+            teacher_score_override: data.is_overridden ? data.points_earned : null,
+            is_correct: data.is_correct,
+            teacher_notes: data.teacher_notes,
+            manual_grading_status: 'graded',
+          })
+          .eq('submission_id', submission.id)
+          .eq('question_id', parseInt(questionId))
+
+        if (ansError) throw ansError
+      }
+
+      // Refresh data
+      const { data: updatedSub } = await supabase
+        .from('exam_submissions')
+        .select('*')
+        .eq('id', submission.id)
+        .single()
+
+      if (updatedSub) setSubmission(updatedSub)
+      setEditingQuestionId(null)
+
+      // invoke optional callback for parent pages
+      if (typeof onSave === 'function') {
+        try {
+          await onSave(overrides)
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.error('Error saving review:', err)
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
-  const updateQuestionOverride = (questionId: number, updates: Partial<{ points_earned: number; is_correct: boolean; teacher_notes: string }>) => {
-    setQuestionOverrides(prev => ({
-      ...prev,
+  const updateQuestionOverride = (questionId: number, updates: any) => {
+    setOverrides({
+      ...overrides,
       [questionId]: {
-        ...prev[questionId],
+        ...overrides[questionId],
         ...updates,
-      },
-    }))
+        is_overridden: true
+      }
+    })
   }
 
-  const getStatusBadge = () => {
-    switch (submission.review_status) {
-      case 'pending_teacher_review':
-        return <Badge className="bg-amber-500 text-white"><IconHourglass className="mr-1 h-3 w-3" />Awaiting Review</Badge>
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline">{t('status.pending')}</Badge>
       case 'ai_reviewed':
-        return <Badge className="bg-blue-500 text-white"><IconRobot className="mr-1 h-3 w-3" />AI Reviewed</Badge>
+        return (
+          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100/80">
+            {t('status.aiReviewed')}
+          </Badge>
+        )
       case 'teacher_reviewed':
-        return <Badge className="bg-green-600 text-white"><IconUser className="mr-1 h-3 w-3" />Teacher Reviewed</Badge>
+        return (
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80">
+            {t('status.teacherReviewed')}
+          </Badge>
+        )
+      case 'needs_attention':
+        return <Badge variant="destructive">{t('status.needsAttention')}</Badge>
       default:
-        return <Badge variant="secondary"><IconHourglass className="mr-1 h-3 w-3" />Pending</Badge>
+        return <Badge variant="secondary">{status}</Badge>
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">Review Submission</h1>
-          {getStatusBadge()}
+    <div className="space-y-8">
+      {/* Summary Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted/30 p-6 rounded-xl border">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold">{t('header.title')}</h2>
+            {getStatusBadge(submission.status)}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t('header.submittedOn', { date: new Date(submission.submitted_at).toLocaleDateString() })}
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Student: <span className="font-medium text-foreground">{submission.student_name}</span>
-          {submission.submission_date && (
-            <> &middot; Submitted {format(new Date(submission.submission_date), 'PPp')}</>
-          )}
-          {submission.ai_model_used && (
-            <> &middot; Graded by <span className="font-medium">{submission.ai_model_used}</span></>
-          )}
-        </p>
+        <div className="flex items-center gap-8">
+          <div className="text-center">
+            <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1">
+              {t('header.aiScore')}
+            </p>
+            <p className="text-2xl font-bold text-blue-600">
+              {submission.ai_score !== null ? `${submission.ai_score}%` : 'N/A'}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-1">
+              {t('header.finalScore')}
+            </p>
+            <p className="text-2xl font-bold text-green-600">
+              {submission.final_score !== null ? `${submission.final_score}%` : '—'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Score Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Overall Score</span>
-            <span className="text-3xl font-black">
-              {Math.round(calculatedScore)}%
-            </span>
-          </CardTitle>
-          <CardDescription>
-            {totalPointsEarned}/{totalPointsPossible} points &middot; Score auto-calculates from question scores below
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Overall Feedback (visible to student)</Label>
-            <Textarea
-              value={overallFeedback}
-              onChange={(e) => setOverallFeedback(e.target.value)}
-              rows={3}
-              placeholder="Provide overall feedback on the student's performance..."
-            />
-          </div>
+      {/* Review Questions */}
+      <div className="space-y-6">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          {t('questions.title')}
+        </h3>
 
-          <div>
-            <Label>Teacher Notes (private, not shown to student)</Label>
-            <Textarea
-              value={teacherNotes}
-              onChange={(e) => setTeacherNotes(e.target.value)}
-              rows={2}
-              placeholder="Internal notes..."
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Questions */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold">Questions ({submission.questions.length})</h2>
-
-        {submission.questions.map((q, idx) => {
-          const override = questionOverrides[q.question_id]
-          const isEditing = editingQuestion === q.question_id
+        {(questions || []).sort((a, b) => a.sequence - b.sequence).map((q, idx) => {
+          const override = overrides[q.id]
+          const isCorrect = override?.is_correct
+          const isPendingReview = q.question_type === 'free_text' && submission.status === 'pending'
           const isFreeText = q.question_type === 'free_text'
-          const isPendingReview = isFreeText && q.ai_confidence === 0
 
           return (
-            <Card key={q.question_id} className={cn(
-              "border-2",
-              isPendingReview && "border-amber-300 dark:border-amber-700",
-              !isPendingReview && override?.is_correct && "border-green-200 dark:border-green-800",
-              !isPendingReview && !override?.is_correct && "border-red-200 dark:border-red-800",
+            <Card key={q.id} className={cn(
+              "overflow-hidden border-l-4",
+              isCorrect ? "border-l-green-500" : "border-l-red-500"
             )}>
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 flex-1">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                        Question {idx + 1}
-                      </span>
-                      <Badge variant="secondary" className="text-xs">{q.question_type.replace('_', ' ')}</Badge>
-                      {q.is_overridden && (
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-muted-foreground">
+                        {t('questions.questionLabel', { index: idx + 1 })} • {q.question_type.replace('_', ' ')}
+                      </Badge>
+                      {override?.is_overridden && (
                         <Badge variant="outline" className="text-xs border-purple-300">
                           <IconUser className="mr-1 h-3 w-3" />
-                          Overridden
+                          {t('questions.overriddenBadge')}
                         </Badge>
                       )}
                       {isPendingReview && (
-                        <Badge className="bg-amber-500 text-white text-xs">
+                        <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700">
                           <IconHourglass className="mr-1 h-3 w-3" />
-                          Needs Grading
+                          {t('questions.needsGradingBadge')}
                         </Badge>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold">{q.question_text}</h3>
+                    <CardTitle className="text-base leading-tight">
+                      {q.question_text}
+                    </CardTitle>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right">
                     <div className="text-2xl font-black">
                       {override?.points_earned ?? 0}/{q.points_possible}
                     </div>
-                    <span className="text-xs text-muted-foreground">points</span>
+                    <span className="text-xs text-muted-foreground">{t('questions.pointsLabel')}</span>
                   </div>
                 </div>
               </CardHeader>
-
               <CardContent className="space-y-4">
-                {/* Show correct answer for MC/TF */}
-                {(q.question_type === 'multiple_choice' || q.question_type === 'true_false') && (
+                {/* Options mapping for non-free text */}
+                {!isFreeText && (
                   <div className="space-y-2">
-                    {q.options.map((opt) => {
-                      const isSelected = q.answer_text === opt.option_id.toString()
+                    {q.options?.map((opt: any) => {
+                      const isSelected = opt.option_text === q.answer_text
                       return (
-                        <div key={opt.option_id} className={cn(
+                        <div key={opt.id} className={cn(
                           "p-3 rounded-lg border flex items-center justify-between text-sm",
-                          isSelected && opt.is_correct && "bg-green-50 dark:bg-green-950/30 border-green-300",
-                          isSelected && !opt.is_correct && "bg-red-50 dark:bg-red-950/30 border-red-300",
-                          !isSelected && opt.is_correct && "bg-green-50/50 dark:bg-green-950/20 border-green-200",
-                          !isSelected && !opt.is_correct && "bg-muted/30 border-muted",
+                          opt.is_correct ? "bg-green-50 border-green-200 text-green-900" :
+                            isSelected ? "bg-red-50 border-red-200 text-red-900" : "bg-muted/30"
                         )}>
                           <span className="font-medium">{opt.option_text}</span>
                           <div className="flex items-center gap-2">
-                            {isSelected && <Badge variant="outline" className="text-xs">Selected</Badge>}
-                            {opt.is_correct && <Badge className="bg-green-600 text-white text-xs">Correct</Badge>}
+                            {isSelected && <Badge variant="outline" className="text-xs">{t('questions.selectedBadge')}</Badge>}
+                            {opt.is_correct && <Badge className="bg-green-600 text-white text-xs">{t('questions.correctBadge')}</Badge>}
                           </div>
                         </div>
                       )
@@ -267,123 +262,124 @@ export function SubmissionReview({ submission, onSave }: SubmissionReviewProps) 
                 {/* Free text answer */}
                 {isFreeText && (
                   <div>
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Student Answer</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">{t('questions.studentAnswerLabel')}</Label>
                     <div className="mt-1 p-4 bg-muted rounded-lg text-sm leading-relaxed">
-                      {q.answer_text || <span className="italic text-muted-foreground">No answer provided</span>}
+                      {q.answer_text || <span className="italic text-muted-foreground">{t('questions.noAnswerProvided')}</span>}
                     </div>
                     {q.ai_grading_criteria && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        <span className="font-bold">Grading criteria:</span> {q.ai_grading_criteria}
+                        <span className="font-bold">{t('questions.gradingCriteria')}:</span> {q.ai_grading_criteria}
                       </p>
                     )}
                     {q.expected_keywords && q.expected_keywords.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        <span className="font-bold">Expected keywords:</span> {q.expected_keywords.join(', ')}
+                        <span className="font-bold">{t('questions.expectedKeywords')}:</span> {q.expected_keywords.join(', ')}
                       </p>
                     )}
                   </div>
                 )}
 
                 {/* AI Feedback */}
-                {q.ai_feedback && q.ai_confidence !== 0 && (
+                {q.ai_feedback && (
                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <IconRobot className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-bold text-blue-900 dark:text-blue-300">AI Feedback</span>
+                      <span className="text-sm font-bold text-blue-900 dark:text-blue-300">{t('aiFeedback.title')}</span>
                       {q.ai_confidence != null && (
                         <Badge variant="secondary" className="text-xs">
-                          {(q.ai_confidence * 100).toFixed(0)}% confidence
+                          {t('aiFeedback.confidence', { confidence: (q.ai_confidence * 100).toFixed(0) })}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-blue-900 dark:text-blue-200">{q.ai_feedback}</p>
+                    <p className="text-sm leading-relaxed">{q.ai_feedback}</p>
                   </div>
                 )}
 
-                {/* Teacher Override Section */}
-                {isEditing ? (
+                {/* Teacher Override Interface */}
+                {editingQuestionId === q.id ? (
                   <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-4 rounded-lg space-y-3">
                     <div className="flex items-center gap-2 mb-1">
                       <IconPencil className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm font-bold text-purple-900 dark:text-purple-300">Teacher Override</span>
+                      <span className="text-sm font-bold text-purple-900 dark:text-purple-300">{t('teacherOverride.title')}</span>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
-                        <Label>Points Earned</Label>
+                        <Label>{t('teacherOverride.pointsEarnedLabel')}</Label>
                         <Input
                           type="number"
                           min="0"
                           max={q.points_possible}
-                          step="0.5"
-                          value={override?.points_earned ?? 0}
-                          onChange={(e) => {
-                            const pts = parseFloat(e.target.value) || 0
-                            updateQuestionOverride(q.question_id, {
-                              points_earned: Math.min(pts, q.points_possible),
-                              is_correct: pts >= q.points_possible * 0.5,
-                            })
-                          }}
+                          value={override?.points_earned}
+                          onChange={(e) => updateQuestionOverride(q.id, { points_earned: parseInt(e.target.value) || 0 })}
                         />
                       </div>
-                      <span className="text-muted-foreground pt-6">/ {q.points_possible}</span>
+                      <div className="flex-1">
+                        <Label>{t('teacherOverride.statusLabel')}</Label>
+                        <div className="flex items-center h-10 border rounded px-3 bg-white">
+                          <span className="text-sm font-medium mr-auto">{isCorrect ? t('teacherOverride.correctStatus') : t('teacherOverride.incorrectStatus')}</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <Label>Mark as:</Label>
+                      <Label>{t('teacherOverride.markAsLabel')}:</Label>
                       <Button
                         type="button"
                         size="sm"
-                        variant={override?.is_correct ? 'default' : 'outline'}
+                        variant={override?.is_correct ? "default" : "outline"}
                         className={cn(override?.is_correct && "bg-green-600 hover:bg-green-700")}
-                        onClick={() => updateQuestionOverride(q.question_id, { is_correct: true })}
+                        onClick={() => updateQuestionOverride(q.id, { is_correct: true })}
                       >
-                        <IconCheck className="mr-1 h-4 w-4" /> Correct
+                        <IconCheck className="mr-1 h-4 w-4" /> {t('teacherOverride.correctButton')}
                       </Button>
                       <Button
                         type="button"
                         size="sm"
-                        variant={!override?.is_correct ? 'default' : 'outline'}
+                        variant={!override?.is_correct ? "default" : "outline"}
                         className={cn(!override?.is_correct && "bg-red-600 hover:bg-red-700")}
-                        onClick={() => updateQuestionOverride(q.question_id, { is_correct: false })}
+                        onClick={() => updateQuestionOverride(q.id, { is_correct: false })}
                       >
-                        <IconX className="mr-1 h-4 w-4" /> Incorrect
+                        <IconX className="mr-1 h-4 w-4" /> {t('teacherOverride.incorrectButton')}
                       </Button>
                     </div>
 
-                    <div>
-                      <Label>Teacher Notes</Label>
+                    <div className="space-y-2">
+                      <Label>{t('teacherOverride.teacherNotesLabel')}</Label>
                       <Textarea
                         value={override?.teacher_notes || ''}
-                        onChange={(e) => updateQuestionOverride(q.question_id, { teacher_notes: e.target.value })}
-                        rows={2}
-                        placeholder="Explain your grading decision..."
+                        onChange={(e) => updateQuestionOverride(q.id, { teacher_notes: e.target.value })}
+                        placeholder={t('teacherOverride.teacherNotesPlaceholder')}
                       />
                     </div>
 
-                    <Button size="sm" onClick={() => setEditingQuestion(null)}>
-                      Done
+                    <Button
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      onClick={() => setEditingQuestionId(null)}
+                    >
+                      {t('teacherOverride.doneButton')}
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3">
-                    {override?.teacher_notes && (
+                  <div className="flex items-start justify-between gap-4">
+                    {override?.teacher_notes ? (
                       <div className="flex-1 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-3 rounded-lg">
                         <div className="flex items-center gap-1 mb-1">
                           <IconUser className="h-3 w-3 text-purple-600" />
-                          <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Teacher Notes</span>
+                          <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{t('teacherOverride.teacherNotesBadge')}</span>
                         </div>
                         <p className="text-sm">{override.teacher_notes}</p>
                       </div>
-                    )}
+                    ) : <div className="flex-1" />}
+
                     <Button
-                      size="sm"
                       variant="outline"
-                      onClick={() => setEditingQuestion(q.question_id)}
+                      size="sm"
+                      onClick={() => setEditingQuestionId(q.id)}
                       className="shrink-0"
                     >
                       <IconPencil className="h-4 w-4 mr-1" />
-                      {isFreeText && isPendingReview ? 'Grade' : 'Override'}
+                      {isFreeText && isPendingReview ? t('teacherOverride.gradeButton') : t('teacherOverride.overrideButton')}
                     </Button>
                   </div>
                 )}
@@ -393,27 +389,41 @@ export function SubmissionReview({ submission, onSave }: SubmissionReviewProps) 
         })}
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end gap-3 pt-4 pb-8 sticky bottom-0 bg-background/80 backdrop-blur-sm border-t p-4 -mx-4">
-        <div className="flex items-center gap-4 mr-auto">
-          <span className="text-sm text-muted-foreground">
-            Final Score: <span className="text-2xl font-black text-foreground">{Math.round(calculatedScore)}%</span>
-          </span>
+      {/* Final Review & Actions */}
+      <Card className="border-2 border-primary/20 shadow-xl overflow-hidden">
+        <div className="bg-primary/5 px-6 py-4 border-b border-primary/10">
+          <h3 className="font-bold flex items-center gap-2">
+            <IconMessage className="h-5 w-5 text-primary" />
+            {t('finalReview.title')}
+          </h3>
         </div>
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? (
-            <>
-              <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <IconCheck className="h-4 w-4 mr-2" />
-              Save & Finalize Review
-            </>
-          )}
-        </Button>
-      </div>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-bold">{t('finalReview.teacherFeedbackLabel')}</Label>
+            <Textarea
+              value={teacherFeedback}
+              onChange={(e) => setTeacherFeedback(e.target.value)}
+              placeholder={t('finalReview.teacherFeedbackPlaceholder')}
+              rows={4}
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-4 gap-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <IconAlertTriangle className="h-4 w-4 text-amber-500" />
+              {t('finalReview.finalNotice')}
+            </div>
+            <Button
+              onClick={handleSaveReview}
+              disabled={loading}
+              className="px-8 shadow-lg shadow-primary/20"
+            >
+              {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('finalReview.saveReviewButton')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +38,7 @@ interface CourseFormProps {
 
 export function CourseForm({ categories, initialData }: CourseFormProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.courseForm')
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +99,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
       }
     } catch (err: any) {
       console.error('Error saving course:', err)
-      setError(err.message || 'Failed to save course')
+      setError(err.message || t('saveError'))
       setLoading(false)
     }
   }
@@ -106,7 +108,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>Course Details</CardTitle>
+          <CardTitle>{t('details')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {error && (
@@ -117,30 +119,30 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="title">
-              Course Title <span className="text-destructive">*</span>
+              {t('titleLabel')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Introduction to Web Development"
+              placeholder={t('titlePlaceholder')}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('descriptionLabel')}</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe what students will learn in this course..."
+              placeholder={t('descriptionPlaceholder')}
               rows={4}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
+            <Label htmlFor="thumbnail_url">{t('thumbnailLabel')}</Label>
             <Input
               id="thumbnail_url"
               type="url"
@@ -148,15 +150,15 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               onChange={(e) =>
                 setFormData({ ...formData, thumbnail_url: e.target.value })
               }
-              placeholder="https://example.com/image.jpg"
+              placeholder={t('thumbnailPlaceholder')}
             />
             <p className="text-xs text-muted-foreground">
-              Provide a URL to an image (16:9 aspect ratio recommended)
+              {t('thumbnailHint')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">{t('categoryLabel')}</Label>
             <Select
               value={formData.category_id || undefined}
               onValueChange={(value) =>
@@ -164,7 +166,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               }
             >
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder={t('categoryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
@@ -177,7 +179,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('statusLabel')}</Label>
             <Select
               value={formData.status}
               onValueChange={(value: any) =>
@@ -185,18 +187,18 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               }
             >
               <SelectTrigger id="status">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t('statusPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="draft">{t('statusHints.draft')}</SelectItem>
+                <SelectItem value="published">{t('statusHints.published')}</SelectItem>
+                <SelectItem value="archived">{t('statusHints.archived')}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {formData.status === 'draft' && 'Only you can see this course.'}
-              {formData.status === 'published' && 'Course is visible to students and ready for enrollment.'}
-              {formData.status === 'archived' && 'Course is hidden from catalog but existing students retain access.'}
+              {formData.status === 'draft' && t('statusHints.draft')}
+              {formData.status === 'published' && t('statusHints.published')}
+              {formData.status === 'archived' && t('statusHints.archived')}
             </p>
           </div>
 
@@ -204,12 +206,12 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
             <Link href="/dashboard/teacher" className="flex-1">
               <Button type="button" variant="outline" className="w-full" disabled={loading}>
                 <IconArrowLeft className="mr-2 h-4 w-4" />
-                Cancel
+                {t('actions.cancel')}
               </Button>
             </Link>
             <Button type="submit" className="flex-1" disabled={loading}>
               {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {initialData ? 'Update Course' : 'Create Course'}
+              {initialData ? t('actions.update') : t('actions.create')}
             </Button>
           </div>
         </CardContent>

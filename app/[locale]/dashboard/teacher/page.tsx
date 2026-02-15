@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ import * as motion from 'motion/react-client'
 
 export default async function TeacherDashboard() {
   const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher')
 
   const {
     data: { user },
@@ -104,23 +106,25 @@ export default async function TeacherDashboard() {
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            Welcome back, {profile?.full_name?.split(' ')[0] || 'Teacher'}!
+            {t.rich('welcome', {
+              userName: profile?.full_name?.split(' ')[0] || 'Teacher'
+            })}
           </h2>
           <p className="text-muted-foreground">
-            Here's what's happening with your courses and students today.
+            {t('subtitle')}
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/dashboard/teacher/templates">
             <Button variant="outline" className="transition-all active:scale-95">
               <IconTemplate className="mr-2 h-4 w-4" />
-              Prompt Templates
+              {t('promptTemplates')}
             </Button>
           </Link>
           <Link href="/dashboard/teacher/courses/new">
             <Button className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95">
               <IconPlus className="mr-2 h-4 w-4" />
-              Create New Course
+              {t('createCourse')}
             </Button>
           </Link>
         </div>
@@ -134,7 +138,7 @@ export default async function TeacherDashboard() {
         >
           <Card className="border-none bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-blue-500/10">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('stats.totalCourses')}</CardTitle>
               <div className="p-2 bg-blue-500/10 rounded-lg">
                 <IconBook className="h-4 w-4 text-blue-600" />
               </div>
@@ -142,7 +146,7 @@ export default async function TeacherDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{totalCourses}</div>
               <p className="text-xs text-muted-foreground">
-                {totalLessons} total lessons
+                {t('stats.totalLessons', { count: totalLessons })}
               </p>
             </CardContent>
           </Card>
@@ -155,7 +159,7 @@ export default async function TeacherDashboard() {
         >
           <Card className="border-none bg-gradient-to-br from-green-500/10 via-green-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-green-500/10">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('stats.activeStudents')}</CardTitle>
               <div className="p-2 bg-green-500/10 rounded-lg">
                 <IconUsers className="h-4 w-4 text-green-600" />
               </div>
@@ -163,7 +167,7 @@ export default async function TeacherDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{totalStudents}</div>
               <p className="text-xs text-muted-foreground">
-                Across all published courses
+                {t('stats.acrossPublished')}
               </p>
             </CardContent>
           </Card>
@@ -176,7 +180,7 @@ export default async function TeacherDashboard() {
         >
           <Card className="border-none bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-amber-500/10">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Submissions</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('stats.submissions')}</CardTitle>
               <div className="p-2 bg-amber-500/10 rounded-lg">
                 <IconFileText className="h-4 w-4 text-amber-600" />
               </div>
@@ -184,7 +188,7 @@ export default async function TeacherDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{totalPendingReviews}</div>
               <p className="text-xs text-muted-foreground">
-                Total exams submitted
+                {t('stats.totalExams')}
               </p>
             </CardContent>
           </Card>
@@ -197,7 +201,7 @@ export default async function TeacherDashboard() {
         >
           <Card className="border-none bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-indigo-500/10">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('stats.quickActions')}</CardTitle>
               <div className="p-2 bg-indigo-500/10 rounded-lg">
                 <IconBolt className="h-4 w-4 text-indigo-600" />
               </div>
@@ -209,7 +213,7 @@ export default async function TeacherDashboard() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Platform activity: Active
+                {t('stats.platformActivity')}
               </p>
             </CardContent>
           </Card>
@@ -221,14 +225,14 @@ export default async function TeacherDashboard() {
         <Card className="lg:col-span-4 border-none shadow-xl bg-card/50 backdrop-blur-sm ring-1 ring-border">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Your Courses</CardTitle>
+              <CardTitle>{t('courses.title')}</CardTitle>
               <CardDescription>
-                Manage and monitor your educational content.
+                {t('courses.description')}
               </CardDescription>
             </div>
             <Link href="/dashboard/teacher/courses">
               <Button variant="ghost" size="sm" className="text-primary">
-                View all
+                {t('courses.viewAll')}
                 <IconArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -259,7 +263,7 @@ export default async function TeacherDashboard() {
                             <IconUsers size={12} /> {course.enrollments?.length || 0}
                           </span>
                           <span className="flex items-center gap-1">
-                            <IconFileText size={12} /> {course.lessons?.length || 0} lessons
+                            <IconFileText size={12} /> {t('courses.lessonsCount', { count: course.lessons?.length || 0 })}
                           </span>
                           <Badge variant={course.status === 'published' ? 'default' : 'outline'} className="text-[10px] h-4 py-0">
                             {course.status}
@@ -284,9 +288,9 @@ export default async function TeacherDashboard() {
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
                   <IconBook className="mx-auto h-12 w-12 opacity-10 mb-4" />
-                  <p>No courses created yet.</p>
+                  <p>{t('courses.noCourses')}</p>
                   <Link href="/dashboard/teacher/courses/new">
-                    <Button variant="link" className="mt-2">Create your first course</Button>
+                    <Button variant="link" className="mt-2">{t('courses.createFirst')}</Button>
                   </Link>
                 </div>
               )}
@@ -297,9 +301,9 @@ export default async function TeacherDashboard() {
         {/* Activity Feed */}
         <Card className="lg:col-span-3 border-none shadow-xl bg-card/50 backdrop-blur-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>{t('activity.title')}</CardTitle>
             <CardDescription>
-              Latest enrollments and submissions.
+              {t('activity.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -319,13 +323,14 @@ export default async function TeacherDashboard() {
                     </div>
                     <div className="flex-1 space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        <span className="text-foreground">{activity.profiles?.full_name || 'Anonymous'}</span>
-                        <span className="text-muted-foreground font-normal"> enrolled in </span>
-                        <span className="text-primary font-semibold">{activity.courses?.title}</span>
+                        {t.rich('activity.enrolledIn', {
+                          userName: (chunks) => <span className="text-foreground">{activity.profiles?.full_name || 'Anonymous'}</span>,
+                          courseTitle: (chunks) => <span className="text-primary font-semibold">{activity.courses?.title}</span>
+                        })}
                       </p>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
                         <IconCalendar size={10} />
-                        {new Date(activity.enrollment_date).toLocaleDateString()} at{' '}
+                        {new Date(activity.enrollment_date).toLocaleDateString()} {t('activity.at')}{' '}
                         {new Date(activity.enrollment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -333,7 +338,7 @@ export default async function TeacherDashboard() {
                 ))
               ) : (
                 <div className="text-center py-10 text-muted-foreground italic text-sm">
-                  No recent activity found.
+                  {t('activity.noActivity')}
                 </div>
               )}
             </div>
@@ -343,10 +348,10 @@ export default async function TeacherDashboard() {
                 <div className="p-1.5 bg-primary/10 rounded-lg">
                   <IconChartBar size={16} className="text-primary" />
                 </div>
-                <h4 className="text-sm font-semibold">Growth Tip</h4>
+                <h4 className="text-sm font-semibold">{t('activity.growthTip')}</h4>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Courses with AI-assisted exercises have 45% higher completion rates. Try adding tasks to your lessons!
+                {t('activity.growthTipDesc')}
               </p>
             </div>
           </CardContent>

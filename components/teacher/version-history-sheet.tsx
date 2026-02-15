@@ -153,14 +153,14 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
           <IconHistory aria-hidden="true" className="h-4 w-4" />
           History
         </DialogTrigger>
-        <DialogContent 
+        <DialogContent
           showCloseButton
-          className="max-w-5xl w-[95vw] h-[85vh] max-h-[800px] p-0 flex flex-col overflow-hidden"
+          className="h-[85vh] max-h-[800px] p-0 flex flex-col overflow-hidden"
         >
           <DialogHeader className="px-6 py-4 border-b shrink-0">
             <DialogTitle className="text-lg font-semibold">Version History</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex flex-1 min-h-0">
             {/* Left sidebar - Version list */}
             <div className="w-64 shrink-0 border-r flex flex-col bg-muted/30">
