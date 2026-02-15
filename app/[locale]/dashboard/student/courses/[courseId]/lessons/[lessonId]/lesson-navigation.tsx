@@ -103,6 +103,7 @@ export function LessonNavigation({
         <div className="flex-1 flex justify-center">
           <Button
             onClick={handleComplete}
+            data-testid="lesson-complete-toggle"
             disabled={loading}
             variant={completed ? 'secondary' : 'default'}
             className={cn(

@@ -206,6 +206,7 @@ export default async function LessonPage({ params }: PageProps) {
                     taskDescription={aiTask.task_instructions}
                     isCompleted={isCurrentLessonCompleted}
                     initialMessages={initialMessages}
+                    data-testid="lesson-ai-chat"
                   />
                 </div>
               </div>

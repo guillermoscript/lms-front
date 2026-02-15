@@ -39,10 +39,10 @@ export default async function EditExamPage({ params }: PageProps) {
       *,
       questions:exam_questions(
         *,
-        options:exam_question_options(*)
+        options:question_options(*)
       )
     `)
-    .eq('id', parseInt(examId))
+    .eq('exam_id', parseInt(examId))
     .eq('course_id', parseInt(courseId))
     .single()
 

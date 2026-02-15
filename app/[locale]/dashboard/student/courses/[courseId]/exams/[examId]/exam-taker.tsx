@@ -329,6 +329,7 @@ export function ExamTaker({
             {isLastQuestion ? (
               <Button
                 size="lg"
+                data-testid="exam-finish-submit"
                 className="rounded-2xl h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
                 onClick={handleSubmit}
                 disabled={submitting}
@@ -356,4 +357,3 @@ export function ExamTaker({
     </div>
   )
 }
-

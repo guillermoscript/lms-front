@@ -139,7 +139,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 </Link>
                 <h1 className="text-2xl font-bold tracking-tight">{course.title}</h1>
                 <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
-                  {course.status}
+                  {t(`status.${course.status}`)}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground ml-10">
@@ -151,7 +151,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
               <Link href={`/dashboard/student/courses/${courseId}`}>
                 <Button variant="outline" size="sm">
                   <IconEye className="mr-2 h-4 w-4" />
-                  {t('tabs.preview') || 'Preview'}
+                  {t('tabs.preview')}
                 </Button>
               </Link>
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`}>
@@ -210,10 +210,10 @@ export default async function CourseManagementPage({ params }: PageProps) {
                           <h3 className="font-medium group-hover:text-primary transition-colors">{lesson.title}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant={lesson.status === 'published' ? 'outline' : 'secondary'} className="text-[10px] h-4">
-                              {lesson.status}
+                              {t(`status.${lesson.status}`)}
                             </Badge>
                             {lesson.video_url && (
-                              <Badge variant="outline" className="text-[10px] h-4">Video</Badge>
+                              <Badge variant="outline" className="text-[10px] h-4">{t('video')}</Badge>
                             )}
                           </div>
                         </div>
@@ -264,16 +264,18 @@ export default async function CourseManagementPage({ params }: PageProps) {
                     <CardHeader className="p-4 pb-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">{exercise.exercise_type.replace('_', ' ')}</Badge>
+                          <Badge variant="outline" className="capitalize">
+                            {t(`exerciseTypes.${(exercise.exercise_type || '').toLowerCase()}`)}
+                          </Badge>
                           <Badge variant={exercise.status === 'published' ? 'default' : 'secondary'} className="text-[10px] h-4">
-                            {exercise.status}
+                            {t(`status.${exercise.status}`)}
                           </Badge>
                         </div>
                         <Badge variant={
                           exercise.difficulty_level === 'hard' ? 'destructive' :
                             exercise.difficulty_level === 'medium' ? 'default' : 'secondary'
                         } className="capitalize">
-                          {exercise.difficulty_level}
+                          {t(`difficulty.${exercise.difficulty_level}`)}
                         </Badge>
                       </div>
                       <CardTitle className="text-lg mt-2 line-clamp-1">{exercise.title}</CardTitle>
@@ -284,7 +286,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                       </p>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <IconBolt size={12} /> {exercise.time_limit || 0} min
+                          <IconBolt size={12} /> {exercise.time_limit || 0} {t('min')}
                         </span>
                         <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`}>
                           <Button variant="ghost" size="sm" className="h-8">
@@ -337,10 +339,10 @@ export default async function CourseManagementPage({ params }: PageProps) {
                           <h3 className="font-medium group-hover:text-primary transition-colors">{exam.title}</h3>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              {exam.duration} min
+                              {exam.duration} {t('min')}
                             </span>
                             <Badge variant={exam.status === 'published' ? 'outline' : 'secondary'} className="text-[10px] h-4">
-                              {exam.status}
+                              {t(`status.${exam.status}`)}
                             </Badge>
                           </div>
                         </div>
@@ -415,7 +417,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
                               {new Date(enrollment.enrollment_date).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3">
-                              <Badge variant="outline" className="capitalize">{enrollment.status}</Badge>
+                              <Badge variant="outline" className="capitalize">
+                                {t(`status.${enrollment.status}`)}
+                              </Badge>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <Button variant="ghost" size="sm">{t('studentList.viewProgress')}</Button>

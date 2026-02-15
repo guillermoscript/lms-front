@@ -59,7 +59,7 @@ export default async function EditExercisePage({ params }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto p-8">
       <Link href={`/dashboard/teacher/courses/${courseId}`}>
         <Button variant="ghost" size="sm" className="mb-4">
           <IconArrowLeft className="mr-2 h-4 w-4" />
