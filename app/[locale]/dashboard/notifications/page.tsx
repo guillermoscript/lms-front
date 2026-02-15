@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { NotificationsClient } from "@/components/notifications-client"
+import { getTranslations } from "next-intl/server"
 
 export default async function NotificationsPage() {
+  const t = await getTranslations('dashboard.student.notifications')
   const supabase = await createClient()
   const {
     data: { user },
@@ -28,9 +30,9 @@ export default async function NotificationsPage() {
   return (
     <div className="container max-w-4xl py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Stay up to date with your latest notifications
+          {t('description')}
         </p>
       </div>
 
