@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
+import { useTranslations } from 'next-intl';
 
 interface Plan {
     plan_id: number;
@@ -25,6 +26,7 @@ interface PricingClientProps {
 
 export default function PricingClient({ monthlyPlans, yearlyPlans, freePlan }: PricingClientProps) {
     const [isYearly, setIsYearly] = useState(false);
+    const t = useTranslations('pricing');
 
     // Get the appropriate plans based on toggle
     const displayPlans = isYearly ? yearlyPlans : monthlyPlans;
@@ -39,89 +41,113 @@ export default function PricingClient({ monthlyPlans, yearlyPlans, freePlan }: P
         <>
             {/* Pricing Toggle */}
             {(monthlyPlans.length > 0 || yearlyPlans.length > 0) && (
-                <div className="flex items-center justify-center space-x-4 mt-8 bg-zinc-900/50 p-1.5 rounded-full border border-zinc-800 w-fit mx-auto">
-                    <span className={`text-sm font-medium px-3 cursor-pointer ${!isYearly ? "text-white" : "text-zinc-500"}`} onClick={() => setIsYearly(false)}>Monthly</span>
+                <div className="flex items-center justify-center space-x-6 mt-12 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800 w-fit mx-auto shadow-xl backdrop-blur-sm">
+                    <span
+                        className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${!isYearly ? "text-white bg-zinc-800 shadow-lg" : "text-zinc-500 hover:text-zinc-400"}`}
+                        onClick={() => setIsYearly(false)}
+                    >
+                        {t('monthly')}
+                    </span>
                     <Switch
                         checked={isYearly}
                         onCheckedChange={setIsYearly}
                         className="data-[state=checked]:bg-blue-600"
                     />
-                    <span className={`text-sm font-medium px-3 cursor-pointer ${isYearly ? "text-white" : "text-zinc-500"}`} onClick={() => setIsYearly(true)}>
-                        Yearly <span className="text-blue-400 text-xs ml-1 font-bold">Save 20%</span>
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span
+                            className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${isYearly ? "text-white bg-zinc-800 shadow-lg" : "text-zinc-500 hover:text-zinc-400"}`}
+                            onClick={() => setIsYearly(true)}
+                        >
+                            {t('yearly')}
+                        </span>
+                        <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">
+                            {t('save', { percent: 20 })}
+                        </span>
+                    </div>
                 </div>
             )}
 
             {/* Plans Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto relative z-10 mt-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto relative z-10 mt-20">
                 {allPlans.map((plan, index) => {
                     const isPopular = index === popularIndex;
-                    
+
                     // Features should already be an array from server-side sanitization
                     const parsedFeatures: string[] = Array.isArray(plan.features) ? plan.features : [];
 
                     return (
-                        <div key={plan.plan_id} className="relative group">
+                        <div key={`${plan.plan_id}-${index}`} className="relative h-full">
                             {isPopular && (
-                                <div className="absolute -top-4 inset-x-0 flex justify-center z-10">
-                                    <div className="bg-cyan-400 text-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                                        Most Popular
+                                <div className="absolute -top-4 inset-x-0 flex justify-center z-20">
+                                    <div className="bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.1em] shadow-xl shadow-blue-600/20 border border-blue-500">
+                                        {t('mostPopular')}
                                     </div>
                                 </div>
                             )}
 
-                            <Card className={`h-full flex flex-col bg-zinc-900/50 backdrop-blur-sm border transition-all duration-300 ${isPopular
-                                    ? "border-cyan-500/50 shadow-lg shadow-cyan-500/10 scale-105 z-10"
-                                    : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
+                            <Card className={`h-full flex flex-col bg-zinc-900/40 backdrop-blur-md border-[1.5px] transition-all duration-500 rounded-[2.5rem] group overflow-hidden ${isPopular
+                                ? "border-blue-500/50 shadow-2xl shadow-blue-600/10 lg:scale-[1.05] z-10 bg-zinc-900/60"
+                                : "border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/60"
                                 }`}>
-                                <CardHeader>
-                                    <CardTitle className="text-xl font-bold text-white">{plan.plan_name}</CardTitle>
-                                    <CardDescription className="text-zinc-400 h-10">{plan.description}</CardDescription>
+                                <CardHeader className="p-8 pb-4">
+                                    <div className="flex flex-col gap-1">
+                                        <CardTitle className="text-2xl font-black text-white tracking-tight">{plan.plan_name}</CardTitle>
+                                        <CardDescription className="text-zinc-500 text-sm font-medium h-12 leading-relaxed">{plan.description}</CardDescription>
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="flex-1">
-                                    <div className="mb-8">
-                                        <div className="flex items-baseline">
-                                            <span className="text-5xl font-bold text-white">
+                                <CardContent className="flex-1 px-8 pb-10">
+                                    <div className="mb-10">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-6xl font-black text-white tracking-tighter">
                                                 ${plan.price}
                                             </span>
-                                            <span className="text-zinc-400 ml-1">
-                                                /{plan.duration_in_days === 30 ? 'mo' : plan.duration_in_days === 365 ? 'yr' : 'free'}
+                                            <span className="text-zinc-500 font-bold text-lg">
+                                                /{plan.duration_in_days === 30 ? t('mo') : plan.duration_in_days === 365 ? t('yr') : t('free')}
                                             </span>
                                         </div>
+                                        <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-2">
+                                            {plan.duration_in_days === 365 ? t('billedYearly') : t('billedMonthly')}
+                                        </div>
+
                                         {plan.plan_id === 0 ? (
-                                            <Link href="/auth/sign-up">
-                                                <Button className="w-full mt-6 bg-transparent border border-zinc-700 hover:bg-zinc-800 text-white">
-                                                    Sign Up Free
+                                            <Link href="/auth/sign-up" className="block mt-10">
+                                                <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold h-14 rounded-2xl border border-zinc-700/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                                                    {t('signUpFree')}
                                                 </Button>
                                             </Link>
                                         ) : (
-                                            <Link href={`/checkout?planId=${plan.plan_id}`}>
-                                                <Button className={`w-full mt-6 ${isPopular 
-                                                    ? 'bg-cyan-400 hover:bg-cyan-300 text-black font-bold shadow-lg shadow-cyan-400/25'
-                                                    : 'bg-transparent border border-zinc-700 hover:bg-zinc-800 text-white'
-                                                }`}>
-                                                    Get Started
+                                            <Link href={`/checkout?planId=${plan.plan_id}`} className="block mt-10">
+                                                <Button className={`w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
+                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
+                                                    : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
+                                                    }`}>
+                                                    {t('getStarted')}
                                                 </Button>
                                             </Link>
                                         )}
                                     </div>
-                                    <div className="space-y-4">
+                                    <ul className="space-y-4 m-0 p-0">
                                         {parsedFeatures?.map((feature: string, i: number) => {
-                                            const isCrossed = feature === "Certificates" && plan.plan_id === 0;
+                                            // The 3rd feature (index 2) of the free plan is the one to cross out (Certificates)
+                                            const isCrossed = plan.plan_id === 0 && i === 2;
                                             return (
-                                                <li key={i} className="flex items-center text-zinc-300 list-none">
+                                                <li key={i} className="flex items-center text-zinc-300 list-none group/item">
                                                     {isCrossed ? (
-                                                        <X className="h-5 w-5 text-zinc-600 mr-3 flex-shrink-0" />
+                                                        <div className="h-6 w-6 rounded-full flex items-center justify-center mr-4 flex-shrink-0 bg-red-500/5">
+                                                            <X className="h-4 w-4 text-zinc-700" />
+                                                        </div>
                                                     ) : (
-                                                        <div className="h-5 w-5 bg-blue-500/20 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                                            <Check className="h-3 w-3 text-blue-400" />
+                                                        <div className="h-6 w-6 bg-blue-500/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0 border border-blue-500/20 group-hover/item:bg-blue-500/20 transition-colors">
+                                                            <Check className="h-3.5 w-3.5 text-blue-400" />
                                                         </div>
                                                     )}
-                                                    <span className={isCrossed ? "text-zinc-600 line-through" : ""}>{feature}</span>
+                                                    <span className={`text-sm font-medium leading-none ${isCrossed ? "text-zinc-600 line-through decoration-zinc-700/50" : "text-zinc-300"}`}>
+                                                        {feature}
+                                                    </span>
                                                 </li>
                                             );
                                         })}
-                                    </div>
+                                    </ul>
                                 </CardContent>
                             </Card>
                         </div>

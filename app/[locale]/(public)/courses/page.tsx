@@ -3,9 +3,10 @@ import { CourseCard } from "@/components/public/course-card";
 import { Button } from "@/components/ui/button";
 import { FilterSidebar } from "@/components/public/filter-sidebar";
 import { Search, Grid, List as ListIcon, ChevronDown } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { getTranslations } from 'next-intl/server';
 
 export default async function CoursesPage() {
+    const t = await getTranslations('coursesCatalog');
     const supabase = await createClient();
     const { data: courses } = await supabase
         .from("courses")
@@ -26,11 +27,10 @@ export default async function CoursesPage() {
                 {/* Header Section */}
                 <div className="mb-16 space-y-4">
                     <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-                        Educational Courses
+                        {t('title')}
                     </h1>
                     <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed">
-                        Master the latest technologies and advance your career with our
-                        premium, expert-led development tutorials and interactive lessons.
+                        {t('description')}
                     </p>
                 </div>
 
@@ -40,8 +40,8 @@ export default async function CoursesPage() {
                     <aside className="w-full lg:w-72 flex-shrink-0">
                         <div className="sticky top-8 space-y-8">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold">Filters</h2>
-                                <Button variant="link" className="text-blue-400 p-0 h-auto text-sm hover:text-blue-300 font-bold">Clear All</Button>
+                                <h2 className="text-xl font-bold">{t('filters.title')}</h2>
+                                <Button variant="link" className="text-blue-400 p-0 h-auto text-sm hover:text-blue-300 font-bold">{t('filters.clearAll')}</Button>
                             </div>
                             <div className="p-6 bg-zinc-900/40 rounded-2xl border border-zinc-800/50 backdrop-blur-sm">
                                 <FilterSidebar />
@@ -55,13 +55,13 @@ export default async function CoursesPage() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/50 backdrop-blur-sm">
                             <div className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                                Showing <span className="text-white font-bold">{courses?.length || 0}</span> published courses
+                                {t('toolbar.showing', { count: courses?.length || 0 })}
                             </div>
 
                             <div className="flex items-center gap-4">
                                 <div className="hidden sm:flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-zinc-800/50 group cursor-pointer hover:border-zinc-700 transition-colors">
-                                    <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Sort:</span>
-                                    <span className="text-sm font-bold text-zinc-200">Latest</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">{t('toolbar.sort')}</span>
+                                    <span className="text-sm font-bold text-zinc-200">{t('toolbar.latest')}</span>
                                     <ChevronDown className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
                                 </div>
                                 <div className="h-6 w-px bg-zinc-800/50 mx-1" />
@@ -92,7 +92,7 @@ export default async function CoursesPage() {
 
                         {courses && courses.length > 0 && (
                             <div className="flex items-center justify-center mt-16 gap-3">
-                                <Button variant="outline" className="h-10 border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-zinc-800 px-6 rounded-xl transition-all">Previous</Button>
+                                <Button variant="outline" className="h-10 border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-zinc-800 px-6 rounded-xl transition-all">{t('pagination.previous')}</Button>
                                 <div className="flex items-center gap-2">
                                     {[1, 2, 3].map((p, i) => (
                                         <Button
@@ -106,7 +106,7 @@ export default async function CoursesPage() {
                                         </Button>
                                     ))}
                                 </div>
-                                <Button variant="outline" className="h-10 border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-zinc-800 px-6 rounded-xl transition-all">Next</Button>
+                                <Button variant="outline" className="h-10 border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-zinc-800 px-6 rounded-xl transition-all">{t('pagination.next')}</Button>
                             </div>
                         )}
 
@@ -116,9 +116,9 @@ export default async function CoursesPage() {
                                     <Search className="w-12 h-12 text-zinc-600" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-bold text-zinc-300">No courses listed yet</h3>
+                                    <h3 className="text-2xl font-bold text-zinc-300">{t('emptyState.title')}</h3>
                                     <p className="text-zinc-500 text-base max-w-sm mx-auto">
-                                        We are currently preparing more educational content for you. Please check back later!
+                                        {t('emptyState.description')}
                                     </p>
                                 </div>
                             </div>

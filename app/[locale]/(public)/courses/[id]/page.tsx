@@ -22,6 +22,7 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
+import { getTranslations } from 'next-intl/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,21 +38,9 @@ interface CourseCategory {
     name: string;
 }
 
-interface Course {
-    course_id: number;
-    title: string;
-    description: string | null;
-    image_url: string | null;
-    author_id: string;
-    category_id: number | null;
-    status: string;
-    published_at: string | null;
-    lessons: Lesson[];
-    category: CourseCategory | null;
-}
-
 export default async function CourseDetailsPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
+    const t = await getTranslations('coursePublicDetails');
     const supabase = await createClient();
 
     // Check if user is logged in
@@ -94,7 +83,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
 
     // Sort lessons by sequence
     const lessons = course.lessons?.sort((a: Lesson, b: Lesson) => a.sequence - b.sequence) || [];
-    
+
     // Count total lessons and calculate estimated duration (assuming 10 min per lesson average)
     const totalLessons = lessons.length;
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
@@ -131,16 +120,14 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
         .limit(1);
 
     const courseProduct = productCourses?.[0]?.product as any;
-    const isFree = courseProduct ? parseFloat(courseProduct.price) === 0 : true; // Default to free if no product? or vice-versa?
-    // Let's assume if there's no product, it's either part of a plan or free.
-    // If there is a product and price is > 0, it's paid.
-    const priceDisplay = isFree ? "Free" : `$${courseProduct.price}`;
+    const isFree = courseProduct ? parseFloat(courseProduct.price) === 0 : true;
+    const priceDisplay = isFree ? t('pricing.free') : `$${courseProduct.price}`;
 
     // Get instructor info
     const instructor = author ? {
-        name: author.full_name || "Instructor",
+        name: author.full_name || t('sections.instructor.defaultBio'),
         avatar_url: author.avatar_url,
-        bio: author.bio || "Experienced instructor passionate about teaching."
+        bio: author.bio || t('sections.instructor.defaultBio')
     } : null;
 
     // Get learning objectives from lessons descriptions
@@ -154,9 +141,9 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
             {/* Breadcrumbs */}
             <div className="bg-[#18181b]/50 border-b border-zinc-800">
                 <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-sm text-zinc-400">
-                    <Link href="/" className="hover:text-blue-400 transition-colors">Home</Link>
+                    <Link href="/" className="hover:text-blue-400 transition-colors">{t('breadcrumbs.home')}</Link>
                     <ChevronRight className="w-3 h-3" />
-                    <Link href="/courses" className="hover:text-blue-400 transition-colors">Courses</Link>
+                    <Link href="/courses" className="hover:text-blue-400 transition-colors">{t('breadcrumbs.courses')}</Link>
                     {course.category && (
                         <>
                             <ChevronRight className="w-3 h-3" />
@@ -176,17 +163,17 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                             {course.title}
                         </h1>
                         <p className="text-xl text-zinc-400 mb-8 leading-relaxed max-w-3xl">
-                            {course.description || "Master advanced patterns, performance optimization, and state management techniques to build scalable React applications."}
+                            {course.description || ""}
                         </p>
 
                         <div className="flex flex-wrap items-center gap-6 text-sm mb-8">
                             <div className="flex items-center gap-1.5 text-zinc-300">
                                 <Users className="w-4 h-4 text-zinc-500" />
-                                <span>{totalLessons} lessons</span>
+                                <span>{t('hero.lessons', { count: totalLessons })}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-zinc-300">
                                 <Clock className="w-4 h-4 text-zinc-500" />
-                                <span>{estimatedHours}h {estimatedMinutes}m</span>
+                                <span>{t('hero.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
                             </div>
                         </div>
 
@@ -194,12 +181,12 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                             {course.published_at && (
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-4 h-4" />
-                                    <span>Published {new Date(course.published_at).toLocaleDateString()}</span>
+                                    <span>{t('hero.published', { date: new Date(course.published_at).toLocaleDateString() })}</span>
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
                                 <Globe className="w-4 h-4" />
-                                <span>English</span>
+                                <span>{t('hero.language')}</span>
                             </div>
                         </div>
 
@@ -212,7 +199,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${instructor.name}`} alt="Instructor" className="w-full h-full object-cover" />
                                     )}
                                 </div>
-                                <span className="text-zinc-300">Created by <span className="text-blue-400 font-medium">{instructor.name}</span></span>
+                                <span className="text-zinc-300">{t('hero.createdBy', { name: instructor.name })}</span>
                             </div>
                         )}
                     </div>
@@ -228,7 +215,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                         {/* What you'll learn */}
                         {whatYoullLearn.length > 0 && (
                             <section className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-                                <h2 className="text-2xl font-bold mb-6">What you&apos;ll learn</h2>
+                                <h2 className="text-2xl font-bold mb-6">{t('sections.whatYoullLearn')}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                     {whatYoullLearn.map((item: string | null, i: number) => (
                                         <div key={i} className="flex gap-3">
@@ -245,12 +232,12 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                         {/* Course Content */}
                         <section>
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold">Course Content</h2>
+                                <h2 className="text-2xl font-bold">{t('sections.content.title')}</h2>
                             </div>
                             <div className="text-sm text-zinc-400 mb-4 flex gap-3">
-                                <span>{lessons.length} lectures</span>
+                                <span>{t('sections.content.lectures', { count: lessons.length })}</span>
                                 <span>•</span>
-                                <span>{estimatedHours}h {estimatedMinutes}m total length</span>
+                                <span>{t('sections.content.totalLength', { h: estimatedHours, m: estimatedMinutes })}</span>
                             </div>
 
                             {lessons.length > 0 ? (
@@ -258,8 +245,8 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                     <AccordionItem value="lessons" className="border border-zinc-800 bg-zinc-900/30 rounded-lg px-4 overflow-hidden">
                                         <AccordionTrigger className="hover:no-underline py-4">
                                             <div className="flex items-center gap-4 text-left">
-                                                <span className="font-bold text-white">All Lessons</span>
-                                                <span className="text-xs text-zinc-500 font-normal">{lessons.length} lectures</span>
+                                                <span className="font-bold text-white">{t('sections.content.allLessons')}</span>
+                                                <span className="text-xs text-zinc-500 font-normal">{t('sections.content.lectures', { count: lessons.length })}</span>
                                             </div>
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-4 space-y-2">
@@ -276,7 +263,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                 </Accordion>
                             ) : (
                                 <div className="text-center py-8 text-zinc-500">
-                                    No lessons available yet.
+                                    {t('sections.content.noLessons')}
                                 </div>
                             )}
                         </section>
@@ -284,7 +271,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                         {/* Description */}
                         {course.description && (
                             <section className="space-y-6">
-                                <h2 className="text-2xl font-bold">About This Course</h2>
+                                <h2 className="text-2xl font-bold">{t('sections.about')}</h2>
                                 <div className="prose prose-invert max-w-none text-zinc-400 text-base leading-relaxed">
                                     <p>{course.description}</p>
                                 </div>
@@ -294,7 +281,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                         {/* Instructor Info */}
                         {instructor && (
                             <section>
-                                <h2 className="text-2xl font-bold mb-8">Instructor</h2>
+                                <h2 className="text-2xl font-bold mb-8">{t('sections.instructor.title')}</h2>
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4">
                                         <div className="w-24 h-24 rounded-full bg-zinc-700 overflow-hidden ring-4 ring-zinc-800">
@@ -306,7 +293,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                         </div>
                                         <div>
                                             <div className="text-xl font-bold text-white">{instructor.name}</div>
-                                            <div className="text-zinc-400 mt-2">Experienced Instructor</div>
+                                            <div className="text-zinc-400 mt-2">{t('sections.instructor.experience')}</div>
                                         </div>
                                     </div>
                                     {instructor.bio && (
@@ -331,7 +318,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                     />
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <PlayCircle className="w-16 h-16 text-white group-hover:scale-110 transition-transform" />
-                                        <span className="mt-4 font-bold text-white">Preview this course</span>
+                                        <span className="mt-4 font-bold text-white">{t('pricing.preview')}</span>
                                     </div>
                                 </div>
 
@@ -342,70 +329,70 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                             <div className="text-zinc-500 uppercase">{courseProduct.currency}</div>
                                         )}
                                     </div>
-                                    
+
                                     <div className="space-y-3">
                                         {!user ? (
                                             // Not logged in - redirect to login
                                             <Link href={`/auth/login?next=${encodeURIComponent(`/courses/${params.id}`)}`}>
                                                 <Button className="w-full h-12 bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-lg shadow-lg shadow-cyan-400/20">
-                                                    {isFree ? "Enroll for Free" : "Enroll Now"}
+                                                    {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
                                                 </Button>
                                             </Link>
                                         ) : hasAccess ? (
                                             // Has access - go to course
                                             <Link href={`/dashboard/student/courses/${course.course_id}`}>
                                                 <Button className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-bold text-lg">
-                                                    Go to Course
+                                                    {t('pricing.goToCourse')}
                                                 </Button>
                                             </Link>
                                         ) : isFree ? (
                                             // Logged in, no access, but it's free
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
                                                 <Button className="w-full h-12 bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-lg shadow-lg shadow-cyan-400/20">
-                                                    Enroll for Free
+                                                    {t('pricing.enrollFree')}
                                                 </Button>
                                             </Link>
                                         ) : (
                                             // Logged in but no access - buy now
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
                                                 <Button className="w-full h-12 bg-cyan-400 hover:bg-cyan-300 text-black font-bold text-lg shadow-lg shadow-cyan-400/20">
-                                                    Buy Now
+                                                    {t('pricing.buyNow')}
                                                 </Button>
                                             </Link>
                                         )}
-                                        
+
                                         {!hasAccess && !isFree && (
                                             <div className="text-center">
-                                                <span className="text-zinc-500 text-xs">or</span>
+                                                <span className="text-zinc-500 text-xs">{t('pricing.or')}</span>
                                                 <Link href="/pricing" className="block text-cyan-400 hover:underline text-sm mt-1">
-                                                    Get access via Subscription
+                                                    {t('pricing.subscription')}
                                                 </Link>
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="space-y-4 border-t border-zinc-800 pt-6">
-                                        <div className="font-bold text-sm">This course includes:</div>
+                                        <div className="font-bold text-sm">{t('pricing.includes.title')}</div>
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3 text-sm text-zinc-300">
                                                 <BookOpen className="w-4 h-4 text-zinc-500" />
-                                                <span>{totalLessons} lessons</span>
+                                                <span>{t('pricing.includes.lessons', { count: totalLessons })}</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm text-zinc-300">
                                                 <Clock className="w-4 h-4 text-zinc-500" />
-                                                <span>{estimatedHours}h {estimatedMinutes}m of content</span>
+                                                <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm text-zinc-300">
                                                 <Infinity className="w-4 h-4 text-zinc-500" />
-                                                <span>Full lifetime access</span>
+                                                <span>{t('pricing.includes.lifetime')}</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm text-zinc-300">
                                                 <Smartphone className="w-4 h-4 text-zinc-500" />
-                                                <span>Access on mobile and desktop</span>
+                                                <span>{t('pricing.includes.mobile')}</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-sm text-zinc-300">
                                                 <Award className="w-4 h-4 text-zinc-500" />
-                                                <span>Certificate of completion</span>
+                                                <span>{t('pricing.includes.certificate')}</span>
                                             </div>
                                         </div>
                                     </div>
