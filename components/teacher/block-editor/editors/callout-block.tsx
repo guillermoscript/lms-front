@@ -25,7 +25,7 @@ const variants = {
 }
 
 export function CalloutBlockEditor({ block, onChange }: CalloutBlockEditorProps) {
-  const v = variants[block.variant]
+  const v = variants[block.variant] || variants.info
   const Icon = v.icon
 
   return (

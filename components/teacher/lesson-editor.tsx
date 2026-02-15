@@ -20,8 +20,7 @@ import {
   IconRobot,
   IconLayoutGrid,
 } from '@tabler/icons-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { MDXPreview } from './mdx-preview'
 import { ImprovedTemplateSelector } from './improved-template-selector'
 import { AIPreviewModal } from './ai-preview-modal'
 import { VersionHistorySheet } from './version-history-sheet'
@@ -386,11 +385,7 @@ export function LessonEditor({
               )}
 
               {formData.content ? (
-                <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {formData.content}
-                  </ReactMarkdown>
-                </div>
+                <MDXPreview content={formData.content} />
               ) : (
                 <p className="text-center text-muted-foreground">
                   {t('previewWriting')}

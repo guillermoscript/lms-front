@@ -24,6 +24,8 @@ import {
   BeforeAfter,
 } from './index'
 
+import { mdxComponents as uiComponents } from '@/components/ui/mdx-components'
+
 /**
  * MDX Components map for lesson content
  * 
@@ -60,10 +62,11 @@ import {
  * - <BeforeAfter before="..." after="..." />
  */
 export const lessonMdxComponents: MDXComponents = {
+  ...uiComponents,
   // Override default code elements
   pre: Pre,
   code: Code,
-  
+
   // Callout components
   Callout,
   Info,
@@ -71,30 +74,30 @@ export const lessonMdxComponents: MDXComponents = {
   Tip,
   Success,
   Danger,
-  
+
   // Spoiler components
   Spoiler,
   Solution,
   Hint,
   Answer,
-  
+
   // Quiz
   Quiz,
-  
+
   // Code components
   CodeBlock,
-  
+
   // Vocabulary
   Vocabulary,
-  
+
   // Steps
   Steps,
   Step,
-  
+
   // Definitions
   Definition,
   Glossary,
-  
+
   // Comparisons
   Compare,
   CodeCompare,
