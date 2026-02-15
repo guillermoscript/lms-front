@@ -18,18 +18,65 @@
     "browseCourses": "Explorar Cursos"
   },
   "auth": {
-    "login": "Iniciar Sesión",
-    "signup": "Registrarse",
+    "login": {
+      "title": "Iniciar Sesión",
+      "description": "Ingresa tu correo electrónico a continuación para iniciar sesión",
+      "email": "Correo Electrónico",
+      "password": "Contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Iniciar Sesión",
+      "submitting": "Iniciando sesión...",
+      "noAccount": "¿No tienes una cuenta?",
+      "signup": "Regístrate"
+    },
+    "signup": {
+      "title": "Crear Cuenta",
+      "description": "Crea una nueva cuenta",
+      "email": "Correo Electrónico",
+      "password": "Contraseña",
+      "repeatPassword": "Repetir Contraseña",
+      "submit": "Registrarse",
+      "submitting": "Creando cuenta...",
+      "haveAccount": "¿Ya tienes una cuenta?",
+      "login": "Inicia sesión",
+      "errors": {
+        "passwordsDontMatch": "Las contraseñas no coinciden"
+      }
+    },
+    "forgotPassword": {
+      "title": "Restablecer Contraseña",
+      "description": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña",
+      "email": "Correo Electrónico",
+      "submit": "Enviar correo de restablecimiento",
+      "submitting": "Enviando...",
+      "backToLogin": "Volver al inicio de sesión",
+      "success": {
+        "title": "Revisa tu Correo",
+        "description": "Instrucciones de restablecimiento enviadas",
+        "info": "Si te registraste usando tu correo y contraseña, recibirás un correo para restablecerla."
+      }
+    },
+    "updatePassword": {
+      "title": "Cambiar Contraseña",
+      "description": "Por favor ingresa tu nueva contraseña a continuación.",
+      "password": "Nueva contraseña",
+      "submit": "Guardar nueva contraseña",
+      "submitting": "Guardando..."
+    },
+    "error": {
+      "title": "Lo sentimos, algo salió mal.",
+      "code": "Error de código: {error}",
+      "generic": "Ocurrió un error no especificado."
+    },
+    "signupSuccess": {
+      "title": "¡Gracias por registrarte!",
+      "description": "Revisa tu correo para confirmar",
+      "body": "Te has registrado con éxito. Por favor, revisa tu correo electrónico para confirmar tu cuenta antes de iniciar sesión."
+    },
     "logout": "Cerrar Sesión",
-    "email": "Correo Electrónico",
-    "password": "Contraseña",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
-    "resetPassword": "Restablecer Contraseña",
-    "dontHaveAccount": "¿No tienes una cuenta?",
-    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
-    "enterEmail": "Ingresa tu correo electrónico para iniciar sesión",
-    "confirmEmail": "Por favor confirma tu dirección de correo electrónico",
-    "emailPlaceholder": "tu@ejemplo.com"
+    "common": {
+      "error": "Ocurrió un error"
+    }
   },
   "dashboard": {
     "student": {
@@ -100,446 +147,1684 @@
       }
     },
     "teacher": {
-      "title": "Mis Cursos",
-      "welcome": "Crea y gestiona tu contenido educativo",
-      "createCourse": "Crear Curso",
-      "totalCourses": "Total de Cursos",
-      "totalStudents": "Total de Estudiantes",
-      "pendingReviews": "Reseñas Pendientes",
-      "noCourses": "Aún no has creado ningún curso."
+      "title": "Panel del Instructor",
+      "welcome": "¡Bienvenido de nuevo, {userName}!",
+      "subtitle": "Esto es lo que está pasando con tus cursos y estudiantes hoy.",
+      "createCourse": "Crear Nuevo Curso",
+      "promptTemplates": "Plantillas de Prompt",
+      "stats": {
+        "totalCourses": "Total de Cursos",
+        "totalLessons": "{count} lecciones en total",
+        "activeStudents": "Estudiantes Activos",
+        "acrossPublished": "En todos los cursos publicados",
+        "submissions": "Entregas",
+        "totalExams": "Total de exámenes entregados",
+        "quickActions": "Acciones Rápidas",
+        "platformActivity": "Actividad de la plataforma: Activa"
+      },
+      "courses": {
+        "title": "Tus Cursos",
+        "description": "Gestiona, edita y monitorea el rendimiento de todo tu contenido educativo.",
+        "viewAll": "Ver todo",
+        "lessonsCount": "{count} lecciones",
+        "noCourses": "Aún no has creado cursos.",
+        "createFirst": "Crea tu primer curso",
+        "searchPlaceholder": "Buscar cursos...",
+        "filter": "Filtrar",
+        "grid": "Vista Cuadrícula",
+        "list": "Vista Lista",
+        "students": "Estudiantes",
+        "lessons": "Lecciones",
+        "exams": "Exámenes",
+        "edit": "Editar",
+        "preview": "Vista Previa",
+        "noCoursesFound": "No se encontraron cursos",
+        "noCoursesDesc": "Aún no has creado ningún curso. ¡Comienza tu viaje de enseñanza hoy!",
+        "createFirstBtn": "Crea tu Primer Curso"
+      },
+      "manageCourse": {
+        "notFound": "Curso No Encontrado",
+        "notFoundDesc": "No se pudo encontrar el curso con ID {courseId} o no tienes permiso para verlo.",
+        "backToCourses": "Volver a Mis Cursos",
+        "accessDenied": "Acceso Denegado",
+        "notAuthor": "No eres el autor de este curso.",
+        "enrolledCount": "{count} {count, plural, one {estudiante inscrito} other {estudiantes inscritos}}",
+        "settings": "Configuración",
+        "tabs": {
+          "lessons": "Lecciones",
+          "exercises": "Ejercicios",
+          "exams": "Exámenes",
+          "students": "Estudiantes"
+        },
+        "curriculum": {
+          "title": "Plan de Estudios",
+          "description": "Gestiona las lecciones y el contenido de tu curso.",
+          "addLesson": "Añadir Lección",
+          "noLessons": "No se encontraron lecciones para este curso.",
+          "createFirst": "Crear Primera Lección"
+        },
+        "practice": {
+          "title": "Ejercicios de Práctica",
+          "description": "Tareas y desafíos interactivos para los estudiantes.",
+          "addExercise": "Añadir Ejercicio",
+          "noExercises": "Aún no has creado ejercicios.",
+          "createFirst": "Crear Primer Ejercicio",
+          "noDescription": "No se proporcionó descripción.",
+          "edit": "Editar"
+        },
+        "studentList": {
+          "title": "Estudiantes Inscritos",
+          "description": "Mira y gestiona a los estudiantes inscritos en este curso.",
+          "table": {
+            "student": "Estudiante",
+            "date": "Fecha de Inscripción",
+            "status": "Estado",
+            "actions": "Acciones"
+          },
+          "noStudents": "Aún no hay estudiantes inscritos en este curso.",
+          "viewProgress": "Ver Progreso",
+          "unknownStudent": "Estudiante Desconocido"
+        }
+      },
+      "newCourse": {
+        "title": "Crear Nuevo Curso",
+        "description": "Rellena la información básica de tu curso"
+      },
+      "courseForm": {
+        "details": "Detalles del Curso",
+        "saveError": "Error al guardar el curso",
+        "titleLabel": "Título del Curso",
+        "titlePlaceholder": "Introducción al Desarrollo Web",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "Describe lo que los estudiantes aprenderán en este curso...",
+        "thumbnailLabel": "URL de la Miniatura",
+        "thumbnailPlaceholder": "https://ejemplo.com/imagen.jpg",
+        "thumbnailHint": "Proporciona una URL a una imagen (se recomienda relación de aspecto 16:9)",
+        "categoryLabel": "Categoría",
+        "categoryPlaceholder": "Selecciona una categoría",
+        "statusLabel": "Estado",
+        "statusPlaceholder": "Selecciona el estado",
+        "statusHints": {
+          "draft": "Sólo tú puedes ver este curso.",
+          "published": "El curso es visible para los estudiantes y está listo para la inscripción.",
+          "archived": "el curso está oculto del catálogo pero los estudiantes existentes conservan el acceso."
+        },
+        "actions": {
+          "cancel": "Cancelar",
+          "update": "Actualizar Curso",
+          "create": "Crear Curso"
+        }
+      },
+      "examBuilder": {
+        "editTitle": "Editar Examen",
+        "createTitle": "Crear Nuevo Examen",
+        "backToCourse": "Volver a {course}",
+        "details": "Detalles del Examen",
+        "titleLabel": "Título del Examen",
+        "titlePlaceholder": "Examen Parcial",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "¿Qué temas cubre este examen?",
+        "durationLabel": "Duración (minutos)",
+        "durationPlaceholder": "60",
+        "durationHint": "Deja en blanco para no tener límite de tiempo",
+        "sequenceLabel": "Orden del Examen",
+        "questionsTitle": "Preguntas",
+        "addMultipleChoice": "Opción Múltiple",
+        "addTrueFalse": "Verdadero/Falso",
+        "addFreeText": "Texto Libre",
+        "noQuestions": "Aún no se han añadido preguntas",
+        "noQuestionsDesc": "Haz clic en uno de los botones superiores para añadir una pregunta",
+        "questionLabel": "Pregunta {index}",
+        "typeMultipleChoice": "Opción Múltiple",
+        "typeTrueFalse": "Verdadero/Falso",
+        "typeFreeText": "Texto Libre (Calificado por IA)",
+        "questionTextLabel": "Texto de la Pregunta",
+        "questionTextPlaceholder": "Introduce tu pregunta aquí...",
+        "pointsLabel": "Puntos",
+        "pointsPlaceholder": "10",
+        "answerOptionsLabel": "Opciones de Respuesta",
+        "optionPlaceholder": "Opción {index}",
+        "correctLabel": "Correcta",
+        "addOption": "Añadir Opción",
+        "trueFalseHint": "Los estudiantes elegirán entre Verdadero y Falso",
+        "aiGradingNotice": "Esta pregunta será calificada automáticamente por la IA. Configura los criterios de calificación a continuación.",
+        "gradingRubricLabel": "Rúbrica de Calificación (Opcional)",
+        "gradingRubricPlaceholder": "Describe qué hace que una respuesta sea completa...",
+        "gradingRubricHint": "Pautas generales para calificar esta respuesta",
+        "aiGradingCriteriaLabel": "Criterios de Calificación de IA (Opcional)",
+        "aiGradingCriteriaPlaceholder": "Busca conceptos específicos o razonamientos...",
+        "aiGradingCriteriaHint": "Criterios específicos para que la IA los evalúe",
+        "expectedKeywordsLabel": "Palabras Clave Esperadas (Opcional)",
+        "expectedKeywordsPlaceholder": "palabra1, palabra2, palabra3",
+        "expectedKeywordsHint": "Lista separada por comas de términos clave esperados en la respuesta",
+        "saveDraft": "Guardar como Borrador",
+        "publishExam": "Publicar Examen"
+      },
+      "lessonEditor": {
+        "editTitle": "Editar Lección",
+        "createTitle": "Crear Nueva Lección",
+        "details": "Detalles de la Lección",
+        "titleLabel": "Título de la Lección",
+        "titlePlaceholder": "Introducción a las Variables",
+        "descriptionLabel": "Descripción Corta",
+        "descriptionPlaceholder": "Breve resumen de lo que cubre esta lección",
+        "videoUrlLabel": "URL del Video (YouTube)",
+        "videoUrlPlaceholder": "https://www.youtube.com/watch?v=...",
+        "videoUrlHint": "Opcional: Añade un video de YouTube a esta lección",
+        "sequenceLabel": "Orden de la Lección",
+        "sequenceHint": "El orden en que aparece esta lección en el curso",
+        "aiTaskTitle": "Configuración de Tarea de IA",
+        "aiTaskPromptLabel": "Prompt de la Tarea (para Estudiantes)",
+        "aiTaskPromptPlaceholder": "ej. Preséntate en inglés",
+        "aiTaskPromptHint": "Este es el desafío de la tarea que se presentará al estudiante para resolver usando el chatbot.",
+        "aiGradingInsLabel": "Instrucciones de Calificación de IA (Oculto)",
+        "aiGradingInsPlaceholder": "ej. Asegúrate de que el usuario use gramática correcta...",
+        "aiGradingInsHint": "Instrucciones específicas para la IA sobre cómo evaluar si la tarea se completó correctamente.",
+        "contentLabel": "Contenido de la Lección (Markdown)",
+        "contentPlaceholder": "# Contenido de la Lección...",
+        "contentHint": "Usa Markdown para dar formato a tu contenido. Soporta encabezados, listas, enlaces, imágenes, bloques de código y más.",
+        "saveDraft": "Guardar como Borrador",
+        "publishLesson": "Publicar Lección",
+        "previewTitle": "Vista Previa",
+        "previewWriting": "Empieza a escribir para ver una vista previa..."
+      },
+      "exerciseBuilder": {
+        "details": "Detalles del Ejercicio",
+        "titleLabel": "Título",
+        "titlePlaceholder": "ej. Introducción a React Hooks",
+        "typeLabel": "Tipo de Ejercicio",
+        "typeEssay": "Ensayo",
+        "typeCoding": "Desafío de Código",
+        "typeQuiz": "Cuestionario",
+        "typeDiscussion": "Discusión",
+        "difficultyLabel": "Dificultad",
+        "difficultyEasy": "Fácil",
+        "difficultyMedium": "Media",
+        "difficultyHard": "Difícil",
+        "timeLimitLabel": "Límite de Tiempo (min)",
+        "statusLabel": "Estado",
+        "aiConfigTitle": "Configuración de IA",
+        "aiConfigDesc": "Configura prompts y reglas de evaluación",
+        "studentInsLabel": "Instrucciones para el Estudiante",
+        "studentInsPlaceholder": "Qué necesita hacer el estudiante...",
+        "studentInsHint": "Usa plantillas para rellenar rápidamente estos campos con prompts probados.",
+        "aiSystemPromptLabel": "Prompt de Sistema de IA",
+        "aiSystemPromptPlaceholder": "Define cómo debe comportarse y calificar la IA...",
+        "updateExercise": "Actualizar Ejercicio",
+        "createExercise": "Crear Ejercicio"
+      },
+      "submissionReview": {
+        "title": "Revisar Entrega",
+        "studentLabel": "Estudiante",
+        "submittedAt": "Entregado el {date}",
+        "gradedBy": "Calificado por {model}",
+        "overallScore": "Calificación General",
+        "pointsSummary": "{earned}/{possible} puntos · La calificación se autocalcula según las puntuaciones de las preguntas",
+        "overallFeedbackLabel": "Comentarios Generales (visible para el estudiante)",
+        "overallFeedbackPlaceholder": "Proporciona comentarios generales sobre el desempeño del estudiante...",
+        "teacherNotesLabel": "Notas del Profesor (privado, no se muestra al estudiante)",
+        "teacherNotesPlaceholder": "Notas internas...",
+        "questionsTitle": "Preguntas",
+        "questionStatus": {
+          "needsGrading": "Necesita Calificación",
+          "overridden": "Anulado",
+          "selected": "Seleccionado",
+          "correct": "Correcto"
+        },
+        "studentAnswer": "Respuesta del Estudiante",
+        "noAnswer": "No se proporcionó respuesta",
+        "gradingCriteria": "Criterios de calificación",
+        "expectedKeywords": "Palabras clave esperadas",
+        "aiFeedback": "Feedback de IA",
+        "confidence": "{value}% de confianza",
+        "teacherOverride": "Anulación del Profesor",
+        "pointsEarnedLabel": "Puntos Obtenidos",
+        "markAsLabel": "Marcar como:",
+        "markCorrect": "Correcto",
+        "markIncorrect": "Incorrecto",
+        "overrideBtn": "Anular",
+        "gradeBtn": "Calificar",
+        "doneBtn": "Listo",
+        "saveBtn": "Guardar y Finalizar Revisión"
+      },
+      "examSubmissionsReview": {
+        "title": "Entregas del Examen",
+        "description": "Revise y califique las entregas de los estudiantes para este examen.",
+        "stats": {
+          "total": "Total de Entregas",
+          "pending": "Pendiente de IA",
+          "aiReviewed": "Revisado por IA",
+          "graded": "Calificado"
+        },
+        "tabs": {
+          "all": "Todas",
+          "pending": "Pendientes de IA",
+          "aiReviewed": "Revisadas por IA",
+          "graded": "Calificadas"
+        },
+        "status": {
+          "pending": "Pendiente de IA",
+          "aiReviewed": "Revisado por IA",
+          "graded": "Calificado",
+          "needsAttention": "Requiere Atención"
+        },
+        "table": {
+          "student": "Estudiante",
+          "status": "Estado",
+          "aiScore": "Puntaje IA",
+          "finalScore": "Puntaje Final",
+          "submitted": "Enviado",
+          "noSubmissions": "No se encontraron entregas",
+          "unknownStudent": "Estudiante Desconocido",
+          "reviewButton": "Revisar"
+        }
+      },
+      "examSubmissions": {
+        "title": "Entregas",
+        "description": "Revisa y califica las entregas de exámenes de los estudiantes ({count} en total)",
+        "needAttention": "{count} necesitan atención",
+        "table": {
+          "student": "Estudiante",
+          "score": "Calificación",
+          "status": "Estado",
+          "submitted": "Entregado",
+          "actions": "Acciones"
+        },
+        "noSubmissions": "No hay entregas en esta categoría",
+        "tabs": {
+          "all": "Todas",
+          "pending": "Pendientes",
+          "ai": "Revisadas por IA",
+          "teacher": "Revisadas por Profesor",
+          "attention": "Necesitan Atención"
+        },
+        "attentionAlert": "Estas entregas han sido marcadas para revisión debido a puntuaciones de confianza bajas de la IA o evaluaciones pendientes de preguntas de texto libre."
+      },
+      "activity": {
+        "title": "Actividad Reciente",
+        "description": "Últimas inscripciones y entregas.",
+        "enrolledIn": "{userName} se inscribió en {courseTitle}",
+        "at": "a las",
+        "noActivity": "No se encontró actividad reciente.",
+        "growthTip": "Consejo de Crecimiento",
+        "growthTipDesc": "Los cursos con ejercicios asistidos por IA tienen tasas de finalización un 45% más altas. ¡Prueba a añadir tareas a tus lecciones!"
+      }
     },
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
-      "totalUsers": "Total de Usuarios",
-      "totalCourses": "Total de Cursos",
-      "activeEnrollments": "Inscripciones Activas",
-      "totalRevenue": "Ingresos Totales",
-      "quickActions": "Acciones Rápidas",
-      "manageUsers": "Gestionar Usuarios",
-      "manageCourses": "Gestionar Cursos",
-      "viewTransactions": "Ver Transacciones",
-      "viewEnrollments": "Ver Inscripciones",
-      "recentUsers": "Usuarios Recientes",
-      "recentTransactions": "Transacciones Recientes"
-    }
-  },
-  "course": {
-    "title": "Curso",
-    "description": "Descripción",
-    "lessons": "Lecciones",
-    "lesson": "Lección",
-    "exams": "Exámenes",
-    "exam": "Examen",
-    "students": "Estudiantes",
-    "progress": "Progreso",
-    "complete": "Completar",
-    "completed": "Completado",
-    "inProgress": "En Progreso",
-    "notStarted": "No Iniciado",
-    "viewCourse": "Ver Curso",
-    "viewExams": "Ver Exámenes",
-    "backToCourse": "Volver al Curso",
-    "courseContent": "Contenido del Curso",
-    "noLessons": "Aún no hay lecciones disponibles.",
-    "published": "Publicado",
-    "draft": "Borrador",
-    "archived": "Archivado"
-  },
-  "lesson": {
-    "markAsComplete": "Marcar como Completado",
-    "completed": "Completado",
-    "duration": "Duración",
-    "minutes": "minutos",
-    "video": "Video",
-    "content": "Contenido",
-    "comments": "Comentarios",
-    "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
-    "postComment": "Publicar Comentario",
-    "commentPlaceholder": "Comparte tus ideas o haz una pregunta...",
-    "posting": "Publicando..."
-  },
-  "exam": {
-    "title": "Examen",
-    "startExam": "Comenzar Examen",
-    "submitExam": "Enviar Examen",
-    "timeRemaining": "Tiempo Restante",
-    "questions": "Preguntas",
-    "question": "Pregunta",
-    "multipleChoice": "Opción Múltiple",
-    "trueFalse": "Verdadero/Falso",
-    "freeText": "Texto Libre",
-    "yourAnswer": "Tu Respuesta",
-    "correctAnswer": "Respuesta Correcta",
-    "score": "Puntuación",
-    "passed": "Aprobado",
-    "failed": "Reprobado",
-    "results": "Resultados",
-    "viewResults": "Ver Resultados",
-    "noExams": "Aún no hay exámenes disponibles."
-  },
-  "review": {
-    "title": "Reseñas",
-    "yourRating": "Tu Calificación",
-    "yourReview": "Tu Reseña",
-    "submitReview": "Enviar Reseña",
-    "submitting": "Enviando...",
-    "reviewPlaceholder": "Comparte tu experiencia con este curso...",
-    "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
-    "alreadyReviewed": "Ya has reseñado este curso. ¡Gracias por tu opinión!",
-    "averageRating": "Calificación Promedio",
-    "reviews": "reseñas"
-  },
-  "enrollment": {
-    "enroll": "Inscribirse",
-    "enrolled": "Inscrito",
-    "enrollmentDate": "Fecha de Inscripción",
-    "status": "Estado",
-    "active": "Activo",
-    "completed": "Completado",
-    "cancelled": "Cancelado"
-  },
-  "user": {
-    "profile": "Perfil",
-    "settings": "Configuración",
-    "account": "Cuenta",
-    "name": "Nombre",
-    "email": "Correo Electrónico",
-    "role": "Rol",
-    "student": "Estudiante",
-    "teacher": "Profesor",
-    "admin": "Administrador",
-    "joined": "Se unió",
-    "lastActive": "Última Actividad"
-  },
-  "transaction": {
-    "transactions": "Transacciones",
-    "amount": "Monto",
-    "status": "Estado",
-    "paymentMethod": "Método de Pago",
-    "date": "Fecha",
-    "successful": "Exitoso",
-    "pending": "Pendiente",
-    "failed": "Fallido",
-    "noTransactions": "No se encontraron transacciones"
-  },
-  "stats": {
-    "total": "Total",
-    "active": "Activo",
-    "published": "Publicado",
-    "draft": "Borrador"
-  },
-  "actions": {
-    "preview": "Vista Previa",
-    "publish": "Publicar",
-    "unpublish": "Despublicar",
-    "archive": "Archivar",
-    "restore": "Restaurar",
-    "duplicate": "Duplicar",
-    "export": "Exportar",
-    "import": "Importar",
-    "viewAll": "Ver Todos",
-    "viewDetails": "Ver Detalles"
-  },
-  "validation": {
-    "required": "Este campo es obligatorio",
-    "emailInvalid": "Por favor ingresa un correo electrónico válido",
-    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
-    "passwordsMustMatch": "Las contraseñas deben coincidir"
-  },
-  "messages": {
-    "success": "¡Éxito!",
-    "saveSuccess": "Guardado exitosamente",
-    "deleteSuccess": "Eliminado exitosamente",
-    "createSuccess": "Creado exitosamente",
-    "updateSuccess": "Actualizado exitosamente",
-    "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
-    "confirmDelete": "¿Estás seguro de que quieres eliminar esto?",
-    "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?"
-  },
-  "landing": {
-    "poweredBy": "Impulsado por Next.js 16",
-    "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroDescription": "La plataforma de aprendizaje definitiva impulsada por Next.js 16 y Supabase. Interactiva, rápida y escalable para desarrolladores modernos.",
-    "getStarted": "Empieza Gratis",
-    "viewGithub": "Ver en Github",
-    "trustedBy": "Confían en nosotros desarrolladores en",
-    "featuresTitle": "¿Por qué elegir LMS V2?",
-    "featuresDescription": "Construido para el rendimiento y la experiencia del desarrollador. Nos enfocamos en las características que importan para la educación técnica.",
-    "feature1Title": "Retroalimentación con IA",
-    "feature1Description": "Obtén revisiones de código inteligentes y sugerencias instantáneas en tus tareas impulsadas por los últimos LLMs.",
-    "feature2Title": "Soporte para Lecciones MDX",
-    "feature2Description": "Escribe lecciones interactivas con MDX. Incrusta componentes de React directamente dentro de tu contenido de curso de forma segura.",
-    "feature3Title": "Paneles Basados en Roles",
-    "feature3Description": "Interfaces dedicadas para Estudiantes, Instructores y Administradores para gestionar el progreso, el contenido y las analíticas."
-  },
-  "navbar": {
-    "brand": "LMS V2",
-    "courses": "Cursos",
-    "plans": "Planes",
-    "about": "Acerca de",
-    "dashboard": "Panel",
-    "login": "Ingresar",
-    "signup": "Registrarse"
-  },
-  "sidebar": {
-    "dashboard": "Panel de Control",
-    "users": "Usuarios",
-    "allCourses": "Todos los Cursos",
-    "enrollments": "Inscripciones",
-    "transactions": "Transacciones",
-    "myCourses": "Mis Cursos",
-    "createCourse": "Crear Curso",
-    "browseCourses": "Explorar Cursos",
-    "courseCatalog": "Catálogo de Cursos",
-    "continueLearning": "Continuar Aprendiendo",
-    "completed": "Completados",
-    "myCertificates": "Mis Certificados",
-    "progressReport": "Informe de Progreso",
-    "settings": "Configuración",
-    "logout": "Cerrar Sesión",
-    "platform": "Plataforma LMS",
-    "guest": "Invitado",
-    "main": "Principal",
-    "discover": "Descubrir",
-    "learning": "Aprendizaje",
-    "resources": "Recursos",
-    "contentManagement": "Gestión de Contenido",
-    "management": "Gestión",
-    "profile": "Perfil"
-  },
-  "userNav": {
-    "profile": "Perfil",
-    "settings": "Configuración",
-    "logout": "Cerrar Sesión"
-  },
-  "welcomeHero": {
-    "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
-    "progressMessage": "Llevas un {progress}% de tu meta semanal. ¡Sigue así para ganar tu próxima insignia!",
-    "viewReport": "Ver Informe",
-    "updateGoals": "Actualizar Metas"
-  },
-  "statsCards": {
-    "hoursStudied": "Horas Estudiadas",
-    "coursesCompleted": "Cursos Completados",
-    "certificatesEarned": "Certificados Ganados"
-  },
-  "upcomingExams": {
-    "title": "Próximos Exámenes",
-    "noExams": "No hay exámenes con fecha próxima",
-    "viewSchedule": "VER HORARIO",
-    "today": "Hoy",
-    "tomorrow": "Mañana",
-    "inDays": "en {days} días"
-  },
-  "recentActivity": {
-    "title": "Actividad Reciente",
-    "assignmentGraded": "Tarea Calificada",
-    "score": "Calificación: {score}/100",
-    "pendingGrade": "Calificación pendiente",
-    "noActivity": "Sin actividad reciente",
-    "minute": "minuto",
-    "minutes": "minutos",
-    "hour": "hora",
-    "hours": "horas",
-    "day": "día",
-    "days": "días",
-    "ago": "atrás"
-  },
-  "components": {
-    "courseProgress": {
-      "progress": "Progreso"
+      "main": {
+        "stats": {
+          "totalUsers": "Total de Usuarios",
+          "activeSubscriptions": "Suscripciones Activas",
+          "monthly": "Recurrente mensual",
+          "totalCourses": "Total de Cursos",
+          "published": "{count} publicados",
+          "pendingPayments": "Pagos Pendientes",
+          "awaiting": "Esperando acción",
+          "totalRevenue": "Ingresos Totales",
+          "transactions": "{count} transacciones"
+        },
+        "quickActions": {
+          "title": "Acciones Rápidas",
+          "analytics": "Análisis",
+          "manageUsers": "Gestionar Usuarios",
+          "manageCourses": "Gestionar Cursos",
+          "subscriptions": "Suscripciones",
+          "paymentRequests": "Solicitudes de Pago",
+          "viewTransactions": "Ver Transacciones",
+          "viewEnrollments": "Ver Inscripciones",
+          "settings": "Configuración"
+        },
+        "recentActivity": {
+          "users": "Usuarios Recientes",
+          "transactions": "Transacciones Recientes",
+          "viewAll": "Ver Todo",
+          "unknown": "Desconocido",
+          "noUsers": "No hay usuarios recientes",
+          "noTransactions": "No hay transacciones recientes",
+          "status": {
+            "successful": "Exitoso",
+            "pending": "Pendiente",
+            "failed": "Fallido"
+          }
+        }
+      },
+      "users": {
+        "title": "Gestión de Usuarios",
+        "description": "Ver y gestionar todos los usuarios de la plataforma",
+        "backToDashboard": "Volver al Panel",
+        "stats": {
+          "totalUsers": "Total de Usuarios",
+          "teachers": "Profesores",
+          "students": "Estudiantes"
+        },
+        "table": {
+          "title": "Todos los Usuarios",
+          "noUsers": "No se encontraron usuarios",
+          "headers": {
+            "user": "Usuario",
+            "email": "Correo",
+            "roles": "Roles",
+            "enrollments": "Inscripciones",
+            "status": "Estado",
+            "joined": "Se unió",
+            "actions": "Acciones"
+          },
+          "roles": {
+            "admin": "Admin",
+            "teacher": "Profesor",
+            "student": "Estudiante",
+            "noRoles": "Sin roles"
+          },
+          "status": {
+            "active": "Activo",
+            "deactivated": "Desactivado",
+            "completed": "Completado",
+            "successful": "Exitoso",
+            "pending": "Pendiente",
+            "failed": "Fallido"
+          },
+          "actions": {
+            "roles": "Roles",
+            "view": "Ver"
+          }
+        },
+        "details": {
+          "back": "Volver a Usuarios",
+          "unknown": "Usuario Desconocido",
+          "profile": "Información del Perfil",
+          "email": "Correo",
+          "joined": "Se unió",
+          "userId": "ID de Usuario",
+          "bio": "Biografía",
+          "roles": "Roles",
+          "rolesPlaceholder": "Sin roles asignados",
+          "status": "Estado de la Cuenta",
+          "statusActive": "Activo",
+          "statusActiveDesc": "La cuenta está activa y al día",
+          "statusDeactivated": "Desactivada",
+          "statusDeactivatedDesc": "Desactivada el {date}",
+          "enrollments": "Inscripciones ({count})",
+          "enrolled": "Inscrito el {date}",
+          "noEnrollments": "Aún no hay inscripciones",
+          "recentActivity": "Actividad Reciente",
+          "completed": "Completado: {title}",
+          "noActivity": "No hay actividad reciente",
+          "recentTransactions": "Transacciones Recientes",
+          "noTransactions": "Aún no hay transacciones"
+        },
+        "actions": {
+          "manageRoles": "Gestionar Roles",
+          "deactivate": "Desactivar Usuario",
+          "reactivate": "Reactivar Usuario",
+          "toasts": {
+            "deactivateSuccess": "{name} ha sido desactivado",
+            "deactivateError": "Error al desactivar al usuario",
+            "reactivateSuccess": "{name} ha sido reactivado",
+            "reactivateError": "Error al reactivar al usuario",
+            "rolesSuccess": "Roles actualizados para {name}",
+            "rolesError": "Error al actualizar los roles"
+          },
+          "dialogs": {
+            "deactivate": {
+              "title": "Desactivar Usuario",
+              "description": "¿Estás seguro de que quieres desactivar a {name}? Ya no podrá acceder a la plataforma.",
+              "confirm": "Desactivar"
+            },
+            "reactivate": {
+              "title": "Reactivar Usuario",
+              "description": "¿Estás seguro de que quieres reactivar a {name}? Recuperará el acceso a la plataforma.",
+              "confirm": "Reactivar"
+            },
+            "roles": {
+              "title": "Gestionar Roles",
+              "description": "Actualiza los roles de {name}. Los usuarios pueden tener múltiples roles.",
+              "admin": {
+                "label": "Admin",
+                "description": "Acceso total al sistema"
+              },
+              "teacher": {
+                "label": "Profesor",
+                "description": "Puede crear y gestionar cursos"
+              },
+              "student": {
+                "label": "Estudiante",
+                "description": "Puede inscribirse y completar cursos"
+              },
+              "save": "Guardar Cambios",
+              "saving": "Guardando..."
+            },
+            "cancel": "Cancelar"
+          }
+        }
+      },
+      "paymentRequests": {
+        "title": "Solicitudes de Pago",
+        "description": "Gestiona las solicitudes de pago manuales de los estudiantes",
+        "stats": {
+          "pending": "Pendientes",
+          "pendingDesc": "Esperando tu respuesta",
+          "contacted": "Contactados",
+          "contactedDesc": "Instrucciones de pago enviadas",
+          "received": "Pago Recibido",
+          "receivedDesc": "Listos para inscribir",
+          "completed": "Completados",
+          "completedTotal": "${amount} en total"
+        },
+        "tabs": {
+          "pending": "Pendientes ({count})",
+          "contacted": "Contactados ({count})",
+          "received": "Pago Recibido ({count})",
+          "completed": "Completados ({count})",
+          "all": "Todos ({count})"
+        },
+        "table": {
+          "id": "ID",
+          "student": "Estudiante",
+          "product": "Producto",
+          "amount": "Monto",
+          "status": "Estado",
+          "invoice": "Factura",
+          "date": "Fecha",
+          "actions": "Acciones",
+          "noRequests": "No se encontraron solicitudes de pago",
+          "manage": "Gestionar"
+        },
+        "status": {
+          "pending": "Pendiente",
+          "contacted": "Contactado",
+          "payment_received": "Pago Recibido",
+          "completed": "Completado",
+          "cancelled": "Cancelado"
+        },
+        "dialog": {
+          "title": "Solicitud de Pago #{id}",
+          "description": "Gestionar solicitud de pago de {name}",
+          "details": {
+            "title": "Detalles de la Solicitud",
+            "student": "Estudiante",
+            "email": "Correo",
+            "phone": "Teléfono",
+            "notProvided": "No proporcionado",
+            "product": "Producto",
+            "amount": "Monto",
+            "date": "Fecha de Solicitud",
+            "invoice": "Factura",
+            "messageTitle": "Mensaje del Estudiante"
+          },
+          "form": {
+            "status": "Estado",
+            "method": "Método de Pago",
+            "methodPlaceholder": "ej., Transferencia Bancaria, Giro, Efectivo",
+            "instructions": "Instrucciones de Pago",
+            "instructionsPlaceholder": "Ingrese las instrucciones de pago para enviar al estudiante...",
+            "instructionsDesc": "Incluya detalles bancarios, instrucciones de giro o dirección de pago",
+            "internalNotes": "Notas Internas",
+            "internalNotesPlaceholder": "Notas internas (no visibles para el estudiante)...",
+            "updateButton": "Actualizar Solicitud",
+            "updatingButton": "Actualizando...",
+            "cancel": "Cancelar"
+          },
+          "actions": {
+            "title": "Acciones Rápidas",
+            "generateInvoice": "Generar Factura",
+            "confirmEnroll": "Confirmar Pago e Inscribir Estudiante",
+            "markContacted": "Marcar como Contactado"
+          },
+          "toasts": {
+            "updateSuccess": "Solicitud de pago actualizada exitosamente",
+            "updateError": "Error al actualizar la solicitud",
+            "enrollSuccess": "¡Estudiante inscrito exitosamente!",
+            "enrollError": "Error al inscribir al estudiante",
+            "invoiceSuccess": "¡Factura {number} generada!",
+            "invoiceError": "Error al generar la factura",
+            "contactedSuccess": "Marcado como contactado"
+          },
+          "confirmations": {
+            "enroll": "¿Está seguro de que desea inscribir a este estudiante? Esto le otorgará acceso a los cursos."
+          }
+        }
+      },
+      "analytics": {
+        "title": "Análisis y Reportes",
+        "description": "Información sobre el rendimiento y el compromiso de la plataforma",
+        "export": "Exportar",
+        "exportOptions": {
+          "all": "Exportar Todos los Datos",
+          "summary": "Exportar Resumen",
+          "revenue": "Exportar Datos de Ingresos",
+          "userGrowth": "Exportar Crecimiento de Usuarios",
+          "coursePopularity": "Exportar Popularidad de Cursos"
+        },
+        "periods": {
+          "7days": "7 Días",
+          "30days": "30 Días",
+          "90days": "90 Días",
+          "1year": "1 Año"
+        },
+        "periodLabels": {
+          "last7days": "últimos 7 días",
+          "last30days": "últimos 30 días",
+          "last90days": "últimos 90 días",
+          "lastYear": "último año",
+          "generic": "últimos {days} días"
+        },
+        "revenue": {
+          "title": "Ingresos a lo Largo del Tiempo",
+          "description": "Tendencias de ingresos para {period}",
+          "total": "Ingresos Totales",
+          "avg": "Promedio: ${amount}/día",
+          "noData": "No hay datos de ingresos disponibles",
+          "tooltip": "Ingresos"
+        },
+        "userGrowth": {
+          "title": "Crecimiento de Usuarios",
+          "description": "Tendencias de registro de usuarios para {period}",
+          "total": "Usuarios Totales",
+          "newInPeriod": "+{count} nuevos en el periodo",
+          "noData": "No hay datos de crecimiento de usuarios disponibles",
+          "newUsersTooltip": "Nuevos Usuarios",
+          "totalUsersTooltip": "Usuarios Totales"
+        },
+        "engagement": {
+          "title": "Métricas de Compromiso",
+          "description": "Estadísticas de compromiso y actividad de la plataforma",
+          "completionRate": "Tasa Promedio de Finalización de Cursos",
+          "completionRateDesc": "Basado en las lecciones completadas en todos los cursos inscritos",
+          "metrics": {
+            "enrollments": "Inscripciones Totales",
+            "activeStudents": "Estudiantes Activos",
+            "activePeriod": "Últimos 30 días",
+            "lessonCompletions": "Lecciones Completadas",
+            "examSubmissions": "Entregas de Exámenes"
+          }
+        },
+        "coursePopularity": {
+          "title": "Cursos Más Populares",
+          "description": "Principales cursos por número de inscripciones",
+          "viewAll": "Ver Todos los Cursos",
+          "detailsTitle": "Detalles del Curso",
+          "noData": "No hay datos de cursos disponibles",
+          "enrollmentsTooltip": "Inscripciones",
+          "enrollmentsCount": "{count} inscripciones",
+          "completionLabel": "finalización"
+        }
+      },
+      "categories": {
+        "title": "Categorías de Cursos",
+        "description": "Gestiona las categorías y la organización de los cursos",
+        "stats": {
+          "total": "Total de Categorías"
+        },
+        "table": {
+          "title": "Todas las Categorías",
+          "addCategory": "Añadir Categoría",
+          "headers": {
+            "name": "Nombre",
+            "description": "Descripción",
+            "courses": "Cursos",
+            "actions": "Acciones"
+          },
+          "noDescription": "Sin descripción",
+          "courseCount": "{count} {count, plural, one {curso} other {cursos}}",
+          "actions": {
+            "edit": "Editar",
+            "delete": "Eliminar"
+          },
+          "empty": "No se encontraron categorías. Crea tu primera categoría para comenzar."
+        },
+        "dialogs": {
+          "delete": {
+            "title": "Eliminar Categoría",
+            "confirm": "Eliminar",
+            "description": "¿Estás seguro de que deseas eliminar \"{name}\"? Esta acción no se puede deshacer.",
+            "cannotDelete": "No se puede eliminar \"{name}\" porque {count} {count, plural, one {curso lo está} other {cursos lo están}} usando. Por favor, reasigna o elimina esos cursos primero."
+          }
+        }
+      },
+      "courses": {
+        "title": "Gestión de Cursos",
+        "description": "Ver y gestionar todos los cursos de la plataforma",
+        "stats": {
+          "total": "Cursos Totales",
+          "published": "Publicados",
+          "drafts": "Borradores"
+        },
+        "table": {
+          "title": "Todos los Cursos",
+          "searchPlaceholder": "Buscar cursos...",
+          "filterStatus": "Filtrar por estado",
+          "allStatuses": "Todos los Estados",
+          "statuses": {
+            "draft": "Borrador",
+            "published": "Publicado",
+            "archived": "Archivado"
+          },
+          "headers": {
+            "course": "Curso",
+            "author": "Autor",
+            "status": "Estado",
+            "lessons": "Lecciones",
+            "students": "Estudiantes",
+            "publishedDate": "Publicado",
+            "actions": "Acciones"
+          },
+          "unknownAuthor": "Desconocido",
+          "empty": "No se encontraron cursos"
+        },
+        "statusActions": {
+          "approve": "Aprobar",
+          "archive": "Archivar",
+          "restore": "Restaurar",
+          "dialogs": {
+            "approve": {
+              "title": "Aprobar Curso",
+              "description": "¿Estás seguro de que deseas aprobar y publicar \"{title}\"? Será visible para todos los estudiantes.",
+              "confirm": "Aprobar y Publicar"
+            },
+            "archive": {
+              "title": "Archivar Curso",
+              "description": "¿Estás seguro de que deseas archivar \"{title}\"? Ya no será visible para los estudiantes.",
+              "confirm": "Archivar"
+            },
+            "restore": {
+              "title": "Restaurar Curso",
+              "description": "¿Estás seguro de que deseas restaurar \"{title}\"? Será publicado y visible para los estudiantes de nuevo.",
+              "confirm": "Restaurar"
+            }
+          },
+          "toasts": {
+            "approveSuccess": "Curso \"{title}\" aprobado y publicado",
+            "approveError": "Error al aprobar el curso",
+            "archiveSuccess": "Curso \"{title}\" archivado",
+            "archiveError": "Error al archivar el curso",
+            "restoreSuccess": "Curso \"{title}\" restaurado",
+            "restoreError": "Error al restaurar el curso"
+          }
+        }
+      },
+      "subscriptions": {
+        "title": "Gestión de Suscripciones",
+        "description": "Gestionar todas las suscripciones activas e históricas",
+        "stats": {
+          "active": "Suscripciones Activas",
+          "cancelled": "Canceladas",
+          "expired": "Expiradas",
+          "revenue": "Ingresos Mensuales"
+        },
+        "filters": {
+          "search": "Buscar por nombre, email o ID...",
+          "all": "Todo",
+          "active": "Activo",
+          "cancelled": "Cancelado",
+          "expired": "Expirado"
+        },
+        "table": {
+          "title": "Todas las Suscripciones ({count})",
+          "unknownUser": "Usuario Desconocido",
+          "unknownPlan": "Plan Desconocido",
+          "cancelsAtEnd": "Se cancela al final del periodo",
+          "started": "Iniciado:",
+          "ended": "Finalizado:",
+          "renews": "Renueva:",
+          "noSubscriptions": "Aún no hay suscripciones",
+          "noFilteredSubscriptions": "No se encontraron suscripciones que coincidan con tus filtros"
+        },
+        "status": {
+          "active": "Activa",
+          "cancelled": "Cancelada",
+          "expired": "Expirada",
+          "past_due": "Vencida",
+          "trialing": "En prueba",
+          "unpaid": "Impagada",
+          "incomplete": "Incompleta",
+          "incomplete_expired": "Incompleta Expirada"
+        },
+        "actions": {
+          "viewUser": "Ver Usuario",
+          "cancel": "Cancelar Suscripción",
+          "reactivate": "Reactivar Suscripción",
+          "cannotReactivate": "No se puede reactivar (Expirada)",
+          "cancelling": "Cancelando...",
+          "reactivating": "Reactivando..."
+        },
+        "dialogs": {
+          "cancel": {
+            "title": "Cancelar Suscripción",
+            "description": "Elige cómo quieres cancelar esta suscripción. Esta acción se sincronizará con Stripe.",
+            "options": "Opciones de Cancelación:",
+            "atEnd": "Cancelar al final del periodo",
+            "atEndDesc": "El usuario mantiene el acceso hasta que termine el periodo de facturación actual. Recomendado para una mejor experiencia de usuario.",
+            "immediate": "Cancelar inmediatamente",
+            "immediateDesc": "El usuario pierde el acceso de inmediato. Usar solo para situaciones urgentes (fraude, violaciones, etc.).",
+            "close": "Cerrar"
+          },
+          "reactivate": {
+            "title": "Reactivar Suscripción",
+            "description": "Esto reactivará la suscripción que estaba programada para cancelarse al final del periodo. Se seguirá facturando al usuario."
+          }
+        },
+        "toasts": {
+          "cancelImmediate": "Suscripción cancelada inmediatamente",
+          "cancelAtEnd": "La suscripción se cancelará al final del periodo",
+          "cancelError": "Error al cancelar la suscripción",
+          "reactivateSuccess": "Suscripción reactivada con éxito",
+          "reactivateError": "Error al reactivar la suscripción",
+          "generalError": "Ha ocurrido un error"
+        }
+      },
+      "transactions": {
+        "title": "Transacciones",
+        "description": "Ver todas las transacciones e ingresos de la plataforma",
+        "backToDashboard": "Volver al Panel",
+        "stats": {
+          "totalRevenue": "Ingresos Totales",
+          "totalRevenueDesc": "De transacciones exitosas",
+          "pending": "Pendiente",
+          "pendingDesc": "Esperando confirmación",
+          "failed": "Fallido",
+          "failedDesc": "Transacciones fallidas"
+        },
+        "table": {
+          "title": "Todas las Transacciones",
+          "headers": {
+            "id": "ID de Transacción",
+            "user": "Usuario",
+            "amount": "Monto",
+            "status": "Estado",
+            "method": "Método de Pago",
+            "date": "Fecha"
+          },
+          "methods": {
+            "stripe": "Stripe",
+            "manual": "Manual",
+            "bank_transfer": "Transferencia Bancaria",
+            "zelle": "Zelle",
+            "pagos_chile": "Pagos Chile"
+          },
+          "unknown": "Desconocido",
+          "notAvailable": "N/A",
+          "empty": "No se encontraron transacciones"
+        }
+      },
+      "enrollments": {
+        "title": "Inscripciones",
+        "description": "Ver todas las inscripciones de estudiantes a cursos",
+        "backToDashboard": "Volver al Panel",
+        "stats": {
+          "total": "Total de Inscripciones",
+          "active": "Activo",
+          "completed": "Completado"
+        },
+        "table": {
+          "title": "Todas las Inscripciones",
+          "headers": {
+            "student": "Estudiante",
+            "course": "Curso",
+            "status": "Estado",
+            "enrolled": "Inscrito",
+            "actions": "Acciones"
+          },
+          "unknown": "Desconocido",
+          "unknownCourse": "Curso Desconocido",
+          "viewCourse": "Ver Curso",
+          "empty": "No se encontraron inscripciones"
+        }
+      },
+      "settings": {
+        "title": "Configuración de la Plataforma",
+        "description": "Configura los ajustes de la plataforma, email, pagos y políticas de inscripción.",
+        "errorTitle": "Error al Cargar Configuración",
+        "errorDesc": "No se pudieron cargar los ajustes de la plataforma",
+        "tabs": {
+          "general": "General",
+          "email": "Email",
+          "payment": "Pago",
+          "enrollment": "Inscripción"
+        },
+        "sections": {
+          "general": {
+            "title": "Ajustes Generales",
+            "description": "Información básica de la plataforma y configuraciones globales"
+          },
+          "email": {
+            "title": "Ajustes de Email",
+            "description": "Configura el servidor SMTP y las preferencias de notificación por email"
+          },
+          "payment": {
+            "title": "Ajustes de Pago",
+            "description": "Gestiona los procesadores de pago, moneda y ajustes de transacciones"
+          },
+          "enrollment": {
+            "title": "Ajustes de Inscripción",
+            "description": "Configura las reglas de inscripción a cursos y políticas de acceso de estudiantes"
+          }
+        },
+        "form": {
+          "saveChanges": "Guardar Cambios",
+          "saving": "Guardando...",
+          "success": "Configuración actualizada con éxito",
+          "error": "Error al actualizar la configuración",
+          "general": {
+            "siteName": "Nombre del Sitio",
+            "siteNamePlaceholder": "Mi Plataforma LMS",
+            "siteNameHint": "El nombre de tu plataforma mostrado en todo el sitio",
+            "siteDescription": "Descripción del Sitio",
+            "siteDescriptionPlaceholder": "Un sistema de gestión de aprendizaje moderno...",
+            "siteDescriptionHint": "Utilizado para SEO y páginas de información",
+            "contactEmail": "Email de Contacto",
+            "contactEmailHint": "Email de contacto principal de la plataforma",
+            "supportEmail": "Email de Soporte",
+            "supportEmailHint": "Email de soporte para consultas de usuarios",
+            "timezone": "Zona Horaria",
+            "timezoneHint": "Zona horaria por defecto (ej., America/New_York, Europe/London)",
+            "maintenanceMode": "Modo Mantenimiento",
+            "maintenanceModeHint": "Activar para mostrar mensaje de mantenimiento a los usuarios",
+            "maintenanceMessage": "Mensaje de Mantenimiento",
+            "maintenanceMessagePlaceholder": "Actualmente estamos realizando tareas de mantenimiento. Por favor, vuelve pronto."
+          },
+          "email": {
+            "notifications": "Notificaciones por Email",
+            "notificationsHint": "Activar o desactivar todas las notificaciones por email globalmente",
+            "smtpConfig": "Configuración SMTP",
+            "smtpHost": "Host SMTP",
+            "smtpHostHint": "Dirección del servidor SMTP de tu proveedor",
+            "smtpPort": "Puerto SMTP",
+            "smtpPortHint": "Puertos comunes: 587 (TLS), 465 (SSL), 25 (sin cifrar)",
+            "smtpUsername": "Usuario SMTP",
+            "smtpUsernameHint": "Normalmente tu dirección de email o usuario de cuenta",
+            "smtpPassword": "Contraseña SMTP",
+            "smtpPasswordHint": "Tu contraseña SMTP o contraseña específica de la aplicación",
+            "senderInfo": "Información del Remitente",
+            "fromEmail": "Email del Remitente",
+            "fromEmailHint": "Dirección de email utilizada como remitente para emails salientes",
+            "fromName": "Nombre del Remitente",
+            "fromNameHint": "Nombre mostrado como remitente en los emails"
+          },
+          "payment": {
+            "processors": "Procesadores de Pago",
+            "stripe": "Stripe",
+            "stripeHint": "Activar el procesamiento de pagos con Stripe",
+            "paypal": "PayPal",
+            "paypalHint": "Activar el procesamiento de pagos con PayPal",
+            "currency": "Moneda por Defecto",
+            "currencyPlaceholder": "Seleccionar moneda",
+            "currencyHint": "Moneda por defecto para todas las transacciones",
+            "taxRate": "Tasa de Impuestos (%)",
+            "taxRateHint": "Porcentaje de tasa de impuestos aplicado a las transacciones (0 = sin impuestos)",
+            "invoiceSettings": "Configuración de Factura",
+            "invoicePrefix": "Prefijo de Factura",
+            "invoicePrefixHint": "Prefijo para los números de factura (ej., INV-001)",
+            "approval": "Requerir Aprobación de Pago",
+            "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos"
+          },
+          "enrollment": {
+            "auto": "Inscripción Automática",
+            "autoHint": "Inscribir automáticamente a nuevos usuarios en cursos designados",
+            "self": "Permitir Autoinscripción",
+            "selfHint": "Permitir que los estudiantes se inscriban ellos mismos en los cursos",
+            "approval": "Requerir Aprobación de Inscripción",
+            "approvalHint": "Requerir aprobación del administrador antes de que los estudiantes accedan a los cursos",
+            "max": "Máximo de Inscripciones por Usuario",
+            "maxHint": "Número máximo de cursos en los que un usuario puede inscribirse (0 = ilimitado)",
+            "expiration": "Expiración de Inscripción (Días)",
+            "expirationHint": "Número de días hasta que la inscripción expire (0 = nunca expira)",
+            "capacity": "Activar Capacidad de Curso",
+            "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
+          }
+        },
+        "notifications": {
+          "title": "Notificaciones",
+          "description": "Enviar anuncios y mensajes a estudiantes y profesores",
+          "buttons": {
+            "templates": "Plantillas",
+            "create": "Crear Notificación"
+          },
+          "stats": {
+            "total": "Total de Notificaciones",
+            "sent": "Enviadas",
+            "scheduled": "Programadas",
+            "drafts": "Borradores"
+          },
+          "manage": {
+            "title": "Gestionar Notificaciones",
+            "description": "Ver y gestionar notificaciones del sistema, anuncios y mensajes dirigidos"
+          },
+          "tabs": {
+            "all": "Todo",
+            "sent": "Enviadas",
+            "scheduled": "Programadas",
+            "drafts": "Borradores"
+          },
+          "types": {
+            "announcement": "Anuncio",
+            "alert": "Alerta",
+            "info": "Información",
+            "success": "Éxito",
+            "warning": "Advertencia",
+            "error": "Error"
+          },
+          "priority": {
+            "low": "Baja",
+            "normal": "Normal",
+            "high": "Alta",
+            "urgent": "Urgente"
+          },
+          "priorityOptions": {
+            "low": "Baja",
+            "normal": "Normal",
+            "high": "Alta",
+            "urgent": "Urgente"
+          },
+          "targets": {
+            "all": "Todos los Usuarios",
+            "role": "Rol Específico",
+            "course": "Estudiantes del Curso"
+          },
+          "list": {
+            "empty": "No se encontraron notificaciones",
+            "status": {
+              "sent": "Enviada",
+              "scheduled": "Programada",
+              "draft": "Borrador",
+              "cancelled": "Cancelada"
+            },
+            "metadata": {
+              "target": "Destino",
+              "sent": "Enviado",
+              "scheduled": "Programado",
+              "created": "Creado"
+            },
+            "actions": {
+              "send": "Enviar Ahora",
+              "delete": "Eliminar"
+            },
+            "confirmDelete": "¿Estás seguro de que quieres eliminar esta notificación?",
+            "toasts": {
+              "sent": "Notificación enviada a {count} usuarios",
+              "deleted": "Notificación eliminada con éxito",
+              "error": "Error al enviar la notificación",
+              "deleteError": "Error al eliminar la notificación"
+            }
+          },
+          "form": {
+            "title": "Título",
+            "titlePlaceholder": "Título de la notificación",
+            "message": "Mensaje",
+            "messagePlaceholder": "Ingrese el mensaje de su notificación...",
+            "messageHint": "Use llaves dobles para contenido dinámico con plantillas",
+            "type": "Tipo",
+            "priority": "Prioridad",
+            "sendTo": "Enviar a",
+            "targets": {
+              "all": "Todos los Usuarios",
+              "role": "Rol Específico",
+              "course": "Estudiantes del Curso"
+            },
+            "roles": "Roles (separados por comas)",
+            "rolesPlaceholder": "estudiante, profesor",
+            "rolesHint": "Ejemplo: estudiante, profesor, admin",
+            "courseId": "ID del Curso",
+            "courseIdPlaceholder": "Ingrese el ID del curso",
+            "courseIdHint": "Encuentre el ID del curso en la página de gestión de cursos",
+            "delivery": "Entrega",
+            "deliveryDesc": "Enviar inmediatamente o programar para más tarde",
+            "deliveryOptions": {
+              "now": "Enviar Ahora",
+              "schedule": "Programar"
+            },
+            "scheduleFor": "Programar para",
+            "submit": {
+              "send": "Enviar Notificación",
+              "save": "Guardar Borrador"
+            },
+            "toasts": {
+              "success": "Notificación enviada con éxito",
+              "draft": "Notificación guardada como borrador",
+              "error": "Error al crear la notificación"
+            }
+          },
+          "templates": {
+            "title": "Plantillas de Notificación",
+            "description": "Crea plantillas reutilizables con variables dinámicas para notificaciones comunes",
+            "back": "Volver",
+            "create": "Crear Plantilla",
+            "empty": "No se encontraron plantillas",
+            "table": {
+              "name": "Nombre",
+              "type": "Tipo",
+              "subject": "Asunto",
+              "created": "Creado",
+              "actions": "Acciones"
+            },
+            "form": {
+              "name": "Nombre de la Plantilla",
+              "namePlaceholder": "ej., Bienvenida al Curso",
+              "subject": "Asunto de la Plantilla",
+              "subjectPlaceholder": "ej., Bienvenido a {{course_name}}",
+              "content": "Contenido de la Plantilla",
+              "contentPlaceholder": "Ingrese el contenido de su plantilla...",
+              "type": "Tipo de Notificación",
+              "description": "Descripción (opcional)",
+              "submit": {
+                "create": "Crear Plantilla",
+                "update": "Actualizar Plantilla"
+              },
+              "toasts": {
+                "success": "Plantilla creada con éxito",
+                "updated": "Plantilla actualizada con éxito",
+                "error": "Error al crear la plantilla",
+                "deleted": "Plantilla eliminada con éxito"
+              },
+              "dialog": {
+                "title": "Crear Nueva Plantilla",
+                "editTitle": "Editar Plantilla",
+                "description": "Crea plantillas reutilizables para notificaciones del sistema"
+              }
+            }
+          }
+        },
+        "common": {
+          "courseSelector": {
+            "label": "Cursos Incluidos",
+            "loading": "Cargando cursos...",
+            "search": "Buscar cursos...",
+            "noResults": "No se encontraron cursos",
+            "noAvailable": "No hay cursos publicados disponibles",
+            "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
+          }
+        },
+        "plans": {
+          "title": "Planes de Suscripción",
+          "description": "Gestionar planes de suscripción y facturación recurrente",
+          "back": "Volver al Panel",
+          "create": "Crear Plan",
+          "stats": {
+            "total": "Total de Planes",
+            "monthly": "Planes Mensuales",
+            "yearly": "Planes Anuales"
+          },
+          "card": {
+            "monthly": "Mensual",
+            "yearly": "Anual",
+            "course": "curso",
+            "courses": "cursos",
+            "noDescription": "Sin descripción",
+            "perMonth": "al mes",
+            "perYear": "al año",
+            "features": "Características:",
+            "includedCourses": "Cursos Incluidos:",
+            "more": "+{count} más",
+            "edit": "Editar Plan"
+          },
+          "empty": {
+            "title": "Aún no hay planes",
+            "description": "Crea tu primer plan de suscripción para comenzar"
+          },
+          "new": {
+            "title": "Crear Plan de Suscripción",
+            "description": "Crea un nuevo plan de suscripción con facturación recurrente",
+            "back": "Volver a Planes",
+            "details": {
+              "title": "Detalles del Plan",
+              "description": "Los planes de suscripción se crearán automáticamente en Stripe con facturación recurrente."
+            }
+          },
+          "edit": {
+            "title": "Editar Plan de Suscripción",
+            "description": "Actualizar detalles del plan",
+            "back": "Volver a Planes"
+          },
+          "form": {
+            "name": "Nombre del Plan",
+            "namePlaceholder": "ej., Plan Mensual Premium",
+            "description": "Descripción",
+            "descriptionPlaceholder": "Describe qué incluye este plan...",
+            "price": "Precio",
+            "currency": "Moneda",
+            "duration": "Duración",
+            "durationMonthly": "Mensual",
+            "durationYearly": "Anual",
+            "features": "Características (separadas por comas)",
+            "featuresPlaceholder": "Acceso ilimitado, Soporte prioritario, Recursos descargables",
+            "featuresHint": "Ingrese las características separadas por comas. Estas se mostrarán a los clientes.",
+            "saving": "Guardando...",
+            "create": "Crear Plan",
+            "save": "Guardar Cambios",
+            "cancel": "Cancelar",
+            "errors": {
+              "nameRequired": "El nombre del plan es obligatorio",
+              "priceGreater": "El precio debe ser mayor a 0",
+              "generic": "Ocurrió un error"
+            },
+            "toasts": {
+              "createSuccess": "Plan creado con éxito",
+              "updateSuccess": "Plan actualizado con éxito"
+            }
+          }
+        },
+        "products": {
+          "title": "Gestión de Productos",
+          "description": "Gestionar productos e integración con Stripe",
+          "back": "Volver al Panel",
+          "create": "Crear Producto",
+          "stats": {
+            "total": "Total de Productos",
+            "active": "Activos",
+            "archived": "Archivados"
+          },
+          "card": {
+            "course": "curso",
+            "courses": "cursos",
+            "noDescription": "Sin descripción",
+            "includedCourses": "Cursos Incluidos:",
+            "more": "+{count} más",
+            "edit": "Editar",
+            "actions": "Acciones"
+          },
+          "empty": {
+            "title": "Aún no hay productos",
+            "description": "Crea tu primer producto para comenzar"
+          },
+          "new": {
+            "title": "Crear Producto",
+            "description": "Crea un nuevo producto con integración de Stripe",
+            "back": "Volver a Productos",
+            "details": {
+              "title": "Detalles del Producto",
+              "description": "Los productos se crearán automáticamente en Stripe. Vincula cursos para crear paquetes."
+            }
+          },
+          "edit": {
+            "title": "Editar Producto",
+            "description": "Actualizar detalles del producto",
+            "back": "Volver a Productos",
+            "details": {
+              "description": "Los cambios en el precio o la moneda crearán un nuevo precio en Stripe."
+            }
+          },
+          "form": {
+            "name": "Nombre del Producto",
+            "namePlaceholder": "ej., Paquete de Desarrollo Web Completo",
+            "description": "Descripción",
+            "descriptionPlaceholder": "Describe qué incluye este producto...",
+            "price": "Precio",
+            "currency": "Moneda",
+            "image": "URL de la Imagen (opcional)",
+            "imagePlaceholder": "https://ejemplo.com/imagen.jpg",
+            "method": "Método de Pago",
+            "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
+            "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
+            "methodPaypal": "PayPal (Próximamente)",
+            "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
+            "methodStripeHint": "Los estudiantes pueden pagar online al instante",
+            "saving": "Guardando...",
+            "create": "Crear Producto",
+            "save": "Guardar Cambios",
+            "cancel": "Cancelar",
+            "errors": {
+              "nameRequired": "El nombre del producto es obligatorio",
+              "priceGreater": "El precio debe ser mayor a 0",
+              "courseRequired": "Por favor seleccione al menos un curso",
+              "generic": "Ocurrió un error"
+            },
+            "toasts": {
+              "createSuccess": "Producto creado con éxito",
+              "updateSuccess": "Producto actualizado con éxito"
+            }
+          }
+        }
+      }
     },
-    "enrolledCourse": {
-      "overallProgress": "Progreso General",
+    "course": {
+      "title": "Curso",
+      "description": "Descripción",
       "lessons": "Lecciones",
+      "lesson": "Lección",
       "exams": "Exámenes",
-      "upNext": "Siguiente",
-      "enrolled": "Inscrito hace {date}",
-      "renew": "Renovar Suscripción",
-      "review": "Repasar Curso",
-      "continue": "Continuar Aprendiendo",
+      "exam": "Examen",
+      "students": "Estudiantes",
+      "progress": "Progreso",
+      "complete": "Completar",
       "completed": "Completado",
       "inProgress": "En Progreso",
       "notStarted": "No Iniciado",
-      "expired": "Tu suscripción ha expirado. Renueva para continuar."
-    },
-    "courseFilters": {
-      "searchPlaceholder": "Buscar tus cursos...",
-      "allCourses": "Todos los Cursos",
-      "inProgress": "En Progreso",
-      "completed": "Completados",
-      "notStarted": "No Iniciados",
-      "sortBy": "Ordenar por",
-      "mostRecent": "Más Recientes",
-      "titleAZ": "Título (A-Z)",
-      "progress": "Progreso"
-    },
-    "browseCourse": {
-      "goCourse": "Ir al Curso",
-      "enrollNow": "Inscribirse",
-      "enrolling": "Inscribiendo...",
-      "subscribeAccess": "Suscribirse para Acceder",
-      "enrolled": "Inscrito"
-    },
-    "profileForm": {
-      "fullName": "Nombre Completo",
-      "username": "Usuario",
-      "website": "Sitio Web",
-      "bio": "Biografía",
-      "save": "Guardar Detalles",
-      "saving": "Guardando...",
-      "success": "¡Perfil actualizado con éxito!",
-      "error": "Error al actualizar perfil",
-      "placeholders": {
-        "fullName": "Tu nombre completo",
-        "username": "usuario_unico",
-        "website": "https://tusitio.com",
-        "bio": "Cuéntanos un poco sobre ti..."
-      }
-    },
-    "lessons": {
-      "lessonIndex": "Lección {count}",
-      "sidebarTitle": "Contenido del Curso",
-      "sidebarDescription": "Navega por las lecciones del curso",
-      "aiTutorTitle": "Sesión de Tutor de IA",
-      "aiTutorDescription": "Completa la tarea para terminar esta lección",
-      "currentTask": "Tarea Actual"
-    },
-    "lessonAIChat": {
-      "suggestions": {
-        "question": "Tengo una pregunta sobre la tarea",
-        "hint": "¿Puedes darme una pista?",
-        "understanding": "Verifica mi comprensión",
-        "summarize": "Resume lo que he aprendido"
-      },
-      "toast": {
-        "completed": "¡Lección Completada!",
-        "completedDetail": "¡Buen trabajo! Has completado la tarea con éxito.",
-        "restartSuccess": "Chat reiniciado con éxito",
-        "restartFailed": "Error al reiniciar el chat",
-        "restartError": "Error al reiniciar el chat"
-      },
-      "confirmRestart": "¿Estás seguro de que quieres reiniciar la conversación? Esto borrará tu historial de chat y restablecerá el estado de finalización.",
-      "successHeader": "¡Lección Completada!",
-      "successDescription": "¡Buen trabajo! Has completado esta tarea con éxito.",
-      "stats": {
-        "messages": "Mensajes Intercambiados",
-        "taskCompleted": "Tarea Completada"
-      },
-      "buttons": {
-        "restarting": "Reiniciando...",
-        "tryAgain": "Intentar de Nuevo"
-      },
-      "emptyState": {
-        "title": "Tutor de IA listo",
-        "description": "¡Estoy listo para revisar tu trabajo! Escribe tu respuesta a continuación según la descripción de la tarea."
-      },
-      "targetAchieved": "¡Objetivo Logrado!",
-      "generating": "Generando respuesta...",
-      "placeholders": {
-        "completed": "¡Lección completada! Reinicia para seguir practicando.",
-        "typeAnswer": "Escribe tu respuesta aquí..."
-      },
-      "tooltips": {
-        "restart": "Reiniciar Conversación"
-      }
-    },
-    "lessonSidebar": {
-      "backToCourse": "Volver al curso"
-    },
-    "lessonNavigation": {
-      "previous": "Anterior",
+      "viewCourse": "Ver Curso",
+      "viewExams": "Ver Exámenes",
       "backToCourse": "Volver al Curso",
-      "completed": "Completado",
+      "courseContent": "Contenido del Curso",
+      "noLessons": "Aún no hay lecciones disponibles.",
+      "published": "Publicado",
+      "draft": "Borrador",
+      "archived": "Archivado"
+    },
+    "lesson": {
       "markAsComplete": "Marcar como Completado",
-      "done": "Hecho",
-      "complete": "Completar",
-      "next": "Siguiente",
-      "finishCourse": "Finalizar Curso"
-    },
-    "lessonComments": {
-      "title": "Comentarios ({count})",
-      "placeholder": "Comparte tus pensamientos o haz una pregunta...",
-      "post": "Publicar Comentario",
-      "posting": "Publicando...",
-      "loading": "Cargando comentarios...",
+      "completed": "Completado",
+      "duration": "Duración",
+      "minutes": "minutos",
+      "video": "Video",
+      "content": "Contenido",
+      "comments": "Comentarios",
       "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
-      "unknown": "Desconocido",
-      "error": "Error al publicar el comentario. Por favor, inténtalo de nuevo."
+      "postComment": "Publicar Comentario",
+      "commentPlaceholder": "Comparte tus ideas o haz una pregunta...",
+      "posting": "Publicando..."
     },
-    "dashboardSummary": {
-      "yourProgress": "Tu Progreso",
-      "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
-      "progressMessage": "¡Lo estás haciendo genial! Has completado {count} lecciones hasta ahora. Mantén el impulso.",
-      "courseCompletion": "Finalización del Curso",
-      "continueLearning": "Continuar Aprendiendo",
-      "dailyStreak": "Racha Diaria",
-      "daysCount": "{count} Días",
-      "topLearner": "\"¡Estás en el top 5% de los estudiantes esta semana!\"",
-      "achievements": "Logros",
-      "badgesCount": "{count} Insignias"
+    "exam": {
+      "title": "Examen",
+      "startExam": "Comenzar Examen",
+      "submitExam": "Enviar Examen",
+      "timeRemaining": "Tiempo Restante",
+      "questions": "Preguntas",
+      "question": "Pregunta",
+      "multipleChoice": "Opción Múltiple",
+      "trueFalse": "Verdadero/Falso",
+      "freeText": "Texto Libre",
+      "yourAnswer": "Tu Respuesta",
+      "correctAnswer": "Respuesta Correcta",
+      "score": "Puntuación",
+      "passed": "Aprobado",
+      "failed": "Reprobado",
+      "results": "Resultados",
+      "viewResults": "Ver Resultados",
+      "noExams": "Aún no hay exámenes disponibles."
     },
-    "manualPayment": {
-      "title": "Solicitar Información de Pago",
-      "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({symbol}{price})",
-      "fullName": "Nombre Completo",
-      "fullNamePlaceholder": "Juan Pérez",
+    "review": {
+      "title": "Reseñas",
+      "yourRating": "Tu Calificación",
+      "yourReview": "Tu Reseña",
+      "submitReview": "Enviar Reseña",
+      "submitting": "Enviando...",
+      "reviewPlaceholder": "Comparte tu experiencia con este curso...",
+      "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
+      "alreadyReviewed": "Ya has reseñado este curso. ¡Gracias por tu opinión!",
+      "averageRating": "Calificación Promedio",
+      "reviews": "reseñas"
+    },
+    "enrollment": {
+      "enroll": "Inscribirse",
+      "enrolled": "Inscrito",
+      "enrollmentDate": "Fecha de Inscripción",
+      "status": "Estado",
+      "active": "Activo",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "user": {
+      "profile": "Perfil",
+      "settings": "Configuración",
+      "account": "Cuenta",
+      "name": "Nombre",
       "email": "Correo Electrónico",
-      "emailPlaceholder": "juan@ejemplo.com",
-      "phone": "Número de Teléfono (opcional)",
-      "phonePlaceholder": "+34 600 000 000",
-      "message": "Mensaje Adicional (opcional)",
-      "messagePlaceholder": "Cualquier pregunta o petición especial...",
-      "whatHappensNext": "¿Qué sucede después?",
-      "step1": "Te enviaremos las instrucciones de pago por correo electrónico",
-      "step2": "Elige tu método de pago preferido (transferencia bancaria, factura, etc.)",
-      "step3": "Una vez confirmado el pago, obtendrás acceso instantáneo",
-      "sending": "Enviando...",
-      "submit": "Solicitar Info de Pago",
-      "cancel": "Cancelar",
-      "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
-      "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo."
+      "role": "Rol",
+      "student": "Estudiante",
+      "teacher": "Profesor",
+      "admin": "Administrador",
+      "joined": "Se unió",
+      "lastActive": "Última Actividad"
     },
-    "notifications": {
-      "title": "Bandeja de Entrada",
-      "viewAll": "Ver Todo",
-      "markAllAsRead": "Marcar todo como leído",
-      "empty": {
-        "title": "¡Todo al día!",
-        "description": "No tienes nuevas notificaciones en este momento."
-      }
+    "transaction": {
+      "transactions": "Transacciones",
+      "amount": "Monto",
+      "status": "Estado",
+      "paymentMethod": "Método de Pago",
+      "date": "Fecha",
+      "successful": "Exitoso",
+      "pending": "Pendiente",
+      "failed": "Fallido",
+      "noTransactions": "No se encontraron transacciones"
     },
-    "activitySection": {
-      "title": "Continuar Aprendiendo",
-      "recentSessions": "{count} Sesiones Recientes",
-      "lastViewed": "Última vez visto el {date}",
-      "part": "Parte {sequence}",
-      "defaultDescription": "Continúa por donde lo dejaste en esta lección.",
-      "resume": "Reanudar Sesión"
+    "stats": {
+      "total": "Total",
+      "active": "Activo",
+      "published": "Publicado",
+      "draft": "Borrador"
     },
-    "dashboardHeader": {
-      "searchPlaceholder": "Buscar cursos, exámenes o recursos...",
+    "actions": {
+      "preview": "Vista Previa",
+      "publish": "Publicar",
+      "unpublish": "Despublicar",
+      "archive": "Archivar",
+      "restore": "Restaurar",
+      "duplicate": "Duplicar",
+      "export": "Exportar",
+      "import": "Importar",
+      "viewAll": "Ver Todos",
+      "viewDetails": "Ver Detalles"
+    },
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "emailInvalid": "Por favor ingresa un correo electrónico válido",
+      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+      "passwordsMustMatch": "Las contraseñas deben coincidir"
+    },
+    "messages": {
+      "success": "¡Éxito!",
+      "saveSuccess": "Guardado exitosamente",
+      "deleteSuccess": "Eliminado exitosamente",
+      "createSuccess": "Creado exitosamente",
+      "updateSuccess": "Actualizado exitosamente",
+      "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
+      "confirmDelete": "¿Estás seguro de que quieres eliminar esto?",
+      "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?"
+    },
+    "landing": {
+      "poweredBy": "Impulsado por Next.js 16",
+      "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
+      "heroDescription": "La plataforma de aprendizaje definitiva impulsada por Next.js 16 y Supabase. Interactiva, rápida y escalable para desarrolladores modernos.",
+      "getStarted": "Empieza Gratis",
+      "viewGithub": "Ver en Github",
+      "trustedBy": "Confían en nosotros desarrolladores en",
+      "featuresTitle": "¿Por qué elegir LMS V2?",
+      "featuresDescription": "Construido para el rendimiento y la experiencia del desarrollador. Nos enfocamos en las características que importan para la educación técnica.",
+      "feature1Title": "Retroalimentación con IA",
+      "feature1Description": "Obtén revisiones de código inteligentes y sugerencias instantáneas en tus tareas impulsadas por los últimos LLMs.",
+      "feature2Title": "Soporte para Lecciones MDX",
+      "feature2Description": "Escribe lecciones interactivas con MDX. Incrusta componentes de React directamente dentro de tu contenido de curso de forma segura.",
+      "feature3Title": "Paneles Basados en Roles",
+      "feature3Description": "Interfaces dedicadas para Estudiantes, Instructores y Administradores para gestionar el progreso, el contenido y las analíticas."
+    },
+    "navbar": {
+      "brand": "LMS V2",
+      "courses": "Cursos",
+      "plans": "Planes",
+      "about": "Acerca de",
+      "dashboard": "Panel",
+      "login": "Ingresar",
+      "signup": "Registrarse"
+    },
+    "sidebar": {
+      "dashboard": "Panel de Control",
+      "users": "Usuarios",
+      "allCourses": "Todos los Cursos",
+      "enrollments": "Inscripciones",
+      "transactions": "Transacciones",
+      "myCourses": "Mis Cursos",
+      "createCourse": "Crear Curso",
+      "browseCourses": "Explorar Cursos",
+      "courseCatalog": "Catálogo de Cursos",
+      "continueLearning": "Continuar Aprendiendo",
+      "completed": "Completados",
+      "myCertificates": "Mis Certificados",
+      "progressReport": "Informe de Progreso",
+      "settings": "Configuración",
+      "logout": "Cerrar Sesión",
+      "platform": "Plataforma LMS",
+      "guest": "Invitado",
+      "main": "Principal",
+      "discover": "Descubrir",
+      "learning": "Aprendizaje",
+      "resources": "Recursos",
+      "contentManagement": "Gestión de Contenido",
+      "management": "Gestión",
+      "profile": "Perfil"
+    },
+    "userNav": {
       "profile": "Perfil",
       "settings": "Configuración",
       "logout": "Cerrar Sesión"
+    },
+    "welcomeHero": {
+      "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
+      "progressMessage": "Llevas un {progress}% de tu meta semanal. ¡Sigue así para ganar tu próxima insignia!",
+      "viewReport": "Ver Informe",
+      "updateGoals": "Actualizar Metas"
+    },
+    "statsCards": {
+      "hoursStudied": "Horas Estudiadas",
+      "coursesCompleted": "Cursos Completados",
+      "certificatesEarned": "Certificados Ganados"
+    },
+    "upcomingExams": {
+      "title": "Próximos Exámenes",
+      "noExams": "No hay exámenes con fecha próxima",
+      "viewSchedule": "VER HORARIO",
+      "today": "Hoy",
+      "tomorrow": "Mañana",
+      "inDays": "en {days} días"
+    },
+    "recentActivity": {
+      "title": "Actividad Reciente",
+      "assignmentGraded": "Tarea Calificada",
+      "score": "Calificación: {score}/100",
+      "pendingGrade": "Calificación pendiente",
+      "noActivity": "Sin actividad reciente",
+      "minute": "minuto",
+      "minutes": "minutos",
+      "hour": "hora",
+      "hours": "horas",
+      "day": "día",
+      "days": "días",
+      "ago": "atrás"
+    },
+    "components": {
+      "courseProgress": {
+        "progress": "Progreso"
+      },
+      "enrolledCourse": {
+        "overallProgress": "Progreso General",
+        "lessons": "Lecciones",
+        "exams": "Exámenes",
+        "upNext": "Siguiente",
+        "enrolled": "Inscrito hace {date}",
+        "renew": "Renovar Suscripción",
+        "review": "Repasar Curso",
+        "continue": "Continuar Aprendiendo",
+        "completed": "Completado",
+        "inProgress": "En Progreso",
+        "notStarted": "No Iniciado",
+        "expired": "Tu suscripción ha expirado. Renueva para continuar."
+      },
+      "courseFilters": {
+        "searchPlaceholder": "Buscar tus cursos...",
+        "allCourses": "Todos los Cursos",
+        "inProgress": "En Progreso",
+        "completed": "Completados",
+        "notStarted": "No Iniciados",
+        "sortBy": "Ordenar por",
+        "mostRecent": "Más Recientes",
+        "titleAZ": "Título (A-Z)",
+        "progress": "Progreso"
+      },
+      "browseCourse": {
+        "goCourse": "Ir al Curso",
+        "enrollNow": "Inscribirse",
+        "enrolling": "Inscribiendo...",
+        "subscribeAccess": "Suscribirse para Acceder",
+        "enrolled": "Inscrito"
+      },
+      "profileForm": {
+        "fullName": "Nombre Completo",
+        "username": "Usuario",
+        "website": "Sitio Web",
+        "bio": "Biografía",
+        "save": "Guardar Detalles",
+        "saving": "Guardando...",
+        "success": "¡Perfil actualizado con éxito!",
+        "error": "Error al actualizar perfil",
+        "placeholders": {
+          "fullName": "Tu nombre completo",
+          "username": "usuario_unico",
+          "website": "https://tusitio.com",
+          "bio": "Cuéntanos un poco sobre ti..."
+        }
+      },
+      "lessons": {
+        "lessonIndex": "Lección {count}",
+        "sidebarTitle": "Contenido del Curso",
+        "sidebarDescription": "Navega por las lecciones del curso",
+        "aiTutorTitle": "Sesión de Tutor de IA",
+        "aiTutorDescription": "Completa la tarea para terminar esta lección",
+        "currentTask": "Tarea Actual"
+      },
+      "lessonAIChat": {
+        "suggestions": {
+          "question": "Tengo una pregunta sobre la tarea",
+          "hint": "¿Puedes darme una pista?",
+          "understanding": "Verifica mi comprensión",
+          "summarize": "Resume lo que he aprendido"
+        },
+        "toast": {
+          "completed": "¡Lección Completada!",
+          "completedDetail": "¡Buen trabajo! Has completado la tarea con éxito.",
+          "restartSuccess": "Chat reiniciado con éxito",
+          "restartFailed": "Error al reiniciar el chat",
+          "restartError": "Error al reiniciar el chat"
+        },
+        "confirmRestart": "¿Estás seguro de que quieres reiniciar la conversación? Esto borrará tu historial de chat y restablecerá el estado de finalización.",
+        "successHeader": "¡Lección Completada!",
+        "successDescription": "¡Buen trabajo! Has completado esta tarea con éxito.",
+        "stats": {
+          "messages": "Mensajes Intercambiados",
+          "taskCompleted": "Tarea Completada"
+        },
+        "buttons": {
+          "restarting": "Reiniciando...",
+          "tryAgain": "Intentar de Nuevo"
+        },
+        "emptyState": {
+          "title": "Tutor de IA listo",
+          "description": "¡Estoy listo para revisar tu trabajo! Escribe tu respuesta a continuación según la descripción de la tarea."
+        },
+        "targetAchieved": "¡Objetivo Logrado!",
+        "generating": "Generando respuesta...",
+        "placeholders": {
+          "completed": "¡Lección completada! Reinicia para seguir practicando.",
+          "typeAnswer": "Escribe tu respuesta aquí..."
+        },
+        "tooltips": {
+          "restart": "Reiniciar Conversación"
+        }
+      },
+      "lessonSidebar": {
+        "backToCourse": "Volver al curso"
+      },
+      "lessonNavigation": {
+        "previous": "Anterior",
+        "backToCourse": "Volver al Curso",
+        "completed": "Completado",
+        "markAsComplete": "Marcar como Completado",
+        "done": "Hecho",
+        "complete": "Completar",
+        "next": "Siguiente",
+        "finishCourse": "Finalizar Curso"
+      },
+      "lessonComments": {
+        "title": "Comentarios ({count})",
+        "placeholder": "Comparte tus pensamientos o haz una pregunta...",
+        "post": "Publicar Comentario",
+        "posting": "Publicando...",
+        "loading": "Cargando comentarios...",
+        "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+        "unknown": "Desconocido",
+        "error": "Error al publicar el comentario. Por favor, inténtalo de nuevo."
+      },
+      "dashboardSummary": {
+        "yourProgress": "Tu Progreso",
+        "welcomeBack": "¡Bienvenido de nuevo, {userName}!",
+        "progressMessage": "¡Lo estás haciendo genial! Has completado {count} lecciones hasta ahora. Mantén el impulso.",
+        "courseCompletion": "Finalización del Curso",
+        "continueLearning": "Continuar Aprendiendo",
+        "dailyStreak": "Racha Diaria",
+        "daysCount": "{count} Días",
+        "topLearner": "\"¡Estás en el top 5% de los estudiantes esta semana!\"",
+        "achievements": "Logros",
+        "badgesCount": "{count} Insignias"
+      },
+      "manualPayment": {
+        "title": "Solicitar Información de Pago",
+        "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({symbol}{price})",
+        "fullName": "Nombre Completo",
+        "fullNamePlaceholder": "Juan Pérez",
+        "email": "Correo Electrónico",
+        "emailPlaceholder": "juan@ejemplo.com",
+        "phone": "Número de Teléfono (opcional)",
+        "phonePlaceholder": "+34 600 000 000",
+        "message": "Mensaje Adicional (opcional)",
+        "messagePlaceholder": "Cualquier pregunta o petición especial...",
+        "whatHappensNext": "¿Qué sucede después?",
+        "step1": "Te enviaremos las instrucciones de pago por correo electrónico",
+        "step2": "Elige tu método de pago preferido (transferencia bancaria, factura, etc.)",
+        "step3": "Una vez confirmado el pago, obtendrás acceso instantáneo",
+        "sending": "Enviando...",
+        "submit": "Solicitar Info de Pago",
+        "cancel": "Cancelar",
+        "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
+        "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo."
+      },
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Mantente al día con tus últimas notificaciones",
+        "tabs": {
+          "all": "Todas",
+          "unread": "No leídas",
+          "read": "Leídas"
+        },
+        "actions": {
+          "markAllAsRead": "Marcar todas como leídas"
+        },
+        "empty": {
+          "title": "Sin notificaciones",
+          "caughtUp": "¡Estás al día!",
+          "none": "No hay notificaciones para mostrar"
+        },
+        "toasts": {
+          "markAsReadSuccess": "Notificación marcada como leída",
+          "markAsReadError": "Error al marcar como leída",
+          "markAllAsReadSuccess": "Todas las notificaciones marcadas como leídas",
+          "markAllAsReadError": "Error al marcar todas como leídas",
+          "dismissSuccess": "Notificación descartada",
+          "dismissError": "Error al descartar la notificación",
+          "error": "Ha ocurrido un error"
+        },
+        "types": {
+          "announcement": "Anuncio",
+          "alert": "Alerta",
+          "info": "Información",
+          "success": "Éxito",
+          "warning": "Advertencia",
+          "error": "Error"
+        },
+        "priority": {
+          "low": "Baja",
+          "normal": "Normal",
+          "high": "Alta",
+          "urgent": "Urgente"
+        }
+      },
+      "activitySection": {
+        "title": "Continuar Aprendiendo",
+        "recentSessions": "{count} Sesiones Recientes",
+        "lastViewed": "Última vez visto el {date}",
+        "part": "Parte {sequence}",
+        "defaultDescription": "Continúa por donde lo dejaste en esta lección.",
+        "resume": "Reanudar Sesión"
+      },
+      "dashboardHeader": {
+        "searchPlaceholder": "Buscar cursos, exámenes o recursos...",
+        "profile": "Perfil",
+        "settings": "Configuración",
+        "logout": "Cerrar Sesión"
+      }
+    },
+    "courseDetails": {
+      "backToLearning": "Volver a Mi Aprendizaje",
+      "instructor": "Instructor:",
+      "unknownInstructor": "Instructor Desconocido",
+      "courseProgress": "Progreso del Curso",
+      "lessonsCount": "{count} LECCIONES",
+      "continue": "Continuar",
+      "startNow": "Comenzar",
+      "exercises": "Ejercicios ({count})",
+      "exams": "Exámenes ({count})",
+      "curriculum": "Plan de Estudios",
+      "mins": "{count} MIN",
+      "videoText": "VIDEO + TEXTO",
+      "completed": "COMPLETADO",
+      "study": "ESTUDIAR",
+      "noLessons": "No hay lecciones disponibles aún."
     }
-  },
-  "courseDetails": {
-    "backToLearning": "Volver a Mi Aprendizaje",
-    "instructor": "Instructor:",
-    "unknownInstructor": "Instructor Desconocido",
-    "courseProgress": "Progreso del Curso",
-    "lessonsCount": "{count} LECCIONES",
-    "continue": "Continuar",
-    "startNow": "Comenzar",
-    "exercises": "Ejercicios ({count})",
-    "exams": "Exámenes ({count})",
-    "curriculum": "Plan de Estudios",
-    "mins": "{count} MIN",
-    "videoText": "VIDEO + TEXTO",
-    "completed": "COMPLETADO",
-    "study": "ESTUDIAR",
-    "noLessons": "No hay lecciones disponibles aún."
   }
 }

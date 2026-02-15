@@ -2,24 +2,64 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { AuthManager } from "../auth.js";
 
-function textResult(text: string) {
-  return { content: [{ type: "text" as const, text }] };
+/**
+ * Common response format enum
+ */
+enum ResponseFormat {
+  MARKDOWN = "markdown",
+  JSON = "json",
+}
+
+/**
+ * Standard pagination schema
+ */
+const PaginationSchema = {
+  limit: z.number().int().min(1).max(100).default(20).describe("Maximum results to return"),
+  offset: z.number().int().min(0).default(0).describe("Number of results to skip for pagination"),
+  response_format: z
+    .nativeEnum(ResponseFormat)
+    .default(ResponseFormat.MARKDOWN)
+    .describe("Output format: 'markdown' for human-readable or 'json' for machine-readable"),
+};
+
+function errorResult(message: string) {
+  return {
+    content: [{ type: "text" as const, text: `Error: ${message}` }],
+    isError: true,
+  };
 }
 
 export function registerCourseTools(server: McpServer, auth: AuthManager) {
-  server.tool(
-    "list_courses",
-    "List courses owned by the authenticated teacher. Admins see all courses. Optionally filter by status.",
+  server.registerTool(
+    "lms_list_courses",
     {
-      status: z.enum(["draft", "published", "archived"]).optional().describe("Filter by course status"),
+      title: "List Courses",
+      description:
+        "List courses owned by the authenticated teacher. Admins see all courses. Supports filtering by status and pagination.",
+      inputSchema: z
+        .object({
+          ...PaginationSchema,
+          status: z.enum(["draft", "published", "archived"]).optional().describe("Filter by course status"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ status }) => {
+    async ({ status, limit, offset, response_format }) => {
       try {
         const supabase = auth.getClient();
         let query = supabase
           .from("courses")
-          .select("course_id, title, description, status, tags, created_at, updated_at, lessons(count), enrollments(count)")
-          .order("created_at", { ascending: false });
+          .select(
+            "course_id, title, description, status, tags, created_at, updated_at, lessons(count), enrollments(count)",
+            { count: "exact" }
+          )
+          .order("created_at", { ascending: false })
+          .range(offset, offset + limit - 1);
 
         if (!auth.isAdmin()) {
           query = query.eq("author_id", auth.getUserId());
@@ -28,30 +68,84 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           query = query.eq("status", status);
         }
 
-        const { data, error } = await query;
-        if (error) return textResult(`Error listing courses: ${error.message}`);
-        if (!data || data.length === 0) return textResult("No courses found.");
+        const { data, error, count } = await query;
+        if (error) return errorResult(`Listing courses: ${error.message}`);
+        if (!data || data.length === 0) {
+          return { content: [{ type: "text", text: "No courses found." }] };
+        }
 
-        const lines = data.map((c) => {
-          const lessonCount = (c.lessons as unknown as { count: number }[])?.[0]?.count ?? 0;
-          const enrollCount = (c.enrollments as unknown as { count: number }[])?.[0]?.count ?? 0;
-          return `- **${c.title}** (ID: ${c.course_id}) [${c.status}] — ${lessonCount} lessons, ${enrollCount} enrollments`;
-        });
+        const total = count || 0;
+        const output = {
+          total,
+          count: data.length,
+          offset,
+          has_more: total > offset + data.length,
+          next_offset: total > offset + data.length ? offset + data.length : undefined,
+          courses: data.map((c) => ({
+            id: c.course_id,
+            title: c.title,
+            description: c.description,
+            status: c.status,
+            tags: c.tags,
+            lesson_count: (c.lessons as any)?.[0]?.count ?? 0,
+            enrollment_count: (c.enrollments as any)?.[0]?.count ?? 0,
+            created_at: c.created_at,
+            updated_at: c.updated_at,
+          })),
+        };
 
-        return textResult(`Found ${data.length} course(s):\n\n${lines.join("\n")}`);
+        let textContent: string;
+        if (response_format === ResponseFormat.JSON) {
+          textContent = JSON.stringify(output, null, 2);
+        } else {
+          const lines = [
+            `# Course List (${status || "all"})`,
+            `Found ${total} course(s), showing ${data.length}`,
+            "",
+          ];
+          for (const c of output.courses) {
+            lines.push(
+              `- **${c.title}** (ID: ${c.id}) [${c.status}] — ${c.lesson_count} lessons, ${c.enrollment_count} enrollments`
+            );
+          }
+          if (output.has_more) {
+            lines.push("", `*More courses available. Use offset=${output.next_offset} to see more.*`);
+          }
+          textContent = lines.join("\n");
+        }
+
+        return {
+          content: [{ type: "text", text: textContent }],
+          structuredContent: output,
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.tool(
-    "get_course",
-    "Get detailed information about a course including its lessons, exams, and enrollment count.",
+  server.registerTool(
+    "lms_get_course",
     {
-      course_id: z.number().describe("The course ID"),
+      title: "Get Course Details",
+      description: "Get detailed information about a course including its lessons, exams, and enrollment count.",
+      inputSchema: z
+        .object({
+          course_id: z.number().describe("The course ID"),
+          response_format: z
+            .nativeEnum(ResponseFormat)
+            .default(ResponseFormat.MARKDOWN)
+            .describe("Output format"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ course_id }) => {
+    async ({ course_id, response_format }) => {
       try {
         await auth.verifyCourseOwnership(course_id);
         const supabase = auth.getClient();
@@ -68,53 +162,99 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .order("sequence", { referencedTable: "lessons" })
           .single();
 
-        if (error || !data) return textResult(`Course ${course_id} not found.`);
+        if (error || !data) return errorResult(`Course ${course_id} not found.`);
 
-        const enrollCount = (data.enrollments as unknown as { count: number }[])?.[0]?.count ?? 0;
+        const enrollCount = (data.enrollments as any)?.[0]?.count ?? 0;
+        const lessons = (data.lessons as any[]) || [];
+        const exams = (data.exams as any[]) || [];
 
-        let result = `# ${data.title} (ID: ${data.course_id})\n\n`;
-        result += `**Status:** ${data.status}\n`;
-        result += `**Description:** ${data.description ?? "None"}\n`;
-        result += `**Tags:** ${data.tags ?? "None"}\n`;
-        result += `**Enrollments:** ${enrollCount}\n`;
-        result += `**Created:** ${data.created_at}\n\n`;
+        const output = {
+          course: {
+            id: data.course_id,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            tags: data.tags,
+            enrollment_count: enrollCount,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+          },
+          lessons: lessons.map((l) => ({
+            id: l.id,
+            title: l.title,
+            sequence: l.sequence,
+            status: l.status,
+          })),
+          exams: exams.map((e) => ({
+            id: e.exam_id,
+            title: e.title,
+            date: e.exam_date,
+            duration: e.duration,
+            status: e.status,
+          })),
+        };
 
-        const lessons = data.lessons as unknown as { id: number; title: string; sequence: number; status: string }[];
-        if (lessons?.length > 0) {
-          result += `## Lessons (${lessons.length})\n\n`;
-          for (const l of lessons) {
-            result += `${l.sequence}. **${l.title}** (ID: ${l.id}) [${l.status}]\n`;
-          }
-          result += "\n";
+        let textContent: string;
+        if (response_format === ResponseFormat.JSON) {
+          textContent = JSON.stringify(output, null, 2);
         } else {
-          result += "## Lessons\nNo lessons yet.\n\n";
+          let result = `# ${data.title} (ID: ${data.course_id})\n\n`;
+          result += `**Status:** ${data.status}\n`;
+          result += `**Description:** ${data.description ?? "None"}\n`;
+          result += `**Tags:** ${data.tags ?? "None"}\n`;
+          result += `**Enrollments:** ${enrollCount}\n`;
+          result += `**Created:** ${data.created_at}\n\n`;
+
+          if (lessons.length > 0) {
+            result += `## Lessons (${lessons.length})\n\n`;
+            for (const l of output.lessons) {
+              result += `${l.sequence}. **${l.title}** (ID: ${l.id}) [${l.status}]\n`;
+            }
+            result += "\n";
+          } else {
+            result += "## Lessons\nNo lessons yet.\n\n";
+          }
+
+          if (exams.length > 0) {
+            result += `## Exams (${exams.length})\n\n`;
+            for (const e of output.exams) {
+              result += `- **${e.title}** (ID: ${e.id}) [${e.status}] — ${e.duration} min, date: ${e.date ?? "TBD"}\n`;
+            }
+          } else {
+            result += "## Exams\nNo exams yet.\n";
+          }
+          textContent = result;
         }
 
-        const exams = data.exams as unknown as { exam_id: number; title: string; exam_date: string; duration: number; status: string }[];
-        if (exams?.length > 0) {
-          result += `## Exams (${exams.length})\n\n`;
-          for (const e of exams) {
-            result += `- **${e.title}** (ID: ${e.exam_id}) [${e.status}] — ${e.duration} min, date: ${e.exam_date ?? "TBD"}\n`;
-          }
-        } else {
-          result += "## Exams\nNo exams yet.\n";
-        }
-
-        return textResult(result);
+        return {
+          content: [{ type: "text", text: textContent }],
+          structuredContent: output,
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.tool(
-    "create_course",
-    "Create a new course in draft status. The authenticated user becomes the author.",
+  server.registerTool(
+    "lms_create_course",
     {
-      title: z.string().describe("Course title"),
-      description: z.string().optional().describe("Course description"),
-      tags: z.string().optional().describe("Comma-separated tags"),
-      category_id: z.number().optional().describe("Category ID"),
+      title: "Create Course",
+      description: "Create a new course in draft status. The authenticated user becomes the author.",
+      inputSchema: z
+        .object({
+          title: z.string().min(1).describe("Course title"),
+          description: z.string().optional().describe("Course description"),
+          tags: z.string().optional().describe("Comma-separated tags"),
+          category_id: z.number().optional().describe("Category ID"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
     },
     async ({ title, description, tags, category_id }) => {
       try {
@@ -132,26 +272,49 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return textResult(`Error creating course: ${error.message}`);
+        if (error) return errorResult(`Creating course: ${error.message}`);
 
-        return textResult(
-          `Course created successfully!\n\n- **${data.title}** (ID: ${data.course_id}) [${data.status}]\n\nNext steps: Add lessons with \`create_lesson\` and exams with \`create_exam\`.`
-        );
+        const output = {
+          id: data.course_id,
+          title: data.title,
+          status: data.status,
+        };
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Course created successfully!\n\n- **${data.title}** (ID: ${data.course_id}) [${data.status}]\n\nNext steps: Add lessons with \`lms_create_lesson\` and exams with \`lms_create_exam\`.`,
+            },
+          ],
+          structuredContent: output,
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.tool(
-    "update_course",
-    "Update course fields (title, description, tags, status).",
+  server.registerTool(
+    "lms_update_course",
     {
-      course_id: z.number().describe("The course ID"),
-      title: z.string().optional().describe("New title"),
-      description: z.string().optional().describe("New description"),
-      tags: z.string().optional().describe("New tags (comma-separated)"),
-      status: z.enum(["draft", "published", "archived"]).optional().describe("New status"),
+      title: "Update Course",
+      description: "Update course metadata such as title, description, tags, or status.",
+      inputSchema: z
+        .object({
+          course_id: z.number().describe("The course ID"),
+          title: z.string().optional().describe("New title"),
+          description: z.string().optional().describe("New description"),
+          tags: z.string().optional().describe("New tags (comma-separated)"),
+          status: z.enum(["draft", "published", "archived"]).optional().describe("New status"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ course_id, title, description, tags, status }) => {
       try {
@@ -164,7 +327,9 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
         if (tags !== undefined) updateData.tags = tags ? tags.split(",").map((t) => t.trim()) : null;
         if (status !== undefined) updateData.status = status;
 
-        if (Object.keys(updateData).length === 0) return textResult("No fields to update.");
+        if (Object.keys(updateData).length === 0) {
+          return { content: [{ type: "text", text: "No fields to update." }] };
+        }
 
         const { data, error } = await supabase
           .from("courses")
@@ -173,19 +338,39 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return textResult(`Error updating course: ${error.message}`);
-        return textResult(`Course updated: **${data.title}** (ID: ${data.course_id}) [${data.status}]`);
+        if (error) return errorResult(`Updating course: ${error.message}`);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Course updated: **${data.title}** (ID: ${data.course_id}) [${data.status}]`,
+            },
+          ],
+          structuredContent: {
+            id: data.course_id,
+            title: data.title,
+            status: data.status,
+          },
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.tool(
-    "publish_course",
-    "Publish a course. Requires at least one published lesson. Sets status to 'published'.",
+  server.registerTool(
+    "lms_publish_course",
     {
-      course_id: z.number().describe("The course ID to publish"),
+      title: "Publish Course",
+      description: "Make a course live. Requires at least one published lesson.",
+      inputSchema: z.object({ course_id: z.number().describe("The course ID to publish") }).strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ course_id }) => {
       try {
@@ -199,9 +384,9 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .eq("status", "published")
           .limit(1);
 
-        if (lessonError) return textResult(`Error checking lessons: ${lessonError.message}`);
+        if (lessonError) return errorResult(`Checking lessons: ${lessonError.message}`);
         if (!lessons || lessons.length === 0) {
-          return textResult("Cannot publish: course needs at least one published lesson. Use `publish_lesson` first.");
+          return errorResult("Cannot publish: course needs at least one published lesson. Use `lms_publish_lesson` first.");
         }
 
         const { data, error } = await supabase
@@ -211,19 +396,38 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return textResult(`Error publishing course: ${error.message}`);
-        return textResult(`Course published! **${data.title}** (ID: ${data.course_id}) is now live.`);
+        if (error) return errorResult(`Publishing course: ${error.message}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Course published! **${data.title}** (ID: ${data.course_id}) is now live.`,
+            },
+          ],
+          structuredContent: {
+            id: data.course_id,
+            title: data.title,
+            status: data.status,
+          },
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.tool(
-    "archive_course",
-    "Archive a course. Sets status to 'archived'. Existing enrollments are preserved.",
+  server.registerTool(
+    "lms_archive_course",
     {
-      course_id: z.number().describe("The course ID to archive"),
+      title: "Archive Course",
+      description: "Archive a course. Sets status to 'archived'. Existing enrollments are preserved.",
+      inputSchema: z.object({ course_id: z.number().describe("The course ID to archive") }).strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ course_id }) => {
       try {
@@ -237,10 +441,22 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return textResult(`Error archiving course: ${error.message}`);
-        return textResult(`Course archived: **${data.title}** (ID: ${data.course_id})`);
+        if (error) return errorResult(`Archiving course: ${error.message}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Course archived: **${data.title}** (ID: ${data.course_id})`,
+            },
+          ],
+          structuredContent: {
+            id: data.course_id,
+            title: data.title,
+            status: data.status,
+          },
+        };
       } catch (err) {
-        return textResult(`Error: ${err instanceof Error ? err.message : err}`);
+        return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );

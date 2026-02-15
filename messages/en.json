@@ -18,18 +18,65 @@
     "browseCourses": "Browse Courses"
   },
   "auth": {
-    "login": "Login",
-    "signup": "Sign Up",
+    "login": {
+      "title": "Login",
+      "description": "Enter your email below to login to your account",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Login",
+      "submitting": "Logging in...",
+      "noAccount": "Don't have an account?",
+      "signup": "Sign up"
+    },
+    "signup": {
+      "title": "Sign up",
+      "description": "Create a new account",
+      "email": "Email",
+      "password": "Password",
+      "repeatPassword": "Repeat Password",
+      "submit": "Sign up",
+      "submitting": "Creating an account...",
+      "haveAccount": "Already have an account?",
+      "login": "Login",
+      "errors": {
+        "passwordsDontMatch": "Passwords do not match"
+      }
+    },
+    "forgotPassword": {
+      "title": "Reset Your Password",
+      "description": "Type in your email and we'll send you a link to reset your password",
+      "email": "Email",
+      "submit": "Send reset email",
+      "submitting": "Sending...",
+      "backToLogin": "Back to login",
+      "success": {
+        "title": "Check Your Email",
+        "description": "Password reset instructions sent",
+        "info": "If you registered using your email and password, you will receive a password reset email."
+      }
+    },
+    "updatePassword": {
+      "title": "Reset Your Password",
+      "description": "Please enter your new password below.",
+      "password": "New password",
+      "submit": "Save new password",
+      "submitting": "Saving..."
+    },
+    "error": {
+      "title": "Sorry, something went wrong.",
+      "code": "Code error: {error}",
+      "generic": "An unspecified error occurred."
+    },
+    "signupSuccess": {
+      "title": "Thank you for signing up!",
+      "description": "Check your email to confirm",
+      "body": "You've successfully signed up. Please check your email to confirm your account before signing in."
+    },
     "logout": "Logout",
-    "email": "Email",
-    "password": "Password",
-    "forgotPassword": "Forgot Password?",
-    "resetPassword": "Reset Password",
-    "dontHaveAccount": "Don't have an account?",
-    "alreadyHaveAccount": "Already have an account?",
-    "enterEmail": "Enter your email below to login to your account",
-    "confirmEmail": "Please confirm your email address",
-    "emailPlaceholder": "m@example.com"
+    "common": {
+      "error": "An error occurred"
+    }
   },
   "dashboard": {
     "student": {
@@ -100,28 +147,1251 @@
       }
     },
     "teacher": {
-      "title": "My Courses",
-      "welcome": "Create and manage your educational content",
-      "createCourse": "Create Course",
-      "totalCourses": "Total Courses",
-      "totalStudents": "Total Students",
-      "pendingReviews": "Pending Reviews",
-      "noCourses": "You haven't created any courses yet."
+      "title": "Instructor Dashboard",
+      "welcome": "Welcome back, {userName}!",
+      "subtitle": "Here's what's happening with your courses and students today.",
+      "createCourse": "Create New Course",
+      "promptTemplates": "Prompt Templates",
+      "stats": {
+        "totalCourses": "Total Courses",
+        "totalLessons": "{count} total lessons",
+        "activeStudents": "Active Students",
+        "acrossPublished": "Across all published courses",
+        "submissions": "Submissions",
+        "totalExams": "Total exams submitted",
+        "quickActions": "Quick Actions",
+        "platformActivity": "Platform activity: Active"
+      },
+      "courses": {
+        "title": "Your Courses",
+        "description": "Manage, edit and track performance for all your educational content.",
+        "viewAll": "View all",
+        "lessonsCount": "{count} lessons",
+        "noCourses": "No courses created yet.",
+        "createFirst": "Create your first course",
+        "searchPlaceholder": "Search courses...",
+        "filter": "Filter",
+        "grid": "Grid View",
+        "list": "List View",
+        "students": "Students",
+        "lessons": "Lessons",
+        "exams": "Exams",
+        "edit": "Edit",
+        "preview": "Preview",
+        "noCoursesFound": "No courses found",
+        "noCoursesDesc": "You haven't created any courses yet. Start your teaching journey today!",
+        "createFirstBtn": "Create Your First Course"
+      },
+      "manageCourse": {
+        "notFound": "Course Not Found",
+        "notFoundDesc": "The course with ID {courseId} could not be found or you don't have permission to view it.",
+        "backToCourses": "Back to My Courses",
+        "accessDenied": "Access Denied",
+        "notAuthor": "You are not the author of this course.",
+        "enrolledCount": "{count} {count, plural, one {student} other {students}} enrolled",
+        "settings": "Settings",
+        "tabs": {
+          "lessons": "Lessons",
+          "exercises": "Exercises",
+          "exams": "Exams",
+          "students": "Students"
+        },
+        "curriculum": {
+          "title": "Curriculum",
+          "description": "Manage your course lessons and content.",
+          "addLesson": "Add Lesson",
+          "noLessons": "No lessons found for this course.",
+          "createFirst": "Create First Lesson"
+        },
+        "practice": {
+          "title": "Practice Exercises",
+          "description": "Interactive tasks and challenges for students.",
+          "addExercise": "Add Exercise",
+          "noExercises": "No exercises created yet.",
+          "createFirst": "Create First Exercise",
+          "noDescription": "No description provided.",
+          "edit": "Edit"
+        },
+        "assessments": {
+          "title": "Assessments",
+          "description": "Formal tests and quizzes for grading.",
+          "addExam": "Add Exam",
+          "noExams": "No exams found for this course.",
+          "createFirst": "Create First Exam",
+          "submissions": "Submissions"
+        },
+        "studentList": {
+          "title": "Enrolled Students",
+          "description": "View and manage students enrolled in this course.",
+          "table": {
+            "student": "Student",
+            "date": "Enrollment Date",
+            "status": "Status",
+            "actions": "Actions"
+          },
+          "noStudents": "No students enrolled in this course yet.",
+          "viewProgress": "View Progress",
+          "unknownStudent": "Unknown Student"
+        }
+      },
+      "newCourse": {
+        "title": "Create New Course",
+        "description": "Fill in the basic information about your course"
+      },
+      "courseForm": {
+        "details": "Course Details",
+        "saveError": "Failed to save course",
+        "titleLabel": "Course Title",
+        "titlePlaceholder": "Introduction to Web Development",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what students will learn in this course...",
+        "thumbnailLabel": "Thumbnail URL",
+        "thumbnailPlaceholder": "https://example.com/image.jpg",
+        "thumbnailHint": "Provide a URL to an image (16:9 aspect ratio recommended)",
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select a category",
+        "statusLabel": "Status",
+        "statusPlaceholder": "Select status",
+        "statusHints": {
+          "draft": "Only you can see this course.",
+          "published": "Course is visible to students and ready for enrollment.",
+          "archived": "Course is hidden from catalog but existing students retain access."
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "update": "Update Course",
+          "create": "Create Course"
+        }
+      },
+      "examBuilder": {
+        "editTitle": "Edit Exam",
+        "createTitle": "Create New Exam",
+        "backToCourse": "Back to {course}",
+        "details": "Exam Details",
+        "titleLabel": "Exam Title",
+        "titlePlaceholder": "Midterm Exam",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "What topics does this exam cover?",
+        "durationLabel": "Duration (minutes)",
+        "durationPlaceholder": "60",
+        "durationHint": "Leave blank for no time limit",
+        "sequenceLabel": "Exam Order",
+        "questionsTitle": "Questions",
+        "addMultipleChoice": "Multiple Choice",
+        "addTrueFalse": "True/False",
+        "addFreeText": "Free Text",
+        "noQuestions": "No questions added yet",
+        "noQuestionsDesc": "Click one of the buttons above to add a question",
+        "questionLabel": "Question {index}",
+        "typeMultipleChoice": "Multiple Choice",
+        "typeTrueFalse": "True/False",
+        "typeFreeText": "Free Text (AI Graded)",
+        "questionTextLabel": "Question Text",
+        "questionTextPlaceholder": "Enter your question here...",
+        "pointsLabel": "Points",
+        "pointsPlaceholder": "10",
+        "answerOptionsLabel": "Answer Options",
+        "optionPlaceholder": "Option {index}",
+        "correctLabel": "Correct",
+        "addOption": "Add Option",
+        "trueFalseHint": "Students will choose between True and False",
+        "aiGradingNotice": "This question will be graded automatically by AI. Configure grading criteria below.",
+        "gradingRubricLabel": "Grading Rubric (Optional)",
+        "gradingRubricPlaceholder": "Describe what makes a complete answer...",
+        "gradingRubricHint": "General guidelines for grading this answer",
+        "aiGradingCriteriaLabel": "AI Grading Criteria (Optional)",
+        "aiGradingCriteriaPlaceholder": "Check for specific concepts or reasoning...",
+        "aiGradingCriteriaHint": "Specific criteria for AI to evaluate",
+        "expectedKeywordsLabel": "Expected Keywords (Optional)",
+        "expectedKeywordsPlaceholder": "keyword1, keyword2, keyword3",
+        "expectedKeywordsHint": "Comma-separated list of key terms expected in the answer",
+        "saveDraft": "Save as Draft",
+        "publishExam": "Publish Exam"
+      },
+      "lessonEditor": {
+        "editTitle": "Edit Lesson",
+        "createTitle": "Create New Lesson",
+        "details": "Lesson Details",
+        "titleLabel": "Lesson Title",
+        "titlePlaceholder": "Introduction to Variables",
+        "descriptionLabel": "Short Description",
+        "descriptionPlaceholder": "Brief overview of what this lesson covers",
+        "videoUrlLabel": "Video URL (YouTube)",
+        "videoUrlPlaceholder": "https://www.youtube.com/watch?v=...",
+        "videoUrlHint": "Optional: Add a YouTube video to this lesson",
+        "sequenceLabel": "Lesson Order",
+        "sequenceHint": "The order in which this lesson appears in the course",
+        "aiTaskTitle": "AI Task Configuration",
+        "aiTaskPromptLabel": "Task Prompt (for Students)",
+        "aiTaskPromptPlaceholder": "e.g. Present yourself in English",
+        "aiTaskPromptHint": "This is the task challenge that will be presented to the student to solve using the chatbot.",
+        "aiGradingInsLabel": "AI Grading Instructions (Hidden)",
+        "aiGradingInsPlaceholder": "e.g. Ensure the user uses correct grammar...",
+        "aiGradingInsHint": "Specific instructions for the AI on how to evaluate if the task is completed correctly.",
+        "contentLabel": "Lesson Content (Markdown)",
+        "contentPlaceholder": "# Lesson Content...",
+        "contentHint": "Use Markdown to format your content. Supports headings, lists, links, images, code blocks, and more.",
+        "saveDraft": "Save as Draft",
+        "publishLesson": "Publish Lesson",
+        "previewTitle": "Preview",
+        "previewWriting": "Start writing to see a preview..."
+      },
+      "exerciseBuilder": {
+        "details": "Exercise Details",
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g. Introduction to React Hooks",
+        "typeLabel": "Exercise Type",
+        "typeEssay": "Essay",
+        "typeCoding": "Coding Challenge",
+        "typeQuiz": "Quiz",
+        "typeDiscussion": "Discussion",
+        "difficultyLabel": "Difficulty",
+        "difficultyEasy": "Easy",
+        "difficultyMedium": "Medium",
+        "difficultyHard": "Hard",
+        "timeLimitLabel": "Time Limit (min)",
+        "statusLabel": "Status",
+        "aiConfigTitle": "AI Configuration",
+        "aiConfigDesc": "Setup prompts and evaluation rules",
+        "studentInsLabel": "Student Instructions",
+        "studentInsPlaceholder": "What the student needs to do...",
+        "studentInsHint": "Use templates to quickly fill these fields with proven prompts.",
+        "aiSystemPromptLabel": "AI System Prompt",
+        "aiSystemPromptPlaceholder": "Define how the AI should behave and grade...",
+        "updateExercise": "Update Exercise",
+        "createExercise": "Create Exercise"
+      },
+      "submissionReview": {
+        "title": "Review Submission",
+        "studentLabel": "Student",
+        "submittedAt": "Submitted {date}",
+        "gradedBy": "Graded by {model}",
+        "overallScore": "Overall Score",
+        "pointsSummary": "{earned}/{possible} points · Score auto-calculates from question scores below",
+        "overallFeedbackLabel": "Overall Feedback (visible to student)",
+        "overallFeedbackPlaceholder": "Provide overall feedback on the student's performance...",
+        "teacherNotesLabel": "Teacher Notes (private, not shown to student)",
+        "teacherNotesPlaceholder": "Internal notes...",
+        "questionsTitle": "Questions",
+        "questionStatus": {
+          "needsGrading": "Needs Grading",
+          "overridden": "Overridden",
+          "selected": "Selected",
+          "correct": "Correct"
+        },
+        "studentAnswer": "Student Answer",
+        "noAnswer": "No answer provided",
+        "gradingCriteria": "Grading criteria",
+        "expectedKeywords": "Expected keywords",
+        "aiFeedback": "AI Feedback",
+        "confidence": "{value}% confidence",
+        "teacherOverride": "Teacher Override",
+        "pointsEarnedLabel": "Points Earned",
+        "markAsLabel": "Mark as:",
+        "markCorrect": "Correct",
+        "markIncorrect": "Incorrect",
+        "overrideBtn": "Override",
+        "gradeBtn": "Grade",
+        "doneBtn": "Done",
+        "saveBtn": "Save & Finalize Review"
+      },
+      "examSubmissionsReview": {
+        "title": "Exam Submissions",
+        "description": "Review and grade student submissions for this exam.",
+        "stats": {
+          "total": "Total Submissions",
+          "pending": "Pending AI",
+          "aiReviewed": "AI Reviewed",
+          "graded": "Graded"
+        },
+        "tabs": {
+          "all": "All",
+          "pending": "Pending AI",
+          "aiReviewed": "AI Reviewed",
+          "graded": "Graded"
+        },
+        "status": {
+          "pending": "Pending AI",
+          "aiReviewed": "AI Reviewed",
+          "graded": "Graded",
+          "needsAttention": "Needs Attention"
+        },
+        "table": {
+          "student": "Student",
+          "status": "Status",
+          "aiScore": "AI Score",
+          "finalScore": "Final Score",
+          "submitted": "Submitted",
+          "noSubmissions": "No submissions found",
+          "unknownStudent": "Unknown Student",
+          "reviewButton": "Review"
+        }
+      },
+      "examSubmissions": {
+        "title": "Submissions",
+        "description": "Review and grade student exam submissions ({count} total)",
+        "needAttention": "{count} need attention",
+        "table": {
+          "student": "Student",
+          "score": "Score",
+          "status": "Status",
+          "submitted": "Submitted",
+          "actions": "Actions"
+        },
+        "noSubmissions": "No submissions in this category",
+        "tabs": {
+          "all": "All",
+          "pending": "Pending",
+          "ai": "AI Reviewed",
+          "teacher": "Teacher Reviewed",
+          "attention": "Needs Attention"
+        },
+        "attentionAlert": "These submissions have been flagged for review due to low AI confidence scores or pending teacher evaluation."
+      },
+      "activity": {
+        "title": "Recent Activity",
+        "description": "Latest enrollments and submissions.",
+        "enrolledIn": "{userName} enrolled in {courseTitle}",
+        "at": "at",
+        "noActivity": "No recent activity found.",
+        "growthTip": "Growth Tip",
+        "growthTipDesc": "Courses with AI-assisted exercises have 45% higher completion rates. Try adding tasks to your lessons!"
+      }
     },
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
-      "totalUsers": "Total Users",
-      "totalCourses": "Total Courses",
-      "activeEnrollments": "Active Enrollments",
-      "totalRevenue": "Total Revenue",
-      "quickActions": "Quick Actions",
-      "manageUsers": "Manage Users",
-      "manageCourses": "Manage Courses",
-      "viewTransactions": "View Transactions",
-      "viewEnrollments": "View Enrollments",
-      "recentUsers": "Recent Users",
-      "recentTransactions": "Recent Transactions"
+      "main": {
+        "stats": {
+          "totalUsers": "Total Users",
+          "activeSubscriptions": "Active Subscriptions",
+          "monthly": "Monthly recurring",
+          "totalCourses": "Total Courses",
+          "published": "{count} published",
+          "pendingPayments": "Pending Payments",
+          "awaiting": "Awaiting action",
+          "totalRevenue": "Total Revenue",
+          "transactions": "{count} transactions"
+        },
+        "quickActions": {
+          "title": "Quick Actions",
+          "analytics": "Analytics",
+          "manageUsers": "Manage Users",
+          "manageCourses": "Manage Courses",
+          "subscriptions": "Subscriptions",
+          "paymentRequests": "Payment Requests",
+          "viewTransactions": "View Transactions",
+          "viewEnrollments": "View Enrollments",
+          "settings": "Settings"
+        },
+        "recentActivity": {
+          "users": "Recent Users",
+          "transactions": "Recent Transactions",
+          "viewAll": "View All",
+          "unknown": "Unknown",
+          "noUsers": "No recent users found",
+          "noTransactions": "No recent transactions found",
+          "status": {
+            "successful": "Successful",
+            "pending": "Pending",
+            "failed": "Failed"
+          }
+        }
+      },
+      "users": {
+        "title": "User Management",
+        "description": "View and manage all platform users",
+        "backToDashboard": "Back to Dashboard",
+        "searchPlaceholder": "Search by name, email, or ID...",
+        "stats": {
+          "totalUsers": "Total Users",
+          "teachers": "Teachers",
+          "students": "Students"
+        },
+        "table": {
+          "title": "All Users",
+          "noUsers": "No users found",
+          "headers": {
+            "user": "User",
+            "email": "Email",
+            "roles": "Roles",
+            "enrollments": "Enrollments",
+            "status": "Status",
+            "joined": "Joined",
+            "actions": "Actions"
+          },
+          "roles": {
+            "admin": "Admin",
+            "teacher": "Teacher",
+            "student": "Student",
+            "noRoles": "No roles"
+          },
+          "status": {
+            "active": "Active",
+            "deactivated": "Deactivated",
+            "completed": "Completed",
+            "successful": "Successful",
+            "pending": "Pending",
+            "failed": "Failed"
+          },
+          "actions": {
+            "roles": "Roles",
+            "view": "View"
+          }
+        },
+        "details": {
+          "back": "Back to Users",
+          "unknown": "Unknown User",
+          "profile": "Profile Information",
+          "email": "Email",
+          "joined": "Joined",
+          "userId": "User ID",
+          "bio": "Bio",
+          "roles": "Roles",
+          "rolesPlaceholder": "No roles assigned",
+          "status": "Account Status",
+          "statusActive": "Active",
+          "statusActiveDesc": "Account is active and in good standing",
+          "statusDeactivated": "Deactivated",
+          "statusDeactivatedDesc": "Deactivated on {date}",
+          "enrollments": "Enrollments ({count})",
+          "enrolled": "Enrolled {date}",
+          "noEnrollments": "No enrollments yet",
+          "recentActivity": "Recent Activity",
+          "completed": "Completed: {title}",
+          "noActivity": "No recent activity",
+          "recentTransactions": "Recent Transactions",
+          "noTransactions": "No transactions yet"
+        },
+        "actions": {
+          "manageRoles": "Manage Roles",
+          "deactivate": "Deactivate User",
+          "reactivate": "Reactivate User",
+          "toasts": {
+            "deactivateSuccess": "{name} has been deactivated",
+            "deactivateError": "Failed to deactivate user",
+            "reactivateSuccess": "{name} has been reactivated",
+            "reactivateError": "Failed to reactivate user",
+            "rolesSuccess": "Roles updated for {name}",
+            "rolesError": "Failed to update roles"
+          },
+          "dialogs": {
+            "deactivate": {
+              "title": "Deactivate User",
+              "description": "Are you sure you want to deactivate {name}? They will no longer be able to access the platform.",
+              "confirm": "Deactivate"
+            },
+            "reactivate": {
+              "title": "Reactivate User",
+              "description": "Are you sure you want to reactivate {name}? They will regain access to the platform.",
+              "confirm": "Reactivate"
+            },
+            "roles": {
+              "title": "Manage Roles",
+              "description": "Update roles for {name}. Users can have multiple roles.",
+              "admin": {
+                "label": "Admin",
+                "description": "Full system access"
+              },
+              "teacher": {
+                "label": "Teacher",
+                "description": "Can create and manage courses"
+              },
+              "student": {
+                "label": "Student",
+                "description": "Can enroll in and complete courses"
+              },
+              "save": "Save Changes",
+              "saving": "Saving..."
+            },
+            "cancel": "Cancel"
+          }
+        }
+      },
+      "paymentRequests": {
+        "title": "Payment Requests",
+        "description": "Manage manual payment requests from students",
+        "stats": {
+          "pending": "Pending",
+          "pendingDesc": "Awaiting your response",
+          "contacted": "Contacted",
+          "contactedDesc": "Instructions sent",
+          "received": "Payment Received",
+          "receivedDesc": "Ready to enroll",
+          "completed": "Completed",
+          "completedTotal": "{amount} total"
+        },
+        "tabs": {
+          "all": "All ({count})",
+          "pending": "Pending ({count})",
+          "contacted": "Contacted ({count})",
+          "received": "Received ({count})",
+          "completed": "Completed ({count})"
+        },
+        "table": {
+          "headers": {
+            "student": "Student",
+            "product": "Product",
+            "amount": "Amount",
+            "date": "Date",
+            "status": "Status",
+            "actions": "Actions"
+          },
+          "noRequests": "No payment requests found",
+          "review": "Review",
+          "manage": "Manage",
+          "id": "Request ID",
+          "invoice": "Invoice"
+        },
+        "status": {
+          "pending": "Pending",
+          "contacted": "Contacted",
+          "payment_received": "Payment Received",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "dialog": {
+          "title": "Payment Request #{id}",
+          "description": "Manage payment request from {name}",
+          "details": {
+            "title": "Request Details",
+            "student": "Student",
+            "email": "Email",
+            "phone": "Phone",
+            "notProvided": "Not provided",
+            "product": "Product",
+            "amount": "Amount",
+            "date": "Request Date",
+            "invoice": "Invoice",
+            "messageTitle": "Student Message"
+          },
+          "form": {
+            "status": "Status",
+            "method": "Payment Method",
+            "methodPlaceholder": "e.g., Bank Transfer, Wire, Cash",
+            "instructions": "Payment Instructions",
+            "instructionsPlaceholder": "Enter payment instructions to send to the student...",
+            "instructionsDesc": "Include bank details, wire instructions, or payment address",
+            "internalNotes": "Internal Notes",
+            "internalNotesPlaceholder": "Internal notes (not visible to student)...",
+            "updateButton": "Update Request",
+            "updatingButton": "Updating...",
+            "cancel": "Cancel"
+          },
+          "actions": {
+            "title": "Quick Actions",
+            "generateInvoice": "Generate Invoice",
+            "confirmEnroll": "Confirm Payment & Enroll Student",
+            "markContacted": "Mark as Contacted"
+          },
+          "toasts": {
+            "updateSuccess": "Payment request updated successfully",
+            "updateError": "Failed to update request",
+            "enrollSuccess": "Student enrolled successfully!",
+            "enrollError": "Failed to enroll student",
+            "invoiceSuccess": "Invoice {number} generated!",
+            "invoiceError": "Failed to generate invoice",
+            "contactedSuccess": "Marked as contacted"
+          },
+          "confirmations": {
+            "enroll": "Are you sure you want to enroll this student? This will grant them access to the courses."
+          }
+        }
+      },
+      "analytics": {
+        "title": "Analytics & Reports",
+        "description": "Platform performance and engagement insights",
+        "export": "Export",
+        "exportOptions": {
+          "all": "Export All Data",
+          "summary": "Export Summary",
+          "revenue": "Export Revenue Data",
+          "userGrowth": "Export User Growth",
+          "coursePopularity": "Export Course Popularity"
+        },
+        "periods": {
+          "7days": "7 Days",
+          "30days": "30 Days",
+          "90days": "90 Days",
+          "1year": "1 Year"
+        },
+        "periodLabels": {
+          "last7days": "last 7 days",
+          "last30days": "last 30 days",
+          "last90days": "last 90 days",
+          "lastYear": "last year",
+          "generic": "last {days} days"
+        },
+        "revenue": {
+          "title": "Revenue Over Time",
+          "description": "Revenue trends for the {period}",
+          "total": "Total Revenue",
+          "avg": "Avg: ${amount}/day",
+          "noData": "No revenue data available",
+          "tooltip": "Revenue"
+        },
+        "userGrowth": {
+          "title": "User Growth",
+          "description": "User registration trends for the {period}",
+          "total": "Total Users",
+          "newInPeriod": "+{count} new in period",
+          "noData": "No user growth data available",
+          "newUsersTooltip": "New Users",
+          "totalUsersTooltip": "Total Users"
+        },
+        "engagement": {
+          "title": "Engagement Metrics",
+          "description": "Platform engagement and activity statistics",
+          "completionRate": "Average Course Completion Rate",
+          "completionRateDesc": "Based on lesson completions across all enrolled courses",
+          "metrics": {
+            "enrollments": "Total Enrollments",
+            "activeStudents": "Active Students",
+            "activePeriod": "Last 30 days",
+            "lessonCompletions": "Lesson Completions",
+            "examSubmissions": "Exam Submissions"
+          }
+        },
+        "coursePopularity": {
+          "title": "Most Popular Courses",
+          "description": "Top courses by enrollment count",
+          "viewAll": "View All Courses",
+          "detailsTitle": "Course Details",
+          "noData": "No course data available",
+          "enrollmentsTooltip": "Enrollments",
+          "enrollmentsCount": "{count} enrollments",
+          "completionLabel": "completion"
+        }
+      },
+      "categories": {
+        "title": "Course Categories",
+        "description": "Manage course categories and organization",
+        "stats": {
+          "total": "Total Categories"
+        },
+        "table": {
+          "title": "All Categories",
+          "addCategory": "Add Category",
+          "headers": {
+            "name": "Name",
+            "description": "Description",
+            "courses": "Courses",
+            "actions": "Actions"
+          },
+          "noDescription": "No description",
+          "courseCount": "{count} {count, plural, one {course} other {courses}}",
+          "actions": {
+            "edit": "Edit",
+            "delete": "Delete"
+          },
+          "empty": "No categories found. Create your first category to get started."
+        },
+        "dialogs": {
+          "delete": {
+            "title": "Delete Category",
+            "confirm": "Delete",
+            "description": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+            "cannotDelete": "Cannot delete \"{name}\" because {count} {count, plural, one {course is} other {courses are}} using it. Please reassign or delete those courses first."
+          }
+        }
+      },
+      "courses": {
+        "title": "Course Management",
+        "description": "View and manage all platform courses",
+        "stats": {
+          "total": "Total Courses",
+          "published": "Published",
+          "drafts": "Drafts"
+        },
+        "table": {
+          "title": "All Courses",
+          "searchPlaceholder": "Search courses...",
+          "filterStatus": "Filter by status",
+          "allStatuses": "All Statuses",
+          "statuses": {
+            "draft": "Draft",
+            "published": "Published",
+            "archived": "Archived"
+          },
+          "headers": {
+            "course": "Course",
+            "author": "Author",
+            "status": "Status",
+            "lessons": "Lessons",
+            "students": "Students",
+            "publishedDate": "Published",
+            "actions": "Actions"
+          },
+          "unknownAuthor": "Unknown",
+          "empty": "No courses found"
+        },
+        "statusActions": {
+          "approve": "Approve",
+          "archive": "Archive",
+          "restore": "Restore",
+          "dialogs": {
+            "approve": {
+              "title": "Approve Course",
+              "description": "Are you sure you want to approve and publish \"{title}\"? It will be visible to all students.",
+              "confirm": "Approve & Publish"
+            },
+            "archive": {
+              "title": "Archive Course",
+              "description": "Are you sure you want to archive \"{title}\"? It will no longer be visible to students.",
+              "confirm": "Archive"
+            },
+            "restore": {
+              "title": "Restore Course",
+              "description": "Are you sure you want to restore \"{title}\"? It will be published and visible to students again.",
+              "confirm": "Restore"
+            }
+          },
+          "toasts": {
+            "approveSuccess": "Course \"{title}\" approved and published",
+            "approveError": "Failed to approve course",
+            "archiveSuccess": "Course \"{title}\" archived",
+            "archiveError": "Failed to archive course",
+            "restoreSuccess": "Course \"{title}\" restored",
+            "restoreError": "Failed to restore course"
+          }
+        }
+      },
+      "subscriptions": {
+        "title": "Subscription Management",
+        "description": "Manage all active and historical subscriptions",
+        "stats": {
+          "active": "Active Subscriptions",
+          "cancelled": "Cancelled",
+          "expired": "Expired",
+          "revenue": "Monthly Revenue"
+        },
+        "filters": {
+          "search": "Search by user name, email, or ID...",
+          "all": "All",
+          "active": "Active",
+          "cancelled": "Cancelled",
+          "expired": "Expired"
+        },
+        "table": {
+          "title": "All Subscriptions ({count})",
+          "unknownUser": "Unknown User",
+          "unknownPlan": "Unknown Plan",
+          "cancelsAtEnd": "Cancels at period end",
+          "started": "Started:",
+          "ended": "Ended:",
+          "renews": "Renews:",
+          "noSubscriptions": "No subscriptions yet",
+          "noFilteredSubscriptions": "No subscriptions found matching your filters"
+        },
+        "status": {
+          "active": "Active",
+          "cancelled": "Cancelled",
+          "expired": "Expired",
+          "past_due": "Past Due",
+          "trialing": "Trialing",
+          "unpaid": "Unpaid",
+          "incomplete": "Incomplete",
+          "incomplete_expired": "Incomplete Expired"
+        },
+        "actions": {
+          "viewUser": "View User",
+          "cancel": "Cancel Subscription",
+          "reactivate": "Reactivate Subscription",
+          "cannotReactivate": "Cannot Reactivate (Expired)",
+          "cancelling": "Cancelling...",
+          "reactivating": "Reactivating..."
+        },
+        "dialogs": {
+          "cancel": {
+            "title": "Cancel Subscription",
+            "description": "Choose how you want to cancel this subscription. This action will be synced with Stripe.",
+            "options": "Cancellation Options:",
+            "atEnd": "Cancel at Period End",
+            "atEndDesc": "User keeps access until the current billing period ends. Recommended for better user experience.",
+            "immediate": "Cancel Immediately",
+            "immediateDesc": "User loses access immediately. Use only for urgent situations (fraud, violations, etc.).",
+            "close": "Close"
+          },
+          "reactivate": {
+            "title": "Reactivate Subscription",
+            "description": "This will reactivate the subscription that was scheduled to cancel at period end. The user will continue to be billed."
+          }
+        },
+        "toasts": {
+          "cancelImmediate": "Subscription cancelled immediately",
+          "cancelAtEnd": "Subscription will cancel at period end",
+          "cancelError": "Failed to cancel subscription",
+          "reactivateSuccess": "Subscription reactivated successfully",
+          "reactivateError": "Failed to reactivate subscription",
+          "generalError": "An error occurred"
+        }
+      },
+      "transactions": {
+        "title": "Transactions",
+        "description": "View all platform transactions and revenue",
+        "backToDashboard": "Back to Dashboard",
+        "stats": {
+          "totalRevenue": "Total Revenue",
+          "totalRevenueDesc": "From successful transactions",
+          "pending": "Pending",
+          "pendingDesc": "Awaiting confirmation",
+          "failed": "Failed",
+          "failedDesc": "Failed transactions"
+        },
+        "table": {
+          "title": "All Transactions",
+          "headers": {
+            "id": "Transaction ID",
+            "user": "User",
+            "amount": "Amount",
+            "status": "Status",
+            "method": "Payment Method",
+            "date": "Date"
+          },
+          "methods": {
+            "stripe": "Stripe",
+            "manual": "Manual",
+            "bank_transfer": "Bank Transfer",
+            "zelle": "Zelle",
+            "pagos_chile": "Pagos Chile"
+          },
+          "unknown": "Unknown",
+          "notAvailable": "N/A",
+          "empty": "No transactions found"
+        }
+      },
+      "enrollments": {
+        "title": "Enrollments",
+        "description": "View all student course enrollments",
+        "backToDashboard": "Back to Dashboard",
+        "stats": {
+          "total": "Total Enrollments",
+          "active": "Active",
+          "completed": "Completed"
+        },
+        "table": {
+          "title": "All Enrollments",
+          "headers": {
+            "student": "Student",
+            "course": "Course",
+            "status": "Status",
+            "enrolled": "Enrolled",
+            "actions": "Actions"
+          },
+          "unknown": "Unknown",
+          "unknownCourse": "Unknown Course",
+          "viewCourse": "View Course",
+          "empty": "No enrollments found"
+        }
+      },
+      "settings": {
+        "title": "Platform Settings",
+        "description": "Configure your platform settings, email, payments, and enrollment policies.",
+        "errorTitle": "Error Loading Settings",
+        "errorDesc": "Failed to load platform settings",
+        "tabs": {
+          "general": "General",
+          "email": "Email",
+          "payment": "Payment",
+          "enrollment": "Enrollment"
+        },
+        "sections": {
+          "general": {
+            "title": "General Settings",
+            "description": "Basic platform information and global configurations"
+          },
+          "email": {
+            "title": "Email Settings",
+            "description": "Configure SMTP server and email notification preferences"
+          },
+          "payment": {
+            "title": "Payment Settings",
+            "description": "Manage payment processors, currency, and transaction settings"
+          },
+          "enrollment": {
+            "title": "Enrollment Settings",
+            "description": "Configure course enrollment rules and student access policies"
+          }
+        },
+        "form": {
+          "saveChanges": "Save Changes",
+          "saving": "Saving...",
+          "success": "Settings updated successfully",
+          "error": "Failed to update settings",
+          "general": {
+            "siteName": "Site Name",
+            "siteNamePlaceholder": "My LMS Platform",
+            "siteNameHint": "The name of your platform displayed across the site",
+            "siteDescription": "Site Description",
+            "siteDescriptionPlaceholder": "A modern learning management system...",
+            "siteDescriptionHint": "Used for SEO and about pages",
+            "contactEmail": "Contact Email",
+            "contactEmailHint": "Main contact email for the platform",
+            "supportEmail": "Support Email",
+            "supportEmailHint": "Support email for user inquiries",
+            "timezone": "Timezone",
+            "timezoneHint": "Default timezone for the platform (e.g., America/New_York, Europe/London)",
+            "maintenanceMode": "Maintenance Mode",
+            "maintenanceModeHint": "Enable to show maintenance message to users",
+            "maintenanceMessage": "Maintenance Message",
+            "maintenanceMessagePlaceholder": "We're currently performing maintenance. Please check back soon."
+          },
+          "email": {
+            "notifications": "Email Notifications",
+            "notificationsHint": "Enable or disable all email notifications globally",
+            "smtpConfig": "SMTP Configuration",
+            "smtpHost": "SMTP Host",
+            "smtpHostHint": "Your email provider's SMTP server address",
+            "smtpPort": "SMTP Port",
+            "smtpPortHint": "Common ports: 587 (TLS), 465 (SSL), 25 (unencrypted)",
+            "smtpUsername": "SMTP Username",
+            "smtpUsernameHint": "Usually your email address or account username",
+            "smtpPassword": "SMTP Password",
+            "smtpPasswordHint": "Your SMTP password or app-specific password",
+            "senderInfo": "Sender Information",
+            "fromEmail": "From Email",
+            "fromEmailHint": "Email address used as the sender for outgoing emails",
+            "fromName": "From Name",
+            "fromNameHint": "Name displayed as the sender in emails"
+          },
+          "payment": {
+            "processors": "Payment Processors",
+            "stripe": "Stripe",
+            "stripeHint": "Enable Stripe payment processing",
+            "paypal": "PayPal",
+            "paypalHint": "Enable PayPal payment processing",
+            "currency": "Default Currency",
+            "currencyPlaceholder": "Select currency",
+            "currencyHint": "Default currency for all transactions",
+            "taxRate": "Tax Rate (%)",
+            "taxRateHint": "Default tax rate percentage applied to transactions (0 = no tax)",
+            "invoiceSettings": "Invoice Settings",
+            "invoicePrefix": "Invoice Prefix",
+            "invoicePrefixHint": "Prefix for invoice numbers (e.g., INV-001)",
+            "approval": "Require Payment Approval",
+            "approvalHint": "Require admin approval before processing payments"
+          },
+          "enrollment": {
+            "auto": "Auto Enrollment",
+            "autoHint": "Automatically enroll new users in designated courses",
+            "self": "Allow Self Enrollment",
+            "selfHint": "Allow students to enroll themselves in courses",
+            "approval": "Require Enrollment Approval",
+            "approvalHint": "Require admin approval before students can access courses",
+            "max": "Maximum Enrollments Per User",
+            "maxHint": "Maximum number of courses a user can enroll in (0 = unlimited)",
+            "expiration": "Enrollment Expiration (Days)",
+            "expirationHint": "Number of days until enrollment expires (0 = never expires)",
+            "capacity": "Enable Course Capacity",
+            "capacityHint": "Allow setting maximum student limits for courses"
+          }
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Send announcements and messages to students and teachers",
+        "buttons": {
+          "templates": "Templates",
+          "create": "Create Notification"
+        },
+        "stats": {
+          "total": "Total Notifications",
+          "sent": "Sent",
+          "scheduled": "Scheduled",
+          "drafts": "Drafts"
+        },
+        "manage": {
+          "title": "Manage Notifications",
+          "description": "View and manage system notifications, announcements, and targeted messages"
+        },
+        "tabs": {
+          "all": "All",
+          "sent": "Sent",
+          "scheduled": "Scheduled",
+          "drafts": "Drafts"
+        },
+        "types": {
+          "announcement": "Announcement",
+          "alert": "Alert",
+          "info": "Info",
+          "success": "Success",
+          "warning": "Warning",
+          "error": "Error"
+        },
+        "priority": {
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "priorityOptions": {
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "targets": {
+          "all": "All Users",
+          "role": "Specific Role",
+          "course": "Course Students"
+        },
+        "list": {
+          "empty": "No notifications found",
+          "status": {
+            "sent": "Sent",
+            "scheduled": "Scheduled",
+            "draft": "Draft",
+            "cancelled": "Cancelled"
+          },
+          "metadata": {
+            "target": "Target",
+            "sent": "Sent",
+            "scheduled": "Scheduled",
+            "created": "Created"
+          },
+          "actions": {
+            "send": "Send Now",
+            "delete": "Delete"
+          },
+          "confirmDelete": "Are you sure you want to delete this notification?",
+          "toasts": {
+            "sent": "Notification sent to {count} users",
+            "deleted": "Notification deleted successfully",
+            "error": "Failed to send notification",
+            "deleteError": "Failed to delete notification"
+          }
+        },
+        "form": {
+          "title": "Title",
+          "titlePlaceholder": "Notification title",
+          "message": "Message",
+          "messagePlaceholder": "Enter your notification message...",
+          "messageHint": "Use double curly braces for dynamic content with templates",
+          "type": "Type",
+          "priority": "Priority",
+          "sendTo": "Send To",
+          "targets": {
+            "all": "All Users",
+            "role": "Specific Role",
+            "course": "Course Students"
+          },
+          "roles": "Roles (comma-separated)",
+          "rolesPlaceholder": "student, teacher",
+          "rolesHint": "Example: student, teacher, admin",
+          "courseId": "Course ID",
+          "courseIdPlaceholder": "Enter course ID",
+          "courseIdHint": "Find course ID in the courses management page",
+          "delivery": "Delivery",
+          "deliveryDesc": "Send immediately or schedule for later",
+          "deliveryOptions": {
+            "now": "Send Now",
+            "schedule": "Schedule"
+          },
+          "scheduleFor": "Schedule For",
+          "submit": {
+            "send": "Send Notification",
+            "save": "Save Draft"
+          },
+          "toasts": {
+            "success": "Notification sent successfully",
+            "draft": "Notification saved as draft",
+            "error": "Failed to create notification"
+          },
+          "dialog": {
+            "title": "Create New Notification",
+            "description": "Send a notification to specific users, groups, or the entire platform"
+          }
+        },
+        "templates": {
+          "title": "Notification Templates",
+          "description": "Create reusable templates with dynamic variables for common notifications",
+          "back": "Back",
+          "create": "Create Template",
+          "empty": "No templates found",
+          "table": {
+            "name": "Name",
+            "type": "Type",
+            "subject": "Subject",
+            "created": "Created",
+            "actions": "Actions"
+          },
+          "form": {
+            "name": "Template Name",
+            "namePlaceholder": "e.g., Course Welcome",
+            "subject": "Subject Template",
+            "subjectPlaceholder": "e.g., Welcome to {{course_name}}",
+            "content": "Content Template",
+            "contentPlaceholder": "Enter your template content...",
+            "type": "Notification Type",
+            "description": "Description (optional)",
+            "submit": {
+              "create": "Create Template",
+              "update": "Update Template"
+            },
+            "toasts": {
+              "success": "Template created successfully",
+              "updated": "Template updated successfully",
+              "error": "Failed to create template",
+              "deleted": "Template deleted successfully"
+            },
+            "dialog": {
+              "title": "Create New Template",
+              "editTitle": "Edit Template",
+              "description": "Create reusable templates for system notifications"
+            }
+          }
+        }
+      },
+      "common": {
+        "courseSelector": {
+          "label": "Courses Included",
+          "loading": "Loading courses...",
+          "search": "Search courses...",
+          "noResults": "No courses found",
+          "noAvailable": "No published courses available",
+          "selected": "{count} {count, plural, one {course} other {courses}} selected"
+        }
+      },
+      "plans": {
+        "title": "Subscription Plans",
+        "description": "Manage subscription plans and recurring billing",
+        "back": "Back to Dashboard",
+        "create": "Create Plan",
+        "stats": {
+          "total": "Total Plans",
+          "monthly": "Monthly Plans",
+          "yearly": "Yearly Plans"
+        },
+        "card": {
+          "monthly": "Monthly",
+          "yearly": "Yearly",
+          "course": "course",
+          "courses": "courses",
+          "noDescription": "No description",
+          "perMonth": "per month",
+          "perYear": "per year",
+          "features": "Features:",
+          "includedCourses": "Included Courses:",
+          "more": "+{count} more",
+          "edit": "Edit Plan"
+        },
+        "empty": {
+          "title": "No plans yet",
+          "description": "Create your first subscription plan to get started"
+        },
+        "new": {
+          "title": "Create Subscription Plan",
+          "description": "Create a new subscription plan with recurring billing",
+          "back": "Back to Plans",
+          "details": {
+            "title": "Plan Details",
+            "description": "Subscription plans will be automatically created in Stripe with recurring billing."
+          }
+        },
+        "edit": {
+          "title": "Edit Subscription Plan",
+          "description": "Update plan details",
+          "back": "Back to Plans"
+        },
+        "form": {
+          "name": "Plan Name",
+          "namePlaceholder": "e.g., Premium Monthly Plan",
+          "description": "Description",
+          "descriptionPlaceholder": "Describe what's included in this plan...",
+          "price": "Price",
+          "currency": "Currency",
+          "duration": "Duration",
+          "durationMonthly": "Monthly",
+          "durationYearly": "Yearly",
+          "features": "Features (comma-separated)",
+          "featuresPlaceholder": "Unlimited access, Priority support, Downloadable resources",
+          "featuresHint": "Enter features separated by commas. These will be displayed to customers.",
+          "saving": "Saving...",
+          "create": "Create Plan",
+          "save": "Save Changes",
+          "cancel": "Cancel",
+          "errors": {
+            "nameRequired": "Plan name is required",
+            "priceGreater": "Price must be greater than 0",
+            "generic": "An error occurred"
+          },
+          "toasts": {
+            "createSuccess": "Plan created successfully",
+            "updateSuccess": "Plan updated successfully"
+          }
+        }
+      },
+      "products": {
+        "title": "Product Management",
+        "description": "Manage products and Stripe integration",
+        "back": "Back to Dashboard",
+        "create": "Create Product",
+        "stats": {
+          "total": "Total Products",
+          "active": "Active",
+          "archived": "Archived"
+        },
+        "card": {
+          "course": "course",
+          "courses": "courses",
+          "noDescription": "No description",
+          "includedCourses": "Included Courses:",
+          "more": "+{count} more",
+          "edit": "Edit",
+          "actions": "Actions"
+        },
+        "empty": {
+          "title": "No products yet",
+          "description": "Create your first product to get started"
+        },
+        "new": {
+          "title": "Create Product",
+          "description": "Create a new product with Stripe integration",
+          "back": "Back to Products",
+          "details": {
+            "title": "Product Details",
+            "description": "Products will be automatically created in Stripe. Link courses to create bundles."
+          }
+        },
+        "edit": {
+          "title": "Edit Product",
+          "description": "Update product details",
+          "back": "Back to Products",
+          "details": {
+            "description": "Changes to price or currency will create a new Stripe price."
+          }
+        },
+        "form": {
+          "name": "Product Name",
+          "namePlaceholder": "e.g., Complete Web Development Bundle",
+          "description": "Description",
+          "descriptionPlaceholder": "Describe what's included in this product...",
+          "price": "Price",
+          "currency": "Currency",
+          "image": "Image URL (optional)",
+          "imagePlaceholder": "https://example.com/image.jpg",
+          "method": "Payment Method",
+          "methodManual": "Manual/Offline Payment (Bank Transfer, Invoice)",
+          "methodStripe": "Stripe (Credit Card, Online)",
+          "methodPaypal": "PayPal (Coming Soon)",
+          "methodManualHint": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
+          "methodStripeHint": "Students can pay online instantly",
+          "saving": "Saving...",
+          "create": "Create Product",
+          "save": "Save Changes",
+          "cancel": "Cancel",
+          "errors": {
+            "nameRequired": "Product name is required",
+            "priceGreater": "Price must be greater than 0",
+            "courseRequired": "Please select at least one course",
+            "generic": "An error occurred"
+          },
+          "toasts": {
+            "createSuccess": "Product created successfully",
+            "updateSuccess": "Product updated successfully"
+          }
+        }
+      }
     }
   },
   "course": {
@@ -501,12 +1771,43 @@
       "error": "Failed to send request. Please try again."
     },
     "notifications": {
-      "title": "Inbox",
-      "viewAll": "View All",
-      "markAllAsRead": "Mark all as read",
+      "title": "Notifications",
+      "description": "Stay up to date with your latest notifications",
+      "tabs": {
+        "all": "All",
+        "unread": "Unread",
+        "read": "Read"
+      },
+      "actions": {
+        "markAllAsRead": "Mark all as read"
+      },
       "empty": {
-        "title": "All caught up!",
-        "description": "No new notifications for you right now."
+        "title": "No notifications",
+        "caughtUp": "You're all caught up!",
+        "none": "No notifications to display"
+      },
+      "toasts": {
+        "markAsReadSuccess": "Notification marked as read",
+        "markAsReadError": "Failed to mark as read",
+        "markAllAsReadSuccess": "All notifications marked as read",
+        "markAllAsReadError": "Failed to mark all as read",
+        "dismissSuccess": "Notification dismissed",
+        "dismissError": "Failed to dismiss notification",
+        "error": "An error occurred"
+      },
+      "types": {
+        "announcement": "Announcement",
+        "alert": "Alert",
+        "info": "Info",
+        "success": "Success",
+        "warning": "Warning",
+        "error": "Error"
+      },
+      "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
       }
     },
     "activitySection": {
