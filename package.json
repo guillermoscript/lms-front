@@ -29,7 +29,7 @@
     "@streamdown/mermaid": "^1.0.1",
     "@stripe/stripe-js": "^8.6.4",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.93.1",
+    "@supabase/supabase-js": "^2.95.3",
     "@tabler/icons-react": "^3.36.1",
     "@tailwindcss/typography": "^0.5.19",
     "@xyflow/react": "^12.10.0",
