@@ -382,3 +382,19 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# Edge Functions — disable gateway JWT verification since each function
+# handles auth internally via supabase.auth.getUser().
+# This is needed because the local auth system issues ES256 tokens
+# but the edge runtime gateway expects HS256.
+[functions.get-gamification-summary]
+verify_jwt = false
+
+[functions.get-leaderboard]
+verify_jwt = false
+
+[functions.check-achievements]
+verify_jwt = false
+
+[functions.spend-points]
+verify_jwt = false
