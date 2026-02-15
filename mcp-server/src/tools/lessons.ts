@@ -301,6 +301,55 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
     }
   );
 
+  server.registerTool(
+    "lms_update_lesson_content",
+    {
+      title: "Update Lesson Content",
+      description: "Quickly update ONLY the MDX content of a lesson.",
+      inputSchema: z
+        .object({
+          lesson_id: z.number().describe("The lesson ID"),
+          content: z.string().describe("The new MDX content"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ lesson_id, content }) => {
+      try {
+        await auth.verifyLessonOwnership(lesson_id);
+        const supabase = auth.getClient();
+
+        const { data, error } = await supabase
+          .from("lessons")
+          .update({ content })
+          .eq("id", lesson_id)
+          .select("id, title")
+          .single();
+
+        if (error) return errorResult(`Updating lesson content: ${error.message}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Lesson content updated for: **${data.title}** (ID: ${data.id})`,
+            },
+          ],
+          structuredContent: {
+            id: data.id,
+            title: data.title,
+          },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
   // Tool to create or update the AI task attached to a lesson
   server.registerTool(
     "lms_upsert_lesson_ai_task",
@@ -311,7 +360,7 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         .object({
           lesson_id: z.number().describe("The lesson ID"),
           task_instructions: z.string().optional().describe("Instructions the student should follow (task description)"),
-          system_prompt: z.string().optional().describe("System prompt / persona for the AI tutor") ,
+          system_prompt: z.string().optional().describe("System prompt / persona for the AI tutor"),
         })
         .strict(),
       annotations: {
