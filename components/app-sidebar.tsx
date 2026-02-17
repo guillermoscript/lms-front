@@ -13,6 +13,7 @@ import {
     IconClipboardList,
     IconClock,
     IconCoins,
+    IconCreditCard,
     IconCurrencyDollar,
     IconDashboard,
     IconFileText,
@@ -71,6 +72,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 { title: t('allCourses'), href: "/dashboard/admin/courses", icon: IconBook },
                 { title: t('enrollments'), href: "/dashboard/admin/enrollments", icon: IconCertificate },
                 { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
+                { title: t('billing'), href: "/dashboard/admin/billing", icon: IconCreditCard },
             ],
         },
         teacher: {

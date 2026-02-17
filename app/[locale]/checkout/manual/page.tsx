@@ -66,7 +66,7 @@ export default async function ManualCheckoutPage(props: {
     <div className="container py-12 px-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8 text-center max-w-2xl mx-auto">
-        <h1 className="text-4xl font-bold tracking-tight mb-3">{t('title')}</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-3" data-testid="manual-checkout-title">{t('title')}</h1>
         <p className="text-muted-foreground text-lg">{t('subtitle')}</p>
       </div>
 

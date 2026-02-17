@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   IconUsers,
   IconBook,
@@ -17,6 +20,7 @@ import {
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { UsageMeter } from '@/components/admin/usage-meter'
 
 export default async function AdminDashboardPage({
   params: { locale }
@@ -96,6 +100,29 @@ export default async function AdminDashboardPage({
   const totalRevenue =
     successfulTransactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
+  // Get plan info for usage widget
+  const tenantId = await getCurrentTenantId()
+  const adminClient = await createAdminClient()
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .single()
+  const planSlug = tenant?.plan || 'free'
+  const { data: platformPlan } = await adminClient
+    .from('platform_plans')
+    .select('name, limits')
+    .eq('slug', planSlug)
+    .eq('is_active', true)
+    .single()
+  const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
+  const { count: studentCount } = await adminClient
+    .from('tenant_users')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('role', 'student')
+    .eq('status', 'active')
+
   const stats = [
     {
       title: t('stats.totalUsers'),
@@ -139,9 +166,44 @@ export default async function AdminDashboardPage({
   ]
 
   return (
-    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8" data-testid="admin-dashboard">
+      {/* Plan & Usage Widget */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Plan</span>
+                  <Badge variant={planSlug === 'free' ? 'secondary' : 'default'}>
+                    {platformPlan?.name || 'Free'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+            <div className="grid flex-1 gap-4 sm:grid-cols-2 sm:max-w-md">
+              <UsageMeter
+                label="Courses"
+                current={totalCourses || 0}
+                limit={planLimits.max_courses ?? 5}
+              />
+              <UsageMeter
+                label="Students"
+                current={studentCount || 0}
+                limit={planLimits.max_students ?? 50}
+              />
+            </div>
+            <Link href="/dashboard/admin/billing/upgrade">
+              <Button variant="outline" size="sm">
+                {planSlug === 'free' ? 'Upgrade' : 'Change Plan'}
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.link}>
             <Card className="transition-all hover:border-primary/50 hover:shadow-sm">

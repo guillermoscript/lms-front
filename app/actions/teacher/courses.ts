@@ -5,13 +5,16 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 
-// Plan limits for course creation
-const PLAN_LIMITS = {
+// Fallback plan limits (used if platform_plans table query fails)
+const PLAN_LIMITS_FALLBACK: Record<string, number> = {
   free: 5,
+  starter: 15,
   basic: 20,
+  pro: 100,
   professional: 100,
-  enterprise: Infinity,
-} as const
+  business: -1,
+  enterprise: -1,
+}
 
 export interface CourseFormData {
   title: string
@@ -29,19 +32,37 @@ export async function checkCourseLimit(): Promise<{
   currentCount: number
   limit: number
   plan: string
+  approaching?: boolean
+  nextPlan?: string
+  nextPlanPrice?: number
 }> {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  // Get tenant's plan
+  // Get tenant's plan and limits from platform_plans
   const { data: tenant } = await supabase
     .from('tenants')
     .select('plan')
     .eq('id', tenantId)
     .single()
 
-  const plan = (tenant?.plan as keyof typeof PLAN_LIMITS) || 'free'
-  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.free
+  const plan = tenant?.plan || 'free'
+
+  // Try to get limit from platform_plans table
+  let limit: number
+  const { data: platformPlan } = await supabase
+    .from('platform_plans')
+    .select('limits')
+    .eq('slug', plan)
+    .eq('is_active', true)
+    .single()
+
+  if (platformPlan?.limits && typeof platformPlan.limits === 'object') {
+    const limits = platformPlan.limits as { max_courses?: number }
+    limit = limits.max_courses ?? PLAN_LIMITS_FALLBACK[plan] ?? 5
+  } else {
+    limit = PLAN_LIMITS_FALLBACK[plan] ?? 5
+  }
 
   // Count existing courses for this tenant
   const { count } = await supabase
@@ -50,13 +71,31 @@ export async function checkCourseLimit(): Promise<{
     .eq('tenant_id', tenantId)
 
   const currentCount = count || 0
-  const canCreate = currentCount < limit
+  // -1 means unlimited
+  const canCreate = limit === -1 || currentCount < limit
+  const approaching = limit !== -1 && currentCount >= limit * 0.8
+
+  // Get next plan info when approaching limit
+  let nextPlan: string | undefined
+  let nextPlanPrice: number | undefined
+  if (approaching) {
+    const planOrder = ['free', 'starter', 'pro', 'business', 'enterprise']
+    const currentIndex = planOrder.indexOf(plan)
+    if (currentIndex >= 0 && currentIndex < planOrder.length - 1) {
+      nextPlan = planOrder[currentIndex + 1]
+      const prices: Record<string, number> = { starter: 9, pro: 29, business: 79, enterprise: 199 }
+      nextPlanPrice = prices[nextPlan]
+    }
+  }
 
   return {
     canCreate,
     currentCount,
     limit,
     plan,
+    approaching,
+    nextPlan,
+    nextPlanPrice,
   }
 }
 

@@ -68,7 +68,7 @@ export default async function PricingPage() {
 
                 {/* Header */}
                 <div className="flex flex-col items-center space-y-6 text-center mb-20 relative z-10">
-                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight">
+                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight" data-testid="pricing-title">
                         {t('title')}
                     </h1>
                     <p className="max-w-[750px] text-zinc-400 text-lg md:text-xl leading-relaxed">

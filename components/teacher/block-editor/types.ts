@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid'
+
 // Block types for the visual lesson editor
 
 export type BlockType =
@@ -135,7 +137,7 @@ export const BLOCK_METAS: BlockMeta[] = [
 
 // Factory to create empty blocks
 export function createBlock(type: BlockType): Block {
-  const id = crypto.randomUUID()
+  const id = nanoid()
   
   switch (type) {
     case 'text':

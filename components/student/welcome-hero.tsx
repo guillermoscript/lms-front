@@ -15,7 +15,7 @@ export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted }: W
   const t = useTranslations('welcomeHero')
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 md:p-8 text-primary-foreground">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 md:p-8 text-primary-foreground" data-testid="welcome-hero">
       {/* Subtle decorative pattern */}
       <div className="absolute inset-0 opacity-10">
         <svg

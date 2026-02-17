@@ -137,7 +137,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
       .single(),
     supabase
       .from('certificates')
-      .select('*, profiles(full_name, avatar_url)')
+      .select('*, profiles!certificates_user_id_fkey(full_name, avatar_url)')
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .order('issued_at', { ascending: false })

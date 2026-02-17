@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,15 +21,15 @@ interface PageProps {
 
 export default async function VerificationPage({ params }: PageProps) {
     const { code } = await params
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const t = await getTranslations('common') // or a specific verification namespace if created
 
     const { data: certificate, error } = await supabase
         .from('certificates')
         .select(`
       *,
-      profiles(full_name, avatar_url),
-      courses(title, slug),
+      profiles!certificates_user_id_fkey(full_name, avatar_url),
+      courses(course_id, title),
       certificate_templates(*)
     `)
         .eq('verification_code', code)
@@ -160,7 +160,7 @@ export default async function VerificationPage({ params }: PageProps) {
                                     {certificate.pdf_url ? 'Download Official PDF' : 'View Certificate'}
                                 </Button>
                             </a>
-                            <Link href={`/courses/${certificate.courses?.slug}`} className="flex-1">
+                            <Link href={`/dashboard/student/courses/${certificate.courses?.course_id}`} className="flex-1">
                                 <Button variant="outline" className="w-full h-12 text-lg font-bold">
                                     <IconCertificate className="mr-2" />
                                     View Course Details

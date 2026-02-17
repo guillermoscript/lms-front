@@ -120,7 +120,7 @@ export default async function StudentDashboard() {
   const totalLessonsCompleted = data.lessonCompletions.length
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-testid="student-dashboard">
       <main className="container mx-auto px-4 md:px-8 py-8 space-y-8">
         {/* Welcome Hero */}
         <WelcomeHero

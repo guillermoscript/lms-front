@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid'
 import type { Block } from './types'
 
 /**
@@ -98,7 +99,7 @@ export function mdxToBlocks(mdx: string): Block[] {
     
     // Divider
     if (line.trim() === '---') {
-      blocks.push({ id: crypto.randomUUID(), type: 'divider' })
+      blocks.push({ id: nanoid(), type: 'divider' })
       i++
       continue
     }
@@ -107,7 +108,7 @@ export function mdxToBlocks(mdx: string): Block[] {
     const headingMatch = line.match(/^(#{1,3})\s+(.+)$/)
     if (headingMatch) {
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'heading',
         level: headingMatch[1].length as 1 | 2 | 3,
         content: headingMatch[2],
@@ -127,7 +128,7 @@ export function mdxToBlocks(mdx: string): Block[] {
         i++
       }
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'code',
         language,
         code: codeLines.join('\n'),
@@ -146,7 +147,7 @@ export function mdxToBlocks(mdx: string): Block[] {
       if (line.includes('/>')) {
         const contentMatch = line.match(/>([^<]+)<\/Callout>/)
         blocks.push({
-          id: crypto.randomUUID(),
+          id: nanoid(),
           type: 'callout',
           variant,
           content: contentMatch?.[1] || '',
@@ -161,7 +162,7 @@ export function mdxToBlocks(mdx: string): Block[] {
         i++
       }
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'callout',
         variant,
         content: contentLines.join('\n'),
@@ -194,7 +195,7 @@ export function mdxToBlocks(mdx: string): Block[] {
       }
       
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'quiz',
         question: questionMatch?.[1] || '',
         options,
@@ -215,7 +216,7 @@ export function mdxToBlocks(mdx: string): Block[] {
         i++
       }
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'spoiler',
         label: labelMatch?.[1] || 'Mostrar',
         content: contentLines.join('\n'),
@@ -228,7 +229,7 @@ export function mdxToBlocks(mdx: string): Block[] {
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)/)
     if (imgMatch) {
       blocks.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         type: 'image',
         alt: imgMatch[1],
         src: imgMatch[2],
@@ -254,7 +255,7 @@ export function mdxToBlocks(mdx: string): Block[] {
       i++
     }
     blocks.push({
-      id: crypto.randomUUID(),
+      id: nanoid(),
       type: 'text',
       content: textLines.join('\n'),
     })

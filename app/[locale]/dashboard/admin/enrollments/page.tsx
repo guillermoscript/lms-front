@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
@@ -41,14 +42,24 @@ export default async function AdminEnrollmentsPage({
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
-  // Get user profiles (profiles table is global - no tenant_id)
+  // Get user profiles (profiles table is global - no tenant_id, no email column)
   const userIds = enrollments?.map((e) => e.user_id) || []
-  const { data: users } = await supabase
+  const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, full_name, email')
-    .in('id', userIds)
+    .select('id, full_name')
+    .in('id', userIds.length > 0 ? userIds : ['none'])
 
-  const usersMap = new Map(users?.map((u) => [u.id, u]))
+  // Get emails from auth.users via admin client
+  const adminClient = createAdminClient()
+  const emailMap = new Map<string, string>()
+  for (const uid of userIds) {
+    const { data } = await adminClient.auth.admin.getUserById(uid)
+    if (data?.user?.email) {
+      emailMap.set(uid, data.user.email)
+    }
+  }
+
+  const usersMap = new Map(profiles?.map((u) => [u.id, { ...u, email: emailMap.get(u.id) || '' }]))
 
   // Get courses
   const courseIds = enrollments?.map((e) => e.course_id) || []

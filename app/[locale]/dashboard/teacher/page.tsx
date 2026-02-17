@@ -108,10 +108,10 @@ export default async function TeacherDashboard() {
   const totalPendingReviews = allSubmissions.length
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
+    <div className="flex-1 space-y-8 p-8 pt-6" data-testid="teacher-dashboard">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
             {t.rich('welcome', {
               userName: profile?.full_name?.split(' ')[0] || 'Teacher'
             })}

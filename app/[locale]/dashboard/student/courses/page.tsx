@@ -198,11 +198,11 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const hasFilteredEnrollments = filteredEnrollments.length > 0
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 max-w-7xl" data-testid="student-courses-page">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="my-courses-title">{t('title')}</h1>
           <p className="text-muted-foreground">
             {hasEnrollments
               ? t('enrolledMessage', { count: enrichedEnrollments.length, s: enrichedEnrollments.length === 1 ? '' : 's' }) // 's' handling might vary by locale, simplified for now

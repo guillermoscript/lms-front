@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import { nanoid } from 'nanoid'
 import type { Block, BlockType } from './types'
 import { createBlock, BLOCK_METAS } from './types'
 import { blocksToMdx, mdxToBlocks } from './serializer'
@@ -116,7 +117,7 @@ export function BlockEditor({ initialContent = '', onChange, className }: BlockE
       const idx = items.findIndex((b) => b.id === id)
       if (idx === -1) return items
       const original = items[idx]
-      const copy = { ...original, id: crypto.randomUUID() }
+      const copy = { ...original, id: nanoid() }
       const newItems = [...items.slice(0, idx + 1), copy, ...items.slice(idx + 1)]
       emitChange(newItems)
       return newItems

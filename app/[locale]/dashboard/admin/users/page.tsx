@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,11 +24,20 @@ export default async function AdminUsersPage() {
     redirect('/auth/login')
   }
 
-  // Get all users with their roles
-  const { data: profiles } = await supabase
+  // Get all users with their roles (profiles has no email column - get from auth)
+  const { data: rawProfiles } = await supabase
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false })
+
+  // Get emails from auth.users via admin client
+  const adminClient = createAdminClient()
+  const profiles = await Promise.all(
+    (rawProfiles || []).map(async (p) => {
+      const { data } = await adminClient.auth.admin.getUserById(p.id)
+      return { ...p, email: data?.user?.email || '' }
+    })
+  )
 
   // Get all user roles
   const { data: userRoles } = await supabase

@@ -124,12 +124,12 @@ export default async function StudentPaymentsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 max-w-7xl" data-testid="payments-page">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <IconReceipt className="w-6 h-6 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="payments-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
