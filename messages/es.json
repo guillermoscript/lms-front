@@ -147,11 +147,52 @@
         "renewsOn": "Renueva el {date}",
         "manageSubscription": "Gestionar Suscripción",
         "noActiveSubscription": "Aún no tienes una suscripción activa.",
-        "viewPlans": "Ver Planes"
+        "viewPlans": "Ver Planes",
+        "certificates": {
+          "title": "Mis Certificados",
+          "subtitle": "Has ganado {count} certificados",
+          "noCertificates": "Aún no has ganado ningún certificado. ¡Completa cursos para certificarte!",
+          "view": "Ver Certificado",
+          "download": "Descargar PDF",
+          "share": "Compartir",
+          "verify": "Verificar",
+          "issuedBy": "Emitido por {issuer}",
+          "issuedOn": "Emitido el {date}"
+        }
       },
       "store": {
         "title": "Tienda de Puntos",
         "subtitle": "Canjea tus monedas por recompensas exclusivas y mejoras"
+      },
+      "payments": {
+        "title": "Solicitudes de Pago",
+        "subtitle": "Rastrea tus solicitudes de pago manual e instrucciones",
+        "infoMessage": "Las solicitudes de pago manual son procesadas por nuestro equipo. Recibirás instrucciones de pago por correo electrónico.",
+        "tableTitle": "Tus Solicitudes de Pago",
+        "tableDescription": "Mostrando {count} solicitud(es) de pago",
+        "amount": "Monto",
+        "viewDetails": "Ver Detalles",
+        "unknownProduct": "Producto Desconocido",
+        "instructionsAvailable": "Instrucciones de pago disponibles",
+        "empty": {
+          "title": "Sin Solicitudes de Pago",
+          "description": "No has enviado ninguna solicitud de pago todavía. ¡Explora cursos para comenzar!",
+          "browseCourses": "Explorar Cursos"
+        },
+        "table": {
+          "product": "Producto",
+          "amount": "Monto",
+          "status": "Estado",
+          "date": "Fecha",
+          "actions": "Acciones"
+        },
+        "status": {
+          "pending": "Pendiente",
+          "contacted": "Contactado",
+          "paymentReceived": "Pago Recibido",
+          "completed": "Completado",
+          "cancelled": "Cancelado"
+        }
       }
     },
     "teacher": {
@@ -225,6 +266,7 @@
           "exercises": "Ejercicios",
           "exams": "Exámenes",
           "students": "Estudiantes",
+          "certificates": "Certificados",
           "preview": "Vista Previa"
         },
         "curriculum": {
@@ -263,6 +305,59 @@
           "noStudents": "Aún no hay estudiantes inscritos en este curso.",
           "viewProgress": "Ver Progreso",
           "unknownStudent": "Estudiante Desconocido"
+        },
+        "certificates": {
+          "title": "Certificados",
+          "description": "Configura y gestiona los certificados para este curso.",
+          "templates": {
+            "title": "Plantilla de Certificado",
+            "description": "Configura cómo se verá el certificado y qué representará.",
+            "edit": "Editar Plantilla",
+            "create": "Crear Plantilla",
+            "noTemplate": "Aún no hay una plantilla de certificado configurada para este curso.",
+            "nameLabel": "Nombre del Certificado",
+            "namePlaceholder": "p. ej. Desarrollador JavaScript Profesional",
+            "issuerNameLabel": "Nombre del Emisor",
+            "issuerUrlLabel": "URL del Emisor",
+            "issuerUrlPlaceholder": "https://tu-academia.com",
+            "descriptionLabel": "Descripción del Certificado",
+            "descriptionPlaceholder": "Este certificado confirma la finalización de...",
+            "criteriaLabel": "Criterios de Emisión",
+            "criteriaPlaceholder": "Criterios para la emisión automática...",
+            "design": "Ajustes de Diseño",
+            "primaryColor": "Color Primario",
+            "secondaryColor": "Color Secundario",
+            "showQrCode": "Mostrar Código QR de Verificación",
+            "qrCodeDescription": "Mejora la confianza permitiendo la verificación pública",
+            "saveSuccess": "Plantilla de certificado guardada con éxito",
+            "saveError": "Error al guardar la plantilla de certificado",
+            "cancel": "Cancelar",
+            "submit": "Guardar Plantilla",
+            "preview": {
+              "title": "Vista Previa del Certificado",
+              "header": "Certificado de Finalización",
+              "certifyThat": "Se certifica por la presente que",
+              "successfullyCompleted": "ha completado con éxito los requisitos para",
+              "officialIssuer": "Emisor Oficial",
+              "issueDate": "Fecha de Emisión",
+              "verified": "Credencial Digital Verificada"
+            }
+          },
+          "issued": {
+            "title": "Certificados Emitidos",
+            "count": "{count} certificados emitidos",
+            "table": {
+              "student": "Estudiante",
+              "date": "Fecha de Emisión",
+              "code": "Código de Verificación",
+              "status": "Estado",
+              "actions": "Acciones"
+            },
+            "noIssued": "Aún no se han emitido certificados para este curso.",
+            "view": "Ver Certificado",
+            "revoke": "Revocar",
+            "revokeConfirm": "¿Estás seguro de que quieres revocar este certificado? Esta acción no se puede deshacer."
+          }
         }
       },
       "newCourse": {
@@ -1019,6 +1114,7 @@
         "errorDesc": "No se pudieron cargar los ajustes de la plataforma",
         "tabs": {
           "general": "General",
+          "branding": "Marca",
           "email": "Email",
           "payment": "Pago",
           "enrollment": "Inscripción"
@@ -1039,6 +1135,10 @@
           "enrollment": {
             "title": "Ajustes de Inscripción",
             "description": "Configura las reglas de inscripción a cursos y políticas de acceso de estudiantes"
+          },
+          "branding": {
+            "title": "Ajustes de Marca",
+            "description": "Personaliza la identidad visual de tu plataforma — logo, colores y favicon"
           }
         },
         "form": {
@@ -1098,6 +1198,20 @@
             "invoicePrefixHint": "Prefijo para los números de factura (ej., INV-001)",
             "approval": "Requerir Aprobación de Pago",
             "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos"
+          },
+          "branding": {
+            "logoUrl": "URL del Logo",
+            "logoUrlPlaceholder": "https://ejemplo.com/logo.png",
+            "logoUrlHint": "URL del logo de tu plataforma (recomendado: 200x50px PNG o SVG)",
+            "faviconUrl": "URL del Favicon",
+            "faviconUrlPlaceholder": "https://ejemplo.com/favicon.ico",
+            "faviconUrlHint": "URL del icono de la pestaña del navegador (recomendado: 32x32px ICO o PNG)",
+            "primaryColor": "Color Primario",
+            "primaryColorHint": "Color principal usado para botones, enlaces y acentos",
+            "secondaryColor": "Color Secundario",
+            "secondaryColorHint": "Color secundario usado para destacados y degradados",
+            "preview": "Vista Previa",
+            "previewHint": "Mira cómo se ve tu marca"
           },
           "enrollment": {
             "auto": "Inscripción Automática",
@@ -1544,6 +1658,7 @@
     "courses": "Cursos",
     "plans": "Planes",
     "about": "Acerca de",
+    "creators": "Para Creadores",
     "dashboard": "Panel",
     "login": "Ingresar",
     "signup": "Registrarse"
@@ -1573,6 +1688,8 @@
     "resources": "Recursos",
     "contentManagement": "Gestión de Contenido",
     "management": "Gestión",
+    "business": "Negocio",
+    "revenue": "Ingresos",
     "profile": "Perfil"
   },
   "userNav": {
@@ -1647,7 +1764,8 @@
       "enrollNow": "Inscribirse",
       "enrolling": "Inscribiendo...",
       "subscribeAccess": "Suscribirse para Acceder",
-      "enrolled": "Inscrito"
+      "enrolled": "Inscrito",
+      "notInPlan": "No incluido en tu Plan"
     },
     "profileForm": {
       "fullName": "Nombre Completo",
@@ -1868,6 +1986,46 @@
         "error": "Error al completar la compra",
         "empty": "La tienda está vacía por el momento. ¡Vuelve más tarde!"
       }
+    },
+    "paymentRequestForm": {
+      "title": "Solicitar Instrucciones de Pago",
+      "description": "Complete este formulario para recibir instrucciones de pago para su compra.",
+      "amount": "Monto",
+      "contactName": "Nombre Completo",
+      "contactNamePlaceholder": "Juan Pérez",
+      "contactEmail": "Correo Electrónico",
+      "contactEmailPlaceholder": "juan@ejemplo.com",
+      "contactEmailHint": "Enviaremos las instrucciones de pago a este correo",
+      "contactPhone": "Número de Teléfono (Opcional)",
+      "contactPhonePlaceholder": "+52 55 1234 5678",
+      "contactPhoneHint": "Opcional - para confirmación de pago",
+      "message": "Mensaje Adicional (Opcional)",
+      "messagePlaceholder": "¿Preguntas o solicitudes especiales?",
+      "messageHint": "Déjanos saber si tienes preferencias de pago específicas",
+      "cancel": "Cancelar",
+      "submit": "Enviar Solicitud",
+      "submitting": "Enviando...",
+      "validationError": "Por favor corrija los errores en el formulario",
+      "success": "¡Solicitud de pago enviada exitosamente!",
+      "error": "Error al enviar la solicitud de pago",
+      "successTitle": "¡Solicitud Enviada!",
+      "successDescription": "Hemos recibido su solicitud de pago y enviaremos las instrucciones a su correo en breve.",
+      "viewRequests": "Ver Mis Solicitudes",
+      "errors": {
+        "nameRequired": "El nombre es requerido",
+        "emailRequired": "El correo electrónico es requerido",
+        "emailInvalid": "Por favor ingrese un correo electrónico válido"
+      }
+    },
+    "cancelPaymentButton": {
+      "cancel": "Cancelar",
+      "confirmTitle": "¿Cancelar Solicitud de Pago?",
+      "confirmDescription": "¿Está seguro de que desea cancelar esta solicitud de pago? Esta acción no se puede deshacer.",
+      "keepRequest": "Mantener Solicitud",
+      "confirmCancel": "Sí, Cancelar Solicitud",
+      "cancelling": "Cancelando...",
+      "success": "Solicitud de pago cancelada exitosamente",
+      "error": "Error al cancelar la solicitud de pago"
     }
   },
   "landing": {
@@ -1897,6 +2055,124 @@
     "cta": {
       "title": "¿Listo para comenzar tu viaje?",
       "description": "Únete a miles de desarrolladores que ya están mejorando sus habilidades con LMS V2.",
+      "button": "Crea tu Cuenta Gratis"
+    }
+  },
+  "creators": {
+    "badge": "Para Creadores de Cursos",
+    "heroTitle": "Crea, Vende y Escala tus Cursos Online con IA",
+    "heroSubtitle": "La primera plataforma nativa de IA para creadores de cursos. Calificacion automatica de examenes, gamificacion para enganchar estudiantes y haz crecer tu negocio, sin plugins.",
+    "ctaHero": "Empieza a Crear Gratis",
+    "ctaSecondary": "Mira Como Funciona",
+    "socialProof": {
+      "creators": "500+ Creadores de Cursos",
+      "students": "50,000+ Estudiantes Inscritos",
+      "revenue": "$2M+ en Ingresos de Creadores"
+    },
+    "differentiators": {
+      "title": "Por Que los Creadores Eligen LMS V2",
+      "subtitle": "Tres cosas que nos diferencian de cualquier otra plataforma de cursos.",
+      "ai": {
+        "title": "Calificacion Automatica con IA",
+        "description": "La IA califica examenes y proporciona retroalimentacion personalizada automaticamente. Ahorra horas de calificacion manual."
+      },
+      "gamification": {
+        "title": "Gamificacion Integrada",
+        "description": "XP, niveles, rachas, logros y tienda de recompensas. Mantiene a los estudiantes enganchados como Duolingo."
+      },
+      "modern": {
+        "title": "Moderno y Rapido",
+        "description": "Construido con Next.js y Supabase. Tu escuela carga al instante, funciona en cualquier dispositivo y escala automaticamente."
+      }
+    },
+    "features": {
+      "badge": "Caracteristicas de la Plataforma",
+      "title": "Todo lo que Necesitas para Ensenar Online",
+      "subtitle": "Desde la creacion de contenido hasta los pagos, nosotros manejamos la infraestructura para que tu puedas enfocarte en ensenar.",
+      "editor": {
+        "title": "Editor de Contenido Enriquecido",
+        "description": "Lecciones con MDX, bloques de codigo, imagenes, embeds y componentes interactivos. Escribe una vez, se renderiza perfectamente."
+      },
+      "exams": {
+        "title": "Constructor de Examenes",
+        "description": "Preguntas de opcion multiple, abiertas y verdadero/falso. La IA califica respuestas de texto libre con retroalimentacion detallada."
+      },
+      "exercises": {
+        "title": "Sistema de Ejercicios",
+        "description": "Desafios de programacion interactivos con un asistente de IA que guia a los estudiantes en la resolucion de problemas."
+      },
+      "payments": {
+        "title": "Pagos con Stripe",
+        "description": "Vende cursos individualmente o por suscripcion. Acepta tarjetas de credito sin comisiones de la plataforma."
+      },
+      "dashboard": {
+        "title": "Panel del Estudiante",
+        "description": "Seguimiento de progreso, lecciones completadas, logros y contadores de rachas que motivan a los estudiantes."
+      },
+      "analytics": {
+        "title": "Analiticas e Insights",
+        "description": "Rastrea inscripciones, ingresos, tasas de completacion y engagement de estudiantes desde tu panel de profesor."
+      }
+    },
+    "comparison": {
+      "title": "Mira Como nos Comparamos",
+      "subtitle": "Construimos LMS V2 para dar a los creadores mas funciones a una fraccion del costo.",
+      "feature": "Caracteristica",
+      "rows": {
+        "aiGrading": "Calificacion con IA",
+        "gamification": "Sistema de Gamificacion",
+        "openSource": "Codigo Abierto",
+        "transactionFee": "Comision por Transaccion",
+        "startingPrice": "Precio Inicial",
+        "free": "Gratis"
+      },
+      "footnote": "* Udemy es gratis para publicar pero toma hasta el 63% de las ventas organicas."
+    },
+    "pricing": {
+      "badge": "Precios Simples",
+      "title": "Planes que Crecen Contigo",
+      "subtitle": "Empieza gratis, actualiza cuando estes listo. Sin cargos ocultos, sin sorpresas.",
+      "mo": "mes",
+      "getStarted": "Comenzar",
+      "contactSales": "Contactar Ventas",
+      "popular": "Mas Popular",
+      "free": {
+        "name": "Gratis",
+        "f1": "1 curso publicado",
+        "f2": "Hasta 50 estudiantes",
+        "f3": "Constructor de examenes basico",
+        "f4": "Soporte comunitario"
+      },
+      "creator": {
+        "name": "Creador",
+        "f1": "5 cursos publicados",
+        "f2": "Hasta 500 estudiantes",
+        "f3": "Calificacion automatica con IA",
+        "f4": "Sistema de gamificacion",
+        "f5": "Pagos con Stripe (0% comision)"
+      },
+      "pro": {
+        "name": "Pro",
+        "f1": "Cursos ilimitados",
+        "f2": "Estudiantes ilimitados",
+        "f3": "Calificacion automatica con IA",
+        "f4": "Suite completa de gamificacion",
+        "f5": "Analiticas avanzadas",
+        "f6": "Soporte prioritario"
+      },
+      "business": {
+        "name": "Negocios",
+        "f1": "Todo en Pro",
+        "f2": "Marca personalizada",
+        "f3": "Acceso a API",
+        "f4": "Gerente de cuenta dedicado",
+        "f5": "SSO / SAML",
+        "f6": "SLA y garantia de uptime"
+      }
+    },
+    "cta": {
+      "title": "Empieza a Construir tu Curso Hoy",
+      "subtitle": "Unete a cientos de creadores que ya estan generando ingresos en LMS V2. Tu primer curso es gratis.",
       "button": "Crea tu Cuenta Gratis"
     }
   },
@@ -2119,6 +2395,21 @@
       }
     }
   },
+  "certificates": {
+    "getCertificate": "Obtener Certificado",
+    "viewCertificate": "Ver Certificado",
+    "generating": "Generando...",
+    "generated": "Certificado generado exitosamente!",
+    "generateError": "Error al generar el certificado",
+    "completeAllLessons": "Completa todas las lecciones para obtener tu certificado",
+    "certificateOf": "Certificado de Finalización",
+    "awardedTo": "Otorgado a",
+    "forCourse": "por completar exitosamente el curso",
+    "date": "Fecha",
+    "score": "Puntuación",
+    "certificateNumber": "Número de Certificado",
+    "issuedBy": "Emitido por LMS Platform"
+  },
   "checkout": {
     "title": "Finalizar Compra",
     "description": "Elige tu método de pago para continuar.",
@@ -2156,6 +2447,80 @@
       "paymentSuccess": "¡Pago exitoso! Ya estás inscrito.",
       "requestSent": "¡Solicitud enviada! Revisa tu correo.",
       "error": "Error: {message}"
+    },
+    "manual": {
+      "title": "Pago Manual",
+      "subtitle": "Solicita instrucciones de pago para completar tu compra",
+      "productDetails": "Detalles del Producto",
+      "price": "Precio",
+      "manualPayment": "Método de Pago Manual",
+      "howItWorks": {
+        "title": "Cómo Funciona",
+        "description": "Sigue estos sencillos pasos para completar tu compra",
+        "step1": "Envía el formulario de solicitud con tu información de contacto",
+        "step2": "Recibe instrucciones de pago por correo (transferencia bancaria, factura, etc.)",
+        "step3": "Completa el pago usando tu método preferido",
+        "step4": "Obtén acceso instantáneo una vez confirmado el pago"
+      }
+    }
+  },
+  "onboarding": {
+    "back": "Atrás",
+    "next": "Continuar",
+    "welcome": {
+      "title": "¡Bienvenido, {name}!",
+      "description": "Configuremos tu escuela online en unos pocos pasos. Estarás listo para crear cursos en menos de 5 minutos.",
+      "step1": "Nombra tu escuela y cuenta a los estudiantes qué enseñas",
+      "step2": "Personaliza los colores de tu marca y logo",
+      "step3": "Crea tu primer curso y empieza a enseñar",
+      "getStarted": "Empecemos"
+    },
+    "school": {
+      "title": "Tu Escuela",
+      "description": "Dale un nombre y descripción a tu escuela que los estudiantes verán.",
+      "nameLabel": "Nombre de la Escuela",
+      "namePlaceholder": "ej. Academia de Código, Escuela de Diseño, Lab Musical",
+      "nameHint": "Aparece en la barra de navegación, emails y certificados",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "¿Qué enseñas? ¿Para quién es?",
+      "descriptionHint": "Una breve descripción para la página de inicio de tu escuela"
+    },
+    "branding": {
+      "title": "Personaliza Tu Escuela",
+      "description": "Hazla tuya con colores personalizados y un logo. Puedes cambiarlos después en Configuración.",
+      "logoLabel": "URL del Logo",
+      "logoPlaceholder": "https://ejemplo.com/tu-logo.png",
+      "logoHint": "Pega una URL a tu imagen de logo (PNG o SVG recomendado)",
+      "primaryLabel": "Color Primario",
+      "secondaryLabel": "Color Secundario",
+      "preview": "Vista Previa"
+    },
+    "payment": {
+      "title": "Configuración de Pagos",
+      "description": "Conecta tu cuenta de Stripe para empezar a aceptar pagos de estudiantes.",
+      "whyTitle": "¿Por qué conectar tu cuenta de pagos?",
+      "whyDescription": "Acepta pagos y recibe el dinero directamente en tu cuenta bancaria.",
+      "benefit1": "Recibe pagos directamente de los estudiantes",
+      "benefit2": "Transferencias automáticas a tu cuenta bancaria",
+      "benefit3": "Procesamiento de pagos seguro vía Stripe",
+      "benefit4": "Rastrea todos los ingresos en tu panel",
+      "revenueSplit": "División de Ingresos",
+      "yourRevenue": "Tus Ingresos",
+      "platformFee": "Tarifa de Plataforma",
+      "revenueSplitNote": "Te quedas con el 80% de todas las ventas de cursos. La tarifa de plataforma cubre alojamiento, soporte y mantenimiento.",
+      "connectStripe": "Conectar con Stripe",
+      "skipForNow": "Omitir por Ahora",
+      "skipWarning": "Puedes conectar tu cuenta de pagos más tarde desde Configuración, pero no podrás vender cursos hasta que lo hagas."
+    },
+    "ready": {
+      "title": "¡Todo Listo!",
+      "description": "Tu escuela está configurada y lista. ¿Qué te gustaría hacer ahora?",
+      "createCourse": "Crear Tu Primer Curso",
+      "goToDashboard": "Ir al Panel"
+    },
+    "complete": {
+      "success": "¡Configuración completa! Bienvenido a bordo.",
+      "error": "Error al guardar la configuración. Inténtalo de nuevo."
     }
   }
 }

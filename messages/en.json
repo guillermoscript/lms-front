@@ -147,11 +147,52 @@
         "renewsOn": "Renews on {date}",
         "manageSubscription": "Manage Subscription",
         "noActiveSubscription": "You don't have an active subscription yet.",
-        "viewPlans": "View Plans"
+        "viewPlans": "View Plans",
+        "certificates": {
+          "title": "My Certificates",
+          "subtitle": "You have earned {count} certificates",
+          "noCertificates": "You haven't earned any certificates yet. Complete courses to get certified!",
+          "view": "View Certificate",
+          "download": "Download PDF",
+          "share": "Share",
+          "verify": "Verify",
+          "issuedBy": "Issued by {issuer}",
+          "issuedOn": "Issued on {date}"
+        }
       },
       "store": {
         "title": "Point Store",
         "subtitle": "Exchange your coins for exclusive rewards and power-ups"
+      },
+      "payments": {
+        "title": "Payment Requests",
+        "subtitle": "Track your manual payment requests and instructions",
+        "infoMessage": "Manual payment requests are processed by our team. You will receive payment instructions via email.",
+        "tableTitle": "Your Payment Requests",
+        "tableDescription": "Showing {count} payment request(s)",
+        "amount": "Amount",
+        "viewDetails": "View Details",
+        "unknownProduct": "Unknown Product",
+        "instructionsAvailable": "Payment instructions available",
+        "empty": {
+          "title": "No Payment Requests",
+          "description": "You haven't submitted any payment requests yet. Browse courses to get started!",
+          "browseCourses": "Browse Courses"
+        },
+        "table": {
+          "product": "Product",
+          "amount": "Amount",
+          "status": "Status",
+          "date": "Date",
+          "actions": "Actions"
+        },
+        "status": {
+          "pending": "Pending",
+          "contacted": "Contacted",
+          "paymentReceived": "Payment Received",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        }
       }
     },
     "teacher": {
@@ -225,6 +266,7 @@
           "exercises": "Exercises",
           "exams": "Exams",
           "students": "Students",
+          "certificates": "Certificates",
           "preview": "Preview"
         },
         "curriculum": {
@@ -263,6 +305,59 @@
           "noStudents": "No students enrolled in this course yet.",
           "viewProgress": "View Progress",
           "unknownStudent": "Unknown Student"
+        },
+        "certificates": {
+          "title": "Certificates",
+          "description": "Configure and manage certificates for this course.",
+          "templates": {
+            "title": "Certificate Template",
+            "description": "Configure how the certificate will look and what it will represent.",
+            "edit": "Edit Template",
+            "create": "Create Template",
+            "noTemplate": "No certificate template configured for this course yet.",
+            "nameLabel": "Certificate Name",
+            "namePlaceholder": "e.g. Professional JavaScript Developer",
+            "issuerNameLabel": "Issuer Name",
+            "issuerUrlLabel": "Issuer URL",
+            "issuerUrlPlaceholder": "https://your-academy.com",
+            "descriptionLabel": "Certificate Description",
+            "descriptionPlaceholder": "This certificate confirms the completion of...",
+            "criteriaLabel": "Issuance Criteria",
+            "criteriaPlaceholder": "Criteria for automatic issuance...",
+            "design": "Design Settings",
+            "primaryColor": "Primary Color",
+            "secondaryColor": "Secondary Color",
+            "showQrCode": "Show QR Code for Verification",
+            "qrCodeDescription": "Enhance trust by allowing public verification",
+            "saveSuccess": "Certificate template saved successfully",
+            "saveError": "Failed to save certificate template",
+            "cancel": "Cancel",
+            "submit": "Save Template",
+            "preview": {
+              "title": "Certificate Preview",
+              "header": "Certificate of Completion",
+              "certifyThat": "This is to certify that",
+              "successfullyCompleted": "has successfully completed the requirements for",
+              "officialIssuer": "Official Issuer",
+              "issueDate": "Issue Date",
+              "verified": "Verified Digital Credential"
+            }
+          },
+          "issued": {
+            "title": "Issued Certificates",
+            "count": "{count} certificates issued",
+            "table": {
+              "student": "Student",
+              "date": "Issue Date",
+              "code": "Verification Code",
+              "status": "Status",
+              "actions": "Actions"
+            },
+            "noIssued": "No certificates have been issued for this course yet.",
+            "view": "View Certificate",
+            "revoke": "Revoke",
+            "revokeConfirm": "Are you sure you want to revoke this certificate? This action cannot be undone."
+          }
         }
       },
       "newCourse": {
@@ -1023,6 +1118,7 @@
         "errorDesc": "Failed to load platform settings",
         "tabs": {
           "general": "General",
+          "branding": "Branding",
           "email": "Email",
           "payment": "Payment",
           "enrollment": "Enrollment"
@@ -1043,6 +1139,10 @@
           "enrollment": {
             "title": "Enrollment Settings",
             "description": "Configure course enrollment rules and student access policies"
+          },
+          "branding": {
+            "title": "Branding Settings",
+            "description": "Customize your platform's visual identity — logo, colors, and favicon"
           }
         },
         "form": {
@@ -1102,6 +1202,20 @@
             "invoicePrefixHint": "Prefix for invoice numbers (e.g., INV-001)",
             "approval": "Require Payment Approval",
             "approvalHint": "Require admin approval before processing payments"
+          },
+          "branding": {
+            "logoUrl": "Logo URL",
+            "logoUrlPlaceholder": "https://example.com/logo.png",
+            "logoUrlHint": "URL of your platform logo (recommended: 200x50px PNG or SVG)",
+            "faviconUrl": "Favicon URL",
+            "faviconUrlPlaceholder": "https://example.com/favicon.ico",
+            "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)",
+            "primaryColor": "Primary Color",
+            "primaryColorHint": "Main brand color used for buttons, links, and accents",
+            "secondaryColor": "Secondary Color",
+            "secondaryColorHint": "Secondary brand color used for highlights and gradients",
+            "preview": "Preview",
+            "previewHint": "See how your branding looks"
           },
           "enrollment": {
             "auto": "Auto Enrollment",
@@ -1577,11 +1691,130 @@
       "button": "Create your Free Account"
     }
   },
+  "creators": {
+    "badge": "For Course Creators",
+    "heroTitle": "Create, Sell & Scale Your Online Courses with AI",
+    "heroSubtitle": "The first AI-native platform for course creators. Auto-grade exams, engage students with gamification, and grow your business — no plugins needed.",
+    "ctaHero": "Start Creating for Free",
+    "ctaSecondary": "See How It Works",
+    "socialProof": {
+      "creators": "500+ Course Creators",
+      "students": "50,000+ Students Enrolled",
+      "revenue": "$2M+ Creator Revenue"
+    },
+    "differentiators": {
+      "title": "Why Creators Choose LMS V2",
+      "subtitle": "Three things that set us apart from every other course platform.",
+      "ai": {
+        "title": "AI Auto-Grading",
+        "description": "AI grades exams and provides personalized feedback automatically. Save hours of manual grading."
+      },
+      "gamification": {
+        "title": "Built-in Gamification",
+        "description": "XP, levels, streaks, achievements, and a rewards store. Keep students engaged like Duolingo."
+      },
+      "modern": {
+        "title": "Modern & Fast",
+        "description": "Built on Next.js and Supabase. Your school loads instantly, works on any device, and scales automatically."
+      }
+    },
+    "features": {
+      "badge": "Platform Features",
+      "title": "Everything You Need to Teach Online",
+      "subtitle": "From content creation to payments, we handle the infrastructure so you can focus on teaching.",
+      "editor": {
+        "title": "Rich Content Editor",
+        "description": "MDX-powered lessons with code blocks, images, embeds, and interactive components. Write once, render beautifully."
+      },
+      "exams": {
+        "title": "Exam Builder",
+        "description": "Multiple choice, open-ended, and true/false questions. AI grades free-text answers with detailed feedback."
+      },
+      "exercises": {
+        "title": "Exercise System",
+        "description": "Interactive coding challenges with an AI assistant that guides students through problem-solving."
+      },
+      "payments": {
+        "title": "Stripe Payments",
+        "description": "Sell courses individually or via subscription plans. Accept credit cards with zero platform transaction fees."
+      },
+      "dashboard": {
+        "title": "Student Dashboard",
+        "description": "Beautiful progress tracking, lesson completions, achievements, and streak counters that motivate students."
+      },
+      "analytics": {
+        "title": "Analytics & Insights",
+        "description": "Track enrollments, revenue, completion rates, and student engagement from your teacher dashboard."
+      }
+    },
+    "comparison": {
+      "title": "See How We Compare",
+      "subtitle": "We built LMS V2 to give creators more features at a fraction of the cost.",
+      "feature": "Feature",
+      "rows": {
+        "aiGrading": "AI Grading",
+        "gamification": "Gamification System",
+        "openSource": "Open Source",
+        "transactionFee": "Transaction Fee",
+        "startingPrice": "Starting Price",
+        "free": "Free"
+      },
+      "footnote": "* Udemy is free to publish but takes up to 63% revenue share on organic sales."
+    },
+    "pricing": {
+      "badge": "Simple Pricing",
+      "title": "Plans That Grow With You",
+      "subtitle": "Start free, upgrade when you're ready. No hidden fees, no surprises.",
+      "mo": "mo",
+      "getStarted": "Get Started",
+      "contactSales": "Contact Sales",
+      "popular": "Most Popular",
+      "free": {
+        "name": "Free",
+        "f1": "1 published course",
+        "f2": "Up to 50 students",
+        "f3": "Basic exam builder",
+        "f4": "Community support"
+      },
+      "creator": {
+        "name": "Creator",
+        "f1": "5 published courses",
+        "f2": "Up to 500 students",
+        "f3": "AI auto-grading",
+        "f4": "Gamification system",
+        "f5": "Stripe payments (0% fee)"
+      },
+      "pro": {
+        "name": "Pro",
+        "f1": "Unlimited courses",
+        "f2": "Unlimited students",
+        "f3": "AI auto-grading",
+        "f4": "Full gamification suite",
+        "f5": "Advanced analytics",
+        "f6": "Priority support"
+      },
+      "business": {
+        "name": "Business",
+        "f1": "Everything in Pro",
+        "f2": "Custom branding",
+        "f3": "API access",
+        "f4": "Dedicated account manager",
+        "f5": "SSO / SAML",
+        "f6": "SLA & uptime guarantee"
+      }
+    },
+    "cta": {
+      "title": "Start Building Your Course Today",
+      "subtitle": "Join hundreds of creators who are already earning revenue on LMS V2. Your first course is free.",
+      "button": "Create Your Free Account"
+    }
+  },
   "navbar": {
     "brand": "LMS V2",
     "courses": "Courses",
     "plans": "Plans",
     "about": "About",
+    "creators": "For Creators",
     "dashboard": "Dashboard",
     "login": "Login",
     "signup": "Sign Up"
@@ -1610,7 +1843,9 @@
     "learning": "Learning",
     "resources": "Resources",
     "contentManagement": "Content Management",
-    "management": "Management"
+    "management": "Management",
+    "business": "Business",
+    "revenue": "Revenue"
   },
   "userNav": {
     "profile": "Profile",
@@ -1684,7 +1919,8 @@
       "enrollNow": "Enroll Now",
       "enrolling": "Enrolling...",
       "subscribeAccess": "Subscribe to Access",
-      "enrolled": "Enrolled"
+      "enrolled": "Enrolled",
+      "notInPlan": "Not in Your Plan"
     },
     "profileForm": {
       "fullName": "Full Name",
@@ -1905,6 +2141,46 @@
         "error": "Failed to complete purchase",
         "empty": "The store is currently empty. Check back later!"
       }
+    },
+    "paymentRequestForm": {
+      "title": "Request Payment Instructions",
+      "description": "Fill out this form to receive payment instructions for your purchase.",
+      "amount": "Amount",
+      "contactName": "Full Name",
+      "contactNamePlaceholder": "John Doe",
+      "contactEmail": "Email Address",
+      "contactEmailPlaceholder": "john@example.com",
+      "contactEmailHint": "We'll send payment instructions to this email",
+      "contactPhone": "Phone Number (Optional)",
+      "contactPhonePlaceholder": "+1 234 567 8900",
+      "contactPhoneHint": "Optional - for payment confirmation",
+      "message": "Additional Message (Optional)",
+      "messagePlaceholder": "Any questions or special requests...",
+      "messageHint": "Let us know if you have specific payment preferences",
+      "cancel": "Cancel",
+      "submit": "Submit Request",
+      "submitting": "Submitting...",
+      "validationError": "Please fix the errors in the form",
+      "success": "Payment request submitted successfully!",
+      "error": "Failed to submit payment request",
+      "successTitle": "Request Submitted!",
+      "successDescription": "We've received your payment request and will send instructions to your email shortly.",
+      "viewRequests": "View My Requests",
+      "errors": {
+        "nameRequired": "Name is required",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email address"
+      }
+    },
+    "cancelPaymentButton": {
+      "cancel": "Cancel",
+      "confirmTitle": "Cancel Payment Request?",
+      "confirmDescription": "Are you sure you want to cancel this payment request? This action cannot be undone.",
+      "keepRequest": "Keep Request",
+      "confirmCancel": "Yes, Cancel Request",
+      "cancelling": "Cancelling...",
+      "success": "Payment request cancelled successfully",
+      "error": "Failed to cancel payment request"
     }
   },
   "courseDetails": {
@@ -2126,6 +2402,21 @@
       }
     }
   },
+  "certificates": {
+    "getCertificate": "Get Certificate",
+    "viewCertificate": "View Certificate",
+    "generating": "Generating...",
+    "generated": "Certificate generated successfully!",
+    "generateError": "Failed to generate certificate",
+    "completeAllLessons": "Complete all lessons to earn your certificate",
+    "certificateOf": "Certificate of Completion",
+    "awardedTo": "Awarded to",
+    "forCourse": "for successfully completing the course",
+    "date": "Date",
+    "score": "Score",
+    "certificateNumber": "Certificate Number",
+    "issuedBy": "Issued by LMS Platform"
+  },
   "checkout": {
     "title": "Checkout",
     "description": "Choose your payment method to continue.",
@@ -2163,6 +2454,80 @@
       "paymentSuccess": "Payment successful! You are now enrolled.",
       "requestSent": "Payment request sent! Check your email for instructions.",
       "error": "Error: {message}"
+    },
+    "manual": {
+      "title": "Manual Payment Checkout",
+      "subtitle": "Request payment instructions to complete your purchase",
+      "productDetails": "Product Details",
+      "price": "Price",
+      "manualPayment": "Manual Payment Method",
+      "howItWorks": {
+        "title": "How It Works",
+        "description": "Follow these simple steps to complete your purchase",
+        "step1": "Submit the payment request form with your contact information",
+        "step2": "Receive payment instructions via email (bank transfer, invoice, etc.)",
+        "step3": "Complete the payment using your preferred method",
+        "step4": "Get instant access once payment is confirmed"
+      }
+    }
+  },
+  "onboarding": {
+    "back": "Back",
+    "next": "Continue",
+    "welcome": {
+      "title": "Welcome, {name}!",
+      "description": "Let's set up your online school in just a few steps. You'll be ready to create courses in under 5 minutes.",
+      "step1": "Name your school and tell students what you teach",
+      "step2": "Customize your brand colors and logo",
+      "step3": "Create your first course and start teaching",
+      "getStarted": "Let's Get Started"
+    },
+    "school": {
+      "title": "Your School",
+      "description": "Give your school a name and description that students will see.",
+      "nameLabel": "School Name",
+      "namePlaceholder": "e.g. Code Academy, Design School, Music Lab",
+      "nameHint": "This appears in the navbar, emails, and certificates",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What do you teach? Who is it for?",
+      "descriptionHint": "A short description for your school's landing page"
+    },
+    "branding": {
+      "title": "Brand Your School",
+      "description": "Make it yours with custom colors and a logo. You can change these later in Settings.",
+      "logoLabel": "Logo URL",
+      "logoPlaceholder": "https://example.com/your-logo.png",
+      "logoHint": "Paste a URL to your logo image (PNG or SVG recommended)",
+      "primaryLabel": "Primary Color",
+      "secondaryLabel": "Secondary Color",
+      "preview": "Preview"
+    },
+    "payment": {
+      "title": "Payment Setup",
+      "description": "Connect your Stripe account to start accepting payments from students.",
+      "whyTitle": "Why connect your payment account?",
+      "whyDescription": "Accept payments and get paid directly to your bank account.",
+      "benefit1": "Receive payments directly from students",
+      "benefit2": "Automatic payouts to your bank account",
+      "benefit3": "Secure payment processing via Stripe",
+      "benefit4": "Track all revenue in your dashboard",
+      "revenueSplit": "Revenue Split",
+      "yourRevenue": "Your Revenue",
+      "platformFee": "Platform Fee",
+      "revenueSplitNote": "You keep 80% of all course sales. The platform fee covers hosting, support, and maintenance.",
+      "connectStripe": "Connect with Stripe",
+      "skipForNow": "Skip for Now",
+      "skipWarning": "You can connect your payment account later from Settings, but you won't be able to sell courses until you do."
+    },
+    "ready": {
+      "title": "You're All Set!",
+      "description": "Your school is configured and ready to go. What would you like to do next?",
+      "createCourse": "Create Your First Course",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "complete": {
+      "success": "School setup complete! Welcome aboard.",
+      "error": "Failed to save settings. Please try again."
     }
   }
 }
