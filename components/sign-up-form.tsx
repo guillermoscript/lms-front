@@ -17,7 +17,11 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
+  tenantId?: string
+}
+
+export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const t = useTranslations('auth.signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,6 +48,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          data: {
+            ...(tenantId ? { tenant_id: tenantId } : {}),
+          },
         },
       })
       if (error) throw error

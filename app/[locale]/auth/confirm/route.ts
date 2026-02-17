@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
@@ -18,6 +19,17 @@ export async function GET(request: NextRequest) {
       token_hash,
     })
     if (!error) {
+      // Get tenant from current subdomain (middleware sets header)
+      const tenantId = await getCurrentTenantId()
+
+      // Update user's preferred_tenant_id to match signup subdomain
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.auth.updateUser({
+          data: { preferred_tenant_id: tenantId }
+        })
+      }
+
       // redirect user to specified redirect URL or root of app
       redirect(next)
     } else {

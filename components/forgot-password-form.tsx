@@ -30,9 +30,13 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
     setError(null)
 
     try {
+      // Preserve subdomain in password reset redirect
+      const currentHost = window.location.host
+      const protocol = window.location.protocol
+
       // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+        redirectTo: `${protocol}//${currentHost}/auth/update-password`,
       })
       if (error) throw error
       setSuccess(true)

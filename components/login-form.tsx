@@ -17,7 +17,11 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
+  tenantId?: string
+}
+
+export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
   const t = useTranslations('auth.login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,6 +41,15 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       })
       if (error) throw error
+
+      // Update preferred tenant if provided
+      if (tenantId) {
+        await supabase.auth.updateUser({
+          data: { preferred_tenant_id: tenantId }
+        })
+        // Refresh session to get updated JWT claims
+        await supabase.auth.refreshSession()
+      }
 
       // Get user role to redirect to the correct dashboard
       const { data: { session } } = await supabase.auth.getSession()
