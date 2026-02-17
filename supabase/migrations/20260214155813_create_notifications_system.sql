@@ -1,3 +1,9 @@
+-- Drop existing incompatible tables if they exist
+DROP TABLE IF EXISTS user_notifications CASCADE;
+DROP TABLE IF EXISTS notification_preferences CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS notification_templates CASCADE;
+
 -- Create notification_templates table for reusable notification templates
 CREATE TABLE IF NOT EXISTS notification_templates (
     id BIGSERIAL PRIMARY KEY,
@@ -16,13 +22,13 @@ CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    notification_type TEXT NOT NULL CHECK (notification_type IN ('announcement', 'alert', 'info', 'success', 'warning', 'error')),
+    notification_type TEXT NOT NULL CHECK (notification_type IN ('announcement', 'alert', 'info', 'success', 'warning', 'error', 'certificate_issued')),
     priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
     
     -- Targeting
     target_type TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'role', 'course', 'user', 'custom')),
     target_roles TEXT[], -- Array of role names ['student', 'teacher']
-    target_course_id BIGINT REFERENCES courses(id) ON DELETE CASCADE,
+    target_course_id BIGINT REFERENCES courses(course_id) ON DELETE CASCADE,
     target_user_ids UUID[], -- Array of specific user IDs
     
     -- Delivery
@@ -115,10 +121,9 @@ CREATE POLICY "Admins and teachers can view templates" ON notification_templates
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name IN ('admin', 'teacher')
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role IN ('admin', 'teacher')
         )
     );
 
@@ -128,10 +133,9 @@ CREATE POLICY "Admins can manage templates" ON notification_templates
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'admin'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
         )
     );
 
@@ -142,10 +146,9 @@ CREATE POLICY "Admins can view all notifications" ON notifications
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'admin'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
         )
     );
 
@@ -169,18 +172,16 @@ CREATE POLICY "Admins can manage notifications" ON notifications
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'admin'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
         )
     )
     WITH CHECK (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'admin'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
         )
     );
 
@@ -190,10 +191,9 @@ CREATE POLICY "Teachers can create course notifications" ON notifications
     TO authenticated
     WITH CHECK (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'teacher'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'teacher'
         )
         AND (
             target_type = 'course'
@@ -223,10 +223,9 @@ CREATE POLICY "Admins can manage user notifications" ON user_notifications
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.role_name = 'admin'
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
         )
     );
 
