@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { toCents } from '@/lib/currency'
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,11 +66,12 @@ export async function POST(req: NextRequest) {
     // Get price based on plan or product
     let amount: number
     let itemName: string
+    let currency = 'usd'
 
     if (planId) {
       const { data: plan, error } = await supabase
         .from('plans')
-        .select('price, plan_name')
+        .select('price, plan_name, currency')
         .eq('plan_id', planId)
         .eq('tenant_id', tenantId)
         .single()
@@ -77,12 +79,13 @@ export async function POST(req: NextRequest) {
       if (error || !plan) {
         return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
       }
-      amount = Math.round(Number(plan.price) * 100) // Convert to cents
+      currency = plan.currency || 'usd'
+      amount = toCents(Number(plan.price), currency)
       itemName = plan.plan_name
     } else {
       const { data: product, error } = await supabase
         .from('products')
-        .select('price, name')
+        .select('price, name, currency')
         .eq('product_id', productId)
         .eq('tenant_id', tenantId)
         .single()
@@ -90,7 +93,8 @@ export async function POST(req: NextRequest) {
       if (error || !product) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
-      amount = Math.round(Number(product.price) * 100) // Convert to cents
+      currency = product.currency || 'usd'
+      amount = toCents(Number(product.price), currency)
       itemName = product.name
     }
 
@@ -112,8 +116,8 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         plan_id: planId || null,
         product_id: productId || null,
-        amount: amount / 100, // Store in dollars
-        currency: 'usd',
+        amount: amount / (currency === 'clp' || currency === 'jpy' ? 1 : 100), // Store in display units
+        currency,
         status: 'pending',
         payment_provider: 'stripe',
         tenant_id: tenantId,
@@ -127,12 +131,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Stripe PaymentIntent with Connect (revenue split)
-    const paymentIntent = await getStripe().paymentIntents.create({
+    // When fee is 0%, still use transfer_data for routing but set fee to 0
+    const stripe = getStripe()
+
+    const paymentIntentParams: Record<string, unknown> = {
       amount,
-      currency: 'usd',
+      currency,
       customer: stripeCustomerId,
       automatic_payment_methods: { enabled: true },
-      application_fee_amount: platformFee, // Platform's cut
       transfer_data: {
         destination: tenant.stripe_account_id, // Money goes to school
       },
@@ -143,7 +149,15 @@ export async function POST(req: NextRequest) {
         planId: planId?.toString() || '',
         productId: productId?.toString() || '',
       },
-    })
+    }
+
+    // Only add application fee if > 0
+    if (platformFee > 0) {
+      paymentIntentParams.application_fee_amount = platformFee
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams as any)
 
     // Save payment intent ID for refund tracking
     await supabase
