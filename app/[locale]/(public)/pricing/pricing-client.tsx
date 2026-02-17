@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -21,18 +21,16 @@ interface Plan {
 interface PricingClientProps {
     monthlyPlans: Plan[];
     yearlyPlans: Plan[];
-    freePlan: Plan;
 }
 
-export default function PricingClient({ monthlyPlans, yearlyPlans, freePlan }: PricingClientProps) {
+export default function PricingClient({ monthlyPlans, yearlyPlans }: PricingClientProps) {
     const [isYearly, setIsYearly] = useState(false);
     const t = useTranslations('pricing');
 
     // Get the appropriate plans based on toggle
     const displayPlans = isYearly ? yearlyPlans : monthlyPlans;
 
-    // Combine free plan with database plans
-    const allPlans = [freePlan, ...displayPlans];
+    const allPlans = displayPlans;
 
     // Determine which plan is most popular (middle one typically)
     const popularIndex = Math.floor(allPlans.length / 2);
@@ -109,44 +107,32 @@ export default function PricingClient({ monthlyPlans, yearlyPlans, freePlan }: P
                                             {plan.duration_in_days === 365 ? t('billedYearly') : t('billedMonthly')}
                                         </div>
 
-                                        {plan.plan_id === 0 ? (
-                                            <Link href="/auth/sign-up" className="block mt-10">
-                                                <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold h-14 rounded-2xl border border-zinc-700/50 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                                                    {t('signUpFree')}
-                                                </Button>
-                                            </Link>
-                                        ) : (
-                                            <Link href={`/checkout?planId=${plan.plan_id}`} className="block mt-10">
-                                                <Button className={`w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
-                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
-                                                    : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
-                                                    }`}>
-                                                    {t('getStarted')}
-                                                </Button>
-                                            </Link>
-                                        )}
+                                        <Link
+                                            href={plan.payment_provider === 'manual'
+                                                ? `/checkout/manual?planId=${plan.plan_id}`
+                                                : `/checkout?planId=${plan.plan_id}`
+                                            }
+                                            className="block mt-10"
+                                        >
+                                            <Button className={`w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
+                                                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
+                                                : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
+                                                }`}>
+                                                {t('getStarted')}
+                                            </Button>
+                                        </Link>
                                     </div>
                                     <ul className="space-y-4 m-0 p-0">
-                                        {parsedFeatures?.map((feature: string, i: number) => {
-                                            // The 3rd feature (index 2) of the free plan is the one to cross out (Certificates)
-                                            const isCrossed = plan.plan_id === 0 && i === 2;
-                                            return (
-                                                <li key={i} className="flex items-center text-zinc-300 list-none group/item">
-                                                    {isCrossed ? (
-                                                        <div className="h-6 w-6 rounded-full flex items-center justify-center mr-4 flex-shrink-0 bg-red-500/5">
-                                                            <X className="h-4 w-4 text-zinc-700" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="h-6 w-6 bg-blue-500/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0 border border-blue-500/20 group-hover/item:bg-blue-500/20 transition-colors">
-                                                            <Check className="h-3.5 w-3.5 text-blue-400" />
-                                                        </div>
-                                                    )}
-                                                    <span className={`text-sm font-medium leading-none ${isCrossed ? "text-zinc-600 line-through decoration-zinc-700/50" : "text-zinc-300"}`}>
-                                                        {feature}
-                                                    </span>
-                                                </li>
-                                            );
-                                        })}
+                                        {parsedFeatures?.map((feature: string, i: number) => (
+                                            <li key={i} className="flex items-center text-zinc-300 list-none group/item">
+                                                <div className="h-6 w-6 bg-blue-500/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0 border border-blue-500/20 group-hover/item:bg-blue-500/20 transition-colors">
+                                                    <Check className="h-3.5 w-3.5 text-blue-400" />
+                                                </div>
+                                                <span className="text-sm font-medium leading-none text-zinc-300">
+                                                    {feature}
+                                                </span>
+                                            </li>
+                                        ))}
                                     </ul>
                                 </CardContent>
                             </Card>

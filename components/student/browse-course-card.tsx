@@ -19,13 +19,15 @@ interface BrowseCourseCardProps {
   isEnrolled: boolean
   hasActiveSubscription: boolean
   subscriptionId?: number
+  isCoveredByPlan?: boolean
 }
 
 export function BrowseCourseCard({
   course,
   isEnrolled,
   hasActiveSubscription,
-  subscriptionId
+  subscriptionId,
+  isCoveredByPlan = true,
 }: BrowseCourseCardProps) {
   const { enrollInCourse, loading } = useEnrollment()
   const t = useTranslations('components.browseCourse')
@@ -102,13 +104,18 @@ export function BrowseCourseCard({
           <Link href={`/dashboard/student/courses/${course.course_id}`} className="w-full">
             <Button className="w-full">{t('goCourse')}</Button>
           </Link>
-        ) : hasActiveSubscription ? (
+        ) : hasActiveSubscription && isCoveredByPlan ? (
           <Button
             className="w-full"
             onClick={handleEnroll}
             disabled={loading}
           >
             {loading ? t('enrolling') : t('enrollNow')}
+          </Button>
+        ) : hasActiveSubscription && !isCoveredByPlan ? (
+          <Button variant="outline" className="w-full gap-2" disabled>
+            <IconLock className="w-4 h-4" />
+            {t('notInPlan')}
           </Button>
         ) : (
           <Link href="/pricing" className="w-full">

@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 import { IconAlertCircle, IconSparkles, IconTrophy } from '@tabler/icons-react'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function BrowseCoursesPage() {
+  const tenantId = await getCurrentTenantId()
   const supabase = await createClient()
 
   // Get authenticated user
@@ -34,11 +36,30 @@ export default async function BrowseCoursesPage() {
       )
     `)
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
     .eq('subscription_status', 'active')
     .gte('end_date', new Date().toISOString())
     .order('end_date', { ascending: false })
 
   const activeSubscription = subscriptions?.[0]
+
+  // Fetch plan_courses to determine which courses the subscription covers
+  let allowedCourseIds: Set<number> | null = null // null = all courses allowed
+  if (activeSubscription) {
+    const planId = (activeSubscription.plan as any)?.plan_id
+    if (planId) {
+      const { data: planCourses } = await supabase
+        .from('plan_courses')
+        .select('course_id')
+        .eq('plan_id', planId)
+        .eq('tenant_id', tenantId)
+
+      // If plan_courses has entries, restrict to those; if empty, allow all
+      if (planCourses && planCourses.length > 0) {
+        allowedCourseIds = new Set(planCourses.map(pc => pc.course_id))
+      }
+    }
+  }
 
   // Fetch all published courses
   const { data: courses } = await supabase
@@ -51,6 +72,7 @@ export default async function BrowseCoursesPage() {
       tags,
       category_id
     `)
+    .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('title', { ascending: true })
 
@@ -64,6 +86,7 @@ export default async function BrowseCoursesPage() {
     .from('enrollments')
     .select('course_id')
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
     .eq('status', 'active')
 
   const enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || [])
@@ -123,15 +146,19 @@ export default async function BrowseCoursesPage() {
             {t('showingCourses', { count: courses.length, s: courses.length === 1 ? '' : 's' })}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course) => (
-              <BrowseCourseCard
-                key={course.course_id}
-                course={course}
-                isEnrolled={enrolledCourseIds.has(course.course_id)}
-                hasActiveSubscription={!!activeSubscription}
-                subscriptionId={activeSubscription?.subscription_id}
-              />
-            ))}
+            {courses.map((course) => {
+              const isCoveredByPlan = allowedCourseIds === null || allowedCourseIds.has(course.course_id)
+              return (
+                <BrowseCourseCard
+                  key={course.course_id}
+                  course={course}
+                  isEnrolled={enrolledCourseIds.has(course.course_id)}
+                  hasActiveSubscription={!!activeSubscription}
+                  subscriptionId={activeSubscription?.subscription_id}
+                  isCoveredByPlan={isCoveredByPlan}
+                />
+              )
+            })}
           </div>
         </>
       )}

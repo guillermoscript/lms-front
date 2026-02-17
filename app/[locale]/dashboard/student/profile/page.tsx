@@ -12,7 +12,8 @@ import {
     IconCrown,
     IconEdit,
     IconTrophy,
-    IconChartBar
+    IconChartBar,
+    IconAward,
 } from "@tabler/icons-react"
 import { ProfileForm } from '@/components/student/profile-form'
 import { cn } from "@/lib/utils"
@@ -21,11 +22,13 @@ import { AchievementGrid } from '@/components/gamification/achievement-grid'
 import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
 import Link from 'next/link'
+import { StudentCertificateCard } from '@/components/student/student-certificate-card'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-async function getProfileData(userId: string) {
+async function getProfileData(userId: string, tenantId: string) {
     const supabase = await createClient()
 
-    const [profileRes, subscriptionRes, transactionsRes] = await Promise.all([
+    const [profileRes, subscriptionRes, transactionsRes, certificatesRes] = await Promise.all([
         supabase
             .from('profiles')
             .select('*, user_roles(role)')
@@ -43,24 +46,38 @@ async function getProfileData(userId: string) {
                 )
             `)
             .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
             .eq('subscription_status', 'active')
             .maybeSingle(),
         supabase
             .from('transactions')
             .select('*')
             .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
             .order('transaction_date', { ascending: false })
-            .limit(10)
+            .limit(10),
+        supabase
+            .from('certificates')
+            .select(`
+                *,
+                courses(title),
+                course_certificates_templates:certificate_templates(*)
+            `)
+            .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
+            .order('issued_at', { ascending: false })
     ])
 
     return {
         profile: profileRes.data,
         subscription: subscriptionRes.data,
-        transactions: transactionsRes.data || []
+        transactions: transactionsRes.data || [],
+        certificates: certificatesRes.data || []
     }
 }
 
 export default async function ProfilePage() {
+    const tenantId = await getCurrentTenantId()
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -68,7 +85,7 @@ export default async function ProfilePage() {
         redirect('/auth/login')
     }
 
-    const { profile, subscription, transactions } = await getProfileData(user.id)
+    const { profile, subscription, transactions, certificates } = await getProfileData(user.id, tenantId)
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
@@ -269,6 +286,40 @@ export default async function ProfilePage() {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Certificates Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                        <IconAward size={20} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-bold">{t('certificates.title')}</h2>
+                                        {certificates.length > 0 && (
+                                            <p className="text-sm text-muted-foreground">
+                                                {t('certificates.subtitle', { count: certificates.length })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {certificates.length > 0 ? (
+                                <div className="grid gap-4">
+                                    {certificates.map((cert: any) => (
+                                        <StudentCertificateCard key={cert.id} certificate={cert} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <Card className="border-dashed">
+                                    <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                                        <IconAward className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                                        <p className="max-w-[300px]">{t('certificates.noCertificates')}</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
 
                         {/* Achievements Section */}
                         <div className="space-y-4">

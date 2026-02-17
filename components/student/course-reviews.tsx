@@ -16,7 +16,7 @@ interface Review {
   created_at: string
   user: {
     full_name: string | null
-    email: string
+    username: string | null
   }
 }
 
@@ -60,14 +60,16 @@ export function CourseReviews({
 
       // Get user details for each review
       const userIds = data?.map((r) => r.user_id) || []
-      const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', userIds)
+      let usersMap = new Map()
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url')
+          .in('id', userIds)
 
-      if (usersError) throw usersError
-
-      const usersMap = new Map(users?.map((u) => [u.id, u]))
+        if (usersError) throw usersError
+        usersMap = new Map(users?.map((u) => [u.id, u]))
+      }
 
       const reviewsWithUsers: Review[] =
         data?.map((r) => ({
@@ -75,7 +77,7 @@ export function CourseReviews({
           rating: r.rating,
           review_text: r.review_text,
           created_at: r.created_at,
-          user: usersMap.get(r.user_id) || { full_name: null, email: 'Unknown' },
+          user: usersMap.get(r.user_id) || { full_name: null, username: 'Unknown' },
         })) || []
 
       setReviews(reviewsWithUsers)
@@ -217,7 +219,7 @@ export function CourseReviews({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">
-                      {review.user.full_name || review.user.email}
+                      {review.user.full_name || review.user.username || 'Anonymous'}
                     </p>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((star) => (

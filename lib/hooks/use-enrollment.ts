@@ -53,6 +53,28 @@ export function useEnrollment() {
         return
       }
 
+      // Verify course is covered by the subscription's plan
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('plan_id')
+        .eq('subscription_id', subscriptionId)
+        .single()
+
+      if (sub?.plan_id) {
+        const { data: planCourses } = await supabase
+          .from('plan_courses')
+          .select('course_id')
+          .eq('plan_id', sub.plan_id)
+
+        // If plan_courses has entries, check if this course is included
+        if (planCourses && planCourses.length > 0) {
+          const allowed = planCourses.some(pc => pc.course_id === courseId)
+          if (!allowed) {
+            throw new Error('This course is not included in your current plan')
+          }
+        }
+      }
+
       // Create enrollment with subscription_id
       const { error: enrollError } = await supabase
         .from('enrollments')

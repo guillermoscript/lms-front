@@ -18,7 +18,7 @@ import { es } from 'date-fns/locale'
 interface CommentUser {
   id: string
   full_name: string | null
-  email: string
+  username: string | null
   avatar_url: string | null
 }
 
@@ -84,7 +84,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
       const userIds = Array.from(new Set(commentsData.map(c => c.user_id)))
       const { data: usersData } = await supabase
         .from('profiles')
-        .select('id, full_name, email, avatar_url')
+        .select('id, full_name, username, avatar_url')
         .in('id', userIds)
 
       const usersMap = new Map(usersData?.map(u => [u.id, u]))
@@ -101,7 +101,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
         const user = usersMap.get(c.user_id) || {
           id: c.user_id,
           full_name: 'Unknown',
-          email: '',
+          username: null,
           avatar_url: null
         }
 
@@ -370,7 +370,7 @@ function CommentItem({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm">
-              {comment.user.full_name || comment.user.email?.split('@')[0] || t('unknown')}
+              {comment.user.full_name || comment.user.username || t('unknown')}
             </span>
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}

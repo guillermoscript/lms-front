@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Check, HelpCircle, PackageSearch, ArrowRight } from "lucide-react";
+import { HelpCircle, PackageSearch, ArrowRight } from "lucide-react";
 import PricingClient from "./pricing-client";
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -24,7 +24,7 @@ export default async function PricingPage() {
     // Fetch plans from database
     const { data: plans, error } = await supabase
         .from('plans')
-        .select('*')
+        .select('plan_id, plan_name, price, duration_in_days, description, features, payment_provider')
         .order('price', { ascending: true });
 
     if (error) {
@@ -59,20 +59,6 @@ export default async function PricingPage() {
     // Group plans by duration
     const monthlyPlans = sanitizedPlans.filter(p => p.duration_in_days === 30);
     const yearlyPlans = sanitizedPlans.filter(p => p.duration_in_days === 365);
-
-    // Hardcoded free plan (localized)
-    const freePlan = {
-        plan_id: 0,
-        plan_name: t('freePlan.name'),
-        price: 0,
-        duration_in_days: 0,
-        description: t('freePlan.description'),
-        features: [
-            t('freePlan.features.0'),
-            t('freePlan.features.1'),
-            t('freePlan.features.2')
-        ]
-    };
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white font-sans">
@@ -117,7 +103,6 @@ export default async function PricingPage() {
                     <PricingClient
                         monthlyPlans={monthlyPlans}
                         yearlyPlans={yearlyPlans}
-                        freePlan={freePlan}
                     />
                 )}
 

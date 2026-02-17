@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { PackageSearch, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getCurrentTenantId } from "@/lib/supabase/tenant";
 
 interface SearchParams {
     courseId?: string;
@@ -23,6 +24,8 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
         const returnUrl = encodeURIComponent(`/checkout?${courseId ? `courseId=${courseId}` : `planId=${planId}`}`);
         redirect(`/auth/login?next=${returnUrl}`);
     }
+
+    const tenantId = await getCurrentTenantId();
 
     // Empty state if no course or plan is provided
     if (!courseId && !planId) {
@@ -54,37 +57,48 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             .from("courses")
             .select("title")
             .eq("course_id", courseId)
+            .eq("tenant_id", tenantId)
             .single();
 
         if (course) {
             title = course.title;
 
-            // Get product price from product_courses (pick first match)
+            // Get product price and payment provider from product_courses (pick first match)
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency)")
+                .select("product_id, product:products(price, currency, payment_provider)")
                 .eq("course_id", courseId)
+                .eq("tenant_id", tenantId)
                 .limit(1);
 
             if (productCourses?.[0]?.product) {
                 const product = productCourses[0].product as any;
                 price = parseFloat(product.price);
                 productId = productCourses[0].product_id;
+
+                // Redirect to manual checkout if payment provider is manual
+                if (product.payment_provider === 'manual') {
+                    redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
+                }
             }
         }
     } else if (planId) {
-        // Fetch plan from database
+        // Fetch plan from database with payment provider
         const { data: dbPlan } = await supabase
             .from("plans")
-            .select("plan_name, price, plan_id")
+            .select("plan_name, price, plan_id, payment_provider")
             .eq("plan_id", planId)
+            .eq("tenant_id", tenantId)
             .single();
 
         if (dbPlan) {
             title = dbPlan.plan_name;
             price = parseFloat(dbPlan.price);
-            // Plans don't use productId in this context, but we might need it for manual payment if it's treated as a product
-            // For now, let's keep it undefined for plans unless we have a specific manual payment product for plans
+
+            // Redirect to manual checkout if payment provider is manual
+            if (dbPlan.payment_provider === 'manual') {
+                redirect(`/checkout/manual?planId=${planId}`);
+            }
         }
     }
 
