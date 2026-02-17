@@ -483,9 +483,47 @@ All migrations successful if:
 
 ---
 
-## 🔗 Related Documentation
+---
+
+## February 17, 2026 — Multi-Tenant Fixes
+
+### Migrations Applied
+
+| Migration | Purpose |
+|-----------|---------|
+| `create_multi_tenant_infrastructure` | Tenants, tenant_users, tenant_settings, super_admins + tenant_id on 65+ tables |
+| `create_revenue_infrastructure` | Revenue splits, payouts, invoices |
+| `add_stripe_fields_to_transactions` | Stripe payment intent fields |
+| `create_handle_new_user_trigger` | Auto-create profiles/user_roles on signup, backfill existing users |
+| `add_delete_policy_lesson_completions` | Allow students to uncomplete lessons (DELETE policy) |
+| `allow_users_to_join_schools` | RLS INSERT on tenant_users for join-school flow |
+| `fix_enroll_user_rpc_status_and_tenant` | `enroll_user()` now sets `status='active'` and inherits `tenant_id` from product |
+
+### Key Fixes
+
+1. **`enroll_user()` RPC** — was creating enrollments with `status = NULL` and default tenant_id. Now properly sets `status = 'active'` and looks up `tenant_id` from the product's tenant.
+
+2. **`handle_new_user` trigger** — new users via `auth.signUp()` now automatically get `profiles` and `user_roles` rows. Includes backfill for existing users.
+
+3. **RLS: tenant_users INSERT** — regular users can now insert themselves as students (required for join-school flow):
+   ```sql
+   CREATE POLICY "Users can join schools as student" ON tenant_users
+     FOR INSERT WITH CHECK (
+       auth.uid() = user_id AND role = 'student' AND status = 'active'
+     );
+   ```
+
+4. **RLS: lesson_completions DELETE** — students can now delete their own completions (uncomplete flow).
+
+### See Also
+- `MULTI_TENANT_TESTING_REPORT.md` — Full testing report with all bugs found and fixed
+
+---
+
+## Related Documentation
 
 - `TESTING_JOURNEY.md` - Original testing findings
 - `TESTING_SUMMARY.md` - Executive summary
+- `MULTI_TENANT_TESTING_REPORT.md` - Multi-tenant testing (Feb 17, 2026)
 - `tests/README.md` - How to run Playwright tests
 - `supabase/migrations/` - All migration files

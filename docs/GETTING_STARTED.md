@@ -27,6 +27,14 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your_anon_key_here
 
 # Optional: Service role key for admin operations (DO NOT COMMIT!)
 # SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+# Stripe (for student payments via Connect)
+# STRIPE_SECRET_KEY=sk_test_...
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+# STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Stripe Platform Billing (for school plan subscriptions)
+# STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...
 ```
 
 Get your keys from:
@@ -96,46 +104,76 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=<from supabase start output>
 ```
 
-## 📁 Project Structure
+### Local Multi-Tenant Testing (Subdomains)
+
+To test multi-tenant subdomain routing locally, use `lvh.me` — a free wildcard DNS that resolves `*.lvh.me` to `127.0.0.1`.
+
+```bash
+# In .env.local, set:
+NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000
+```
+
+Then access:
+- `http://lvh.me:3000` — Platform root (Default School)
+- `http://your-school.lvh.me:3000` — Tenant subdomain
+
+You can also use the `x-tenant-slug` header as a dev override (e.g., via browser extensions or API clients).
+
+See `MULTI_TENANT_TESTING_REPORT.md` for full testing details.
+
+## Project Structure
 
 ```
 lms-front/
 ├── app/                          # Next.js App Router
-│   ├── auth/                     # Auth pages (login, signup, etc.)
-│   ├── dashboard/                # Protected dashboards
-│   │   ├── student/             # Student dashboard
-│   │   ├── teacher/             # Teacher dashboard
-│   │   └── admin/               # Admin dashboard
-│   ├── globals.css              # Global styles + Tailwind
-│   ├── layout.tsx               # Root layout
-│   └── page.tsx                 # Home page
+│   ├── [locale]/                # i18n locale segment (en, es)
+│   │   ├── auth/               # Auth pages (login, signup, etc.)
+│   │   ├── dashboard/          # Protected dashboards
+│   │   │   ├── student/       # Student dashboard
+│   │   │   ├── teacher/       # Teacher dashboard
+│   │   │   └── admin/         # Admin dashboard
+│   │   ├── checkout/           # Payment checkout pages
+│   │   ├── courses/            # Public course catalog
+│   │   ├── pricing/            # Public pricing page
+│   │   ├── create-school/      # School creation page
+│   │   └── join-school/        # Join a school page
+│   ├── actions/                # Server actions
+│   │   ├── admin/             # Admin actions
+│   │   ├── teacher/           # Teacher actions (course creation, etc.)
+│   │   ├── payment-requests.ts # Manual payment flow
+│   │   └── join-school.ts     # Join school action
+│   └── api/                    # API routes
+│       └── stripe/            # Stripe webhooks + payment intent + billing
 │
 ├── components/                   # React components
-│   ├── ui/                      # Shadcn UI components
-│   ├── login-form.tsx           # Auth forms
+│   ├── ui/                      # Shadcn UI components (base-mira)
+│   ├── tenant/                  # Tenant-specific components
 │   └── ...
 │
 ├── lib/                         # Utilities
 │   ├── supabase/               # Supabase clients
 │   │   ├── client.ts           # Browser client
 │   │   ├── server.ts           # Server client
-│   │   ├── middleware.ts       # Auth middleware
-│   │   └── get-user-role.ts    # Role utilities
+│   │   ├── admin.ts            # Admin client (bypass RLS)
+│   │   ├── proxy.ts            # Session update for middleware
+│   │   ├── tenant.ts           # getCurrentTenantId()
+│   │   └── get-user-role.ts    # Role utilities (reads tenant_users)
+│   ├── plans/                  # Plan features & gating utilities
+│   ├── hooks/                  # Client hooks (usePlanFeatures, etc.)
+│   ├── currency.ts             # Multi-currency utilities (LATAM support)
 │   └── utils.ts                # General utilities (cn, etc.)
 │
-├── docs/                        # Documentation (you are here!)
-│   ├── README.md               # Docs index
-│   ├── PROJECT_OVERVIEW.md     # High-level overview
+├── docs/                        # Documentation
+│   ├── MULTI_TENANT_TESTING_REPORT.md  # Multi-tenant test results
 │   ├── DATABASE_SCHEMA.md      # Database reference
 │   ├── AUTH.md                 # Auth guide
 │   └── ...
 │
 ├── supabase/                    # Supabase config
-│   ├── migrations/             # Database migrations
-│   │   └── 20260126190500_lms_complete.sql
+│   ├── migrations/             # Database migrations (many files)
 │   └── config.toml             # Local Supabase config
 │
-├── middleware.ts                # Next.js middleware (route protection)
+├── proxy.ts                     # Single middleware (tenant + i18n + auth)
 ├── .env.local                   # Environment variables (DO NOT COMMIT!)
 ├── package.json                 # Dependencies
 └── tsconfig.json               # TypeScript config

@@ -4,13 +4,18 @@
 
 ## 📊 Overview
 
-The LMS database is built on PostgreSQL 15 via Supabase. It consists of 44 tables organized into logical domains:
+The LMS database is built on PostgreSQL 15 via Supabase. It consists of 59+ tables organized into logical domains:
 
 - **User Management**: profiles, roles, permissions
+- **Multi-Tenancy**: tenants, tenant_users, tenant_settings, super_admins
 - **Course Content**: courses, lessons, exercises, exams
 - **Enrollment**: enrollments, subscriptions
 - **Submissions**: exam submissions, exercise completions
 - **Commerce**: products, plans, transactions
+- **Platform Billing**: platform_plans, platform_subscriptions, platform_payment_requests
+- **Revenue**: revenue_splits, payouts, invoices
+- **Gamification**: 12 tables (profiles, xp, levels, achievements, store, challenges, leaderboard)
+- **Certificates**: certificates, certificate_templates
 - **Social**: messages, comments, reviews
 - **Support**: tickets, notifications
 
@@ -652,6 +657,76 @@ CREATE TRIGGER on_auth_user_created
 
 #### `create_notification(user_id UUID, notification_type VARCHAR, message TEXT)`
 **Purpose**: Creates a notification for a user
+
+---
+
+## 💳 Platform Billing Tables
+
+### `platform_plans`
+Defines the 5-tier pricing (Free, Starter, Pro, Business, Enterprise).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `plan_id` | UUID PK | |
+| `slug` | VARCHAR(50) UNIQUE | `free`, `starter`, `pro`, `business`, `enterprise` |
+| `name` | VARCHAR(100) | Display name |
+| `price_monthly` | NUMERIC(10,2) | Monthly price (0 for free) |
+| `price_yearly` | NUMERIC(10,2) | Yearly price (~17% discount) |
+| `stripe_price_id_monthly` | VARCHAR(255) | Stripe Price ID for monthly billing |
+| `stripe_price_id_yearly` | VARCHAR(255) | Stripe Price ID for yearly billing |
+| `features` | JSONB | Feature flags: `{leaderboard, achievements, store, certificates, analytics, ai_grading, ...}` |
+| `limits` | JSONB | `{max_courses, max_students}` — `-1` means unlimited |
+| `transaction_fee_percent` | NUMERIC(5,2) | Platform fee on student payments (10% → 0%) |
+| `sort_order` | INTEGER | Display order |
+| `is_active` | BOOLEAN | Whether plan is available |
+
+### `platform_subscriptions`
+Tracks each school's billing subscription. `UNIQUE(tenant_id)`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `subscription_id` | UUID PK | |
+| `tenant_id` | UUID FK → tenants | One per tenant |
+| `plan_id` | UUID FK → platform_plans | Current plan |
+| `stripe_subscription_id` | VARCHAR(255) | Stripe Subscription ID |
+| `stripe_customer_id` | VARCHAR(255) | Stripe Customer ID |
+| `status` | VARCHAR(50) | `active`, `past_due`, `canceled`, `trialing` |
+| `payment_method` | VARCHAR(50) | `stripe` or `manual_transfer` |
+| `interval` | VARCHAR(20) | `monthly` or `yearly` |
+| `current_period_start/end` | TIMESTAMPTZ | Billing period dates |
+| `cancel_at_period_end` | BOOLEAN | Scheduled cancellation |
+
+### `platform_payment_requests`
+Manual bank transfer requests for school plan upgrades (LATAM schools without international cards).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `request_id` | UUID PK | |
+| `tenant_id` | UUID FK → tenants | |
+| `plan_id` | UUID FK → platform_plans | Requested plan |
+| `requested_by` | UUID FK → profiles | Admin who requested |
+| `status` | VARCHAR(50) | `pending` → `instructions_sent` → `payment_received` → `confirmed` |
+| `interval` | VARCHAR(20) | `monthly` or `yearly` |
+| `amount` | NUMERIC(10,2) | Plan price |
+| `confirmed_by` | UUID FK → profiles | Super admin who confirmed |
+
+### `tenants` (Billing Columns Added)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `stripe_customer_id` | VARCHAR(255) | For platform billing (NOT student payments) |
+| `billing_email` | VARCHAR(255) | Billing contact email |
+| `billing_period_end` | TIMESTAMPTZ | Current billing period end |
+| `billing_status` | VARCHAR(50) | `free`, `active`, `past_due`, `canceled` |
+
+### Key RPC: `get_plan_features(_tenant_id UUID)`
+
+Returns plan features/limits for a tenant. Single source of truth for feature gating.
+
+```sql
+-- Returns: {plan, plan_name, features, limits, transaction_fee_percent}
+SELECT * FROM get_plan_features('tenant-uuid-here');
+```
 
 ---
 

@@ -1,10 +1,11 @@
 # February 2026 Implementation Summary
 ## Complete Multi-Tenant SaaS Transformation
 
-**Implementation Period:** February 1-16, 2026
-**Status:** ✅ COMPLETE
-**Total Changes:** 88+ files modified/created
+**Implementation Period:** February 1-18, 2026
+**Status:** COMPLETE — Monetization system implemented on Feb 18
+**Total Changes:** 111+ files modified/created
 **E2E Tests:** 47 comprehensive security tests
+**Multi-Tenant Testing:** Full flow verified (see `MULTI_TENANT_TESTING_REPORT.md`)
 
 ---
 
@@ -21,7 +22,8 @@ Successfully transformed the LMS from a single-tenant application into a **produ
 5. ✅ **Join School Flow** - Multi-school membership
 6. ✅ **Plan Limits Enforcement** - Free (5), Basic (20), Pro (100), Enterprise (unlimited)
 7. ✅ **Onboarding Wizard** - Payment setup integration
-8. ✅ **Comprehensive Documentation** - 15+ guides
+8. ✅ **Tenant-Scoped Gamification** - XP/levels/streaks/achievements/store/leaderboard isolated per school with plan-gated premium upsell
+9. ✅ **Comprehensive Documentation** - 15+ guides
 
 ---
 
@@ -43,6 +45,8 @@ Successfully transformed the LMS from a single-tenant application into a **produ
 **Global Tables (No tenant_id):**
 - `profiles` - Users can belong to multiple tenants
 - `gamification_levels` - Global level definitions
+- `gamification_achievements` - Global definitions (optional `tenant_id` for school-specific)
+- `gamification_store_items` - Global definitions (optional `tenant_id` for school-specific)
 
 **Migrations Created:**
 ```
@@ -1180,4 +1184,187 @@ npm run dev
 
 ---
 
-🎉 **February 2026 Multi-Tenant SaaS Implementation Complete!**
+---
+
+## Phase 8: Multi-Tenant E2E Testing (Feb 17)
+
+### What Was Tested
+
+Full end-to-end verification of the multi-tenant SaaS architecture using `lvh.me` wildcard DNS for local subdomain testing.
+
+**Tenants tested:**
+- Default School (`lvh.me:3000`) — platform root
+- Code Academy Pro (`code-academy.lvh.me:3000`) — created during testing
+
+**Flows verified:**
+1. School creation via `create_school` RPC
+2. Subdomain → tenant resolution in `proxy.ts`
+3. Role resolution from `tenant_users` (authoritative, not JWT)
+4. Course creation scoped to tenant
+5. Product and plan creation per tenant
+6. Student sign-up and join-school flow
+7. Manual payment request and enrollment
+8. Cross-tenant data isolation (courses, enrollments, products)
+
+### Bugs Found & Fixed (8)
+
+| Bug | Fix |
+|-----|-----|
+| `proxy.ts` port comparison failed with `lvh.me:3000` | Strip port from `PLATFORM_DOMAIN` at module level |
+| Proxy used stale JWT role for routing | Read role from `tenant_users` table |
+| `getUserRole()` returned wrong role cross-tenant | Check `tenant_users` first, fall back to JWT |
+| `create-school-form.tsx` hardcoded `https://` | Use `window.location.protocol` |
+| `enroll_user()` RPC set null status | Set `status = 'active'` and inherit `tenant_id` |
+| No INSERT RLS on `tenant_users` | Added policy for student self-join |
+| Missing `handle_new_user` trigger | Created trigger to auto-create profiles |
+| No DELETE RLS on `lesson_completions` | Added DELETE policy for uncomplete flow |
+
+### Known Remaining Issues
+
+- i18n keys render raw on course detail page
+- Admin dashboard shows cross-tenant aggregate stats
+- Sidebar shows "LMS Platform" instead of tenant name
+- Admin page has Next.js 16 async params error
+
+### Full Report
+See `MULTI_TENANT_TESTING_REPORT.md` for detailed test results with step-by-step verification.
+
+---
+
+---
+
+## Phase 9: Tenant-Scoped Gamification with Premium Upsell (Feb 17)
+
+### Problem
+
+The gamification system (XP, levels, achievements, store, leaderboard, streaks) worked but was **globally scoped** — all 10 gamification tables lacked `tenant_id`. Students from different schools shared the same XP pool, leaderboard, and achievements. This was the single largest multi-tenant isolation gap.
+
+### Solution
+
+**Migration:** `20260217030000_tenant_scope_gamification.sql`
+
+1. Added `tenant_id NOT NULL` to 7 data tables (nullable-first strategy: add nullable, backfill with default tenant, set NOT NULL)
+2. Added optional `tenant_id` to 2 definition tables (`gamification_achievements`, `gamification_store_items`) for school-specific customization
+3. Updated all unique constraints to composite keys: `(user_id, tenant_id)`
+4. Rewrote all RLS policies to use `get_tenant_id()`
+5. Rewrote `award_xp()` with `_tenant_id` parameter and UPSERT for lazy profile creation
+6. Rewrote all 5 XP trigger functions to resolve `tenant_id` from source tables
+7. Rewrote `refresh_leaderboard_cache()` with `PARTITION BY tenant_id`
+8. Created `get_gamification_features()` RPC for plan-based feature gating
+
+**Edge Functions Updated (4):**
+- `get-gamification-summary` — tenant filter + `features` in response
+- `get-leaderboard` — tenant filter + 403 on locked plan
+- `check-achievements` — tenant filter + plan check
+- `spend-points` — tenant filter + plan check + bug fixes (`is_active` → `is_available`, `item.title` → `item.name`)
+
+**Frontend Updated (6 files):**
+- `use-gamification.ts` — Added `GamificationFeatures` interface
+- `gamification-header-card.tsx` — Conditional trophy icon
+- `mini-leaderboard.tsx` — Upgrade prompt for free plan
+- `achievement-grid.tsx` — Upgrade prompt
+- `store-section.tsx` — Upgrade prompt
+- i18n keys added in both `en.json` and `es.json`
+
+### Plan-Gated Feature Matrix
+
+| Plan | XP/Levels/Streaks | Leaderboard | Achievements | Store |
+|------|:---:|:---:|:---:|:---:|
+| **free** | Yes | Locked | Locked | Locked |
+| **basic** | Yes | Yes | Yes | Locked |
+| **professional** | Yes | Yes | Yes | Yes |
+| **enterprise** | Yes | Yes | Yes | Yes |
+
+### Verified via Playwright MCP
+
+- **Tenant isolation**: Same user has separate XP profiles per tenant (310 XP in Default School vs 25 XP in test-academy)
+- **Plan gating**: All 3 tiers tested — features correctly lock/unlock on plan change
+- **Dynamic switching**: Changing plan in DB immediately reflects in UI on page reload
+
+---
+
+---
+
+## Phase 10: Full Monetization Stack (Feb 18)
+
+### Overview
+
+Implemented the complete business monetization system: school billing, 5-tier pricing, feature gating, LATAM payment support, revenue dashboard, and upgrade nudges. This transforms the LMS from a free product into a revenue-generating SaaS.
+
+### New Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `platform_plans` | 5-tier plan definitions with features JSONB, limits JSONB, Stripe price IDs |
+| `platform_subscriptions` | Per-tenant billing (Stripe or manual transfer). `UNIQUE(tenant_id)` |
+| `platform_payment_requests` | Manual bank transfer requests for plan upgrades |
+
+**Altered `tenants` table:** Added `stripe_customer_id`, `billing_email`, `billing_period_end`, `billing_status`
+
+**Altered `currency_type` enum:** Added `mxn`, `cop`, `clp`, `pen`, `ars`, `brl`
+
+**New RPC:** `get_plan_features(_tenant_id)` — single source of truth for plan features/limits
+
+### Pricing Tiers (Seeded)
+
+| Plan | $/mo | Courses | Students | Transaction Fee |
+|------|------|---------|----------|----------------|
+| Free | $0 | 5 | 50 | 10% |
+| Starter | $9 | 15 | 200 | 5% |
+| Pro | $29 | 100 | 1,000 | 2% |
+| Business | $79 | Unlimited | 5,000 | 0% |
+| Enterprise | $199 | Unlimited | Unlimited | 0% |
+
+### Two Separate Stripe Integrations
+
+- **School billing** (NEW): Stripe Checkout + Subscriptions at `/api/stripe/checkout-session`, `/api/stripe/billing-portal`, `/api/stripe/platform-webhook`
+- **Student payments** (EXISTING): Stripe Connect at `/api/stripe/create-payment-intent`, `/api/stripe/webhook`
+
+### Files Created (23)
+
+**Migrations:** `20260217040000_platform_billing.sql`, `20260217050000_add_latam_currencies.sql`
+
+**Edge Function:** `supabase/functions/get-plan-features/index.ts`
+
+**API Routes:** `checkout-session/route.ts`, `billing-portal/route.ts`, `platform-webhook/route.ts`
+
+**Server Actions:** `app/actions/admin/billing.ts`, `app/actions/admin/revenue.ts`
+
+**Pages:** Billing dashboard, upgrade page, platform pricing (public), revenue dashboard
+
+**Components:** `billing-overview.tsx`, `plan-comparison-table.tsx`, `manual-transfer-form.tsx`, `usage-meter.tsx`, `bank-details-form.tsx`, `feature-gate.tsx`, `upgrade-nudge.tsx`, `limit-reached-banner.tsx`
+
+**Libraries:** `lib/plans/features.ts`, `lib/hooks/use-plan-features.ts`, `lib/currency.ts`
+
+### Files Modified (9)
+
+- `proxy.ts` — Added `/platform-pricing` to public routes
+- `components/app-sidebar.tsx` — Added "Billing" link to admin nav
+- `app/actions/teacher/courses.ts` — Replaced hardcoded PLAN_LIMITS with DB query, added approaching-limit info
+- `app/actions/join-school.ts` — Added student limit enforcement
+- `app/api/stripe/create-payment-intent/route.ts` — Dynamic currency + dynamic fee (0% on Business/Enterprise)
+- `app/[locale]/dashboard/admin/page.tsx` — Added plan badge + usage meters widget
+- `messages/en.json` — Added billing, platformPricing, featureGate, limits, revenue keys
+- `messages/es.json` — Spanish translations for all new keys
+
+### Feature Gating System
+
+- `lib/plans/features.ts` — `canAccessFeature()`, `isAtLimit()`, `FEATURE_REQUIRED_PLAN` map
+- `lib/hooks/use-plan-features.ts` — Client hook calling `get-plan-features` edge function
+- `components/shared/feature-gate.tsx` — Wraps content, shows UpgradeNudge if locked
+- Student limit enforced in `join-school.ts`, course limit enforced in `courses.ts`
+
+### LATAM Payment Support
+
+- Added MXN, COP, CLP, PEN, ARS, BRL currencies
+- `lib/currency.ts` — `toCents()`/`fromCents()`/`formatCurrency()` with zero-decimal handling
+- `BankDetailsForm` with country-specific routing number labels (CLABE/CBU/CCI)
+- Dynamic currency in Stripe PaymentIntent creation
+
+### Full Documentation
+
+See `docs/MONETIZATION.md` for complete reference including architecture, flows, file reference, testing checklist, and Stripe setup steps.
+
+---
+
+**February 2026 Multi-Tenant SaaS + Monetization Implementation Complete!**

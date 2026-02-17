@@ -435,6 +435,14 @@ See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes
 - AUTH.md for admin-only access patterns
 - DATABASE_SCHEMA.md for user management tables
 
+**Billing & monetization** → Check:
+- `docs/MONETIZATION.md` for full architecture reference
+- `app/actions/admin/billing.ts` for server actions
+- `lib/plans/features.ts` for plan types and `canAccessFeature()`
+- `lib/hooks/use-plan-features.ts` for client hook
+- `components/shared/feature-gate.tsx` for gating UI
+- `lib/currency.ts` for multi-currency support
+
 **Database queries** → Check:
 - DATABASE_SCHEMA.md for table structure
 - Existing queries in similar components
@@ -444,6 +452,33 @@ See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes
 - `components/ui/` for Shadcn components
 - Existing pages for component usage patterns
 - Shadcn docs: https://ui.shadcn.com
+
+## ⚠️ Common Gotchas
+
+- **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`
+- **Button component** uses `@base-ui/react` — has NO `asChild` prop. Wrap `<Link>` around `<Button>` instead
+- **Stripe API v2025** (`2025-12-15.clover`): `Subscription` and `Invoice` types have breaking changes — cast to `any` when accessing `current_period_start`, `subscription`, etc.
+- **`certificates` table** has TWO foreign keys to `profiles` — must use FK hint: `profiles!certificates_user_id_fkey(...)`
+- **`profiles` table** has NO `email` column — get emails via `createAdminClient().auth.admin.getUserById()`
+- **`product_courses`** can have multiple rows per course — NEVER use `.single()`
+- **`crypto.randomUUID()`** fails on HTTP — use `nanoid()` instead
+
+### Feature Gating Pattern
+
+```typescript
+// Server-side: check plan features
+const { data: planInfo } = await adminClient.rpc('get_plan_features', { _tenant_id: tenantId })
+if (!planInfo?.features?.ai_grading) throw new Error('Requires Pro plan')
+
+// Client-side: use hook + gate component
+import { usePlanFeatures } from '@/lib/hooks/use-plan-features'
+import { FeatureGate } from '@/components/shared/feature-gate'
+
+const { plan, features, limits } = usePlanFeatures()
+<FeatureGate feature="ai_grading" plan={plan} features={features}>
+  <AIGradingPanel />
+</FeatureGate>
+```
 
 ## 🎯 Success Criteria
 
@@ -455,6 +490,8 @@ Your implementation is good if:
 - ✅ It's mobile-responsive
 - ✅ It handles errors gracefully
 - ✅ It respects user roles and permissions
+- ✅ It filters all queries by `tenant_id`
+- ✅ It checks plan limits for gated features
 
 Your implementation needs work if:
 - ❌ It adds new patterns without justification

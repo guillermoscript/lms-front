@@ -30,11 +30,30 @@ The gamification system motivates students through:
 
 ### Key Design Decisions
 
+- **Tenant-scoped**: All gamification data (XP, levels, streaks, achievements, store, leaderboard) is scoped per tenant. A user has separate progression per school.
+- **Plan-gated features**: Advanced features are locked behind plan tiers (see [Plan-Gated Features](#plan-gated-features) below)
 - **Automatic XP**: All XP is awarded via database triggers — no client-side logic needed
+- **Lazy profile creation**: Gamification profiles are created on first XP award via UPSERT in `award_xp()`, not on user signup
 - **SECURITY DEFINER**: All write operations go through `SECURITY DEFINER` functions; RLS handles reads
 - **Lazy loading**: The dashboard header only fetches the summary; leaderboard/achievements/store load on demand
 - **Edge Functions**: Complex reads (summary, leaderboard) and writes (spend-points, check-achievements) use Supabase Edge Functions with service role access
 - **JWT handled internally**: Edge functions use `verify_jwt = false` in config and validate auth via `getUser()` — required because local auth issues ES256 tokens while the edge gateway expects HS256
+
+### Plan-Gated Features
+
+Features are gated by the tenant's `plan` column via `get_gamification_features()` RPC:
+
+| Plan | XP | Levels | Streaks | Leaderboard | Achievements | Store | Custom Content |
+|------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **free** | Yes | Yes | Yes | No | No | No | No |
+| **basic** | Yes | Yes | Yes | Yes | Yes | No | No |
+| **professional** | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| **enterprise** | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+
+When a feature is locked:
+- Edge functions return `{ feature_locked: true }` (403 for leaderboard/store)
+- Frontend components show upgrade prompts with lock icons
+- The gamification header hides the trophy icon when achievements are disabled
 
 ---
 
@@ -58,7 +77,7 @@ Level definitions with XP thresholds.
 
 ### gamification_achievements
 
-Achievement definitions.
+Achievement definitions. Global (platform default) when `tenant_id IS NULL`, school-specific when set.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -74,19 +93,21 @@ Achievement definitions.
 | `condition_type` | `TEXT` | Stat key to check (e.g., `lessons_completed`) |
 | `condition_value` | `INTEGER` | Threshold to trigger (e.g., `10`) |
 | `is_active` | `BOOLEAN` | Soft-delete flag |
+| `tenant_id` | `UUID` (NULLABLE, FK → tenants) | NULL = global, UUID = school-specific |
 
-**RLS**: Anyone can SELECT where `is_active = true`.
+**RLS**: Anyone can SELECT where `is_active = true` AND (`tenant_id IS NULL` OR `tenant_id = get_tenant_id()`).
 
 ### gamification_profiles
 
-Per-user gamification state. Auto-created via trigger when a profile is inserted.
+Per-user, per-tenant gamification state. Created lazily by `award_xp()` on first XP award (UPSERT).
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
-| `user_id` | `UUID` (UNIQUE, FK → profiles) | |
-| `total_xp` | `INTEGER` | Lifetime XP |
-| `level` | `INTEGER` (FK → levels) | Current level |
+| `user_id` | `UUID` (FK → profiles) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
+| `total_xp` | `INTEGER` | Lifetime XP in this school |
+| `level` | `INTEGER` (FK → levels) | Current level in this school |
 | `current_streak` | `INTEGER` | Current consecutive days |
 | `longest_streak` | `INTEGER` | All-time best streak |
 | `streak_freezes_available` | `INTEGER` | Purchased streak freezes |
@@ -94,41 +115,44 @@ Per-user gamification state. Auto-created via trigger when a profile is inserted
 | `last_activity_date` | `DATE` | Last date XP was earned |
 | `updated_at` | `TIMESTAMPTZ` | |
 
-**RLS**: Anyone can SELECT (needed for leaderboards).
+**Constraint**: `UNIQUE(user_id, tenant_id)` — one profile per user per school.
+**RLS**: Anyone in the same tenant can SELECT (needed for leaderboards).
 
 ### gamification_user_achievements
 
-Join table: which users have earned which achievements.
+Join table: which users have earned which achievements, per tenant.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
 | `user_id` | `UUID` (FK → profiles) | |
 | `achievement_id` | `UUID` (FK → achievements) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
 | `earned_at` | `TIMESTAMPTZ` | |
 
-**Constraint**: `UNIQUE(user_id, achievement_id)`.
-**RLS**: Anyone can SELECT.
+**Constraint**: `UNIQUE(user_id, achievement_id, tenant_id)`.
+**RLS**: Same-tenant users can SELECT.
 
 ### gamification_xp_transactions
 
-Audit log of all XP awards.
+Audit log of all XP awards, scoped per tenant.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
 | `user_id` | `UUID` (FK → profiles) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
 | `action_type` | `TEXT` | e.g., `lesson_completion`, `exam_submission` |
 | `xp_amount` | `INTEGER` | XP awarded |
 | `reference_id` | `TEXT` | ID of the source entity |
 | `reference_type` | `TEXT` | Type of source (e.g., `lesson`, `exam`) |
 | `created_at` | `TIMESTAMPTZ` | |
 
-**RLS**: Users can SELECT own rows only.
+**RLS**: Users can SELECT own rows within current tenant only.
 
 ### gamification_store_items
 
-Items available for purchase with coins.
+Items available for purchase with coins. Global (platform default) when `tenant_id IS NULL`, school-specific when set.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -142,87 +166,107 @@ Items available for purchase with coins.
 | `max_per_user` | `INTEGER` | NULL = unlimited |
 | `is_available` | `BOOLEAN` | Whether item is purchasable |
 | `metadata` | `JSONB` | Extra data (e.g., duration for double XP) |
+| `tenant_id` | `UUID` (NULLABLE, FK → tenants) | NULL = global, UUID = school-specific |
 
-**RLS**: Anyone can SELECT where `is_available = true`.
+**RLS**: Anyone can SELECT where `is_available = true` AND (`tenant_id IS NULL` OR `tenant_id = get_tenant_id()`).
 
 ### gamification_redemptions
 
-Purchase history.
+Purchase history, per tenant.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
 | `user_id` | `UUID` (FK → profiles) | |
 | `item_id` | `UUID` (FK → store_items) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
 | `coins_spent` | `INTEGER` | |
 | `redeemed_at` | `TIMESTAMPTZ` | |
 
-**RLS**: Users can SELECT own rows only.
+**RLS**: Users can SELECT own rows within current tenant only.
 
 ### gamification_user_rewards
 
-Active power-ups and cosmetics (e.g., double XP buff).
+Active power-ups and cosmetics (e.g., double XP buff), per tenant.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
 | `user_id` | `UUID` (FK → profiles) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
 | `reward_type` | `TEXT` | e.g., `double_xp`, `streak_freeze` |
 | `reward_data` | `JSONB` | e.g., `{"item_name": "Double XP (1h)"}` |
 | `expires_at` | `TIMESTAMPTZ` | NULL = permanent |
 | `is_active` | `BOOLEAN` | |
 
-**RLS**: Users can SELECT own rows only.
+**RLS**: Users can SELECT own rows within current tenant only.
 
 ### gamification_leaderboard_cache
 
-Pre-computed leaderboard for fast reads.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | `UUID` (PK) | |
-| `user_id` | `UUID` (UNIQUE, FK → profiles) | |
-| `full_name` | `TEXT` | Denormalized from profiles |
-| `avatar_url` | `TEXT` | Denormalized from profiles |
-| `total_xp` | `INTEGER` | |
-| `level` | `INTEGER` | |
-| `rank` | `INTEGER` | 1-based position |
-| `updated_at` | `TIMESTAMPTZ` | |
-
-**RLS**: Anyone can SELECT.
-
-### gamification_challenge_participants
-
-Tracks user participation in challenges.
+Pre-computed per-tenant leaderboard for fast reads.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | `UUID` (PK) | |
 | `user_id` | `UUID` (FK → profiles) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
+| `full_name` | `TEXT` | Denormalized from profiles |
+| `avatar_url` | `TEXT` | Denormalized from profiles |
+| `total_xp` | `INTEGER` | |
+| `level` | `INTEGER` | |
+| `rank` | `INTEGER` | 1-based position within tenant |
+| `updated_at` | `TIMESTAMPTZ` | |
+
+**Constraint**: `UNIQUE(user_id, tenant_id)`.
+**RLS**: Same-tenant users can SELECT.
+
+### gamification_challenge_participants
+
+Tracks user participation in challenges, per tenant.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `UUID` (PK) | |
+| `user_id` | `UUID` (FK → profiles) | |
+| `tenant_id` | `UUID` (NOT NULL, FK → tenants) | School scope |
 | `challenge_id` | `UUID` | |
 | `completed_at` | `TIMESTAMPTZ` | NULL if not yet completed |
 
 **Constraint**: `UNIQUE(user_id, challenge_id)`.
-**RLS**: Users can SELECT own rows only.
+**RLS**: Users can SELECT own rows within current tenant only.
 
 ---
 
 ## SQL Functions (RPCs)
 
-### `award_xp(_user_id, _action_type, _xp_amount, _reference_id?, _reference_type?)`
+### `award_xp(_user_id, _action_type, _xp_amount, _reference_id?, _reference_type?, _tenant_id?)`
 
 Core function that:
 
-1. Inserts an `xp_transactions` record
-2. Updates streak (continues if yesterday, resets otherwise)
-3. Adds XP to `gamification_profiles.total_xp`
-4. Auto-levels up by checking `gamification_levels`
+1. Resolves `tenant_id` (from param, JWT, or default tenant)
+2. UPSERTs a `gamification_profiles` row keyed on `(user_id, tenant_id)` — creates profile lazily on first XP award
+3. Inserts a tenant-scoped `xp_transactions` record
+4. Updates streak (continues if yesterday, resets otherwise)
+5. Adds XP to `gamification_profiles.total_xp`
+6. Auto-levels up by checking `gamification_levels`
 
 **Security**: `SECURITY DEFINER` — called by triggers, not directly by users.
 
 ### `refresh_leaderboard_cache()`
 
-Truncates and rebuilds the leaderboard cache from `gamification_profiles` joined with `profiles`. Ranks top 1000 users by `total_xp DESC`.
+Truncates and rebuilds the leaderboard cache from `gamification_profiles` joined with `profiles`. Uses `PARTITION BY tenant_id` for per-school rankings, top 1000 per tenant.
+
+**Security**: `SECURITY DEFINER`.
+
+### `get_gamification_features(_tenant_id)`
+
+Returns a JSONB object with feature flags based on the tenant's `plan`:
+
+```json
+// free:         {"xp":true,"levels":true,"streaks":true,"leaderboard":false,"achievements":false,"store":false,...}
+// basic:        {"xp":true,"levels":true,"streaks":true,"leaderboard":true,"achievements":true,"store":false,...}
+// professional: {"xp":true,"levels":true,"streaks":true,"leaderboard":true,"achievements":true,"store":true,"custom_achievements":true,"custom_store":true}
+```
 
 **Security**: `SECURITY DEFINER`.
 
@@ -240,17 +284,18 @@ Returns count of `like` reactions on the user's lesson comments. Used by `check-
 
 XP is awarded automatically when students complete learning activities:
 
-| Trigger | Table | Event | XP | Notes |
-|---------|-------|-------|-----|-------|
-| `on_lesson_completed_xp` | `lesson_completions` | INSERT | 100 | Per lesson |
-| `on_exam_submitted_xp` | `exam_submissions` | INSERT (when score IS NOT NULL) | 200–300 | +100 for score ≥ 100, +50 for score ≥ 80 |
-| `on_exam_score_updated_xp` | `exam_submissions` | UPDATE (score NULL → NOT NULL) | 200–300 | Handles deferred grading (AI) |
-| `on_exercise_completed_xp` | `exercise_completions` | INSERT | 50 | Per exercise |
-| `on_comment_posted_xp` | `lesson_comments` | INSERT | 10 | Per comment |
-| `on_review_posted_xp` | `reviews` | INSERT | 50 | Per course review |
-| `on_profile_created_gamification` | `profiles` | INSERT | — | Creates `gamification_profiles` row |
+| Trigger | Table | Event | XP | tenant_id Source |
+|---------|-------|-------|-----|-----------------|
+| `on_lesson_completed_xp` | `lesson_completions` | INSERT | 100 | `NEW.tenant_id` (direct) |
+| `on_exam_submitted_xp` | `exam_submissions` | INSERT (when score IS NOT NULL) | 200–300 | `NEW.tenant_id` (direct) |
+| `on_exam_score_updated_xp` | `exam_submissions` | UPDATE (score NULL → NOT NULL) | 200–300 | `NEW.tenant_id` (direct) |
+| `on_exercise_completed_xp` | `exercise_completions` | INSERT | 50 | Lookup via `exercises.tenant_id` |
+| `on_comment_posted_xp` | `lesson_comments` | INSERT | 10 | Lookup via `lessons.tenant_id` |
+| `on_review_posted_xp` | `reviews` | INSERT | 50 | Lookup via `courses.tenant_id` |
 
-All trigger functions are `SECURITY DEFINER` and call `award_xp()` internally.
+All trigger functions are `SECURITY DEFINER` and call `award_xp(_tenant_id := v_tenant_id)` internally.
+
+> **Note:** The `on_profile_created_gamification` trigger was **removed**. Gamification profiles are now created lazily by `award_xp()` via UPSERT on first XP award per tenant.
 
 ---
 
@@ -265,11 +310,13 @@ Located in `supabase/functions/`. All functions:
 
 ### `get-gamification-summary`
 
-**Purpose**: Returns the complete gamification state for the authenticated user.
+**Purpose**: Returns the complete gamification state for the authenticated user **within the current tenant**.
 
 **Method**: POST
-**Auth**: Bearer token required
+**Auth**: Bearer token required (tenant_id extracted from JWT)
 **Body**: `{ "user_id"?: string }` (optional, defaults to authenticated user)
+
+**Tenant scoping**: Extracts `tenant_id` from JWT claims. All queries filter by `(user_id, tenant_id)`.
 
 **Response**:
 ```json
@@ -296,7 +343,17 @@ Located in `supabase/functions/`. All functions:
     "recent": [...],
     "newly_earned": []
   },
-  "recent_xp": [...]
+  "recent_xp": [...],
+  "features": {
+    "xp": true,
+    "levels": true,
+    "streaks": true,
+    "leaderboard": true,
+    "achievements": true,
+    "store": false,
+    "custom_achievements": false,
+    "custom_store": false
+  }
 }
 ```
 
@@ -304,11 +361,13 @@ Located in `supabase/functions/`. All functions:
 
 ### `get-leaderboard`
 
-**Purpose**: Returns the cached leaderboard with the current user's rank.
+**Purpose**: Returns the tenant-scoped leaderboard with the current user's rank.
 
 **Method**: POST
-**Auth**: Bearer token required
+**Auth**: Bearer token required (tenant_id extracted from JWT)
 **Body**: `{ "limit"?: number }` (default 10)
+
+**Plan gate**: Returns `{ feature_locked: true }` with 403 if leaderboard is not available on the tenant's plan.
 
 **Response**:
 ```json
@@ -323,13 +382,15 @@ Located in `supabase/functions/`. All functions:
 
 ### `check-achievements`
 
-**Purpose**: Evaluates all unearned achievements against the user's current stats. Awards any newly earned achievements and their XP bonuses.
+**Purpose**: Evaluates all unearned achievements against the user's current stats **within the current tenant**. Awards any newly earned achievements and their XP bonuses.
 
 **Method**: POST
-**Auth**: Bearer token required
+**Auth**: Bearer token required (tenant_id extracted from JWT)
 **Body**: `{ "user_id"?: string }`
 
-**Stats evaluated**:
+**Plan gate**: Returns `{ feature_locked: true, newly_earned: [], count: 0 }` if achievements are not available on the tenant's plan.
+
+**Stats evaluated** (all filtered by tenant_id):
 - `lessons_completed`, `exams_submitted`, `perfect_exams`
 - `exercises_completed`, `exercises_high_score` (score ≥ 80)
 - `comments_posted`, `likes_received`, `reviews_written`
@@ -347,19 +408,22 @@ Located in `supabase/functions/`. All functions:
 
 ### `spend-points`
 
-**Purpose**: Purchases a store item with coins.
+**Purpose**: Purchases a store item with coins within the current tenant context.
 
 **Method**: POST
-**Auth**: Bearer token required
+**Auth**: Bearer token required (tenant_id extracted from JWT)
 **Body**: `{ "item_id": "uuid" }`
 
+**Plan gate**: Returns `{ error: "Store feature not available on your plan", feature_locked: true }` with 403 if store is not available.
+
 **Logic**:
-1. Verifies item exists and `is_available = true`
-2. Checks user has enough coins
-3. Checks `max_per_user` limit (if set)
-4. Creates `redemption` record
-5. Updates `total_coins_spent` on profile
-6. Creates `user_reward` (with `expires_at` for time-limited items)
+1. Checks plan allows store access
+2. Verifies item exists and `is_available = true` (shows global + tenant-specific items)
+3. Checks user has enough coins (tenant-scoped balance)
+4. Checks `max_per_user` limit within tenant
+5. Creates tenant-scoped `redemption` record
+6. Updates `total_coins_spent` on tenant-scoped profile
+7. Creates tenant-scoped `user_reward` (with `expires_at` for time-limited items)
 
 **Response**:
 ```json
@@ -379,7 +443,7 @@ Located in `supabase/functions/`. All functions:
 Central state manager for all gamification data. Uses Zustand-like pattern with React state.
 
 **Exports**:
-- Types: `GamificationSummary`, `LeaderboardEntry`, `Achievement`, `StoreItem`
+- Types: `GamificationSummary`, `GamificationFeatures`, `LeaderboardEntry`, `Achievement`, `StoreItem`
 - Hook: `useGamification()` returns:
   - `summary` — Main gamification state (auto-fetched on mount)
   - `leaderboard` — Top players (fetched on demand)
@@ -424,10 +488,12 @@ Central state manager for all gamification data. Uses Zustand-like pattern with 
 
 ```
 Student completes lesson
-    → INSERT INTO lesson_completions
+    → INSERT INTO lesson_completions (with tenant_id)
     → TRIGGER: on_lesson_completed_xp()
-        → award_xp(user_id, 'lesson_completion', 100, lesson_id, 'lesson')
-            → INSERT xp_transaction
+        → Resolve tenant_id from NEW.tenant_id
+        → award_xp(user_id, 'lesson_completion', 100, lesson_id, 'lesson', tenant_id)
+            → UPSERT gamification_profiles (user_id, tenant_id) — creates if first XP
+            → INSERT xp_transaction (with tenant_id)
             → UPDATE streak
             → UPDATE total_xp
             → CHECK level up
@@ -464,7 +530,8 @@ User clicks "Buy" on store item
 refresh_leaderboard_cache() (called periodically or manually)
     → TRUNCATE gamification_leaderboard_cache
     → INSERT from gamification_profiles JOIN profiles
-    → Ranked by total_xp DESC, top 1000
+    → ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY total_xp DESC)
+    → Top 1000 per tenant
 ```
 
 ---
@@ -581,6 +648,7 @@ curl -s http://127.0.0.1:54321/functions/v1/get-gamification-summary \
 | `20260216000000_create_gamification_system.sql` | Tables, RPCs, triggers |
 | `20260216000001_seed_gamification_data.sql` | Levels, achievements, store items |
 | `20260215000003_schedule_leaderboard_refresh.sql` | Leaderboard refresh scheduling |
+| `20260217030000_tenant_scope_gamification.sql` | Tenant-scoping, plan-gated features, RLS updates |
 
 ---
 
@@ -598,4 +666,5 @@ components.gamification.headerCard.*     — XP bar, level, streak, coins
 components.gamification.leaderboard.*    — Mini leaderboard
 components.gamification.achievements.*   — Achievement grid
 components.gamification.store.*          — Store section and items
+components.gamification.upgrade.*        — Plan upgrade prompts (leaderboardLocked, achievementsLocked, storeLocked)
 ```

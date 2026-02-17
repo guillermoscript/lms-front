@@ -254,9 +254,25 @@ const { data } = await supabase
 ### Phase 10 - AI Documentation (Pending)
 - Document AI integration points
 
-### Phase 11 - Testing (Pending)
-- Playwright E2E tests
-- Flow documentation
+### Phase 11 - Testing ✅
+- Playwright E2E tests (47 scenarios across 4 test files)
+- Multi-tenant isolation, auth security, payment security, comprehensive audit
+
+### Phase 12 - Gamification ✅
+- XP, levels, streaks, achievements, leaderboard, point store
+- Multi-tenant scoped gamification profiles
+
+### Phase 13 - Certificates ✅
+- Certificate templates, auto-issuance on course completion
+- QR-code public verification at `/verify/[code]`
+
+### Phase 14 - Monetization ✅
+- School billing via Stripe Checkout + manual bank transfer
+- 5-tier pricing (Free → Enterprise) with feature gating
+- Dynamic transaction fees (10% → 0%)
+- LATAM payment support (MXN, COP, CLP, PEN, ARS, BRL)
+- Revenue dashboard for school admins
+- See `docs/MONETIZATION.md` for full details
 
 ## 🤝 Development Team
 

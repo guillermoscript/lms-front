@@ -1,20 +1,34 @@
 # Authentication & Authorization
 
-## 🔐 Overview
+## Overview
 
-The LMS uses Supabase Auth for authentication and role-based access control (RBAC) for authorization. Roles are stored in the database and injected into JWT tokens for efficient authorization checks.
+The LMS uses Supabase Auth for authentication and role-based access control (RBAC) for authorization. In the multi-tenant architecture, roles are **per-tenant** — a user can be an admin on one school and a student on another.
 
-## 🎭 User Roles
+## User Roles
 
 ### Role Types
 - **student** (default) - Can enroll in and complete courses
 - **teacher** - Can create and manage courses
-- **admin** - Full system access
+- **admin** - Full system access for their tenant/school
 
-### Role Assignment
-- New users automatically get 'student' role via `handle_new_user()` trigger
-- Admins can assign additional roles via `user_roles` table
-- Users can have multiple roles (e.g., teacher + admin)
+### Role Assignment (Multi-Tenant)
+- New users automatically get 'student' role via `handle_new_user()` trigger (global `user_roles`)
+- **Per-tenant roles** are stored in `tenant_users` table (authoritative source)
+- When a user creates a school, they become `admin` of that tenant
+- When a user joins a school, they become `student` of that tenant
+- JWT claims (`tenant_role`, `user_role`) are injected by `custom_access_token_hook()` but may be stale across tenants
+
+### Role Resolution Priority
+1. **`tenant_users` table** (authoritative) — checked by `getUserRole()` and `proxy.ts`
+2. **JWT claims** (fallback) — `tenant_role` then `user_role` from token payload
+3. **Default** — `'student'` if no role found
+
+```typescript
+import { getUserRole } from '@/lib/supabase/get-user-role'
+const role = await getUserRole() // Checks tenant_users first, falls back to JWT
+```
+
+**Important:** After switching tenants, call `supabase.auth.refreshSession()` to update JWT claims.
 
 ## 🔑 Authentication Flow
 
