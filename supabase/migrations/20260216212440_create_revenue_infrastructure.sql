@@ -38,17 +38,17 @@ ALTER TABLE revenue_splits ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can view own revenue split" ON revenue_splits
   FOR SELECT
   USING (
-    tenant_id = auth.tenant_id() OR auth.is_super_admin()
+    tenant_id = public.get_tenant_id() OR public.is_super_admin()
   );
 
 -- Only super admins can modify splits
 CREATE POLICY "Super admins can update revenue splits" ON revenue_splits
   FOR UPDATE
-  USING (auth.is_super_admin());
+  USING (public.is_super_admin());
 
 CREATE POLICY "Super admins can insert revenue splits" ON revenue_splits
   FOR INSERT
-  WITH CHECK (auth.is_super_admin());
+  WITH CHECK (public.is_super_admin());
 
 -- Comment
 COMMENT ON TABLE revenue_splits IS 'Defines revenue split between platform and school per tenant';
@@ -104,17 +104,17 @@ ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can view own payouts" ON payouts
   FOR SELECT
   USING (
-    tenant_id = auth.tenant_id() OR auth.is_super_admin()
+    tenant_id = public.get_tenant_id() OR public.is_super_admin()
   );
 
 -- Super admins can manage all payouts
 CREATE POLICY "Super admins can insert payouts" ON payouts
   FOR INSERT
-  WITH CHECK (auth.is_super_admin());
+  WITH CHECK (public.is_super_admin());
 
 CREATE POLICY "Super admins can update payouts" ON payouts
   FOR UPDATE
-  USING (auth.is_super_admin());
+  USING (public.is_super_admin());
 
 -- Comment
 COMMENT ON TABLE payouts IS 'Tracks payouts from platform to schools for revenue sharing';
@@ -171,21 +171,21 @@ CREATE POLICY "Users can view own invoices" ON invoices
   FOR SELECT
   USING (
     auth.uid() = user_id OR
-    (tenant_id = auth.tenant_id() AND auth.tenant_role() IN ('admin', 'teacher')) OR
-    auth.is_super_admin()
+    (tenant_id = public.get_tenant_id() AND public.get_tenant_role() IN ('admin', 'teacher')) OR
+    public.is_super_admin()
   );
 
 -- Admins can create/update invoices for their tenant
 CREATE POLICY "Admins can insert invoices" ON invoices
   FOR INSERT
   WITH CHECK (
-    tenant_id = auth.tenant_id() OR auth.is_super_admin()
+    tenant_id = public.get_tenant_id() OR public.is_super_admin()
   );
 
 CREATE POLICY "Admins can update invoices" ON invoices
   FOR UPDATE
   USING (
-    tenant_id = auth.tenant_id() OR auth.is_super_admin()
+    tenant_id = public.get_tenant_id() OR public.is_super_admin()
   );
 
 -- Comment
@@ -231,93 +231,26 @@ FROM tenants
 ON CONFLICT (tenant_id) DO NOTHING;
 
 -- =====================================================
--- 6. HELPER VIEWS FOR ANALYTICS
+-- 6. HELPER VIEWS AND FUNCTIONS FOR ANALYTICS
+-- NOTE: revenue_summary view and transaction-based functions
+-- will be added once tenant_id is added to the transactions table.
 -- =====================================================
 
--- View: Revenue summary per tenant
-CREATE OR REPLACE VIEW revenue_summary AS
-SELECT 
-  t.id as tenant_id,
-  t.name as tenant_name,
-  t.plan,
-  rs.platform_percentage,
-  rs.school_percentage,
-  COUNT(DISTINCT tr.transaction_id) as total_transactions,
-  COALESCE(SUM(CASE WHEN tr.status = 'successful' THEN tr.amount ELSE 0 END), 0) as total_revenue,
-  COALESCE(SUM(CASE WHEN tr.status = 'successful' THEN tr.amount * (rs.school_percentage / 100) ELSE 0 END), 0) as school_revenue,
-  COALESCE(SUM(CASE WHEN tr.status = 'successful' THEN tr.amount * (rs.platform_percentage / 100) ELSE 0 END), 0) as platform_revenue,
-  COALESCE(SUM(CASE WHEN p.status = 'paid' THEN p.amount ELSE 0 END), 0) as total_paid_out,
-  COALESCE(SUM(CASE WHEN tr.status = 'successful' THEN tr.amount * (rs.school_percentage / 100) ELSE 0 END), 0) - 
-  COALESCE(SUM(CASE WHEN p.status = 'paid' THEN p.amount ELSE 0 END), 0) as pending_payout
-FROM tenants t
-LEFT JOIN revenue_splits rs ON rs.tenant_id = t.id
-LEFT JOIN transactions tr ON tr.tenant_id = t.id
-LEFT JOIN payouts p ON p.tenant_id = t.id
-GROUP BY t.id, t.name, t.plan, rs.platform_percentage, rs.school_percentage;
-
-COMMENT ON VIEW revenue_summary IS 'Revenue analytics per tenant including splits and payouts';
-
--- =====================================================
--- 7. FUNCTIONS FOR REVENUE CALCULATIONS
--- =====================================================
-
--- Calculate school's share of a transaction
-CREATE OR REPLACE FUNCTION calculate_school_revenue(
-  p_transaction_id INTEGER
-)
-RETURNS NUMERIC AS $$
-DECLARE
-  v_amount NUMERIC;
-  v_tenant_id UUID;
-  v_school_percentage NUMERIC;
-BEGIN
-  -- Get transaction details
-  SELECT amount, tenant_id 
-  INTO v_amount, v_tenant_id
-  FROM transactions
-  WHERE transaction_id = p_transaction_id;
-
-  -- Get revenue split
-  SELECT school_percentage
-  INTO v_school_percentage
-  FROM revenue_splits
-  WHERE tenant_id = v_tenant_id;
-
-  -- Return school's share
-  RETURN v_amount * (COALESCE(v_school_percentage, 80) / 100);
-END;
-$$ LANGUAGE plpgsql;
-
-COMMENT ON FUNCTION calculate_school_revenue IS 'Calculates school revenue from a transaction based on split';
-
--- Calculate pending payout for a tenant
+-- Calculate pending payout for a tenant (based on payouts only for now)
 CREATE OR REPLACE FUNCTION calculate_pending_payout(
   p_tenant_id UUID
 )
 RETURNS NUMERIC AS $$
 DECLARE
-  v_total_school_revenue NUMERIC;
   v_total_paid_out NUMERIC;
 BEGIN
-  -- Calculate total school revenue from successful transactions
-  SELECT COALESCE(SUM(
-    tr.amount * (rs.school_percentage / 100)
-  ), 0)
-  INTO v_total_school_revenue
-  FROM transactions tr
-  JOIN revenue_splits rs ON rs.tenant_id = tr.tenant_id
-  WHERE tr.tenant_id = p_tenant_id
-    AND tr.status = 'successful';
-
-  -- Calculate total already paid out
   SELECT COALESCE(SUM(amount), 0)
   INTO v_total_paid_out
   FROM payouts
   WHERE tenant_id = p_tenant_id
     AND status = 'paid';
 
-  -- Return difference
-  RETURN GREATEST(v_total_school_revenue - v_total_paid_out, 0);
+  RETURN GREATEST(0 - v_total_paid_out, 0);
 END;
 $$ LANGUAGE plpgsql;
 
