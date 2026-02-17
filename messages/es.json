@@ -164,6 +164,34 @@
         "title": "Tienda de Puntos",
         "subtitle": "Canjea tus monedas por recompensas exclusivas y mejoras"
       },
+      "progress": {
+        "title": "Reporte de Progreso",
+        "subtitle": "Sigue tu progreso de aprendizaje en todos los cursos",
+        "overallStats": "Estadísticas Generales",
+        "coursesEnrolled": "Cursos Inscritos",
+        "lessonsCompleted": "Lecciones Completadas",
+        "examsCompleted": "Exámenes Completados",
+        "avgScore": "Puntaje Promedio",
+        "courseProgress": "Progreso por Curso",
+        "lessons": "{completed} de {total} lecciones",
+        "exams": "{completed} de {total} exámenes",
+        "noEnrollments": "Sin Cursos Aún",
+        "noEnrollmentsDescription": "Inscríbete en un curso para comenzar a seguir tu progreso.",
+        "browseCourses": "Explorar Cursos",
+        "completed": "Completado",
+        "inProgress": "En Progreso",
+        "notStarted": "Sin Iniciar",
+        "viewCourse": "Ver Curso",
+        "examScore": "Puntaje: {score}%"
+      },
+      "certificates": {
+        "title": "Mis Certificados",
+        "subtitle": "Ve y comparte tus certificados obtenidos",
+        "noCertificates": "Sin Certificados Aún",
+        "noCertificatesDescription": "Completa cursos para obtener certificados. ¡Sigue aprendiendo!",
+        "browseCourses": "Explorar Cursos",
+        "earned": "{count} certificados obtenidos"
+      },
       "payments": {
         "title": "Solicitudes de Pago",
         "subtitle": "Rastrea tus solicitudes de pago manual e instrucciones",
@@ -636,6 +664,8 @@
         },
         "table": {
           "title": "Todos los Usuarios",
+          "searchPlaceholder": "Buscar por nombre, correo o ID...",
+          "unknown": "Desconocido",
           "noUsers": "No se encontraron usuarios",
           "headers": {
             "user": "Usuario",
@@ -1690,7 +1720,8 @@
     "management": "Gestión",
     "business": "Negocio",
     "revenue": "Ingresos",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "billing": "Facturación"
   },
   "userNav": {
     "profile": "Perfil",
@@ -1985,6 +2016,12 @@
         "success": "¡Compra exitosa!",
         "error": "Error al completar la compra",
         "empty": "La tienda está vacía por el momento. ¡Vuelve más tarde!"
+      },
+      "upgrade": {
+        "upgradeDescription": "Pide al administrador de tu escuela que actualice el plan para desbloquear esta función.",
+        "leaderboardLocked": "Tabla de Clasificación — Actualiza a Básico",
+        "achievementsLocked": "Logros — Actualiza a Básico",
+        "storeLocked": "Tienda de Puntos — Actualiza a Profesional"
       }
     },
     "paymentRequestForm": {
@@ -2522,5 +2559,73 @@
       "success": "¡Configuración completa! Bienvenido a bordo.",
       "error": "Error al guardar la configuración. Inténtalo de nuevo."
     }
+  },
+  "billing": {
+    "title": "Facturación",
+    "description": "Administra la suscripción y facturación de tu escuela",
+    "currentPlan": "Plan Actual",
+    "freePlanNote": "Estás en el plan gratuito. Actualiza para desbloquear más funciones.",
+    "transactionFee": "{percent}% de comisión en pagos de estudiantes",
+    "manage": "Administrar",
+    "upgrade": "Actualizar",
+    "changePlan": "Cambiar Plan",
+    "nextBillingDate": "Próxima fecha de cobro: {date}",
+    "cancelsOn": "Se cancela el {date}",
+    "annual": "Anual",
+    "monthly": "Mensual",
+    "pastDue": "Tu pago está vencido. Actualiza tu método de pago para evitar interrupciones del servicio.",
+    "courses": "Cursos",
+    "students": "Estudiantes",
+    "pendingRequests": "Solicitudes de Actualización Pendientes",
+    "pendingDescription": "Solicitudes de transferencia bancaria esperando confirmación",
+    "viewInvoices": "Ver Facturas",
+    "upgradePage": {
+      "title": "Actualiza Tu Plan",
+      "description": "Elige el plan que mejor se adapte a las necesidades de tu escuela"
+    },
+    "plans": {
+      "free": "Gratis",
+      "starter": "Inicial",
+      "pro": "Pro",
+      "business": "Negocio",
+      "enterprise": "Empresa"
+    },
+    "subscribe": "Suscribirse",
+    "currentPlanBadge": "Plan Actual",
+    "mostPopular": "Más Popular",
+    "saveYearly": "Ahorra ~17%",
+    "bankTransfer": "Pagar por transferencia bancaria",
+    "unlimited": "Ilimitado"
+  },
+  "platformPricing": {
+    "title": "Precios simples y transparentes",
+    "description": "Comienza gratis y escala a medida que creces. Sin costos ocultos, sin contratos a largo plazo. Actualiza o baja de plan cuando quieras.",
+    "cta": {
+      "title": "¿Listo para empezar?",
+      "description": "Crea tu escuela gratis y actualiza cuando necesites más.",
+      "createSchool": "Crea Tu Escuela",
+      "signIn": "Iniciar Sesión"
+    }
+  },
+  "featureGate": {
+    "locked": "Esta función requiere el plan {plan} o superior",
+    "upgrade": "Actualizar a {plan}",
+    "upgradeToUnlock": "Actualiza a {plan} para desbloquear {feature}"
+  },
+  "limits": {
+    "approaching": "Estás usando {current} de {limit} {resource}. Considera actualizar para más.",
+    "reached": "Has alcanzado tu límite de {resource} ({limit}). Actualiza tu plan para agregar más.",
+    "studentLimitReached": "Esta escuela ha alcanzado su límite de estudiantes. Contacta al administrador de la escuela.",
+    "courseLimitReached": "Has alcanzado tu límite de cursos. Actualiza tu plan para crear más cursos."
+  },
+  "revenue": {
+    "title": "Ingresos",
+    "description": "Rastrea los ingresos y ganancias de tu escuela",
+    "totalRevenue": "Ingresos Totales",
+    "platformFees": "Comisiones de Plataforma Pagadas",
+    "netRevenue": "Ingresos Netos",
+    "revenueByCourse": "Ingresos por Curso",
+    "monthlyTrend": "Tendencia Mensual",
+    "noRevenue": "Aún no hay datos de ingresos. Comienza a vender cursos para ver tus ganancias aquí."
   }
 }

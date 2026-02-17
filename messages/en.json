@@ -164,6 +164,34 @@
         "title": "Point Store",
         "subtitle": "Exchange your coins for exclusive rewards and power-ups"
       },
+      "progress": {
+        "title": "Progress Report",
+        "subtitle": "Track your learning progress across all courses",
+        "overallStats": "Overall Statistics",
+        "coursesEnrolled": "Courses Enrolled",
+        "lessonsCompleted": "Lessons Completed",
+        "examsCompleted": "Exams Completed",
+        "avgScore": "Average Score",
+        "courseProgress": "Course Progress",
+        "lessons": "{completed} of {total} lessons",
+        "exams": "{completed} of {total} exams",
+        "noEnrollments": "No Courses Yet",
+        "noEnrollmentsDescription": "Enroll in a course to start tracking your progress.",
+        "browseCourses": "Browse Courses",
+        "completed": "Completed",
+        "inProgress": "In Progress",
+        "notStarted": "Not Started",
+        "viewCourse": "View Course",
+        "examScore": "Score: {score}%"
+      },
+      "certificates": {
+        "title": "My Certificates",
+        "subtitle": "View and share your earned certificates",
+        "noCertificates": "No Certificates Yet",
+        "noCertificatesDescription": "Complete courses to earn certificates. Keep learning!",
+        "browseCourses": "Browse Courses",
+        "earned": "{count} certificates earned"
+      },
       "payments": {
         "title": "Payment Requests",
         "subtitle": "Track your manual payment requests and instructions",
@@ -637,6 +665,8 @@
         },
         "table": {
           "title": "All Users",
+          "searchPlaceholder": "Search by name, email, or ID...",
+          "unknown": "Unknown",
           "noUsers": "No users found",
           "headers": {
             "user": "User",
@@ -1845,7 +1875,8 @@
     "contentManagement": "Content Management",
     "management": "Management",
     "business": "Business",
-    "revenue": "Revenue"
+    "revenue": "Revenue",
+    "billing": "Billing"
   },
   "userNav": {
     "profile": "Profile",
@@ -2140,6 +2171,12 @@
         "success": "Purchase successful!",
         "error": "Failed to complete purchase",
         "empty": "The store is currently empty. Check back later!"
+      },
+      "upgrade": {
+        "upgradeDescription": "Ask your school admin to upgrade the plan to unlock this feature.",
+        "leaderboardLocked": "Leaderboard — Upgrade to Basic",
+        "achievementsLocked": "Achievements — Upgrade to Basic",
+        "storeLocked": "Point Store — Upgrade to Professional"
       }
     },
     "paymentRequestForm": {
@@ -2529,5 +2566,73 @@
       "success": "School setup complete! Welcome aboard.",
       "error": "Failed to save settings. Please try again."
     }
+  },
+  "billing": {
+    "title": "Billing",
+    "description": "Manage your school's subscription and billing",
+    "currentPlan": "Current Plan",
+    "freePlanNote": "You are on the free plan. Upgrade to unlock more features.",
+    "transactionFee": "{percent}% transaction fee on student payments",
+    "manage": "Manage",
+    "upgrade": "Upgrade",
+    "changePlan": "Change Plan",
+    "nextBillingDate": "Next billing date: {date}",
+    "cancelsOn": "Cancels on {date}",
+    "annual": "Annual",
+    "monthly": "Monthly",
+    "pastDue": "Your payment is past due. Please update your payment method to avoid service interruption.",
+    "courses": "Courses",
+    "students": "Students",
+    "pendingRequests": "Pending Upgrade Requests",
+    "pendingDescription": "Bank transfer requests awaiting confirmation",
+    "viewInvoices": "View Invoices",
+    "upgradePage": {
+      "title": "Upgrade Your Plan",
+      "description": "Choose the plan that best fits your school's needs"
+    },
+    "plans": {
+      "free": "Free",
+      "starter": "Starter",
+      "pro": "Pro",
+      "business": "Business",
+      "enterprise": "Enterprise"
+    },
+    "subscribe": "Subscribe",
+    "currentPlanBadge": "Current Plan",
+    "mostPopular": "Most Popular",
+    "saveYearly": "Save ~17%",
+    "bankTransfer": "Pay via bank transfer",
+    "unlimited": "Unlimited"
+  },
+  "platformPricing": {
+    "title": "Simple, transparent pricing",
+    "description": "Start free and scale as you grow. No hidden fees, no long-term contracts. Upgrade or downgrade anytime.",
+    "cta": {
+      "title": "Ready to get started?",
+      "description": "Create your school for free and upgrade whenever you need more.",
+      "createSchool": "Create Your School",
+      "signIn": "Sign In"
+    }
+  },
+  "featureGate": {
+    "locked": "This feature requires the {plan} plan or higher",
+    "upgrade": "Upgrade to {plan}",
+    "upgradeToUnlock": "Upgrade to {plan} to unlock {feature}"
+  },
+  "limits": {
+    "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more.",
+    "reached": "You've reached your {resource} limit ({limit}). Upgrade your plan to add more.",
+    "studentLimitReached": "This school has reached its student limit. Please contact the school administrator.",
+    "courseLimitReached": "You've reached your course limit. Upgrade your plan to create more courses."
+  },
+  "revenue": {
+    "title": "Revenue",
+    "description": "Track your school's revenue and earnings",
+    "totalRevenue": "Total Revenue",
+    "platformFees": "Platform Fees Paid",
+    "netRevenue": "Net Revenue",
+    "revenueByCourse": "Revenue by Course",
+    "monthlyTrend": "Monthly Trend",
+    "noRevenue": "No revenue data yet. Start selling courses to see your earnings here."
   }
 }
