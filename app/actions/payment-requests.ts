@@ -1,10 +1,11 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { revalidatePath } from 'next/cache'
 
-interface CreatePaymentRequestData {
+export interface PaymentRequestFormData {
   productId: number
   contactName: string
   contactEmail: string
@@ -12,105 +13,254 @@ interface CreatePaymentRequestData {
   message?: string
 }
 
-interface PaymentRequest {
-  request_id: number
-  user_id: string
-  product_id: number
-  contact_name: string
-  contact_email: string
-  contact_phone: string | null
-  message: string | null
-  status: string
-  payment_method: string | null
-  payment_amount: number | null
-  payment_currency: string | null
-  invoice_number: string | null
-  created_at: string
-  updated_at: string
+export interface PaymentInstructionsData {
+  paymentMethod: string
+  paymentInstructions: string
+  paymentDeadline?: string
+  paymentAmount: number
+  paymentCurrency: string
 }
 
 /**
- * Student creates a payment request for manual payment
+ * Student creates a payment request for manual/offline payment
  */
-export async function createPaymentRequest(
-  data: CreatePaymentRequestData
-): Promise<ActionResult<PaymentRequest>> {
-  try {
-    const supabase = await createClient()
+export async function createPaymentRequest(data: PaymentRequestFormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const tenantId = await getCurrentTenantId()
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      throw new Error('You must be logged in to request payment information')
-    }
-
-    // Validate product exists and is manual payment
-    const { data: product, error: productError } = await supabase
-      .from('products')
-      .select('product_id, name, price, currency, payment_provider')
-      .eq('product_id', data.productId)
-      .eq('status', 'active')
-      .single()
-
-    if (productError || !product) {
-      throw new Error('Product not found')
-    }
-
-    if (product.payment_provider !== 'manual') {
-      throw new Error('This product does not support manual payment')
-    }
-
-    // Check if user already has a pending request for this product
-    const { data: existingRequest } = await supabase
-      .from('payment_requests')
-      .select('request_id, status')
-      .eq('user_id', user.id)
-      .eq('product_id', data.productId)
-      .in('status', ['pending', 'contacted', 'payment_received'])
-      .single()
-
-    if (existingRequest) {
-      throw new Error('You already have a pending payment request for this product')
-    }
-
-    // Create payment request
-    const { data: request, error: insertError } = await supabase
-      .from('payment_requests')
-      .insert({
-        user_id: user.id,
-        product_id: data.productId,
-        contact_name: data.contactName,
-        contact_email: data.contactEmail,
-        contact_phone: data.contactPhone || null,
-        message: data.message || null,
-        payment_amount: product.price,
-        payment_currency: product.currency,
-        status: 'pending'
-      })
-      .select()
-      .single()
-
-    if (insertError) throw insertError
-
-    // TODO: Send notification to admin
-    // TODO: Send confirmation email to student
-
-    revalidatePath('/dashboard/student')
-    revalidatePath('/dashboard/admin/payment-requests')
-
-    return { success: true, data: request }
-
-  } catch (error) {
-    console.error('Create payment request failed:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create payment request'
-    }
+  if (!user) {
+    throw new Error('Not authenticated')
   }
+
+  // Verify product exists and belongs to tenant
+  const { data: product } = await supabase
+    .from('products')
+    .select('product_id, name, price, currency, payment_provider')
+    .eq('product_id', data.productId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!product) {
+    throw new Error('Product not found')
+  }
+
+  if (product.payment_provider !== 'manual') {
+    throw new Error('This product does not support manual payments')
+  }
+
+  // Create payment request
+  const { data: request, error } = await supabase
+    .from('payment_requests')
+    .insert({
+      user_id: user.id,
+      product_id: data.productId,
+      contact_name: data.contactName,
+      contact_email: data.contactEmail,
+      contact_phone: data.contactPhone || null,
+      message: data.message || null,
+      status: 'pending',
+      payment_amount: parseFloat(product.price),
+      payment_currency: product.currency || 'usd',
+      tenant_id: tenantId,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to create payment request:', error)
+    throw new Error('Failed to create payment request')
+  }
+
+  revalidatePath('/dashboard/student/payments')
+  return request
 }
 
 /**
- * Admin updates payment request status and details
+ * Admin sends payment instructions to student
+ */
+export async function sendPaymentInstructions(
+  requestId: number,
+  instructions: PaymentInstructionsData
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user || (role !== 'admin' && !superAdmin)) {
+    throw new Error('Unauthorized')
+  }
+
+  // Verify request belongs to tenant
+  const { data: request } = await supabase
+    .from('payment_requests')
+    .select('request_id, status, tenant_id')
+    .eq('request_id', requestId)
+    .single()
+
+  if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
+    throw new Error('Payment request not found or access denied')
+  }
+
+  if (request.status !== 'pending') {
+    throw new Error('Can only send instructions for pending requests')
+  }
+
+  // Update request with payment instructions
+  const { error } = await supabase
+    .from('payment_requests')
+    .update({
+      status: 'contacted',
+      payment_method: instructions.paymentMethod,
+      payment_instructions: instructions.paymentInstructions,
+      payment_deadline: instructions.paymentDeadline || null,
+      payment_amount: instructions.paymentAmount,
+      payment_currency: instructions.paymentCurrency,
+      processed_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('request_id', requestId)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    console.error('Failed to send payment instructions:', error)
+    throw new Error('Failed to send payment instructions')
+  }
+
+  revalidatePath('/dashboard/admin/payment-requests')
+  revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+
+  return { success: true }
+}
+
+/**
+ * Admin confirms payment has been received
+ */
+export async function confirmPaymentReceived(requestId: number, adminNotes?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user || (role !== 'admin' && !superAdmin)) {
+    throw new Error('Unauthorized')
+  }
+
+  // Verify request belongs to tenant
+  const { data: request } = await supabase
+    .from('payment_requests')
+    .select('request_id, status, tenant_id')
+    .eq('request_id', requestId)
+    .single()
+
+  if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
+    throw new Error('Payment request not found or access denied')
+  }
+
+  if (request.status !== 'contacted') {
+    throw new Error('Can only confirm payment for requests with instructions sent')
+  }
+
+  // Update request status
+  const { error } = await supabase
+    .from('payment_requests')
+    .update({
+      status: 'payment_received',
+      payment_confirmed_at: new Date().toISOString(),
+      admin_notes: adminNotes || null,
+      processed_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('request_id', requestId)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    console.error('Failed to confirm payment:', error)
+    throw new Error('Failed to confirm payment')
+  }
+
+  revalidatePath('/dashboard/admin/payment-requests')
+  revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+
+  return { success: true }
+}
+
+/**
+ * Admin completes the request and enrolls student in course
+ */
+export async function completeAndEnroll(requestId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user || (role !== 'admin' && !superAdmin)) {
+    throw new Error('Unauthorized')
+  }
+
+  // Get full request details
+  const { data: request, error: fetchError } = await supabase
+    .from('payment_requests')
+    .select('*, product:products(product_id, name, price, currency)')
+    .eq('request_id', requestId)
+    .single()
+
+  if (fetchError || !request || (request.tenant_id !== tenantId && !superAdmin)) {
+    throw new Error('Payment request not found or access denied')
+  }
+
+  if (request.status !== 'payment_received') {
+    throw new Error('Can only complete requests with confirmed payment')
+  }
+
+  // Create transaction record
+  const { data: transaction, error: transactionError } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: request.user_id,
+      product_id: request.product_id,
+      amount: request.payment_amount,
+      currency: request.payment_currency,
+      payment_method: `manual - ${request.payment_method}`,
+      status: 'successful',
+      tenant_id: tenantId,
+    })
+    .select()
+    .single()
+
+  if (transactionError) {
+    console.error('Failed to create transaction:', transactionError)
+    throw new Error('Failed to create transaction')
+  }
+
+  // Update payment request status
+  const { error: updateError } = await supabase
+    .from('payment_requests')
+    .update({
+      status: 'completed',
+      processed_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('request_id', requestId)
+    .eq('tenant_id', tenantId)
+
+  if (updateError) {
+    console.error('Failed to complete payment request:', updateError)
+    throw new Error('Failed to complete payment request')
+  }
+
+  revalidatePath('/dashboard/admin/payment-requests')
+  revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+
+  return { success: true, transactionId: transaction.transaction_id }
+}
+
+/**
+ * Generic update function for payment requests (used by dialog)
  */
 export async function updatePaymentRequest(
   requestId: number,
@@ -118,49 +268,52 @@ export async function updatePaymentRequest(
     status?: string
     paymentMethod?: string
     paymentInstructions?: string
-    paymentDeadline?: string
     adminNotes?: string
   }
-): Promise<ActionResult> {
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user || (role !== 'admin' && !superAdmin)) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  // Verify request belongs to tenant
+  const { data: request } = await supabase
+    .from('payment_requests')
+    .select('request_id, tenant_id')
+    .eq('request_id', requestId)
+    .single()
+
+  if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
+    return { success: false, error: 'Payment request not found or access denied' }
+  }
+
   try {
-    await verifyAdminAccess()
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
-
-    if (updates.status) updateData.status = updates.status
-    if (updates.paymentMethod) updateData.payment_method = updates.paymentMethod
-    if (updates.paymentInstructions) updateData.payment_instructions = updates.paymentInstructions
-    if (updates.paymentDeadline) updateData.payment_deadline = updates.paymentDeadline
-    if (updates.adminNotes) updateData.admin_notes = updates.adminNotes
-    if (user) updateData.processed_by = user.id
-
-    // If marking as payment received, set timestamp
-    if (updates.status === 'payment_received') {
-      updateData.payment_confirmed_at = new Date().toISOString()
-    }
-
-    const adminClient = createAdminClient()
-    const { error } = await adminClient
+    const { error } = await supabase
       .from('payment_requests')
-      .update(updateData)
+      .update({
+        ...(updates.status && { status: updates.status }),
+        ...(updates.paymentMethod && { payment_method: updates.paymentMethod }),
+        ...(updates.paymentInstructions && { payment_instructions: updates.paymentInstructions }),
+        ...(updates.adminNotes && { admin_notes: updates.adminNotes }),
+        processed_by: user.id,
+        updated_at: new Date().toISOString(),
+      })
       .eq('request_id', requestId)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 
-    // TODO: Send notification to student about status change
-    // TODO: If status is 'contacted', send payment instructions email
-
     revalidatePath('/dashboard/admin/payment-requests')
+    revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
 
     return { success: true }
-
   } catch (error) {
-    console.error('Update payment request failed:', error)
+    console.error('Failed to update payment request:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update payment request'
@@ -169,150 +322,133 @@ export async function updatePaymentRequest(
 }
 
 /**
- * Admin confirms payment and enrolls student
+ * Alias for completeAndEnroll (used by existing dialog component)
  */
-export async function confirmPaymentAndEnroll(
-  requestId: number
-): Promise<ActionResult> {
-  try {
-    await verifyAdminAccess()
-
-    const adminClient = createAdminClient()
-
-    // Get payment request details
-    const { data: request, error: requestError } = await adminClient
-      .from('payment_requests')
-      .select(`
-        *,
-        product:products(
-          product_id,
-          name
-        )
-      `)
-      .eq('request_id', requestId)
-      .single()
-
-    if (requestError || !request) {
-      throw new Error('Payment request not found')
-    }
-
-    if (request.status === 'completed') {
-      throw new Error('This request has already been completed')
-    }
-
-    // Create transaction record (required for enroll_user RPC)
-    const { data: transaction, error: txError } = await adminClient
-      .from('transactions')
-      .insert({
-        user_id: request.user_id,
-        product_id: request.product_id,
-        amount: request.payment_amount,
-        currency: request.payment_currency,
-        payment_method: request.payment_method || 'manual',
-        status: 'successful' // Fixed: must match enroll_user check
-      })
-      .select()
-      .single()
-
-    if (txError) {
-      throw new Error('Failed to create transaction: ' + txError.message)
-    }
-
-    // Use enroll_user RPC function to handle enrollment
-    // This automatically enrolls user in all courses linked to the product
-    const { error: enrollError } = await adminClient.rpc('enroll_user', {
-      _user_id: request.user_id,
-      _product_id: request.product.product_id
-    })
-
-    if (enrollError) {
-      throw new Error('Failed to enroll user: ' + enrollError.message)
-    }
-
-    // Update request status
-    await adminClient
-      .from('payment_requests')
-      .update({
-        status: 'completed',
-        payment_confirmed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('request_id', requestId)
-
-    // TODO: Send enrollment confirmation email to student
-
-    revalidatePath('/dashboard/admin/payment-requests')
-    revalidatePath('/dashboard/student')
-
-    return { success: true }
-
-  } catch (error) {
-    console.error('Confirm payment and enroll failed:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to complete enrollment'
-    }
-  }
+export async function confirmPaymentAndEnroll(requestId: number) {
+  return completeAndEnroll(requestId)
 }
 
 /**
- * Generate invoice for payment request
+ * Generate invoice number for payment request
  */
-export async function generateInvoice(
-  requestId: number
-): Promise<ActionResult<{ invoiceNumber: string; invoiceUrl: string }>> {
+export async function generateInvoice(requestId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user || (role !== 'admin' && !superAdmin)) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   try {
-    await verifyAdminAccess()
-
-    const adminClient = createAdminClient()
-
-    // Get payment request
-    const { data: request, error: requestError } = await adminClient
+    // Verify request belongs to tenant
+    const { data: request } = await supabase
       .from('payment_requests')
-      .select(`
-        *,
-        user:profiles(full_name, email),
-        product:products(name, price, currency, description)
-      `)
+      .select('request_id, invoice_number, tenant_id')
       .eq('request_id', requestId)
       .single()
 
-    if (requestError || !request) {
-      throw new Error('Payment request not found')
+    if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
+      return { success: false, error: 'Payment request not found or access denied' }
     }
 
-    // Generate invoice number
-    const invoiceNumber = `INV-${Date.now()}-${requestId}`
-
-    // Update request with invoice number
-    await adminClient
-      .from('payment_requests')
-      .update({
-        invoice_number: invoiceNumber,
-        invoice_generated_at: new Date().toISOString()
-      })
-      .eq('request_id', requestId)
-
-    // TODO: Generate PDF invoice using a library like jsPDF or Puppeteer
-    // For now, we'll return a placeholder URL
-
-    const invoiceUrl = `/api/invoices/${invoiceNumber}`
-
-    revalidatePath('/dashboard/admin/payment-requests')
-
-    return {
-      success: true,
-      data: {
-        invoiceNumber,
-        invoiceUrl
+    if (request.invoice_number) {
+      return {
+        success: true,
+        data: { invoiceNumber: request.invoice_number }
       }
     }
 
+    // Generate invoice number: INV-YYYYMMDD-XXXXX
+    const date = new Date()
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '')
+    const randomNum = Math.floor(10000 + Math.random() * 90000)
+    const invoiceNumber = `INV-${dateStr}-${randomNum}`
+
+    const { error } = await supabase
+      .from('payment_requests')
+      .update({
+        invoice_number: invoiceNumber,
+        invoice_generated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('request_id', requestId)
+      .eq('tenant_id', tenantId)
+
+    if (error) throw error
+
+    revalidatePath('/dashboard/admin/payment-requests')
+    revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+
+    return {
+      success: true,
+      data: { invoiceNumber }
+    }
   } catch (error) {
-    console.error('Generate invoice failed:', error)
+    console.error('Failed to generate invoice:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate invoice'
     }
   }
+}
+
+/**
+ * Admin or student cancels a payment request
+ */
+export async function cancelPaymentRequest(requestId: number, reason?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Get request
+  const { data: request } = await supabase
+    .from('payment_requests')
+    .select('request_id, user_id, status, tenant_id')
+    .eq('request_id', requestId)
+    .single()
+
+  if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
+    throw new Error('Payment request not found or access denied')
+  }
+
+  // Students can only cancel their own pending/contacted requests
+  if (role !== 'admin' && !superAdmin) {
+    if (request.user_id !== user.id) {
+      throw new Error('You can only cancel your own requests')
+    }
+    if (request.status !== 'pending' && request.status !== 'contacted') {
+      throw new Error('Cannot cancel this request')
+    }
+  }
+
+  // Update status
+  const { error } = await supabase
+    .from('payment_requests')
+    .update({
+      status: 'cancelled',
+      admin_notes: reason || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('request_id', requestId)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    console.error('Failed to cancel payment request:', error)
+    throw new Error('Failed to cancel payment request')
+  }
+
+  revalidatePath('/dashboard/admin/payment-requests')
+  revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+  revalidatePath('/dashboard/student/payments')
+
+  return { success: true }
 }

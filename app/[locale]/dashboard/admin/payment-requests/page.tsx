@@ -1,9 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
+import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { PaymentRequestsTable } from '@/components/admin/payment-requests-table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { IconArrowLeft } from '@tabler/icons-react'
+import Link from 'next/link'
 
 export default async function PaymentRequestsPage({
   params: { locale }
@@ -12,8 +17,24 @@ export default async function PaymentRequestsPage({
 }) {
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const supabase = await createClient()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+  const superAdmin = await isSuperAdmin()
 
-  // Fetch all payment requests with related data
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/auth/login')
+  }
+
+  // Verify admin access
+  if (role !== 'admin' && !superAdmin) {
+    redirect('/dashboard')
+  }
+
+  // Fetch all payment requests with related data, filtered by tenant
   const { data: allRequests } = await supabase
     .from('payment_requests')
     .select(`
@@ -30,6 +51,7 @@ export default async function PaymentRequestsPage({
         currency
       )
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   const requests = allRequests || []
@@ -46,13 +68,26 @@ export default async function PaymentRequestsPage({
     .reduce((sum, r) => sum + (Number(r.payment_amount) || 0), 0)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">{t('title')}</h1>
-        <p className="text-muted-foreground mt-1">
-          {t('description')}
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <Link href="/dashboard/admin">
+            <Button variant="ghost" size="sm" className="mb-4">
+              <IconArrowLeft className="mr-2 h-4 w-4" />
+              {t('back')}
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
+            <p className="mt-1 text-muted-foreground">
+              {t('description')}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -155,6 +190,7 @@ export default async function PaymentRequestsPage({
           <PaymentRequestsTable requests={requests} />
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   )
 }

@@ -26,9 +26,13 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import {
+  sendPaymentInstructions,
+  confirmPaymentReceived,
+  completeAndEnroll,
+  cancelPaymentRequest,
   updatePaymentRequest,
   confirmPaymentAndEnroll,
-  generateInvoice
+  generateInvoice,
 } from '@/app/actions/payment-requests'
 
 interface PaymentRequest {
@@ -108,14 +112,19 @@ export function PaymentRequestDialog({
 
     setLoading(true)
 
-    const result = await confirmPaymentAndEnroll(request.request_id)
+    try {
+      const result = await confirmPaymentAndEnroll(request.request_id)
 
-    if (result.success) {
-      toast.success(t('dialog.toasts.enrollSuccess'))
-      router.refresh()
-      onOpenChange(false)
-    } else {
-      toast.error(result.error || t('dialog.toasts.enrollError'))
+      if (result.success) {
+        toast.success(t('dialog.toasts.enrollSuccess'))
+        router.refresh()
+        onOpenChange(false)
+      } else {
+        const errorMsg = ('error' in result ? (result as any).error : t('dialog.toasts.enrollError')) as string
+        toast.error(errorMsg)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('dialog.toasts.enrollError'))
     }
 
     setLoading(false)
