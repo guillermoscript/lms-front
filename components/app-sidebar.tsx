@@ -81,6 +81,9 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook },
                 { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus },
             ],
+            business: [
+                { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
+            ],
         },
         student: {
             main: [
@@ -223,6 +226,29 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {currentNav.content.map((item: NavItem) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            render={<Link href={item.href} />}
+                                            isActive={pathname === item.href}
+                                            tooltip={item.title}
+                                        >
+                                            <item.icon />
+                                            <span>{item.title}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                )}
+
+                {/* Teacher: Business Section */}
+                {userRole === 'teacher' && currentNav && 'business' in currentNav && (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>{t('business')}</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {currentNav.business.map((item: NavItem) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
                                             render={<Link href={item.href} />}
