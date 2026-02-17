@@ -93,10 +93,12 @@ export function GamificationHeaderCard() {
                 </div>
             </div>
 
-            <Link href="/dashboard/student/profile#achievements" className="flex items-center justify-center p-1.5 md:p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-all shrink-0">
-                <IconTrophy size={18} className="md:hidden" />
-                <IconTrophy size={20} className="hidden md:block" />
-            </Link>
+            {summary.features?.achievements && (
+                <Link href="/dashboard/student/profile#achievements" className="flex items-center justify-center p-1.5 md:p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-all shrink-0">
+                    <IconTrophy size={18} className="md:hidden" />
+                    <IconTrophy size={20} className="hidden md:block" />
+                </Link>
+            )}
         </div>
     );
 }

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useGamification } from "@/lib/hooks/use-gamification";
 import { PointStoreItem } from "./point-store-item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconShoppingBag, IconCoins } from "@tabler/icons-react";
+import { IconShoppingBag, IconCoins, IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 export function StoreSection() {
@@ -12,8 +12,34 @@ export function StoreSection() {
     const t = useTranslations('components.gamification');
 
     useEffect(() => {
-        refreshStore();
-    }, []);
+        if (summary?.features?.store) {
+            refreshStore();
+        }
+    }, [summary?.features?.store]);
+
+    // Show upgrade prompt if store feature is not available
+    if (summary && !summary.features?.store) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
+                        <IconShoppingBag size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-foreground tracking-tight">{t('store.title')}</h2>
+                        <p className="text-xs text-muted-foreground">{t('store.subtitle')}</p>
+                    </div>
+                </div>
+                <div className="py-12 text-center bg-muted/30 rounded-3xl border border-dashed border-border">
+                    <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                        <IconLock size={24} className="text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-bold">{t('upgrade.storeLocked')}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
+                </div>
+            </div>
+        );
+    }
 
     if (storeLoading && storeItems.length === 0) {
         return (

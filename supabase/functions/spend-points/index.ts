@@ -1,6 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+function getTenantIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,6 +40,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    const tenantId = getTenantIdFromJwt(authHeader) || "00000000-0000-0000-0000-000000000001";
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Check if store feature is enabled for this tenant's plan
+    const { data: features } = await admin.rpc("get_gamification_features", { _tenant_id: tenantId });
+    if (!features?.store) {
+      return new Response(JSON.stringify({ error: "Store is not available on your plan", feature_locked: true }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { item_id } = await req.json();
     if (!item_id) {
       return new Response(JSON.stringify({ error: "item_id is required" }), {
@@ -38,14 +60,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(supabaseUrl, serviceRoleKey);
-
-    // Get store item
+    // Get store item (global or tenant-specific)
     const { data: item, error: itemError } = await admin
       .from("gamification_store_items")
       .select("*")
       .eq("id", item_id)
-      .eq("is_active", true)
+      .eq("is_available", true)
+      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
       .single();
 
     if (itemError || !item) {
@@ -55,11 +76,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get user profile
+    // Get user profile (tenant-scoped)
     const { data: profile, error: profileError } = await admin
       .from("gamification_profiles")
       .select("total_xp, total_coins_spent")
       .eq("user_id", user.id)
+      .eq("tenant_id", tenantId)
       .single();
 
     if (profileError || !profile) {
@@ -69,7 +91,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Calculate available coins: floor(total_xp / 10) - total_coins_spent
+    // Calculate available coins
     const availableCoins = Math.floor(profile.total_xp / 10) - profile.total_coins_spent;
 
     if (availableCoins < item.price_coins) {
@@ -83,12 +105,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check max_per_user limit
+    // Check max_per_user limit (tenant-scoped)
     if (item.max_per_user !== null) {
       const { count } = await admin
         .from("gamification_redemptions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .eq("item_id", item_id);
 
       if ((count || 0) >= item.max_per_user) {
@@ -99,13 +122,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create redemption record
+    // Create redemption record (tenant-scoped)
     const { error: redemptionError } = await admin
       .from("gamification_redemptions")
       .insert({
         user_id: user.id,
         item_id: item_id,
         coins_spent: item.price_coins,
+        tenant_id: tenantId,
       });
 
     if (redemptionError) {
@@ -115,26 +139,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update total_coins_spent
+    // Update total_coins_spent (tenant-scoped)
     await admin
       .from("gamification_profiles")
       .update({ total_coins_spent: profile.total_coins_spent + item.price_coins, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("tenant_id", tenantId);
 
     // Special handling for streak_freeze
     if (item.slug === "streak_freeze") {
+      const { data: currentProfile } = await admin
+        .from("gamification_profiles")
+        .select("streak_freezes_available")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .single();
+
       await admin
         .from("gamification_profiles")
         .update({
-          streak_freezes_available: Math.min(
-            (await admin.from("gamification_profiles").select("streak_freezes_available").eq("user_id", user.id).single()).data?.streak_freezes_available + 1 || 1,
-            5
-          ),
+          streak_freezes_available: Math.min((currentProfile?.streak_freezes_available || 0) + 1, 5),
         })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId);
     }
 
-    // Create user reward record for applicable items
+    // Create user reward record for applicable items (tenant-scoped)
     if (["double_xp_1h", "hint_token", "early_access"].includes(item.slug)) {
       const expiresAt = item.slug === "double_xp_1h"
         ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
@@ -145,9 +175,10 @@ Deno.serve(async (req) => {
       await admin.from("gamification_user_rewards").insert({
         user_id: user.id,
         reward_type: item.slug,
-        reward_data: { item_id: item.id, item_title: item.title },
+        reward_data: { item_id: item.id, item_name: item.name },
         expires_at: expiresAt,
         is_active: true,
+        tenant_id: tenantId,
       });
     }
 
@@ -156,14 +187,14 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        item: { id: item.id, name: item.title, slug: item.slug },
+        item: { id: item.id, name: item.name, slug: item.slug },
         coins_spent: item.price_coins,
         coins_remaining: coinsRemaining,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

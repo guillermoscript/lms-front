@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+export interface GamificationFeatures {
+    xp: boolean;
+    levels: boolean;
+    streaks: boolean;
+    leaderboard: boolean;
+    achievements: boolean;
+    store: boolean;
+    custom_achievements: boolean;
+    custom_store: boolean;
+}
+
 export interface GamificationSummary {
     total_xp: number;
     level: number;
@@ -27,6 +38,7 @@ export interface GamificationSummary {
         newly_earned: string[];
     };
     recent_xp: any[];
+    features: GamificationFeatures;
 }
 
 export interface LeaderboardEntry {
@@ -55,13 +67,13 @@ export interface Achievement {
 export interface StoreItem {
     id: string;
     slug: string;
-    title: string;
+    name: string;
     description: string;
     price_coins: number;
     category: string;
     icon: string;
     metadata: any;
-    is_active: boolean;
+    is_available: boolean;
 }
 
 export function useGamification() {
@@ -181,7 +193,7 @@ export function useGamification() {
             const { data, error } = await supabase
                 .from("gamification_store_items")
                 .select("*")
-                .eq("is_active", true);
+                .eq("is_available", true);
 
             if (error) throw error;
             setStoreItems(data || []);

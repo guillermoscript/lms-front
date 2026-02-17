@@ -28,7 +28,7 @@ export function PointStoreItem({ item }: PointStoreItemProps) {
 
         if (result.success) {
             toast.success(t('store.success'), {
-                description: item.title,
+                description: item.name,
                 icon: <IconCheck className="text-green-500" />
             });
         } else {
@@ -62,7 +62,7 @@ export function PointStoreItem({ item }: PointStoreItemProps) {
             <div className="flex-1 mb-6">
                 <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-bold text-sm leading-tight truncate">
-                        {item.title}
+                        {item.name}
                     </h4>
                     {!canAfford && <IconLock size={12} className="text-muted-foreground" />}
                 </div>

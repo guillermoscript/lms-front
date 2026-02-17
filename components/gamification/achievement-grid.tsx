@@ -9,12 +9,27 @@ import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 
 export function AchievementGrid() {
-    const { allAchievements, achievementsLoading, refreshAchievements } = useGamification();
+    const { allAchievements, achievementsLoading, refreshAchievements, summary } = useGamification();
 
     useEffect(() => {
-        refreshAchievements();
-    }, []);
+        if (summary?.features?.achievements) {
+            refreshAchievements();
+        }
+    }, [summary?.features?.achievements]);
     const t = useTranslations('components.gamification');
+
+    // Show upgrade prompt if achievements feature is not available
+    if (summary && !summary.features?.achievements) {
+        return (
+            <div className="py-12 text-center bg-muted/30 rounded-3xl border border-dashed border-border">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                    <IconAward size={24} className="text-muted-foreground" />
+                </div>
+                <p className="text-sm font-bold">{t('upgrade.achievementsLocked')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
+            </div>
+        );
+    }
 
     if (achievementsLoading && allAchievements.length === 0) {
         return (

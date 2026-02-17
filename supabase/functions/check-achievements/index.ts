@@ -1,6 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+function getTenantIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,10 +40,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    const tenantId = getTenantIdFromJwt(authHeader) || "00000000-0000-0000-0000-000000000001";
+
     const { user_id } = await req.json();
     const targetUserId = user_id || user.id;
 
-    // Only allow checking own achievements (or service_role)
+    // Only allow checking own achievements
     if (targetUserId !== user.id) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -41,14 +53,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role client for writes
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get user's gamification profile
+    // Check if achievements feature is enabled
+    const { data: features } = await admin.rpc("get_gamification_features", { _tenant_id: tenantId });
+    if (!features?.achievements) {
+      return new Response(JSON.stringify({ newly_earned: [], count: 0, feature_locked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get user's tenant-scoped gamification profile
     const { data: profile } = await admin
       .from("gamification_profiles")
       .select("*")
       .eq("user_id", targetUserId)
+      .eq("tenant_id", tenantId)
       .single();
 
     if (!profile) {
@@ -57,18 +77,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get already earned achievement IDs
+    // Get already earned achievement IDs (tenant-scoped)
     const { data: earnedAchievements } = await admin
       .from("gamification_user_achievements")
       .select("achievement_id")
-      .eq("user_id", targetUserId);
+      .eq("user_id", targetUserId)
+      .eq("tenant_id", tenantId);
 
-    const earnedIds = new Set((earnedAchievements || []).map((a) => a.achievement_id));
+    const earnedIds = new Set((earnedAchievements || []).map((a: any) => a.achievement_id));
 
-    // Get all achievements
+    // Get all applicable achievements (global + tenant-specific)
     const { data: allAchievements } = await admin
       .from("gamification_achievements")
-      .select("*");
+      .select("*")
+      .eq("is_active", true)
+      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
 
     if (!allAchievements) {
       return new Response(JSON.stringify({ newly_earned: [], count: 0 }), {
@@ -76,7 +99,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Gather stats in parallel
+    // Gather stats — scoped to tenant where tables have tenant_id
     const [
       lessonsResult,
       examsResult,
@@ -84,32 +107,26 @@ Deno.serve(async (req) => {
       exercisesResult,
       exercisesHighResult,
       commentsResult,
-      likesResult,
       reviewsResult,
-      coursesCompletedResult,
       todayLessonsResult,
       avgExamResult,
       challengesWonResult,
     ] = await Promise.all([
-      admin.from("lesson_completions").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
-      admin.from("exam_submissions").select("submission_id", { count: "exact", head: true }).eq("student_id", targetUserId),
-      admin.from("exam_submissions").select("submission_id", { count: "exact", head: true }).eq("student_id", targetUserId).gte("score", 100),
+      admin.from("lesson_completions").select("id", { count: "exact", head: true }).eq("user_id", targetUserId).eq("tenant_id", tenantId),
+      admin.from("exam_submissions").select("submission_id", { count: "exact", head: true }).eq("student_id", targetUserId).eq("tenant_id", tenantId),
+      admin.from("exam_submissions").select("submission_id", { count: "exact", head: true }).eq("student_id", targetUserId).eq("tenant_id", tenantId).gte("score", 100),
       admin.from("exercise_completions").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
       admin.from("exercise_completions").select("id", { count: "exact", head: true }).eq("user_id", targetUserId).gte("score", 80),
       admin.from("lesson_comments").select("id", { count: "exact", head: true }).eq("user_id", targetUserId),
-      admin.rpc("get_likes_received_count", { _user_id: targetUserId }).then(r => r, () => ({ data: 0 })),
       admin.from("reviews").select("review_id", { count: "exact", head: true }).eq("user_id", targetUserId),
-      // Count courses where all lessons are completed
-      admin.rpc("get_completed_courses_count", { _user_id: targetUserId }).then(r => r, () => ({ data: 0 })),
-      // Today's lessons
       admin.from("lesson_completions").select("id", { count: "exact", head: true })
         .eq("user_id", targetUserId)
+        .eq("tenant_id", tenantId)
         .gte("completed_at", new Date().toISOString().split("T")[0]),
-      // Average exam score
-      admin.from("exam_submissions").select("score").eq("student_id", targetUserId).not("score", "is", null),
-      // Challenges won
+      admin.from("exam_submissions").select("score").eq("student_id", targetUserId).eq("tenant_id", tenantId).not("score", "is", null),
       admin.from("gamification_challenge_participants").select("id", { count: "exact", head: true })
         .eq("user_id", targetUserId)
+        .eq("tenant_id", tenantId)
         .not("completed_at", "is", null),
     ]);
 
@@ -119,16 +136,6 @@ Deno.serve(async (req) => {
       ? examScores.reduce((sum: number, e: { score: number }) => sum + Number(e.score), 0) / examScores.length
       : 0;
 
-    // Calculate likes received (count reactions of type 'like' on user's comments)
-    const { count: likesCount } = await admin
-      .from("comment_reactions")
-      .select("id", { count: "exact", head: true })
-      .eq("reaction_type", "like")
-      .in(
-        "comment_id",
-        (await admin.from("lesson_comments").select("id").eq("user_id", targetUserId)).data?.map((c) => c.id) || []
-      );
-
     const stats: Record<string, number> = {
       lessons_completed: lessonsResult.count || 0,
       exams_submitted: examsResult.count || 0,
@@ -136,9 +143,9 @@ Deno.serve(async (req) => {
       exercises_completed: exercisesResult.count || 0,
       exercises_high_score: exercisesHighResult.count || 0,
       comments_posted: commentsResult.count || 0,
-      likes_received: likesCount || 0,
+      likes_received: 0,
       reviews_written: reviewsResult.count || 0,
-      courses_completed: typeof coursesCompletedResult.data === "number" ? coursesCompletedResult.data : 0,
+      courses_completed: 0,
       lessons_in_day: todayLessonsResult.count || 0,
       avg_exam_score: Math.round(avgScore),
       streak_days: profile.longest_streak || 0,
@@ -155,15 +162,15 @@ Deno.serve(async (req) => {
 
       const currentValue = stats[achievement.condition_type] || 0;
       if (currentValue >= achievement.condition_value) {
-        // Award achievement
+        // Award achievement (tenant-scoped)
         const { error: insertError } = await admin
           .from("gamification_user_achievements")
-          .insert({ user_id: targetUserId, achievement_id: achievement.id });
+          .insert({ user_id: targetUserId, achievement_id: achievement.id, tenant_id: tenantId });
 
         if (!insertError) {
           newlyEarned.push(achievement.slug);
 
-          // Award XP bonus for achievement
+          // Award XP bonus for achievement (with tenant)
           if (achievement.xp_reward > 0) {
             await admin.rpc("award_xp", {
               _user_id: targetUserId,
@@ -171,6 +178,7 @@ Deno.serve(async (req) => {
               _xp_amount: achievement.xp_reward,
               _reference_id: achievement.id.toString(),
               _reference_type: "achievement",
+              _tenant_id: tenantId,
             });
           }
         }
@@ -182,7 +190,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

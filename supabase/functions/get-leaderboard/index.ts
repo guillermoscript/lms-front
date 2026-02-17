@@ -1,6 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+function getTenantIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,15 +40,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    const tenantId = getTenantIdFromJwt(authHeader) || "00000000-0000-0000-0000-000000000001";
+
     const url = new URL(req.url);
-    const scope = url.searchParams.get("scope") || "global";
     const timeframe = url.searchParams.get("timeframe") || "weekly";
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100);
     const offset = parseInt(url.searchParams.get("offset") || "0");
-    const courseId = url.searchParams.get("course_id");
 
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Check if leaderboard feature is enabled for this tenant
+    const { data: features } = await admin.rpc("get_gamification_features", { _tenant_id: tenantId });
+    if (!features?.leaderboard) {
+      return new Response(JSON.stringify({ error: "Leaderboard is not available on your plan", feature_locked: true }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let leaderboardData: Array<{
       rank: number;
@@ -51,28 +70,27 @@ Deno.serve(async (req) => {
       current_streak: number;
     }> = [];
 
-    if (timeframe === "all_time" && scope === "global") {
-      // Use cached data or direct query from profiles
-      let query = admin
+    if (timeframe === "all_time") {
+      // Use profiles directly, scoped to tenant
+      const { data: profiles } = await admin
         .from("gamification_profiles")
         .select("user_id, total_xp, level, current_streak")
+        .eq("tenant_id", tenantId)
         .order("total_xp", { ascending: false })
         .range(offset, offset + limit - 1);
 
-      const { data: profiles } = await query;
-
       if (profiles && profiles.length > 0) {
-        const userIds = profiles.map((p) => p.user_id);
+        const userIds = profiles.map((p: any) => p.user_id);
         const { data: profilesData } = await admin
           .from("profiles")
           .select("id, full_name, avatar_url, username")
           .in("id", userIds);
 
         const profileMap = new Map(
-          (profilesData || []).map((p) => [p.id, p])
+          (profilesData || []).map((p: any) => [p.id, p])
         );
 
-        leaderboardData = profiles.map((p, i) => {
+        leaderboardData = profiles.map((p: any, i: number) => {
           const userProfile = profileMap.get(p.user_id);
           return {
             rank: offset + i + 1,
@@ -87,34 +105,16 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      // Weekly/monthly: aggregate from xp_transactions
+      // Weekly/monthly: aggregate from xp_transactions within tenant
       const periodStart = timeframe === "weekly"
         ? getWeekStart()
         : getMonthStart();
 
-      let query = admin
+      const { data: transactions } = await admin
         .from("gamification_xp_transactions")
         .select("user_id, xp_amount")
+        .eq("tenant_id", tenantId)
         .gte("created_at", periodStart.toISOString());
-
-      // If course scope, filter by enrolled users
-      if (scope === "course" && courseId) {
-        const { data: enrolledUsers } = await admin
-          .from("enrollments")
-          .select("user_id")
-          .eq("course_id", parseInt(courseId))
-          .eq("status", "active");
-
-        const enrolledIds = (enrolledUsers || []).map((e) => e.user_id);
-        if (enrolledIds.length === 0) {
-          return new Response(JSON.stringify([]), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        query = query.in("user_id", enrolledIds);
-      }
-
-      const { data: transactions } = await query;
 
       // Aggregate XP per user
       const xpMap = new Map<string, number>();
@@ -131,11 +131,11 @@ Deno.serve(async (req) => {
         const userIds = sorted.map(([uid]) => uid);
         const [{ data: profilesData }, { data: gamProfiles }] = await Promise.all([
           admin.from("profiles").select("id, full_name, avatar_url, username").in("id", userIds),
-          admin.from("gamification_profiles").select("user_id, level, current_streak").in("user_id", userIds),
+          admin.from("gamification_profiles").select("user_id, level, current_streak").eq("tenant_id", tenantId).in("user_id", userIds),
         ]);
 
-        const profileMap = new Map((profilesData || []).map((p) => [p.id, p]));
-        const gamMap = new Map((gamProfiles || []).map((p) => [p.user_id, p]));
+        const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+        const gamMap = new Map((gamProfiles || []).map((p: any) => [p.user_id, p]));
 
         leaderboardData = sorted.map(([uid, xp], i) => {
           const userProfile = profileMap.get(uid);
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

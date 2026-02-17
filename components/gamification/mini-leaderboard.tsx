@@ -4,17 +4,45 @@ import { useEffect } from "react";
 import { useGamification } from "@/lib/hooks/use-gamification";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconTrophy, IconMedal, IconTrendingUp } from "@tabler/icons-react";
+import { IconTrophy, IconMedal, IconTrendingUp, IconLock } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 export function MiniLeaderboard() {
-    const { leaderboard, leaderboardLoading, refreshLeaderboard } = useGamification();
+    const { leaderboard, leaderboardLoading, refreshLeaderboard, summary } = useGamification();
 
     useEffect(() => {
-        refreshLeaderboard();
-    }, []);
+        if (summary?.features?.leaderboard) {
+            refreshLeaderboard();
+        }
+    }, [summary?.features?.leaderboard]);
     const t = useTranslations('components.gamification');
+
+    // Show upgrade prompt if leaderboard feature is not available
+    if (summary && !summary.features?.leaderboard) {
+        return (
+            <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500">
+                            <IconTrophy size={18} />
+                        </div>
+                        <h3 className="font-bold text-sm tracking-tight">{t('leaderboardTitle')}</h3>
+                    </div>
+                    <IconLock size={16} className="text-muted-foreground" />
+                </div>
+                <div className="p-6 text-center space-y-3">
+                    <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center">
+                        <IconTrophy size={24} className="text-muted-foreground" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold">{t('upgrade.leaderboardLocked')}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (leaderboardLoading && leaderboard.length === 0) {
         return (

@@ -1,6 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+function getTenantIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -31,30 +41,41 @@ Deno.serve(async (req) => {
       });
     }
 
+    const tenantId = getTenantIdFromJwt(authHeader) || "00000000-0000-0000-0000-000000000001";
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch profile, levels, achievements, and recent XP in parallel
+    // Fetch profile, levels, achievements, recent XP, and features in parallel
     const [
       profileResult,
       levelsResult,
       achievementsResult,
       recentXpResult,
+      featuresResult,
     ] = await Promise.all([
-      admin.from("gamification_profiles").select("*").eq("user_id", user.id).single(),
+      admin.from("gamification_profiles").select("*").eq("user_id", user.id).eq("tenant_id", tenantId).single(),
       admin.from("gamification_levels").select("*").order("level", { ascending: true }),
       admin
         .from("gamification_user_achievements")
         .select("*, achievement:gamification_achievements(*)")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .order("earned_at", { ascending: false })
         .limit(5),
       admin
         .from("gamification_xp_transactions")
         .select("*")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(10),
+      admin.rpc("get_gamification_features", { _tenant_id: tenantId }),
     ]);
+
+    const features = featuresResult.data || {
+      xp: true, levels: true, streaks: true,
+      leaderboard: false, achievements: false, store: false,
+      custom_achievements: false, custom_store: false,
+    };
 
     const profile = profileResult.data || {
       total_xp: 0,
@@ -69,8 +90,8 @@ Deno.serve(async (req) => {
     const levels = levelsResult.data || [];
 
     // Find current and next level
-    const currentLevel = levels.find((l) => l.level === profile.level) || levels[0];
-    const nextLevel = levels.find((l) => l.level === profile.level + 1);
+    const currentLevel = levels.find((l: any) => l.level === profile.level) || levels[0];
+    const nextLevel = levels.find((l: any) => l.level === profile.level + 1);
 
     // Calculate XP progress to next level
     const xpForCurrentLevel = currentLevel?.min_xp || 0;
@@ -86,39 +107,44 @@ Deno.serve(async (req) => {
             )
           ),
         }
-      : { current: 0, required: 0, percentage: 100 }; // Max level
+      : { current: 0, required: 0, percentage: 100 };
 
     // Calculate available coins
     const availableCoins = Math.floor(profile.total_xp / 10) - profile.total_coins_spent;
 
-    // Trigger lazy achievement check
+    // Trigger lazy achievement check (only if achievements feature is enabled)
     let newlyEarnedAchievements: string[] = [];
-    try {
-      const checkResponse = await fetch(`${supabaseUrl}/functions/v1/check-achievements`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user_id: user.id }),
-      });
-      if (checkResponse.ok) {
-        const checkResult = await checkResponse.json();
-        newlyEarnedAchievements = checkResult.newly_earned || [];
+    if (features.achievements) {
+      try {
+        const checkResponse = await fetch(`${supabaseUrl}/functions/v1/check-achievements`, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_id: user.id }),
+        });
+        if (checkResponse.ok) {
+          const checkResult = await checkResponse.json();
+          newlyEarnedAchievements = checkResult.newly_earned || [];
+        }
+      } catch {
+        // Non-critical
       }
-    } catch {
-      // Non-critical — continue without achievement check
     }
 
-    // Get total achievement count
+    // Get achievement counts (global + tenant-specific achievements)
     const { count: totalAchievements } = await admin
       .from("gamification_achievements")
-      .select("id", { count: "exact", head: true });
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
 
     const { count: earnedCount } = await admin
       .from("gamification_user_achievements")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("tenant_id", tenantId);
 
     return new Response(
       JSON.stringify({
@@ -137,7 +163,7 @@ Deno.serve(async (req) => {
         achievements: {
           earned: earnedCount || 0,
           total: totalAchievements || 0,
-          recent: (achievementsResult.data || []).map((ua) => ({
+          recent: (achievementsResult.data || []).map((ua: any) => ({
             slug: ua.achievement?.slug,
             title: ua.achievement?.title,
             description: ua.achievement?.description,
@@ -148,17 +174,18 @@ Deno.serve(async (req) => {
           })),
           newly_earned: newlyEarnedAchievements,
         },
-        recent_xp: (recentXpResult.data || []).map((tx) => ({
+        recent_xp: (recentXpResult.data || []).map((tx: any) => ({
           action_type: tx.action_type,
           xp_amount: tx.xp_amount,
           reference_type: tx.reference_type,
           created_at: tx.created_at,
         })),
+        features,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
