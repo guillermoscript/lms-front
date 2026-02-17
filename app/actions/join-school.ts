@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
@@ -27,6 +28,40 @@ export async function joinCurrentSchool() {
 
   if (existingMembership) {
     return { success: false, error: 'You are already a member of this school' }
+  }
+
+  // Check student limit before allowing join
+  const adminClient = await createAdminClient()
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .single()
+
+  const planSlug = tenant?.plan || 'free'
+  const { data: platformPlan } = await adminClient
+    .from('platform_plans')
+    .select('limits')
+    .eq('slug', planSlug)
+    .eq('is_active', true)
+    .single()
+
+  const maxStudents = (platformPlan?.limits as { max_students?: number })?.max_students ?? 50
+
+  if (maxStudents !== -1) {
+    const { count } = await adminClient
+      .from('tenant_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('role', 'student')
+      .eq('status', 'active')
+
+    if ((count || 0) >= maxStudents) {
+      return {
+        success: false,
+        error: 'This school has reached its student limit. Please contact the school administrator.',
+      }
+    }
   }
 
   // Add user to tenant

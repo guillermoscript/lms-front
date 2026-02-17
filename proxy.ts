@@ -6,11 +6,15 @@ import { locales, defaultLocale } from './i18n'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+// Strip port from domain for hostname comparisons
+const PLATFORM_DOMAIN_RAW = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
+const PLATFORM_DOMAIN = PLATFORM_DOMAIN_RAW.split(':')[0] // e.g. "lvh.me" from "lvh.me:3000"
+
 // Domains that are the platform itself (not tenant subdomains)
 const PLATFORM_HOSTS = [
   'localhost',
   '127.0.0.1',
-  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com',
+  PLATFORM_DOMAIN,
 ]
 
 // Create i18n middleware
@@ -23,6 +27,7 @@ const intlMiddleware = createIntlMiddleware({
 /**
  * Extract tenant slug from subdomain.
  * e.g. "school.lmsplatform.com" -> "school"
+ * e.g. "school.lvh.me:3000" -> "school"
  * Returns null if on the platform root domain or localhost without subdomain.
  */
 function getTenantSlugFromHost(host: string): string | null {
@@ -34,9 +39,8 @@ function getTenantSlugFromHost(host: string): string | null {
   }
 
   // Check for subdomain pattern: slug.platform.com
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
-  if (hostname.endsWith(`.${platformDomain}`)) {
-    const slug = hostname.replace(`.${platformDomain}`, '')
+  if (hostname.endsWith(`.${PLATFORM_DOMAIN}`)) {
+    const slug = hostname.replace(`.${PLATFORM_DOMAIN}`, '')
     if (slug && !slug.includes('.')) {
       return slug
     }
@@ -118,6 +122,7 @@ export default async function proxy(request: NextRequest) {
     '/create-school',
     '/creators',
     '/join-school',
+    '/platform-pricing',
   ]
 
   const isPublicRoute = publicRoutes.some(route =>
@@ -176,20 +181,25 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Check if user is a member of the current tenant (for non-default tenants)
-  if (tenantId !== DEFAULT_TENANT_ID && !normalizedPath.startsWith('/join-school')) {
+  // Check if user is a member of the current tenant and get their tenant role
+  if (!normalizedPath.startsWith('/join-school')) {
     const { data: membership } = await supabase
       .from('tenant_users')
-      .select('id')
+      .select('id, role')
       .eq('user_id', session.user.id)
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
       .single()
 
-    if (!membership) {
+    if (!membership && tenantId !== DEFAULT_TENANT_ID) {
       // User is not a member of this tenant - redirect to join page
       const joinUrl = new URL(`/${locale}/join-school`, request.url)
       return NextResponse.redirect(joinUrl)
+    }
+
+    // Use tenant_users role (authoritative) over JWT claim for routing
+    if (membership?.role) {
+      userRole = membership.role as 'student' | 'teacher' | 'admin'
     }
   }
 

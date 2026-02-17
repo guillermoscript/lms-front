@@ -66,7 +66,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{t('title')}</CardTitle>
+          <CardTitle className="text-2xl" data-testid="signup-title">{t('title')}</CardTitle>
           <CardDescription>{t('description')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,6 +76,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                 <Label htmlFor="email">{t('email')}</Label>
                 <Input
                   id="email"
+                  data-testid="signup-email"
                   type="email"
                   placeholder="m@example.com"
                   required
@@ -89,6 +90,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                 </div>
                 <Input
                   id="password"
+                  data-testid="signup-password"
                   type="password"
                   required
                   value={password}
@@ -101,6 +103,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                 </div>
                 <Input
                   id="repeat-password"
+                  data-testid="signup-repeat-password"
                   type="password"
                   required
                   value={repeatPassword}
@@ -108,7 +111,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} data-testid="signup-submit">
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
             </div>

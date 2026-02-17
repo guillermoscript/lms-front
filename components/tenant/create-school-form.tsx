@@ -60,10 +60,11 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
 
     toast.success('School created successfully!')
 
-    // In production, redirect to subdomain
+    // Redirect to subdomain
     const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     if (platformDomain && platformDomain !== 'localhost') {
-      window.location.href = `https://${slug}.${platformDomain}/dashboard/admin`
+      const protocol = window.location.protocol // Preserves http: or https:
+      window.location.href = `${protocol}//${slug}.${platformDomain}/dashboard/admin`
     } else {
       router.push('/dashboard/admin')
     }

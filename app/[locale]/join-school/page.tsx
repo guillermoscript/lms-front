@@ -93,7 +93,7 @@ export default async function JoinSchoolPage() {
             <School className="h-8 w-8 text-primary" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold mb-2">Join {tenant.name}</h1>
+        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">Join {tenant.name}</h1>
         <p className="text-muted-foreground">
           Start learning with {tenant.name} today
         </p>
