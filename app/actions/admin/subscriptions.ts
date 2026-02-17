@@ -2,6 +2,8 @@
 
 import { createAdminClient, verifyAdminAccess } from '@/lib/supabase/admin'
 import { getStripe } from '@/lib/stripe'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -18,10 +20,13 @@ export async function cancelSubscription(
       return { success: false, error: 'Unauthorized: Admin access required' }
     }
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     const supabase = createAdminClient()
     const stripe = getStripe()
 
-    // Get subscription details
+    // Get subscription details and verify tenant ownership
     const { data: subscription, error: fetchError } = await supabase
       .from('subscriptions')
       .select('*, profiles(stripe_customer_id)')
@@ -30,6 +35,11 @@ export async function cancelSubscription(
 
     if (fetchError || !subscription) {
       return { success: false, error: 'Subscription not found' }
+    }
+
+    // Verify subscription belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && subscription.tenant_id !== tenantId) {
+      return { success: false, error: 'Subscription not found or access denied' }
     }
 
     // If subscription has a Stripe subscription ID, cancel it in Stripe
@@ -53,6 +63,7 @@ export async function cancelSubscription(
       .from('subscriptions')
       .update(updates)
       .eq('subscription_id', subscriptionId)
+      .eq('tenant_id', tenantId)
 
     if (updateError) {
       console.error('Database update error:', updateError)
@@ -80,9 +91,12 @@ export async function reactivateSubscription(subscriptionId: number) {
       return { success: false, error: 'Unauthorized: Admin access required' }
     }
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     const supabase = createAdminClient()
 
-    // Get subscription details
+    // Get subscription details and verify tenant ownership
     const { data: subscription, error: fetchError } = await supabase
       .from('subscriptions')
       .select('*')
@@ -91,6 +105,11 @@ export async function reactivateSubscription(subscriptionId: number) {
 
     if (fetchError || !subscription) {
       return { success: false, error: 'Subscription not found' }
+    }
+
+    // Verify subscription belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && subscription.tenant_id !== tenantId) {
+      return { success: false, error: 'Subscription not found or access denied' }
     }
 
     // Only reactivate if it was scheduled to cancel
@@ -106,6 +125,7 @@ export async function reactivateSubscription(subscriptionId: number) {
         cancel_at: null,
       })
       .eq('subscription_id', subscriptionId)
+      .eq('tenant_id', tenantId)
 
     if (updateError) {
       console.error('Database update error:', updateError)
@@ -131,6 +151,9 @@ export async function getSubscriptionDetails(subscriptionId: number) {
     if (!hasAccess) {
       return { success: false, error: 'Unauthorized: Admin access required', data: null }
     }
+
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
 
     const supabase = createAdminClient()
 
@@ -158,6 +181,11 @@ export async function getSubscriptionDetails(subscriptionId: number) {
 
     if (error) {
       return { success: false, error: 'Subscription not found', data: null }
+    }
+
+    // Verify subscription belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && data.tenant_id !== tenantId) {
+      return { success: false, error: 'Subscription not found or access denied', data: null }
     }
 
     return { success: true, data, error: null }

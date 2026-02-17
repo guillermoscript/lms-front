@@ -18,10 +18,12 @@ import {
 } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import * as motion from 'motion/react-client'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function TeacherCoursesPage() {
     const supabase = await createClient()
     const t = await getTranslations('dashboard.teacher.courses')
+    const tenantId = await getCurrentTenantId()
 
     const {
         data: { user },
@@ -41,6 +43,7 @@ export default async function TeacherCoursesPage() {
             enrollments:enrollments(count)
         `)
         .eq('author_id', user.id)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
 
     const coursesList = courses || []

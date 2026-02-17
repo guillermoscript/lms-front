@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ export default async function AdminEnrollmentsPage({
   const t = await getTranslations('dashboard.admin.enrollments')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -36,9 +38,10 @@ export default async function AdminEnrollmentsPage({
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select('*, user_id, course_id')
+    .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
-  // Get user profiles
+  // Get user profiles (profiles table is global - no tenant_id)
   const userIds = enrollments?.map((e) => e.user_id) || []
   const { data: users } = await supabase
     .from('profiles')
@@ -52,6 +55,7 @@ export default async function AdminEnrollmentsPage({
   const { data: courses } = await supabase
     .from('courses')
     .select('course_id, title')
+    .eq('tenant_id', tenantId)
     .in('course_id', courseIds)
 
   const coursesMap = new Map(courses?.map((c) => [c.course_id, c]))

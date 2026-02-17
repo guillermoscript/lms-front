@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createAITools } from '@/lib/ai/tools'
@@ -8,24 +9,25 @@ export const maxDuration = 120
 
 export async function POST(req: Request) {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return new Response('Unauthorized', { status: 401 })
 
     const body = await req.json()
     console.log('Received request body:', JSON.stringify(body, null, 2))
-    
+
     const { messages, lessonId } = body
     if (!lessonId) return new Response('Lesson ID is required', { status: 400 })
 
-    // 1. Fetch lesson details
+    // 1. Fetch lesson details and validate tenant
     const { data: lesson, error } = await supabase
         .from('lessons')
-        .select('title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt)')
+        .select('title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt), course:courses!inner(tenant_id)')
         .eq('id', lessonId)
         .single()
 
-    if (error || !lesson) return new Response('Lesson not found', { status: 404 })
+    if (error || !lesson || (lesson as any).course?.tenant_id !== tenantId) return new Response('Lesson not found', { status: 404 })
 
     // Handle both array and object response from Supabase (one-to-one relationship)
     const aiTask = Array.isArray(lesson.lessons_ai_tasks) 

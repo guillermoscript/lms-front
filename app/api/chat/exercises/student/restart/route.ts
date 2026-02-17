@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
     try {
         const supabase = await createClient()
+        const tenantId = await getCurrentTenantId()
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!user) {
@@ -14,6 +16,17 @@ export async function POST(req: Request) {
 
         if (!exerciseId) {
             return new NextResponse('Exercise ID is required', { status: 400 })
+        }
+
+        // Validate exercise belongs to tenant
+        const { data: exercise } = await supabase
+            .from('exercises')
+            .select('id, course:courses!inner(tenant_id)')
+            .eq('id', exerciseId)
+            .single()
+
+        if (!exercise || (exercise as any).course?.tenant_id !== tenantId) {
+            return new NextResponse('Exercise not found', { status: 404 })
         }
 
         // Delete all messages for this exercise and user

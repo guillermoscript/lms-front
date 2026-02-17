@@ -8,6 +8,7 @@ import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
+import BrandingSettingsForm from '@/components/admin/branding-settings-form'
 
 export default async function SettingsPage() {
   const t = await getTranslations('dashboard.admin.settings')
@@ -49,8 +50,9 @@ export default async function SettingsPage() {
 
       {/* Tabbed Settings Interface */}
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
+          <TabsTrigger value="branding">{t('tabs.branding')}</TabsTrigger>
           <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
           <TabsTrigger value="payment">{t('tabs.payment')}</TabsTrigger>
           <TabsTrigger value="enrollment">{t('tabs.enrollment')}</TabsTrigger>
@@ -67,6 +69,21 @@ export default async function SettingsPage() {
             </CardHeader>
             <CardContent>
               <GeneralSettingsForm settings={settings.general || {}} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Branding Settings */}
+        <TabsContent value="branding" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('sections.branding.title')}</CardTitle>
+              <CardDescription>
+                {t('sections.branding.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BrandingSettingsForm settings={settings.general || {}} />
             </CardContent>
           </Card>
         </TabsContent>

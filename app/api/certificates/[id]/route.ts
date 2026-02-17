@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateCertificateHTML } from '@/lib/certificate-generator'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export async function GET(
   request: NextRequest,
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
     const { id } = await params
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -15,12 +17,12 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    // Get certificate with course info
+    // Get certificate with course info and validate tenant
     const { data: certificate, error: certError } = await supabase
       .from('certificates')
       .select(`
         *,
-        courses (title),
+        courses (title, tenant_id),
         certificate_templates (
           template_name,
           issuer_name,
@@ -32,6 +34,11 @@ export async function GET(
 
     if (certError || !certificate) {
       return new NextResponse('Certificate not found', { status: 404 })
+    }
+
+    // Validate certificate belongs to tenant
+    if (certificate.courses?.tenant_id !== tenantId) {
+      return new NextResponse('Forbidden', { status: 403 })
     }
 
     // Check authorization

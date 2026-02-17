@@ -2,7 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 type TemplateCategory = 'system' | 'course' | 'payment' | 'enrollment' | 'exam' | 'custom'
@@ -91,6 +92,8 @@ export async function createNotificationTemplate(
 ): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
@@ -110,6 +113,7 @@ export async function createNotificationTemplate(
         ...data,
         variables: data.variables || [],
         created_by: user.id,
+        tenant_id: tenantId
       })
       .select()
       .single()
@@ -133,16 +137,33 @@ export async function updateNotificationTemplate(
 ): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
     const adminClient = createAdminClient()
 
+    // Verify template belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: template, error: verifyError } = await adminClient
+        .from('notification_templates')
+        .select('tenant_id')
+        .eq('id', id)
+        .single()
+
+      if (verifyError || !template || template.tenant_id !== tenantId) {
+        return { success: false, error: 'Template not found or access denied' }
+      }
+    }
+
     const { data: template, error } = await adminClient
       .from('notification_templates')
       .update(data)
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single()
 
@@ -162,16 +183,33 @@ export async function updateNotificationTemplate(
 export async function deleteNotificationTemplate(id: number): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
     const adminClient = createAdminClient()
 
+    // Verify template belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: template, error: verifyError } = await adminClient
+        .from('notification_templates')
+        .select('tenant_id')
+        .eq('id', id)
+        .single()
+
+      if (verifyError || !template || template.tenant_id !== tenantId) {
+        return { success: false, error: 'Template not found or access denied' }
+      }
+    }
+
     const { error } = await adminClient
       .from('notification_templates')
       .delete()
       .eq('id', id)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 

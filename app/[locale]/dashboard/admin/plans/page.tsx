@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import {
 export default async function AdminPlansPage() {
   const t = await getTranslations('dashboard.admin.plans')
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -44,6 +46,7 @@ export default async function AdminPlansPage() {
         )
       )
     `)
+    .eq('tenant_id', tenantId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 

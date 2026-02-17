@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 
 /**
  * Approves a course (moves from draft to published)
@@ -10,11 +12,27 @@ export async function approveCourse(courseId: number): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!courseId) {
       throw new Error('Course ID is required')
     }
 
     const adminClient = createAdminClient()
+
+    // Verify course belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: course, error: verifyError } = await adminClient
+        .from('courses')
+        .select('tenant_id')
+        .eq('course_id', courseId)
+        .single()
+
+      if (verifyError || !course || course.tenant_id !== tenantId) {
+        throw new Error('Course not found or access denied')
+      }
+    }
 
     // Update course status
     const { data: course, error } = await adminClient
@@ -24,6 +42,7 @@ export async function approveCourse(courseId: number): Promise<ActionResult> {
         published_at: new Date().toISOString()
       })
       .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
       .select('title, author_id')
       .single()
 
@@ -63,11 +82,27 @@ export async function archiveCourse(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!courseId) {
       throw new Error('Course ID is required')
     }
 
     const adminClient = createAdminClient()
+
+    // Verify course belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: course, error: verifyError } = await adminClient
+        .from('courses')
+        .select('tenant_id')
+        .eq('course_id', courseId)
+        .single()
+
+      if (verifyError || !course || course.tenant_id !== tenantId) {
+        throw new Error('Course not found or access denied')
+      }
+    }
 
     // Update course status
     const { data: course, error } = await adminClient
@@ -77,6 +112,7 @@ export async function archiveCourse(
         archived_at: new Date().toISOString()
       })
       .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
       .select('title, author_id')
       .single()
 
@@ -117,11 +153,27 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!courseId) {
       throw new Error('Course ID is required')
     }
 
     const adminClient = createAdminClient()
+
+    // Verify course belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: course, error: verifyError } = await adminClient
+        .from('courses')
+        .select('tenant_id')
+        .eq('course_id', courseId)
+        .single()
+
+      if (verifyError || !course || course.tenant_id !== tenantId) {
+        throw new Error('Course not found or access denied')
+      }
+    }
 
     // Update course status
     const { data: course, error } = await adminClient
@@ -131,6 +183,7 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
         archived_at: null
       })
       .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
       .select('title, author_id')
       .single()
 

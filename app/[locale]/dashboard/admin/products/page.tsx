@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +20,7 @@ import { ProductActions } from '@/components/admin/product-actions'
 export default async function AdminProductsPage() {
   const t = await getTranslations('dashboard.admin.products')
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -41,6 +43,7 @@ export default async function AdminProductsPage() {
         )
       )
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   const activeCount = products?.filter(p => p.status === 'active').length || 0

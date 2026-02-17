@@ -5,10 +5,12 @@ import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconPlus } from '@tabler/icons-react'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function ExercisesPage({ params }: { params: Promise<{ courseId: string }> }) {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return notFound()
@@ -21,6 +23,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
     .select('*')
     .eq('course_id', courseId)
     .eq('author_id', user.id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!course) return notFound()
@@ -30,6 +33,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
     .from('exercises')
     .select('*, lesson:lessons(title)')
     .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   return (

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ExamTaker } from './exam-taker'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -9,6 +10,7 @@ interface PageProps {
 export default async function TakeExamPage({ params }: PageProps) {
   const { courseId, examId } = await params
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -25,6 +27,7 @@ export default async function TakeExamPage({ params }: PageProps) {
     .eq('user_id', user.id)
     .eq('course_id', parseInt(courseId))
     .eq('status', 'active')
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!enrollment) {
@@ -37,6 +40,7 @@ export default async function TakeExamPage({ params }: PageProps) {
     .select('submission_id')
     .eq('exam_id', parseInt(examId))
     .eq('student_id', user.id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (existingSubmission) {
@@ -73,6 +77,7 @@ export default async function TakeExamPage({ params }: PageProps) {
     `)
     .eq('exam_id', parseInt(examId))
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
     .order('question_id', { foreignTable: 'exam_questions', ascending: true })
     .single()
 

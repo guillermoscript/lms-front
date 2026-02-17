@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 
 interface ProductFormData {
   name: string
@@ -34,6 +36,8 @@ interface Product {
 export async function createProduct(formData: ProductFormData): Promise<ActionResult<Product>> {
   try {
     await verifyAdminAccess()
+
+    const tenantId = await getCurrentTenantId()
 
     // Validate input
     if (!formData.name || formData.name.trim().length === 0) {
@@ -86,7 +90,8 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
         payment_provider: provider.provider,
         provider_product_id: paymentProduct.id,
         provider_price_id: paymentPrice.id,
-        status: 'active'
+        status: 'active',
+        tenant_id: tenantId
       })
       .select()
       .single()
@@ -129,6 +134,9 @@ export async function updateProduct(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!productId) {
       throw new Error('Product ID is required')
     }
@@ -143,7 +151,7 @@ export async function updateProduct(
 
     const adminClient = createAdminClient()
 
-    // Get existing product
+    // Get existing product and verify tenant ownership
     const { data: existingProduct, error: fetchError } = await adminClient
       .from('products')
       .select('*')
@@ -152,6 +160,11 @@ export async function updateProduct(
 
     if (fetchError || !existingProduct) {
       throw new Error('Product not found')
+    }
+
+    // Verify product belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && existingProduct.tenant_id !== tenantId) {
+      throw new Error('Product not found or access denied')
     }
 
     // Get payment provider
@@ -196,6 +209,7 @@ export async function updateProduct(
             updated_at: new Date().toISOString()
           })
           .eq('product_id', productId)
+          .eq('tenant_id', tenantId)
           .select()
           .single()
 
@@ -206,6 +220,7 @@ export async function updateProduct(
           .from('product_courses')
           .delete()
           .eq('product_id', productId)
+          .eq('tenant_id', tenantId)
 
         if (formData.courseIds.length > 0) {
           const courseLinks = formData.courseIds.map(courseId => ({
@@ -233,6 +248,7 @@ export async function updateProduct(
         updated_at: new Date().toISOString()
       })
       .eq('product_id', productId)
+      .eq('tenant_id', tenantId)
       .select()
       .single()
 
@@ -243,6 +259,7 @@ export async function updateProduct(
       .from('product_courses')
       .delete()
       .eq('product_id', productId)
+      .eq('tenant_id', tenantId)
 
     if (formData.courseIds.length > 0) {
       const courseLinks = formData.courseIds.map(courseId => ({
@@ -274,21 +291,29 @@ export async function archiveProduct(productId: number): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!productId) {
       throw new Error('Product ID is required')
     }
 
     const adminClient = createAdminClient()
 
-    // Get product details
+    // Get product details and verify tenant ownership
     const { data: product, error: fetchError } = await adminClient
       .from('products')
-      .select('payment_provider, provider_product_id, provider_price_id')
+      .select('payment_provider, provider_product_id, provider_price_id, tenant_id')
       .eq('product_id', productId)
       .single()
 
     if (fetchError || !product) {
       throw new Error('Product not found')
+    }
+
+    // Verify product belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && product.tenant_id !== tenantId) {
+      throw new Error('Product not found or access denied')
     }
 
     // Archive in payment provider
@@ -305,6 +330,7 @@ export async function archiveProduct(productId: number): Promise<ActionResult> {
       .from('products')
       .update({ status: 'inactive' })
       .eq('product_id', productId)
+      .eq('tenant_id', tenantId)
 
     if (updateError) throw updateError
 
@@ -329,21 +355,29 @@ export async function restoreProduct(productId: number): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!productId) {
       throw new Error('Product ID is required')
     }
 
     const adminClient = createAdminClient()
 
-    // Get product details
+    // Get product details and verify tenant ownership
     const { data: product, error: fetchError } = await adminClient
       .from('products')
-      .select('payment_provider, provider_product_id, provider_price_id')
+      .select('payment_provider, provider_product_id, provider_price_id, tenant_id')
       .eq('product_id', productId)
       .single()
 
     if (fetchError || !product) {
       throw new Error('Product not found')
+    }
+
+    // Verify product belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && product.tenant_id !== tenantId) {
+      throw new Error('Product not found or access denied')
     }
 
     // Restore in payment provider
@@ -359,6 +393,7 @@ export async function restoreProduct(productId: number): Promise<ActionResult> {
       .from('products')
       .update({ status: 'active' })
       .eq('product_id', productId)
+      .eq('tenant_id', tenantId)
 
     if (updateError) throw updateError
 

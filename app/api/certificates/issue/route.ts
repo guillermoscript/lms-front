@@ -6,12 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -23,6 +25,18 @@ export async function POST(request: NextRequest) {
 
     if (!courseId) {
       return NextResponse.json({ error: 'Missing courseId' }, { status: 400 })
+    }
+
+    // Validate course belongs to tenant
+    const { data: course } = await supabase
+      .from('courses')
+      .select('course_id, author_id')
+      .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!course) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
     }
 
     // If userId is provided, this is a teacher-initiated issuance
@@ -43,16 +57,8 @@ export async function POST(request: NextRequest) {
 
       // Verify teacher owns this course (unless admin)
       const isAdmin = roles?.some(r => r.role === 'admin')
-      if (!isAdmin) {
-        const { data: course } = await supabase
-          .from('courses')
-          .select('author_id')
-          .eq('course_id', courseId)
-          .single()
-
-        if (!course || course.author_id !== user.id) {
-          return NextResponse.json({ error: 'Not authorized for this course' }, { status: 403 })
-        }
+      if (!isAdmin && course.author_id !== user.id) {
+        return NextResponse.json({ error: 'Not authorized for this course' }, { status: 403 })
       }
     }
 
@@ -101,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Simplified issuance (no crypto, no PDF generation)
-    return await simplifiedIssuance(supabase, studentId, courseId, isTeacherIssue ? user.id : undefined)
+    return await simplifiedIssuance(supabase, studentId, courseId, tenantId, isTeacherIssue ? user.id : undefined)
   } catch (error) {
     console.error('Certificate issuance error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -112,6 +118,7 @@ async function simplifiedIssuance(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   courseId: number,
+  tenantId: string,
   issuedBy?: string,
 ) {
   // Check eligibility via RPC (or fallback to lesson count)
@@ -158,6 +165,7 @@ async function simplifiedIssuance(
     .from('courses')
     .select('title')
     .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
     .single()
 
   const { data: profile } = await supabase
@@ -173,6 +181,7 @@ async function simplifiedIssuance(
     .from('certificate_templates')
     .select('template_id, issuer_name, issuer_url, expiration_days')
     .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .limit(1)
     .maybeSingle()
@@ -253,6 +262,7 @@ async function simplifiedIssuance(
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -264,6 +274,18 @@ export async function GET(request: NextRequest) {
 
     if (!courseId) {
       return NextResponse.json({ error: 'Missing courseId' }, { status: 400 })
+    }
+
+    // Validate course belongs to tenant
+    const { data: course } = await supabase
+      .from('courses')
+      .select('course_id')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!course) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
     }
 
     // Check eligibility via RPC

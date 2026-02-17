@@ -4,6 +4,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { notFound } from 'next/navigation'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface EditTemplatePageProps {
   params: Promise<{
@@ -14,10 +15,12 @@ interface EditTemplatePageProps {
 export default async function EditTemplatePage({ params }: EditTemplatePageProps) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: template, error } = await supabase
     .from('prompt_templates')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (error || !template) {

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -13,6 +15,18 @@ export async function POST(request: NextRequest) {
     const { courseId } = await request.json() as { courseId: number }
     if (!courseId) {
       return NextResponse.json({ error: 'courseId is required' }, { status: 400 })
+    }
+
+    // Validate course belongs to tenant
+    const { data: course } = await supabase
+      .from('courses')
+      .select('course_id')
+      .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!course) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
     }
 
     // Check if certificate already exists for this user + course
@@ -38,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (eligError) {
       console.error('Eligibility check error:', eligError)
       // Fallback: do a simpler check if the RPC fails (e.g., no template configured)
-      return await fallbackCertificateGeneration(supabase, user.id, courseId)
+      return await fallbackCertificateGeneration(supabase, user.id, courseId, tenantId)
     }
 
     const result = eligibility as { success: boolean; reason?: string; eligible?: boolean; completion?: any; certificateId?: string }
@@ -62,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Eligible — issue the certificate
-    return await issueCertificate(supabase, user.id, courseId, result.completion)
+    return await issueCertificate(supabase, user.id, courseId, result.completion, tenantId)
   } catch (error) {
     console.error('Certificate generation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -73,16 +87,18 @@ async function issueCertificate(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   courseId: number,
-  completionData?: any
+  completionData: any,
+  tenantId: string
 ) {
-  // Get course info
-  const { data: course } = await supabase
+  // Get course info (already validated above, safe to use)
+  const { data: courseInfo } = await supabase
     .from('courses')
     .select('title')
     .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
     .single()
 
-  if (!course) {
+  if (!courseInfo) {
     return NextResponse.json({ error: 'Course not found' }, { status: 404 })
   }
 
@@ -100,6 +116,7 @@ async function issueCertificate(
     .from('certificate_templates')
     .select('*')
     .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .limit(1)
     .maybeSingle()
@@ -123,8 +140,8 @@ async function issueCertificate(
       name: studentName,
       achievement: {
         type: 'Achievement',
-        name: course.title,
-        description: template?.description || `Completed the course "${course.title}"`,
+        name: courseInfo.title,
+        description: template?.description || `Completed the course "${courseInfo.title}"`,
         criteria: {
           narrative: template?.issuance_criteria || 'Completed all required lessons and exams.',
         },
@@ -185,7 +202,8 @@ async function issueCertificate(
 async function fallbackCertificateGeneration(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  courseId: number
+  courseId: number,
+  tenantId: string
 ) {
   // Verify enrollment
   const { data: enrollment } = await supabase
@@ -236,7 +254,7 @@ async function fallbackCertificateGeneration(
     issued_via: 'fallback_no_template',
   }
 
-  return await issueCertificate(supabase, userId, courseId, completionData)
+  return await issueCertificate(supabase, userId, courseId, completionData, tenantId)
 }
 
 function generateVerificationCode(): string {

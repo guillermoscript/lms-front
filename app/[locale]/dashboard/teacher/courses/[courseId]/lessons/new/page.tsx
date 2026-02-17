@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonEditor } from '@/components/teacher/lesson-editor'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -9,6 +10,7 @@ interface PageProps {
 export default async function NewLessonPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -24,6 +26,7 @@ export default async function NewLessonPage({ params }: PageProps) {
     .select('course_id, title')
     .eq('course_id', parseInt(courseId))
     .eq('author_id', user.id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!course) {
@@ -35,6 +38,7 @@ export default async function NewLessonPage({ params }: PageProps) {
     .from('lessons')
     .select('sequence')
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .order('sequence', { ascending: false })
     .limit(1)
 

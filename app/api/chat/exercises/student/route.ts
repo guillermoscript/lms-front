@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createAITools } from '@/lib/ai/tools'
@@ -8,6 +9,7 @@ export const maxDuration = 120
 
 export async function POST(req: Request) {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return new Response('Unauthorized', { status: 401 })
@@ -15,14 +17,14 @@ export async function POST(req: Request) {
     const { messages, exerciseId } = await req.json()
     if (!exerciseId) return new Response('Exercise ID is required', { status: 400 })
 
-    // 1. Fetch exercise details
+    // 1. Fetch exercise details and validate tenant
     const { data: exercise, error } = await supabase
         .from('exercises')
-        .select('title, description, instructions, system_prompt, course_id')
+        .select('title, description, instructions, system_prompt, course_id, course:courses!inner(tenant_id)')
         .eq('id', exerciseId)
         .single()
 
-    if (error || !exercise) return new Response('Exercise not found', { status: 404 })
+    if (error || !exercise || (exercise as any).course?.tenant_id !== tenantId) return new Response('Exercise not found', { status: 404 })
 
     // 2. Save user message
     const lastUserMessage = messages[messages.length - 1]

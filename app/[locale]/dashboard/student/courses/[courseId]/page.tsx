@@ -17,6 +17,7 @@ import {
 } from '@tabler/icons-react'
 import { CourseReviews } from '@/components/student/course-reviews'
 import { getTranslations } from 'next-intl/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -26,6 +27,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
   const t = await getTranslations('courseDetails')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -42,6 +44,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .eq('user_id', user.id)
     .eq('course_id', parseInt(courseId))
     .eq('status', 'active')
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!enrollment) {
@@ -59,6 +62,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       author_id
     `)
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   // Get author profile separately
@@ -82,6 +86,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .select('id, title, sequence, description')
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
     .order('sequence', { ascending: true })
 
   // Get completed lessons
@@ -89,6 +94,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .from('lesson_completions')
     .select('lesson_id')
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
   const totalLessons = lessons?.length || 0
@@ -104,6 +110,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .select('exam_id')
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
 
   const examCount = exams?.length || 0
 
@@ -113,6 +120,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .select('id')
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
 
   const exerciseCount = exercises?.length || 0
 
@@ -122,6 +130,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     .select('review_id')
     .eq('course_id', parseInt(courseId))
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
     .single()
 
   const userHasReviewed = !!userReview

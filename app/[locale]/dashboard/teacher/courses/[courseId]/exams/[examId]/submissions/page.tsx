@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-review'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionsPage({ params }: { params: Promise<{ courseId: string; examId: string }> }) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return notFound()
@@ -18,6 +20,7 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
     .from('exams')
     .select('*')
     .eq('exam_id', examId)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!exam) return notFound()
@@ -27,6 +30,7 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
     .from('exam_submissions')
     .select('*')
     .eq('exam_id', parseInt(examId))
+    .eq('tenant_id', tenantId)
     .order('submission_date', { ascending: false })
 
   if (!rawSubmissions) return notFound()

@@ -6,6 +6,7 @@ import { EnrolledCourseCard } from '@/components/student/enrolled-course-card'
 import { CourseFilters } from '@/components/student/course-filters'
 import { Button } from '@/components/ui/button'
 import { IconBook, IconSparkles, IconTrophy } from '@tabler/icons-react'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   searchParams: Promise<{
@@ -16,6 +17,7 @@ interface PageProps {
 }
 
 export default async function MyCoursesPage({ searchParams }: PageProps) {
+  const tenantId = await getCurrentTenantId()
   const supabase = await createClient()
   const params = await searchParams
 
@@ -33,6 +35,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     .from('enrollments')
     .select('*')
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
   // If we have enrollments, fetch related data separately
@@ -45,6 +48,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
         .from('courses')
         .select('course_id, title, description, thumbnail_url, status')
         .eq('course_id', enrollment.course_id)
+        .eq('tenant_id', tenantId)
         .single()
 
       if (course) {
@@ -53,12 +57,14 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           .from('lessons')
           .select('id, title, sequence')
           .eq('course_id', course.course_id)
+          .eq('tenant_id', tenantId)
 
         // Fetch lesson completions for this user
         const { data: lessonCompletions } = await supabase
           .from('lesson_completions')
           .select('lesson_id, completed_at')
           .eq('user_id', user.id)
+          .eq('tenant_id', tenantId)
           .in('lesson_id', lessons?.map(l => l.id) || [])
 
         // Fetch exams
@@ -66,12 +72,14 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           .from('exams')
           .select('exam_id, title, sequence, passing_score, allow_retake')
           .eq('course_id', course.course_id)
+          .eq('tenant_id', tenantId)
 
         // Fetch exam submissions
         const { data: examSubmissions } = await supabase
           .from('exam_submissions')
           .select('submission_id, exam_id, submission_date, score')
           .eq('student_id', user.id)
+          .eq('tenant_id', tenantId)
           .in('exam_id', exams?.map(e => e.exam_id) || [])
 
         // Fetch product if exists
@@ -81,6 +89,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
             .from('products')
             .select('product_id, name')
             .eq('product_id', enrollment.product_id)
+            .eq('tenant_id', tenantId)
             .single()
           product = p
         }
@@ -92,6 +101,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
             .from('subscriptions')
             .select('subscription_id, subscription_status, end_date, plan_id')
             .eq('subscription_id', enrollment.subscription_id)
+            .eq('tenant_id', tenantId)
             .single()
 
           if (s) {
@@ -100,6 +110,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
               .from('plans')
               .select('plan_id, plan_name')
               .eq('plan_id', s.plan_id)
+              .eq('tenant_id', tenantId)
               .single()
             subscription = { ...s, plan }
           }

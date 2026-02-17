@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; exerciseId: string }>
@@ -16,6 +17,7 @@ export default async function EditExercisePage({ params }: PageProps) {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -30,6 +32,7 @@ export default async function EditExercisePage({ params }: PageProps) {
     .select('*')
     .eq('id', parseInt(exerciseId))
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!exercise) return notFound()
@@ -39,6 +42,7 @@ export default async function EditExercisePage({ params }: PageProps) {
     .from('courses')
     .select('*')
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!course) return notFound()

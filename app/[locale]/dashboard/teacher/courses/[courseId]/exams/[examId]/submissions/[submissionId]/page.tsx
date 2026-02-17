@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return notFound()
@@ -19,6 +21,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     .from('exam_submissions')
     .select('*')
     .eq('submission_id', submissionId)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!rawSubmission) return notFound()
@@ -47,6 +50,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       )
     `)
     .eq('exam_id', parseInt(examId))
+    .eq('tenant_id', tenantId)
     .order('question_id', { ascending: true })
 
   // Fetch answers
@@ -54,18 +58,21 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     .from('exam_answers')
     .select('*')
     .eq('submission_id', parseInt(submissionId))
+    .eq('tenant_id', tenantId)
 
   // Fetch question-level AI scores
   const { data: questionScores } = await supabase
     .from('exam_question_scores')
     .select('*')
     .eq('submission_id', parseInt(submissionId))
+    .eq('tenant_id', tenantId)
 
   // Fetch overall exam_scores
   const { data: examScores } = await supabase
     .from('exam_scores')
     .select('*')
     .eq('submission_id', parseInt(submissionId))
+    .eq('tenant_id', tenantId)
 
   // Build per-question data combining questions, answers, and AI scores
   const questionData = (questions || []).map((q: any) => {

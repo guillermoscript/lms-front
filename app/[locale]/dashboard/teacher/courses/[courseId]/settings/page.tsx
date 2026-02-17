@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -16,6 +17,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tForm = await getTranslations('dashboard.teacher.courseForm')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -32,6 +34,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
     .from('courses')
     .select('*')
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!course) {
@@ -57,6 +60,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   const { data: categories } = await supabase
     .from('course_categories')
     .select('id, name')
+    .eq('tenant_id', tenantId)
     .order('name')
 
   return (

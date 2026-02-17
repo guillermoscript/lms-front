@@ -9,6 +9,7 @@ import { LessonAIChat } from '@/components/student/lesson-ai-chat'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -18,6 +19,7 @@ export default async function LessonPage({ params }: PageProps) {
   const { courseId, lessonId } = await params
   const supabase = await createClient()
   const t = await getTranslations('components.lessons')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -42,6 +44,7 @@ export default async function LessonPage({ params }: PageProps) {
       lesson_completions(lesson_id, user_id)
     `)
     .eq('id', parseInt(lessonId))
+    .eq('tenant_id', tenantId)
     .eq('lessons_ai_task_messages.user_id', user.id)
     .eq('lesson_completions.user_id', user.id)
     .order('created_at', {
@@ -104,6 +107,7 @@ export default async function LessonPage({ params }: PageProps) {
     .select('id, title, sequence')
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
+    .eq('tenant_id', tenantId)
     .order('sequence', { ascending: true })
 
   // Get completed lessons for this user (for sidebar highlights)
@@ -111,6 +115,7 @@ export default async function LessonPage({ params }: PageProps) {
     .from('lesson_completions')
     .select('lesson_id')
     .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
 

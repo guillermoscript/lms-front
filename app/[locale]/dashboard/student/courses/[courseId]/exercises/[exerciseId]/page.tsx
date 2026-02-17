@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 // Components
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
@@ -18,6 +19,7 @@ interface PageProps {
 export default async function ExercisePage({ params }: PageProps) {
     const { courseId, exerciseId } = await params
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/auth/login')
@@ -32,6 +34,7 @@ export default async function ExercisePage({ params }: PageProps) {
       exercise_messages(id, message, role, created_at)
     `)
         .eq('id', parseInt(exerciseId))
+        .eq('tenant_id', tenantId)
         .eq('exercise_completions.user_id', user.id)
         .eq('exercise_messages.user_id', user.id)
         .order('created_at', {
@@ -45,7 +48,7 @@ export default async function ExercisePage({ params }: PageProps) {
         notFound()
     }
 
-    // Fetch student profile
+    // Fetch student profile (profiles table has no tenant_id - global table)
     const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
@@ -61,6 +64,7 @@ export default async function ExercisePage({ params }: PageProps) {
         `)
         .eq('course_id', parseInt(courseId))
         .eq('status', 'published')
+        .eq('tenant_id', tenantId)
         .eq('exercise_completions.user_id', user.id)
         .neq('id', parseInt(exerciseId))
         .limit(3)
@@ -70,6 +74,7 @@ export default async function ExercisePage({ params }: PageProps) {
         .from('exercise_files')
         .select('file_path, content')
         .eq('exercise_id', parseInt(exerciseId))
+        .eq('tenant_id', tenantId)
 
     // Fetch last submission
     const { data: lastSubmission } = await supabase
@@ -77,6 +82,7 @@ export default async function ExercisePage({ params }: PageProps) {
         .select('submission_code')
         .eq('exercise_id', parseInt(exerciseId))
         .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .single()
 

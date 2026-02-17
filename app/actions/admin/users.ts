@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 
 /**
  * Updates user roles. Replaces all existing roles with the provided ones.
@@ -13,6 +15,9 @@ export async function updateUserRoles(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!userId) {
       throw new Error('User ID is required')
     }
@@ -23,11 +28,26 @@ export async function updateUserRoles(
 
     const adminClient = createAdminClient()
 
+    // Verify user belongs to current tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: tenantUser, error: verifyError } = await adminClient
+        .from('tenant_users')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (verifyError || !tenantUser) {
+        throw new Error('User not found or access denied')
+      }
+    }
+
     // Delete existing roles
     const { error: deleteError } = await adminClient
       .from('user_roles')
       .delete()
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
 
     if (deleteError) throw deleteError
 
@@ -38,7 +58,8 @@ export async function updateUserRoles(
         .insert(
           roles.map(role => ({
             user_id: userId,
-            role: role
+            role: role,
+            tenant_id: tenantId
           }))
         )
 
@@ -76,11 +97,28 @@ export async function deactivateUser(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!userId) {
       throw new Error('User ID is required')
     }
 
     const adminClient = createAdminClient()
+
+    // Verify user belongs to current tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: tenantUser, error: verifyError } = await adminClient
+        .from('tenant_users')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (verifyError || !tenantUser) {
+        throw new Error('User not found or access denied')
+      }
+    }
 
     // Update profile to mark as deactivated
     const { error: updateError } = await adminClient
@@ -120,11 +158,28 @@ export async function reactivateUser(userId: string): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!userId) {
       throw new Error('User ID is required')
     }
 
     const adminClient = createAdminClient()
+
+    // Verify user belongs to current tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: tenantUser, error: verifyError } = await adminClient
+        .from('tenant_users')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (verifyError || !tenantUser) {
+        throw new Error('User not found or access denied')
+      }
+    }
 
     // Update profile to remove deactivation
     const { error: updateError } = await adminClient

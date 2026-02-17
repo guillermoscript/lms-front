@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { generateText, Output } from 'ai'
@@ -7,12 +8,24 @@ import z from 'zod'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ examId: string }> }) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   const { examId } = await params
   const { submission_id } = await req.json()
+
+  // Validate exam belongs to tenant
+  const { data: exam } = await supabase
+    .from('exams')
+    .select('exam_id, course_id, course:courses!inner(tenant_id)')
+    .eq('exam_id', examId)
+    .single()
+
+  if (!exam || (exam as any).course?.tenant_id !== tenantId) {
+    return Response.json({ error: 'Exam not found' }, { status: 404 })
+  }
 
   // 1. Fetch submission with answers and questions
   const { data: submission, error } = await supabase
@@ -26,6 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ exa
       )
     `)
     .eq('submission_id', submission_id)
+    .eq('exam_id', examId)
     .single()
 
   if (error || !submission) {

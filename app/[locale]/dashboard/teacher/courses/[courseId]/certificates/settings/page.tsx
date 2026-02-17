@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { CertificateTemplateForm } from '@/components/teacher/certificate-template-form'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
     params: Promise<{ courseId: string }>
@@ -14,6 +15,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
     const { courseId } = await params
     const supabase = await createClient()
     const t = await getTranslations('dashboard.teacher.manageCourse')
+    const tenantId = await getCurrentTenantId()
 
     const {
         data: { user },
@@ -28,6 +30,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
         .from('courses')
         .select('*')
         .eq('course_id', parseInt(courseId))
+        .eq('tenant_id', tenantId)
         .single()
 
     if (courseError || !course) {
@@ -43,6 +46,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
         .from('certificate_templates')
         .select('*')
         .eq('course_id', parseInt(courseId))
+        .eq('tenant_id', tenantId)
         .single()
 
     return (

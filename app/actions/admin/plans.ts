@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -36,6 +38,8 @@ interface Plan {
 export async function createPlan(formData: PlanFormData): Promise<ActionResult<Plan>> {
   try {
     await verifyAdminAccess()
+
+    const tenantId = await getCurrentTenantId()
 
     // Validate input
     if (!formData.plan_name || formData.plan_name.trim().length === 0) {
@@ -89,7 +93,8 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
         currency: formData.currency,
         features: formData.features || null,
         stripe_product_id: stripeProduct.id,
-        stripe_price_id: stripePrice.id
+        stripe_price_id: stripePrice.id,
+        tenant_id: tenantId
       })
       .select()
       .single()
@@ -134,6 +139,9 @@ export async function updatePlan(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!planId) {
       throw new Error('Plan ID is required')
     }
@@ -148,7 +156,7 @@ export async function updatePlan(
 
     const adminClient = createAdminClient()
 
-    // Get existing plan
+    // Get existing plan and verify tenant ownership
     const { data: existingPlan, error: fetchError } = await adminClient
       .from('plans')
       .select('*')
@@ -157,6 +165,11 @@ export async function updatePlan(
 
     if (fetchError || !existingPlan) {
       throw new Error('Plan not found')
+    }
+
+    // Verify plan belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && existingPlan.tenant_id !== tenantId) {
+      throw new Error('Plan not found or access denied')
     }
 
     // Update Stripe product
@@ -207,6 +220,7 @@ export async function updatePlan(
             updated_at: new Date().toISOString()
           })
           .eq('plan_id', planId)
+          .eq('tenant_id', tenantId)
           .select()
           .single()
 
@@ -217,6 +231,7 @@ export async function updatePlan(
           .from('plan_courses')
           .delete()
           .eq('plan_id', planId)
+          .eq('tenant_id', tenantId)
 
         if (formData.courseIds && formData.courseIds.length > 0) {
           const courseLinks = formData.courseIds.map(courseId => ({
@@ -244,6 +259,7 @@ export async function updatePlan(
         updated_at: new Date().toISOString()
       })
       .eq('plan_id', planId)
+      .eq('tenant_id', tenantId)
       .select()
       .single()
 
@@ -254,6 +270,7 @@ export async function updatePlan(
       .from('plan_courses')
       .delete()
       .eq('plan_id', planId)
+      .eq('tenant_id', tenantId)
 
     if (formData.courseIds && formData.courseIds.length > 0) {
       const courseLinks = formData.courseIds.map(courseId => ({
@@ -285,21 +302,29 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!planId) {
       throw new Error('Plan ID is required')
     }
 
     const adminClient = createAdminClient()
 
-    // Get plan details
+    // Get plan details and verify tenant ownership
     const { data: plan, error: fetchError } = await adminClient
       .from('plans')
-      .select('stripe_product_id, stripe_price_id')
+      .select('stripe_product_id, stripe_price_id, tenant_id')
       .eq('plan_id', planId)
       .single()
 
     if (fetchError || !plan) {
       throw new Error('Plan not found')
+    }
+
+    // Verify plan belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && plan.tenant_id !== tenantId) {
+      throw new Error('Plan not found or access denied')
     }
 
     // Archive Stripe price
@@ -321,6 +346,7 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
       .from('plans')
       .update({ deleted_at: new Date().toISOString() })
       .eq('plan_id', planId)
+      .eq('tenant_id', tenantId)
 
     if (updateError) throw updateError
 

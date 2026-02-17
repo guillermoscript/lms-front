@@ -2,10 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function NewCoursePage() {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.newCourse')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -19,6 +21,7 @@ export default async function NewCoursePage() {
   const { data: categories } = await supabase
     .from('course_categories')
     .select('id, name')
+    .eq('tenant_id', tenantId)
     .order('name')
 
   return (

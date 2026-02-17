@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { generateInvoiceHTML, getInvoiceConfig } from '@/lib/invoice-generator'
 
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
     const { invoiceNumber } = await params
 
     // Verify user is logged in
@@ -16,7 +18,7 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    // Get payment request by invoice number
+    // Get payment request by invoice number and validate tenant
     const { data: paymentRequest, error: requestError } = await supabase
       .from('payment_requests')
       .select(`
@@ -30,7 +32,8 @@ export async function GET(
           name,
           description,
           price,
-          currency
+          currency,
+          tenant_id
         )
       `)
       .eq('invoice_number', invoiceNumber)
@@ -38,6 +41,11 @@ export async function GET(
 
     if (requestError || !paymentRequest) {
       return new NextResponse('Invoice not found', { status: 404 })
+    }
+
+    // Validate product belongs to tenant
+    if (paymentRequest.product.tenant_id !== tenantId) {
+      return new NextResponse('Forbidden', { status: 403 })
     }
 
     // Verify user has access to this invoice (student or admin)

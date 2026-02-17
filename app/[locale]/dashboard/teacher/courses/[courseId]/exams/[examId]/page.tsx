@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTranslations } from 'next-intl/server'
 import { redirect, notFound } from 'next/navigation'
 import { ExamBuilder } from '@/components/teacher/exam-builder'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -11,6 +12,7 @@ export default async function EditExamPage({ params }: PageProps) {
   const { courseId, examId } = await params
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -26,6 +28,7 @@ export default async function EditExamPage({ params }: PageProps) {
     .select('course_id, title')
     .eq('course_id', parseInt(courseId))
     .eq('author_id', user.id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!course) {
@@ -44,6 +47,7 @@ export default async function EditExamPage({ params }: PageProps) {
     `)
     .eq('exam_id', parseInt(examId))
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!exam) {

@@ -20,10 +20,12 @@ import {
   IconBolt
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function TeacherDashboard() {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -42,6 +44,7 @@ export default async function TeacherDashboard() {
             exams(exam_id)
         `)
     .eq('author_id', user.id)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   if (coursesError) {
@@ -63,6 +66,7 @@ export default async function TeacherDashboard() {
                     courses!inner(title)
                 `)
         .in('course_id', courseIds)
+        .eq('tenant_id', tenantId)
         .order('enrollment_date', { ascending: false })
         .limit(5)
       : Promise.resolve({ data: [] }),
@@ -73,6 +77,7 @@ export default async function TeacherDashboard() {
         .from('enrollments')
         .select('enrollment_id')
         .in('course_id', courseIds)
+        .eq('tenant_id', tenantId)
       : Promise.resolve({ data: [] }),
 
     // Submissions for these courses
@@ -81,6 +86,7 @@ export default async function TeacherDashboard() {
         .from('exam_submissions')
         .select('submission_id, exam_id, exams!inner(course_id)')
         .in('exams.course_id', courseIds)
+        .eq('tenant_id', tenantId)
       : Promise.resolve({ data: [] }),
 
     supabase

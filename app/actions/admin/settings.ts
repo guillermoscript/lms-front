@@ -2,19 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
-
-type SettingCategory = 'general' | 'email' | 'payment' | 'enrollment'
-
-interface SystemSetting {
-  id: number
-  setting_key: string
-  setting_value: any
-  category: SettingCategory
-  description: string | null
-  created_at: string
-  updated_at: string
-}
 
 interface SettingsResponse {
   success: boolean
@@ -23,34 +12,44 @@ interface SettingsResponse {
 }
 
 /**
- * Get all settings or settings by category
+ * Get all tenant settings or settings filtered by key prefix
  */
-export async function getSettings(category?: SettingCategory): Promise<SettingsResponse> {
+export async function getSettings(category?: string): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
+    const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
     let query = supabase
-      .from('system_settings')
+      .from('tenant_settings')
       .select('*')
+      .eq('tenant_id', tenantId)
       .order('setting_key')
 
     if (category) {
-      query = query.eq('category', category)
+      // Filter by category prefix (e.g. 'smtp_' for email settings)
+      const categoryPrefixes: Record<string, string[]> = {
+        general: ['site_name', 'site_description', 'contact_email', 'support_email', 'timezone', 'maintenance_mode'],
+        email: ['smtp_', 'email_'],
+        payment: ['stripe_', 'paypal_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval'],
+        enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled'],
+      }
+      const keys = categoryPrefixes[category]
+      if (keys) {
+        query = query.or(keys.map(k => k.endsWith('_') ? `setting_key.like.${k}%` : `setting_key.eq.${k}`).join(','))
+      }
     }
 
     const { data, error } = await query
 
     if (error) throw error
 
-    // Transform array to object for easier access
-    const settings = data.reduce((acc: Record<string, any>, setting: SystemSetting) => {
-      acc[setting.setting_key] = setting.setting_value
+    const settings = (data || []).reduce((acc: Record<string, any>, s: any) => {
+      acc[s.setting_key] = s.setting_value
       return acc
     }, {})
 
@@ -66,17 +65,18 @@ export async function getSettings(category?: SettingCategory): Promise<SettingsR
  */
 export async function getSetting(key: string): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
+    const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
-      .from('system_settings')
+      .from('tenant_settings')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', key)
       .single()
 
@@ -90,36 +90,36 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
 }
 
 /**
- * Update a setting by key
+ * Update a setting by key (upsert into tenant_settings)
  */
 export async function updateSetting(
   key: string,
   value: any
 ): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = createAdminClient()
-
-    // Validate value is an object
     if (typeof value !== 'object' || value === null) {
       return { success: false, error: 'Setting value must be an object' }
     }
 
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+
     const { data, error } = await supabase
-      .from('system_settings')
-      .update({ setting_value: value })
-      .eq('setting_key', key)
+      .from('tenant_settings')
+      .upsert(
+        { tenant_id: tenantId, setting_key: key, setting_value: value },
+        { onConflict: 'tenant_id,setting_key' }
+      )
       .select()
       .single()
 
     if (error) throw error
 
-    // Revalidate relevant pages
     revalidatePath('/dashboard/admin/settings')
     revalidatePath('/dashboard/admin')
 
@@ -131,37 +131,32 @@ export async function updateSetting(
 }
 
 /**
- * Update multiple settings at once (bulk update)
+ * Update multiple settings at once (bulk upsert)
  */
 export async function updateSettings(
   settings: Record<string, any>
 ): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
+    const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
-    // Update each setting individually
-    const updatePromises = Object.entries(settings).map(([key, value]) => {
-      return supabase
-        .from('system_settings')
-        .update({ setting_value: value })
-        .eq('setting_key', key)
-    })
+    const rows = Object.entries(settings).map(([key, value]) => ({
+      tenant_id: tenantId,
+      setting_key: key,
+      setting_value: value,
+    }))
 
-    const results = await Promise.all(updatePromises)
+    const { error } = await supabase
+      .from('tenant_settings')
+      .upsert(rows, { onConflict: 'tenant_id,setting_key' })
 
-    // Check if any updates failed
-    const failed = results.find(result => result.error)
-    if (failed) {
-      throw failed.error
-    }
+    if (error) throw error
 
-    // Revalidate relevant pages
     revalidatePath('/dashboard/admin/settings')
     revalidatePath('/dashboard/admin')
 
@@ -177,18 +172,14 @@ export async function updateSettings(
  */
 export async function resetSetting(key: string): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const supabase = createAdminClient()
-
-    // Get the default value from the migration
     const defaults: Record<string, any> = {
-      site_name: { value: 'LMS V2' },
-      site_description: { value: 'A modern learning management system' },
+      site_name: { value: 'My School' },
+      site_description: { value: 'An online learning platform' },
       contact_email: { value: 'contact@example.com' },
       support_email: { value: 'support@example.com' },
       timezone: { value: 'America/New_York' },
@@ -198,7 +189,7 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       smtp_username: { value: '' },
       smtp_password: { value: '' },
       smtp_from_email: { value: 'noreply@example.com' },
-      smtp_from_name: { value: 'LMS V2' },
+      smtp_from_name: { value: 'My School' },
       email_notifications: { enabled: true },
       stripe_enabled: { enabled: true },
       paypal_enabled: { enabled: false },
@@ -212,6 +203,10 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       allow_self_enrollment: { enabled: true },
       enrollment_expiration_days: { value: 365 },
       course_capacity_enabled: { enabled: false },
+      logo_url: { value: '' },
+      primary_color: { value: '#2563eb' },
+      secondary_color: { value: '#7c3aed' },
+      favicon_url: { value: '' },
     }
 
     const defaultValue = defaults[key]
@@ -219,20 +214,7 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       return { success: false, error: 'Unknown setting key' }
     }
 
-    const { data, error } = await supabase
-      .from('system_settings')
-      .update({ setting_value: defaultValue })
-      .eq('setting_key', key)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Revalidate relevant pages
-    revalidatePath('/dashboard/admin/settings')
-    revalidatePath('/dashboard/admin')
-
-    return { success: true, data: data.setting_value }
+    return updateSetting(key, defaultValue)
   } catch (error) {
     console.error('Error resetting setting:', error)
     return { success: false, error: 'Failed to reset setting' }
@@ -244,30 +226,42 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
  */
 export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
   try {
-    // Verify admin role
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
+    const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
-      .from('system_settings')
+      .from('tenant_settings')
       .select('*')
-      .order('category')
+      .eq('tenant_id', tenantId)
       .order('setting_key')
 
     if (error) throw error
 
-    // Group by category
-    const grouped = data.reduce((acc: Record<string, Record<string, any>>, setting: SystemSetting) => {
-      if (!acc[setting.category]) {
-        acc[setting.category] = {}
-      }
-      acc[setting.category][setting.setting_key] = {
-        value: setting.setting_value,
-        description: setting.description,
+    // Categorize by setting key prefix
+    const categoryMap: Record<string, string> = {
+      site_name: 'general', site_description: 'general', contact_email: 'general',
+      support_email: 'general', timezone: 'general', maintenance_mode: 'general',
+      logo_url: 'general', favicon_url: 'general', primary_color: 'general', secondary_color: 'general',
+      smtp_host: 'email', smtp_port: 'email', smtp_username: 'email', smtp_password: 'email',
+      smtp_from_email: 'email', smtp_from_name: 'email', email_notifications: 'email',
+      stripe_enabled: 'payment', paypal_enabled: 'payment', currency: 'payment',
+      tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
+      auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
+      max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
+      enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',
+    }
+
+    const grouped = (data || []).reduce((acc: Record<string, Record<string, any>>, s: any) => {
+      const category = categoryMap[s.setting_key] || 'general'
+      if (!acc[category]) acc[category] = {}
+      acc[category][s.setting_key] = {
+        value: s.setting_value,
+        description: null,
       }
       return acc
     }, {})

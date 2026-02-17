@@ -6,12 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentTenantId } from '@/lib/supabase/tenant';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
+        const tenantId = await getCurrentTenantId();
 
         // Check authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -34,10 +36,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Verify certificate belongs to user
+        // Verify certificate belongs to user and tenant
         const { data: certificate, error: certError } = await supabase
             .from('certificates')
-            .select('certificate_id, user_id, share_count')
+            .select(`
+                certificate_id,
+                user_id,
+                share_count,
+                course:courses!inner(tenant_id)
+            `)
             .eq('certificate_id', certificateId)
             .eq('user_id', user.id)
             .single();
@@ -46,6 +53,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: 'Certificate not found or access denied' },
                 { status: 404 }
+            );
+        }
+
+        // Validate tenant
+        const courseTenantId = (certificate as any).course?.tenant_id
+        if (courseTenantId !== tenantId) {
+            return NextResponse.json(
+                { error: 'Certificate not found or access denied' },
+                { status: 403 }
             );
         }
 

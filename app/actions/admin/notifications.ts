@@ -2,7 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 type NotificationType = 'announcement' | 'alert' | 'info' | 'success' | 'warning' | 'error'
@@ -38,6 +39,7 @@ interface ActionResponse<T = any> {
 export async function createNotification(data: NotificationData): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -77,6 +79,7 @@ export async function createNotification(data: NotificationData): Promise<Action
         ...data,
         created_by: user.id,
         status: data.scheduled_for ? 'scheduled' : 'draft',
+        tenant_id: tenantId
       })
       .select()
       .single()
@@ -102,13 +105,16 @@ export async function createNotification(data: NotificationData): Promise<Action
 export async function dispatchNotification(notificationId: number): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
     const adminClient = createAdminClient()
 
-    // Get notification details
+    // Get notification details and verify tenant ownership
     const { data: notification, error: notifError } = await adminClient
       .from('notifications')
       .select('*')
@@ -117,6 +123,11 @@ export async function dispatchNotification(notificationId: number): Promise<Acti
 
     if (notifError || !notification) {
       throw new Error('Notification not found')
+    }
+
+    // Verify notification belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser && notification.tenant_id !== tenantId) {
+      throw new Error('Notification not found or access denied')
     }
 
     // Get target users based on target_type
@@ -163,6 +174,7 @@ export async function dispatchNotification(notificationId: number): Promise<Acti
       .from('notifications')
       .update({ status: 'sent', sent_at: new Date().toISOString() })
       .eq('id', notificationId)
+      .eq('tenant_id', tenantId)
 
     revalidatePath('/dashboard/admin/notifications')
     return { success: true, data: { usersNotified: userIds.length } }
@@ -358,16 +370,33 @@ export async function updateNotificationStatus(
 ): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
     const adminClient = createAdminClient()
 
+    // Verify notification belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: notification, error: verifyError } = await adminClient
+        .from('notifications')
+        .select('tenant_id')
+        .eq('id', notificationId)
+        .single()
+
+      if (verifyError || !notification || notification.tenant_id !== tenantId) {
+        return { success: false, error: 'Notification not found or access denied' }
+      }
+    }
+
     const { error } = await adminClient
       .from('notifications')
       .update({ status })
       .eq('id', notificationId)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 
@@ -385,16 +414,33 @@ export async function updateNotificationStatus(
 export async function deleteNotification(notificationId: number): Promise<ActionResponse> {
   try {
     const role = await getUserRole()
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
 
     const adminClient = createAdminClient()
 
+    // Verify notification belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: notification, error: verifyError } = await adminClient
+        .from('notifications')
+        .select('tenant_id')
+        .eq('id', notificationId)
+        .single()
+
+      if (verifyError || !notification || notification.tenant_id !== tenantId) {
+        return { success: false, error: 'Notification not found or access denied' }
+      }
+    }
+
     const { error } = await adminClient
       .from('notifications')
       .delete()
       .eq('id', notificationId)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 

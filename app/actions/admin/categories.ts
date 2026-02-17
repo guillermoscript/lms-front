@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 
 interface Category {
   id: number
@@ -19,6 +21,8 @@ export async function createCategory(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+
     if (!name || name.trim().length === 0) {
       throw new Error('Category name is required')
     }
@@ -29,7 +33,8 @@ export async function createCategory(
       .from('course_categories')
       .insert({
         name: name.trim(),
-        description: description?.trim() || null
+        description: description?.trim() || null,
+        tenant_id: tenantId
       })
       .select()
       .single()
@@ -60,6 +65,9 @@ export async function updateCategory(
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!categoryId) {
       throw new Error('Category ID is required')
     }
@@ -70,6 +78,19 @@ export async function updateCategory(
 
     const adminClient = createAdminClient()
 
+    // Verify category belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: category, error: verifyError } = await adminClient
+        .from('course_categories')
+        .select('tenant_id')
+        .eq('id', categoryId)
+        .single()
+
+      if (verifyError || !category || category.tenant_id !== tenantId) {
+        throw new Error('Category not found or access denied')
+      }
+    }
+
     const { error } = await adminClient
       .from('course_categories')
       .update({
@@ -78,6 +99,7 @@ export async function updateCategory(
         updated_at: new Date().toISOString()
       })
       .eq('id', categoryId)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 
@@ -101,17 +123,34 @@ export async function deleteCategory(categoryId: number): Promise<ActionResult> 
   try {
     await verifyAdminAccess()
 
+    const tenantId = await getCurrentTenantId()
+    const isSuperAdminUser = await isSuperAdmin()
+
     if (!categoryId) {
       throw new Error('Category ID is required')
     }
 
     const adminClient = createAdminClient()
 
-    // Check if any courses use this category
+    // Verify category belongs to tenant (unless super_admin)
+    if (!isSuperAdminUser) {
+      const { data: category, error: verifyError } = await adminClient
+        .from('course_categories')
+        .select('tenant_id')
+        .eq('id', categoryId)
+        .single()
+
+      if (verifyError || !category || category.tenant_id !== tenantId) {
+        throw new Error('Category not found or access denied')
+      }
+    }
+
+    // Check if any courses use this category (within tenant)
     const { count, error: countError } = await adminClient
       .from('courses')
       .select('*', { count: 'exact', head: true })
       .eq('category_id', categoryId)
+      .eq('tenant_id', tenantId)
 
     if (countError) throw countError
 
@@ -127,6 +166,7 @@ export async function deleteCategory(categoryId: number): Promise<ActionResult> 
       .from('course_categories')
       .delete()
       .eq('id', categoryId)
+      .eq('tenant_id', tenantId)
 
     if (error) throw error
 

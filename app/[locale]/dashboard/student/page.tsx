@@ -10,8 +10,9 @@ import { IconRocket, IconSparkles, IconTrophy, IconCircleCheck } from '@tabler/i
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-async function getData(userId: string) {
+async function getData(userId: string, tenantId: string) {
   const supabase = await createClient()
 
   const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription] = await Promise.all([
@@ -29,6 +30,7 @@ async function getData(userId: string) {
         )
       `)
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('status', 'active')
       .eq('course.lessons.lesson_completions.user_id', userId),
 
@@ -36,13 +38,15 @@ async function getData(userId: string) {
       .from('exam_submissions')
       .select('*')
       .eq('student_id', userId)
+      .eq('tenant_id', tenantId)
       .order('submission_date', { ascending: false })
       .limit(5),
 
     supabase
       .from('lesson_completions')
       .select('*')
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId),
 
     supabase
       .from('exams')
@@ -50,6 +54,7 @@ async function getData(userId: string) {
         *,
         course:courses(title)
       `)
+      .eq('tenant_id', tenantId)
       .gte('exam_date', new Date().toISOString())
       .order('exam_date', { ascending: true })
       .limit(5),
@@ -58,6 +63,7 @@ async function getData(userId: string) {
       .from('subscriptions')
       .select('subscription_id, plan:plans!subscriptions_plan_id_fkey(plan_name)')
       .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
       .eq('subscription_status', 'active')
       .gte('end_date', new Date().toISOString())
       .order('end_date', { ascending: false })
@@ -95,6 +101,7 @@ async function getData(userId: string) {
 }
 
 export default async function StudentDashboard() {
+  const tenantId = await getCurrentTenantId()
   const supabase = await createClient()
   const {
     data: { user },
@@ -104,7 +111,7 @@ export default async function StudentDashboard() {
     redirect('/auth/login')
   }
 
-  const data = await getData(user.id)
+  const data = await getData(user.id, tenantId)
   const t = await getTranslations('dashboard.student')
   const tCommon = await getTranslations('common')
 

@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { NextRequest } from 'next/server'
 
 // GET /api/teacher/templates?category=lesson_task&search=conversation
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return new Response('Unauthorized', { status: 401 })
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('prompt_templates')
     .select('*')
+    .eq('tenant_id', tenantId)
     .or(`created_by.eq.${user.id},is_system.eq.true`)
     .order('is_system', { ascending: false })
     .order('created_at', { ascending: false })
