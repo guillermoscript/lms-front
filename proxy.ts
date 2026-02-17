@@ -4,57 +4,104 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
+// Domains that are the platform itself (not tenant subdomains)
+const PLATFORM_HOSTS = [
+  'localhost',
+  '127.0.0.1',
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com',
+]
+
 // Create i18n middleware
 const intlMiddleware = createIntlMiddleware({
   locales,
   defaultLocale,
-  localePrefix: 'always', // Force prefix to make routing predictable for auth checks
+  localePrefix: 'always',
 })
+
+/**
+ * Extract tenant slug from subdomain.
+ * e.g. "school.lmsplatform.com" -> "school"
+ * Returns null if on the platform root domain or localhost without subdomain.
+ */
+function getTenantSlugFromHost(host: string): string | null {
+  const hostname = host.split(':')[0] // Remove port
+
+  // Skip if it's a platform host without subdomain
+  if (PLATFORM_HOSTS.some(h => hostname === h)) {
+    return null
+  }
+
+  // Check for subdomain pattern: slug.platform.com
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
+  if (hostname.endsWith(`.${platformDomain}`)) {
+    const slug = hostname.replace(`.${platformDomain}`, '')
+    if (slug && !slug.includes('.')) {
+      return slug
+    }
+  }
+
+  // For localhost development: check x-tenant-slug header as override
+  return null
+}
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. Handle ignore paths (api, static, etc) is done by config matcher, 
-  // but we double check API here just in case.
   if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
     return NextResponse.next()
   }
 
-  // 2. Run Intl Middleware to handle locale routing and rewriting
-  // This helps ensure we are working with a consistent URL structure
+  // --- Tenant Resolution ---
+  const host = request.headers.get('host') || ''
+  const tenantSlug = getTenantSlugFromHost(host)
+    || request.headers.get('x-tenant-slug') // Dev override
+  let tenantId = DEFAULT_TENANT_ID
+
+  if (tenantSlug) {
+    // Look up tenant by slug using service client (no auth needed)
+    const supabaseLookup = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() { /* not needed for lookup */ },
+        },
+      }
+    )
+    const { data: tenant } = await supabaseLookup
+      .from('tenants')
+      .select('id, status')
+      .eq('slug', tenantSlug)
+      .eq('status', 'active')
+      .single()
+
+    if (!tenant) {
+      // Invalid tenant slug - redirect to platform root
+      const platformUrl = new URL('/', request.url)
+      platformUrl.host = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || request.headers.get('host') || 'localhost:3000'
+      return NextResponse.redirect(platformUrl)
+    }
+    tenantId = tenant.id
+  }
+
+  // --- Intl Middleware ---
   const intlResponse = intlMiddleware(request)
 
-  // If intlMiddleware redirects (e.g. / -> /en), we should follow it immediately
-  // unless we want to check auth first? 
-  // Standard pattern: let intl normalize the URL first.
   if (intlResponse.headers.get('x-middleware-rewrite')) {
-    // It's a rewrite, continue to auth check
+    // It's a rewrite, continue
   } else if (intlResponse.status >= 300 && intlResponse.status < 400) {
-    // It's a redirect (e.g. adding locale prefix)
     return intlResponse
   }
 
-  // 3. Auth Logic
-
-  // We need to strip locale to check logic against "clean" paths
-  // pathname might look like /en/dashboard
-  const pathnameIsMissingLocale = locales.every(
-    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
-  );
-
-  // If we are here, next-intl didn't redirect, so we likely have a locale or it's a public path that doesn't need one?
-  // But we set localePrefix: 'always', so it should have redirected if missing.
-
-  // Normalize path for auth checks: remove locale
-  // e.g. /en/dashboard -> /dashboard
+  // --- Path normalization ---
   const segments = pathname.split('/')
   const locale = segments[1]
-  // if segments[1] is a locale, remove it
   const cleanPath = locales.includes(locale as any)
     ? `/${segments.slice(2).join('/')}`
-    : pathname // Should technically not happen if 'always' prefix is enforcing, unless it's a file
-
-  // Fix cleanPath to ensure it starts with / if empty
+    : pathname
   const normalizedPath = cleanPath === '' ? '/' : cleanPath
 
   // Public routes
@@ -67,7 +114,10 @@ export default async function proxy(request: NextRequest) {
     '/auth/confirm',
     '/auth/error',
     '/',
-    '/auth/callback' // Add callback if needed
+    '/auth/callback',
+    '/create-school',
+    '/creators',
+    '/join-school',
   ]
 
   const isPublicRoute = publicRoutes.some(route =>
@@ -77,6 +127,10 @@ export default async function proxy(request: NextRequest) {
   // Update session
   const supabaseResponse = await updateSession(request)
 
+  // Set tenant ID header on the response for downstream server components
+  intlResponse.headers.set('x-tenant-id', tenantId)
+  supabaseResponse.headers.set('x-tenant-id', tenantId)
+
   // Create client to check session
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,7 +138,7 @@ export default async function proxy(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) { /* handled by updateSession */ },
+        setAll() { /* handled by updateSession */ },
       },
     }
   )
@@ -95,7 +149,7 @@ export default async function proxy(request: NextRequest) {
   if (session?.access_token) {
     try {
       const payload = JSON.parse(atob(session.access_token.split('.')[1]))
-      userRole = payload.user_role || 'student'
+      userRole = payload.tenant_role || payload.user_role || 'student'
     } catch (e) {
       // ignore
     }
@@ -103,28 +157,15 @@ export default async function proxy(request: NextRequest) {
 
   // Auth Guards
   if (isPublicRoute) {
-    // If logged in and at login/signup, redirect to dashboard
     if (session && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
       const dashboardUrl = new URL(`/${locale}/dashboard/${userRole}`, request.url)
       return NextResponse.redirect(dashboardUrl)
     }
-    // Return intlResponse to preserve locale cookies/headers, but wait, supabaseResponse sets cookies too.
-    // We need to merge them.
-    // Actually, supabaseResponse is just a `NextResponse.next()` with cookies set.
-    // intlResponse is also a response.
-    // It's tricky to merge.
-    // Pattern: return intlResponse, but Copy cookies from supabaseResponse?
 
-    // Simplest working pattern for Supabase + (Next-Intl or other MW):
-    // 1. intlResponse handles the routing/headers for locale.
-    // 2. We copy the set-cookie header from supabaseResponse to intlResponse.
-
-    // Copy cookies from updateSession response to intlResponse
     const supabaseCookies = supabaseResponse.headers.get('set-cookie')
     if (supabaseCookies) {
       intlResponse.headers.set('set-cookie', supabaseCookies)
     }
-
     return intlResponse
   }
 
@@ -133,6 +174,23 @@ export default async function proxy(request: NextRequest) {
     const redirectUrl = new URL(`/${locale}/auth/login`, request.url)
     redirectUrl.searchParams.set('redirectTo', normalizedPath)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Check if user is a member of the current tenant (for non-default tenants)
+  if (tenantId !== DEFAULT_TENANT_ID && !normalizedPath.startsWith('/join-school')) {
+    const { data: membership } = await supabase
+      .from('tenant_users')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .single()
+
+    if (!membership) {
+      // User is not a member of this tenant - redirect to join page
+      const joinUrl = new URL(`/${locale}/join-school`, request.url)
+      return NextResponse.redirect(joinUrl)
+    }
   }
 
   // Role Checks
@@ -149,8 +207,8 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
   }
 
-  // Allow access, return intlResponse (with supabase cookies)
-  const finalResponse = intlResponse;
+  // Allow access
+  const finalResponse = intlResponse
   const supabaseCookies = supabaseResponse.headers.get('set-cookie')
   if (supabaseCookies) {
     finalResponse.headers.set('set-cookie', supabaseCookies)

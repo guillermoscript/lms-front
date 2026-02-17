@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/server'
 export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | null> {
   const supabase = await createClient()
 
-  // Get the session to access JWT claims
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -16,11 +15,9 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
     return null
   }
 
-  // Decode the JWT to get custom claims set by custom_access_token_hook
-  // The access_token is a JWT that contains our custom claims
   try {
     const payload = JSON.parse(atob(session.access_token.split('.')[1]))
-    const role = payload.user_role as 'student' | 'teacher' | 'admin' | undefined
+    const role = (payload.tenant_role || payload.user_role) as 'student' | 'teacher' | 'admin' | undefined
     return role || 'student'
   } catch {
     return 'student'
@@ -31,6 +28,46 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
  * Get user role from JWT claims (used in middleware)
  */
 export function getRoleFromClaims(claims: any): 'student' | 'teacher' | 'admin' {
-  const role = claims?.user_role as 'student' | 'teacher' | 'admin' | undefined
+  const role = (claims?.tenant_role || claims?.user_role) as 'student' | 'teacher' | 'admin' | undefined
   return role || 'student'
+}
+
+/**
+ * Get tenant ID from JWT claims
+ */
+export async function getUserTenantId(): Promise<string | null> {
+  const supabase = await createClient()
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) return null
+
+  try {
+    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    return payload.tenant_id || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Check if current user is a super admin from JWT claims
+ */
+export async function isSuperAdmin(): Promise<boolean> {
+  const supabase = await createClient()
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) return false
+
+  try {
+    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    return payload.is_super_admin === true
+  } catch {
+    return false
+  }
 }

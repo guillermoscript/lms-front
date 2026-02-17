@@ -1,28 +1,77 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { getTranslations } from 'next-intl/server';
+import { getCurrentTenant } from "@/lib/supabase/tenant";
+import { NavbarTenantSwitcher } from "@/components/tenant/navbar-tenant-switcher";
 
 export async function Navbar() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const t = await getTranslations('navbar');
+    const tenant = await getCurrentTenant();
+
+    // Load branding overrides from tenant_settings
+    let brandingOverrides: Record<string, any> = {};
+    if (tenant) {
+        const { data: tsData } = await supabase
+            .from('tenant_settings')
+            .select('setting_key, setting_value')
+            .eq('tenant_id', tenant.id)
+            .in('setting_key', ['site_name', 'logo_url', 'primary_color']);
+        if (tsData) {
+            brandingOverrides = tsData.reduce((acc: Record<string, any>, s) => {
+                acc[s.setting_key] = s.setting_value?.value;
+                return acc;
+            }, {});
+        }
+    }
+
+    // Get user's tenants for the switcher
+    let userTenants: any[] = [];
+    if (user) {
+        const { data } = await supabase
+            .from('tenant_users')
+            .select('role, tenant:tenants(id, slug, name)')
+            .eq('user_id', user.id)
+            .eq('status', 'active');
+        userTenants = (data || []).map((tu: any) => ({
+            ...tu.tenant,
+            role: tu.role,
+        }));
+    }
+
+    const brandName = brandingOverrides.site_name || tenant?.name || t('brand');
+    const logoUrl = brandingOverrides.logo_url || tenant?.logo_url;
+    const logoColor = brandingOverrides.primary_color || tenant?.primary_color || '#3B82F6';
 
     return (
         <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
             <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
 
-                {/* Logo */}
-                <Link href="/" className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <span className="font-bold text-white">L</span>
-                    </div>
-                    <span className="font-bold text-lg text-white tracking-tight">
-                        {t('brand')}
-                    </span>
-                </Link>
+                {/* Logo + Tenant Branding */}
+                <div className="flex items-center gap-3">
+                    <Link href="/" className="flex items-center space-x-2">
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={brandName} className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                            <div
+                                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                style={{ backgroundColor: logoColor }}
+                            >
+                                <span className="font-bold text-white">{brandName[0]?.toUpperCase()}</span>
+                            </div>
+                        )}
+                        <span className="font-bold text-lg text-white tracking-tight">
+                            {brandName}
+                        </span>
+                    </Link>
+
+                    {userTenants.length > 1 && (
+                        <NavbarTenantSwitcher tenants={userTenants} />
+                    )}
+                </div>
 
                 {/* Center Links */}
                 <div className="hidden md:flex items-center space-x-8">
@@ -34,6 +83,9 @@ export async function Navbar() {
                     </Link>
                     <Link href="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
                         {t('about')}
+                    </Link>
+                    <Link href="/creators" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                        {t('creators')}
                     </Link>
                 </div>
 
