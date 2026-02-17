@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { createClient } from '@/lib/supabase/client'
+import { createCourse, updateCourse, checkCourseLimit } from '@/app/actions/teacher/courses'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { IconLoader2, IconArrowLeft } from '@tabler/icons-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { IconLoader2, IconArrowLeft, IconAlertTriangle } from '@tabler/icons-react'
 import Link from 'next/link'
 
 interface Category {
@@ -39,9 +40,14 @@ interface CourseFormProps {
 export function CourseForm({ categories, initialData }: CourseFormProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.courseForm')
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [limitInfo, setLimitInfo] = useState<{
+    canCreate: boolean
+    currentCount: number
+    limit: number
+    plan: string
+  } | null>(null)
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -51,50 +57,34 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     status: initialData?.status || 'draft',
   })
 
+  // Check course limit on mount for new courses
+  useEffect(() => {
+    if (!initialData) {
+      checkCourseLimit().then(setLimitInfo)
+    }
+  }, [initialData])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-
       const courseData = {
         title: formData.title,
         description: formData.description || null,
         thumbnail_url: formData.thumbnail_url || null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
-        author_id: user.id,
-        status: formData.status,
+        status: formData.status as 'draft' | 'published' | 'archived',
       }
 
       if (initialData) {
         // Update existing course
-        const { error: updateError } = await supabase
-          .from('courses')
-          .update(courseData)
-          .eq('course_id', initialData.course_id)
-
-        if (updateError) throw updateError
-
+        await updateCourse(initialData.course_id, courseData)
         router.push(`/dashboard/teacher/courses/${initialData.course_id}`)
       } else {
         // Create new course
-        const { data: course, error: insertError } = await supabase
-          .from('courses')
-          .insert([courseData])
-          .select('course_id')
-          .single()
-
-        if (insertError) throw insertError
-
+        const course = await createCourse(courseData)
         router.push(`/dashboard/teacher/courses/${course.course_id}`)
       }
     } catch (err: any) {
@@ -104,6 +94,41 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     }
   }
 
+  // Show limit reached error for new courses
+  if (!initialData && limitInfo && !limitInfo.canCreate) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('details')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Alert variant="destructive">
+            <IconAlertTriangle className="h-4 w-4" />
+            <AlertTitle>Course Limit Reached</AlertTitle>
+            <AlertDescription>
+              Your {limitInfo.plan} plan is limited to {limitInfo.limit} courses.
+              You currently have {limitInfo.currentCount} courses.
+              Please upgrade your plan to create more courses.
+            </AlertDescription>
+          </Alert>
+          <div className="flex gap-3">
+            <Link href="/dashboard/teacher" className="flex-1">
+              <Button type="button" variant="outline" className="w-full">
+                <IconArrowLeft className="mr-2 h-4 w-4" />
+                {t('actions.cancel')}
+              </Button>
+            </Link>
+            <Link href="/pricing" className="flex-1">
+              <Button className="w-full">
+                Upgrade Plan
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit}>
       <Card>
@@ -111,6 +136,17 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           <CardTitle>{t('details')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Show warning if approaching limit */}
+          {!initialData && limitInfo && limitInfo.canCreate && limitInfo.currentCount / limitInfo.limit > 0.8 && (
+            <Alert>
+              <IconAlertTriangle className="h-4 w-4" />
+              <AlertTitle>Approaching Course Limit</AlertTitle>
+              <AlertDescription>
+                You have used {limitInfo.currentCount} of {limitInfo.limit} courses on your {limitInfo.plan} plan.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {error && (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
               <p className="text-sm text-destructive">{error}</p>

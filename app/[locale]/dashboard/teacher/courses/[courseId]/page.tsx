@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -18,7 +19,12 @@ import {
   IconBolt,
   IconFileText,
   IconTarget,
+  IconCertificate,
+  IconAward,
+  IconExternalLink,
 } from '@tabler/icons-react'
+import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -28,6 +34,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
@@ -42,6 +49,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
     .from('courses')
     .select('*')
     .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
     .single()
 
   if (courseError || !course) {
@@ -96,33 +104,51 @@ export default async function CourseManagementPage({ params }: PageProps) {
   }
 
   // Fetch all related data in parallel
-  const [lessonsRes, exercisesRes, examsRes, enrollmentsRes] = await Promise.all([
+  const [lessonsRes, exercisesRes, examsRes, enrollmentsRes, certificateTemplateRes, issuedCertificatesRes] = await Promise.all([
     supabase
       .from('lessons')
       .select('*')
       .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
       .order('sequence', { ascending: true }),
     supabase
       .from('exercises')
       .select('*')
       .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false }),
     supabase
       .from('exams')
       .select('*')
       .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
       .order('sequence', { ascending: true }),
     supabase
       .from('enrollments')
       .select('*, profiles(id, full_name, avatar_url)')
       .eq('course_id', parseInt(courseId))
-      .eq('status', 'active')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active'),
+    supabase
+      .from('certificate_templates')
+      .select('*')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+    supabase
+      .from('certificates')
+      .select('*, profiles(full_name, avatar_url)')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .order('issued_at', { ascending: false })
   ])
 
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
   const exams = examsRes.data || []
   const enrollments = enrollmentsRes.data || []
+  const certificateTemplate = certificateTemplateRes.data
+  const issuedCertificates = issuedCertificatesRes.data || []
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -179,6 +205,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
             </TabsTrigger>
             <TabsTrigger value="students" className="flex items-center gap-2">
               <IconUsers size={16} /> {t('tabs.students')}
+            </TabsTrigger>
+            <TabsTrigger value="certificates" className="flex items-center gap-2">
+              <IconCertificate size={16} /> {t('tabs.certificates')}
             </TabsTrigger>
           </TabsList>
 
@@ -422,7 +451,15 @@ export default async function CourseManagementPage({ params }: PageProps) {
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <Button variant="ghost" size="sm">{t('studentList.viewProgress')}</Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <IssueCertificateButton
+                                  courseId={parseInt(courseId)}
+                                  userId={enrollment.user_id}
+                                  studentName={enrollment.profiles?.full_name || t('studentList.unknownStudent')}
+                                  existingCertificateId={issuedCertificates.find((c: any) => c.user_id === enrollment.user_id)?.id}
+                                />
+                                <Button variant="ghost" size="sm">{t('studentList.viewProgress')}</Button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -438,6 +475,131 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Certificates Tab */}
+          <TabsContent value="certificates" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">{t('certificates.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('certificates.description')}</p>
+              </div>
+              <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`}>
+                <Button variant="outline" size="sm">
+                  <IconSettings className="mr-2 h-4 w-4" />
+                  {certificateTemplate ? t('certificates.templates.edit') : t('certificates.templates.create')}
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-1 space-y-6">
+                {certificateTemplate ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{t('certificates.templates.title')}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground uppercase">{t('certificates.templates.nameLabel')}</Label>
+                        <p className="font-medium">{certificateTemplate.template_name}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground uppercase">{t('certificates.templates.issuerNameLabel')}</Label>
+                        <p className="text-sm">{certificateTemplate.issuer_name}</p>
+                      </div>
+                      <div className="pt-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-4 w-4 rounded-full border"
+                            style={{ backgroundColor: certificateTemplate.design_settings?.primary_color }}
+                          />
+                          <span className="text-xs text-muted-foreground">Brand Color</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                      <IconAward className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                      <p className="text-sm">{t('certificates.templates.noTemplate')}</p>
+                      <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`} className="mt-4">
+                        <Button variant="outline" size="sm">
+                          {t('certificates.templates.create')}
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg">{t('certificates.issued.title')}</CardTitle>
+                    {issuedCertificates.length > 0 && (
+                      <Badge variant="secondary">
+                        {t('certificates.issued.count', { count: issuedCertificates.length })}
+                      </Badge>
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.student')}</th>
+                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.date')}</th>
+                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.code')}</th>
+                            <th className="px-4 py-3 text-right font-medium">{t('certificates.issued.table.actions')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {issuedCertificates.length > 0 ? (
+                            issuedCertificates.map((cert: any) => (
+                              <tr key={cert.certificate_id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-6 w-6 rounded-full bg-accent flex items-center justify-center overflow-hidden border">
+                                      {cert.profiles?.avatar_url ? (
+                                        <img src={cert.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
+                                      ) : (
+                                        <IconUsers className="h-3 w-3 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <span className="font-medium">{cert.profiles?.full_name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground">
+                                  {new Date(cert.issued_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3 font-mono text-xs uppercase">
+                                  {cert.verification_code}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="ghost" size="sm">
+                                      <IconExternalLink className="h-4 w-4" />
+                                    </Button>
+                                  </a>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                                {t('certificates.issued.noIssued')}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
