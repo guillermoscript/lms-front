@@ -22,23 +22,46 @@
 
 The unauthenticated experience that converts visitors into users.
 
-### Journey: Discovery to Sign-Up
+> **Context-aware:** The experience branches based on which domain the visitor lands on.
+
+### Journey A: Main Platform (`lvh.me` / `yourplatform.com`)
+
+Visitors landing here are prospective **school owners / creators**.
 
 ```
-Landing Page → Browse Courses → View Course Detail → See Pricing → Sign Up
+Platform Landing → Features / Pricing / For Creators → Create School → Sign Up
 ```
 
 | Story | Route | Description |
 |-------|-------|-------------|
-| View landing page with platform branding | `/` | Hero section, feature cards, stats, social proof, CTA buttons |
-| Browse public course catalog | `/courses` | Search, category filters, sort options, grid/list toggle, pagination |
-| View course details | `/courses/[id]` | Lesson list, instructor info, pricing card, enrollment button, reviews |
-| Compare subscription plans | `/pricing` | Per-school plans (no hardcoded free tier), feature comparison, FAQ accordion |
-| Read about the platform | `/about` | Mission, values, company stats, team |
-| Explore creator features | `/creators` | AI grading showcase, gamification demo, feature comparison, creator pricing |
-| Sign up | `/auth/sign-up` | Email/password registration with email confirmation |
+| View platform marketing page | `/` | Hero, AI features, gamification, feature grid, pricing teaser, CTA — targets B2B audience |
+| Browse platform pricing | `/platform-pricing` | Plan comparison (Free → Business → Enterprise) |
+| Explore creator features | `/creators` | AI grading showcase, gamification demo, feature comparison |
+| Create a school | `/create-school` | Name + slug form, creates tenant with creator as admin |
+| Sign up (main domain) | `/auth/sign-up` | Email/password registration → confirm email → lands on `/create-school` |
+| Login | `/auth/login` | Email/password with redirect to role-based dashboard |
+
+**Navbar on main domain:** Features · Pricing · For Creators | Log In · **Start Free →** (→ `/create-school`)
+
+### Journey B: School Subdomain (`myschool.platform.com`)
+
+Visitors landing here are prospective **students** of a specific school.
+
+```
+School Landing → Browse Courses → Join School → Confirm Email → Join Flow
+```
+
+| Story | Route | Description |
+|-------|-------|-------------|
+| View school landing page | `/` on school subdomain | School logo, name, "Join [School]" CTA, published courses grid, join CTA strip — uses school's `primary_color` |
+| Browse school's courses | `/courses` | All published courses for that school |
+| View course details | `/courses/[id]` | Lesson list, pricing card, enrollment button |
+| Compare school's plans | `/pricing` | Per-school subscription plans |
+| Sign up on subdomain | `/auth/sign-up?next=/join-school` | Registration → confirm email → lands on `/join-school` for that school |
 | Login | `/auth/login` | Email/password with redirect to role-based dashboard |
 | Reset password | `/auth/forgot-password` | Email-based password reset flow |
+
+**Navbar on school subdomain:** Courses · About | Log In · **Join [School Name]** (→ `/auth/sign-up?next=/join-school`)
 
 ---
 
@@ -222,7 +245,8 @@ Create School → Configure Branding → Connect Stripe → Create Courses → S
 |-------|-------|-------------|
 | Create a new school | `/create-school` | Name + slug form, creates tenant with creator as admin |
 | School gets its own isolated data | Automatic | All courses, enrollments, transactions scoped by `tenant_id` via RLS |
-| School has branded navbar | Navbar | Logo, school name, custom colors from tenant settings |
+| School has context-aware navbar | Navbar | On school subdomain: shows Courses/About + "Join [School]" CTA; on main domain: shows Features/Pricing/Creators + "Start Free →" |
+| School subdomain shows school landing page | `myschool.platform.com/` | `SchoolLandingPage` component: school logo, name, published courses grid, join CTA — uses `tenant.primary_color` as accent |
 | Users switch between schools | TenantSwitcher dropdown | Dropdown in navbar for multi-school users |
 | School admin connects Stripe | `/api/stripe/connect` | Stripe Connect onboarding, payments route to school's account |
 | Subdomain routing | `school.platform.com` | Each school gets its own subdomain (configurable via `NEXT_PUBLIC_PLATFORM_DOMAIN`) |
@@ -319,12 +343,13 @@ Create School → Configure Branding → Connect Stripe → Create Courses → S
 
 ### Demo 3: Multi-Tenant SaaS (3 min)
 
-1. Create a new school via `/create-school`
-2. Show school appears in tenant management
-3. Create a course in the new school
-4. Login as student → show course is NOT visible (different tenant)
-5. Show branded navbar with school name
-6. Show Stripe Connect flow for school payments
+1. Visit `lvh.me:3000/en` → show platform marketing page with "Start Free →" CTA
+2. Visit `myschool.lvh.me:3000/en` → show school landing page (school logo, courses grid, school colors)
+3. Show context-aware navbar: main domain shows Features/Pricing/Creators; school shows Courses/About + "Join [School]"
+4. Sign up on school subdomain → confirm email → lands on `/join-school` (not stranded on `/`)
+5. Create a new school via `/create-school`
+6. Show school appears in tenant management
+7. Show Stripe Connect flow for school payments
 
 ### Demo 4: Admin Platform Management (3 min)
 

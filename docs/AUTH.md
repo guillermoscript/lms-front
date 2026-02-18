@@ -448,32 +448,38 @@ supabase.auth.onAuthStateChange((event, session) => {
 3. Use `{{ .ConfirmationURL }}` for confirmation link
 
 ### Handling Confirmation Callback
-```typescript
-// app/auth/confirm/route.ts
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const token_hash = searchParams.get('token_hash')
-  const type = searchParams.get('type')
+`app/[locale]/auth/confirm/route.ts` handles email OTP verification. For `type=signup` it applies **context-aware smart redirect logic**:
 
-  if (token_hash && type) {
-    const supabase = await createClient()
-
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: type as any,
-    })
-
-    if (!error) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-  }
-
-  return NextResponse.redirect(new URL('/auth/error', request.url))
-}
 ```
+Has active tenant_users memberships?
+  → YES → /dashboard/student          (returning user clicked old link)
+  → NO, main platform (default tenant) → /create-school
+  → NO, school subdomain → /join-school
+```
+
+For all other OTP types (`recovery`, `magiclink`, etc.) the route uses the `next` query param as before.
+
+```typescript
+// Simplified — see route.ts for full implementation
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
+if (type === 'signup' && user) {
+  const { data: memberships } = await supabase
+    .from('tenant_users')
+    .select('tenant_id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .limit(1)
+
+  if ((memberships ?? []).length > 0) redirect('/dashboard/student')
+  else if (tenantId === DEFAULT_TENANT_ID) redirect('/create-school')
+  else redirect('/join-school')
+}
+redirect(next) // recovery, magiclink, etc.
+```
+
+**Why this matters:** New users signing up at `school.lvh.me` land on `/join-school` for that school; new users signing up at the main domain land on `/create-school`. No more floating, school-less accounts.
 
 ## 🔗 Related Documentation
 
