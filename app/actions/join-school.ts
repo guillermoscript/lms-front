@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
+import { sendEmail } from '@/lib/email/send'
+import { joinedSchoolTemplate } from '@/lib/email/templates/joined-school'
 
 /**
  * Join the current tenant as a student
@@ -89,6 +91,29 @@ export async function joinCurrentSchool() {
 
   revalidatePath('/dashboard/student')
   revalidatePath('/join-school')
+
+  // Send welcome email (non-blocking)
+  try {
+    const adminClient = createAdminClient()
+    const { data: authUser } = await adminClient.auth.admin.getUserById(user.id)
+    const { data: tenantRow } = await adminClient
+      .from('tenants')
+      .select('name')
+      .eq('id', tenantId)
+      .single()
+
+    if (authUser?.user?.email) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+      const template = joinedSchoolTemplate({
+        studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
+        schoolName: tenantRow?.name || 'the school',
+        dashboardUrl: `${appUrl}/dashboard/student`,
+      })
+      await sendEmail({ to: authUser.user.email, ...template })
+    }
+  } catch (emailErr) {
+    console.error('Failed to send welcome email:', emailErr)
+  }
 
   return { success: true }
 }
