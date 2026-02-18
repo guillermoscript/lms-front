@@ -2,6 +2,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
+import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
@@ -9,6 +10,7 @@ import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import BrandingSettingsForm from '@/components/admin/branding-settings-form'
+import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 
 export default async function SettingsPage() {
   const t = await getTranslations('dashboard.admin.settings')
@@ -38,6 +40,10 @@ export default async function SettingsPage() {
 
   const settings = result.data
 
+  // Fetch referral code (non-blocking — silently skip if it fails)
+  const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
+
   return (
     <div className="space-y-6 p-8" data-testid="settings-page">
       {/* Header */}
@@ -47,6 +53,17 @@ export default async function SettingsPage() {
           {t('description')}
         </p>
       </div>
+
+      {/* Referral Program */}
+      {referralCode && (
+        <ReferralLinkCard
+          code={referralCode.code}
+          usedCount={referralCode.used_count ?? 0}
+          discountMonths={referralCode.discount_months ?? 1}
+          referrerRewardMonths={referralCode.referrer_reward_months ?? 1}
+          appUrl={appUrl}
+        />
+      )}
 
       {/* Tabbed Settings Interface */}
       <Tabs defaultValue="general" className="space-y-6">
