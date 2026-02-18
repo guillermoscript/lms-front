@@ -39,7 +39,10 @@ export default async function AdminDashboardPage({
     redirect('/auth/login')
   }
 
-  // Get platform statistics
+  // Get tenant context for all queries
+  const tenantId = await getCurrentTenantId()
+
+  // Get platform statistics — ALL queries scoped to current tenant
   const [
     { count: totalUsers },
     { count: totalCourses },
@@ -49,32 +52,38 @@ export default async function AdminDashboardPage({
     { count: pendingPaymentRequests },
     { count: activeSubscriptions },
     { data: recentTransactions },
-    { data: recentUsers },
+    { data: recentTenantUsers },
   ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('courses').select('*', { count: 'exact', head: true }),
+    supabase.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
       .from('courses')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('status', 'published'),
-    supabase.from('enrollments').select('*', { count: 'exact', head: true }),
-    supabase.from('transactions').select('*', { count: 'exact', head: true }),
+    supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
       .from('payment_requests')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .in('status', ['pending', 'contacted', 'payment_received']),
     supabase
       .from('subscriptions')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('subscription_status', 'active'),
     supabase
       .from('transactions')
       .select('transaction_id, amount, status, created_at, user_id')
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(5),
     supabase
-      .from('profiles')
-      .select('id, full_name, email, created_at')
+      .from('tenant_users')
+      .select('user_id, created_at, profiles(id, full_name)')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -91,17 +100,17 @@ export default async function AdminDashboardPage({
     })
   )
 
-  // Calculate total revenue (successful transactions)
+  // Calculate total revenue (successful transactions) — tenant scoped
   const { data: successfulTransactions } = await supabase
     .from('transactions')
     .select('amount')
+    .eq('tenant_id', tenantId)
     .eq('status', 'successful')
 
   const totalRevenue =
     successfulTransactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
   // Get plan info for usage widget
-  const tenantId = await getCurrentTenantId()
   const adminClient = await createAdminClient()
   const { data: tenant } = await adminClient
     .from('tenants')
@@ -304,18 +313,17 @@ export default async function AdminDashboardPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentUsers && recentUsers.length > 0 ? (
-                recentUsers.map((user) => (
+              {recentTenantUsers && recentTenantUsers.length > 0 ? (
+                recentTenantUsers.map((tu: any) => (
                   <div
-                    key={user.id}
+                    key={tu.user_id}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium">{user.full_name || t('recentActivity.unknown')}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="font-medium">{tu.profiles?.full_name || t('recentActivity.unknown')}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(user.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                      {format(new Date(tu.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                     </p>
                   </div>
                 ))
