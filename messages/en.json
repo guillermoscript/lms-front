@@ -1845,9 +1845,13 @@
     "plans": "Plans",
     "about": "About",
     "creators": "For Creators",
+    "features": "Features",
+    "pricing": "Pricing",
     "dashboard": "Dashboard",
     "login": "Login",
-    "signup": "Sign Up"
+    "signup": "Sign Up",
+    "startFree": "Start Free",
+    "join": "Join"
   },
   "sidebar": {
     "dashboard": "Dashboard",

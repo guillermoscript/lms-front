@@ -6,11 +6,15 @@ import { getTranslations } from 'next-intl/server';
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { NavbarTenantSwitcher } from "@/components/tenant/navbar-tenant-switcher";
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
 export async function Navbar() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const t = await getTranslations('navbar');
     const tenant = await getCurrentTenant();
+
+    const isMainPlatform = !tenant || tenant.id === DEFAULT_TENANT_ID
 
     // Load branding overrides from tenant_settings
     let brandingOverrides: Record<string, any> = {};
@@ -75,18 +79,28 @@ export async function Navbar() {
 
                 {/* Center Links */}
                 <div className="hidden md:flex items-center space-x-8">
-                    <Link href="/courses" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        {t('courses')}
-                    </Link>
-                    <Link href="/pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        {t('plans')}
-                    </Link>
-                    <Link href="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        {t('about')}
-                    </Link>
-                    <Link href="/creators" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                        {t('creators')}
-                    </Link>
+                    {isMainPlatform ? (
+                        <>
+                            <Link href="/#features" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                {t('features')}
+                            </Link>
+                            <Link href="/platform-pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                {t('pricing')}
+                            </Link>
+                            <Link href="/creators" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                {t('creators')}
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/courses" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                {t('courses')}
+                            </Link>
+                            <Link href="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                {t('about')}
+                            </Link>
+                        </>
+                    )}
                 </div>
 
                 {/* Right Actions */}
@@ -106,11 +120,19 @@ export async function Navbar() {
                                     {t('login')}
                                 </Button>
                             </Link>
-                            <Link href="/auth/sign-up">
-                                <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
-                                    {t('signup')}
-                                </Button>
-                            </Link>
+                            {isMainPlatform ? (
+                                <Link href="/create-school">
+                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                        {t('startFree')} →
+                                    </Button>
+                                </Link>
+                            ) : (
+                                <Link href="/auth/sign-up?next=/join-school">
+                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                        {t('join')} {tenant?.name}
+                                    </Button>
+                                </Link>
+                            )}
                         </>
                     )}
                 </div>

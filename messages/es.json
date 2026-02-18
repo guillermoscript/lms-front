@@ -1689,9 +1689,13 @@
     "plans": "Planes",
     "about": "Acerca de",
     "creators": "Para Creadores",
+    "features": "Características",
+    "pricing": "Precios",
     "dashboard": "Panel",
     "login": "Ingresar",
-    "signup": "Registrarse"
+    "signup": "Registrarse",
+    "startFree": "Empieza Gratis",
+    "join": "Únete a"
   },
   "sidebar": {
     "dashboard": "Panel de Control",
