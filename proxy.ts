@@ -53,11 +53,11 @@ function getTenantSlugFromHost(host: string): string | null {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+  if (pathname.startsWith('/_next')) {
     return NextResponse.next()
   }
 
-  // --- Tenant Resolution ---
+  // --- Tenant Resolution (runs for ALL routes including /api) ---
   const host = request.headers.get('host') || ''
   const tenantSlug = getTenantSlugFromHost(host)
     || request.headers.get('x-tenant-slug') // Dev override
@@ -83,12 +83,22 @@ export default async function proxy(request: NextRequest) {
       .single()
 
     if (!tenant) {
-      // Invalid tenant slug - redirect to platform root
+      // Invalid tenant slug - redirect to platform root (skip for API routes)
+      if (pathname.startsWith('/api')) {
+        return NextResponse.json({ error: 'Invalid tenant' }, { status: 404 })
+      }
       const platformUrl = new URL('/', request.url)
       platformUrl.host = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || request.headers.get('host') || 'localhost:3000'
       return NextResponse.redirect(platformUrl)
     }
     tenantId = tenant.id
+  }
+
+  // For API routes: set tenant header and pass through (no intl/auth guards)
+  if (pathname.startsWith('/api')) {
+    const response = NextResponse.next()
+    response.headers.set('x-tenant-id', tenantId)
+    return response
   }
 
   // --- Intl Middleware ---
@@ -123,6 +133,9 @@ export default async function proxy(request: NextRequest) {
     '/creators',
     '/join-school',
     '/platform-pricing',
+    '/pricing',
+    '/verify',
+    '/courses',
   ]
 
   const isPublicRoute = publicRoutes.some(route =>
@@ -229,6 +242,6 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
