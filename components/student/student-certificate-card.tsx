@@ -62,7 +62,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                                <a href={certificate.pdf_url || `/api/certificates/${certificate.certificate_id}`} target="_blank" rel="noopener noreferrer">
+                                <a href={`/api/certificates/${certificate.certificate_id}?format=pdf`} download>
                                     <Button variant="outline" size="sm" className="h-9">
                                         <IconDownload className="mr-2 h-4 w-4" />
                                         {t('download')}

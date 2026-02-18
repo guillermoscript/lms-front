@@ -6,7 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { sendEmail } from '@/lib/email/send'
+import { certificateIssuedTemplate } from '@/lib/email/templates/certificate-issued'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +89,36 @@ export async function POST(request: NextRequest) {
       const result = await issueCertificate(studentId, courseId)
 
       if (result.success) {
+        // Send certificate issued email (non-blocking)
+        try {
+          const adminClient = createAdminClient()
+          const { data: authUser } = await adminClient.auth.admin.getUserById(studentId)
+          const { data: courseRow } = await supabase
+            .from('courses')
+            .select('title')
+            .eq('course_id', courseId)
+            .single()
+          const { data: tenantRow } = await adminClient
+            .from('tenants')
+            .select('name')
+            .eq('id', tenantId)
+            .single()
+
+          if (authUser?.user?.email && result.certificateId) {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+            const template = certificateIssuedTemplate({
+              studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
+              courseTitle: courseRow?.title || 'the course',
+              schoolName: tenantRow?.name || 'LMS Platform',
+              verifyUrl: `${appUrl}/verify/${result.certificateId}`,
+              downloadUrl: `${appUrl}/api/certificates/${result.certificateId}?format=pdf`,
+            })
+            await sendEmail({ to: authUser.user.email, ...template })
+          }
+        } catch (emailErr) {
+          console.error('Failed to send certificate email:', emailErr)
+        }
+
         return NextResponse.json({
           success: true,
           certificateId: result.certificateId,
@@ -251,6 +284,31 @@ async function simplifiedIssuance(
   if (insertError) {
     console.error('Certificate insert error:', insertError)
     return NextResponse.json({ error: 'Failed to issue certificate' }, { status: 500 })
+  }
+
+  // Send certificate issued email (non-blocking)
+  try {
+    const adminClient = createAdminClient()
+    const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
+    const { data: tenantRow } = await adminClient
+      .from('tenants')
+      .select('name')
+      .eq('id', tenantId)
+      .single()
+
+    if (authUser?.user?.email) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+      const template = certificateIssuedTemplate({
+        studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
+        courseTitle: course?.title || 'the course',
+        schoolName: tenantRow?.name || 'LMS Platform',
+        verifyUrl: `${appUrl}/verify/${certificate.verification_code}`,
+        downloadUrl: `${appUrl}/api/certificates/${certificate.certificate_id}?format=pdf`,
+      })
+      await sendEmail({ to: authUser.user.email, ...template })
+    }
+  } catch (emailErr) {
+    console.error('Failed to send certificate email:', emailErr)
   }
 
   return NextResponse.json({

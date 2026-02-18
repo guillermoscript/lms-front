@@ -61,6 +61,13 @@ export default async function VerificationPage({ params }: PageProps) {
     const isRevoked = !!certificate.revoked_at
     const primaryColor = certificate.certificate_templates?.design_settings?.primary_color || '#3B82F6'
 
+    // Course title may be null if the course was deleted — fall back to the snapshot in credential_json
+    const courseTitle =
+        certificate.courses?.title ||
+        (certificate.credential_json as any)?.credentialSubject?.achievement?.name ||
+        'Course'
+    const courseStillExists = !!certificate.courses?.course_id
+
     return (
         <div className="min-h-screen bg-muted/30 py-12 px-4">
             <div className="max-w-3xl mx-auto space-y-8">
@@ -85,7 +92,7 @@ export default async function VerificationPage({ params }: PageProps) {
                         <Badge variant="outline" className="mb-2 uppercase tracking-widest bg-emerald-50 text-emerald-700 border-emerald-200">
                             Verified Authenticity
                         </Badge>
-                        <CardTitle className="text-3xl font-black">{certificate.certificate_templates?.template_name || certificate.courses?.title}</CardTitle>
+                        <CardTitle className="text-3xl font-black">{certificate.certificate_templates?.template_name || courseTitle}</CardTitle>
                     </CardHeader>
 
                     <CardContent className="p-8 space-y-12">
@@ -99,7 +106,7 @@ export default async function VerificationPage({ params }: PageProps) {
                             <p className="text-lg text-muted-foreground px-8 leading-relaxed">
                                 has successfully completed the requirements for the course
                                 <br />
-                                <span className="font-bold text-foreground">"{certificate.courses?.title}"</span>
+                                <span className="font-bold text-foreground">"{courseTitle}"</span>
                             </p>
                         </div>
 
@@ -160,12 +167,14 @@ export default async function VerificationPage({ params }: PageProps) {
                                     {certificate.pdf_url ? 'Download Official PDF' : 'View Certificate'}
                                 </Button>
                             </a>
-                            <Link href={`/dashboard/student/courses/${certificate.courses?.course_id}`} className="flex-1">
-                                <Button variant="outline" className="w-full h-12 text-lg font-bold">
-                                    <IconCertificate className="mr-2" />
-                                    View Course Details
-                                </Button>
-                            </Link>
+                            {courseStillExists && (
+                                <Link href={`/dashboard/student/courses/${certificate.courses!.course_id}`} className="flex-1">
+                                    <Button variant="outline" className="w-full h-12 text-lg font-bold">
+                                        <IconCertificate className="mr-2" />
+                                        View Course Details
+                                    </Button>
+                                </Link>
+                            )}
                         </div>
                     </CardContent>
 
