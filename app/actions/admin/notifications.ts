@@ -58,11 +58,12 @@ export async function createNotification(data: NotificationData): Promise<Action
         return { success: false, error: 'Teachers can only create course notifications' }
       }
 
-      // Verify teacher owns the course
+      // Verify teacher owns the course (tenant-scoped)
       const { data: course } = await supabase
         .from('courses')
         .select('author_id')
         .eq('course_id', data.target_course_id)
+        .eq('tenant_id', tenantId)
         .single()
 
       if (!course || course.author_id !== user.id) {
@@ -133,21 +134,31 @@ export async function dispatchNotification(notificationId: number): Promise<Acti
     // Get target users based on target_type
     let userIds: string[] = []
 
+    // Use notification.tenant_id (from DB) to scope all user lookups
+    const notifTenantId = notification.tenant_id
+
     if (notification.target_type === 'all') {
+      // Only target users in THIS tenant, not all platform users
       const { data: users } = await adminClient
-        .from('profiles')
-        .select('id')
-      userIds = users?.map(u => u.id) || []
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', notifTenantId)
+        .eq('status', 'active')
+      userIds = users?.map(u => u.user_id) || []
     } else if (notification.target_type === 'role' && notification.target_roles) {
+      // Only target users with matching role in THIS tenant
       const { data: users } = await adminClient
-        .from('user_roles')
-        .select('user_id, roles!inner(role_name)')
-        .in('roles.role_name', notification.target_roles)
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', notifTenantId)
+        .eq('status', 'active')
+        .in('role', notification.target_roles)
       userIds = users?.map(u => u.user_id) || []
     } else if (notification.target_type === 'course' && notification.target_course_id) {
       const { data: enrollments } = await adminClient
         .from('enrollments')
         .select('user_id')
+        .eq('tenant_id', notifTenantId)
         .eq('course_id', notification.target_course_id)
         .eq('status', 'active')
       userIds = enrollments?.map(e => e.user_id) || []
@@ -198,14 +209,16 @@ export async function getNotifications(
     }
 
     const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
 
     let query = supabase
       .from('notifications')
       .select(`
         *,
-        created_by_user:profiles!notifications_created_by_fkey(full_name, email),
+        created_by_user:profiles!notifications_created_by_fkey(full_name),
         course:courses(title)
       `)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -463,6 +476,7 @@ export async function getNotificationStats(): Promise<ActionResponse> {
     }
 
     const adminClient = createAdminClient()
+    const tenantId = await getCurrentTenantId()
 
     const [
       { count: totalNotifications },
@@ -471,13 +485,14 @@ export async function getNotificationStats(): Promise<ActionResponse> {
       { count: draftNotifications },
       { data: recentNotifications },
     ] = await Promise.all([
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('status', 'sent'),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('status', 'scheduled'),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'sent'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'scheduled'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'draft'),
       adminClient
         .from('notifications')
         .select('id, title, status, created_at')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(5),
     ])
