@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type Stripe from 'stripe'
+import { sendEmail } from '@/lib/email/send'
+import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
 
 function getPlatformWebhookSecret(): string {
   const secret = process.env.STRIPE_PLATFORM_WEBHOOK_SECRET
@@ -145,6 +147,26 @@ export async function POST(req: NextRequest) {
             .single()
 
           if (newPlan) {
+            // Check downgrade limits before applying new plan
+            const limits = (newPlan as any).limits as { max_courses?: number; max_students?: number } | null
+            const maxCourses = limits?.max_courses ?? -1
+            const maxStudents = limits?.max_students ?? -1
+
+            if (maxCourses !== -1 || maxStudents !== -1) {
+              const [coursesRes, studentsRes] = await Promise.all([
+                adminClient.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('status', 'archived'),
+                adminClient.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
+              ])
+              const overCourses = maxCourses !== -1 && (coursesRes.count ?? 0) > maxCourses
+              const overStudents = maxStudents !== -1 && (studentsRes.count ?? 0) > maxStudents
+
+              if (overCourses || overStudents) {
+                console.error(`Plan downgrade blocked for tenant ${tenantId}: over course or student limits`)
+                // Don't update the plan — leave Stripe subscription active but don't change DB plan
+                break
+              }
+            }
+
             await adminClient
               .from('tenants')
               .update({ plan: newPlan.slug, updated_at: new Date().toISOString() })
@@ -233,6 +255,45 @@ export async function POST(req: NextRequest) {
             .from('tenants')
             .update({ billing_status: 'past_due', updated_at: new Date().toISOString() })
             .eq('id', sub.tenant_id)
+
+          // Email the school admin about the failed payment
+          try {
+            const { data: tenantRow } = await adminClient
+              .from('tenants')
+              .select('name')
+              .eq('id', sub.tenant_id)
+              .single()
+
+            const { data: adminUsers } = await adminClient
+              .from('tenant_users')
+              .select('user_id')
+              .eq('tenant_id', sub.tenant_id)
+              .eq('role', 'admin')
+              .eq('status', 'active')
+
+            const { data: planRow } = await adminClient
+              .from('platform_subscriptions')
+              .select('platform_plans(name)')
+              .eq('tenant_id', sub.tenant_id)
+              .single()
+
+            const planName = (planRow?.platform_plans as any)?.name || 'your plan'
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+
+            for (const admin of adminUsers || []) {
+              const { data: authUser } = await adminClient.auth.admin.getUserById(admin.user_id)
+              if (authUser?.user?.email) {
+                const template = paymentFailedTemplate({
+                  schoolName: tenantRow?.name || 'your school',
+                  planName,
+                  billingUrl: `${appUrl}/dashboard/admin/billing`,
+                })
+                await sendEmail({ to: authUser.user.email, ...template })
+              }
+            }
+          } catch (emailErr) {
+            console.error('Failed to send payment failed email:', emailErr)
+          }
         }
 
         break
@@ -247,11 +308,12 @@ export async function POST(req: NextRequest) {
 
         const { data: sub } = await adminClient
           .from('platform_subscriptions')
-          .select('tenant_id')
+          .select('tenant_id, status')
           .eq('stripe_subscription_id', subscriptionId)
           .single()
 
-        if (sub) {
+        // Idempotency: only update if not already active
+        if (sub && sub.status !== 'active') {
           await adminClient
             .from('platform_subscriptions')
             .update({ status: 'active', updated_at: new Date().toISOString() })
