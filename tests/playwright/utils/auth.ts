@@ -41,3 +41,18 @@ export async function loginAsTenantStudent(page: Page, baseUrl = TENANT_BASE) {
     baseUrl
   )
 }
+
+/**
+ * Login as super admin on the platform domain (lvh.me:3000).
+ * After login, navigates to /en/platform (does NOT wait for dashboard/**).
+ */
+export async function loginAsSuperAdmin(page: Page, baseUrl = BASE) {
+  await page.goto(`${baseUrl}/${LOCALE}/auth/login`)
+  await page.getByTestId('login-email').fill(ACCOUNTS.superAdmin.email)
+  await page.getByTestId('login-password').fill(ACCOUNTS.superAdmin.password)
+  await page.getByTestId('login-submit').click()
+  // Super admin lands on /dashboard/teacher — then navigate to platform
+  await page.waitForURL('**/dashboard/**', { timeout: 20_000 })
+  await page.goto(`${baseUrl}/${LOCALE}/platform`)
+  await page.waitForSelector('[data-testid="platform-overview"]', { timeout: 15_000 })
+}
