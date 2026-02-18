@@ -14,14 +14,18 @@ export function LessonContent({ content, videoUrl, embedCode }: LessonContentPro
   const [mdxResult, setMdxResult] = useState<SerializeResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Extract YouTube video ID if it's a YouTube URL
-  const getYouTubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-    const match = url.match(regExp)
-    return match && match[2].length === 11 ? match[2] : null
+  // Extract embed URL from YouTube or Vimeo URL
+  const getEmbedUrl = (url: string): string | null => {
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/[^/]+\/|groups\/[^/]+\/videos\/|video\/)?(\d+)/)
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
+    return null
   }
 
-  const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null
+  const videoEmbedUrl = videoUrl ? getEmbedUrl(videoUrl) : null
 
   // Compile MDX content on client
   useEffect(() => {
@@ -77,10 +81,10 @@ export function LessonContent({ content, videoUrl, embedCode }: LessonContentPro
   return (
     <div className="space-y-8">
       {/* Video embed */}
-      {youtubeId && (
+      {videoEmbedUrl && (
         <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}`}
+            src={videoEmbedUrl}
             title="Video"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -90,7 +94,7 @@ export function LessonContent({ content, videoUrl, embedCode }: LessonContentPro
       )}
 
       {/* Custom embed code */}
-      {embedCode && !youtubeId && (
+      {embedCode && !videoEmbedUrl && (
         <div
           className="aspect-video w-full overflow-hidden rounded-lg"
           dangerouslySetInnerHTML={{ __html: embedCode }}
@@ -125,7 +129,7 @@ export function LessonContent({ content, videoUrl, embedCode }: LessonContentPro
         </article>
       )}
 
-      {!content && !videoUrl && !embedCode && (
+      {!content && !videoEmbedUrl && !embedCode && (
         <div className="rounded-lg border bg-muted/50 p-8 text-center">
           <p className="text-muted-foreground">
             No content available for this lesson.

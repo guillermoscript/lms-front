@@ -41,6 +41,8 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
+import { useTenant } from "@/components/tenant/tenant-provider"
+import Image from "next/image"
 
 interface NavItem {
     title: string
@@ -56,6 +58,11 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
     const pathname = usePathname()
     const supabase = createClient()
     const t = useTranslations('sidebar')
+    const tenant = useTenant()
+
+    const schoolName = tenant?.name || t('platform')
+    const logoUrl = tenant?.logo_url
+    const initials = schoolName.slice(0, 2).toUpperCase()
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
@@ -116,11 +123,21 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                <IconSchool className="size-4" />
+                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground overflow-hidden">
+                                {logoUrl ? (
+                                    <Image
+                                        src={logoUrl}
+                                        alt={schoolName}
+                                        width={32}
+                                        height={32}
+                                        className="size-8 object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-xs font-bold">{initials}</span>
+                                )}
                             </div>
                             <div className="flex flex-col gap-0.5 leading-none">
-                                <span className="font-semibold" data-testid="sidebar-platform">{t('platform')}</span>
+                                <span className="font-semibold" data-testid="sidebar-platform">{schoolName}</span>
                                 <span className="text-xs text-muted-foreground uppercase" data-testid="sidebar-role">{userRole || t('guest')}</span>
                             </div>
                         </SidebarMenuButton>
