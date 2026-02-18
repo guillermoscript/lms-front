@@ -40,20 +40,53 @@ interface Course {
 const course: any = ...
 ```
 
-### Database Queries
+### Database Queries (Multi-Tenant)
+
+**Every query MUST filter by `tenant_id`** — RLS enforces this at the DB level, but explicit filters are required for correctness and clarity:
 
 ```typescript
-// ✅ GOOD: Direct query with RLS
+// ✅ GOOD: Direct query with RLS + tenant filter
+import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
 const { data } = await supabase
   .from('courses')
   .select('*, lessons(count)')
+  .eq('tenant_id', tenantId)
   .eq('status', 'published')
 
-// ❌ BAD: Server action for simple query
+// ❌ BAD: Missing tenant filter — will return empty or wrong data
+const { data } = await supabase
+  .from('courses')
+  .select('*')
+  .eq('status', 'published')
+
+// ❌ BAD: Server action for simple read query
 async function getCourses() {
   'use server'
   // ... complex server action for simple query
 }
+```
+
+**Three Supabase clients:**
+
+| Client | Import | Use For |
+|--------|--------|---------|
+| `createClient()` | `@/lib/supabase/server` | Server components, route handlers (respects RLS) |
+| `createClient()` | `@/lib/supabase/client` | Client components (respects RLS) |
+| `createAdminClient()` | `@/lib/supabase/admin` | Bypass RLS — admin ops, public pages, cross-tenant queries |
+
+**When using `createAdminClient()`**, always validate tenant ownership manually:
+```typescript
+const adminClient = createAdminClient()
+const { data: resource } = await adminClient
+  .from('products')
+  .select('tenant_id')
+  .eq('product_id', id)
+  .single()
+if (resource.tenant_id !== tenantId) throw new Error('Access denied')
 ```
 
 ### Component Structure
@@ -252,32 +285,43 @@ export default async function Page() {
 ### Key Relationships
 
 ```
-users (auth.users)
+auth.users
   ↓
-profiles (auto-created)
+profiles (auto-created, GLOBAL — no tenant_id)
   ↓
-user_roles (assigned role)
+tenant_users (per-tenant role: student/teacher/admin — AUTHORITATIVE for roles)
   ↓
-enrollments (course access)
+enrollments (course access, has tenant_id)
   ↓
-courses
+products → product_courses → courses (tenant-scoped)
   ↓
-lessons, exercises, exams
+lessons, exercises, exams (tenant-scoped)
 ```
+
+**Important:** `tenant_users` is the authoritative source for roles, NOT `user_roles` or JWT claims.
 
 ### Key Functions to Know
 
-1. **`enroll_user(user_id, product_id)`**
-   - Enrolls user in courses linked to product
+1. **`enroll_user(_user_id, _product_id)`**
+   - Enrolls user in ALL courses linked to product (loops through `product_courses`)
+   - Sets `status = 'active'` and inherits `tenant_id` from product
    - Called automatically on successful payment
 
-2. **`create_exam_submission(student_id, exam_id, answers)`**
+2. **`get_plan_features(_tenant_id)`**
+   - Returns plan info, features (JSONB), and limits for the tenant
+   - Single source of truth for feature gating
+   - `SECURITY DEFINER` — works regardless of caller's RLS context
+
+3. **`create_exam_submission(student_id, exam_id, answers)`**
    - Creates exam submission
    - Returns submission ID
 
-3. **`save_exam_feedback(submission_id, ...)`**
+4. **`save_exam_feedback(submission_id, ...)`**
    - Saves AI feedback to exam
    - Updates score and marks as reviewed
+
+5. **`award_xp(p_user_id, p_action_type, p_reference_id)`**
+   - Awards XP for gamification actions
 
 ### Querying with Relations
 
@@ -301,12 +345,17 @@ const { data } = await supabase
 
 ### Check Auth State
 ```typescript
-const { data: { session } } = await supabase.auth.getSession()
-console.log('Session:', session)
-
+// ✅ CORRECT: Server-verified authentication
 const { data: { user } } = await supabase.auth.getUser()
 console.log('User:', user)
-console.log('User role:', user?.app_metadata?.user_role)
+
+// Get role from tenant_users (authoritative)
+import { getUserRole } from '@/lib/supabase/get-user-role'
+const role = await getUserRole()
+console.log('Tenant role:', role)
+
+// ❌ AVOID: getSession() reads unverified JWT — DO NOT use for auth decisions
+// Only proxy.ts uses getSession() (compensates with tenant_users lookup)
 ```
 
 ### Check Database Query
@@ -322,10 +371,18 @@ console.log('Error:', error) // Will show RLS policy violations
 
 ### Check RLS Policies
 If query returns empty when it shouldn't:
-1. Check if user is authenticated: `await supabase.auth.getUser()`
+1. Check if user is authenticated: `await supabase.auth.getUser()` (NOT `getSession()`)
 2. Check if RLS is blocking: Look at error message
-3. Verify user has required enrollment/role
-4. Test with service role key to bypass RLS (temporarily, for debugging only)
+3. Verify user has `tenant_users` membership for the current tenant
+4. Verify user has required enrollment/role
+5. Test with `createAdminClient()` to bypass RLS (temporarily, for debugging only)
+
+**RLS is enabled on ALL tenant-scoped tables** (65+ tables). Standard policy pattern:
+- SELECT: users who are members of the tenant (checked via `tenant_users`)
+- INSERT/UPDATE/DELETE: users with `teacher` or `admin` role in the tenant
+- Special cases: students can INSERT own `enrollments`, `lesson_completions`, `exam_submissions`
+
+**Public pages** (e.g. `/verify/[code]`, `/platform-pricing`) must use `createAdminClient()` since unauthenticated users get blocked by RLS.
 
 ## 🤖 AI-Specific Instructions
 
@@ -444,9 +501,10 @@ See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes
 - `lib/currency.ts` for multi-currency support
 
 **Database queries** → Check:
-- DATABASE_SCHEMA.md for table structure
+- DATABASE_SCHEMA.md for table structure and RLS policy patterns
 - Existing queries in similar components
-- RLS policy documentation (when available)
+- Always include `.eq('tenant_id', tenantId)` on tenant-scoped tables
+- Use `createAdminClient()` only for admin ops or public pages (validate tenant ownership manually)
 
 **UI components** → Check:
 - `components/ui/` for Shadcn components

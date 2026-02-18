@@ -4,7 +4,7 @@
 
 ## 📊 Overview
 
-The LMS database is built on PostgreSQL 15 via Supabase. It consists of 59+ tables organized into logical domains:
+The LMS database is built on PostgreSQL 15 via Supabase. It consists of 65+ tables organized into logical domains:
 
 - **User Management**: profiles, roles, permissions
 - **Multi-Tenancy**: tenants, tenant_users, tenant_settings, super_admins
@@ -542,15 +542,47 @@ CREATE TABLE reviews (
 ```
 
 #### `notifications`
-User notifications
+Admin-created notifications dispatched to users
 
 ```sql
 CREATE TABLE notifications (
-  id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  notification_type VARCHAR(100),
-  message TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT FALSE,
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  notification_type TEXT NOT NULL, -- 'announcement', 'alert', 'info', 'success', 'warning', 'error', 'certificate_issued'
+  priority TEXT DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+  target_type TEXT DEFAULT 'all', -- 'all', 'role', 'course', 'user', 'custom'
+  target_roles TEXT[],
+  target_course_id BIGINT REFERENCES courses(course_id),
+  target_user_ids UUID[],
+  delivery_channels TEXT[] DEFAULT ARRAY['in_app'],
+  scheduled_for TIMESTAMPTZ,
+  sent_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  status TEXT DEFAULT 'draft', -- 'draft', 'scheduled', 'sent', 'cancelled'
+  created_by UUID REFERENCES auth.users(id),
+  template_id BIGINT,
+  metadata JSONB,
+  tenant_id UUID REFERENCES tenants(id), -- Added: tenant scoping
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+```
+
+#### `user_notifications`
+Per-user notification delivery tracking
+
+```sql
+CREATE TABLE user_notifications (
+  id BIGSERIAL PRIMARY KEY,
+  notification_id BIGINT REFERENCES notifications(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  in_app_read BOOLEAN DEFAULT FALSE,
+  in_app_read_at TIMESTAMPTZ,
+  email_sent BOOLEAN DEFAULT FALSE,
+  push_sent BOOLEAN DEFAULT FALSE,
+  dismissed BOOLEAN DEFAULT FALSE,
+  dismissed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 )
 ```
@@ -730,15 +762,46 @@ SELECT * FROM get_plan_features('tenant-uuid-here');
 
 ---
 
-## 🔒 RLS Policies (To Be Implemented)
+## 🔒 Row Level Security (RLS)
 
-See [RLS_POLICIES.md](./RLS_POLICIES.md) for detailed policies.
+RLS is enabled on **all tenant-scoped tables**. Every table with a `tenant_id` column has RLS policies that scope access to the user's tenant via the `tenant_users` table.
+
+### Tables with RLS Enabled
+
+**Core content tables** (enabled Feb 2026):
+`courses`, `lessons`, `exercises`, `exams`, `exam_submissions`, `enrollments`, `transactions`, `products`, `plans`, `product_courses`, `subscriptions`, `course_categories`
+
+**Already had RLS**:
+`profiles`, `tenant_users`, `tenants`, `tenant_settings`, `super_admins`, `notifications`, `user_notifications`, `payment_requests`, `revenue_splits`, `invoices`, `payouts`, `certificates`, `certificate_templates`, `lesson_completions`, `comments`, `reviews`, `messages`, all `gamification_*` tables, `platform_plans`, `platform_subscriptions`, `platform_payment_requests`
+
+### RLS Policy Pattern
+
+All tenant-scoped tables follow this pattern:
+
+```sql
+-- SELECT: users in the tenant can read
+CREATE POLICY "Users in tenant can view"
+  ON table_name FOR SELECT
+  USING (tenant_id IN (
+    SELECT tu.tenant_id FROM tenant_users tu
+    WHERE tu.user_id = auth.uid() AND tu.status = 'active'
+  ));
+
+-- ALL: teachers/admins can manage
+CREATE POLICY "Teachers and admins can manage"
+  ON table_name FOR ALL
+  USING (tenant_id IN (
+    SELECT tu.tenant_id FROM tenant_users tu
+    WHERE tu.user_id = auth.uid() AND tu.role IN ('teacher', 'admin') AND tu.status = 'active'
+  ));
+```
 
 **Key Principles**:
 - Students can only read published content in enrolled courses
 - Teachers can manage their own content
-- Admins have full access
+- Admins have full access within their tenant
 - Users can only update their own profile
+- `createAdminClient()` bypasses RLS — always validate tenant ownership manually
 
 ---
 

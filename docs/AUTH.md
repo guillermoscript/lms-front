@@ -96,6 +96,22 @@ const { data: { user } } = await supabase.auth.getUser()
 await supabase.auth.signOut()
 ```
 
+## 🔐 getUser() vs getSession() — Security Critical
+
+**Always use `getUser()` in server components and server actions** — it makes a server-verified call to Supabase Auth. Never use `getSession()` for auth decisions as it reads unverified JWT from cookies (can be tampered with).
+
+```typescript
+// ✅ CORRECT: Server-verified authentication
+const { data: { user } } = await supabase.auth.getUser()
+
+// ❌ WRONG: Reads unverified JWT from cookies — DO NOT use for auth decisions
+const { data: { session } } = await supabase.auth.getSession()
+```
+
+**Exception:** `proxy.ts` (middleware) uses `getSession()` for performance since `getUser()` adds latency per request. It compensates by double-checking the `tenant_users` table for role resolution.
+
+**`isSuperAdmin()`** queries the `super_admins` table directly — it does NOT trust JWT `is_super_admin` claims.
+
 ## 🛡️ Authorization
 
 ### JWT Claims Structure

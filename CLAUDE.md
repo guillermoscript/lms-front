@@ -68,7 +68,7 @@ After a tenant switch, **always call `supabase.auth.refreshSession()`** to get u
 
 ### Database Query Pattern
 
-**All queries must filter by tenant_id** — RLS enforces this at DB level too, but explicit filters are required:
+**All queries must filter by tenant_id** — RLS is enabled on ALL tenant-scoped tables (courses, enrollments, transactions, products, exams, exercises, lessons, plans, product_courses, subscriptions, course_categories, exam_submissions, and more). Explicit filters are still required for clarity and performance:
 
 ```typescript
 // ✅ Correct — server component
@@ -87,7 +87,7 @@ const { data } = await supabase.from('courses').select('*')
 **Client imports:**
 - Server components / Route Handlers → `@/lib/supabase/server`
 - Client components → `@/lib/supabase/client`
-- Admin operations (bypass RLS) → `createAdminClient()` from `@/lib/supabase/server`
+- Admin operations (bypass RLS) → `createAdminClient()` from `@/lib/supabase/admin`
 
 **When using `createAdminClient()` in server actions**, manually validate tenant ownership before writes:
 ```typescript
@@ -131,13 +131,13 @@ Two flows, both produce a `transaction` record and call `enroll_user()` RPC on s
 
 All app routes live under `app/[locale]/`. The `[locale]` segment is always present (`/en/`, `/es/`).
 
-Public routes (no auth required): `/auth/*`, `/`, `/create-school`, `/creators`, `/join-school`
+Public routes (no auth required): `/auth/*`, `/`, `/create-school`, `/creators`, `/join-school`, `/platform-pricing`, `/pricing`, `/courses`, `/verify`
 
 Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dashboard/admin`
 
 ### Database Schema Essentials
 
-**56 tables total.** Key groups:
+**65+ tables total.** Key groups:
 
 | Group | Tables |
 |-------|--------|
@@ -147,9 +147,10 @@ Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dash
 | Progress | `enrollments`, `lesson_completions`, `exam_submissions` |
 | Commerce | `products`, `plans`, `transactions`, `subscriptions`, `payment_requests` |
 | Revenue | `revenue_splits`, `payouts`, `invoices` |
+| Platform Billing | `platform_plans`, `platform_subscriptions`, `platform_payment_requests` |
 | Gamification | 12 tables: `gamification_profiles`, `xp_transactions`, `levels`, `achievements`, `user_achievements`, `store_items`, `redemptions`, `challenges`, `challenge_participants`, `leaderboard_cache`, `daily_caps`, `user_rewards` |
 | Certificates | `certificates`, `certificate_templates` |
-| Notifications | `notifications` |
+| Notifications | `notifications` (has tenant_id), `user_notifications`, `notification_templates`, `notification_preferences` |
 
 **`profiles` and `gamification_levels` are global** (no `tenant_id` column).
 
@@ -160,17 +161,31 @@ supabase.rpc('handle_new_subscription', { _user_id, _plan_id })
 supabase.rpc('award_xp', { p_user_id, p_action_type, p_reference_id })
 supabase.rpc('create_exam_submission', { student_id, exam_id, answers })
 supabase.rpc('save_exam_feedback', { submission_id, exam_id, student_id, answers, overall_feedback, score })
+supabase.rpc('get_plan_features', { _tenant_id })  // Returns plan features/limits for billing
 ```
 
 **`product_courses`** can have multiple rows per course (one course → many products). Never use `.single()` on it.
 
-### Plan Limits
+### Plan Limits & Feature Gating
 
-Enforced in `app/actions/teacher/courses.ts`:
-- `free` → 5 courses
-- `basic` → 20 courses
-- `professional` → 100 courses
-- `enterprise` → unlimited
+Plan limits are stored in `platform_plans` table (JSONB `limits` column) and enforced dynamically:
+- `free` → 5 courses, 50 students, 10% transaction fee
+- `starter` → 15 courses, 200 students, 5% fee ($9/mo)
+- `pro` → 100 courses, 1000 students, 2% fee ($29/mo)
+- `business` → unlimited courses/students, 0% fee ($79/mo)
+- `enterprise` → unlimited, 0% fee ($199/mo)
+
+Feature gating uses `get_plan_features(_tenant_id)` RPC as single source of truth. Client hook: `usePlanFeatures()` from `lib/hooks/use-plan-features.ts`. Component: `<FeatureGate feature="..." />` from `components/shared/feature-gate.tsx`.
+
+### Payment Architecture — Two Stripe Integrations
+
+| | School Billing (Platform) | Student Payments (Connect) |
+|--|--|--|
+| **Who pays** | School admin pays platform | Student pays school |
+| **Stripe mode** | Stripe Billing (Checkout + Subscriptions) | Stripe Connect (PaymentIntents) |
+| **Webhook** | `/api/stripe/platform-webhook` | `/api/stripe/webhook` |
+| **Env var** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
+| **Customer ID** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
 
 ## Environment Variables
 
@@ -180,7 +195,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=         # Bypasses RLS — admin ops only
 STRIPE_SECRET_KEY=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=
+STRIPE_WEBHOOK_SECRET=             # For Connect webhook (student payments)
+STRIPE_PLATFORM_WEBHOOK_SECRET=    # For Billing webhook (school plan payments)
 NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lmsplatform.com (for subdomain routing)
 ```
 
@@ -205,12 +221,21 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - **Creating test users via SQL** won't fire `handle_new_user()` trigger — manually insert `profiles`, `user_roles`, and `auth.identities`. Use `NULL` for `phone` (unique constraint), `''` for nullable string columns.
 - **`proxy.ts` is the only middleware** — do not create `middleware.ts` (conflict).
 - **After tenant switch**, call `supabase.auth.refreshSession()` to update JWT claims.
+- **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`.
+- **Button component** uses `@base-ui/react` — no `asChild` prop. Wrap `<Link>` around `<Button>` instead.
+- **Stripe API v2025** types need `any` casts for `Subscription` and `Invoice` objects (type breaking changes).
+- **`getUserRole()` uses `getUser()`** (server-verified), NOT `getSession()` (reads unverified JWT from cookies).
+- **`isSuperAdmin()` queries `super_admins` table** directly — does NOT trust JWT claims.
+- **API routes get tenant context** via `proxy.ts` — the `x-tenant-id` header is set for all routes including `/api/*`.
+- **`enroll_user()` RPC** loops through ALL courses per product (FOR loop) — a product can have multiple courses via `product_courses`.
+- **Transactions unique constraint** is a partial index on `(user_id, product_id, plan_id) WHERE status IN ('pending', 'successful')` — allows retries after failed payments.
 
 ## Key Documentation
 
 - `docs/DATABASE_SCHEMA.md` — complete schema with relationships
 - `docs/AUTH.md` — auth flows
 - `docs/AI_AGENT_GUIDE.md` — detailed patterns
+- `docs/MONETIZATION.md` — school billing, feature gating, LATAM payments, revenue dashboard
 - `docs/FEBRUARY_2026_IMPLEMENTATION_SUMMARY.md` — full record of multi-tenant SaaS implementation
 - `MULTI_TENANT_IMPLEMENTATION_SUMMARY.md` — multi-tenant architecture deep dive
 - `E2E_TESTING_AND_SECURITY_AUDIT_PLAN.md` — 47 test scenarios with steps
