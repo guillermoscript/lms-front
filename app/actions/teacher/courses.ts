@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
+import { sendEmail } from '@/lib/email/send'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Fallback plan limits (used if platform_plans table query fails)
 const PLAN_LIMITS_FALLBACK: Record<string, number> = {
@@ -194,5 +196,130 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
 
   revalidatePath('/dashboard/teacher/courses')
   revalidatePath(`/dashboard/teacher/courses/${courseId}`)
+  return { success: true }
+}
+
+/**
+ * Check enrollment count before deleting a course.
+ * Returns { enrollmentCount, canDelete } for the UI to decide.
+ */
+export async function getCourseEnrollmentCount(courseId: number) {
+  const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
+
+  const { count } = await supabase
+    .from('enrollments')
+    .select('*', { count: 'exact', head: true })
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+
+  return { enrollmentCount: count ?? 0 }
+}
+
+/**
+ * Archive a course (safe alternative to delete — enrolled students keep access).
+ */
+export async function archiveCourse(courseId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+
+  if (!user) throw new Error('Not authenticated')
+  if (role !== 'teacher' && role !== 'admin') throw new Error('Unauthorized')
+
+  const { data: existingCourse } = await supabase
+    .from('courses')
+    .select('author_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!existingCourse) throw new Error('Course not found')
+  if (role !== 'admin' && existingCourse.author_id !== user.id) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('courses')
+    .update({ status: 'archived' })
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+
+  if (error) throw new Error('Failed to archive course')
+
+  revalidatePath('/dashboard/teacher/courses')
+  revalidatePath(`/dashboard/teacher/courses/${courseId}`)
+  return { success: true }
+}
+
+/**
+ * Delete a course. Sends email to enrolled students if any.
+ * Requires explicit confirmation — use getCourseEnrollmentCount first to warn the UI.
+ */
+export async function deleteCourse(courseId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = await getUserRole()
+  const tenantId = await getCurrentTenantId()
+
+  if (!user) throw new Error('Not authenticated')
+  if (role !== 'teacher' && role !== 'admin') throw new Error('Unauthorized')
+
+  // Verify ownership
+  const { data: course } = await supabase
+    .from('courses')
+    .select('course_id, author_id, title, tenant_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!course) throw new Error('Course not found')
+  if (role !== 'admin' && course.author_id !== user.id) throw new Error('Unauthorized')
+
+  // Notify enrolled students before deleting
+  try {
+    const adminClient = createAdminClient()
+    const { data: enrollments } = await adminClient
+      .from('enrollments')
+      .select('user_id')
+      .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+
+    const { data: tenantRow } = await adminClient
+      .from('tenants')
+      .select('name')
+      .eq('id', tenantId)
+      .single()
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+
+    for (const enrollment of enrollments || []) {
+      const { data: authUser } = await adminClient.auth.admin.getUserById(enrollment.user_id)
+      if (authUser?.user?.email) {
+        await sendEmail({
+          to: authUser.user.email,
+          subject: `Course "${course.title}" has been removed — ${tenantRow?.name || 'LMS Platform'}`,
+          html: `<p>Hi,</p><p>The course <strong>${course.title}</strong> that you were enrolled in has been removed from ${tenantRow?.name || 'the platform'}. We're sorry for any inconvenience.</p><p><a href="${appUrl}/dashboard/student/browse">Browse other courses</a></p>`,
+        })
+      }
+    }
+  } catch (emailErr) {
+    console.error('Failed to notify students of course deletion:', emailErr)
+  }
+
+  // Delete the course (cascade will handle lessons, exams, etc.)
+  const { error } = await supabase
+    .from('courses')
+    .delete()
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    console.error('Failed to delete course:', error)
+    throw new Error('Failed to delete course')
+  }
+
+  revalidatePath('/dashboard/teacher/courses')
   return { success: true }
 }

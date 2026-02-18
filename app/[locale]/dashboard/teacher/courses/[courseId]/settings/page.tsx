@@ -7,6 +7,8 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
+import { Separator } from '@/components/ui/separator'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -84,6 +86,17 @@ export default async function CourseSettingsPage({ params }: PageProps) {
           categories={categories || []}
           initialData={course as any}
         />
+
+        <Separator className="my-8" />
+
+        {/* Danger Zone */}
+        <div className="rounded-lg border border-destructive/30 p-6">
+          <h2 className="text-lg font-semibold text-destructive mb-1">Danger Zone</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Deleting a course is permanent and cannot be undone. Students who are enrolled will lose access immediately.
+          </p>
+          <CourseDeleteButton courseId={parseInt(courseId)} courseTitle={course.title} />
+        </div>
       </div>
     </div>
   )
