@@ -4,6 +4,8 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
@@ -30,7 +32,29 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // redirect user to specified redirect URL or root of app
+      // Smart redirect for new signups based on context
+      if (type === 'signup' && user) {
+        // Check if user already has active school memberships
+        const { data: memberships } = await supabase
+          .from('tenant_users')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(1)
+
+        if ((memberships ?? []).length > 0) {
+          // Already set up → go to dashboard
+          redirect('/dashboard/student')
+        } else if (tenantId === DEFAULT_TENANT_ID) {
+          // Main platform → prompt to create a school
+          redirect('/create-school')
+        } else {
+          // School subdomain → join that school
+          redirect('/join-school')
+        }
+      }
+
+      // For recovery and other OTP types, use the next param
       redirect(next)
     } else {
       // redirect the user to an error page with some instructions
