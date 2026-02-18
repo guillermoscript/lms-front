@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 /**
@@ -70,21 +71,20 @@ export async function getUserTenantId(): Promise<string | null> {
 }
 
 /**
- * Check if current user is a super admin from JWT claims
+ * Check if current user is a super admin by querying the super_admins table directly.
+ * Does NOT trust JWT claims to prevent privilege escalation.
  */
 export async function isSuperAdmin(): Promise<boolean> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const adminClient = createAdminClient()
+  const { data } = await adminClient
+    .from('super_admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
-  if (!session) return false
-
-  try {
-    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
-    return payload.is_super_admin === true
-  } catch {
-    return false
-  }
+  return !!data
 }
