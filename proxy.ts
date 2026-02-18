@@ -4,6 +4,29 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+async function checkSuperAdmin(userId: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/super_admins?user_id=eq.${userId}&select=user_id&limit=1`,
+      {
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          Accept: 'application/json',
+        },
+      }
+    )
+    if (!res.ok) return false
+    const rows = await res.json()
+    return Array.isArray(rows) && rows.length > 0
+  } catch {
+    return false
+  }
+}
+
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 // Strip port from domain for hostname comparisons
@@ -214,6 +237,23 @@ export default async function proxy(request: NextRequest) {
     if (membership?.role) {
       userRole = membership.role as 'student' | 'teacher' | 'admin'
     }
+  }
+
+  // Super admin platform guard — /platform/* requires super_admins membership
+  if (normalizedPath.startsWith('/platform')) {
+    const isSA = await checkSuperAdmin(session.user.id)
+    if (!isSA) {
+      const loginUrl = new URL(`/${locale}/auth/login`, request.url)
+      return NextResponse.redirect(loginUrl)
+    }
+    // Allow super admin through — bypass tenant membership checks
+    const finalPlatformResponse = intlResponse
+    const supabasePlatformCookies = supabaseResponse.headers.get('set-cookie')
+    if (supabasePlatformCookies) {
+      finalPlatformResponse.headers.set('set-cookie', supabasePlatformCookies)
+    }
+    finalPlatformResponse.headers.set('x-tenant-id', tenantId)
+    return finalPlatformResponse
   }
 
   // Role Checks
