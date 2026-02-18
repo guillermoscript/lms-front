@@ -8,7 +8,7 @@ export default async function UpgradePage() {
   ])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="upgrade-page">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Upgrade Your Plan</h1>
         <p className="text-muted-foreground">

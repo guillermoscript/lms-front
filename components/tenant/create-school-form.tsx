@@ -78,6 +78,7 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
             <Label htmlFor="name" className="text-zinc-300">School Name</Label>
             <Input
               id="name"
+              data-testid="create-school-name"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="My Awesome Academy"
@@ -91,6 +92,7 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
             <div className="flex items-center gap-0">
               <Input
                 id="slug"
+                data-testid="create-school-slug"
                 value={slug}
                 onChange={(e) => setSlug(generateSlug(e.target.value))}
                 placeholder="my-academy"
@@ -112,6 +114,7 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
           <Button
             type="submit"
             className="w-full"
+            data-testid="create-school-submit"
             disabled={loading || !name.trim() || !slug.trim()}
           >
             {loading ? 'Creating...' : 'Create School'}

@@ -49,7 +49,7 @@ export default async function TeacherCoursesPage() {
     const coursesList = courses || []
 
     return (
-        <div className="flex-1 space-y-8 p-8 pt-6">
+        <div className="flex-1 space-y-8 p-8 pt-6" data-testid="teacher-courses-list">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight text-foreground">

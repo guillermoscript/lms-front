@@ -72,7 +72,7 @@ export default async function RevenuePage() {
   const isStripeConnected = !!tenant?.stripe_account_id
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-8" data-testid="revenue-page">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Revenue Dashboard</h1>
         <p className="text-muted-foreground mt-2">

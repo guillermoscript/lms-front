@@ -95,7 +95,7 @@ export default async function ProfilePage() {
         new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(amount)
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="min-h-screen bg-background pb-20" data-testid="profile-page">
             <main className="container mx-auto px-4 md:px-8 py-8 md:py-12">
                 {/* Page Header */}
                 <div className="mb-8">

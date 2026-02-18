@@ -39,7 +39,7 @@ export default async function SettingsPage() {
   const settings = result.data
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6 p-8" data-testid="settings-page">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>

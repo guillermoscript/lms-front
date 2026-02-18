@@ -118,7 +118,7 @@ export default function PromptTemplatesPage() {
   )
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
+    <div className="flex-1 space-y-8 p-8 pt-6" data-testid="templates-page">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Prompt Templates</h2>

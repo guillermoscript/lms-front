@@ -41,7 +41,7 @@ export default async function NotificationsPage() {
   const draftNotifications = allNotifications.filter((n: any) => n.status === 'draft')
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6 p-8" data-testid="notifications-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

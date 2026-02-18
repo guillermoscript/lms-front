@@ -252,7 +252,7 @@ export default async function AnalyticsPage({
   const periodLabel = t(`periodLabels.${period === '7' ? 'last7days' : period === '30' ? 'last30days' : period === '90' ? 'last90days' : period === '365' ? 'lastYear' : 'generic'}`, { days: period })
 
   return (
-    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8" data-testid="analytics-page">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>

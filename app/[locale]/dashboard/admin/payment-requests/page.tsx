@@ -68,7 +68,7 @@ export default async function PaymentRequestsPage({
     .reduce((sum, r) => sum + (Number(r.payment_amount) || 0), 0)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-testid="payment-requests-page">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

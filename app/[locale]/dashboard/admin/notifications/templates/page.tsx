@@ -21,7 +21,7 @@ export default async function NotificationTemplatesPage() {
   const templates = result.success ? result.data : []
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6 p-8" data-testid="notification-templates-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

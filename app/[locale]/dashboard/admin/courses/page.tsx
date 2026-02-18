@@ -62,7 +62,7 @@ export default async function AdminCoursesPage() {
   const draftCount = courses?.filter((c) => c.status === 'draft').length || 0
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-testid="admin-courses-page">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

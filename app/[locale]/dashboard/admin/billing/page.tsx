@@ -8,7 +8,7 @@ export default async function BillingPage() {
   ])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="billing-page">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
         <p className="text-muted-foreground">
