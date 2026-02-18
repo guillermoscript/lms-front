@@ -3,7 +3,8 @@ import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TenantProvider } from "@/components/tenant/tenant-provider";
+import { TenantProvider } from "@/components/tenant/tenant-provider"
+import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
@@ -93,6 +94,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TenantProvider tenant={tenantInfo}>
+              <TenantCssVars />
               {children}
               <Toaster />
             </TenantProvider>
