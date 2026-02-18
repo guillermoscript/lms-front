@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# playwright MCP session artifacts
+.playwright-mcp/
+
+# temporary screenshots
+landing-*.png
 
 # vercel
 .vercel
