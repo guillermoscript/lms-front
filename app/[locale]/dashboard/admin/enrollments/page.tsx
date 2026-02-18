@@ -18,10 +18,11 @@ import {
 } from '@tabler/icons-react'
 
 export default async function AdminEnrollmentsPage({
-  params: { locale }
+  params,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.enrollments')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()

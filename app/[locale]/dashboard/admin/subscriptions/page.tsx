@@ -25,12 +25,13 @@ interface SearchParams {
 }
 
 export default async function SubscriptionsPage({
-  params: { locale },
+  params,
   searchParams,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
   searchParams: SearchParams
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.subscriptions')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()

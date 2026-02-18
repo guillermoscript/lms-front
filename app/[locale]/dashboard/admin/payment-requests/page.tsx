@@ -11,10 +11,11 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
 
 export default async function PaymentRequestsPage({
-  params: { locale }
+  params,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const supabase = await createClient()
   const role = await getUserRole()

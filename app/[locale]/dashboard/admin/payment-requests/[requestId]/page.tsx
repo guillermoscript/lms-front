@@ -13,13 +13,14 @@ import { format } from 'date-fns'
 import { PaymentRequestActions } from '@/components/admin/payment-request-actions'
 
 interface PageProps {
-  params: {
+  params: Promise<{
     locale: string
     requestId: string
-  }
+  }>
 }
 
 export default async function PaymentRequestDetailPage({ params }: PageProps) {
+  const { requestId } = await params
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const supabase = await createClient()
   const role = await getUserRole()
@@ -68,7 +69,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
         full_name
       )
     `)
-    .eq('request_id', params.requestId)
+    .eq('request_id', requestId)
     .eq('tenant_id', tenantId)
     .single()
 

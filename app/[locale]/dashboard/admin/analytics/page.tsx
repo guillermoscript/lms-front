@@ -19,12 +19,13 @@ interface SearchParams {
 }
 
 export default async function AnalyticsPage({
-  params: { locale },
+  params,
   searchParams,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
   searchParams: SearchParams
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.analytics')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()

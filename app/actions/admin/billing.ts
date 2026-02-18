@@ -186,6 +186,54 @@ export async function getManualPaymentRequests() {
 }
 
 /**
+ * Check if downgrading to a target plan would violate usage limits.
+ * Returns null if OK, or an error message string if over limits.
+ */
+async function checkDowngradeLimits(
+  adminClient: Awaited<ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>>,
+  tenantId: string,
+  targetPlanId: string,
+): Promise<string | null> {
+  const [planResult, coursesResult, studentsResult] = await Promise.all([
+    adminClient
+      .from('platform_plans')
+      .select('name, limits')
+      .eq('plan_id', targetPlanId)
+      .single(),
+    adminClient
+      .from('courses')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .neq('status', 'archived'),
+    adminClient
+      .from('tenant_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('role', 'student')
+      .eq('status', 'active'),
+  ])
+
+  const plan = planResult.data
+  if (!plan) return null
+
+  const limits = plan.limits as { max_courses?: number; max_students?: number } | null
+  const maxCourses = limits?.max_courses ?? -1
+  const maxStudents = limits?.max_students ?? -1
+  const currentCourses = coursesResult.count ?? 0
+  const currentStudents = studentsResult.count ?? 0
+
+  const errors: string[] = []
+  if (maxCourses !== -1 && currentCourses > maxCourses) {
+    errors.push(`You have ${currentCourses} active courses but the ${plan.name} plan allows ${maxCourses}. Archive ${currentCourses - maxCourses} course(s) before downgrading.`)
+  }
+  if (maxStudents !== -1 && currentStudents > maxStudents) {
+    errors.push(`You have ${currentStudents} students but the ${plan.name} plan allows ${maxStudents}.`)
+  }
+
+  return errors.length > 0 ? errors.join(' ') : null
+}
+
+/**
  * Super admin: confirm a manual bank transfer and activate the plan
  */
 export async function confirmManualPayment(requestId: string) {
@@ -215,6 +263,10 @@ export async function confirmManualPayment(requestId: string) {
   if (request.status === 'confirmed') throw new Error('Already confirmed')
 
   const plan = request.platform_plans as { slug: string; transaction_fee_percent: number }
+
+  // Check downgrade limits before activating
+  const limitError = await checkDowngradeLimits(adminClient, request.tenant_id, request.plan_id)
+  if (limitError) throw new Error(limitError)
 
   // Update request status
   await adminClient

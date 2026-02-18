@@ -47,7 +47,8 @@ export async function cancelSubscription(
     // For now, we'll just update the database status
     
     const updates: any = {
-      subscription_status: immediate ? 'cancelled' : 'active',
+      // Use 'canceled' (correct enum value) for immediate; keep 'active' for period-end
+      subscription_status: immediate ? 'canceled' : 'active',
       canceled_at: new Date().toISOString(),
     }
 
@@ -69,6 +70,10 @@ export async function cancelSubscription(
       console.error('Database update error:', updateError)
       return { success: false, error: 'Failed to update subscription' }
     }
+
+    // For immediate cancellation, the DB trigger already disabled linked enrollments.
+    // For period-end cancellation, enrollments stay active until the cron job
+    // or a future webhook fires when the period ends.
 
     // Revalidate the subscriptions page
     revalidatePath('/dashboard/admin/subscriptions')

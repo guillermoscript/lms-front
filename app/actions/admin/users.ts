@@ -42,6 +42,30 @@ export async function updateUserRoles(
       }
     }
 
+    // Guard: prevent demoting the last admin in the tenant
+    const wasAdmin = await (async () => {
+      const { data } = await adminClient
+        .from('tenant_users')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .single()
+      return data?.role === 'admin'
+    })()
+
+    if (wasAdmin && !roles.includes('admin')) {
+      const { count: adminCount } = await adminClient
+        .from('tenant_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('role', 'admin')
+        .eq('status', 'active')
+
+      if ((adminCount ?? 0) <= 1) {
+        throw new Error('Cannot remove the last admin. Promote another user to admin first.')
+      }
+    }
+
     // Delete existing roles
     const { error: deleteError } = await adminClient
       .from('user_roles')

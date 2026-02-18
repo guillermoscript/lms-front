@@ -23,10 +23,11 @@ import { Button } from '@/components/ui/button'
 import { UsageMeter } from '@/components/admin/usage-meter'
 
 export default async function AdminDashboardPage({
-  params: { locale }
+  params,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.main')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()

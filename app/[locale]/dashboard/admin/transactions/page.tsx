@@ -17,10 +17,11 @@ import {
 } from '@tabler/icons-react'
 
 export default async function AdminTransactionsPage({
-  params: { locale }
+  params,
 }: {
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
+  const { locale } = await params
   const t = await getTranslations('dashboard.admin.transactions')
   const tm = await getTranslations('dashboard.admin.main')
   const dateLocale = locale === 'es' ? es : enUS
