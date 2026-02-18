@@ -30,8 +30,29 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
+import { createClient } from "@/lib/supabase/server";
+import { SchoolLandingPage } from "@/components/public/school-landing-page";
+
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 export default async function LandingPage() {
+  // Branch to school landing page on subdomains
+  const tenantId = await getCurrentTenantId()
+  if (tenantId !== DEFAULT_TENANT_ID) {
+    const [tenant, supabase] = await Promise.all([getCurrentTenant(), createClient()])
+    const { data: products } = await supabase
+      .from('products')
+      .select('product_id, name, description, price, currency, thumbnail_url')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(9)
+    if (tenant) {
+      return <SchoolLandingPage tenant={tenant} products={products ?? []} />
+    }
+  }
+
   const t = await getTranslations("landing");
 
   return (
