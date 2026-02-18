@@ -2627,5 +2627,20 @@
     "revenueByCourse": "Ingresos por Curso",
     "monthlyTrend": "Tendencia Mensual",
     "noRevenue": "Aún no hay datos de ingresos. Comienza a vender cursos para ver tus ganancias aquí."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "Lo sentimos, no pudimos encontrar la página que buscas.",
+      "backToDashboard": "Volver al Panel",
+      "goHome": "Ir al Inicio"
+    },
+    "generic": {
+      "title": "Algo salió mal",
+      "description": "Ocurrió un error inesperado. Por favor inténtalo de nuevo o contacta soporte si el problema persiste.",
+      "retry": "Intentar de Nuevo",
+      "backToDashboard": "Volver al Panel",
+      "reference": "Referencia del error"
+    }
   }
 }

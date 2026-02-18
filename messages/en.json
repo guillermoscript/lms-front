@@ -2634,5 +2634,20 @@
     "revenueByCourse": "Revenue by Course",
     "monthlyTrend": "Monthly Trend",
     "noRevenue": "No revenue data yet. Start selling courses to see your earnings here."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "Sorry, we couldn't find the page you're looking for.",
+      "backToDashboard": "Back to Dashboard",
+      "goHome": "Go Home"
+    },
+    "generic": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred. Please try again or contact support if the issue persists.",
+      "retry": "Try Again",
+      "backToDashboard": "Back to Dashboard",
+      "reference": "Error reference"
+    }
   }
 }
