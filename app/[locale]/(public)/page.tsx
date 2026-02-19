@@ -43,9 +43,9 @@ export default async function LandingPage() {
     const [tenant, supabase] = await Promise.all([getCurrentTenant(), createClient()])
     const { data: products } = await supabase
       .from('products')
-      .select('product_id, name, description, price, currency, thumbnail_url')
+      .select('product_id, name, description, price, currency, image')
       .eq('tenant_id', tenantId)
-      .eq('status', 'published')
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(9)
     if (tenant) {

@@ -9,7 +9,7 @@ interface Product {
   description: string | null
   price: number | null
   currency: string | null
-  thumbnail_url: string | null
+  image: string | null
 }
 
 interface Props {
@@ -102,10 +102,10 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                   key={product.product_id}
                   className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl overflow-hidden hover:bg-zinc-800/40 hover:border-zinc-700/50 transition-all duration-200 group flex flex-col"
                 >
-                  {product.thumbnail_url ? (
+                  {product.image ? (
                     <div className="aspect-video overflow-hidden">
                       <img
-                        src={product.thumbnail_url}
+                        src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
