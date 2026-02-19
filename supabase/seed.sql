@@ -448,16 +448,17 @@ SELECT setval('products_product_id_seq', 10000, false);
 
 -- ---------------------------------------------------------------------------
 -- 13. PRODUCT → COURSE LINKS
+-- Note: product_courses PK is on product_id alone — one product per course.
+-- "Multiple rows per course" means the same course can appear in multiple
+-- products (e.g. same course sold individually AND via a bundle product).
 -- ---------------------------------------------------------------------------
-INSERT INTO product_courses (product_id, course_id)
+INSERT INTO product_courses (product_id, course_id, tenant_id)
 VALUES
-  (1001, 1001),  -- Testing Package → Intro to Testing
-  (1002, 1002),  -- Web Dev Starter → Web Dev Basics
-  (2001, 2001),  -- Python Bundle → Python for Beginners
-  (2001, 2002),  -- Python Bundle → Data Analysis (one product → two courses)
-  (2002, 2001),  -- Monthly plan → Python for Beginners
-  (2002, 2002)   -- Monthly plan → Data Analysis
-ON CONFLICT DO NOTHING;
+  (1001, 1001, '00000000-0000-0000-0000-000000000001'),  -- Testing Package → Intro to Testing
+  (1002, 1002, '00000000-0000-0000-0000-000000000001'),  -- Web Dev Starter → Web Dev Basics
+  (2001, 2001, '00000000-0000-0000-0000-000000000002'),  -- Python Bundle → Python for Beginners
+  (2002, 2002, '00000000-0000-0000-0000-000000000002')   -- Code Academy Monthly → Data Analysis
+ON CONFLICT (product_id) DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
@@ -506,7 +507,30 @@ SELECT setval('enrollments_enrollment_id_seq', 10000, false);
 
 
 -- ---------------------------------------------------------------------------
--- 15. GAMIFICATION LEVELS & ACHIEVEMENTS
+-- 15. SUBSCRIPTION PLANS  (tenant-level — shown on /pricing)
+-- plan_id 2001 = Code Academy Pro Monthly (30-day subscription)
+-- ---------------------------------------------------------------------------
+INSERT INTO plans (plan_id, plan_name, price, duration_in_days, description, features, currency, payment_provider, tenant_id)
+OVERRIDING SYSTEM VALUE
+VALUES
+(
+  2001,
+  'Code Academy Pro Monthly',
+  19.00,
+  30,
+  'Full access to all Code Academy Pro courses for 30 days.',
+  '["Unlimited course access","Certificate of completion","Priority support","Offline downloads"]',
+  'usd',
+  'stripe',
+  '00000000-0000-0000-0000-000000000002'
+)
+ON CONFLICT (plan_id) DO NOTHING;
+
+SELECT setval('plans_plan_id_seq', 10000, false);
+
+
+-- ---------------------------------------------------------------------------
+-- 16. GAMIFICATION LEVELS & ACHIEVEMENTS  (renumbered from 15)
 -- Already seeded by migration 20260216000001 — kept here for reset-safety
 -- ---------------------------------------------------------------------------
 INSERT INTO gamification_levels (level, min_xp, title, icon) VALUES
@@ -545,7 +569,7 @@ INSERT INTO gamification_profiles (user_id, total_xp, level, current_streak, ten
 VALUES
   ('a1000000-0000-0000-0000-000000000001', 250,  3, 2, '00000000-0000-0000-0000-000000000001'),
   ('a1000000-0000-0000-0000-000000000004', 500,  4, 5, '00000000-0000-0000-0000-000000000002')
-ON CONFLICT (user_id) DO NOTHING;
+ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
