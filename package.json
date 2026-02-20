@@ -9,7 +9,11 @@
     "lint": "eslint",
     "backup-course": "tsx scripts/backup-english-course.ts",
     "restore-course": "tsx scripts/restore-english-course.ts",
-    "show-jwt-fix": "tsx scripts/show-jwt-fix.ts"
+    "show-jwt-fix": "tsx scripts/show-jwt-fix.ts",
+    "demo:720": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts",
+    "demo:1080": "DEMO_RES=1080 npx playwright test --config tests/demos/playwright.demo.config.ts",
+    "demo:single": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts -g",
+    "demo:seed": "npx tsx tests/demos/seed-demo-data.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.18",
@@ -32,7 +36,7 @@
     "@streamdown/mermaid": "^1.0.1",
     "@stripe/stripe-js": "^8.6.4",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.95.3",
+    "@supabase/supabase-js": "^2.97.0",
     "@tabler/icons-react": "^3.36.1",
     "@tailwindcss/typography": "^0.5.19",
     "@xyflow/react": "^12.10.0",

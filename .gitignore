@@ -50,5 +50,8 @@ next-env.d.ts
 .next-docs/
 
 
+# demo recordings
+tests/demos/recordings/
+
 mcp-server/node_modules
 mcp-server/build
