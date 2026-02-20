@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
  */
 
 // Helper function to login and navigate to lesson
-async function navigateToLesson(page, courseId = 1, lessonId = 1) {
+async function navigateToLesson(page: import('@playwright/test').Page, courseId = 1, lessonId = 1) {
   await page.goto('/auth/login')
   await page.getByRole('textbox', { name: 'Email' }).fill('student@test.com')
   await page.getByRole('textbox', { name: 'Password' }).fill('password123')

@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
  */
 
 // Helper function to login as student
-async function loginAsStudent(page) {
+async function loginAsStudent(page: import('@playwright/test').Page) {
   await page.goto('/auth/login')
   await page.getByRole('textbox', { name: 'Email' }).fill('student@test.com')
   await page.getByRole('textbox', { name: 'Password' }).fill('password123')
