@@ -27,7 +27,9 @@
       "submit": "Login",
       "submitting": "Logging in...",
       "noAccount": "Don't have an account?",
-      "signup": "Sign up"
+      "signup": "Sign up",
+      "orContinueWith": "Or continue with",
+      "continueWithGoogle": "Continue with Google"
     },
     "signup": {
       "title": "Sign up",
@@ -39,6 +41,8 @@
       "submitting": "Creating an account...",
       "haveAccount": "Already have an account?",
       "login": "Login",
+      "orContinueWith": "Or continue with email",
+      "continueWithGoogle": "Sign up with Google",
       "errors": {
         "passwordsDontMatch": "Passwords do not match"
       }
@@ -2329,14 +2333,10 @@
       "next": "Next"
     },
     "courseCard": {
-      "popular": "POPULAR",
       "free": "Free",
-      "getStarted": "Get Started",
-      "defaults": {
-        "duration": "12h 30m",
-        "instructor": "Sarah Jenkins",
-        "category": "Web Development"
-      }
+      "lessons": "{count} lessons",
+      "viewCourse": "View Course",
+      "noCategory": "General"
     },
     "filterSidebar": {
       "categories": "Categories",
@@ -2357,52 +2357,52 @@
         "intermediate": "Intermediate",
         "advanced": "Advanced"
       }
+    }
+  },
+  "coursePublicDetails": {
+    "breadcrumbs": {
+      "home": "Home",
+      "courses": "Courses"
     },
-    "coursePublicDetails": {
-      "breadcrumbs": {
-        "home": "Home",
-        "courses": "Courses"
+    "hero": {
+      "lessons": "{count} lessons",
+      "duration": "{h}h {m}m",
+      "published": "Published {date}",
+      "language": "English",
+      "createdBy": "Created by {name}"
+    },
+    "sections": {
+      "whatYoullLearn": "What you'll learn",
+      "about": "About This Course",
+      "content": {
+        "title": "Course Content",
+        "lectures": "{count} lectures",
+        "totalLength": "{h}h {m}m total length",
+        "allLessons": "All Lessons",
+        "noLessons": "No lessons available yet."
       },
-      "hero": {
+      "instructor": {
+        "title": "Instructor",
+        "experience": "Experienced Instructor",
+        "defaultBio": "Instructor passionate about teaching."
+      }
+    },
+    "pricing": {
+      "preview": "Preview this course",
+      "free": "Free",
+      "enrollFree": "Enroll for Free",
+      "enrollNow": "Enroll Now",
+      "goToCourse": "Go to Course",
+      "buyNow": "Buy Now",
+      "or": "or",
+      "subscription": "Get access via Subscription",
+      "includes": {
+        "title": "This course includes:",
         "lessons": "{count} lessons",
-        "duration": "{h}h {m}m",
-        "published": "Published {date}",
-        "language": "English",
-        "createdBy": "Created by {name}"
-      },
-      "sections": {
-        "whatYoullLearn": "What you'll learn",
-        "about": "About This Course",
-        "content": {
-          "title": "Course Content",
-          "lectures": "{count} lectures",
-          "totalLength": "{h}h {m}m total length",
-          "allLessons": "All Lessons",
-          "noLessons": "No lessons available yet."
-        },
-        "instructor": {
-          "title": "Instructor",
-          "experience": "Experienced Instructor",
-          "defaultBio": "Instructor passionate about teaching."
-        }
-      },
-      "pricing": {
-        "preview": "Preview this course",
-        "free": "Free",
-        "enrollFree": "Enroll for Free",
-        "enrollNow": "Enroll Now",
-        "goToCourse": "Go to Course",
-        "buyNow": "Buy Now",
-        "or": "or",
-        "subscription": "Get access via Subscription",
-        "includes": {
-          "title": "This course includes:",
-          "lessons": "{count} lessons",
-          "duration": "{h}h {m}m of content",
-          "lifetime": "Full lifetime access",
-          "mobile": "Access on mobile and desktop",
-          "certificate": "Certificate of completion"
-        }
+        "duration": "{h}h {m}m of content",
+        "lifetime": "Full lifetime access",
+        "mobile": "Access on mobile and desktop",
+        "certificate": "Certificate of completion"
       }
     }
   },

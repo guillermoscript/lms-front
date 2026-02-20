@@ -27,7 +27,9 @@
       "submit": "Iniciar Sesión",
       "submitting": "Iniciando sesión...",
       "noAccount": "¿No tienes una cuenta?",
-      "signup": "Regístrate"
+      "signup": "Regístrate",
+      "orContinueWith": "O continuar con",
+      "continueWithGoogle": "Continuar con Google"
     },
     "signup": {
       "title": "Crear Cuenta",
@@ -39,6 +41,8 @@
       "submitting": "Creando cuenta...",
       "haveAccount": "¿Ya tienes una cuenta?",
       "login": "Inicia sesión",
+      "orContinueWith": "O continuar con email",
+      "continueWithGoogle": "Registrarse con Google",
       "errors": {
         "passwordsDontMatch": "Las contraseñas no coinciden"
       }
@@ -2322,14 +2326,10 @@
       "next": "Siguiente"
     },
     "courseCard": {
-      "popular": "POPULAR",
       "free": "Gratis",
-      "getStarted": "Comenzar",
-      "defaults": {
-        "duration": "12h 30m",
-        "instructor": "Sarah Jenkins",
-        "category": "Desarrollo Web"
-      }
+      "lessons": "{count} lecciones",
+      "viewCourse": "Ver Curso",
+      "noCategory": "General"
     },
     "filterSidebar": {
       "categories": "Categorías",
