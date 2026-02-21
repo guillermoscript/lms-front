@@ -13,8 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { createPaymentRequest } from '@/app/actions/payment-requests'
+import { createPaymentRequest, uploadStudentPaymentProof } from '@/app/actions/payment-requests'
 import { useTranslations } from 'next-intl'
+import { ProofUpload } from '@/components/shared/proof-upload'
 
 interface ManualPaymentDialogProps {
   open: boolean
@@ -41,26 +42,34 @@ export function ManualPaymentDialog({
     message: ''
   })
   const [loading, setLoading] = useState(false)
+  const [proofFile, setProofFile] = useState<File | null>(null)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    const result = await createPaymentRequest({
-      productId,
-      contactName: formData.name,
-      contactEmail: formData.email,
-      contactPhone: formData.phone,
-      message: formData.message
-    })
+    try {
+      const result = await createPaymentRequest({
+        productId,
+        contactName: formData.name,
+        contactEmail: formData.email,
+        contactPhone: formData.phone,
+        message: formData.message
+      })
 
-    if (result.success) {
+      // Upload proof if one was selected
+      if (proofFile && result.request_id) {
+        const fd = new FormData()
+        fd.append('file', proofFile)
+        await uploadStudentPaymentProof(result.request_id, fd)
+      }
+
       toast.success(t('success'))
       onOpenChange(false)
-      // Reset form
       setFormData({ name: '', email: '', phone: '', message: '' })
-    } else {
-      toast.error(result.error || t('error'))
+      setProofFile(null)
+    } catch {
+      toast.error(t('error'))
     }
 
     setLoading(false)
@@ -136,6 +145,12 @@ export function ManualPaymentDialog({
               disabled={loading}
             />
           </div>
+
+          <ProofUpload
+            onUpload={async (file) => { setProofFile(file) }}
+            label={t('proofLabel') || 'Payment Proof (optional)'}
+            disabled={loading}
+          />
 
           <div className="rounded-lg bg-muted p-4 text-sm">
             <p className="font-semibold mb-2">{t('whatHappensNext')}</p>

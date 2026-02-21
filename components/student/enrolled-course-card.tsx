@@ -1,23 +1,24 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  IconClock,
-  IconCalendar,
-  IconTrophy,
+  IconPlayerPlay,
   IconRefresh,
   IconCheck,
-  IconAlertCircle
+  IconAlertTriangle,
+  IconChevronRight,
+  IconArrowRight,
+  IconBook2,
+  IconClock,
 } from '@tabler/icons-react'
 import { calculateCourseProgress, type ExamInfo, type ExamAttempt } from '@/lib/services/course-progress-service'
 import { determineAccessStatus, getAccessBadge, shouldShowRenewCTA } from '@/lib/services/enrollment-service'
 import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface EnrolledCourseCardProps {
   enrollment: any
@@ -58,10 +59,8 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
     }
   })
 
-  // Calculate overall progress
   const progress = calculateCourseProgress(totalLessons, completedLessons, examsWithAttempts)
 
-  // Determine access status
   const accessStatus = determineAccessStatus({
     product_id: enrollment.product_id,
     subscription_id: enrollment.subscription_id,
@@ -81,132 +80,152 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
       return !completions.some((c: any) => c.user_id === userId)
     })
 
-  // Find next pending exam
-  const nextExam = examsWithAttempts
-    .sort((a, b) => a.sequence - b.sequence)
-    .find(exam => exam.attempts.length === 0 ||
-      (exam.allowRetake && exam.attempts.every(a => a.score < exam.passingScore)))
-
-  // Enrollment date
   const enrolledDate = enrollment.enrollment_date
     ? formatDistanceToNow(new Date(enrollment.enrollment_date), { addSuffix: true })
     : null
 
-  // Status badge
-  const getStatusBadge = () => {
-    if (progress.status === 'completed') {
-      return <Badge className="gap-1"><IconCheck className="w-3 h-3" /> {t('completed')}</Badge>
-    }
-    if (progress.status === 'in_progress') {
-      return <Badge variant="secondary" className="gap-1">{t('inProgress')}</Badge>
-    }
-    return <Badge variant="outline" className="gap-1">{t('notStarted')}</Badge>
-  }
+  const isCompleted = progress.status === 'completed'
+  const isInProgress = progress.status === 'in_progress'
+  const pct = progress.overallPercentage
 
   return (
-    <Card className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Thumbnail */}
-      <Link href={`/dashboard/student/courses/${course.course_id}`} data-testid={`course-link-${course.course_id}`}>
-        <div className="relative aspect-video w-full overflow-hidden bg-muted">
+    <Link
+      href={`/dashboard/student/courses/${course.course_id}`}
+      className="block group"
+      data-testid={`course-link-${course.course_id}`}
+    >
+      <div className={cn(
+        "relative flex flex-col sm:flex-row overflow-hidden rounded-2xl border bg-card transition-all duration-200",
+        "hover:shadow-lg hover:border-primary/20",
+        !accessStatus.hasAccess && "opacity-75"
+      )}>
+        {/* Thumbnail */}
+        <div className="relative w-full sm:w-48 md:w-56 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden bg-muted">
           {course.thumbnail_url || course.image_url ? (
             <Image
               src={course.thumbnail_url || course.image_url}
               alt={course.title}
               fill
-              className="object-cover hover:scale-105 transition-transform duration-300"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-              <IconTrophy className="w-12 h-12 text-muted-foreground" />
+            <div className="w-full h-full min-h-[140px] flex items-center justify-center bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
+              <IconBook2 className="w-10 h-10 text-primary/30" />
+            </div>
+          )}
+
+          {/* Progress overlay on thumbnail */}
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-black/20">
+            <div
+              className={cn(
+                "h-full transition-all duration-500",
+                isCompleted ? "bg-emerald-500" : "bg-primary"
+              )}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          {/* Status chip on thumbnail */}
+          {isCompleted && (
+            <div className="absolute top-2.5 left-2.5">
+              <div className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
+                <IconCheck size={10} stroke={3} />
+                {t('completed')}
+              </div>
             </div>
           )}
         </div>
-      </Link>
 
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          {getStatusBadge()}
-          <Badge variant={accessBadge.variant as any} className="text-xs">
-            {accessBadge.text}
-          </Badge>
-        </div>
-        <Link href={`/dashboard/student/courses/${course.course_id}`}>
-          <h3 data-testid={`course-title-${course.course_id}`} className="font-semibold text-lg line-clamp-2 hover:text-primary transition-colors">
-            {course.title}
-          </h3>
-        </Link>
-      </CardHeader>
-
-      <CardContent className="flex-1 pb-3 space-y-4">
-        {/* Progress */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t('overallProgress')}</span>
-            <span data-testid={`course-progress-${course.course_id}`} className="font-semibold">{progress.overallPercentage}%</span>
+        {/* Content */}
+        <div className="flex-1 flex flex-col p-4 sm:p-5 min-w-0">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0 flex-1">
+              <h3
+                data-testid={`course-title-${course.course_id}`}
+                className="font-bold text-base leading-snug line-clamp-1 group-hover:text-primary transition-colors"
+              >
+                {course.title}
+              </h3>
+              {enrolledDate && (
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                  <IconClock size={10} />
+                  {t('enrolled', { date: enrolledDate })}
+                </p>
+              )}
+            </div>
+            <Badge variant={accessBadge.variant as any} className="text-[10px] font-bold shrink-0 uppercase tracking-wider">
+              {accessBadge.text}
+            </Badge>
           </div>
-          <Progress value={progress.overallPercentage} className="h-2" />
 
-          {/* Lessons & Exams breakdown */}
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>
-              {t('lessons')}: {progress.lessonsCompleted}/{progress.totalLessons}
-            </span>
-            {progress.totalExams > 0 && (
-              <span>
-                {t('exams')}: {progress.examsPassed}/{progress.totalExams}
+          {/* Progress Section */}
+          <div className="mt-auto space-y-2.5">
+            {/* Stats row */}
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-muted-foreground">
+                <span className="font-bold text-foreground">{progress.lessonsCompleted}</span>/{progress.totalLessons} {t('lessons')}
+              </span>
+              {progress.totalExams > 0 && (
+                <span className="text-muted-foreground">
+                  <span className="font-bold text-foreground">{progress.examsPassed}</span>/{progress.totalExams} {t('exams')}
+                </span>
+              )}
+              <span
+                data-testid={`course-progress-${course.course_id}`}
+                className={cn(
+                  "ml-auto text-xs font-bold tabular-nums",
+                  isCompleted ? "text-emerald-600" : isInProgress ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {pct}%
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  isCompleted
+                    ? "bg-emerald-500"
+                    : isInProgress
+                      ? "bg-primary"
+                      : "bg-muted-foreground/20"
+                )}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+
+            {/* Next up / Expired / CTA */}
+            {!accessStatus.hasAccess ? (
+              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                <IconAlertTriangle size={13} />
+                <span className="font-medium">{t('expired')}</span>
+              </div>
+            ) : nextLesson && !isCompleted ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <IconPlayerPlay size={12} className="text-primary shrink-0" />
+                <span className="truncate">{t('upNext')}: <span className="font-medium text-foreground">{nextLesson.title}</span></span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Action row */}
+          <div className="flex items-center justify-end mt-3 pt-3 border-t border-border/50">
+            {showRenew ? (
+              <span className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                <IconRefresh size={13} />
+                {t('renew')}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                {isCompleted ? t('review') : t('continue')}
+                <IconArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
               </span>
             )}
           </div>
         </div>
-
-        {/* Next item */}
-        {(nextLesson || nextExam) && accessStatus.hasAccess && (
-          <div className="text-sm space-y-1">
-            <p className="text-muted-foreground font-medium">{t('upNext')}:</p>
-            {nextLesson && (
-              <p className="text-sm truncate">📚 {nextLesson.title}</p>
-            )}
-            {nextExam && !nextLesson && (
-              <p className="text-sm truncate">📝 {nextExam.title}</p>
-            )}
-          </div>
-        )}
-
-        {/* Enrollment date */}
-        {enrolledDate && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <IconCalendar className="w-3 h-3" />
-            <span>{t('enrolled', { date: enrolledDate })}</span>
-          </div>
-        )}
-
-        {/* Expired warning */}
-        {!accessStatus.hasAccess && (
-          <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
-            <IconAlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              {t('expired')}
-            </p>
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="pt-3 border-t">
-        {showRenew ? (
-          <Link href="/pricing" className="w-full">
-            <Button variant="outline" className="w-full gap-2">
-              <IconRefresh className="w-4 h-4" />
-              {t('renew')}
-            </Button>
-          </Link>
-        ) : (
-          <Link href={`/dashboard/student/courses/${course.course_id}`} className="w-full">
-            <Button className="w-full">
-              {progress.status === 'completed' ? t('review') : t('continue')}
-            </Button>
-          </Link>
-        )}
-      </CardFooter>
-    </Card>
+      </div>
+    </Link>
   )
 }
