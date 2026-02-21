@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { IconBuildingBank, IconCheck } from '@tabler/icons-react'
+import { ProofUpload } from '@/components/shared/proof-upload'
 
 interface ManualTransferFormProps {
   planName: string
   amount: number
   interval: string
   onSubmit: (bankReference: string, notes: string) => Promise<void>
+  onProofUpload?: (file: File) => Promise<void>
   onCancel: () => void
 }
 
@@ -21,6 +23,7 @@ export function ManualTransferForm({
   amount,
   interval,
   onSubmit,
+  onProofUpload,
   onCancel,
 }: ManualTransferFormProps) {
   const [bankReference, setBankReference] = useState('')
@@ -92,6 +95,13 @@ export function ManualTransferForm({
               If you&apos;ve already made the transfer, enter the reference number here
             </p>
           </div>
+
+          {onProofUpload && (
+            <ProofUpload
+              onUpload={onProofUpload}
+              label="Payment Proof (optional)"
+            />
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Additional Notes (optional)</Label>

@@ -64,7 +64,7 @@ export function PlanComparisonTable({
   const [yearly, setYearly] = useState(false)
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-3">
         <Label htmlFor="billing-toggle" className={cn(!yearly && 'font-semibold')}>Monthly</Label>
@@ -75,7 +75,7 @@ export function PlanComparisonTable({
       </div>
 
       {/* Plan cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 py-4">
         {plans.map((plan) => {
           const isCurrent = plan.slug === currentPlan
           const isPopular = plan.slug === 'pro'

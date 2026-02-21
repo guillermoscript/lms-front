@@ -119,6 +119,7 @@ export function CourseStatusActions({
         title={t('dialogs.approve.title')}
         description={t('dialogs.approve.description', { title: courseTitle })}
         confirmText={t('dialogs.approve.confirm')}
+        cancelText={t('cancel')}
         onConfirm={handleApprove}
       />
 
@@ -129,6 +130,7 @@ export function CourseStatusActions({
         title={t('dialogs.archive.title')}
         description={t('dialogs.archive.description', { title: courseTitle })}
         confirmText={t('dialogs.archive.confirm')}
+        cancelText={t('cancel')}
         variant="destructive"
         onConfirm={handleArchive}
       />
@@ -140,6 +142,7 @@ export function CourseStatusActions({
         title={t('dialogs.restore.title')}
         description={t('dialogs.restore.description', { title: courseTitle })}
         confirmText={t('dialogs.restore.confirm')}
+        cancelText={t('cancel')}
         onConfirm={handleRestore}
       />
     </>
