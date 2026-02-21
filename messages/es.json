@@ -204,6 +204,7 @@
         "tableDescription": "Mostrando {count} solicitud(es) de pago",
         "amount": "Monto",
         "viewDetails": "Ver Detalles",
+        "viewProof": "Ver Comprobante",
         "unknownProduct": "Producto Desconocido",
         "instructionsAvailable": "Instrucciones de pago disponibles",
         "empty": {
@@ -480,25 +481,35 @@
         "videoUrlHint": "Opcional: Añade un video de YouTube a esta lección",
         "sequenceLabel": "Orden de la Lección",
         "sequenceHint": "El orden en que aparece esta lección en el curso",
-        "aiTaskTitle": "Configuración de Tarea de IA",
+        "aiTaskTitle": "Tarea IA",
+        "aiTaskDescription": "Configura una tarea interactiva con IA para que los estudiantes completen después de esta lección.",
         "aiTaskPromptLabel": "Prompt de la Tarea (para Estudiantes)",
         "aiTaskPromptPlaceholder": "ej. Preséntate en inglés",
         "aiTaskPromptHint": "Este es el desafío de la tarea que se presentará al estudiante para resolver usando el chatbot.",
         "aiGradingInsLabel": "Instrucciones de Calificación de IA (Oculto)",
         "aiGradingInsPlaceholder": "ej. Asegúrate de que el usuario use gramática correcta...",
         "aiGradingInsHint": "Instrucciones específicas para la IA sobre cómo evaluar si la tarea se completó correctamente.",
-        "contentLabel": "Contenido de la Lección (Markdown)",
+        "optional": "Opcional",
+        "aiTaskOptionalHint": "Omite este paso si la lección no necesita una tarea evaluada por IA.",
+        "contentLabel": "Contenido",
         "contentPlaceholder": "# Contenido de la Lección...",
-        "contentHint": "Usa Markdown para dar formato a tu contenido. Soporta encabezados, listas, enlaces, imágenes, bloques de código y más.",
-        "saveDraft": "Guardar como Borrador",
-        "publishLesson": "Publicar Lección",
+        "contentHint": "Soporta MDX — Markdown con componentes JSX como Callout, Steps, Quiz y más.",
+        "editorMode": "Editor",
+        "lines": "líneas",
+        "saveDraft": "Guardar Borrador",
+        "publishLesson": "Publicar",
         "previewTitle": "Vista Previa",
-        "previewWriting": "Empieza a escribir para ver una vista previa..."
+        "previewWriting": "Empieza a escribir para ver una vista previa...",
+        "readyForContent": "¡Se ve bien! Ahora escribamos el contenido de la lección.",
+        "enterTitleFirst": "Ingresa un título arriba para continuar.",
+        "writeContent": "Escribir Contenido"
       },
       "exerciseBuilder": {
-        "details": "Detalles del Ejercicio",
+        "details": "Detalles",
         "titleLabel": "Título",
         "titlePlaceholder": "ej. Introducción a React Hooks",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "Breve descripción de lo que los estudiantes practicarán...",
         "typeLabel": "Tipo de Ejercicio",
         "typeEssay": "Ensayo",
         "typeCoding": "Desafío de Código",
@@ -508,17 +519,25 @@
         "difficultyEasy": "Fácil",
         "difficultyMedium": "Media",
         "difficultyHard": "Difícil",
-        "timeLimitLabel": "Límite de Tiempo (min)",
+        "timeLimitLabel": "Límite de Tiempo",
         "statusLabel": "Estado",
+        "configSection": "Configuración",
         "aiConfigTitle": "Configuración de IA",
-        "aiConfigDesc": "Configura prompts y reglas de evaluación",
+        "aiConfigDesc": "Define lo que ven los estudiantes y cómo la IA evalúa su trabajo.",
         "studentInsLabel": "Instrucciones para el Estudiante",
         "studentInsPlaceholder": "Qué necesita hacer el estudiante...",
         "studentInsHint": "Usa plantillas para rellenar rápidamente estos campos con prompts probados.",
         "aiSystemPromptLabel": "Prompt de Sistema de IA",
         "aiSystemPromptPlaceholder": "Define cómo debe comportarse y calificar la IA...",
+        "visibleToStudents": "Visible",
+        "hiddenFromStudents": "Oculto",
         "updateExercise": "Actualizar Ejercicio",
-        "createExercise": "Crear Ejercicio"
+        "createExercise": "Crear Ejercicio",
+        "saveDraft": "Guardar Borrador",
+        "publishExercise": "Publicar",
+        "readyForAI": "Ahora configura cómo la IA guiará y evaluará a los estudiantes.",
+        "enterTitleFirst": "Ingresa un título arriba para continuar.",
+        "configureAI": "Configurar IA"
       },
       "submissionReview": {
         "title": "Revisar Entrega",
@@ -607,6 +626,44 @@
         },
         "attentionAlert": "Estas entregas han sido marcadas para revisión debido a puntuaciones de confianza bajas de la IA o evaluaciones pendientes de preguntas de texto libre."
       },
+      "templateSelector": {
+        "titleChoose": "Elige una Plantilla",
+        "titleCustomize": "Personalizar Plantilla",
+        "backToTemplates": "← Volver a Plantillas",
+        "description": "Selecciona una plantilla predefinida para configurar rápidamente tus ejercicios",
+        "loading": "Cargando plantillas...",
+        "noTemplates": "No se encontraron plantillas",
+        "system": "Sistema",
+        "variables": "Variables:",
+        "tabFillVariables": "Llenar Variables",
+        "tabNoVariables": "Sin Variables",
+        "tabPreview": "Vista Previa",
+        "requiresInfo": "{name} requiere la siguiente información:",
+        "fieldRequired": "Este campo es obligatorio",
+        "enterPlaceholder": "Ingresar {field}",
+        "noVariablesMsg": "Esta plantilla no tiene variables para configurar. Haz clic en \"Aplicar Plantilla\" para usarla.",
+        "studentPreviewTitle": "Instrucciones del Estudiante (Vista Previa)",
+        "aiPreviewTitle": "Prompt de Sistema IA (Vista Previa)",
+        "fillAllVariables": "Llena todas las variables para ver la vista previa completa",
+        "cancel": "Cancelar",
+        "applyTemplate": "Aplicar Plantilla",
+        "useTemplate": "Usar Plantilla"
+      },
+      "aiPreview": {
+        "buttonText": "Previsualizar IA",
+        "modalTitle": "Modo de Vista Previa IA",
+        "modalSubtitle": "Probando tu configuración en tiempo real",
+        "readyTitle": "Listo para Previsualizar",
+        "readyDesc": "Esto simula una sesión de estudiante con tus prompts actuales. Comienza haciendo una pregunta.",
+        "placeholder": "Escribe tu mensaje de prueba aquí...",
+        "previewSession": "Sesión de Previsualización",
+        "suggestions": {
+          "affect": "¿Cómo afecta esta configuración a las respuestas?",
+          "sample": "Dame una pregunta de estudiante de ejemplo",
+          "tone": "¿El tono es adecuado?",
+          "trigger": "Probar un desencadenante de finalización"
+        }
+      },
       "activity": {
         "title": "Actividad Reciente",
         "description": "Últimas inscripciones y entregas.",
@@ -620,6 +677,32 @@
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
+      "breadcrumbs": {
+        "admin": "Admin",
+        "analytics": "Analíticas",
+        "users": "Usuarios",
+        "userDetails": "Detalles del Usuario",
+        "courses": "Cursos",
+        "subscriptions": "Suscripciones",
+        "paymentRequests": "Solicitudes de Pago",
+        "paymentRequestDetails": "Detalles de Solicitud",
+        "transactions": "Transacciones",
+        "enrollments": "Inscripciones",
+        "settings": "Configuración",
+        "billing": "Facturación",
+        "upgrade": "Mejorar",
+        "products": "Productos",
+        "newProduct": "Nuevo Producto",
+        "editProduct": "Editar Producto",
+        "plans": "Planes",
+        "newPlan": "Nuevo Plan",
+        "editPlan": "Editar Plan",
+        "categories": "Categorías",
+        "revenue": "Ingresos",
+        "notifications": "Notificaciones",
+        "templates": "Plantillas",
+        "tenants": "Inquilinos"
+      },
       "main": {
         "stats": {
           "totalUsers": "Total de Usuarios",
@@ -955,6 +1038,7 @@
       "courses": {
         "title": "Gestión de Cursos",
         "description": "Ver y gestionar todos los cursos de la plataforma",
+        "backToDashboard": "Volver al Panel",
         "stats": {
           "total": "Cursos Totales",
           "published": "Publicados",
@@ -980,12 +1064,17 @@
             "actions": "Acciones"
           },
           "unknownAuthor": "Desconocido",
-          "empty": "No se encontraron cursos"
+          "empty": "No se encontraron cursos",
+          "actions": {
+            "view": "Ver",
+            "edit": "Editar"
+          }
         },
         "statusActions": {
           "approve": "Aprobar",
           "archive": "Archivar",
           "restore": "Restaurar",
+          "cancel": "Cancelar",
           "dialogs": {
             "approve": {
               "title": "Aprobar Curso",
@@ -1923,7 +2012,8 @@
       "submit": "Solicitar Info de Pago",
       "cancel": "Cancelar",
       "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
-      "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo."
+      "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo.",
+      "proofLabel": "Comprobante de Pago (opcional)"
     },
     "notifications": {
       "title": "Notificaciones",

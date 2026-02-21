@@ -204,6 +204,7 @@
         "tableDescription": "Showing {count} payment request(s)",
         "amount": "Amount",
         "viewDetails": "View Details",
+        "viewProof": "View Proof",
         "unknownProduct": "Unknown Product",
         "instructionsAvailable": "Payment instructions available",
         "empty": {
@@ -480,25 +481,35 @@
         "videoUrlHint": "Optional: Add a YouTube video to this lesson",
         "sequenceLabel": "Lesson Order",
         "sequenceHint": "The order in which this lesson appears in the course",
-        "aiTaskTitle": "AI Task Configuration",
+        "aiTaskTitle": "AI Task",
+        "aiTaskDescription": "Set up an AI-powered interactive task for students to complete after this lesson.",
         "aiTaskPromptLabel": "Task Prompt (for Students)",
         "aiTaskPromptPlaceholder": "e.g. Present yourself in English",
         "aiTaskPromptHint": "This is the task challenge that will be presented to the student to solve using the chatbot.",
         "aiGradingInsLabel": "AI Grading Instructions (Hidden)",
         "aiGradingInsPlaceholder": "e.g. Ensure the user uses correct grammar...",
         "aiGradingInsHint": "Specific instructions for the AI on how to evaluate if the task is completed correctly.",
-        "contentLabel": "Lesson Content (Markdown)",
+        "optional": "Optional",
+        "aiTaskOptionalHint": "Skip this step if the lesson doesn't need an AI-graded task.",
+        "contentLabel": "Content",
         "contentPlaceholder": "# Lesson Content...",
-        "contentHint": "Use Markdown to format your content. Supports headings, lists, links, images, code blocks, and more.",
-        "saveDraft": "Save as Draft",
-        "publishLesson": "Publish Lesson",
+        "contentHint": "Supports MDX — Markdown with JSX components like Callout, Steps, Quiz, and more.",
+        "editorMode": "Editor",
+        "lines": "lines",
+        "saveDraft": "Save Draft",
+        "publishLesson": "Publish",
         "previewTitle": "Preview",
-        "previewWriting": "Start writing to see a preview..."
+        "previewWriting": "Start writing to see a preview...",
+        "readyForContent": "Looking good! Now let's write the lesson content.",
+        "enterTitleFirst": "Enter a title above to continue.",
+        "writeContent": "Write Content"
       },
       "exerciseBuilder": {
-        "details": "Exercise Details",
+        "details": "Details",
         "titleLabel": "Title",
         "titlePlaceholder": "e.g. Introduction to React Hooks",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Brief description of what students will practice...",
         "typeLabel": "Exercise Type",
         "typeEssay": "Essay",
         "typeCoding": "Coding Challenge",
@@ -508,17 +519,25 @@
         "difficultyEasy": "Easy",
         "difficultyMedium": "Medium",
         "difficultyHard": "Hard",
-        "timeLimitLabel": "Time Limit (min)",
+        "timeLimitLabel": "Time Limit",
         "statusLabel": "Status",
+        "configSection": "Configuration",
         "aiConfigTitle": "AI Configuration",
-        "aiConfigDesc": "Setup prompts and evaluation rules",
+        "aiConfigDesc": "Define what students see and how the AI evaluates their work.",
         "studentInsLabel": "Student Instructions",
         "studentInsPlaceholder": "What the student needs to do...",
         "studentInsHint": "Use templates to quickly fill these fields with proven prompts.",
         "aiSystemPromptLabel": "AI System Prompt",
         "aiSystemPromptPlaceholder": "Define how the AI should behave and grade...",
+        "visibleToStudents": "Visible",
+        "hiddenFromStudents": "Hidden",
         "updateExercise": "Update Exercise",
-        "createExercise": "Create Exercise"
+        "createExercise": "Create Exercise",
+        "saveDraft": "Save Draft",
+        "publishExercise": "Publish",
+        "readyForAI": "Now configure how the AI will guide and evaluate students.",
+        "enterTitleFirst": "Enter a title above to continue.",
+        "configureAI": "Configure AI"
       },
       "submissionReview": {
         "title": "Review Submission",
@@ -607,6 +626,44 @@
         },
         "attentionAlert": "These submissions have been flagged for review due to low AI confidence scores or pending teacher evaluation."
       },
+      "templateSelector": {
+        "titleChoose": "Choose a Template",
+        "titleCustomize": "Customize Template",
+        "backToTemplates": "← Back to Templates",
+        "description": "Select a pre-built template to quickly set up your exercise prompts",
+        "loading": "Loading templates...",
+        "noTemplates": "No templates found",
+        "system": "System",
+        "variables": "Variables:",
+        "tabFillVariables": "Fill Variables",
+        "tabNoVariables": "No Variables",
+        "tabPreview": "Preview",
+        "requiresInfo": "{name} requires the following information:",
+        "fieldRequired": "This field is required",
+        "enterPlaceholder": "Enter {field}",
+        "noVariablesMsg": "This template has no variables to configure. Click \"Apply Template\" to use it.",
+        "studentPreviewTitle": "Student Instructions (Preview)",
+        "aiPreviewTitle": "AI System Prompt (Preview)",
+        "fillAllVariables": "Fill in all variables to see the complete preview",
+        "cancel": "Cancel",
+        "applyTemplate": "Apply Template",
+        "useTemplate": "Use Template"
+      },
+      "aiPreview": {
+        "buttonText": "Preview AI Behavior",
+        "modalTitle": "AI Preview Mode",
+        "modalSubtitle": "Testing your configuration in real-time",
+        "readyTitle": "Ready to Preview",
+        "readyDesc": "This simulates a student session with your current prompts. Start by asking a question.",
+        "placeholder": "Type your test message here...",
+        "previewSession": "Preview Session",
+        "suggestions": {
+          "affect": "How does this configuration affect responses?",
+          "sample": "Give me a sample student question",
+          "tone": "Is the tone appropriate?",
+          "trigger": "Test a completion trigger"
+        }
+      },
       "activity": {
         "title": "Recent Activity",
         "description": "Latest enrollments and submissions.",
@@ -620,6 +677,32 @@
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
+      "breadcrumbs": {
+        "admin": "Admin",
+        "analytics": "Analytics",
+        "users": "Users",
+        "userDetails": "User Details",
+        "courses": "Courses",
+        "subscriptions": "Subscriptions",
+        "paymentRequests": "Payment Requests",
+        "paymentRequestDetails": "Request Details",
+        "transactions": "Transactions",
+        "enrollments": "Enrollments",
+        "settings": "Settings",
+        "billing": "Billing",
+        "upgrade": "Upgrade",
+        "products": "Products",
+        "newProduct": "New Product",
+        "editProduct": "Edit Product",
+        "plans": "Plans",
+        "newPlan": "New Plan",
+        "editPlan": "Edit Plan",
+        "categories": "Categories",
+        "revenue": "Revenue",
+        "notifications": "Notifications",
+        "templates": "Templates",
+        "tenants": "Tenants"
+      },
       "main": {
         "stats": {
           "totalUsers": "Total Users",
@@ -959,6 +1042,7 @@
       "courses": {
         "title": "Course Management",
         "description": "View and manage all platform courses",
+        "backToDashboard": "Back to Dashboard",
         "stats": {
           "total": "Total Courses",
           "published": "Published",
@@ -984,12 +1068,17 @@
             "actions": "Actions"
           },
           "unknownAuthor": "Unknown",
-          "empty": "No courses found"
+          "empty": "No courses found",
+          "actions": {
+            "view": "View",
+            "edit": "Edit"
+          }
         },
         "statusActions": {
           "approve": "Approve",
           "archive": "Archive",
           "restore": "Restore",
+          "cancel": "Cancel",
           "dialogs": {
             "approve": {
               "title": "Approve Course",
@@ -2078,7 +2167,8 @@
       "submit": "Request Payment Info",
       "cancel": "Cancel",
       "success": "Payment request sent! We will contact you shortly with payment instructions.",
-      "error": "Failed to send request. Please try again."
+      "error": "Failed to send request. Please try again.",
+      "proofLabel": "Payment Proof (optional)"
     },
     "notifications": {
       "title": "Notifications",
