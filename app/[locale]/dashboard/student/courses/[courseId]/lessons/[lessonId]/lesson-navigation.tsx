@@ -11,6 +11,7 @@ import {
   IconArrowRight,
   IconCheck,
   IconLoader2,
+  IconCircleCheck,
 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
@@ -48,7 +49,6 @@ export function LessonNavigation({
     }
 
     if (completed) {
-      // Uncomplete
       await supabase
         .from('lesson_completions')
         .delete()
@@ -57,7 +57,6 @@ export function LessonNavigation({
 
       setCompleted(false)
     } else {
-      // Complete
       await supabase.from('lesson_completions').insert({
         lesson_id: lessonId,
         user_id: user.id,
@@ -65,7 +64,6 @@ export function LessonNavigation({
 
       setCompleted(true)
 
-      // If there's a next lesson, navigate to it after a short delay
       if (nextLessonId) {
         setTimeout(() => {
           router.push(`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`)
@@ -78,21 +76,21 @@ export function LessonNavigation({
   }
 
   return (
-    <footer className="shrink-0 border-t bg-card px-3 py-3 md:px-6 md:py-4">
-      <div className="flex items-center justify-between gap-2 max-w-5xl mx-auto">
-        {/* Previous lesson */}
-        <div className="flex-1">
+    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
+      <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
+        {/* Previous */}
+        <div className="w-32">
           {prevLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`}>
-              <Button variant="outline" className="w-full sm:w-auto px-2 sm:px-4">
-                <IconArrowLeft className="sm:mr-2 h-4 w-4" />
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+                <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('previous')}</span>
               </Button>
             </Link>
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button variant="outline" className="w-full sm:w-auto px-2 sm:px-4">
-                <IconArrowLeft className="sm:mr-2 h-4 w-4" />
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+                <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('backToCourse')}</span>
               </Button>
             </Link>
@@ -100,41 +98,42 @@ export function LessonNavigation({
         </div>
 
         {/* Complete button */}
-        <div className="flex-1 flex justify-center">
-          <Button
-            onClick={handleComplete}
-            data-testid="lesson-complete-toggle"
-            disabled={loading}
-            variant={completed ? 'secondary' : 'default'}
-            className={cn(
-              "w-full sm:w-auto px-2 sm:px-4",
-              completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''
-            )}
-          >
-            {loading ? (
-              <IconLoader2 className="sm:mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <IconCheck className="sm:mr-2 h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">{completed ? t('completed') : t('markAsComplete')}</span>
-            <span className="sm:hidden">{completed ? t('done') : t('complete')}</span>
-          </Button>
-        </div>
+        <Button
+          onClick={handleComplete}
+          data-testid="lesson-complete-toggle"
+          disabled={loading}
+          variant={completed ? 'secondary' : 'default'}
+          size="sm"
+          className={cn(
+            'gap-2 px-5 font-semibold transition-all',
+            completed && 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20'
+          )}
+        >
+          {loading ? (
+            <IconLoader2 className="h-4 w-4 animate-spin" />
+          ) : completed ? (
+            <IconCircleCheck className="h-4 w-4" />
+          ) : (
+            <IconCheck className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">{completed ? t('completed') : t('markAsComplete')}</span>
+          <span className="sm:hidden">{completed ? t('done') : t('complete')}</span>
+        </Button>
 
-        {/* Next lesson */}
-        <div className="flex-1 flex justify-end">
+        {/* Next */}
+        <div className="w-32 flex justify-end">
           {nextLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
-              <Button className="w-full sm:w-auto px-2 sm:px-4">
+              <Button size="sm" className="gap-1.5">
                 <span className="hidden sm:inline">{t('next')}</span>
-                <IconArrowRight className="sm:ml-2 h-4 w-4" />
+                <IconArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button className="w-full sm:w-auto px-2 sm:px-4">
+              <Button size="sm" className="gap-1.5">
                 <span className="hidden sm:inline">{t('finishCourse')}</span>
-                <IconCheck className="sm:ml-2 h-4 w-4" />
+                <IconCheck className="h-4 w-4" />
               </Button>
             </Link>
           )}

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-// Components
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
 import EssayExercise from '@/components/exercises/essay-exercise'
@@ -10,7 +9,6 @@ import CodeExercise from '@/components/exercises/code-exercise'
 import CodeChallengeWrapper from '@/components/exercises/code-challenge-wrapper'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 import ToggleableSection from '@/components/exercises/toggleable-section'
-import { Card, CardContent } from '@/components/ui/card'
 
 interface PageProps {
     params: Promise<{ courseId: string; exerciseId: string }>
@@ -24,7 +22,6 @@ export default async function ExercisePage({ params }: PageProps) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/auth/login')
 
-    // Fetch exercise data with completions and messages
     const { data: exercise, error: exerciseError } = await supabase
         .from('exercises')
         .select(`
@@ -48,14 +45,12 @@ export default async function ExercisePage({ params }: PageProps) {
         notFound()
     }
 
-    // Fetch student profile (profiles table has no tenant_id - global table)
     const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
         .eq('id', user.id)
         .single()
 
-    // Find other exercises for suggestions
     const { data: otherExercises } = await supabase
         .from('exercises')
         .select(`
@@ -69,14 +64,12 @@ export default async function ExercisePage({ params }: PageProps) {
         .neq('id', parseInt(exerciseId))
         .limit(3)
 
-    // Fetch exercise files (for coding challenges)
     const { data: exerciseFiles } = await supabase
         .from('exercise_files')
         .select('file_path, content')
         .eq('exercise_id', parseInt(exerciseId))
         .eq('tenant_id', tenantId)
 
-    // Fetch last submission
     const { data: lastSubmission } = await supabase
         .from('exercise_code_student_submissions')
         .select('submission_code')
@@ -86,7 +79,6 @@ export default async function ExercisePage({ params }: PageProps) {
         .order('created_at', { ascending: false })
         .single()
 
-    // Construct files object for Sandpack
     const files: Record<string, string> = {}
     exerciseFiles?.forEach((file) => {
         files[file.file_path] = file.content
@@ -94,7 +86,6 @@ export default async function ExercisePage({ params }: PageProps) {
 
     const isExerciseCompleted = exercise.exercise_completions?.length > 0
 
-    // Format initial messages
     const initialMessages = [
         ...(exercise.exercise_messages || []).map((m: any) => ({
             id: m.id.toString(),
@@ -116,7 +107,7 @@ export default async function ExercisePage({ params }: PageProps) {
 
     const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
         <>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">More Exercises</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">More Exercises</h3>
             <div className="grid gap-3">
                 {otherExercises.map((ex: any) => (
                     <ExerciseCard
@@ -140,7 +131,7 @@ export default async function ExercisePage({ params }: PageProps) {
     )
 
     return (
-        <div className="mx-auto max-w-7xl py-4 px-3 sm:py-6 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
+        <div className="mx-auto max-w-7xl py-6 px-4 lg:px-8 space-y-6">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {exercise.exercise_type === 'coding_challenge' ? (

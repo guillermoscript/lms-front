@@ -19,6 +19,7 @@ import {
   IconInfoCircle,
 } from '@tabler/icons-react'
 import { CancelPaymentButton } from '@/components/student/cancel-payment-button'
+import { StudentProofUpload } from './student-proof-upload'
 
 export default async function StudentPaymentsPage() {
   const supabase = await createClient()
@@ -50,6 +51,7 @@ export default async function StudentPaymentsPage() {
       payment_method,
       payment_instructions,
       payment_deadline,
+      proof_url,
       product:products (
         product_id,
         name
@@ -207,6 +209,15 @@ export default async function StudentPaymentsPage() {
                                 </Button>
                               </Link>
                             )}
+                            {request.proof_url ? (
+                              <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="ghost">
+                                  {t('viewProof') || 'View Proof'}
+                                </Button>
+                              </a>
+                            ) : canCancel(request.status) ? (
+                              <StudentProofUpload requestId={request.request_id} />
+                            ) : null}
                             {canCancel(request.status) && (
                               <CancelPaymentButton requestId={request.request_id} />
                             )}
@@ -268,6 +279,15 @@ export default async function StudentPaymentsPage() {
                           </Button>
                         </Link>
                       )}
+                      {request.proof_url ? (
+                        <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost">
+                            {t('viewProof') || 'View Proof'}
+                          </Button>
+                        </a>
+                      ) : canCancel(request.status) ? (
+                        <StudentProofUpload requestId={request.request_id} />
+                      ) : null}
                       {canCancel(request.status) && (
                         <CancelPaymentButton requestId={request.request_id} />
                       )}

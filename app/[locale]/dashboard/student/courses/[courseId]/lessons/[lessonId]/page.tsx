@@ -2,12 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
 import { LessonContent } from './lesson-content'
-import { IconRobot, IconMenu2 } from '@tabler/icons-react'
+import { IconRobot, IconMenu2, IconSparkles } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
 import { LessonAIChat } from '@/components/student/lesson-ai-chat'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -29,7 +30,6 @@ export default async function LessonPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Consolidated query as requested
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
     .select(`
@@ -59,17 +59,14 @@ export default async function LessonPage({ params }: PageProps) {
 
   const lesson = lessonData;
   const course = lessonData.courses;
-  // Handle both array and object response from Supabase (one-to-one relationship can return either)
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks;
 
-  // Convert database messages to AI SDK format
   const dbMessages = lessonData.lessons_ai_task_messages || [];
   const initialMessages = dbMessages.map((msg: any, index: number) => {
     const parts = [];
 
-    // Add text content as a part
     if (msg.message) {
       parts.push({
         type: 'text',
@@ -77,7 +74,6 @@ export default async function LessonPage({ params }: PageProps) {
       });
     }
 
-    // Add tool invocations if present
     if (msg.tool_invocations) {
       const invocations = Array.isArray(msg.tool_invocations)
         ? msg.tool_invocations
@@ -93,7 +89,7 @@ export default async function LessonPage({ params }: PageProps) {
 
     return {
       id: msg.id.toString(),
-      role: msg.sender, // sender is 'user' | 'assistant' | 'system'
+      role: msg.sender,
       parts: parts,
       createdAt: msg.created_at
     };
@@ -101,7 +97,6 @@ export default async function LessonPage({ params }: PageProps) {
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
-  // Get all lessons for sidebar
   const { data: allLessons } = await supabase
     .from('lessons')
     .select('id, title, sequence')
@@ -110,7 +105,6 @@ export default async function LessonPage({ params }: PageProps) {
     .eq('tenant_id', tenantId)
     .order('sequence', { ascending: true })
 
-  // Get completed lessons for this user (for sidebar highlights)
   const { data: completions } = await supabase
     .from('lesson_completions')
     .select('lesson_id')
@@ -119,7 +113,6 @@ export default async function LessonPage({ params }: PageProps) {
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
 
-  // Format lessons for sidebar
   const sidebarLessons =
     allLessons?.map((l) => ({
       id: l.id,
@@ -128,7 +121,6 @@ export default async function LessonPage({ params }: PageProps) {
       isCompleted: completedLessonIds.has(l.id),
     })) || []
 
-  // Find prev/next lessons
   const currentIndex = allLessons?.findIndex((l) => l.id === lesson.id) ?? -1
   const prevLesson = currentIndex > 0 ? allLessons?.[currentIndex - 1] : null
   const nextLesson =
@@ -136,17 +128,23 @@ export default async function LessonPage({ params }: PageProps) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Lesson header */}
-        <header className="shrink-0 border-b bg-card px-4 py-3 md:px-6 md:py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs md:text-sm text-muted-foreground">
-                {t('lessonIndex', { count: lesson.sequence })}
-              </p>
-              <h1 className="text-lg md:text-xl font-bold line-clamp-1">{lesson.title}</h1>
+        <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  {t('lessonIndex', { count: lesson.sequence })}
+                </span>
+                {isCurrentLessonCompleted && (
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] font-bold uppercase tracking-wider h-4 px-1.5">
+                    Completed
+                  </Badge>
+                )}
+              </div>
+              <h1 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">{lesson.title}</h1>
             </div>
 
             {/* Mobile Sidebar Toggle */}
@@ -154,12 +152,12 @@ export default async function LessonPage({ params }: PageProps) {
               <Sheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
                       <IconMenu2 className="h-5 w-5" />
                     </Button>
                   }
                 />
-                <SheetContent side="left" className="p-0 w-80">
+                <SheetContent side="right" className="p-0 w-80">
                   <SheetHeader className="sr-only">
                     <SheetTitle>{t('sidebarTitle')}</SheetTitle>
                     <SheetDescription>{t('sidebarDescription')}</SheetDescription>
@@ -178,7 +176,7 @@ export default async function LessonPage({ params }: PageProps) {
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 space-y-6 md:space-y-8">
+          <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
             <LessonContent
               content={lesson.content}
               videoUrl={lesson.video_url}
@@ -187,38 +185,51 @@ export default async function LessonPage({ params }: PageProps) {
 
             {/* AI Task Section */}
             {aiTask && (
-              <div className="space-y-4">
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 md:p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                      <IconRobot className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-base md:text-lg text-foreground">{t('aiTutorTitle')}</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground">{t('aiTutorDescription')}</p>
+              <section className="space-y-5">
+                <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.04] to-transparent overflow-hidden">
+                  {/* Task header */}
+                  <div className="px-5 py-4 border-b border-primary/10 bg-primary/[0.03]">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-xl shrink-0">
+                        <IconSparkles className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-base text-foreground">{t('aiTutorTitle')}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t('aiTutorDescription')}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-card border rounded-lg p-3 md:p-4 shadow-sm mb-6">
-                    <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">{t('currentTask')}</h4>
-                    <p className="text-sm md:text-base text-foreground leading-relaxed">
-                      {aiTask.task_instructions}
-                    </p>
+                  {/* Task description */}
+                  <div className="px-5 py-4">
+                    <div className="bg-card border rounded-xl p-4 shadow-sm">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
+                        {t('currentTask')}
+                      </h4>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {aiTask.task_instructions}
+                      </p>
+                    </div>
                   </div>
 
-                  <LessonAIChat
-                    lessonId={lesson.id}
-                    taskDescription={aiTask.task_instructions}
-                    isCompleted={isCurrentLessonCompleted}
-                    initialMessages={initialMessages}
-                    data-testid="lesson-ai-chat"
-                  />
+                  {/* Chat */}
+                  <div className="px-5 pb-5">
+                    <LessonAIChat
+                      lessonId={lesson.id}
+                      taskDescription={aiTask.task_instructions}
+                      isCompleted={isCurrentLessonCompleted}
+                      initialMessages={initialMessages}
+                      data-testid="lesson-ai-chat"
+                    />
+                  </div>
                 </div>
-              </div>
+              </section>
             )}
 
             {/* Comments Section */}
-            <LessonComments lessonId={lesson.id} userId={user.id} />
+            <section className="border-t pt-10">
+              <LessonComments lessonId={lesson.id} userId={user.id} />
+            </section>
           </div>
         </div>
 

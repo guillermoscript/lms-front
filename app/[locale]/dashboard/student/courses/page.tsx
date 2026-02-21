@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { EnrolledCourseCard } from '@/components/student/enrolled-course-card'
 import { CourseFilters } from '@/components/student/course-filters'
 import { Button } from '@/components/ui/button'
-import { IconBook, IconSparkles, IconTrophy } from '@tabler/icons-react'
+import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
+import Link from 'next/link'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -21,7 +21,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const params = await searchParams
 
-  // Get authenticated user
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -30,7 +29,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Fetch enrollments - basic query first to debug
+  // Fetch enrollments
   const { data: enrollments, error } = await supabase
     .from('enrollments')
     .select('*')
@@ -38,11 +37,10 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
-  // If we have enrollments, fetch related data separately
+  // Enrich enrollments with related data
   let enrichedEnrollments: any[] = []
 
   if (enrollments && enrollments.length > 0) {
-    // Fetch course data for each enrollment
     for (const enrollment of enrollments) {
       const { data: course } = await supabase
         .from('courses')
@@ -52,14 +50,12 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
         .single()
 
       if (course) {
-        // Fetch lessons
         const { data: lessons } = await supabase
           .from('lessons')
           .select('id, title, sequence')
           .eq('course_id', course.course_id)
           .eq('tenant_id', tenantId)
 
-        // Fetch lesson completions for this user
         const { data: lessonCompletions } = await supabase
           .from('lesson_completions')
           .select('lesson_id, completed_at')
@@ -67,14 +63,12 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           .eq('tenant_id', tenantId)
           .in('lesson_id', lessons?.map(l => l.id) || [])
 
-        // Fetch exams
         const { data: exams } = await supabase
           .from('exams')
           .select('exam_id, title, sequence, passing_score, allow_retake')
           .eq('course_id', course.course_id)
           .eq('tenant_id', tenantId)
 
-        // Fetch exam submissions
         const { data: examSubmissions } = await supabase
           .from('exam_submissions')
           .select('submission_id, exam_id, submission_date, score')
@@ -82,7 +76,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           .eq('tenant_id', tenantId)
           .in('exam_id', exams?.map(e => e.exam_id) || [])
 
-        // Fetch product if exists
         let product = null
         if (enrollment.product_id) {
           const { data: p } = await supabase
@@ -94,7 +87,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           product = p
         }
 
-        // Fetch subscription if exists
         let subscription = null
         if (enrollment.subscription_id) {
           const { data: s } = await supabase
@@ -105,7 +97,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
             .single()
 
           if (s) {
-            // Fetch plan
             const { data: plan } = await supabase
               .from('plans')
               .select('plan_id, plan_name')
@@ -116,7 +107,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           }
         }
 
-        // Combine all data
         enrichedEnrollments.push({
           ...enrollment,
           course: {
@@ -137,15 +127,12 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     }
   }
 
-  // Fetch translations
   const t = await getTranslations('dashboard.student.courses')
-  const tCommon = await getTranslations('common')
-  const tBrowse = await getTranslations('dashboard.student.browse')
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="text-center py-12">
+      <div className="mx-auto max-w-5xl py-12 px-4">
+        <div className="text-center py-16">
           <p className="text-muted-foreground">{t('errorLoading')}</p>
         </div>
       </div>
@@ -167,15 +154,21 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     }
   })
 
+  // Count by status for filter pills
+  const counts = {
+    all: processedEnrollments.length,
+    in_progress: processedEnrollments.filter(e => e.course.progress > 0 && e.course.progress < 100).length,
+    completed: processedEnrollments.filter(e => e.course.progress === 100).length,
+    not_started: processedEnrollments.filter(e => e.course.progress === 0).length,
+  }
+
   let filteredEnrollments = processedEnrollments.filter(enrollment => {
-    // Status filter
     if (params.status && params.status !== 'all') {
       if (params.status === 'completed' && enrollment.course.progress < 100) return false
       if (params.status === 'in_progress' && (enrollment.course.progress === 0 || enrollment.course.progress === 100)) return false
       if (params.status === 'not_started' && enrollment.course.progress > 0) return false
     }
 
-    // Search filter
     if (params.search) {
       const search = params.search.toLowerCase()
       return (
@@ -187,54 +180,79 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     return true
   })
 
-  // Sort logic
   if (params.sort === 'title') {
     filteredEnrollments.sort((a, b) => a.course.title.localeCompare(b.course.title))
   } else if (params.sort === 'progress') {
     filteredEnrollments.sort((a, b) => b.course.progress - a.course.progress)
   }
 
+  // Fetch certificate count for the banner
+  const { count: certificateCount } = await supabase
+    .from('certificates')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .is('revoked_at', null)
+
   const hasEnrollments = enrichedEnrollments.length > 0
   const hasFilteredEnrollments = filteredEnrollments.length > 0
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl" data-testid="student-courses-page">
+    <div className="mx-auto max-w-5xl py-8 px-4 lg:px-8 space-y-6" data-testid="student-courses-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="my-courses-title">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-black tracking-tight" data-testid="my-courses-title">
+            {t('title')}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {hasEnrollments
-              ? t('enrolledMessage', { count: enrichedEnrollments.length, s: enrichedEnrollments.length === 1 ? '' : 's' }) // 's' handling might vary by locale, simplified for now
+              ? t('enrolledMessage', { count: enrichedEnrollments.length, s: enrichedEnrollments.length === 1 ? '' : 's' })
               : t('startJourney')
             }
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Link href="/dashboard/student/browse">
-            <Button variant="outline" className="gap-2">
-              <IconSparkles className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs font-bold">
+              <IconSparkles size={14} />
               {t('browseCatalog')}
-            </Button>
-          </Link>
-          <Link href="/pricing">
-            <Button className="gap-2">
-              <IconTrophy className="w-4 h-4" />
-              {t('upgradePlan')}
             </Button>
           </Link>
         </div>
       </div>
 
+      {/* Certificates Banner */}
+      {(certificateCount ?? 0) > 0 && (
+        <Link href="/dashboard/student/certificates" className="block group">
+          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500/20 bg-gradient-to-r from-amber-500/[0.06] via-amber-500/[0.03] to-transparent p-4 sm:px-6 hover:border-amber-500/30 transition-colors">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                  <IconCertificate size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">
+                    {certificateCount} {certificateCount === 1 ? 'Certificate' : 'Certificates'} Earned
+                  </p>
+                  <p className="text-xs text-muted-foreground">View, download and share your achievements</p>
+                </div>
+              </div>
+              <IconArrowRight size={16} className="text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
+
       {!hasEnrollments ? (
         /* Empty State */
-        <div className="border-2 border-dashed rounded-lg p-12 text-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <IconBook className="w-8 h-8 text-primary" />
+        <div className="rounded-2xl border-2 border-dashed border-muted-foreground/15 p-16 text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+            <IconBook2 className="w-7 h-7 text-primary" />
           </div>
-          <h2 className="text-2xl font-semibold mb-2">{t('noCoursesTitle')}</h2>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+          <h2 className="text-xl font-bold mb-2">{t('noCoursesTitle')}</h2>
+          <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto leading-relaxed">
             {t('noCoursesDesc')}
           </p>
           <div className="flex gap-3 justify-center">
@@ -253,17 +271,18 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
             currentStatus={params.status || 'all'}
             currentSort={params.sort || 'recent'}
             currentSearch={params.search || ''}
+            counts={counts}
           />
 
-          {/* Course Grid */}
+          {/* Course List */}
           {!hasFilteredEnrollments ? (
-            <div className="border rounded-lg p-8 text-center">
-              <p className="text-muted-foreground">
+            <div className="rounded-2xl border border-dashed p-12 text-center">
+              <p className="text-sm text-muted-foreground">
                 {t('noFilterMatch')}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            <div className="grid grid-cols-1 gap-4">
               {filteredEnrollments.map((enrollment) => (
                 <EnrolledCourseCard
                   key={enrollment.enrollment_id}
