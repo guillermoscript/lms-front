@@ -11,9 +11,12 @@ import {
   IconShield,
 } from '@tabler/icons-react'
 import { UsersTable } from '@/components/admin/users-table'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminUsersPage() {
   const t = await getTranslations('dashboard.admin.users')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
 
   const {
@@ -24,10 +27,22 @@ export default async function AdminUsersPage() {
     redirect('/auth/login')
   }
 
-  // Get all users with their roles (profiles has no email column - get from auth)
+  const tenantId = await getCurrentTenantId()
+
+  // Get tenant members first, then fetch their profiles
+  const { data: tenantMembers } = await supabase
+    .from('tenant_users')
+    .select('user_id, role')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+
+  const memberUserIds = tenantMembers?.map((m) => m.user_id) || []
+
+  // Get profiles only for users in this tenant
   const { data: rawProfiles } = await supabase
     .from('profiles')
     .select('*')
+    .in('id', memberUserIds.length > 0 ? memberUserIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false })
 
   // Get emails from auth.users via admin client
@@ -39,22 +54,18 @@ export default async function AdminUsersPage() {
     })
   )
 
-  // Get all user roles
-  const { data: userRoles } = await supabase
-    .from('user_roles')
-    .select('user_id, role')
-
-  // Create a map of user roles
+  // Build roles map from tenant_users (authoritative for this tenant)
   const rolesMap = new Map<string, string[]>()
-  userRoles?.forEach((ur) => {
-    const existing = rolesMap.get(ur.user_id) || []
-    rolesMap.set(ur.user_id, [...existing, ur.role])
+  tenantMembers?.forEach((m) => {
+    const existing = rolesMap.get(m.user_id) || []
+    rolesMap.set(m.user_id, [...existing, m.role])
   })
 
-  // Get enrollment counts
+  // Get enrollment counts (filtered by tenant)
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select('user_id')
+    .eq('tenant_id', tenantId)
 
   const enrollmentCounts = new Map<string, number>()
   enrollments?.forEach((e) => {
@@ -63,75 +74,70 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="users-page">
-      {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('backToDashboard')}
-            </Button>
-          </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">
-                {t('description')}
-              </p>
-            </div>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('users') },
+              ]}
+            />
           </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats */}
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.totalUsers')}</p>
-                  <p className="mt-2 text-3xl font-bold">{profiles?.length || 0}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.totalUsers')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{profiles?.length || 0}</p>
                 </div>
-                <IconUser className="h-10 w-10 text-blue-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <IconUser className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.teachers')}</p>
-                  <p className="mt-2 text-3xl font-bold">
-                    {Array.from(rolesMap.values()).filter((roles) =>
-                      roles.includes('teacher')
-                    ).length}
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.teachers')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">
+                    {Array.from(rolesMap.values()).filter((roles) => roles.includes('teacher')).length}
                   </p>
                 </div>
-                <IconShield className="h-10 w-10 text-green-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconShield className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.students')}</p>
-                  <p className="mt-2 text-3xl font-bold">
-                    {Array.from(rolesMap.values()).filter((roles) =>
-                      roles.includes('student')
-                    ).length}
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.students')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">
+                    {Array.from(rolesMap.values()).filter((roles) => roles.includes('student')).length}
                   </p>
                 </div>
-                <IconUser className="h-10 w-10 text-purple-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
+                  <IconUser className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Users Table */}
         <Card>
           <CardHeader>
             <CardTitle>{t('table.title')}</CardTitle>

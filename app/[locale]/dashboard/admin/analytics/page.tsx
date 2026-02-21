@@ -8,11 +8,12 @@ import { UserGrowthChart } from '@/components/admin/user-growth-chart'
 import { EngagementMetrics } from '@/components/admin/engagement-metrics'
 import { CoursePopularityChart } from '@/components/admin/course-popularity-chart'
 import { ExportButton } from '@/components/admin/export-button'
-import { IconChartBar, IconDownload, IconCalendar } from '@tabler/icons-react'
 import Link from 'next/link'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface SearchParams {
   period?: string
@@ -27,6 +28,7 @@ export default async function AnalyticsPage({
 }) {
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.analytics')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
@@ -43,6 +45,8 @@ export default async function AnalyticsPage({
     redirect('/dashboard/student')
   }
 
+  const tenantId = await getCurrentTenantId()
+
   // Get period from query params (default: 30 days)
   const period = searchParams.period || '30'
   const daysAgo = parseInt(period)
@@ -53,6 +57,7 @@ export default async function AnalyticsPage({
   const { data: transactions } = await supabase
     .from('transactions')
     .select('amount, status, created_at')
+    .eq('tenant_id', tenantId)
     .eq('status', 'successful')
     .gte('created_at', startDate.toISOString())
     .order('created_at', { ascending: true })
@@ -77,16 +82,22 @@ export default async function AnalyticsPage({
     transactions: data.transactions,
   }))
 
-  // Calculate user growth data
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('created_at')
+  // Calculate user growth data (filter by tenant members)
+  const { data: tenantUserIds } = await supabase
+    .from('tenant_users')
+    .select('user_id, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
     .gte('created_at', startDate.toISOString())
     .order('created_at', { ascending: true })
 
+  const profiles = tenantUserIds?.map((tu) => ({ created_at: tu.created_at })) || []
+
   const { count: totalUsers } = await supabase
-    .from('profiles')
+    .from('tenant_users')
     .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
 
   // Group users by date
   const usersByDate = new Map<string, number>()
@@ -111,6 +122,7 @@ export default async function AnalyticsPage({
   const { count: totalEnrollments } = await supabase
     .from('enrollments')
     .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
 
   // Active students (users with activity in last 30 days)
   const thirtyDaysAgo = new Date()
@@ -119,6 +131,7 @@ export default async function AnalyticsPage({
   const { data: activeStudentIds } = await supabase
     .from('lesson_completions')
     .select('student_id')
+    .eq('tenant_id', tenantId)
     .gte('completed_at', thirtyDaysAgo.toISOString())
 
   const activeStudents = new Set(activeStudentIds?.map((s) => s.student_id)).size
@@ -126,10 +139,12 @@ export default async function AnalyticsPage({
   const { count: totalLessonCompletions } = await supabase
     .from('lesson_completions')
     .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
 
   const { count: totalExamSubmissions } = await supabase
     .from('exam_submissions')
     .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
 
   // Calculate average completion rate
   const { data: enrollmentsWithProgress } = await supabase
@@ -143,6 +158,7 @@ export default async function AnalyticsPage({
       )
     `
     )
+    .eq('tenant_id', tenantId)
 
   let totalCompletionRate = 0
   let validEnrollments = 0
@@ -191,6 +207,7 @@ export default async function AnalyticsPage({
       )
     `
     )
+    .eq('tenant_id', tenantId)
     .eq('status', 'published')
 
   const coursePopularityData = await Promise.all(
@@ -253,20 +270,22 @@ export default async function AnalyticsPage({
   const periodLabel = t(`periodLabels.${period === '7' ? 'last7days' : period === '30' ? 'last30days' : period === '90' ? 'last90days' : period === '365' ? 'lastYear' : 'generic'}`, { days: period })
 
   return (
-    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8" data-testid="analytics-page">
+    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="analytics-page">
+      <div className="mb-4">
+        <AdminBreadcrumb
+          items={[
+            { label: t('breadcrumbs.admin'), href: '/dashboard/admin' },
+            { label: t('breadcrumbs.analytics') },
+          ]}
+        />
+      </div>
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold">
-            <IconChartBar className="h-8 w-8" />
-            {t('title')}
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            {t('description')}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Export button */}
           <ExportButton
             data={{
               revenueData,
@@ -282,25 +301,24 @@ export default async function AnalyticsPage({
             }}
             period={period}
           />
-          {/* Period selector */}
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Link href="?period=7">
-              <Button variant={period === '7' ? 'default' : 'outline'} size="sm">
+              <Button variant={period === '7' ? 'default' : 'outline'} size="sm" className="text-xs">
                 {t('periods.7days')}
               </Button>
             </Link>
             <Link href="?period=30">
-              <Button variant={period === '30' ? 'default' : 'outline'} size="sm">
+              <Button variant={period === '30' ? 'default' : 'outline'} size="sm" className="text-xs">
                 {t('periods.30days')}
               </Button>
             </Link>
             <Link href="?period=90">
-              <Button variant={period === '90' ? 'default' : 'outline'} size="sm">
+              <Button variant={period === '90' ? 'default' : 'outline'} size="sm" className="text-xs">
                 {t('periods.90days')}
               </Button>
             </Link>
             <Link href="?period=365">
-              <Button variant={period === '365' ? 'default' : 'outline'} size="sm">
+              <Button variant={period === '365' ? 'default' : 'outline'} size="sm" className="text-xs">
                 {t('periods.1year')}
               </Button>
             </Link>

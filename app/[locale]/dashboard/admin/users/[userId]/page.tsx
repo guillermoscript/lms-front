@@ -16,6 +16,8 @@ import {
   IconCreditCard,
 } from '@tabler/icons-react'
 import { UserActions } from '@/components/admin/user-actions'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 interface PageProps {
   params: Promise<{ userId: string; locale: string }>
@@ -25,6 +27,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   const { userId, locale } = await params
   const t = await getTranslations('dashboard.admin.users.details')
   const tu = await getTranslations('dashboard.admin.users.table')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
@@ -34,6 +37,21 @@ export default async function UserDetailPage({ params }: PageProps) {
 
   if (!user) {
     redirect('/auth/login')
+  }
+
+  const tenantId = await getCurrentTenantId()
+
+  // Verify user belongs to this tenant
+  const { data: membership } = await supabase
+    .from('tenant_users')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .single()
+
+  if (!membership) {
+    notFound()
   }
 
   // Fetch user profile
@@ -47,15 +65,9 @@ export default async function UserDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // Fetch user roles
-  const { data: userRoles } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId)
+  const roles = [membership.role]
 
-  const roles = userRoles?.map(r => r.role) || []
-
-  // Fetch enrollments with course details
+  // Fetch enrollments with course details (tenant-scoped)
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select(`
@@ -67,17 +79,19 @@ export default async function UserDetailPage({ params }: PageProps) {
       )
     `)
     .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
     .order('enrolled_at', { ascending: false })
 
-  // Fetch transactions
+  // Fetch transactions (tenant-scoped)
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(10)
 
-  // Fetch recent lesson completions
+  // Fetch recent lesson completions (tenant-scoped)
   const { data: recentActivity } = await supabase
     .from('lesson_completions')
     .select(`
@@ -92,6 +106,7 @@ export default async function UserDetailPage({ params }: PageProps) {
       )
     `)
     .eq('student_id', userId)
+    .eq('tenant_id', tenantId)
     .order('completed_at', { ascending: false })
     .limit(10)
 
@@ -102,12 +117,15 @@ export default async function UserDetailPage({ params }: PageProps) {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin/users">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('back')}
-            </Button>
-          </Link>
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: t('breadcrumbs.admin'), href: '/dashboard/admin' },
+                { label: t('breadcrumbs.users'), href: '/dashboard/admin/users' },
+                { label: t('breadcrumbs.userDetails') },
+              ]}
+            />
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">

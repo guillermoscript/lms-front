@@ -1,6 +1,7 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
 import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -14,6 +15,7 @@ import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 
 export default async function SettingsPage() {
   const t = await getTranslations('dashboard.admin.settings')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -45,11 +47,17 @@ export default async function SettingsPage() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
 
   return (
-    <div className="space-y-6 p-8" data-testid="settings-page">
+    <div className="space-y-6 p-6 lg:p-8" data-testid="settings-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('settings') },
+        ]}
+      />
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
           {t('description')}
         </p>
       </div>

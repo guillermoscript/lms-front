@@ -7,9 +7,11 @@ import Link from 'next/link'
 import { IconArrowLeft, IconTemplate } from '@tabler/icons-react'
 import { CreateTemplateButton } from '@/components/admin/create-template-button'
 import { TemplatesClient } from '@/components/admin/templates-client'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function NotificationTemplatesPage() {
   const t = await getTranslations('dashboard.admin.notifications.templates')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -22,15 +24,16 @@ export default async function NotificationTemplatesPage() {
 
   return (
     <div className="space-y-6 p-8" data-testid="notification-templates-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('notifications'), href: '/dashboard/admin/notifications' },
+          { label: tBreadcrumbs('templates') },
+        ]}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/admin/notifications">
-            <Button variant="outline" size="sm">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('back')}
-            </Button>
-          </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <IconTemplate className="h-8 w-8" />

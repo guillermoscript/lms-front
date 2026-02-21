@@ -15,6 +15,8 @@ import {
   IconX,
   IconClock,
 } from '@tabler/icons-react'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminTransactionsPage({
   params,
@@ -24,6 +26,7 @@ export default async function AdminTransactionsPage({
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.transactions')
   const tm = await getTranslations('dashboard.admin.main')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
@@ -35,10 +38,13 @@ export default async function AdminTransactionsPage({
     redirect('/auth/login')
   }
 
-  // Get all transactions
+  const tenantId = await getCurrentTenantId()
+
+  // Get all transactions for this tenant
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   // Get user profiles for transactions
@@ -68,72 +74,74 @@ export default async function AdminTransactionsPage({
     <div className="min-h-screen bg-background" data-testid="transactions-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('backToDashboard')}
-            </Button>
-          </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">
-                {t('description')}
-              </p>
-            </div>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('transactions') },
+              ]}
+            />
           </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Stats */}
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.totalRevenue')}</p>
-                  <p className="mt-2 text-3xl font-bold">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.totalRevenue')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
                     {t('stats.totalRevenueDesc')}
                   </p>
                 </div>
-                <IconCurrencyDollar className="h-10 w-10 text-green-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconCurrencyDollar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.pending')}</p>
-                  <p className="mt-2 text-3xl font-bold">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.pending')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(pendingAmount)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
                     {t('stats.pendingDesc')}
                   </p>
                 </div>
-                <IconClock className="h-10 w-10 text-yellow-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
+                  <IconClock className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.failed')}</p>
-                  <p className="mt-2 text-3xl font-bold">{failedCount}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.failed')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{failedCount}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
                     {t('stats.failedDesc')}
                   </p>
                 </div>
-                <IconX className="h-10 w-10 text-red-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
+                  <IconX className="h-[18px] w-[18px] text-red-600 dark:text-red-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -146,15 +154,15 @@ export default async function AdminTransactionsPage({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="border-b">
-                  <tr className="text-left text-sm text-muted-foreground">
-                    <th className="pb-3 font-medium">{t('table.headers.id')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.user')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.amount')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.status')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.method')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.date')}</th>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.id')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.user')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.amount')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.status')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.method')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.date')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -163,24 +171,24 @@ export default async function AdminTransactionsPage({
                       const user = usersMap.get(transaction.user_id)
 
                       return (
-                        <tr key={transaction.transaction_id} className="text-sm">
-                          <td className="py-4">
-                            <code className="rounded bg-muted px-2 py-1 text-xs">
+                        <tr key={transaction.transaction_id} className="border-b last:border-0 transition-colors hover:bg-muted/40">
+                          <td className="px-4 py-3">
+                            <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
                               {transaction.transaction_id}
                             </code>
                           </td>
-                          <td className="py-4">
+                          <td className="px-4 py-3">
                             <div>
                               <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-[11px] text-muted-foreground/70">
                                 {user?.email}
                               </p>
                             </div>
                           </td>
-                          <td className="py-4 font-medium">
+                          <td className="px-4 py-3 font-semibold tabular-nums">
                             {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
                           </td>
-                          <td className="py-4">
+                          <td className="px-4 py-3">
                             <Badge
                               variant={
                                 transaction.status === 'successful'
@@ -189,6 +197,7 @@ export default async function AdminTransactionsPage({
                                     ? 'secondary'
                                     : 'destructive'
                               }
+                              className={`text-[10px] ${transaction.status === 'successful' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                             >
                               {transaction.status === 'successful' && (
                                 <IconCheck className="mr-1 h-3 w-3" />
@@ -202,10 +211,10 @@ export default async function AdminTransactionsPage({
                               {tm(`recentActivity.status.${transaction.status}`)}
                             </Badge>
                           </td>
-                          <td className="py-4 text-muted-foreground">
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
                             {transaction.payment_method ? (t(`table.methods.${transaction.payment_method}`) || transaction.payment_method) : t('table.notAvailable')}
                           </td>
-                          <td className="py-4 text-muted-foreground">
+                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
                             {format(new Date(transaction.created_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
                           </td>
                         </tr>

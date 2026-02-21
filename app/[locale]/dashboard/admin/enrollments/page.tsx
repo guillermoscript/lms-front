@@ -10,12 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import {
-  IconArrowLeft,
-  IconCertificate,
-  IconCheck,
-  IconClock,
-} from '@tabler/icons-react'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { IconArrowLeft, IconCertificate, IconCheck, IconClock } from '@tabler/icons-react'
 
 export default async function AdminEnrollmentsPage({
   params,
@@ -24,6 +20,7 @@ export default async function AdminEnrollmentsPage({
 }) {
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.enrollments')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
@@ -79,59 +76,61 @@ export default async function AdminEnrollmentsPage({
     <div className="min-h-screen bg-background" data-testid="enrollments-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('backToDashboard')}
-            </Button>
-          </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">
-                {t('description')}
-              </p>
-            </div>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('enrollments') },
+              ]}
+            />
           </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Stats */}
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
-                  <p className="mt-2 text-3xl font-bold">{enrollments?.length || 0}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{enrollments?.length || 0}</p>
                 </div>
-                <IconCertificate className="h-10 w-10 text-blue-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <IconCertificate className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.active')}</p>
-                  <p className="mt-2 text-3xl font-bold">{activeCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.active')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{activeCount}</p>
                 </div>
-                <IconClock className="h-10 w-10 text-green-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconClock className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.completed')}</p>
-                  <p className="mt-2 text-3xl font-bold">{completedCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.completed')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{completedCount}</p>
                 </div>
-                <IconCheck className="h-10 w-10 text-purple-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
+                  <IconCheck className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -144,38 +143,38 @@ export default async function AdminEnrollmentsPage({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="border-b">
-                  <tr className="text-left text-sm text-muted-foreground">
-                    <th className="pb-3 font-medium">{t('table.headers.student')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.course')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.status')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.enrolled')}</th>
-                    <th className="pb-3 font-medium">{t('table.headers.actions')}</th>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.student')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.course')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.status')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.enrolled')}</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.actions')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody>
                   {enrollments && enrollments.length > 0 ? (
                     enrollments.map((enrollment) => {
                       const user = usersMap.get(enrollment.user_id)
                       const course = coursesMap.get(enrollment.course_id)
 
                       return (
-                        <tr key={enrollment.enrollment_id} className="text-sm">
-                          <td className="py-4">
+                        <tr key={enrollment.enrollment_id} className="border-b last:border-0 transition-colors hover:bg-muted/40">
+                          <td className="px-4 py-3">
                             <div>
                               <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-[11px] text-muted-foreground/70">
                                 {user?.email}
                               </p>
                             </div>
                           </td>
-                          <td className="py-4">
+                          <td className="px-4 py-3">
                             <p className="font-medium line-clamp-1">
                               {course?.title || t('table.unknownCourse')}
                             </p>
                           </td>
-                          <td className="py-4">
+                          <td className="px-4 py-3">
                             <Badge
                               variant={
                                 enrollment.status === 'active'
@@ -184,16 +183,17 @@ export default async function AdminEnrollmentsPage({
                                     ? 'secondary'
                                     : 'outline'
                               }
+                              className={`text-[10px] ${enrollment.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                             >
                               {enrollment.status === 'active' ? t('stats.active') : t('stats.completed')}
                             </Badge>
                           </td>
-                          <td className="py-4 text-muted-foreground">
+                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
                             {format(new Date(enrollment.enrollment_date), 'MMM d, yyyy', { locale: dateLocale })}
                           </td>
-                          <td className="py-4">
+                          <td className="px-4 py-3">
                             <Link href={`/dashboard/student/courses/${enrollment.course_id}`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="text-xs">
                                 {t('table.viewCourse')}
                               </Button>
                             </Link>
@@ -203,7 +203,7 @@ export default async function AdminEnrollmentsPage({
                     })
                   ) : (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         {t('table.empty')}
                       </td>
                     </tr>

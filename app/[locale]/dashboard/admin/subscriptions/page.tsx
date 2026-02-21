@@ -18,6 +18,8 @@ import {
 } from '@tabler/icons-react'
 import Link from 'next/link'
 import { SubscriptionActions } from '@/components/admin/subscription-actions'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 interface SearchParams {
   search?: string
@@ -33,6 +35,7 @@ export default async function SubscriptionsPage({
 }) {
   const { locale } = await params
   const t = await getTranslations('dashboard.admin.subscriptions')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
@@ -49,6 +52,7 @@ export default async function SubscriptionsPage({
     redirect('/dashboard/student')
   }
 
+  const tenantId = await getCurrentTenantId()
   const search = searchParams.search || ''
   const statusFilter = searchParams.status || 'all'
 
@@ -81,6 +85,7 @@ export default async function SubscriptionsPage({
       )
     `
     )
+    .eq('tenant_id', tenantId)
     .order('created', { ascending: false })
 
   // Apply status filter
@@ -123,52 +128,61 @@ export default async function SubscriptionsPage({
       title: t('stats.active'),
       value: activeCount,
       icon: IconCrown,
-      color: 'text-green-500',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
     },
     {
       title: t('stats.cancelled'),
       value: canceledCount,
       icon: IconRefresh,
-      color: 'text-orange-500',
+      bg: 'bg-amber-50 dark:bg-amber-950/40',
+      iconColor: 'text-amber-600 dark:text-amber-400',
     },
     {
       title: t('stats.expired'),
       value: expiredCount,
       icon: IconCalendar,
-      color: 'text-red-500',
+      bg: 'bg-red-50 dark:bg-red-950/40',
+      iconColor: 'text-red-600 dark:text-red-400',
     },
     {
       title: t('stats.revenue'),
       value: `$${(totalRevenue || 0).toFixed(2)}`,
       icon: IconCurrencyDollar,
-      color: 'text-blue-500',
+      bg: 'bg-blue-50 dark:bg-blue-950/40',
+      iconColor: 'text-blue-600 dark:text-blue-400',
     },
   ]
 
   return (
-    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8" data-testid="subscriptions-page">
+    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="subscriptions-page">
+      <div className="mb-4">
+        <AdminBreadcrumb
+          items={[
+            { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+            { label: tBreadcrumbs('subscriptions') },
+          ]}
+        />
+      </div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="flex items-center gap-2 text-3xl font-bold">
-          <IconCrown className="h-8 w-8" />
-          {t('title')}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {t('description')}
-        </p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{stat.title}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{stat.value}</p>
                 </div>
-                <stat.icon className={`h-10 w-10 ${stat.color}`} />
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -180,14 +194,14 @@ export default async function SubscriptionsPage({
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 max-w-sm">
-              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <IconSearch className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <form method="get">
                 <Input
                   type="search"
                   name="search"
                   placeholder={t('filters.search')}
                   defaultValue={search}
-                  className="pl-10"
+                  className="pl-9 h-8 text-sm"
                 />
                 {statusFilter !== 'all' && (
                   <input type="hidden" name="status" value={statusFilter} />
@@ -275,6 +289,7 @@ export default async function SubscriptionsPage({
                                       ? 'secondary'
                                       : 'destructive'
                                 }
+                                className={`text-[10px] ${isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                               >
                                 {t(`status.${subscription.subscription_status}`)}
                               </Badge>

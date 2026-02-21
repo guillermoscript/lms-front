@@ -16,9 +16,11 @@ import {
 } from '@tabler/icons-react'
 import NotificationsList from '@/components/admin/notifications-list'
 import CreateNotificationButton from '@/components/admin/create-notification-button'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function NotificationsPage() {
   const t = await getTranslations('dashboard.admin.notifications')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin' && role !== 'teacher') {
@@ -42,6 +44,12 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-6 p-8" data-testid="notifications-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('notifications') },
+        ]}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

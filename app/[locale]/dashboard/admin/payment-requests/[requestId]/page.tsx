@@ -11,6 +11,7 @@ import { IconArrowLeft, IconUser, IconMail, IconPhone, IconShoppingCart, IconCal
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { PaymentRequestActions } from '@/components/admin/payment-request-actions'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 interface PageProps {
   params: Promise<{
@@ -22,6 +23,7 @@ interface PageProps {
 export default async function PaymentRequestDetailPage({ params }: PageProps) {
   const { requestId } = await params
   const t = await getTranslations('dashboard.admin.paymentRequests')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
@@ -120,12 +122,15 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin/payment-requests">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('detail.back')}
-            </Button>
-          </Link>
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('paymentRequests'), href: '/dashboard/admin/payment-requests' },
+                { label: tBreadcrumbs('paymentRequestDetails') },
+              ]}
+            />
+          </div>
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3">

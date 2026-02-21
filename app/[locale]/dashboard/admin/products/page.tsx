@@ -16,9 +16,11 @@ import {
   IconRestore
 } from '@tabler/icons-react'
 import { ProductActions } from '@/components/admin/product-actions'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminProductsPage() {
   const t = await getTranslations('dashboard.admin.products')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
@@ -53,23 +55,23 @@ export default async function AdminProductsPage() {
     <div className="min-h-screen bg-background" data-testid="products-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('back')}
-            </Button>
-          </Link>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('products') },
+              ]}
+            />
+          </div>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">
-                {t('description')}
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
             </div>
             <Link href="/dashboard/admin/products/new">
-              <Button>
-                <IconPlus className="mr-2 h-4 w-4" />
+              <Button size="sm" className="gap-2">
+                <IconPlus className="h-4 w-4" />
                 {t('create')}
               </Button>
             </Link>
@@ -77,41 +79,47 @@ export default async function AdminProductsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Stats */}
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
-                  <p className="mt-2 text-3xl font-bold">{products?.length || 0}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{products?.length || 0}</p>
                 </div>
-                <IconShoppingCart className="h-10 w-10 text-blue-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <IconShoppingCart className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.active')}</p>
-                  <p className="mt-2 text-3xl font-bold">{activeCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.active')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{activeCount}</p>
                 </div>
-                <IconShoppingCart className="h-10 w-10 text-green-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconShoppingCart className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.archived')}</p>
-                  <p className="mt-2 text-3xl font-bold">{inactiveCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.archived')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{inactiveCount}</p>
                 </div>
-                <IconArchive className="h-10 w-10 text-yellow-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
+                  <IconArchive className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -131,7 +139,10 @@ export default async function AdminProductsPage() {
                       <div className="flex-1">
                         <CardTitle className="line-clamp-2">{product.name}</CardTitle>
                         <div className="mt-2 flex items-center gap-2">
-                          <Badge variant={isActive ? 'default' : 'secondary'}>
+                          <Badge
+                            variant={isActive ? 'default' : 'secondary'}
+                            className={`text-[10px] ${isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                          >
                             {product.status}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
@@ -146,11 +157,11 @@ export default async function AdminProductsPage() {
                       {product.description || t('card.noDescription')}
                     </p>
                     <div className="mb-4">
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold tracking-tight tabular-nums">
                         {product.currency === 'usd' ? '$' : '€'}
                         {product.price.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground text-uppercase">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {product.currency}
                       </p>
                     </div>

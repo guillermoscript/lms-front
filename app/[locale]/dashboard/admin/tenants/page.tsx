@@ -3,8 +3,12 @@ import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { getTranslations } from 'next-intl/server'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function TenantsPage() {
+  const t = await getTranslations('dashboard.admin')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const isSuper = await isSuperAdmin()
   if (!isSuper) {
     redirect('/dashboard/admin')
@@ -17,7 +21,13 @@ export default async function TenantsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 lg:p-8">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('tenants') },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tenant Management</h1>
         <Badge variant="outline">Super Admin</Badge>

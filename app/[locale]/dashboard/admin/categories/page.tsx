@@ -7,9 +7,12 @@ import Link from 'next/link'
 import { IconArrowLeft, IconFolderOpen } from '@tabler/icons-react'
 import { CategoriesTable } from '@/components/admin/categories-table'
 import { getTranslations } from 'next-intl/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminCategoriesPage() {
   const t = await getTranslations('dashboard.admin.categories')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
 
   const {
@@ -20,6 +23,8 @@ export default async function AdminCategoriesPage() {
     redirect('/auth/login')
   }
 
+  const tenantId = await getCurrentTenantId()
+
   // Get all categories with course counts
   const { data: categories } = await supabase
     .from('course_categories')
@@ -27,6 +32,7 @@ export default async function AdminCategoriesPage() {
       *,
       courses (count)
     `)
+    .eq('tenant_id', tenantId)
     .order('name')
 
   return (
@@ -34,12 +40,14 @@ export default async function AdminCategoriesPage() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('backToDashboard')}
-            </Button>
-          </Link>
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('categories') },
+              ]}
+            />
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>

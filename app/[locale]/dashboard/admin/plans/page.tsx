@@ -13,9 +13,11 @@ import {
   IconCalendar,
   IconEdit
 } from '@tabler/icons-react'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminPlansPage() {
   const t = await getTranslations('dashboard.admin.plans')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
@@ -57,23 +59,23 @@ export default async function AdminPlansPage() {
     <div className="min-h-screen bg-background" data-testid="plans-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              {t('back')}
-            </Button>
-          </Link>
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('plans') },
+              ]}
+            />
+          </div>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">
-                {t('description')}
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
             </div>
             <Link href="/dashboard/admin/plans/new">
-              <Button>
-                <IconPlus className="mr-2 h-4 w-4" />
+              <Button size="sm" className="gap-2">
+                <IconPlus className="h-4 w-4" />
                 {t('create')}
               </Button>
             </Link>
@@ -81,41 +83,47 @@ export default async function AdminPlansPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Stats */}
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
-                  <p className="mt-2 text-3xl font-bold">{plans?.length || 0}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{plans?.length || 0}</p>
                 </div>
-                <IconCalendar className="h-10 w-10 text-blue-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <IconCalendar className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.monthly')}</p>
-                  <p className="mt-2 text-3xl font-bold">{monthlyCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.monthly')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{monthlyCount}</p>
                 </div>
-                <IconCalendar className="h-10 w-10 text-green-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconCalendar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('stats.yearly')}</p>
-                  <p className="mt-2 text-3xl font-bold">{yearlyCount}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.yearly')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{yearlyCount}</p>
                 </div>
-                <IconCalendar className="h-10 w-10 text-purple-500" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
+                  <IconCalendar className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -151,11 +159,11 @@ export default async function AdminPlansPage() {
                       {plan.description || t('card.noDescription')}
                     </p>
                     <div className="mb-4">
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold tracking-tight tabular-nums">
                         {plan.currency === 'usd' ? '$' : '€'}
                         {plan.price.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {isMonthly ? t('card.perMonth') : t('card.perYear')}
                       </p>
                     </div>

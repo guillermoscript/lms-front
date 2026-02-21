@@ -1,12 +1,22 @@
 import { getRevenueOverview } from '@/app/actions/admin/revenue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/currency'
+import { getTranslations } from 'next-intl/server'
+import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function RevenuePage() {
+  const t = await getTranslations('dashboard.admin')
+  const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const revenue = await getRevenueOverview()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:p-6 p-2" data-testid="revenue-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('revenue') },
+        ]}
+      />
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Revenue</h1>
         <p className="text-muted-foreground">
