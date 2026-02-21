@@ -42,11 +42,17 @@ export async function POST(req: NextRequest) {
     // Check for existing active subscription
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
-      .select('subscription_id, stripe_subscription_id, status')
+      .select('subscription_id, stripe_subscription_id, status, payment_method')
       .eq('tenant_id', tenantId)
       .single()
 
-    if (existingSub?.stripe_subscription_id && existingSub.status === 'active') {
+    // Block only if there's an active Stripe subscription (not manual)
+    // Allow checkout when switching from manual_transfer to Stripe
+    if (
+      existingSub?.stripe_subscription_id &&
+      existingSub.status === 'active' &&
+      existingSub.payment_method !== 'manual_transfer'
+    ) {
       return NextResponse.json(
         { error: 'Active subscription exists. Use billing portal to change plans.' },
         { status: 400 }

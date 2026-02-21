@@ -66,8 +66,9 @@ export async function joinCurrentSchool() {
     }
   }
 
-  // Add user to tenant
-  const { error } = await supabase
+  // Add user to tenant (use admin client to bypass RLS — user's JWT has their
+  // current tenant_id, not the one they're joining, so RLS would block the insert)
+  const { error } = await adminClient
     .from('tenant_users')
     .insert({
       tenant_id: tenantId,
@@ -80,6 +81,14 @@ export async function joinCurrentSchool() {
     console.error('Failed to join school:', error)
     return { success: false, error: 'Failed to join school. Please try again.' }
   }
+
+  // Create gamification profile for this tenant (ignore if already exists)
+  await adminClient
+    .from('gamification_profiles')
+    .upsert(
+      { user_id: user.id, tenant_id: tenantId, total_xp: 0, level: 1 },
+      { onConflict: 'user_id,tenant_id', ignoreDuplicates: true }
+    )
 
   // Update user's preferred tenant
   await supabase.auth.updateUser({

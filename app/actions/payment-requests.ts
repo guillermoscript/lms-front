@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
@@ -393,6 +394,59 @@ export async function generateInvoice(requestId: number) {
       error: error instanceof Error ? error.message : 'Failed to generate invoice'
     }
   }
+}
+
+/**
+ * Student uploads payment proof for a payment request
+ */
+export async function uploadStudentPaymentProof(requestId: number, formData: FormData) {
+  const supabase = await createClient()
+  const adminClient = await createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const tenantId = await getCurrentTenantId()
+
+  if (!user) throw new Error('Not authenticated')
+
+  // Verify request belongs to user and tenant
+  const { data: request } = await supabase
+    .from('payment_requests')
+    .select('request_id, user_id, tenant_id')
+    .eq('request_id', requestId)
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!request) throw new Error('Payment request not found')
+
+  const file = formData.get('file') as File
+  if (!file || file.size === 0) throw new Error('No file provided')
+  if (file.size > 10 * 1024 * 1024) throw new Error('File must be less than 10MB')
+
+  const ext = file.name.split('.').pop() || 'bin'
+  const path = `student/${tenantId}/${user.id}/${requestId}/proof.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('payment-proofs')
+    .upload(path, file, { upsert: true })
+
+  if (uploadError) {
+    console.error('Failed to upload proof:', uploadError)
+    throw new Error('Failed to upload file')
+  }
+
+  const { data: signedUrlData } = await supabase.storage
+    .from('payment-proofs')
+    .createSignedUrl(path, 60 * 60 * 24 * 365) // 1 year
+
+  const proofUrl = signedUrlData?.signedUrl || ''
+
+  await adminClient
+    .from('payment_requests')
+    .update({ proof_url: proofUrl, updated_at: new Date().toISOString() })
+    .eq('request_id', requestId)
+
+  revalidatePath('/dashboard/student/payments')
+  return { proofUrl }
 }
 
 /**

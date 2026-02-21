@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { revalidatePath } from 'next/cache'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
@@ -82,7 +83,9 @@ export async function getSubscriptionStatus() {
       paymentMethod: subscription.payment_method,
       interval: subscription.interval,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodStart: subscription.current_period_start,
       currentPeriodEnd: subscription.current_period_end,
+      gracePeriodEnd: subscription.grace_period_end,
     } : null,
     usage: {
       courses: {
@@ -279,9 +282,26 @@ export async function confirmManualPayment(requestId: string) {
     })
     .eq('request_id', requestId)
 
-  // Calculate period end
+  // Calculate period: for renewals, extend from old period end (no gap)
   const now = new Date()
-  const periodEnd = new Date(now)
+  let periodStart: Date
+
+  if (request.request_type === 'renewal') {
+    // Get existing subscription to extend from its end date
+    const { data: existingSub } = await adminClient
+      .from('platform_subscriptions')
+      .select('current_period_end')
+      .eq('tenant_id', request.tenant_id)
+      .single()
+
+    const oldEnd = existingSub?.current_period_end ? new Date(existingSub.current_period_end) : now
+    // If old period hasn't ended yet, start from old end; otherwise start from now
+    periodStart = oldEnd > now ? oldEnd : now
+  } else {
+    periodStart = now
+  }
+
+  const periodEnd = new Date(periodStart)
   if (request.interval === 'yearly') {
     periodEnd.setFullYear(periodEnd.getFullYear() + 1)
   } else {
@@ -297,8 +317,9 @@ export async function confirmManualPayment(requestId: string) {
       status: 'active',
       payment_method: 'manual_transfer',
       interval: request.interval,
-      current_period_start: now.toISOString(),
+      current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),
+      grace_period_end: null,
       updated_at: now.toISOString(),
     }, { onConflict: 'tenant_id' })
 
@@ -362,4 +383,126 @@ export async function cancelSubscription() {
   }
 
   return { success: true }
+}
+
+/**
+ * Upload payment proof for a platform payment request (school admin)
+ */
+export async function uploadPaymentProof(requestId: string, formData: FormData) {
+  const { user, tenantId } = await verifyAdminAccess()
+  const adminClient = await createAdminClient()
+
+  // Verify request belongs to tenant
+  const { data: request } = await adminClient
+    .from('platform_payment_requests')
+    .select('request_id, tenant_id, status')
+    .eq('request_id', requestId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!request) throw new Error('Request not found')
+
+  const file = formData.get('file') as File
+  if (!file || file.size === 0) throw new Error('No file provided')
+  if (file.size > 10 * 1024 * 1024) throw new Error('File must be less than 10MB')
+
+  const ext = file.name.split('.').pop() || 'bin'
+  const path = `platform/${tenantId}/${requestId}/proof.${ext}`
+
+  const supabase = await createClient()
+  const { error: uploadError } = await supabase.storage
+    .from('payment-proofs')
+    .upload(path, file, { upsert: true })
+
+  if (uploadError) {
+    console.error('Failed to upload proof:', uploadError)
+    throw new Error('Failed to upload file')
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('payment-proofs')
+    .getPublicUrl(path)
+
+  // Since bucket is private, generate a signed URL instead
+  const { data: signedUrlData } = await supabase.storage
+    .from('payment-proofs')
+    .createSignedUrl(path, 60 * 60 * 24 * 365) // 1 year
+
+  const proofUrl = signedUrlData?.signedUrl || urlData.publicUrl
+
+  await adminClient
+    .from('platform_payment_requests')
+    .update({ proof_url: proofUrl, updated_at: new Date().toISOString() })
+    .eq('request_id', requestId)
+
+  revalidatePath('/dashboard/admin/billing')
+  return { proofUrl }
+}
+
+/**
+ * Request a manual subscription renewal (before current period ends)
+ */
+export async function requestManualRenewal() {
+  const { user, tenantId } = await verifyAdminAccess()
+  const adminClient = await createAdminClient()
+
+  // Get current subscription
+  const { data: subscription } = await adminClient
+    .from('platform_subscriptions')
+    .select('*, platform_plans(*)')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!subscription) throw new Error('No active subscription found')
+  if (subscription.payment_method !== 'manual_transfer') {
+    throw new Error('Renewal is only for manual transfer subscriptions')
+  }
+
+  // Check period ends within 30 days
+  const periodEnd = new Date(subscription.current_period_end)
+  const now = new Date()
+  const daysUntilEnd = Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (daysUntilEnd > 30 && subscription.status === 'active') {
+    throw new Error('Renewal can only be requested within 30 days of period end')
+  }
+
+  // Check for existing pending renewal request
+  const { data: existingRequest } = await adminClient
+    .from('platform_payment_requests')
+    .select('request_id')
+    .eq('tenant_id', tenantId)
+    .eq('request_type', 'renewal')
+    .in('status', ['pending', 'instructions_sent', 'payment_received'])
+    .single()
+
+  if (existingRequest) {
+    throw new Error('You already have a pending renewal request')
+  }
+
+  const plan = subscription.platform_plans as { plan_id: string; price_monthly: number; price_yearly: number }
+  const amount = subscription.interval === 'yearly' ? plan.price_yearly : plan.price_monthly
+
+  const { data: request, error } = await adminClient
+    .from('platform_payment_requests')
+    .insert({
+      tenant_id: tenantId,
+      plan_id: subscription.plan_id,
+      requested_by: user.id,
+      interval: subscription.interval,
+      amount,
+      currency: 'usd',
+      status: 'pending',
+      request_type: 'renewal',
+    })
+    .select('request_id')
+    .single()
+
+  if (error) {
+    console.error('Failed to create renewal request:', error)
+    throw new Error('Failed to create renewal request')
+  }
+
+  revalidatePath('/dashboard/admin/billing')
+  return { requestId: request.request_id }
 }
