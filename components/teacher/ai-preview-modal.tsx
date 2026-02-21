@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { IconRobot, IconPlayerPlay } from '@tabler/icons-react'
+import { IconRobot, IconPlayerPlay, IconSparkles } from '@tabler/icons-react'
 import {
   Conversation,
   ConversationContent,
@@ -33,16 +34,17 @@ interface AIPreviewModalProps {
   }
 }
 
-const suggestions = [
-  "How does this configuration affect responses?",
-  "Give me a sample student question",
-  "Is the tone appropriate?",
-  "Test a completion trigger"
-]
-
 function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
+  const t = useTranslations('dashboard.teacher.aiPreview')
   const [open, setOpen] = useState(false)
   const { textInput } = usePromptInputController()
+
+  const suggestions = [
+    t('suggestions.affect'),
+    t('suggestions.sample'),
+    t('suggestions.tone'),
+    t('suggestions.trigger')
+  ]
 
   const endpoint = type === 'lesson'
     ? '/api/teacher/preview/lesson-task'
@@ -82,31 +84,41 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
         className="gap-2 shadow-sm hover:shadow transition-all"
       >
         <IconPlayerPlay className="h-4 w-4" />
-        Preview AI Behavior
+        {t('buttonText')}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden bg-background">
-          <div className="flex flex-col h-full divide-y overflow-hidden">
-            <div className="px-6 py-4 bg-muted/5 flex items-center justify-between shrink-0">
+        <DialogContent className="!max-w-[90vw] !w-[900px] h-[90vh] max-h-[850px] p-0 gap-0 overflow-hidden bg-background">
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <IconRobot className="h-5 w-5 text-primary" />
+                <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <IconRobot className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-lg leading-none mb-1">AI Preview Mode</h2>
-                  <p className="text-sm text-muted-foreground">Testing your configuration in real-time</p>
+                  <h2 className="font-semibold text-base leading-none mb-0.5">{t('modalTitle')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('modalSubtitle')}</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  {t('previewSession')}
+                </span>
               </div>
             </div>
 
-            <Conversation className="flex-1 bg-background/50">
+            {/* Chat area */}
+            <Conversation className="flex-1 bg-muted/10">
               <ConversationContent>
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-8 text-center bg-muted/5">
-                    <IconRobot className="h-12 w-12 mb-4 opacity-20" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">Ready to Preview</h3>
-                    <p className="max-w-xs mx-auto">This simulates a student session with your current prompts. Start by asking a question.</p>
+                  <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-12 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
+                      <IconSparkles className="h-10 w-10 opacity-30" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">{t('readyTitle')}</h3>
+                    <p className="text-sm max-w-sm mx-auto leading-relaxed">{t('readyDesc')}</p>
                   </div>
                 )}
 
@@ -126,30 +138,29 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
               <ConversationScrollButton />
             </Conversation>
 
-            <div className="grid shrink-0 gap-4 pt-4 bg-background px-6 pb-6">
-              <Suggestions>
-                {suggestions.map((suggestion) => (
-                  <Suggestion
-                    key={suggestion}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    suggestion={suggestion}
-                  />
-                ))}
-              </Suggestions>
+            {/* Input area */}
+            <div className="grid shrink-0 gap-4 pt-4 bg-background px-6 pb-6 border-t">
+              {messages.length === 0 && (
+                <Suggestions>
+                  {suggestions.map((suggestion) => (
+                    <Suggestion
+                      key={suggestion}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      suggestion={suggestion}
+                    />
+                  ))}
+                </Suggestions>
+              )}
 
               <PromptInput onSubmit={handleSubmit}>
                 <PromptInputBody>
                   <PromptInputTextarea
-                    placeholder="Type your test message here..."
+                    placeholder={t('placeholder')}
                     className="min-h-[60px]"
                   />
                 </PromptInputBody>
                 <PromptInputFooter>
-                  <PromptInputTools>
-                    <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider text-muted-foreground border">
-                      Preview Session
-                    </div>
-                  </PromptInputTools>
+                  <PromptInputTools />
                   <PromptInputSubmit status={status as any} />
                 </PromptInputFooter>
               </PromptInput>

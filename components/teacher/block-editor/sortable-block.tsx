@@ -8,20 +8,23 @@ import {
   IconCopy,
   IconChevronUp,
   IconChevronDown,
-  IconPlus,
+  IconDotsVertical,
 } from '@tabler/icons-react'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { BLOCK_METAS, type BlockType } from './types'
+import { BLOCK_ICONS } from './add-block-menu'
+import { AddBlockMenu } from './add-block-menu'
 import { cn } from '@/lib/utils'
 
 interface SortableBlockProps {
   id: string
+  blockType: BlockType
   children: React.ReactNode
   isFirst: boolean
   isLast: boolean
@@ -34,6 +37,7 @@ interface SortableBlockProps {
 
 export function SortableBlock({
   id,
+  blockType,
   children,
   isFirst,
   isLast,
@@ -57,95 +61,107 @@ export function SortableBlock({
     transition,
   }
 
+  const meta = BLOCK_METAS.find((m) => m.type === blockType)
+  const iconData = BLOCK_ICONS[blockType]
+  const TypeIcon = iconData?.icon
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group relative flex gap-2 rounded-lg border bg-card p-3 transition-shadow',
-        isDragging && 'z-50 shadow-lg ring-2 ring-primary/50'
-      )}
-    >
-      {/* Drag handle & controls */}
-      <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Drag handle */}
-        <button
-          type="button"
-          className="cursor-grab p-1 rounded hover:bg-muted active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-          aria-label="Arrastrar bloque"
-        >
-          <IconGripVertical className="h-4 w-4 text-muted-foreground" />
-        </button>
+    <div className="relative">
+      {/* The block itself */}
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          'group/block relative rounded-xl border bg-card transition-all duration-200',
+          isDragging
+            ? 'z-50 shadow-xl ring-2 ring-primary/40 scale-[1.01]'
+            : 'hover:shadow-md hover:border-border/80',
+          'border-border/50'
+        )}
+      >
+        {/* Block type indicator strip */}
+        <div className={cn('absolute left-0 top-3 bottom-3 w-1 rounded-full', iconData?.bg || 'bg-muted')} />
 
-        {/* Move up */}
-        <button
-          type="button"
-          onClick={onMoveUp}
-          disabled={isFirst}
-          className="p-1 rounded hover:bg-muted disabled:opacity-30"
-          aria-label="Mover arriba"
-        >
-          <IconChevronUp className="h-3 w-3 text-muted-foreground" />
-        </button>
+        {/* Header bar — visible on hover */}
+        <div className="flex items-center gap-1 px-4 pt-2 pb-0 opacity-0 group-hover/block:opacity-100 transition-opacity duration-150">
+          {/* Drag handle */}
+          <button
+            type="button"
+            className="cursor-grab rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+            aria-label="Arrastrar bloque"
+          >
+            <IconGripVertical className="h-3.5 w-3.5" />
+          </button>
 
-        {/* Move down */}
-        <button
-          type="button"
-          onClick={onMoveDown}
-          disabled={isLast}
-          className="p-1 rounded hover:bg-muted disabled:opacity-30"
-          aria-label="Mover abajo"
-        >
-          <IconChevronDown className="h-3 w-3 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Block content */}
-      <div className="flex-1 min-w-0">{children}</div>
-
-      {/* Block actions */}
-      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Add block after */}
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <span
-              className="p-1 rounded hover:bg-muted inline-flex cursor-pointer"
-              aria-label="Añadir bloque"
-            >
-              <IconPlus className="h-4 w-4 text-muted-foreground" />
+          {/* Type label */}
+          <div className="flex items-center gap-1.5 px-1">
+            {TypeIcon && <TypeIcon className={cn('h-3 w-3', iconData?.color || 'text-muted-foreground')} />}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              {meta?.label || blockType}
             </span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {BLOCK_METAS.map((meta) => (
-              <DropdownMenuItem key={meta.type} onClick={() => onAddAfter(meta.type)}>
-                <span className="font-medium">{meta.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
 
-        {/* Duplicate */}
-        <button
-          type="button"
-          onClick={onDuplicate}
-          className="p-1 rounded hover:bg-muted"
-          aria-label="Duplicar bloque"
-        >
-          <IconCopy className="h-4 w-4 text-muted-foreground" />
-        </button>
+          {/* Spacer */}
+          <div className="flex-1" />
 
-        {/* Delete */}
-        <button
-          type="button"
-          onClick={onDelete}
-          className="p-1 rounded hover:bg-destructive/10 text-destructive"
-          aria-label="Eliminar bloque"
-        >
-          <IconTrash className="h-4 w-4" />
-        </button>
+          {/* Quick actions */}
+          <div className="flex items-center gap-0.5">
+            {!isFirst && (
+              <button
+                type="button"
+                onClick={onMoveUp}
+                className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
+                aria-label="Mover arriba"
+              >
+                <IconChevronUp className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!isLast && (
+              <button
+                type="button"
+                onClick={onMoveDown}
+                className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
+                aria-label="Mover abajo"
+              >
+                <IconChevronDown className="h-3.5 w-3.5" />
+              </button>
+            )}
+
+            {/* More menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
+                aria-label="Más opciones"
+              >
+                <IconDotsVertical className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={onDuplicate}>
+                  <IconCopy className="mr-2 h-3.5 w-3.5" />
+                  Duplicar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <IconTrash className="mr-2 h-3.5 w-3.5" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Block content area */}
+        <div className="px-5 pb-4 pt-2 pl-6">{children}</div>
       </div>
+
+      {/* Between-block inserter */}
+      {!isLast && (
+        <div className="relative z-10">
+          <AddBlockMenu onSelect={onAddAfter} position="between" />
+        </div>
+      )}
     </div>
   )
 }

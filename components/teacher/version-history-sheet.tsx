@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { IconHistory, IconLoader2, IconRestore, IconGitCompare, IconEye } from '@tabler/icons-react'
+import { IconHistory, IconLoader2, IconRestore, IconGitCompare, IconEye, IconClock, IconDots } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { VersionPreview } from './version-preview'
 import { VersionDiffPanel } from './version-diff-panel'
@@ -82,6 +82,35 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function formatDateShort(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/** Group versions by date for the timeline sidebar */
+function groupByDate(versions: ContentVersion[]): { date: string; versions: ContentVersion[] }[] {
+  const groups: Record<string, ContentVersion[]> = {}
+  for (const v of versions) {
+    const dateKey = new Date(v.created_at).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    if (!groups[dateKey]) groups[dateKey] = []
+    groups[dateKey].push(v)
+  }
+  return Object.entries(groups).map(([date, versions]) => ({ date, versions }))
+}
+
 export function VersionHistorySheet({ contentType, contentId, onRestore, currentSnapshot }: VersionHistorySheetProps) {
   const [open, setOpen] = useState(false)
   const [versions, setVersions] = useState<ContentVersion[]>([])
@@ -106,7 +135,6 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
       toast.error('Failed to load version history')
     } else {
       setVersions(data || [])
-      // Auto-select first version if available
       if (data && data.length > 0) {
         setSelectedVersion(data[0])
       }
@@ -146,6 +174,8 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
     setRestoring(false)
   }
 
+  const dateGroups = groupByDate(versions)
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpen}>
@@ -155,143 +185,206 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
         </DialogTrigger>
         <DialogContent
           showCloseButton
-          className="h-[85vh] max-h-[800px] p-0 flex flex-col overflow-hidden"
+          className="!max-w-[95vw] !w-[1200px] h-[90vh] max-h-[900px] p-0 flex flex-col overflow-hidden"
         >
-          <DialogHeader className="px-6 py-4 border-b shrink-0">
-            <DialogTitle className="text-lg font-semibold">Version History</DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-1 min-h-0">
-            {/* Left sidebar - Version list */}
-            <div className="w-64 shrink-0 border-r flex flex-col bg-muted/30">
-              <div className="px-3 py-2 border-b bg-muted/50">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {versions.length} {versions.length === 1 ? 'Version' : 'Versions'}
+          {/* Top bar */}
+          <div className="px-6 py-4 border-b shrink-0 flex items-center justify-between bg-background">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <IconHistory aria-hidden="true" className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <DialogHeader className="p-0 space-y-0">
+                  <DialogTitle className="text-base font-semibold leading-none">
+                    Version History
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {versions.length} {versions.length === 1 ? 'version' : 'versions'} saved
                 </p>
               </div>
+            </div>
+
+            {selectedVersion && (
+              <div className="flex items-center gap-2">
+                {/* View mode toggle */}
+                {currentSnapshot && (
+                  <div className="flex items-center border rounded-lg p-0.5 bg-muted/50">
+                    <button
+                      onClick={() => setViewMode('preview')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                        'outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                        viewMode === 'preview'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <IconEye aria-hidden="true" className="h-3.5 w-3.5" />
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => setViewMode('diff')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                        'outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                        viewMode === 'diff'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <IconGitCompare aria-hidden="true" className="h-3.5 w-3.5" />
+                      Compare
+                    </button>
+                  </div>
+                )}
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={restoring}
+                  onClick={() => setConfirmVersion(selectedVersion.version_number)}
+                  className="gap-1.5"
+                >
+                  {restoring ? (
+                    <IconLoader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <IconRestore aria-hidden="true" className="h-3.5 w-3.5" />
+                  )}
+                  Restore this version
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Main layout: sidebar + content */}
+          <div className="flex flex-1 min-h-0">
+            {/* Timeline sidebar */}
+            <div className="w-72 shrink-0 border-r flex flex-col bg-muted/20">
               <ScrollArea className="flex-1">
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <IconLoader2 aria-hidden="true" className="h-5 w-5 animate-spin text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Loading...</p>
+                    <p className="text-xs text-muted-foreground">Loading history...</p>
                   </div>
                 ) : versions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center gap-2">
-                    <IconHistory aria-hidden="true" className="h-8 w-8 text-muted-foreground/40" />
-                    <p className="text-xs text-muted-foreground">No versions yet</p>
+                  <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                      <IconHistory aria-hidden="true" className="h-7 w-7 text-muted-foreground/40" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">No versions yet</p>
+                      <p className="text-xs text-muted-foreground">
+                        Versions are created automatically when you save changes.
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="p-2 space-y-1">
-                    {versions.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => setSelectedVersion(v)}
-                        className={cn(
-                          'w-full text-left px-3 py-2.5 rounded-lg transition-colors outline-none',
-                          'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                          selectedVersion?.id === v.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-muted'
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            'font-mono text-xs font-bold px-1.5 py-0.5 rounded',
-                            selectedVersion?.id === v.id
-                              ? 'bg-primary-foreground/20'
-                              : 'bg-secondary'
-                          )}>
-                            v{v.version_number}
-                          </span>
-                          <span className={cn(
-                            'text-[10px] tabular-nums',
-                            selectedVersion?.id === v.id
-                              ? 'text-primary-foreground/70'
-                              : 'text-muted-foreground'
-                          )}>
-                            {timeAgo(v.created_at)}
+                  <div className="py-3">
+                    {dateGroups.map((group) => (
+                      <div key={group.date} className="mb-1">
+                        {/* Date header */}
+                        <div className="px-4 py-2 sticky top-0 bg-muted/20 backdrop-blur-sm z-10">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                            {group.date}
                           </span>
                         </div>
-                      </button>
+
+                        {/* Timeline items */}
+                        <div className="px-3 space-y-0.5">
+                          {group.versions.map((v, idx) => {
+                            const isSelected = selectedVersion?.id === v.id
+                            const isLatest = versions[0]?.id === v.id
+                            return (
+                              <button
+                                key={v.id}
+                                onClick={() => setSelectedVersion(v)}
+                                className={cn(
+                                  'w-full text-left px-3 py-3 rounded-lg transition-all outline-none',
+                                  'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                                  isSelected
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'hover:bg-muted/80'
+                                )}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Timeline dot */}
+                                  <div className={cn(
+                                    'mt-1 w-2.5 h-2.5 rounded-full shrink-0 ring-2',
+                                    isSelected
+                                      ? 'bg-primary-foreground ring-primary-foreground/30'
+                                      : isLatest
+                                        ? 'bg-amber-500 ring-amber-500/20'
+                                        : 'bg-muted-foreground/30 ring-muted/50'
+                                  )} />
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn(
+                                        'font-mono text-xs font-bold',
+                                        isSelected ? 'text-primary-foreground' : 'text-foreground'
+                                      )}>
+                                        v{v.version_number}
+                                      </span>
+                                      {isLatest && (
+                                        <span className={cn(
+                                          'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
+                                          isSelected
+                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                        )}>
+                                          Latest
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className={cn(
+                                      'flex items-center gap-1.5 mt-1 text-[11px]',
+                                      isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                    )}>
+                                      <IconClock aria-hidden="true" className="h-3 w-3" />
+                                      <span className="tabular-nums">{formatTime(v.created_at)}</span>
+                                      <span className="opacity-50">·</span>
+                                      <span>{timeAgo(v.created_at)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
               </ScrollArea>
             </div>
 
-            {/* Right panel - Preview/Diff */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* Main content area */}
+            <div className="flex-1 flex flex-col min-w-0 bg-background">
               {selectedVersion ? (
                 <>
-                  {/* Panel header with actions */}
-                  <div className="px-4 py-3 border-b flex items-center justify-between gap-4 bg-background shrink-0">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="font-mono">
-                        v{selectedVersion.version_number}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(selectedVersion.created_at)}
+                  {/* Version info bar */}
+                  <div className="px-6 py-3 border-b flex items-center gap-4 bg-muted/5 shrink-0">
+                    <Badge variant="outline" className="font-mono text-xs h-6 px-2.5">
+                      v{selectedVersion.version_number}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(selectedVersion.created_at)}
+                    </span>
+                    {viewMode === 'diff' && (
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        Comparing with current state
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* View mode toggle */}
-                      {currentSnapshot && (
-                        <div className="flex items-center border rounded-lg p-0.5 bg-muted/50">
-                          <button
-                            onClick={() => setViewMode('preview')}
-                            className={cn(
-                              'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                              'outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                              viewMode === 'preview'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                            )}
-                          >
-                            <IconEye aria-hidden="true" className="h-3.5 w-3.5" />
-                            Preview
-                          </button>
-                          <button
-                            onClick={() => setViewMode('diff')}
-                            className={cn(
-                              'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-                              'outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                              viewMode === 'diff'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                            )}
-                          >
-                            <IconGitCompare aria-hidden="true" className="h-3.5 w-3.5" />
-                            Compare
-                          </button>
-                        </div>
-                      )}
-                      <Button
-                        variant="default"
-                        size="sm"
-                        disabled={restoring}
-                        onClick={() => setConfirmVersion(selectedVersion.version_number)}
-                        className="gap-1.5"
-                      >
-                        {restoring ? (
-                          <IconLoader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <IconRestore aria-hidden="true" className="h-3.5 w-3.5" />
-                        )}
-                        Restore
-                      </Button>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Content area */}
+                  {/* Content */}
                   <ScrollArea className="flex-1">
-                    <div className="p-4">
+                    <div className="p-6 max-w-4xl">
                       {viewMode === 'preview' ? (
-                        <div className="rounded-lg border bg-muted/20 p-4">
-                          <VersionPreview
-                            contentType={contentType}
-                            snapshot={selectedVersion.snapshot}
-                          />
-                        </div>
+                        <VersionPreview
+                          contentType={contentType}
+                          snapshot={selectedVersion.snapshot}
+                        />
                       ) : currentSnapshot ? (
                         <VersionDiffPanel
                           versionNumber={selectedVersion.version_number}
@@ -307,14 +400,14 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                   </ScrollArea>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 p-8">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                    <IconHistory aria-hidden="true" className="h-8 w-8 text-muted-foreground/50" />
+                <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 p-8">
+                  <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center">
+                    <IconHistory aria-hidden="true" className="h-10 w-10 text-muted-foreground/30" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Select a version</p>
-                    <p className="text-xs text-muted-foreground">
-                      Click on a version from the list to preview or compare it
+                  <div className="space-y-1.5">
+                    <p className="text-base font-medium">Select a version</p>
+                    <p className="text-sm text-muted-foreground max-w-xs">
+                      Choose a version from the timeline to preview its content or compare changes.
                     </p>
                   </div>
                 </div>

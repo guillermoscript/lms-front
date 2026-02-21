@@ -19,7 +19,7 @@ import {
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { nanoid } from 'nanoid'
 import type { Block, BlockType } from './types'
-import { createBlock, BLOCK_METAS } from './types'
+import { createBlock } from './types'
 import { blocksToMdx, mdxToBlocks } from './serializer'
 import { SortableBlock } from './sortable-block'
 import { BlockRenderer } from './block-renderer'
@@ -145,39 +145,52 @@ export function BlockEditor({ initialContent = '', onChange, className }: BlockE
   }
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('space-y-0', className)}>
       {/* Add block at top */}
       <AddBlockMenu onSelect={(type: BlockType) => addBlockAfter(null, type)} position="top" />
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToVerticalAxis]}
-      >
-        <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {blocks.map((block, index) => (
-              <SortableBlock
-                key={block.id}
-                id={block.id}
-                isFirst={index === 0}
-                isLast={index === blocks.length - 1}
-                onDelete={() => deleteBlock(block.id)}
-                onDuplicate={() => duplicateBlock(block.id)}
-                onMoveUp={() => moveBlockUp(block.id)}
-                onMoveDown={() => moveBlockDown(block.id)}
-                onAddAfter={(type: BlockType) => addBlockAfter(block.id, type)}
-              >
-                <BlockRenderer
-                  block={block}
-                  onChange={(updates: Partial<Block>) => updateBlock(block.id, updates)}
-                />
-              </SortableBlock>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="mt-3">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis]}
+        >
+          <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-0">
+              {blocks.map((block, index) => (
+                <SortableBlock
+                  key={block.id}
+                  id={block.id}
+                  blockType={block.type}
+                  isFirst={index === 0}
+                  isLast={index === blocks.length - 1}
+                  onDelete={() => deleteBlock(block.id)}
+                  onDuplicate={() => duplicateBlock(block.id)}
+                  onMoveUp={() => moveBlockUp(block.id)}
+                  onMoveDown={() => moveBlockDown(block.id)}
+                  onAddAfter={(type: BlockType) => addBlockAfter(block.id, type)}
+                >
+                  <BlockRenderer
+                    block={block}
+                    onChange={(updates: Partial<Block>) => updateBlock(block.id, updates)}
+                  />
+                </SortableBlock>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
+
+      {/* Add block at bottom if there are blocks */}
+      {blocks.length > 0 && (
+        <div className="mt-3">
+          <AddBlockMenu
+            onSelect={(type: BlockType) => addBlockAfter(blocks[blocks.length - 1].id, type)}
+            position="top"
+          />
+        </div>
+      )}
     </div>
   )
 }
