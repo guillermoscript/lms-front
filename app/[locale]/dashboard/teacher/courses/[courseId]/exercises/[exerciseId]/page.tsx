@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { ExerciseBuilder } from '@/components/teacher/exercise-builder'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -26,7 +26,6 @@ export default async function EditExercisePage({ params }: PageProps) {
 
   const role = await getUserRole()
 
-  // Verify course ownership and fetch exercise
   const { data: exercise } = await supabase
     .from('exercises')
     .select('*')
@@ -37,7 +36,6 @@ export default async function EditExercisePage({ params }: PageProps) {
 
   if (!exercise) return notFound()
 
-  // Verify course ownership
   const { data: course } = await supabase
     .from('courses')
     .select('*')
@@ -52,10 +50,10 @@ export default async function EditExercisePage({ params }: PageProps) {
 
   if (!isOwner && !isAdmin) {
     return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">{t('accessDenied')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('notAuthor')}</p>
-        <Link href="/dashboard/teacher/courses" className="mt-4 inline-block">
+      <div className="p-8 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold text-destructive mb-2">{t('accessDenied')}</h1>
+        <p className="text-muted-foreground">{t('notAuthor')}</p>
+        <Link href={`/dashboard/teacher/courses/${courseId}/exercises`} className="mt-6 inline-block">
           <Button variant="outline">{t('backToCourses')}</Button>
         </Link>
       </div>
@@ -63,14 +61,21 @@ export default async function EditExercisePage({ params }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <Link href={`/dashboard/teacher/courses/${courseId}`}>
-        <Button variant="ghost" size="sm" className="mb-4">
-          <IconArrowLeft className="mr-2 h-4 w-4" />
-          {t('backToCourses')}
-        </Button>
-      </Link>
-      <h1 className="text-3xl font-bold mb-6">{tEx('updateExercise')}</h1>
+    <div className="mx-auto max-w-4xl px-4 py-8 lg:px-6 lg:py-10">
+      {/* Breadcrumb */}
+      <div className="mb-6 flex items-center gap-2">
+        <Link href={`/dashboard/teacher/courses/${courseId}/exercises`}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <IconArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="truncate max-w-[200px]">{course.title}</span>
+          <IconChevronRight className="h-3 w-3 shrink-0" />
+          <span className="font-medium text-foreground">{tEx('updateExercise')}</span>
+        </div>
+      </div>
+
       <ExerciseBuilder
         courseId={parseInt(courseId)}
         initialData={exercise}

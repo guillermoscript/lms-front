@@ -71,96 +71,98 @@ export default async function RevenuePage() {
   // Check if Stripe account is connected
   const isStripeConnected = !!tenant?.stripe_account_id
 
+  const revenueStats = [
+    {
+      title: 'Total Revenue',
+      value: `$${totalRevenue.toFixed(2)}`,
+      sub: 'All time revenue from students',
+      icon: DollarSign,
+      bg: 'bg-blue-50 dark:bg-blue-950/40',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      accent: 'group-hover:ring-blue-200 dark:group-hover:ring-blue-800',
+    },
+    {
+      title: `Your Share (${split?.school_percentage || 80}%)`,
+      value: `$${schoolRevenue.toFixed(2)}`,
+      valueColor: 'text-emerald-600 dark:text-emerald-400',
+      sub: 'After platform fee deduction',
+      icon: TrendingUp,
+      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      accent: 'group-hover:ring-emerald-200 dark:group-hover:ring-emerald-800',
+    },
+    {
+      title: 'Last 30 Days',
+      value: `$${recentRevenue.toFixed(2)}`,
+      sub: `${recentTransactions.length} transactions`,
+      icon: Clock,
+      bg: 'bg-violet-50 dark:bg-violet-950/40',
+      iconColor: 'text-violet-600 dark:text-violet-400',
+      accent: 'group-hover:ring-violet-200 dark:group-hover:ring-violet-800',
+    },
+    {
+      title: 'Pending Payout',
+      value: `$${pendingPayout.toFixed(2)}`,
+      valueColor: 'text-amber-600 dark:text-amber-400',
+      sub: 'Awaiting Stripe transfer',
+      icon: DollarSign,
+      bg: 'bg-amber-50 dark:bg-amber-950/40',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      accent: 'group-hover:ring-amber-200 dark:group-hover:ring-amber-800',
+    },
+  ]
+
   return (
-    <div className="container mx-auto py-8 space-y-8" data-testid="revenue-page">
+    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="revenue-page">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Revenue Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your school's revenue and payouts
+        <h1 className="text-2xl font-bold tracking-tight">Revenue Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Track your school&apos;s revenue and payouts
         </p>
       </div>
 
       {!isStripeConnected && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
-              <CardTitle className="text-amber-900">Payment Account Not Connected</CardTitle>
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-5 ring-1 ring-amber-200 dark:ring-amber-800">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
+              <AlertCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />
             </div>
-            <CardDescription className="text-amber-700">
-              Connect your Stripe account to start accepting payments and receiving payouts.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <a
-              href="/api/stripe/connect"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-            >
-              Connect Stripe Account
-            </a>
-          </CardContent>
-        </Card>
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Payment Account Not Connected</h3>
+              <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                Connect your Stripe account to start accepting payments and receiving payouts.
+              </p>
+              <a
+                href="/api/stripe/connect"
+                className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 h-8 px-4 transition-colors"
+              >
+                Connect Stripe Account
+              </a>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Revenue Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All time revenue from students
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Your Share ({split?.school_percentage || 80}%)
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${schoolRevenue.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              After platform fee deduction
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Last 30 Days</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${recentRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {recentTransactions.length} transactions
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payout</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              ${pendingPayout.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Awaiting Stripe transfer
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {revenueStats.map((stat) => (
+          <Card key={stat.title} className={`group transition-all duration-200 ring-1 ring-transparent ${stat.accent} hover:shadow-md`}>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{stat.title}</p>
+                  <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${stat.valueColor || ''}`}>
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">{stat.sub}</p>
+                </div>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
+                  <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} strokeWidth={1.75} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Platform Fee Info */}
@@ -173,28 +175,28 @@ export default async function RevenuePage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+            <div className="rounded-xl bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Platform Fee</span>
-                <Badge variant="secondary">{split?.platform_percentage || 20}%</Badge>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Platform Fee</span>
+                <Badge variant="secondary" className="text-[10px]">{split?.platform_percentage || 20}%</Badge>
               </div>
-              <div className="text-2xl font-bold text-muted-foreground">
+              <div className="text-2xl font-bold tabular-nums text-muted-foreground">
                 ${platformFee.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground/70">
                 Platform maintenance and support
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 p-4 ring-1 ring-emerald-100 dark:ring-emerald-900/40 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Your Revenue</span>
-                <Badge variant="default">{split?.school_percentage || 80}%</Badge>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Your Revenue</span>
+                <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">{split?.school_percentage || 80}%</Badge>
               </div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                 ${schoolRevenue.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground/70">
                 Paid directly to your Stripe account
               </p>
             </div>

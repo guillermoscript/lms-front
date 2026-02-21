@@ -118,17 +118,17 @@ export default function PromptTemplatesPage() {
   )
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6" data-testid="templates-page">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="templates-page">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Prompt Templates</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight">Prompt Templates</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Manage your reusable AI prompt templates for lessons and exercises.
           </p>
         </div>
         <Link href="/dashboard/teacher/templates/new">
-          <Button className="gap-2">
-            <IconPlus size={18} />
+          <Button size="sm" className="gap-2">
+            <IconPlus size={16} />
             Create Template
           </Button>
         </Link>
@@ -140,13 +140,13 @@ export default function PromptTemplatesPage() {
           <CardDescription>
             System templates are available for everyone. You can edit or delete your own templates.
           </CardDescription>
-          <div className="relative mt-2">
-            <IconSearch className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <div className="relative mt-3">
+            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search templates..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 max-w-sm"
+              className="pl-9 h-8 max-w-sm text-sm"
             />
           </div>
         </CardHeader>
@@ -154,82 +154,82 @@ export default function PromptTemplatesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Variables</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">Name</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">Category</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">Variables</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">Created</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
                     Loading templates...
                   </TableCell>
                 </TableRow>
               ) : filteredTemplates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
                     No templates found.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredTemplates.map((template) => (
-                  <TableRow key={template.id}>
+                  <TableRow key={template.id} className="hover:bg-muted/40">
                     <TableCell>
-                      <div className="font-medium flex items-center gap-2">
-                        {template.name}
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{template.name}</span>
                         {template.is_system && (
-                          <Badge variant="secondary" className="gap-1">
-                            <IconSparkles size={12} />
+                          <Badge variant="secondary" className="gap-1 text-[10px]">
+                            <IconSparkles size={10} />
                             System
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground line-clamp-1">
+                      <div className="text-[11px] text-muted-foreground/70 line-clamp-1 mt-0.5">
                         {template.description}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="text-[10px] capitalize">
                         {template.category.replace('_', ' ')}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {template.variables.variables.map((v) => (
-                          <Badge key={v} variant="secondary" className="text-[10px] px-1 h-4">
+                          <Badge key={v} variant="secondary" className="text-[9px] px-1.5 h-4 font-mono">
                             {v}
                           </Badge>
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-xs tabular-nums text-muted-foreground">
                       {new Date(template.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <IconDotsVertical size={16} />
+                          <Button variant="ghost" size="icon-xs">
+                            <IconDotsVertical size={14} />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/dashboard/teacher/templates/${template.id}/edit`)} className="flex items-center gap-2">
-                            <IconEdit size={16} />
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/teacher/templates/${template.id}/edit`)} className="flex items-center gap-2 text-sm">
+                            <IconEdit size={14} />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicate(template)} className="flex items-center gap-2">
-                            <IconCopy size={16} />
+                          <DropdownMenuItem onClick={() => handleDuplicate(template)} className="flex items-center gap-2 text-sm">
+                            <IconCopy size={14} />
                             Duplicate
                           </DropdownMenuItem>
                           {!template.is_system && (
                             <DropdownMenuItem
                               onClick={() => handleDelete(template.id)}
-                              className="flex items-center gap-2 text-destructive focus:text-destructive"
+                              className="flex items-center gap-2 text-sm text-destructive focus:text-destructive"
                             >
-                              <IconTrash size={16} />
+                              <IconTrash size={14} />
                               Delete
                             </DropdownMenuItem>
                           )}

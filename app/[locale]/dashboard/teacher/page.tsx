@@ -108,127 +108,135 @@ export default async function TeacherDashboard() {
   const totalPendingReviews = allSubmissions.length
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6" data-testid="teacher-dashboard">
-      <div className="flex items-center justify-between space-y-2">
+    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-dashboard">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
             {t.rich('welcome', {
               userName: profile?.full_name?.split(' ')[0] || 'Teacher'
             })}
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {t('subtitle')}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Link href="/dashboard/teacher/templates">
-            <Button variant="outline" className="transition-all active:scale-95">
-              <IconTemplate className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className="gap-2">
+              <IconTemplate className="h-3.5 w-3.5" />
               {t('promptTemplates')}
             </Button>
           </Link>
           <Link href="/dashboard/teacher/courses/new">
-            <Button className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95">
-              <IconPlus className="mr-2 h-4 w-4" />
+            <Button size="sm" className="gap-2">
+              <IconPlus className="h-3.5 w-3.5" />
               {t('createCourse')}
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05, duration: 0.3 }}
         >
-          <Card className="border-none bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-blue-500/10">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('stats.totalCourses')}</CardTitle>
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <IconBook className="h-4 w-4 text-blue-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCourses}</div>
-              <p className="text-xs text-muted-foreground">
-                {t('stats.totalLessons', { count: totalLessons })}
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="border-none bg-gradient-to-br from-green-500/10 via-green-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-green-500/10">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('stats.activeStudents')}</CardTitle>
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <IconUsers className="h-4 w-4 text-green-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalStudents}</div>
-              <p className="text-xs text-muted-foreground">
-                {t('stats.acrossPublished')}
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="border-none bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-amber-500/10">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('stats.submissions')}</CardTitle>
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <IconFileText className="h-4 w-4 text-amber-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPendingReviews}</div>
-              <p className="text-xs text-muted-foreground">
-                {t('stats.totalExams')}
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="border-none bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-background shadow-md backdrop-blur-sm ring-1 ring-indigo-500/10">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('stats.quickActions')}</CardTitle>
-              <div className="p-2 bg-indigo-500/10 rounded-lg">
-                <IconBolt className="h-4 w-4 text-indigo-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <div className="h-2 w-full bg-indigo-500/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 w-[65%] rounded-full" />
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-blue-200 hover:shadow-md dark:hover:ring-blue-800">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.totalCourses')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{totalCourses}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                    {t('stats.totalLessons', { count: totalLessons })}
+                  </p>
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <IconBook className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {t('stats.platformActivity')}
-              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+        >
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-emerald-200 hover:shadow-md dark:hover:ring-emerald-800">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.activeStudents')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{totalStudents}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                    {t('stats.acrossPublished')}
+                  </p>
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
+                  <IconUsers className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.3 }}
+        >
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-amber-200 hover:shadow-md dark:hover:ring-amber-800">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.submissions')}</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight">{totalPendingReviews}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                    {t('stats.totalExams')}
+                  </p>
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
+                  <IconFileText className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-violet-200 hover:shadow-md dark:hover:ring-violet-800">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.quickActions')}</p>
+                  <div className="mt-2 flex gap-2">
+                    <div className="h-1.5 w-full rounded-full bg-violet-100 dark:bg-violet-950/60 overflow-hidden">
+                      <div className="h-full bg-violet-500 w-[65%] rounded-full" />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-muted-foreground/70">
+                    {t('stats.platformActivity')}
+                  </p>
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
+                  <IconBolt className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-6 lg:grid-cols-7">
         {/* Courses Section */}
-        <Card className="lg:col-span-4 border-none shadow-xl bg-card/50 backdrop-blur-sm ring-1 ring-border">
+        <Card className="lg:col-span-4">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>{t('courses.title')}</CardTitle>
@@ -237,66 +245,71 @@ export default async function TeacherDashboard() {
               </CardDescription>
             </div>
             <Link href="/dashboard/teacher/courses">
-              <Button variant="ghost" size="sm" className="text-primary">
+              <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
                 {t('courses.viewAll')}
-                <IconArrowRight className="ml-2 h-4 w-4" />
+                <IconArrowRight className="h-3 w-3" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-1">
               {courses.length > 0 ? (
                 courses.map((course, idx) => (
                   <motion.div
                     key={course.course_id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * idx }}
-                    className="group relative flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-accent/50 hover:border-primary/50 transition-all duration-300 shadow-sm"
+                    transition={{ delay: 0.05 * idx, duration: 0.25 }}
+                    className="group relative flex items-center justify-between rounded-lg px-3 py-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
                         {course.thumbnail_url ? (
                           <img src={course.thumbnail_url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <IconBook className="h-6 w-6 text-primary" />
+                          <IconBook className="h-5 w-5 text-primary/60" />
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-semibold group-hover:text-primary transition-colors line-clamp-1">{course.title}</h4>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-medium group-hover:text-primary transition-colors line-clamp-1">{course.title}</h4>
+                        <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground mt-0.5">
                           <span className="flex items-center gap-1">
-                            <IconUsers size={12} /> {course.enrollments?.length || 0}
+                            <IconUsers size={11} /> {course.enrollments?.length || 0}
                           </span>
                           <span className="flex items-center gap-1">
-                            <IconFileText size={12} /> {t('courses.lessonsCount', { count: course.lessons?.length || 0 })}
+                            <IconFileText size={11} /> {t('courses.lessonsCount', { count: course.lessons?.length || 0 })}
                           </span>
-                          <Badge variant={course.status === 'published' ? 'default' : 'outline'} className="text-[10px] h-4 py-0">
+                          <Badge
+                            variant={course.status === 'published' ? 'default' : 'outline'}
+                            className={`text-[9px] h-4 py-0 ${course.status === 'published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                          >
                             {course.status}
                           </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/dashboard/teacher/courses/${course.course_id}`}>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full">
-                          <IconEdit size={16} />
+                        <Button size="icon-xs" variant="ghost" className="rounded-full">
+                          <IconEdit size={14} />
                         </Button>
                       </Link>
                       <Link href={`/dashboard/teacher/courses/${course.course_id}/preview`}>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full">
-                          <IconEye size={16} />
+                        <Button size="icon-xs" variant="ghost" className="rounded-full">
+                          <IconEye size={14} />
                         </Button>
                       </Link>
                     </div>
                   </motion.div>
                 ))
               ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                  <IconBook className="mx-auto h-12 w-12 opacity-10 mb-4" />
-                  <p>{t('courses.noCourses')}</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <IconBook className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t('courses.noCourses')}</p>
                   <Link href="/dashboard/teacher/courses/new">
-                    <Button variant="link" className="mt-2">{t('courses.createFirst')}</Button>
+                    <Button variant="link" size="sm" className="mt-1">{t('courses.createFirst')}</Button>
                   </Link>
                 </div>
               )}
@@ -305,7 +318,7 @@ export default async function TeacherDashboard() {
         </Card>
 
         {/* Activity Feed */}
-        <Card className="lg:col-span-3 border-none shadow-xl bg-card/50 backdrop-blur-sm ring-1 ring-border">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>{t('activity.title')}</CardTitle>
             <CardDescription>
@@ -313,25 +326,25 @@ export default async function TeacherDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-5">
               {recentEnrollments.length > 0 ? (
                 recentEnrollments.map((activity: any, idx) => (
-                  <div key={idx} className="flex items-start gap-4">
+                  <div key={idx} className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="h-10 w-10 rounded-full bg-accent border flex items-center justify-center overflow-hidden">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden text-xs font-semibold text-primary">
                         {activity.profiles?.avatar_url ? (
                           <img src={activity.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <IconUsers className="h-5 w-5 text-muted-foreground" />
+                          (activity.profiles?.full_name || '?').charAt(0).toUpperCase()
                         )}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background ring-1 ring-green-500/20" />
+                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-snug">
                         {t.rich('activity.enrolledIn', {
-                          userName: (chunks) => <span className="text-foreground">{activity.profiles?.full_name || 'Anonymous'}</span>,
-                          courseTitle: (chunks) => <span className="text-primary font-semibold">{activity.courses?.title}</span>
+                          userName: (chunks) => <span className="font-medium text-foreground">{activity.profiles?.full_name || 'Anonymous'}</span>,
+                          courseTitle: (chunks) => <span className="font-medium text-primary">{activity.courses?.title}</span>
                         })}
                       </p>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
@@ -343,20 +356,25 @@ export default async function TeacherDashboard() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-10 text-muted-foreground italic text-sm">
-                  {t('activity.noActivity')}
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <IconUsers className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('activity.noActivity')}
+                  </p>
                 </div>
               )}
             </div>
 
-            <div className="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-1.5 bg-primary/10 rounded-lg">
-                  <IconChartBar size={16} className="text-primary" />
+            <div className="mt-6 rounded-xl bg-primary/[0.04] p-4 ring-1 ring-primary/10">
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                  <IconChartBar size={14} className="text-primary" />
                 </div>
                 <h4 className="text-sm font-semibold">{t('activity.growthTip')}</h4>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed pl-[38px]">
                 {t('activity.growthTipDesc')}
               </p>
             </div>
