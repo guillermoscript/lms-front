@@ -27,62 +27,65 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
     const TypeIcon = config.icon;
 
     const difficultyColor = {
-        easy: "bg-emerald-50 text-emerald-700 border-emerald-100",
-        medium: "bg-amber-50 text-amber-700 border-amber-100",
-        hard: "bg-rose-50 text-rose-700 border-rose-100",
-    }[exercise.difficulty_level as string] || "bg-muted text-muted-foreground";
+        easy: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+        medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+        hard: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
+    }[exercise.difficulty_level as string] || "bg-muted text-muted-foreground border-border";
 
     return (
         <Link href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`} className="block group">
-            <Card className="h-full hover:shadow-xl transition-all duration-300 border-muted-foreground/10 overflow-hidden relative">
+            <Card className="h-full hover:shadow-lg hover:border-primary/20 transition-all duration-200 overflow-hidden relative">
                 {isCompleted && (
-                    <div className="absolute top-0 right-0 p-3 z-10">
-                        <div className="bg-emerald-500 text-white p-1 rounded-full shadow-lg border-2 border-white">
-                            <IconCheck size={14} stroke={4} />
+                    <div className="absolute top-3 right-3 z-10">
+                        <div className="bg-emerald-500 text-white p-1 rounded-full shadow-md">
+                            <IconCheck size={12} stroke={4} />
                         </div>
                     </div>
                 )}
 
-                <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
+                <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
                         <div className={cn(
-                            "p-3 rounded-2xl transition-all duration-300",
-                            isCompleted ? "bg-emerald-100 text-emerald-600" : "bg-primary/10 text-primary group-hover:scale-110"
+                            "p-2.5 rounded-xl transition-transform duration-200",
+                            isCompleted ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary group-hover:scale-110"
                         )}>
-                            <TypeIcon size={24} />
+                            <TypeIcon size={20} />
                         </div>
-                        <Badge variant="outline" className={cn("rounded-md font-bold px-2 py-0", difficultyColor)}>
+                        <Badge variant="outline" className={cn("rounded-md font-bold px-2 py-0 text-[10px] uppercase tracking-wider", difficultyColor)}>
                             {exercise.difficulty_level}
                         </Badge>
                     </div>
 
-                    <div className="space-y-2">
-                        <h3 className="font-black text-xl leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                    <div className="space-y-1.5">
+                        <h3 className="font-bold text-base leading-tight group-hover:text-primary transition-colors line-clamp-2">
                             {exercise.title}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed min-h-[32px]">
                             {exercise.description || "Interactive practice session to reinforce your learning."}
                         </p>
                     </div>
 
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-muted/30">
-                        <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                            <div className="flex items-center gap-1.5">
-                                <IconClock size={16} />
-                                {exercise.time_limit || "15"}m
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <IconChartBar size={16} />
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            {exercise.time_limit && (
+                                <div className="flex items-center gap-1">
+                                    <IconClock size={12} />
+                                    {exercise.time_limit}m
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                                <IconChartBar size={12} />
                                 {config.label}
                             </div>
                         </div>
-                        <div className="text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                            <IconChevronRight size={20} stroke={3} />
-                        </div>
+                        <IconChevronRight
+                            size={16}
+                            stroke={3}
+                            className="text-primary/0 group-hover:text-primary transition-all group-hover:translate-x-0.5"
+                        />
                     </div>
                 </CardContent>
             </Card>
         </Link>
     );
 }
-
