@@ -184,6 +184,7 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: { session } } = await supabase.auth.getSession()
 
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
@@ -198,7 +199,7 @@ export default async function proxy(request: NextRequest) {
 
   // Auth Guards
   if (isPublicRoute) {
-    if (session && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
+    if (user && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
       const dashboardUrl = new URL(`/${locale}/dashboard/${userRole}`, request.url)
       return NextResponse.redirect(dashboardUrl)
     }
@@ -211,7 +212,7 @@ export default async function proxy(request: NextRequest) {
   }
 
   // Protected Routes
-  if (!session) {
+  if (!user) {
     const redirectUrl = new URL(`/${locale}/auth/login`, request.url)
     redirectUrl.searchParams.set('redirectTo', normalizedPath)
     return NextResponse.redirect(redirectUrl)
@@ -222,12 +223,12 @@ export default async function proxy(request: NextRequest) {
     const { data: membership } = await supabase
       .from('tenant_users')
       .select('id, role')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
       .single()
 
-    if (!membership && tenantId !== DEFAULT_TENANT_ID) {
+    if (!membership) {
       // User is not a member of this tenant - redirect to join page
       const joinUrl = new URL(`/${locale}/join-school`, request.url)
       return NextResponse.redirect(joinUrl)
@@ -241,7 +242,7 @@ export default async function proxy(request: NextRequest) {
 
   // Super admin platform guard — /platform/* requires super_admins membership
   if (normalizedPath.startsWith('/platform')) {
-    const isSA = await checkSuperAdmin(session.user.id)
+    const isSA = await checkSuperAdmin(user.id)
     if (!isSA) {
       const loginUrl = new URL(`/${locale}/auth/login`, request.url)
       return NextResponse.redirect(loginUrl)
