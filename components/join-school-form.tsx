@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Check } from 'lucide-react'
+import { joinCurrentSchool } from '@/app/actions/join-school'
 
 interface JoinSchoolFormProps {
   tenant: {
@@ -27,46 +27,14 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
     setError(null)
 
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const result = await joinCurrentSchool()
 
-      if (!user) {
-        setError('You must be logged in to join a school')
+      if (!result.success) {
+        setError(result.error || 'Failed to join school. Please try again.')
         return
       }
 
-      // Add user to tenant_users
-      const { error: insertError } = await supabase
-        .from('tenant_users')
-        .insert({
-          tenant_id: tenant.id,
-          user_id: user.id,
-          role: 'student',
-          status: 'active',
-        })
-
-      if (insertError) {
-        console.error('Insert error:', insertError)
-
-        // Check if user is already a member
-        if (insertError.code === '23505') {
-          setError('You are already a member of this school')
-          return
-        }
-
-        setError('Failed to join school. Please try again.')
-        return
-      }
-
-      // Update user's preferred tenant
-      await supabase.auth.updateUser({
-        data: { preferred_tenant_id: tenant.id }
-      })
-
-      // Refresh session to get updated JWT claims
-      await supabase.auth.refreshSession()
-
-      // Redirect to dashboard
+      // Redirect to student dashboard
       router.push('/dashboard/student')
       router.refresh()
     } catch (err) {
@@ -137,7 +105,7 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
         </Button>
 
         <p className="text-xs text-muted-foreground text-center">
-          By joining, you agree to {tenant.name}'s terms of service and privacy policy
+          By joining, you agree to {tenant.name}&apos;s terms of service and privacy policy
         </p>
       </CardContent>
     </Card>
