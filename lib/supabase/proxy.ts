@@ -33,14 +33,16 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: If you remove getSession() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+  // A simple mistake could make it very hard to debug issues with users being randomly logged out.
   try {
-    await supabase.auth.getSession()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
   } catch (e) {
     // If this fails, it's likely a database connection issue or schema mismatch
     // We continue anyway as the main proxy will handle redirects if session is missing
-    console.error('Error in updateSession getSession:', e)
+    console.error('Error in updateSession getUser:', e)
   }
 
   return supabaseResponse

@@ -11,10 +11,10 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
   const supabase = await createClient()
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
@@ -23,7 +23,7 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('role')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .single()
@@ -34,6 +34,12 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
 
   // Fall back to JWT claims
   try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) return 'student'
+
     const payload = JSON.parse(atob(session.access_token.split('.')[1]))
     const role = (payload.tenant_role || payload.user_role) as 'student' | 'teacher' | 'admin' | undefined
     return role || 'student'

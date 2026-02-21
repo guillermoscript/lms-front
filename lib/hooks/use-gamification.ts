@@ -108,15 +108,18 @@ export function useGamification() {
             );
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error("Gamification summary error:", errorData);
-                throw new Error(errorData.error || "Failed to fetch gamification summary");
+                // Edge function unavailable or user has no gamification profile in this tenant — use defaults
+                console.warn("Gamification summary unavailable (status %d), using defaults", response.status);
+                setSummary(null);
+                return;
             }
 
             const data = await response.json();
             setSummary(data);
         } catch (err: any) {
-            setError(err);
+            // Network error or edge function not deployed — silently degrade
+            console.warn("Gamification fetch failed, using defaults:", err.message);
+            setSummary(null);
         } finally {
             setLoading(false);
         }
