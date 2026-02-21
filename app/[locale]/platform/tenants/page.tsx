@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -66,30 +66,30 @@ export default async function TenantsPage({
   }))
 
   return (
-    <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8" data-testid="platform-tenants-page">
+    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-tenants-page">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Tenants</h1>
-          <p className="text-muted-foreground mt-1" data-testid="tenants-count">{rows.length} school(s) found</p>
+          <h1 className="text-2xl font-bold tracking-tight">Tenants</h1>
+          <p className="text-sm text-muted-foreground mt-1" data-testid="tenants-count">{rows.length} school(s) found</p>
         </div>
       </div>
 
       {/* Filters */}
-      <form className="mb-6 flex flex-wrap gap-3" data-testid="tenants-filter-form">
+      <form className="mb-6 flex flex-wrap items-center gap-2" data-testid="tenants-filter-form">
         <input
           name="q"
           defaultValue={q}
           placeholder="Search by name…"
-          className="border rounded-md px-3 py-1.5 text-sm bg-background"
+          className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           data-testid="tenants-search"
         />
-        <select name="plan" defaultValue={plan || ''} className="border rounded-md px-3 py-1.5 text-sm bg-background" data-testid="tenants-plan-filter">
+        <select name="plan" defaultValue={plan || ''} className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm capitalize" data-testid="tenants-plan-filter">
           <option value="">All plans</option>
           {['free', 'starter', 'pro', 'business', 'enterprise'].map(p => (
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
-        <select name="status" defaultValue={status || ''} className="border rounded-md px-3 py-1.5 text-sm bg-background" data-testid="tenants-status-filter">
+        <select name="status" defaultValue={status || ''} className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm" data-testid="tenants-status-filter">
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
@@ -102,40 +102,43 @@ export default async function TenantsPage({
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="tenants-table">
-              <thead className="border-b bg-muted/50">
+              <thead className="border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Slug</th>
-                  <th className="px-4 py-3 text-left font-medium">Plan</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-right font-medium">Students</th>
-                  <th className="px-4 py-3 text-right font-medium">Courses</th>
-                  <th className="px-4 py-3 text-left font-medium">Created</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Name</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Slug</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Plan</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Students</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Courses</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Created</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((tenant) => (
-                  <tr key={tenant.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors" data-testid="tenant-row" data-tenant-id={tenant.id}>
+                  <tr key={tenant.id} className="border-b last:border-0 transition-colors hover:bg-muted/40" data-testid="tenant-row" data-tenant-id={tenant.id}>
                     <td className="px-4 py-3 font-medium">
-                      <Link href={`./tenants/${tenant.id}`} className="hover:underline">
+                      <Link href={`./tenants/${tenant.id}`} className="hover:text-primary transition-colors">
                         {tenant.name}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{tenant.slug}</td>
                     <td className="px-4 py-3">
-                      <Badge variant={PLAN_BADGE[tenant.plan] || 'outline'} className="capitalize">
+                      <Badge variant={PLAN_BADGE[tenant.plan] || 'outline'} className="capitalize text-[10px]">
                         {tenant.plan}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={tenant.status === 'active' ? 'default' : 'destructive'}>
+                      <Badge
+                        variant={tenant.status === 'active' ? 'default' : 'destructive'}
+                        className={`text-[10px] ${tenant.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                      >
                         {tenant.status}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">{tenant.students}</td>
-                    <td className="px-4 py-3 text-right">{tenant.courses}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                    <td className="px-4 py-3 text-right tabular-nums">{tenant.students}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{tenant.courses}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
                       {format(new Date(tenant.created_at), 'MMM d, yyyy')}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -150,7 +153,7 @@ export default async function TenantsPage({
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                       No tenants found.
                     </td>
                   </tr>
