@@ -6,7 +6,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { Link } from '@/i18n/routing'
+import Link from 'next/link'
 import React from 'react'
 
 export interface StudentBreadcrumbItem {
@@ -31,8 +31,8 @@ export function StudentBreadcrumb({ items }: StudentBreadcrumbProps) {
                                 {isLast ? (
                                     <BreadcrumbPage>{item.label}</BreadcrumbPage>
                                 ) : (
-                                    <BreadcrumbLink asChild>
-                                        <Link href={item.href || '#'}>{item.label}</Link>
+                                    <BreadcrumbLink render={<Link href={item.href || '#'} />}>
+                                        {item.label}
                                     </BreadcrumbLink>
                                 )}
                             </BreadcrumbItem>
