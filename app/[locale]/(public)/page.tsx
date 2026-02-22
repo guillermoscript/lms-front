@@ -33,22 +33,44 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
+import { LandingPageRenderer } from "@/components/public/landing-page/landing-page-renderer";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
 export default async function LandingPage() {
   // Branch to school landing page on subdomains
   const tenantId = await getCurrentTenantId()
   if (tenantId !== DEFAULT_TENANT_ID) {
     const [tenant, supabase] = await Promise.all([getCurrentTenant(), createClient()])
-    const { data: products } = await supabase
-      .from('products')
-      .select('product_id, name, description, price, currency, image')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(9)
     if (tenant) {
+      // Check if tenant has a paid plan with a custom active landing page
+      if (PAID_PLANS.includes(tenant.plan)) {
+        const { data: customPage } = await supabase
+          .from('landing_pages')
+          .select('sections, settings')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .eq('status', 'published')
+          .maybeSingle()
+        if (customPage && Array.isArray(customPage.sections) && customPage.sections.length > 0) {
+          return (
+            <LandingPageRenderer
+              sections={customPage.sections}
+              accentColor={tenant.primary_color}
+            />
+          )
+        }
+      }
+
+      // Fallback: default school landing page
+      const { data: products } = await supabase
+        .from('products')
+        .select('product_id, name, description, price, currency, image')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(9)
       return <SchoolLandingPage tenant={tenant} products={products ?? []} />
     }
   }
