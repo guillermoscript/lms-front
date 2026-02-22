@@ -19,6 +19,8 @@ const DEFAULT_FEATURES: PlanFeatures = {
   xp: true,
   levels: true,
   streaks: true,
+  landing_pages: false,
+  remove_branding: false,
 }
 
 const DEFAULT_LIMITS: PlanLimits = {

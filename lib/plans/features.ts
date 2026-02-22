@@ -13,6 +13,8 @@ export interface PlanFeatures {
   xp: boolean
   levels: boolean
   streaks: boolean
+  landing_pages: boolean
+  remove_branding: boolean
 }
 
 export interface PlanLimits {
@@ -36,8 +38,10 @@ export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   leaderboard: 'starter',
   achievements: 'starter',
   analytics: 'starter',
+  landing_pages: 'starter',
   store: 'pro',
   ai_grading: 'pro',
+  remove_branding: 'pro',
   custom_branding: 'business',
   custom_domain: 'business',
   priority_support: 'business',
