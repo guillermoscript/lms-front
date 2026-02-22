@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -54,19 +55,20 @@ export function TenantSwitcher({ tenants }: { tenants: TenantOption[] }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuLabel>Your Schools</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {tenants.map((t) => (
-          <DropdownMenuItem
-            key={t.id}
-            onClick={() => handleSwitch(t.id, t.slug)}
-            className={t.id === currentTenant?.id ? 'bg-accent' : ''}
-          >
-            <School className="mr-2 h-4 w-4" />
-            <span className="flex-1 truncate">{t.name}</span>
-            <span className="text-xs text-muted-foreground capitalize">{t.role}</span>
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Your Schools</DropdownMenuLabel>
+          {tenants.map((t) => (
+            <DropdownMenuItem
+              key={t.id}
+              onClick={() => handleSwitch(t.id, t.slug)}
+              className={t.id === currentTenant?.id ? 'bg-accent' : ''}
+            >
+              <School className="mr-2 h-4 w-4" />
+              <span className="flex-1 truncate">{t.name}</span>
+              <span className="text-xs text-muted-foreground capitalize">{t.role}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => window.location.href = '/create-school'}>
           <Plus className="mr-2 h-4 w-4" />
