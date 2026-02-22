@@ -17,6 +17,7 @@ import {
     IconCurrencyDollar,
     IconDashboard,
     IconFileText,
+    IconLayout,
     IconLogout,
     IconPlus,
     IconSchool,
@@ -80,6 +81,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 { title: t('enrollments'), href: "/dashboard/admin/enrollments", icon: IconCertificate },
                 { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
                 { title: t('billing'), href: "/dashboard/admin/billing", icon: IconCreditCard },
+                { title: 'Landing Page', href: "/dashboard/admin/landing-page", icon: IconLayout },
             ],
         },
         teacher: {
