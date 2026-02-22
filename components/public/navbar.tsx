@@ -5,10 +5,15 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { NavbarTenantSwitcher } from "@/components/tenant/navbar-tenant-switcher";
+import type { HeaderSettings } from "@/lib/landing-pages/types";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
-export async function Navbar() {
+interface NavbarProps {
+    headerSettings?: HeaderSettings
+}
+
+export async function Navbar({ headerSettings }: NavbarProps = {}) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const t = await getTranslations('navbar');
@@ -91,6 +96,14 @@ export async function Navbar() {
                                 {t('creators')}
                             </Link>
                         </>
+                    ) : headerSettings?.navLinks && headerSettings.navLinks.length > 0 ? (
+                        <>
+                            {headerSettings.navLinks.map((link, idx) => (
+                                <Link key={idx} href={link.href} className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                    {link.label}
+                                </Link>
+                            ))}
+                        </>
                     ) : (
                         <>
                             <Link href="/courses" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
@@ -105,7 +118,7 @@ export async function Navbar() {
 
                 {/* Right Actions */}
                 <div className="flex items-center space-x-4">
-                    <LanguageSwitcher />
+                    {(headerSettings?.showLanguageSwitcher !== false) && <LanguageSwitcher />}
 
                     {user ? (
                         <Link href="/dashboard/student">
@@ -115,12 +128,20 @@ export async function Navbar() {
                         </Link>
                     ) : (
                         <>
-                            <Link href="/auth/login" className="hidden sm:inline-block">
-                                <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-white/5">
-                                    {t('login')}
-                                </Button>
-                            </Link>
-                            {isMainPlatform ? (
+                            {(headerSettings?.showLoginButton !== false) && (
+                                <Link href="/auth/login" className="hidden sm:inline-block">
+                                    <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-white/5">
+                                        {t('login')}
+                                    </Button>
+                                </Link>
+                            )}
+                            {headerSettings?.ctaText && headerSettings?.ctaLink ? (
+                                <Link href={headerSettings.ctaLink}>
+                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                        {headerSettings.ctaText}
+                                    </Button>
+                                </Link>
+                            ) : isMainPlatform ? (
                                 <Link href="/create-school">
                                     <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
                                         {t('startFree')} →
