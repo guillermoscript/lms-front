@@ -80,6 +80,22 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // --- OAuth well-known metadata (RFC 9728 path-aware format) ---
+  // Claude Desktop looks for:
+  //   /.well-known/oauth-protected-resource/api/mcp
+  //   /.well-known/oauth-authorization-server/api/mcp
+  // Rewrite these to our catch-all proxy at /api/mcp/.well-known/*
+  if (pathname.startsWith('/.well-known/oauth-protected-resource/api/mcp') ||
+      pathname.startsWith('/.well-known/oauth-authorization-server/api/mcp')) {
+    // Extract which well-known type: oauth-protected-resource or oauth-authorization-server
+    const wellKnownType = pathname.startsWith('/.well-known/oauth-protected-resource')
+      ? 'oauth-protected-resource'
+      : 'oauth-authorization-server'
+    const rewriteUrl = request.nextUrl.clone()
+    rewriteUrl.pathname = `/api/mcp/.well-known/${wellKnownType}`
+    return NextResponse.rewrite(rewriteUrl)
+  }
+
   // --- Tenant Resolution (runs for ALL routes including /api) ---
   const host = request.headers.get('host') || ''
   const tenantSlug = getTenantSlugFromHost(host)
