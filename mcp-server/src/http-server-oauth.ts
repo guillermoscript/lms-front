@@ -1,19 +1,36 @@
 #!/usr/bin/env node
 
 /**
- * LMS MCP HTTP Server with OAuth 2.1 Authentication
+ * LMS MCP HTTP Server with OAuth 2.1 Authorization Server (Multi-Tenant)
  *
- * This server uses Supabase as the OAuth 2.1 Authorization Server.
- * It acts as a Resource Server that:
- * 1. Advertises OAuth metadata via /.well-known/oauth-protected-resource
- * 2. Validates Bearer tokens (Supabase JWTs) via JWKS
- * 3. Extracts user_role from JWT claims (injected by custom_access_token_hook)
- * 4. Creates per-request AuthManager with user context from the verified JWT
+ * This server acts as BOTH the OAuth Authorization Server AND the Resource Server.
+ * It sits behind the Next.js catch-all proxy at /api/mcp/[[...path]].
  *
- * Flow:
- *   MCP Client → discovers OAuth via well-known → redirects to Supabase Auth
- *   → user logs in + consents → Supabase issues JWT → client sends Bearer token
- *   → this server verifies JWT via JWKS → processes MCP request with user context
+ * Multi-tenant design:
+ * - The Next.js proxy serves OAuth metadata (/.well-known/*) directly,
+ *   constructing tenant-specific URLs from the Host header
+ * - The proxy forwards X-Origin header so this server knows which tenant
+ *   subdomain to redirect to for the consent page
+ * - Each tenant (school1.platform.com, school2.platform.com) gets a
+ *   correctly-scoped OAuth flow without any per-tenant configuration
+ *
+ * Endpoints handled by this server (behind the proxy):
+ *   /auth/authorize  → redirects to tenant consent page
+ *   /auth/token      → code → JWT exchange
+ *   /auth/register   → dynamic client registration
+ *   /auth/callback   → receives consent result, issues auth code
+ *   /mcp             → protected MCP endpoint (Bearer JWT)
+ *   /health          → health check
+ *
+ * Flow for Claude Desktop:
+ *   1. User adds school.platform.com/api/mcp in Settings > Connectors
+ *   2. Claude GETs /.well-known/oauth-protected-resource (served by proxy)
+ *   3. Claude registers via /auth/register → forwarded here
+ *   4. Claude hits /auth/authorize → this server redirects to tenant consent
+ *   5. User logs in + approves → consent page POSTs to /auth/callback
+ *   6. This server generates auth code → redirects back to Claude
+ *   7. Claude exchanges code for JWT at /auth/token
+ *   8. Claude calls /mcp with Bearer JWT
  */
 
 import dotenv from "dotenv";
@@ -23,10 +40,10 @@ import express from "express";
 import { IncomingMessage, ServerResponse } from "http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { mcpAuthMetadataRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { AuthManager, loadOAuthResourceConfig, UserContext, OAuthResourceConfig } from "./auth.js";
-import { SupabaseTokenVerifier } from "./oauth/token-verifier.js";
+import { SupabaseOAuthProvider } from "./oauth/supabase-oauth-provider.js";
 import { registerCourseTools } from "./tools/courses.js";
 import { registerLessonTools } from "./tools/lessons.js";
 import { registerExerciseTools } from "./tools/exercises.js";
@@ -34,7 +51,6 @@ import { registerExamTools } from "./tools/exams.js";
 import { registerAnalyticsTools } from "./tools/analytics.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
-import type { OAuthMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
 
 const PORT = parseInt(process.env.MCP_SERVER_PORT || "3001", 10);
 const HOST = process.env.MCP_SERVER_HOST || "127.0.0.1";
@@ -43,33 +59,20 @@ const HOST = process.env.MCP_SERVER_HOST || "127.0.0.1";
 let authConfig: OAuthResourceConfig;
 try {
   authConfig = loadOAuthResourceConfig();
-  console.error(`[Config] OAuth Resource Server mode`);
+  console.error(`[Config] OAuth Authorization + Resource Server mode`);
   console.error(`[Config] Supabase URL: ${authConfig.supabaseUrl}`);
 } catch (error) {
   console.error("Failed to load auth config:", error);
   process.exit(1);
 }
 
-// Create token verifier
-const tokenVerifier = new SupabaseTokenVerifier({
-  supabaseUrl: authConfig.supabaseUrl,
-});
+// Create OAuth provider (no hardcoded URL — origin comes from request headers)
+const oauthProvider = new SupabaseOAuthProvider();
 
-// Build OAuth metadata pointing to Supabase Auth endpoints
-const supabaseAuthBase = `${authConfig.supabaseUrl}/auth/v1`;
-const oauthMetadata = {
-  issuer: supabaseAuthBase,
-  authorization_endpoint: `${supabaseAuthBase}/oauth/authorize`,
-  token_endpoint: `${supabaseAuthBase}/oauth/token`,
-  registration_endpoint: `${supabaseAuthBase}/oauth/register`,
-  response_types_supported: ["code"],
-  grant_types_supported: ["authorization_code", "refresh_token"],
-  token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
-  code_challenge_methods_supported: ["S256"],
-  scopes_supported: ["openid", "profile", "email"],
-} satisfies OAuthMetadata;
-
-const resourceServerUrl = new URL(`http://${HOST}:${PORT}`);
+// Issuer URL for mcpAuthRouter — this is the internal address.
+// The proxy rewrites metadata for the actual public URLs, so this is
+// only used for the SDK's internal routing.
+const issuerUrl = new URL(`http://${HOST}:${PORT}`);
 
 /**
  * Create a server factory that registers tools with a given auth manager.
@@ -94,23 +97,129 @@ function createServerWithAuth(auth: AuthManager): McpServer {
 // Create Express app
 const app = express();
 
-// Auth metadata router — serves /.well-known/oauth-protected-resource
+// OAuth auth router — handles /auth/authorize, /auth/token, /auth/register
+// Note: The proxy overrides /.well-known/* with tenant-aware metadata,
+// so mcpAuthRouter's metadata will only be seen if accessed directly.
 app.use(
-  mcpAuthMetadataRouter({
-    oauthMetadata,
-    resourceServerUrl,
+  mcpAuthRouter({
+    provider: oauthProvider,
+    issuerUrl,
+    scopesSupported: ["mcp:tools"],
     resourceName: "LMS MCP Server",
-    scopesSupported: ["openid", "profile", "email"],
   })
 );
 
-// JSON body parsing
+// JSON body parsing (after auth router, which has its own parsing)
 app.use(express.json());
 
 // Bearer auth middleware for /mcp endpoint
 const bearerAuth = requireBearerAuth({
-  verifier: tokenVerifier,
-  resourceMetadataUrl: `${resourceServerUrl.origin}/.well-known/oauth-protected-resource`,
+  verifier: oauthProvider,
+  resourceMetadataUrl: `${issuerUrl.origin}/.well-known/oauth-protected-resource`,
+});
+
+/**
+ * POST /auth/callback — receives user identity from consent page
+ *
+ * After the user approves on the tenant's consent page, it POSTs here
+ * (via the proxy) with: { sessionId, userId, userRole, tenantId }
+ *
+ * This generates an authorization code and redirects to the client's redirect_uri.
+ */
+app.post("/auth/callback", (req, res) => {
+  try {
+    const { sessionId, userId, userRole, tenantId } = req.body;
+
+    if (!sessionId || !userId || !userRole || !tenantId) {
+      res.status(400).json({
+        error: "invalid_request",
+        error_description: "Missing required fields: sessionId, userId, userRole, tenantId",
+      });
+      return;
+    }
+
+    if (userRole !== "teacher" && userRole !== "admin") {
+      res.status(403).json({
+        error: "access_denied",
+        error_description: "Only teachers and admins can authorize MCP access",
+      });
+      return;
+    }
+
+    const { code, redirectUri, state } = oauthProvider.completeAuthorization(
+      sessionId,
+      userId,
+      userRole,
+      tenantId
+    );
+
+    const targetUrl = new URL(redirectUri);
+    targetUrl.searchParams.set("code", code);
+    if (state) {
+      targetUrl.searchParams.set("state", state);
+    }
+
+    console.error(`[OAuth Callback] Auth code issued for tenant ${tenantId}, redirecting to client`);
+    res.redirect(targetUrl.toString());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[OAuth Callback] Error: ${message}`);
+    res.status(400).json({
+      error: "invalid_request",
+      error_description: message,
+    });
+  }
+});
+
+/**
+ * GET /auth/callback — handles consent page redirects (browser navigation)
+ */
+app.get("/auth/callback", (req, res) => {
+  try {
+    const sessionId = req.query.session_id as string;
+    const userId = req.query.user_id as string;
+    const userRole = req.query.user_role as string;
+    const tenantId = req.query.tenant_id as string;
+
+    if (!sessionId || !userId || !userRole || !tenantId) {
+      res.status(400).json({
+        error: "invalid_request",
+        error_description: "Missing required query params: session_id, user_id, user_role, tenant_id",
+      });
+      return;
+    }
+
+    if (userRole !== "teacher" && userRole !== "admin") {
+      res.status(403).json({
+        error: "access_denied",
+        error_description: "Only teachers and admins can authorize MCP access",
+      });
+      return;
+    }
+
+    const { code, redirectUri, state } = oauthProvider.completeAuthorization(
+      sessionId,
+      userId,
+      userRole as "teacher" | "admin",
+      tenantId
+    );
+
+    const targetUrl = new URL(redirectUri);
+    targetUrl.searchParams.set("code", code);
+    if (state) {
+      targetUrl.searchParams.set("state", state);
+    }
+
+    console.error(`[OAuth Callback GET] Auth code issued, redirecting to client`);
+    res.redirect(targetUrl.toString());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[OAuth Callback GET] Error: ${message}`);
+    res.status(400).json({
+      error: "invalid_request",
+      error_description: message,
+    });
+  }
 });
 
 // MCP endpoint (protected by OAuth bearer token)
@@ -132,7 +241,7 @@ app.post("/mcp", bearerAuth, async (req, res) => {
     const mcpServer = createServerWithAuth(auth);
 
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // Stateless mode
+      sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
 
@@ -156,7 +265,7 @@ app.post("/mcp", bearerAuth, async (req, res) => {
     }
 
     console.error(
-      `[${new Date().toISOString()}] MCP request handled for ${userContext.userRole} (${userContext.userId})`
+      `[${new Date().toISOString()}] MCP request: ${userContext.userRole} (${userContext.userId}) tenant ${userContext.tenantId}`
     );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -192,34 +301,33 @@ app.get("/health", (_req, res) => {
     status: "ok",
     server: "lms-mcp-server",
     version: "2.0.0",
-    authMode: "oauth-resource",
+    authMode: "oauth-authorization-server",
+    multiTenant: true,
   });
 });
 
 // Start server
 app.listen(PORT, HOST, () => {
   console.error(`╔════════════════════════════════════════════════════════════╗`);
-  console.error(`║  LMS MCP HTTP Server (OAuth 2.1)                          ║`);
+  console.error(`║  LMS MCP HTTP Server (OAuth 2.1 — Multi-Tenant)           ║`);
   console.error(`╠════════════════════════════════════════════════════════════╣`);
   console.error(`║  Status:   READY                                           ║`);
   console.error(`║  Address:  http://${HOST}:${PORT.toString().padEnd(37)} ║`);
-  console.error(`║  Endpoint: POST /mcp                                       ║`);
-  console.error(`║  Health:   GET /health                                     ║`);
-  console.error(`║  Mode:     OAuth 2.1 Resource Server (Stateless)           ║`);
+  console.error(`║  Mode:     OAuth 2.1 Auth + Resource Server                ║`);
   console.error(`╠════════════════════════════════════════════════════════════╣`);
-  console.error(`║  Auth Server: ${supabaseAuthBase.padEnd(42)} ║`);
-  console.error(`║  Metadata:  /.well-known/oauth-protected-resource         ║`);
+  console.error(`║  Multi-Tenant:                                             ║`);
+  console.error(`║    Proxy serves /.well-known/* with per-tenant URLs       ║`);
+  console.error(`║    authorize() reads X-Origin for consent redirect        ║`);
+  console.error(`║    Each subdomain gets its own OAuth flow automatically   ║`);
   console.error(`╠════════════════════════════════════════════════════════════╣`);
-  console.error(`║  Registered:                                               ║`);
-  console.error(`║    • 27 tools (courses, lessons, exams, etc.)              ║`);
-  console.error(`║    • 3 resources (course, lesson, exam data)               ║`);
-  console.error(`║    • 4 prompts (course creation, content gen, etc.)        ║`);
+  console.error(`║  Auth Endpoints (behind proxy):                            ║`);
+  console.error(`║    • /auth/register  (Dynamic Client Registration)        ║`);
+  console.error(`║    • /auth/authorize (→ tenant consent page)              ║`);
+  console.error(`║    • /auth/token     (code → JWT exchange)                ║`);
+  console.error(`║    • /auth/callback  (consent result → auth code)         ║`);
+  console.error(`║    • POST /mcp       (Bearer JWT required)                ║`);
   console.error(`╠════════════════════════════════════════════════════════════╣`);
-  console.error(`║  Security:                                                 ║`);
-  console.error(`║    ✓ OAuth 2.1 bearer token validation (JWKS)             ║`);
-  console.error(`║    ✓ Per-request authentication required                   ║`);
-  console.error(`║    ✓ Role-based access control (teacher/admin only)        ║`);
-  console.error(`║    ✓ Audit logging enabled                                 ║`);
+  console.error(`║  Registered: 27 tools · 3 resources · 4 prompts           ║`);
   console.error(`╚════════════════════════════════════════════════════════════╝`);
 });
 
