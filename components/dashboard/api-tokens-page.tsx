@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -31,6 +31,7 @@ interface ApiTokensPageProps {
 }
 
 export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
+  const t = useTranslations('dashboard.admin.apiTokens')
   const [createOpen, setCreateOpen] = useState(false)
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
   const [tokenName, setTokenName] = useState('')
@@ -42,7 +43,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
 
   const handleCreate = () => {
     if (!tokenName.trim()) {
-      toast.error('Please enter a token name')
+      toast.error(t('toasts.nameRequired'))
       return
     }
     startTransition(async () => {
@@ -52,9 +53,9 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
         setRevealedToken(result.token)
         setTokenName('')
         setExpiration('never')
-        toast.success('Token created successfully')
+        toast.success(t('toasts.created'))
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to create token')
+        toast.error(err instanceof Error ? err.message : t('toasts.createError'))
       }
     })
   }
@@ -63,9 +64,9 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
     startTransition(async () => {
       try {
         await revokeMcpToken(tokenId)
-        toast.success('Token revoked')
+        toast.success(t('toasts.revoked'))
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to revoke token')
+        toast.error(err instanceof Error ? err.message : t('toasts.revokeError'))
       }
     })
   }
@@ -74,9 +75,9 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
     startTransition(async () => {
       try {
         await deleteMcpToken(tokenId)
-        toast.success('Token deleted')
+        toast.success(t('toasts.deleted'))
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to delete token')
+        toast.error(err instanceof Error ? err.message : t('toasts.deleteError'))
       }
     })
   }
@@ -104,7 +105,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
   }, null, 2)
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return new Date(dateStr).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -121,11 +122,15 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">API Tokens</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Generate tokens to connect Claude Desktop or other MCP clients to the LMS.
+            {t('description')}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <IconPlus className="size-4 mr-1.5" />
+          {t('createToken')}
+        </Button>
         <Dialog open={createOpen} onOpenChange={(open) => {
           setCreateOpen(open)
           if (!open) {
@@ -134,17 +139,13 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
             setExpiration('never')
           }
         }}>
-          <DialogTrigger render={<Button />}>
-            <IconPlus className="size-4 mr-1.5" />
-            Create Token
-          </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             {revealedToken ? (
               <>
                 <DialogHeader>
-                  <DialogTitle>Token Created</DialogTitle>
+                  <DialogTitle>{t('revealDialog.title')}</DialogTitle>
                   <DialogDescription>
-                    Copy this token now. It won&apos;t be shown again.
+                    {t('revealDialog.description')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -163,7 +164,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
                     </Button>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground mb-1.5 block">Claude Desktop config</Label>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">{t('revealDialog.configLabel')}</Label>
                     <div className="relative">
                       <pre className="bg-muted rounded-md p-3 text-xs overflow-x-auto">
                         {configSnippet(revealedToken)}
@@ -180,45 +181,45 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => setCreateOpen(false)}>Done</Button>
+                  <Button onClick={() => setCreateOpen(false)}>{t('revealDialog.done')}</Button>
                 </DialogFooter>
               </>
             ) : (
               <>
                 <DialogHeader>
-                  <DialogTitle>Create API Token</DialogTitle>
+                  <DialogTitle>{t('createDialog.title')}</DialogTitle>
                   <DialogDescription>
-                    Generate a token for MCP client access.
+                    {t('createDialog.description')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="token-name">Token Name</Label>
+                    <Label htmlFor="token-name">{t('createDialog.nameLabel')}</Label>
                     <Input
                       id="token-name"
-                      placeholder="e.g., Claude Desktop"
+                      placeholder={t('createDialog.namePlaceholder')}
                       value={tokenName}
                       onChange={(e) => setTokenName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="expiration">Expiration</Label>
+                    <Label htmlFor="expiration">{t('createDialog.expirationLabel')}</Label>
                     <Select value={expiration} onValueChange={(v) => v && setExpiration(v)}>
                       <SelectTrigger id="expiration">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="7">7 days</SelectItem>
-                        <SelectItem value="30">30 days</SelectItem>
-                        <SelectItem value="90">90 days</SelectItem>
-                        <SelectItem value="never">Never</SelectItem>
+                        <SelectItem value="7">{t('createDialog.expiration7d')}</SelectItem>
+                        <SelectItem value="30">{t('createDialog.expiration30d')}</SelectItem>
+                        <SelectItem value="90">{t('createDialog.expiration90d')}</SelectItem>
+                        <SelectItem value="never">{t('createDialog.expirationNever')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleCreate} disabled={isPending}>
-                    {isPending ? 'Creating...' : 'Create Token'}
+                    {isPending ? t('createDialog.creating') : t('createDialog.create')}
                   </Button>
                 </DialogFooter>
               </>
@@ -235,9 +236,9 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
         >
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-sm">How to Connect</CardTitle>
+              <CardTitle className="text-sm">{t('howToConnect.title')}</CardTitle>
               <CardDescription>
-                Set up Claude Desktop or other MCP clients to access your LMS data.
+                {t('howToConnect.description')}
               </CardDescription>
             </div>
             {showInstructions
@@ -249,10 +250,10 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
         {showInstructions && (
           <CardContent className="text-sm space-y-3">
             <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-              <li>Create a token above and copy the Claude Desktop config snippet.</li>
-              <li>Open Claude Desktop settings and find the MCP servers configuration file.</li>
-              <li>Paste the config snippet and save.</li>
-              <li>Restart Claude Desktop — you should see the LMS tools available.</li>
+              <li>{t('howToConnect.step1')}</li>
+              <li>{t('howToConnect.step2')}</li>
+              <li>{t('howToConnect.step3')}</li>
+              <li>{t('howToConnect.step4')}</li>
             </ol>
           </CardContent>
         )}
@@ -261,11 +262,13 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
       {/* Token List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Your Tokens</CardTitle>
+          <CardTitle className="text-sm">{t('yourTokens.title')}</CardTitle>
           <CardDescription>
             {tokens.length === 0
-              ? 'No tokens yet. Create one to get started.'
-              : `${tokens.length} token${tokens.length === 1 ? '' : 's'}`
+              ? t('yourTokens.empty')
+              : tokens.length === 1
+                ? t('yourTokens.count', { count: tokens.length })
+                : t('yourTokens.countPlural', { count: tokens.length })
             }
           </CardDescription>
         </CardHeader>
@@ -282,24 +285,24 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
                         <span className="font-medium text-sm">{token.name}</span>
                         {inactive && (
                           <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                            Revoked
+                            {t('token.revoked')}
                           </span>
                         )}
                         {!inactive && expired && (
                           <span className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">
-                            Expired
+                            {t('token.expired')}
                           </span>
                         )}
                         {!inactive && !expired && (
                           <span className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded">
-                            Active
+                            {t('token.active')}
                           </span>
                         )}
                       </div>
                       <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>Created {formatDate(token.created_at)}</span>
-                        {token.last_used_at && <span>Last used {formatDate(token.last_used_at)}</span>}
-                        {token.expires_at && <span>Expires {formatDate(token.expires_at)}</span>}
+                        <span>{t('token.created', { date: formatDate(token.created_at) })}</span>
+                        {token.last_used_at && <span>{t('token.lastUsed', { date: formatDate(token.last_used_at) })}</span>}
+                        {token.expires_at && <span>{t('token.expires', { date: formatDate(token.expires_at) })}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -309,7 +312,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
                           size="icon-sm"
                           onClick={() => handleRevoke(token.id)}
                           disabled={isPending}
-                          title="Revoke token"
+                          title={t('actions.revoke')}
                         >
                           <IconBan className="size-4" />
                         </Button>
@@ -319,7 +322,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
                         size="icon-sm"
                         onClick={() => handleDelete(token.id)}
                         disabled={isPending}
-                        title="Delete token"
+                        title={t('actions.delete')}
                       >
                         <IconTrash className="size-4" />
                       </Button>

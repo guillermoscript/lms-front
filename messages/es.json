@@ -1652,6 +1652,65 @@
             }
           }
         }
+      },
+      "apiTokens": {
+        "title": "Tokens de API",
+        "description": "Genera tokens para conectar Claude Desktop u otros clientes MCP al LMS.",
+        "createToken": "Crear Token",
+        "howToConnect": {
+          "title": "Cómo Conectar",
+          "description": "Configura Claude Desktop u otros clientes MCP para acceder a los datos del LMS.",
+          "step1": "Crea un token arriba y copia el fragmento de configuración de Claude Desktop.",
+          "step2": "Abre la configuración de Claude Desktop y busca el archivo de configuración de servidores MCP.",
+          "step3": "Pega el fragmento de configuración y guarda.",
+          "step4": "Reinicia Claude Desktop — deberías ver las herramientas del LMS disponibles."
+        },
+        "yourTokens": {
+          "title": "Tus Tokens",
+          "empty": "Aún no hay tokens. Crea uno para comenzar.",
+          "count": "{count} token",
+          "countPlural": "{count} tokens"
+        },
+        "token": {
+          "active": "Activo",
+          "revoked": "Revocado",
+          "expired": "Expirado",
+          "created": "Creado {date}",
+          "lastUsed": "Último uso {date}",
+          "expires": "Expira {date}"
+        },
+        "createDialog": {
+          "title": "Crear Token de API",
+          "description": "Genera un token para acceso de clientes MCP.",
+          "nameLabel": "Nombre del Token",
+          "namePlaceholder": "ej., Claude Desktop",
+          "expirationLabel": "Expiración",
+          "expiration7d": "7 días",
+          "expiration30d": "30 días",
+          "expiration90d": "90 días",
+          "expirationNever": "Nunca",
+          "creating": "Creando...",
+          "create": "Crear Token"
+        },
+        "revealDialog": {
+          "title": "Token Creado",
+          "description": "Copia este token ahora. No se mostrará de nuevo.",
+          "configLabel": "Configuración de Claude Desktop",
+          "done": "Listo"
+        },
+        "toasts": {
+          "created": "Token creado exitosamente",
+          "revoked": "Token revocado",
+          "deleted": "Token eliminado",
+          "createError": "Error al crear token",
+          "revokeError": "Error al revocar token",
+          "deleteError": "Error al eliminar token",
+          "nameRequired": "Por favor ingresa un nombre para el token"
+        },
+        "actions": {
+          "revoke": "Revocar token",
+          "delete": "Eliminar token"
+        }
       }
     },
     "course": {
@@ -1818,7 +1877,8 @@
     "business": "Negocio",
     "revenue": "Ingresos",
     "profile": "Perfil",
-    "billing": "Facturación"
+    "billing": "Facturación",
+    "apiTokens": "Tokens de API"
   },
   "userNav": {
     "profile": "Perfil",

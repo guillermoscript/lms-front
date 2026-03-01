@@ -83,7 +83,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
                 { title: t('billing'), href: "/dashboard/admin/billing", icon: IconCreditCard },
                 { title: 'Landing Page', href: "/dashboard/admin/landing-page", icon: IconLayout },
-                { title: 'API Tokens', href: "/dashboard/admin/api-tokens", icon: IconKey },
+                { title: t('apiTokens'), href: "/dashboard/admin/api-tokens", icon: IconKey },
             ],
         },
         teacher: {
@@ -93,7 +93,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             content: [
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook },
                 { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus },
-                { title: 'API Tokens', href: "/dashboard/teacher/api-tokens", icon: IconKey },
+                { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
             ],
             business: [
                 { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },

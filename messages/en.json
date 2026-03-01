@@ -1660,6 +1660,65 @@
             "updateSuccess": "Product updated successfully"
           }
         }
+      },
+      "apiTokens": {
+        "title": "API Tokens",
+        "description": "Generate tokens to connect Claude Desktop or other MCP clients to the LMS.",
+        "createToken": "Create Token",
+        "howToConnect": {
+          "title": "How to Connect",
+          "description": "Set up Claude Desktop or other MCP clients to access your LMS data.",
+          "step1": "Create a token above and copy the Claude Desktop config snippet.",
+          "step2": "Open Claude Desktop settings and find the MCP servers configuration file.",
+          "step3": "Paste the config snippet and save.",
+          "step4": "Restart Claude Desktop — you should see the LMS tools available."
+        },
+        "yourTokens": {
+          "title": "Your Tokens",
+          "empty": "No tokens yet. Create one to get started.",
+          "count": "{count} token",
+          "countPlural": "{count} tokens"
+        },
+        "token": {
+          "active": "Active",
+          "revoked": "Revoked",
+          "expired": "Expired",
+          "created": "Created {date}",
+          "lastUsed": "Last used {date}",
+          "expires": "Expires {date}"
+        },
+        "createDialog": {
+          "title": "Create API Token",
+          "description": "Generate a token for MCP client access.",
+          "nameLabel": "Token Name",
+          "namePlaceholder": "e.g., Claude Desktop",
+          "expirationLabel": "Expiration",
+          "expiration7d": "7 days",
+          "expiration30d": "30 days",
+          "expiration90d": "90 days",
+          "expirationNever": "Never",
+          "creating": "Creating...",
+          "create": "Create Token"
+        },
+        "revealDialog": {
+          "title": "Token Created",
+          "description": "Copy this token now. It won't be shown again.",
+          "configLabel": "Claude Desktop config",
+          "done": "Done"
+        },
+        "toasts": {
+          "created": "Token created successfully",
+          "revoked": "Token revoked",
+          "deleted": "Token deleted",
+          "createError": "Failed to create token",
+          "revokeError": "Failed to revoke token",
+          "deleteError": "Failed to delete token",
+          "nameRequired": "Please enter a token name"
+        },
+        "actions": {
+          "revoke": "Revoke token",
+          "delete": "Delete token"
+        }
       }
     }
   },
@@ -1973,7 +2032,8 @@
     "management": "Management",
     "business": "Business",
     "revenue": "Revenue",
-    "billing": "Billing"
+    "billing": "Billing",
+    "apiTokens": "API Tokens"
   },
   "userNav": {
     "profile": "Profile",
