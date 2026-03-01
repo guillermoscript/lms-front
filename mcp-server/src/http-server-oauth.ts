@@ -98,6 +98,67 @@ function createServerWithAuth(auth: AuthManager): McpServer {
 // Create Express app
 const app = express();
 
+// In-memory request log for debugging
+const requestLog: Array<{ ts: string; method: string; path: string; query: Record<string,unknown>; contentType: string; body: string; status?: number; resBody?: string }> = [];
+const MAX_LOG = 50;
+
+// Request logging for debugging OAuth flow
+app.use((req, res, next) => {
+  if (req.path.startsWith("/auth/") || req.path === "/mcp") {
+    const entry: typeof requestLog[0] = {
+      ts: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      query: req.query as Record<string,unknown>,
+      contentType: req.headers["content-type"] || "none",
+      body: "",
+    };
+    // Capture body for non-GET
+    if (req.method !== "GET") {
+      const chunks: Buffer[] = [];
+      const origOn = req.on.bind(req);
+      req.on = function(event: string, listener: (...args: unknown[]) => void) {
+        if (event === "data") {
+          const wrappedListener = (chunk: Buffer) => {
+            chunks.push(chunk);
+            listener(chunk);
+          };
+          return origOn(event, wrappedListener);
+        }
+        if (event === "end") {
+          const wrappedListener = (...args: unknown[]) => {
+            entry.body = Buffer.concat(chunks).toString().substring(0, 500);
+            listener(...args);
+          };
+          return origOn(event, wrappedListener);
+        }
+        return origOn(event, listener);
+      } as typeof req.on;
+    }
+    // Capture response
+    const origJson = res.json.bind(res);
+    res.json = function(body: unknown) {
+      entry.status = res.statusCode;
+      entry.resBody = JSON.stringify(body).substring(0, 500);
+      requestLog.push(entry);
+      if (requestLog.length > MAX_LOG) requestLog.shift();
+      return origJson(body);
+    } as typeof res.json;
+    const origRedirect = res.redirect.bind(res);
+    res.redirect = function(...args: unknown[]) {
+      const url = typeof args[0] === "string" ? args[0] : String(args[1]);
+      entry.status = typeof args[0] === "number" ? args[0] : 302;
+      entry.resBody = `redirect: ${url.substring(0, 300)}`;
+      requestLog.push(entry);
+      if (requestLog.length > MAX_LOG) requestLog.shift();
+      return origRedirect(...(args as Parameters<typeof origRedirect>));
+    } as typeof res.redirect;
+
+    console.error(`[HTTP] ${req.method} ${req.path} content-type=${req.headers["content-type"] || "none"}`);
+  }
+  next();
+});
+
 // OAuth auth router — mounted at /auth so routes become /auth/authorize, /auth/token, /auth/register
 // The SDK registers routes at /authorize, /token, /register — mounting at /auth adds the prefix.
 // The proxy overrides /.well-known/* with tenant-aware metadata,
@@ -307,6 +368,16 @@ app.get("/health", (_req, res) => {
     version: "2.0.0",
     authMode: "oauth-authorization-server",
     multiTenant: true,
+  });
+});
+
+// Debug endpoint — shows OAuth state and recent requests (remove in production)
+app.get("/debug/oauth-state", (_req, res) => {
+  res.json({
+    pendingAuths: oauthProvider.getPendingAuthCount(),
+    authCodes: oauthProvider.getAuthCodeCount(),
+    clients: oauthProvider.getClientCount(),
+    recentRequests: requestLog.slice(-20),
   });
 });
 
