@@ -2,7 +2,8 @@ FROM node:20-alpine AS base
 
 # Install dependencies
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++ pkgconfig \
+    cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev pixman-dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -35,6 +36,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN apk add --no-cache cairo pango libjpeg-turbo giflib librsvg pixman
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
