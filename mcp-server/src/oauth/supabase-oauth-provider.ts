@@ -75,6 +75,8 @@ class InMemoryClientsStore implements OAuthRegisteredClientsStore {
     return this.clients.get(clientId);
   }
 
+  getCount(): number { return this.clients.size; }
+
   async registerClient(
     client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">
   ): Promise<OAuthClientInformationFull> {
@@ -371,6 +373,11 @@ export class SupabaseOAuthProvider implements OAuthServerProvider {
       state: pending.params.state,
     };
   }
+
+  // Debug helpers
+  getPendingAuthCount(): number { return this.pendingAuths.size; }
+  getAuthCodeCount(): number { return this.authCodes.size; }
+  getClientCount(): number { return (this.clientsStore as InMemoryClientsStore).getCount(); }
 
   /**
    * Clean up expired entries.

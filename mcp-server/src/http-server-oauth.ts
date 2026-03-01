@@ -98,6 +98,14 @@ function createServerWithAuth(auth: AuthManager): McpServer {
 // Create Express app
 const app = express();
 
+// Request logging for debugging OAuth flow
+app.use((req, _res, next) => {
+  if (req.path.startsWith("/auth/") || req.path === "/mcp") {
+    console.error(`[HTTP] ${req.method} ${req.path} content-type=${req.headers["content-type"] || "none"} origin=${req.headers["x-origin"] || "none"}`);
+  }
+  next();
+});
+
 // OAuth auth router — mounted at /auth so routes become /auth/authorize, /auth/token, /auth/register
 // The SDK registers routes at /authorize, /token, /register — mounting at /auth adds the prefix.
 // The proxy overrides /.well-known/* with tenant-aware metadata,
@@ -307,6 +315,15 @@ app.get("/health", (_req, res) => {
     version: "2.0.0",
     authMode: "oauth-authorization-server",
     multiTenant: true,
+  });
+});
+
+// Debug endpoint — shows OAuth state (remove in production)
+app.get("/debug/oauth-state", (_req, res) => {
+  res.json({
+    pendingAuths: oauthProvider.getPendingAuthCount(),
+    authCodes: oauthProvider.getAuthCodeCount(),
+    clients: oauthProvider.getClientCount(),
   });
 });
 
