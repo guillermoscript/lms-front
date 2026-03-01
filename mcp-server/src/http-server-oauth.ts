@@ -69,10 +69,11 @@ try {
 // Create OAuth provider (no hardcoded URL — origin comes from request headers)
 const oauthProvider = new SupabaseOAuthProvider();
 
-// Issuer URL for mcpAuthRouter — this is the internal address.
-// The proxy rewrites metadata for the actual public URLs, so this is
-// only used for the SDK's internal routing.
-const issuerUrl = new URL(`http://${HOST}:${PORT}`);
+// Issuer URL for mcpAuthRouter — the SDK requires HTTPS.
+// This is a placeholder; the Next.js proxy serves the real per-tenant
+// metadata at /.well-known/* with correct public URLs.
+// The SDK's internal metadata response is never seen publicly.
+const issuerUrl = new URL(process.env.MCP_ISSUER_URL || "https://mcp.internal");
 
 /**
  * Create a server factory that registers tools with a given auth manager.
