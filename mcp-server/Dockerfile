@@ -1,23 +1,28 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm ci
 
-# Install production dependencies only
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+COPY package*.json ./
 RUN npm ci --production --ignore-scripts
 
-# Copy built files
-COPY build ./build
+COPY --from=builder /app/build ./build
 
-# Expose MCP server port
 EXPOSE 3001
 
-# Health check
+ENV MCP_HTTP_HOST=0.0.0.0
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001', (res) => process.exit(res.statusCode === 404 ? 0 : 1))"
 
-# Run HTTP server
 CMD ["node", "build/http-server.js"]
