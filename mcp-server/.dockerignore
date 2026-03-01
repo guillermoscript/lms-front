@@ -1,12 +1,9 @@
-# Dependencies
+# Dependencies (installed fresh via npm ci)
 node_modules
 npm-debug.log
-package-lock.json
 
-# Source files (only ship built code)
-src
-*.ts
-tsconfig.json
+# Build output (rebuilt in builder stage)
+build
 
 # Environment files
 .env
@@ -20,7 +17,6 @@ __tests__
 *.spec.ts
 
 # Documentation
-*.md
 docs
 
 # Git
@@ -33,6 +29,6 @@ docs
 *.swp
 *.swo
 
-# Build artifacts
+# Misc
 *.log
 .DS_Store
