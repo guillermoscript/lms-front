@@ -1,0 +1,20 @@
+import { getUserRole } from '@/lib/supabase/get-user-role'
+import { redirect } from 'next/navigation'
+import { listMcpTokens } from '@/app/actions/mcp-tokens'
+import ApiTokensPage from '@/components/dashboard/api-tokens-page'
+
+export default async function TeacherApiTokensPage() {
+  const role = await getUserRole()
+  if (role !== 'teacher') {
+    redirect('/dashboard/teacher')
+  }
+
+  const { data: tokens } = await listMcpTokens()
+  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
+
+  return (
+    <div className="p-6 lg:p-8">
+      <ApiTokensPage tokens={tokens ?? []} domain={domain} />
+    </div>
+  )
+}
