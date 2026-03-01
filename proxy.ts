@@ -80,6 +80,46 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // --- OAuth well-known metadata (must run before intl middleware) ---
+  // RFC 9728: Claude Desktop fetches /.well-known/oauth-protected-resource/api/mcp
+  // Return JSON directly from middleware to avoid intl locale redirect.
+  if (pathname.startsWith('/.well-known/oauth-protected-resource') ||
+      pathname.startsWith('/.well-known/oauth-authorization-server')) {
+    const proto = request.headers.get('x-forwarded-proto') || 'https'
+    const reqHost = request.headers.get('host') || 'localhost:3000'
+    const origin = `${proto}://${reqHost}`
+    const mcpBase = `${origin}/api/mcp`
+
+    const isResource = pathname.startsWith('/.well-known/oauth-protected-resource')
+    const metadata = isResource
+      ? {
+          resource: mcpBase,
+          authorization_servers: [mcpBase],
+          scopes_supported: ['mcp:tools'],
+          bearer_methods_supported: ['header'],
+          resource_name: 'LMS MCP Server',
+        }
+      : {
+          issuer: mcpBase,
+          authorization_endpoint: `${mcpBase}/auth/authorize`,
+          token_endpoint: `${mcpBase}/auth/token`,
+          registration_endpoint: `${mcpBase}/auth/register`,
+          response_types_supported: ['code'],
+          grant_types_supported: ['authorization_code', 'refresh_token'],
+          token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
+          code_challenge_methods_supported: ['S256'],
+          scopes_supported: ['mcp:tools'],
+          revocation_endpoint: `${mcpBase}/auth/revoke`,
+        }
+
+    return NextResponse.json(metadata, {
+      headers: {
+        'cache-control': 'public, max-age=3600',
+        'access-control-allow-origin': '*',
+      },
+    })
+  }
+
   // --- Tenant Resolution (runs for ALL routes including /api) ---
   const host = request.headers.get('host') || ''
   const tenantSlug = getTenantSlugFromHost(host)
