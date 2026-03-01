@@ -30,24 +30,19 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims()
-  const user = data?.claims
-
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+  // It refreshes the session and keeps the user logged in.
+  try {
+    await supabase.auth.getUser()
+  } catch {
+    // Session refresh failed — continue anyway, proxy.ts handles auth guards
   }
+
+  // NOTE: Auth redirects are handled by proxy.ts (the main middleware),
+  // not here. This function only refreshes the Supabase session.
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

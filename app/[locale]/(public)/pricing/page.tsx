@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { HelpCircle, PackageSearch, ArrowRight } from "lucide-react";
 import PricingClient from "./pricing-client";
 import { getTranslations } from 'next-intl/server';
@@ -19,12 +20,14 @@ interface Plan {
 
 export default async function PricingPage() {
     const supabase = await createClient();
+    const tenantId = await getCurrentTenantId();
     const t = await getTranslations('pricing');
 
-    // Fetch plans from database
+    // Fetch plans from database - filtered by tenant
     const { data: plans, error } = await supabase
         .from('plans')
         .select('plan_id, plan_name, price, duration_in_days, description, features, payment_provider')
+        .eq('tenant_id', tenantId)
         .order('price', { ascending: true });
 
     if (error) {

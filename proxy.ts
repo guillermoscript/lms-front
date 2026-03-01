@@ -119,10 +119,14 @@ export default async function proxy(request: NextRequest) {
 
   // For API routes: set tenant header and pass through (no intl/auth guards)
   if (pathname.startsWith('/api')) {
-    const response = NextResponse.next()
+    request.headers.set('x-tenant-id', tenantId)
+    const response = NextResponse.next({ request })
     response.headers.set('x-tenant-id', tenantId)
     return response
   }
+
+  // --- Inject tenant ID into request headers so server components can read it ---
+  request.headers.set('x-tenant-id', tenantId)
 
   // --- Intl Middleware ---
   const intlResponse = intlMiddleware(request)
