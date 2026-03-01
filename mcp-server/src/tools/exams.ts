@@ -261,6 +261,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
             duration,
             status: "draft",
             created_by: auth.getUserId(),
+            tenant_id: auth.getTenantId(),
           })
           .select("exam_id, title, status")
           .single();

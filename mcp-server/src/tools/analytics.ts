@@ -52,7 +52,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
           .from("enrollments")
           .select(
             `enrollment_id, status, enrollment_date, user_id,
-            profiles:user_id(full_name, email)`,
+            profiles:user_id(full_name)`,
             { count: "exact" }
           )
           .eq("course_id", course_id)
@@ -82,7 +82,6 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
               date: e.enrollment_date,
               student_id: e.user_id,
               student_name: profile?.full_name ?? null,
-              student_email: profile?.email ?? null,
             };
           }),
         };
@@ -97,7 +96,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
             "",
           ];
           for (const e of output.enrollments) {
-            const name = e.student_name ?? e.student_email ?? e.student_id;
+            const name = e.student_name ?? e.student_id;
             lines.push(`- **${name}** [${e.status}] — enrolled ${e.date}`);
           }
           textContent = lines.join("\n");
@@ -140,7 +139,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
           .from("exam_submissions")
           .select(
             `submission_id, score, submission_date, review_status, student_id,
-            profiles:student_id(full_name, email)`,
+            profiles:student_id(full_name)`,
             { count: "exact" }
           )
           .eq("exam_id", exam_id)
@@ -168,7 +167,6 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
               status: s.review_status,
               student_id: s.student_id,
               student_name: profile?.full_name ?? null,
-              student_email: profile?.email ?? null,
             };
           }),
         };
@@ -179,7 +177,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
         } else {
           const lines = [`# Exam Submissions (ID: ${exam_id})`, `Showing ${data.length} of ${total} submissions`, ""];
           for (const s of output.submissions) {
-            const name = s.student_name ?? s.student_email ?? s.student_id;
+            const name = s.student_name ?? s.student_id;
             lines.push(`- **${name}** — Score: ${s.score ?? "pending"} [${s.status}] (ID: ${s.id})`);
           }
           textContent = lines.join("\n");
@@ -224,7 +222,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
           .from("exam_submissions")
           .select(
             `submission_id, score, submission_date, review_status, feedback, ai_data, student_id, exam_id,
-            profiles:student_id(full_name, email)`
+            profiles:student_id(full_name)`
           )
           .eq("submission_id", submission_id)
           .single();
@@ -240,7 +238,6 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
             exam_id: data.exam_id,
             student_id: data.student_id,
             student_name: profile?.full_name ?? null,
-            student_email: profile?.email ?? null,
             score: data.score,
             status: data.review_status,
             date: data.submission_date,
@@ -253,7 +250,7 @@ export function registerAnalyticsTools(server: McpServer, auth: AuthManager) {
         if (response_format === ResponseFormat.JSON) {
           textContent = JSON.stringify(output, null, 2);
         } else {
-          const name = output.submission.student_name ?? output.submission.student_email ?? output.submission.student_id;
+          const name = output.submission.student_name ?? output.submission.student_id;
           let result = `# Submission ${data.submission_id}\n\n`;
           result += `**Student:** ${name}\n`;
           result += `**Exam ID:** ${data.exam_id}\n`;
