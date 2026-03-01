@@ -98,10 +98,12 @@ function createServerWithAuth(auth: AuthManager): McpServer {
 // Create Express app
 const app = express();
 
-// OAuth auth router — handles /auth/authorize, /auth/token, /auth/register
-// Note: The proxy overrides /.well-known/* with tenant-aware metadata,
-// so mcpAuthRouter's metadata will only be seen if accessed directly.
+// OAuth auth router — mounted at /auth so routes become /auth/authorize, /auth/token, /auth/register
+// The SDK registers routes at /authorize, /token, /register — mounting at /auth adds the prefix.
+// The proxy overrides /.well-known/* with tenant-aware metadata,
+// so mcpAuthRouter's internal metadata routes (at /auth/.well-known/*) are never reached.
 app.use(
+  "/auth",
   mcpAuthRouter({
     provider: oauthProvider,
     issuerUrl,

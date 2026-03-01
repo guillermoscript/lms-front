@@ -35,29 +35,14 @@ export function McpConsentForm({
     setError(null)
 
     try {
-      // POST to MCP server callback — this will redirect us
-      // We use a form submission approach to follow the redirect
-      const form = document.createElement("form")
-      form.method = "POST"
-      form.action = mcpCallbackUrl
-
-      const fields = {
-        sessionId,
-        userId,
-        userRole,
-        tenantId,
-      }
-
-      for (const [key, value] of Object.entries(fields)) {
-        const input = document.createElement("input")
-        input.type = "hidden"
-        input.name = key
-        input.value = value
-        form.appendChild(input)
-      }
-
-      document.body.appendChild(form)
-      form.submit()
+      // Redirect to MCP server callback via GET with query params
+      // The callback will generate an auth code and redirect back to Claude
+      const url = new URL(mcpCallbackUrl)
+      url.searchParams.set("session_id", sessionId)
+      url.searchParams.set("user_id", userId)
+      url.searchParams.set("user_role", userRole)
+      url.searchParams.set("tenant_id", tenantId)
+      window.location.href = url.toString()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to authorize")
       setLoading(null)
