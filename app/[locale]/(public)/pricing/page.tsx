@@ -65,7 +65,7 @@ export default async function PricingPage() {
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white font-sans">
-            <div className="container py-24 px-4 md:px-6 relative">
+            <div className="container py-24 px-4 md:px-6 relative mx-auto">
                 {/* Background Glow */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
