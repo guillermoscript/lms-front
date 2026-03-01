@@ -98,9 +98,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
       }
 
       // Create auth manager with user context
+      const tenantId = req.headers["x-tenant-id"] as string || "00000000-0000-0000-0000-000000000001";
       const userContext: UserContext = {
         userId,
         userRole: userRole as "teacher" | "admin",
+        tenantId,
       };
 
       auth = new AuthManager(authConfig, userContext);

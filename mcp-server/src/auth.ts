@@ -33,6 +33,7 @@ export type AuthConfig = DirectAuthConfig | ProxyAuthConfig | OAuthResourceConfi
 export interface UserContext {
   userId: string;
   userRole: "teacher" | "admin";
+  tenantId: string;
 }
 
 export class AuthManager {
@@ -40,20 +41,24 @@ export class AuthManager {
   private adminClient: SupabaseClient | null = null;
   private userId: string | null = null;
   private userRole: string | null = null;
+  private tenantId: string | null = null;
 
   constructor(
     private config: AuthConfig,
     userContext?: UserContext
   ) {
     if (config.mode === "proxy" || config.mode === "oauth-resource") {
-      // Proxy/OAuth mode: create clients for queries and audit logging
-      this.client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+      // Proxy/OAuth mode: use service role client for queries (anon client has no session,
+      // so RLS policies checking auth.uid() would block all queries).
+      // Auth is already validated by the proxy layer.
       this.adminClient = createClient(config.supabaseUrl, config.supabaseServiceKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
+      // Use admin client as the query client in proxy mode
+      this.client = this.adminClient;
 
       // Use provided user context
       if (!userContext) {
@@ -61,6 +66,7 @@ export class AuthManager {
       }
       this.userId = userContext.userId;
       this.userRole = userContext.userRole;
+      this.tenantId = userContext.tenantId;
     } else {
       // Direct mode: traditional authentication
       this.client = createClient(config.supabaseUrl, config.supabaseAnonKey);
@@ -200,18 +206,29 @@ export class AuthManager {
     return this.userRole === "admin";
   }
 
-  async verifyCourseOwnership(courseId: number): Promise<void> {
-    if (this.isAdmin()) return;
+  getTenantId(): string {
+    if (!this.tenantId) throw new Error("Tenant context not available");
+    return this.tenantId;
+  }
 
+  async verifyCourseOwnership(courseId: number): Promise<void> {
     const { data, error } = await this.client
       .from("courses")
-      .select("author_id")
+      .select("author_id, tenant_id")
       .eq("course_id", courseId)
       .single();
 
     if (error || !data) {
       throw new Error(`Course ${courseId} not found`);
     }
+
+    // Always verify tenant scope
+    if (this.tenantId && data.tenant_id !== this.tenantId) {
+      throw new Error(`Access denied: course ${courseId} belongs to a different tenant`);
+    }
+
+    // Admins can access any course in their tenant
+    if (this.isAdmin()) return;
 
     if (data.author_id !== this.userId) {
       throw new Error(`Access denied: you don't own course ${courseId}`);

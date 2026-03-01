@@ -119,6 +119,7 @@ app.post("/mcp", bearerAuth, async (req, res) => {
   const userContext: UserContext = {
     userId: authInfo.extra?.userId as string,
     userRole: authInfo.extra?.userRole as "teacher" | "admin",
+    tenantId: (authInfo.extra?.tenantId as string) || "00000000-0000-0000-0000-000000000001",
   };
 
   const startTime = Date.now();

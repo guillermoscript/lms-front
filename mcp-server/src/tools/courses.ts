@@ -58,6 +58,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
             "course_id, title, description, status, tags, created_at, updated_at, lessons(count), enrollments(count)",
             { count: "exact" }
           )
+          .eq("tenant_id", auth.getTenantId())
           .order("created_at", { ascending: false })
           .range(offset, offset + limit - 1);
 
@@ -267,6 +268,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
             tags: tags ? tags.split(",").map((t) => t.trim()) : null,
             category_id: category_id ?? null,
             author_id: auth.getUserId(),
+            tenant_id: auth.getTenantId(),
             status: "draft",
           })
           .select("course_id, title, status")

@@ -96,14 +96,15 @@ app.use((req, res, next) => {
   // Extract user context
   const userId = req.headers["x-user-id"] as string;
   const userRole = req.headers["x-user-role"] as string;
+  const tenantId = req.headers["x-tenant-id"] as string;
 
-  if (!userId || !userRole) {
+  if (!userId || !userRole || !tenantId) {
     console.error(`[Auth] Missing user context headers from ${req.socket.remoteAddress}`);
     return res.status(400).json({
       jsonrpc: "2.0",
       error: {
         code: -32002,
-        message: "Bad Request: Missing X-User-ID or X-User-Role headers",
+        message: "Bad Request: Missing X-User-ID, X-User-Role, or X-Tenant-ID headers",
       },
     });
   }
@@ -123,9 +124,10 @@ app.use((req, res, next) => {
   (req as any).userContext = {
     userId,
     userRole: userRole as "teacher" | "admin",
+    tenantId,
   };
 
-  console.error(`[Auth] Validated ${userRole} (${userId})`);
+  console.error(`[Auth] Validated ${userRole} (${userId}) tenant=${tenantId}`);
   next();
 });
 
