@@ -213,7 +213,7 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
   });
 
   const headers = new Headers();
-  for (const name of ['content-type', 'accept', 'authorization', 'x-tenant-id', 'x-forwarded-for', 'x-real-ip']) {
+  for (const name of ['content-type', 'content-length', 'accept', 'authorization', 'x-tenant-id', 'x-forwarded-for', 'x-real-ip']) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
