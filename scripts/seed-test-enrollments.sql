@@ -65,23 +65,23 @@ BEGIN
 
   -- Add lesson completions for Course 1 (2 out of 3 lessons completed)
   -- Lesson 1: Completed
-  INSERT INTO lesson_completions (student_id, lesson_id, completed_at)
+  INSERT INTO lesson_completions (user_id, lesson_id, completed_at)
   VALUES (student_user_id, 1, NOW() - INTERVAL '6 days')
-  ON CONFLICT (student_id, lesson_id) DO NOTHING;
+  ON CONFLICT (user_id, lesson_id) DO NOTHING;
 
   -- Lesson 2: Completed
-  INSERT INTO lesson_completions (student_id, lesson_id, completed_at)
+  INSERT INTO lesson_completions (user_id, lesson_id, completed_at)
   VALUES (student_user_id, 2, NOW() - INTERVAL '5 days')
-  ON CONFLICT (student_id, lesson_id) DO NOTHING;
+  ON CONFLICT (user_id, lesson_id) DO NOTHING;
 
   -- Lesson 3: Not completed (to show "In Progress" status)
 
   RAISE NOTICE 'Created 2/3 lesson completions for Course 1';
 
   -- Add lesson completion for Course 3 (1 out of 24 lessons completed)
-  INSERT INTO lesson_completions (student_id, lesson_id, completed_at)
+  INSERT INTO lesson_completions (user_id, lesson_id, completed_at)
   VALUES (student_user_id, 8, NOW() - INTERVAL '2 days')
-  ON CONFLICT (student_id, lesson_id) DO NOTHING;
+  ON CONFLICT (user_id, lesson_id) DO NOTHING;
 
   RAISE NOTICE 'Created 1/24 lesson completion for Course 3';
 

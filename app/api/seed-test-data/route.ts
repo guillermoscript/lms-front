@@ -104,18 +104,18 @@ export async function POST() {
     const lessonCompletions = [
       // Course 1: 2 out of 3 lessons
       {
-        student_id: studentUserId,
+        user_id: studentUserId,
         lesson_id: 1,
         completed_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        student_id: studentUserId,
+        user_id: studentUserId,
         lesson_id: 2,
         completed_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
       },
       // Course 3: 1 out of 24 lessons
       {
-        student_id: studentUserId,
+        user_id: studentUserId,
         lesson_id: 8,
         completed_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
       }
@@ -125,7 +125,7 @@ export async function POST() {
       const { error: completionError } = await supabase
         .from('lesson_completions')
         .upsert(completion, {
-          onConflict: 'student_id,lesson_id'
+          onConflict: 'user_id,lesson_id'
         })
       
       if (completionError) {
