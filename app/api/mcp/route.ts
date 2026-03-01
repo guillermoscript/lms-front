@@ -106,11 +106,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Forward to MCP server with user context
+    const tenantId = request.headers.get('x-tenant-id') || '00000000-0000-0000-0000-000000000001';
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/event-stream',
       'X-User-ID': user.id,
       'X-User-Role': role,
+      'X-Tenant-ID': tenantId,
     };
 
     // Add secret if configured
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
       headers['X-MCP-Secret'] = MCP_PROXY_SECRET;
     }
 
-    const mcpResponse = await fetch(MCP_SERVER_URL, {
+    const mcpResponse = await fetch(`${MCP_SERVER_URL}/mcp`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
