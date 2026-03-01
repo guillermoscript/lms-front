@@ -112,8 +112,9 @@ app.use(
   })
 );
 
-// JSON body parsing (after auth router, which has its own parsing)
+// Body parsing (after auth router, which has its own parsing)
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Bearer auth middleware for /mcp endpoint
 const bearerAuth = requireBearerAuth({
