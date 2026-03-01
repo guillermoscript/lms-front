@@ -27,10 +27,10 @@ import { createMcpToken, revokeMcpToken, deleteMcpToken, type McpToken } from '@
 
 interface ApiTokensPageProps {
   tokens: McpToken[]
-  domain: string
+  mcpUrl: string
 }
 
-export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
+export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
   const t = useTranslations('dashboard.admin.apiTokens')
   const [createOpen, setCreateOpen] = useState(false)
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
@@ -96,7 +96,7 @@ export default function ApiTokensPage({ tokens, domain }: ApiTokensPageProps) {
   const configSnippet = (token: string) => JSON.stringify({
     mcpServers: {
       lms: {
-        url: `https://${domain}/api/mcp/cli`,
+        url: mcpUrl,
         headers: {
           Authorization: `Bearer ${token}`,
         },

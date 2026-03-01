@@ -1,4 +1,5 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenant } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
@@ -10,11 +11,15 @@ export default async function AdminApiTokensPage() {
   }
 
   const { data: tokens } = await listMcpTokens()
-  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
+  const tenant = await getCurrentTenant()
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
+  const mcpUrl = tenant?.slug
+    ? `https://${tenant.slug}.${platformDomain}/api/mcp/cli`
+    : `https://${platformDomain}/api/mcp/cli`
 
   return (
     <div className="p-6 lg:p-8">
-      <ApiTokensPage tokens={tokens ?? []} domain={domain} />
+      <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} />
     </div>
   )
 }
