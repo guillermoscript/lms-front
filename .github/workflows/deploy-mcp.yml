@@ -2,7 +2,7 @@ name: Build and deploy MCP server to Dokploy
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "feature/mcp"]
     paths:
       - "mcp-server/**"
 
