@@ -1,0 +1,40 @@
+
+> lms-mcp-server@1.0.0 start:http
+> node build/http-server-v2.js
+
+[dotenv@17.3.1] injecting env (7) from .env -- tip: ⚡️ secrets for agents: https://dotenvx.com/as2
+[Config] Proxy secret configured: c723abe3...
+╔════════════════════════════════════════════════════════════╗
+║  LMS MCP HTTP Server v2                                    ║
+╠════════════════════════════════════════════════════════════╣
+║  Status:   READY                                           ║
+║  Address:  http://127.0.0.1:3001                                  ║
+║  Endpoint: POST /mcp                                       ║
+║  Health:   GET /health                                     ║
+║  Mode:     Proxy Authentication (Stateless)                ║
+╠════════════════════════════════════════════════════════════╣
+║  Registered:                                               ║
+║    • 27 tools (courses, lessons, exams, etc.)              ║
+║    • 3 resources (course, lesson, exam data)               ║
+║    • 4 prompts (course creation, content gen, etc.)        ║
+╠════════════════════════════════════════════════════════════╣
+║  Security:                                                 ║
+║    ✓ Shared secret validation enabled                      ║
+║    ✓ Per-request authentication required                   ║
+║    ✓ Audit logging enabled                                 ║
+║    ✓ DNS rebinding protection enabled                      ║
+╚════════════════════════════════════════════════════════════╝
+[Auth] Validated teacher (00000000-0000-0000-0000-000000000001)
+[Proxy Auth] teacher (user: 00000000-0000-0000-0000-000000000001)
+[Audit] Logging: tools/call -> list_courses (success: true, duration: 31ms)
+[Audit] Insert error: {
+  code: '23503',
+  details: 'Key (user_id)=(00000000-0000-0000-0000-000000000001) is not present in table "users".',
+  hint: null,
+  message: 'insert or update on table "mcp_audit_log" violates foreign key constraint "mcp_audit_log_user_id_fkey"'
+}
+[2026-02-14T13:52:03.477Z] MCP request handled for teacher (00000000-0000-0000-0000-000000000001)
+[Auth] Invalid secret from 127.0.0.1
+[Auth] Invalid secret from 127.0.0.1
+
+[Shutdown] Shutting down gracefully...

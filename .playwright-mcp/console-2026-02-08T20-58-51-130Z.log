@@ -1,0 +1,1 @@
+[    8197ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:54321/auth/v1/token?grant_type=password:0

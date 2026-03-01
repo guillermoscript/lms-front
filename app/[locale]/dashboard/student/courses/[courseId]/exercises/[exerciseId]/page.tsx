@@ -1,222 +1,183 @@
-import { generateId } from 'ai'
+import { createClient } from '@/lib/supabase/server'
+import { notFound, redirect } from 'next/navigation'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-import { getI18n } from '@/app/locales/server'
-import ExerciseCard from '@/components/dashboards/exercises/ExerciseCard'
-import StudentExerciseCodePage from '@/components/dashboards/exercises/StudentExerciseCodePage'
-import StudentExerciseCodeWrapper from '@/components/dashboards/exercises/StudentExerciseCodeWrapper'
-import StudentExercisePage from '@/components/dashboards/exercises/StudentExercisePage'
-import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
-import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
-import { Card, CardContent } from '@/components/ui/card'
-import { URL_OF_SITE } from '@/utils/const'
-import { createClient } from '@/utils/supabase/server'
+import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
+import ExerciseCard from '@/components/exercises/exercise-card'
+import EssayExercise from '@/components/exercises/essay-exercise'
+import CodeExercise from '@/components/exercises/code-exercise'
+import CodeChallengeWrapper from '@/components/exercises/code-challenge-wrapper'
+import ExerciseChat from '@/components/exercises/exercise-chat'
+import ToggleableSection from '@/components/exercises/toggleable-section'
 
-export default async function ExerciseStudentPage({
-    params,
-}: {
-    params: { exerciseId: string; courseId: string }
-}) {
-    const supabase = createClient()
-    const userData = await supabase.auth.getUser()
+interface PageProps {
+    params: Promise<{ courseId: string; exerciseId: string }>
+}
 
-    const exercise = await supabase
+export default async function ExercisePage({ params }: PageProps) {
+    const { courseId, exerciseId } = await params
+    const supabase = await createClient()
+    const tenantId = await getCurrentTenantId()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/auth/login')
+
+    const { data: exercise, error: exerciseError } = await supabase
         .from('exercises')
-        .select(
-            `*,
-            courses(title),
-            exercise_completions(*),
-            exercise_messages(id,message,role,created_at)`
-        )
-        .eq('id', params.exerciseId)
-        .eq('exercise_completions.user_id', userData?.data.user.id)
-        .eq('exercise_messages.user_id', userData?.data.user.id)
+        .select(`
+      *,
+      courses(title),
+      exercise_completions(*),
+      exercise_messages(id, message, role, created_at)
+    `)
+        .eq('id', parseInt(exerciseId))
+        .eq('tenant_id', tenantId)
+        .eq('exercise_completions.user_id', user.id)
+        .eq('exercise_messages.user_id', user.id)
         .order('created_at', {
             referencedTable: 'exercise_messages',
             ascending: true,
         })
         .single()
 
-    const profile = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', userData.data.user.id)
-        .single()
-
-    // search for other 3 exercises
-    const exercises = await supabase
-        .from('exercise_view')
-        .select('*,exercise_completions(id),exercise_messages(id)')
-        .eq('course_id', params.courseId)
-        .neq('id', params.exerciseId)
-        .eq('exercise_completions.user_id', userData?.data.user.id)
-        .eq('exercise_messages.user_id', userData?.data.user.id)
-        .limit(3)
-
-    // Fetch the exercise files
-    const { data: exerciseFiles, error: filesError } = await supabase
-        .from('exercise_files')
-        .select('file_path, content')
-        .eq('exercise_id', params.exerciseId)
-
-    if (filesError) {
-        console.error('Error fetching exercise files:', filesError)
-        // Handle the error appropriately
+    if (exerciseError || !exercise) {
+        console.error('Error fetching exercise:', exerciseError)
+        notFound()
     }
 
-    const { data: lastSubmission, error: fetchError } = await supabase
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .single()
+
+    const { data: otherExercises } = await supabase
+        .from('exercises')
+        .select(`
+            *,
+            exercise_completions(id)
+        `)
+        .eq('course_id', parseInt(courseId))
+        .eq('status', 'published')
+        .eq('tenant_id', tenantId)
+        .eq('exercise_completions.user_id', user.id)
+        .neq('id', parseInt(exerciseId))
+        .limit(3)
+
+    const { data: exerciseFiles } = await supabase
+        .from('exercise_files')
+        .select('file_path, content')
+        .eq('exercise_id', parseInt(exerciseId))
+        .eq('tenant_id', tenantId)
+
+    const { data: lastSubmission } = await supabase
         .from('exercise_code_student_submissions')
         .select('submission_code')
-        .eq('exercise_id', params.exerciseId)
-        .eq('user_id', userData.data.user.id)
+        .eq('exercise_id', parseInt(exerciseId))
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .single()
 
-    // Construct the files object for MySandpack
-    const files = {}
+    const files: Record<string, string> = {}
     exerciseFiles?.forEach((file) => {
         files[file.file_path] = file.content
     })
 
-    console.log(fetchError)
+    const isExerciseCompleted = exercise.exercise_completions?.length > 0
 
-    const t = await getI18n()
-    const isExerciseCompleted = exercise.data?.exercise_completions.length > 0
     const initialMessages = [
-        {
-            id: generateId().toString(),
-            role: 'system',
-            content: exercise.data?.system_prompt,
-        },
-        ...exercise.data?.exercise_messages.map((message) => ({
-            id: message.id.toString(),
-            role: message.role,
-            content: message.message,
-        })),
+        ...(exercise.exercise_messages || []).map((m: any) => ({
+            id: m.id.toString(),
+            role: m.role,
+            content: m.message,
+        }))
     ]
 
-    return (
+    const courseTitle = Array.isArray(exercise.courses)
+        ? exercise.courses[0]?.title
+        : (exercise.courses as any)?.title || 'Course'
+
+    const breadcrumbLinks = [
+        { href: '/dashboard/student', label: 'Dashboard' },
+        { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
+        { href: `/dashboard/student/courses/${courseId}/exercises`, label: 'Exercises' },
+        { href: '#', label: exercise.title },
+    ]
+
+    const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
         <>
-            <div className="md:container mx-auto space-y-4">
-                <div className="container">
-                    <BreadcrumbComponent
-                        links={[
-                            {
-                                href: '/dashboard',
-                                label: t('BreadcrumbComponent.dashboard'),
-                            },
-                            {
-                                href: '/dashboard/student',
-                                label: t('BreadcrumbComponent.student'),
-                            },
-                            {
-                                href: '/dashboard/student/courses/',
-                                label: t('BreadcrumbComponent.course'),
-                            },
-                            {
-                                href: `/dashboard/student/courses/${params.courseId}`,
-                                label: exercise.data?.courses.title,
-                            },
-                            {
-                                href: `/dashboard/student/courses/${params.courseId}/exercises`,
-                                label: t('BreadcrumbComponent.exercise'),
-                            },
-                            {
-                                href: `/dashboard/student/courses/${params.courseId}/exercises/${params.exerciseId}`,
-                                label: exercise.data?.title,
-                            },
-                        ]}
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">More Exercises</h3>
+            <div className="grid gap-3">
+                {otherExercises.map((ex: any) => (
+                    <ExerciseCard
+                        key={ex.id}
+                        exercise={ex}
+                        courseId={courseId}
                     />
-                </div>
-
-                {exercise.data.exercise_type === 'essay' && (
-                    <StudentExercisePage
-                        exercise={exercise.data}
-                        exerciseId={params.exerciseId}
-                        courseId={params.courseId}
-                        isExerciseCompleted={isExerciseCompleted}
-                        profile={profile.data}
-                        studentId={userData.data.user.id}
-                        isExerciseCompletedSection={
-                            <>
-                                <h3 className="text-lg font-bold">
-                                    {t(
-                                        'StudentExercisePage.exerciseSuggestionsDescription'
-                                    )}
-                                </h3>
-                                {exercises.data.map((exercise) => {
-                                    return (
-                                        <ExerciseCard
-                                            key={exercise.id}
-                                            exercise={exercise as any}
-                                            courseId={exercise.course_id as any}
-                                            t={t}
-                                        />
-                                    )
-                                })}
-                            </>
-                        }
-                    >
-                        <>
-                            <Card className=" border-none shadow-none md:border md:shadow ">
-                                <CardContent className="p-0">
-                                    <ExerciseChat
-                                        apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/student/`}
-                                        exerciseId={params.exerciseId}
-                                        initialMessages={initialMessages as any}
-                                        isExerciseCompleted={
-                                            isExerciseCompleted
-                                        }
-                                        profile={profile.data}
-                                    />
-                                </CardContent>
-                            </Card>
-                        </>
-                    </StudentExercisePage>
-                )}
-                {exercise.data.exercise_type === 'coding_challenge' && (
-                    <StudentExerciseCodePage
-                        exercise={exercise.data as any}
-                        isExerciseCompleted={isExerciseCompleted}
-                        studentId={userData.data.user.id}
-                        courseId={params.courseId}
-                    >
-                        <StudentExerciseCodeWrapper
-                            exercise={exercise.data}
-                            files={files}
-                            exerciseId={+params.exerciseId}
-                            isExerciseCompleted={isExerciseCompleted}
-                            userCode={lastSubmission?.submission_code}
-                        />
-
-                        {exercises.data.length > 0 && (
-                            <ToggleableSection
-                                isOpen={false}
-                                title={
-                                    <h3 className="text-lg font-bold">
-                                        {t(
-                                            'StudentExercisePage.exerciseSuggestionsDescription'
-                                        )}
-                                    </h3>
-                                }
-                            >
-                                <>
-                                    {exercises.data.map((exercise) => {
-                                        return (
-                                            <ExerciseCard
-                                                key={exercise.id}
-                                                exercise={exercise as any}
-                                                courseId={exercise.course_id as any}
-                                                t={t}
-                                            />
-                                        )
-                                    })}
-                                </>
-                            </ToggleableSection>
-                        )}
-                    </StudentExerciseCodePage>
-                )}
+                ))}
             </div>
         </>
+    ) : null
+
+    const chatComponent = (
+        <ExerciseChat
+            apiEndpoint="/api/chat/exercises/student"
+            exerciseId={exerciseId}
+            initialMessages={initialMessages}
+            isExerciseCompleted={isExerciseCompleted}
+            profile={profile}
+        />
+    )
+
+    return (
+        <div className="mx-auto max-w-7xl py-6 px-4 lg:px-8 space-y-6">
+            <BreadcrumbComponent links={breadcrumbLinks} />
+
+            {exercise.exercise_type === 'coding_challenge' ? (
+                <CodeExercise
+                    exercise={exercise}
+                    isExerciseCompleted={isExerciseCompleted}
+                    studentId={user.id}
+                    courseId={courseId}
+                >
+                    <CodeChallengeWrapper
+                        exercise={exercise}
+                        files={files}
+                        exerciseId={exercise.id}
+                        isExerciseCompleted={isExerciseCompleted}
+                        userCode={lastSubmission?.submission_code}
+                    />
+
+                    {otherExercises && otherExercises.length > 0 && (
+                        <ToggleableSection
+                            title={<h3 className="font-semibold">Recommended Exercises</h3>}
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                                {otherExercises.map((ex: any) => (
+                                    <ExerciseCard
+                                        key={ex.id}
+                                        exercise={ex}
+                                        courseId={courseId}
+                                    />
+                                ))}
+                            </div>
+                        </ToggleableSection>
+                    )}
+                </CodeExercise>
+            ) : (
+                <EssayExercise
+                    exercise={exercise}
+                    exerciseId={exerciseId}
+                    courseId={courseId}
+                    isExerciseCompleted={isExerciseCompleted}
+                    profile={profile}
+                    studentId={user.id}
+                    isExerciseCompletedSection={otherExercisesSection}
+                >
+                    {chatComponent}
+                </EssayExercise>
+            )}
+        </div>
     )
 }

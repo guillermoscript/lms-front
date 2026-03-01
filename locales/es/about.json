@@ -1,0 +1,14 @@
+{
+  "title": "Sobre nosotros",
+  "description": "Construimos experiencias de aprendizaje modernas y accesibles para estudiantes y docentes. Nuestra misión es facilitar la enseñanza con herramientas intuitivas.",
+  "visitHome": "Volver al inicio",
+  "contact": "Contacto",
+  "teamTitle": "Nuestro equipo",
+  "teamDescription": "Somos un equipo pequeño apasionado por la educación. Contáctanos si quieres colaborar o hablar sobre integraciones."
+  ,"missionTitle": "Nuestra misión",
+  "missionDescription": "Hacer el aprendizaje de alta calidad accesible. Construimos herramientas que empoderan a los docentes y mantienen a los estudiantes comprometidos mediante contenidos claros, retroalimentación progresiva y evaluaciones fiables.",
+  "whatWeBuild": "Qué construimos",
+  "feature1": "Cursos y lecciones con soporte MDX",
+  "feature2": "Seguimiento del progreso y evaluaciones para estudiantes",
+  "feature3": "Herramientas para docentes para crear y calificar exámenes"
+}

@@ -1,0 +1,2 @@
+[     789ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:54321/rest/v1/reviews?select=review_id%2Crating%2Ccomment%2Ccreated_at%2Cuser_id&course_id=eq.1&order=created_at.desc:0
+[     790ms] [ERROR] Error loading reviews: {code: 42703, details: null, hint: null, message: column reviews.comment does not exist} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127

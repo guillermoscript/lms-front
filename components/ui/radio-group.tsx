@@ -1,44 +1,39 @@
-'use client'
+"use client"
 
-import * as RadioGroupPrimitive from '@radix-ui/react-radio-group'
-import { Circle } from 'lucide-react'
-import * as React from 'react'
+import { Radio as RadioPrimitive } from "@base-ui/react/radio"
+import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group"
 
-import { cn } from '@/utils'
+import { cn } from "@/lib/utils"
+import { IconCircle } from "@tabler/icons-react"
 
-const RadioGroup = React.forwardRef<
-React.ElementRef<typeof RadioGroupPrimitive.Root>,
-React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
->(({ className, ...props }, ref) => {
-    return (
-        <RadioGroupPrimitive.Root
-            className={cn('grid gap-2', className)}
-            {...props}
-            ref={ref}
-        />
-    )
-})
-RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
+function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
+  return (
+    <RadioGroupPrimitive
+      data-slot="radio-group"
+      className={cn("grid gap-3 w-full", className)}
+      {...props}
+    />
+  )
+}
 
-const RadioGroupItem = React.forwardRef<
-React.ElementRef<typeof RadioGroupPrimitive.Item>,
-React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({ className, ...props }, ref) => {
-    return (
-        <RadioGroupPrimitive.Item
-            ref={ref}
-            className={cn(
-                'aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                className
-            )}
-            {...props}
-        >
-            <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-                <Circle className="h-2.5 w-2.5 fill-current text-current" />
-            </RadioGroupPrimitive.Indicator>
-        </RadioGroupPrimitive.Item>
-    )
-})
-RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName
+function RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Props) {
+  return (
+    <RadioPrimitive.Root
+      data-slot="radio-group-item"
+      className={cn(
+        "border-input text-primary dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 data-checked:bg-primary data-checked:border-primary flex size-4 rounded-full transition-none focus-visible:ring-[2px] aria-invalid:ring-[2px] group/radio-group-item peer relative aspect-square shrink-0 border outline-none after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
+    >
+      <RadioPrimitive.Indicator
+        data-slot="radio-group-indicator"
+        className="group-aria-invalid/radio-group-item:text-destructive flex size-4 items-center justify-center text-white"
+      >
+        <IconCircle className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-current" />
+      </RadioPrimitive.Indicator>
+    </RadioPrimitive.Root>
+  )
+}
 
 export { RadioGroup, RadioGroupItem }

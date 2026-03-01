@@ -1,0 +1,36 @@
+{
+  "name": "lms-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "lms-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js build/http-server.js build/http-server-v2.js build/http-server-direct.js build/http-server-oauth.js",
+    "dev": "tsc --watch",
+    "start": "node build/http-server-direct.js",
+    "start:direct": "node build/http-server-direct.js",
+    "start:http": "node build/http-server-v2.js",
+    "start:http:v1": "node build/http-server.js",
+    "start:oauth": "node build/http-server-oauth.js",
+    "start:stdio": "node build/index.js",
+    "docker:build": "docker build -t lms-mcp-server .",
+    "docker:run": "docker run -p 3001:3001 --env-file .env lms-mcp-server",
+    "docker:stop": "docker stop $(docker ps -q --filter ancestor=lms-mcp-server)",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@supabase/supabase-js": "^2.93.1",
+    "@types/express": "^5.0.6",
+    "async-hooks": "^1.3.1",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jose": "^6.1.3",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

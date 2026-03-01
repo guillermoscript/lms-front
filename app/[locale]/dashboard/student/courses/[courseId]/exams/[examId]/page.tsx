@@ -1,157 +1,129 @@
-import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { redirect, notFound } from 'next/navigation'
+import { ExamTaker } from './exam-taker'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-import { getI18n } from '@/app/locales/server'
-import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import ExamsSubmissionForm from '@/components/dashboards/student/ExamSubmissionForm'
-import { createClient } from '@/utils/supabase/server'
-
-export default async function StudentExamCoursePage ({
-    params
-}: {
-    params: {
-        courseId: string
-        examId: string
-    }
-}) {
-    const supabase = createClient()
-
-    const userData = await supabase.auth.getUser()
-
-    if (userData.error != null) {
-        redirect('/auth/login')
-    }
-
-    const exams = await supabase
-        .from('exams')
-        .select(
-            `* ,
-            courses (*),
-            exam_questions(
-				*,
-				question_options(*)
-			)
-		`
-        )
-        .eq('exam_id', params.examId)
-        .single()
-
-    const examSubmission = await supabase
-        .from('exam_submissions')
-        .select('*')
-        .eq('exam_id', params.examId)
-        .eq('student_id', userData.data?.user?.id)
-        .single()
-
-    console.log(examSubmission)
-
-    if (examSubmission.error != null) {
-        console.log(examSubmission.error.message)
-    }
-
-    if (examSubmission.data?.exam_id) {
-        redirect(
-            `/dashboard/student/courses/${params.courseId}/exams/${params.examId}/review`
-        )
-    }
-
-    if (exams.error != null) {
-        console.log(exams.error.message)
-    }
-
-    const {
-        singleSelectQuestions,
-        freeTextQuestions,
-        multipleChoiceQuestions
-    } = parseExamData(exams.data)
-
-    const t = await getI18n()
-
-    return (
-        <>
-            <div className='container'>
-                <BreadcrumbComponent
-                    links={[
-                        { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                        { href: '/dashboard/student', label: t('BreadcrumbComponent.student') },
-                        { href: '/dashboard/student/courses/', label: t('BreadcrumbComponent.course') },
-                        {
-                            href: `/dashboard/student/courses/${exams.data?.course_id}`,
-                            label: exams.data?.courses?.title
-                        },
-                        {
-                            href: `/dashboard/student/courses/${exams.data?.course_id}/exams`,
-                            label: t('BreadcrumbComponent.exam')
-                        },
-                        {
-                            href: `/dashboard/student/courses/${exams.data?.course_id}/exams/${exams.data?.exam_id}`,
-                            label: exams.data?.title
-                        }
-                    ]}
-                />
-            </div>
-            <div className="grid gap-8 container">
-                <div>
-                    <h1 className="text-3xl font-bold">
-                        {exams.data.title}
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400">
-                        {exams.data.description}
-                    </p>
-                    <p className="text-gray-500 dark:text-gray-400">
-                        {t('dashboard.student.StudentExamCoursePage.duration')}: {exams.data?.duration} minutes
-                    </p>
-                </div>
-                <ExamsSubmissionForm
-                    multipleChoiceQuestions={multipleChoiceQuestions}
-                    freeTextQuestions={freeTextQuestions}
-                    singleSelectQuestions={singleSelectQuestions}
-                    examId={parseFloat(params.examId)}
-                    courseId={parseFloat(params.courseId)}
-                    userId={userData.data?.user?.id }
-                />
-            </div>
-        </>
-    )
+interface PageProps {
+  params: Promise<{ courseId: string; examId: string }>
 }
 
-const parseExamData = (examData: any) => {
-    const { exam_questions } = examData
+export default async function TakeExamPage({ params }: PageProps) {
+  const { courseId, examId } = await params
+  const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
-    const freeTextQuestions = exam_questions
-        .filter((q) => q.question_type === 'free_text')
-        .map((q) => ({
-            id: q.question_id.toString(),
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-            label: q.question_text,
+  if (!user) {
+    redirect('/auth/login')
+  }
 
-            placeholder: 'Enter your answer'
-        }))
+  // Verify enrollment
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('enrollment_id')
+    .eq('user_id', user.id)
+    .eq('course_id', parseInt(courseId))
+    .eq('status', 'active')
+    .eq('tenant_id', tenantId)
+    .single()
 
-    const singleSelectQuestions = exam_questions
-        .filter((q) => q.question_type === 'true_false')
-        .map((q) => ({
-            id: q.question_id.toString(),
+  if (!enrollment) {
+    redirect('/dashboard/student')
+  }
 
-            text: q.question_text
-        }))
+  // Check if user already submitted this exam
+  const { data: existingSubmission } = await supabase
+    .from('exam_submissions')
+    .select('submission_id')
+    .eq('exam_id', parseInt(examId))
+    .eq('student_id', user.id)
+    .eq('tenant_id', tenantId)
+    .single()
 
-    const multipleChoiceQuestions = exam_questions
-        .filter((q) => q.question_type === 'multiple_choice')
-        .map((q) => ({
-            id: q.question_id.toString(),
+  if (existingSubmission) {
+    redirect(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
+  }
 
-            label: q.question_text,
+  // Get exam details with questions and options in one query as requested
+  const { data: exam, error: examError } = await supabase
+    .from('exams')
+    .select(`
+      exam_id,
+      course_id,
+      title,
+      description,
+      duration,
+      status,
+      exam_date,
+      courses (
+        course_id,
+        title
+      ),
+      exam_questions!exam_questions_exam_id_fkey (
+        question_id,
+        exam_id,
+        question_text,
+        question_type,
+        question_options (
+          option_id,
+          question_id,
+          option_text,
+          is_correct
+        )
+      )
+    `)
+    .eq('exam_id', parseInt(examId))
+    .eq('status', 'published')
+    .eq('tenant_id', tenantId)
+    .order('question_id', { foreignTable: 'exam_questions', ascending: true })
+    .single()
 
-            options: q.question_options.map((option) => ({
-                id: option.option_id.toString(),
+  console.log('🔍 Exam query result:', {
+    examId,
+    error: examError,
+    hasExam: !!exam,
+    questionsCount: exam?.exam_questions?.length || 0,
+    examKeys: exam ? Object.keys(exam) : [],
+    examData: exam ? {
+      exam_id: exam.exam_id,
+      title: exam.title,
+      status: exam.status,
+      hasQuestionsKey: 'exam_questions' in exam,
+      questionsType: typeof exam.exam_questions,
+      questionsIsArray: Array.isArray(exam.exam_questions),
+      questionsPreview: exam.exam_questions
+    } : null
+  })
 
-                text: option.option_text
-            }))
-        }))
+  if (examError || !exam) {
+    console.error('❌ Exam not found or error:', examError)
+    notFound()
+  }
 
-    return {
-        freeTextQuestions,
-        singleSelectQuestions,
-        multipleChoiceQuestions
-    }
+  // Format questions for the client component
+  const formattedQuestions = (exam.exam_questions || []).map((q: any) => ({
+    id: q.question_id,
+    text: q.question_text,
+    type: q.question_type as 'multiple_choice' | 'true_false' | 'free_text',
+    options: (q.question_options || []).map((o: any) => ({
+      id: o.option_id,
+      text: o.option_text,
+    })),
+  }))
+
+  console.log('✅ Formatted questions:', formattedQuestions.length, 'questions')
+
+  return (
+    <ExamTaker
+      examId={exam.exam_id}
+      courseId={parseInt(courseId)}
+      title={exam.title}
+      description={exam.description}
+      duration={exam.duration}
+      questions={formattedQuestions}
+    />
+  )
 }

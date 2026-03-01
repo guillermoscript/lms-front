@@ -1,209 +1,85 @@
-import { generateId } from 'ai'
-import { Clock, Edit, MessageSquare, Users } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { ExerciseBuilder } from '@/components/teacher/exercise-builder'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
+import { getUserRole } from '@/lib/supabase/get-user-role'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-import { getI18n } from '@/app/locales/server'
-import BreadcrumbComponent from '@/components/dashboards/student/course/BreadcrumbComponent'
-import ExerciseChat from '@/components/dashboards/student/course/exercises/exerciseChat'
-import ToggleableSection from '@/components/dashboards/student/course/lessons/ToggleableSection'
-import DeleteExerciseAlert from '@/components/dashboards/teacher/exercises/DeleteExerciseAlert'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import ViewMarkdown from '@/components/ui/markdown/ViewMarkdown'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { URL_OF_SITE } from '@/utils/const'
-import { createClient } from '@/utils/supabase/server'
+interface PageProps {
+  params: Promise<{ courseId: string; exerciseId: string }>
+}
 
-export default async function ExercisePageTeacher({
-    params
-}: {
-    params: { courseId: string; exerciseId: string }
-}) {
-    const supabase = createClient()
-    const t = await getI18n()
-    const user = await supabase.auth.getUser()
+export default async function EditExercisePage({ params }: PageProps) {
+  const { courseId, exerciseId } = await params
+  const supabase = await createClient()
+  const t = await getTranslations('dashboard.teacher.manageCourse')
+  const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
+  const tenantId = await getCurrentTenantId()
+  const { data: { user } } = await supabase.auth.getUser()
 
-    const { data: exercise, error } = await supabase
-        .from('exercises')
-        .select(`
-            *,
-            courses(*),
-            exercise_completions(*),
-            exercise_messages(id,message,role)
-        `)
-        .eq('id', params.exerciseId)
-        .eq('exercise_messages.user_id', user.data.user.id)
-        .order('created_at', { referencedTable: 'exercise_messages', ascending: false })
-        .single()
+  if (!user) {
+    redirect('/auth/login')
+  }
 
-    const usersData = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .in('id', exercise?.exercise_completions.map((completion) => completion.user_id))
+  const role = await getUserRole()
 
-    if (error) {
-        console.error('Error fetching exercise:', error)
-        return <div>{t('errorLoadingExercise')}</div>
-    }
+  const { data: exercise } = await supabase
+    .from('exercises')
+    .select('*')
+    .eq('id', parseInt(exerciseId))
+    .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
+    .single()
 
-    const getDifficultyColor = (level: string) => {
-        switch (level) {
-            case 'easy': return 'bg-green-100 text-green-800'
-            case 'medium': return 'bg-yellow-100 text-yellow-800'
-            case 'hard': return 'bg-red-100 text-red-800'
-            default: return 'bg-gray-100 text-gray-800'
-        }
-    }
+  if (!exercise) return notFound()
 
-    const averageScore = exercise?.exercise_completions.length > 0
-        ? (exercise?.exercise_completions.reduce((acc, curr) => acc + (curr.score || 0), 0) / exercise?.exercise_completions.length).toFixed(2)
-        : 'N/A'
+  const { data: course } = await supabase
+    .from('courses')
+    .select('*')
+    .eq('course_id', parseInt(courseId))
+    .eq('tenant_id', tenantId)
+    .single()
 
-    const initialMessages = [
-        {
-            id: generateId().toString(),
-            role: 'system' as const,
-            content: exercise.system_prompt
-        },
-        ...exercise.exercise_messages.map((message) => ({
-            id: message.id.toString(),
-            role: message.role as 'system' | 'user' | 'assistant' | 'data',
-            content: message.message
-        }))
-    ]
+  if (!course) return notFound()
 
-    const profile = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.data.user.id)
-        .single()
+  const isOwner = course.author_id === user.id
+  const isAdmin = role === 'admin'
 
+  if (!isOwner && !isAdmin) {
     return (
-        <div className="container mx-auto">
-            <BreadcrumbComponent
-                links={[
-                    { href: '/dashboard', label: t('BreadcrumbComponent.dashboard') },
-                    { href: '/dashboard/teacher', label: t('BreadcrumbComponent.teacher') },
-                    { href: '/dashboard/teacher/courses', label: t('BreadcrumbComponent.course') },
-                    { href: `/dashboard/teacher/courses/${params.courseId}`, label: exercise?.courses.title },
-                    { href: `/dashboard/teacher/courses/${params.courseId}/exercises`, label: t('BreadcrumbComponent.exercise') },
-                    { href: `/dashboard/teacher/courses/${params.courseId}/exercises/${params.exerciseId}`, label: exercise?.title }
-                ]}
-            />
-
-            <div className="flex justify-between items-center mt-8 mb-6">
-                <h1 className="text-3xl font-bold">{exercise.title || 'Exercise'}</h1>
-                <div className="space-x-2">
-                    <Link
-                        className={buttonVariants({ variant: 'outline' })}
-                        href={`/dashboard/teacher/courses/${params.courseId}/exercises/${params.exerciseId}/edit`}
-                    >
-                        <Edit className="w-4 h-4 mr-2" />
-                        {t('dashboard.teacher.ExercisePageTeacher.editExercise')}
-                    </Link>
-                    <Button variant="destructive">
-                        <DeleteExerciseAlert exerciseId={params.exerciseId} />
-                    </Button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ToggleableSection
-                    isOpen
-                    title={t('dashboard.teacher.ExercisePageTeacher.exerciseDetails')}
-                    cardClassName='md:col-span-2'
-                >
-                    <>
-                        <p className=" mb-4">{exercise.instructions}</p>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <Badge variant="secondary">{exercise.exercise_type}</Badge>
-                            <Badge className={getDifficultyColor(exercise.difficulty_level)}>
-                                {exercise.difficulty_level}
-                            </Badge>
-                            {exercise.time_limit && (
-                                <Badge variant="outline">
-                                    <Clock className="w-4 h-4 mr-1" />
-                                    {exercise.time_limit} {t('dashboard.teacher.ExercisePageTeacher.minutes')}
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="mt-4">
-                            <h3 className="font-semibold mb-2">{t('dashboard.teacher.ExercisePageTeacher.systemPrompt')}</h3>
-                            <ViewMarkdown
-                                markdown={exercise.system_prompt || ''}
-                            />
-                        </div>
-                    </>
-                </ToggleableSection>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('dashboard.teacher.ExercisePageTeacher.performanceMetrics')}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="flex items-center">
-                                <Users className="w-5 h-5 mr-2 text-blue-500" />
-                                <span>{t('dashboard.teacher.ExercisePageTeacher.completions')}: {exercise?.exercise_completions.length}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <span>{t('dashboard.teacher.ExercisePageTeacher.averageScore')}: {averageScore}</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Tabs defaultValue="chat" className="mt-8">
-                <TabsList>
-                    <TabsTrigger value="chat">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        {t('dashboard.teacher.ExercisePageTeacher.exerciseChat')}
-                    </TabsTrigger>
-                    <TabsTrigger value="completions">
-                        <Users className="w-4 h-4 mr-2" />
-                        {t('dashboard.teacher.ExercisePageTeacher.studentCompletions')}
-                    </TabsTrigger>
-                </TabsList>
-                <TabsContent value="chat" className="mt-4">
-                    <ExerciseChat
-                        exerciseId={params.exerciseId}
-                        apiEndpoint={`${URL_OF_SITE}/api/chat/exercises/`}
-                        initialMessages={initialMessages || []}
-                        isExerciseCompleted={false}
-                        profile={profile.data}
-                    />
-                </TabsContent>
-                <TabsContent value="completions" className="mt-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('dashboard.teacher.ExercisePageTeacher.studentCompletions')}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-[400px]">
-                                {usersData?.data.map((user, index) => (
-                                    <div key={index} className="flex items-center justify-between py-4 border-b last:border-b-0">
-                                        <div className="flex items-center">
-                                            <Avatar className="w-10 h-10 mr-3">
-                                                <AvatarImage src={user.avatar_url} />
-                                                <AvatarFallback>{user.full_name[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold">{user.full_name}</p>
-                                                <p className="text-sm text-gray-500">
-                                                    {t('dashboard.teacher.ExercisePageTeacher.completed')}: {new Date(exercise.exercise_completions[index].completed_at).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-        </div>
+      <div className="p-8 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold text-destructive mb-2">{t('accessDenied')}</h1>
+        <p className="text-muted-foreground">{t('notAuthor')}</p>
+        <Link href={`/dashboard/teacher/courses/${courseId}/exercises`} className="mt-6 inline-block">
+          <Button variant="outline">{t('backToCourses')}</Button>
+        </Link>
+      </div>
     )
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8 lg:px-6 lg:py-10">
+      {/* Breadcrumb */}
+      <div className="mb-6 flex items-center gap-2">
+        <Link href={`/dashboard/teacher/courses/${courseId}/exercises`}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <IconArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="truncate max-w-[200px]">{course.title}</span>
+          <IconChevronRight className="h-3 w-3 shrink-0" />
+          <span className="font-medium text-foreground">{tEx('updateExercise')}</span>
+        </div>
+      </div>
+
+      <ExerciseBuilder
+        courseId={parseInt(courseId)}
+        initialData={exercise}
+      />
+    </div>
+  )
 }

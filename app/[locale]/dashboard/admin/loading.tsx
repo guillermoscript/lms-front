@@ -1,53 +1,81 @@
-/**
- * v0 by Vercel.
- * @see https://v0.dev/t/vkBhDMemo6s
- * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
- */
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from "@/components/ui/skeleton"
 
-export default function Component () {
-    return (
-        <div className="grid min-h-screen w-full lg:grid-cols-[1fr_280px]">
-            <div className="flex flex-col">
-                <main className="flex-1 p-4 md:p-6">
-                    <div className="flex items-center">
-                        <Skeleton className="h-6 w-40 rounded-md" />
-                        <Skeleton className="h-8 w-20 ml-auto rounded-md" />
-                    </div>
-                    <div className="mt-4 border rounded-lg shadow-sm">
-                        <Skeleton className="h-[200px] w-full rounded-t-lg" />
-                        <div className="p-4 md:p-6">
-                            <div className="space-y-4">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
-            <div className="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40">
-                <div className="flex h-full max-h-screen flex-col gap-2">
-                    <div className="flex h-[60px] items-center border-b px-6">
-                        <Skeleton className="h-6 w-6 rounded-full" />
-                        <Skeleton className="h-5 w-24 ml-2" />
-                    </div>
-                    <div className="flex-1 overflow-auto py-2">
-                        <nav className="grid gap-2 px-4">
-                            <Skeleton className="h-8 w-full rounded-md" />
-                            <Skeleton className="h-8 w-full rounded-md" />
-                            <Skeleton className="h-8 w-full rounded-md" />
-                            <Skeleton className="h-8 w-full rounded-md" />
-                            <Skeleton className="h-8 w-full rounded-md" />
-                        </nav>
-                    </div>
-                    <div className="mt-auto p-4">
-                        <Skeleton className="h-[125px] w-full rounded-lg" />
-                    </div>
-                </div>
-            </div>
+export default function Loading() {
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-72" />
         </div>
-    )
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-28 rounded-md" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-8 w-8 rounded-md" />
+            </div>
+            <Skeleton className="h-8 w-20" />
+            <div className="flex items-center gap-1">
+              <Skeleton className="h-3 w-3 rounded-full" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-xl border p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-8 w-28 rounded-md" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </div>
+        <div className="rounded-xl border p-5 space-y-4">
+          <Skeleton className="h-5 w-36" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-5 w-14 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Data table */}
+      <div className="rounded-xl border">
+        <div className="flex items-center gap-4 px-4 py-3 border-b">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-48 rounded-md ml-auto" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3 border-b last:border-0">
+            <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
