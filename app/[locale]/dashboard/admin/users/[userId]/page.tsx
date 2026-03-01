@@ -105,7 +105,7 @@ export default async function UserDetailPage({ params }: PageProps) {
         )
       )
     `)
-    .eq('student_id', userId)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .order('completed_at', { ascending: false })
     .limit(10)

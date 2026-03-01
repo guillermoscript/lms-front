@@ -24,9 +24,10 @@ export default async function AnalyticsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
   const { locale } = await params
+  const resolvedSearchParams = await searchParams
   const t = await getTranslations('dashboard.admin.analytics')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
@@ -48,7 +49,7 @@ export default async function AnalyticsPage({
   const tenantId = await getCurrentTenantId()
 
   // Get period from query params (default: 30 days)
-  const period = searchParams.period || '30'
+  const period = resolvedSearchParams.period || '30'
   const daysAgo = parseInt(period)
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - daysAgo)
@@ -130,11 +131,11 @@ export default async function AnalyticsPage({
 
   const { data: activeStudentIds } = await supabase
     .from('lesson_completions')
-    .select('student_id')
+    .select('user_id')
     .eq('tenant_id', tenantId)
     .gte('completed_at', thirtyDaysAgo.toISOString())
 
-  const activeStudents = new Set(activeStudentIds?.map((s) => s.student_id)).size
+  const activeStudents = new Set(activeStudentIds?.map((s) => s.user_id)).size
 
   const { count: totalLessonCompletions } = await supabase
     .from('lesson_completions')
@@ -174,7 +175,7 @@ export default async function AnalyticsPage({
       const { count: completedLessons } = await supabase
         .from('lesson_completions')
         .select('*', { count: 'exact', head: true })
-        .eq('student_id', (enrollment as any).student_id)
+        .eq('user_id', (enrollment as any).user_id)
         .in(
           'lesson_id',
           (
@@ -245,7 +246,7 @@ export default async function AnalyticsPage({
         const { count: completedCount } = await supabase
           .from('lesson_completions')
           .select('*', { count: 'exact', head: true })
-          .eq('student_id', enrollment.user_id)
+          .eq('user_id', enrollment.user_id)
           .in('lesson_id', lessonIds)
 
         totalCompletions += (completedCount || 0) / lessonIds.length

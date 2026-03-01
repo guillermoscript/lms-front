@@ -426,8 +426,7 @@ async function main() {
         const { error: delComErr } = await supabase
           .from('lesson_completions')
           .delete()
-          .eq('student_id', userId)
-          .eq('course_id', courseId)
+          .eq('user_id', userId)
 
         if (delComErr) console.warn('Warning deleting lesson_completions:', delComErr.message)
 
