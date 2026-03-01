@@ -23,20 +23,36 @@ Access the dashboard at `http://your-server-ip:3000`.
 
 ### 1.2 DNS Configuration (Cloudflare)
 
+We recommend **Cloudflare** (free tier) for DNS because Traefik's wildcard SSL requires DNS-01 challenge, and Cloudflare has first-class integration. If you're currently on GoDaddy or another registrar, migrate your nameservers to Cloudflare:
+
+1. Create a free account at [dash.cloudflare.com](https://dash.cloudflare.com)
+2. **Add your domain** — Cloudflare will scan existing DNS records
+3. Cloudflare gives you two nameservers (e.g., `karina.ns.cloudflare.com`, `karl.ns.cloudflare.com`)
+4. **Update nameservers at your registrar** (e.g., GoDaddy > My Domains > DNS > Nameservers > Custom) to point to Cloudflare's nameservers
+5. Wait for propagation (usually 5-30 minutes)
+
+Once active, configure these DNS records:
+
 | Type  | Name | Value            | Proxy               |
 |-------|------|------------------|----------------------|
-| A     | `@`  | `your-server-ip` | Proxied (orange)     |
+| A     | `@`  | `your-server-ip` | **DNS only (grey)**  |
 | A     | `*`  | `your-server-ip` | **DNS only (grey)**  |
-| CNAME | `www`| `lmsplatform.com`| Proxied              |
+| CNAME | `www`| `lmsplatform.com`| DNS only (grey)      |
 
-**Critical:** The wildcard `*` record MUST be **DNS only (grey cloud)** so Traefik handles SSL directly. If proxied through Cloudflare, the wildcard cert won't work with Traefik's DNS challenge.
+**Critical:** Both `@` and `*` records MUST be **DNS only (grey cloud)** so Traefik handles SSL directly. If proxied through Cloudflare, the wildcard cert won't work with Traefik's DNS challenge. You can enable Cloudflare proxy on the `@` record later once everything is working.
+
+**Clean up old records:** If you migrated from another provider, delete any leftover A records pointing to old IPs (e.g., GoDaddy forwarding IPs). You should have exactly ONE A record per name.
 
 ### 1.3 Cloudflare API Token
 
-1. Cloudflare Dashboard > My Profile > API Tokens
-2. Create Token > **Edit zone DNS** template
-3. Zone Resources: Include your domain
-4. Save the token for Traefik configuration
+1. Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Click **"Create Token"**
+3. Use the **"Edit zone DNS"** template
+4. Zone Resources: **Include > Specific zone > your domain**
+5. Click **Continue to summary > Create Token**
+6. **Copy and save the token** — you'll need it for Traefik configuration
+
+> **Security:** Never share this token publicly. If compromised, rotate it immediately from the same page.
 
 ---
 
@@ -44,32 +60,69 @@ Access the dashboard at `http://your-server-ip:3000`.
 
 This is what makes multi-tenant subdomains work with HTTPS.
 
-### 2.1 Add Cloudflare Token
+### 2.1 Add Cloudflare Token to Traefik
 
-In Dokploy: **Web Server > Traefik > Environment**
+In Dokploy: **Web Server** (left sidebar) > scroll to **Web Server** section > click **Traefik** button > select **"Modify Environment"** from the dropdown:
 
 ```
 CF_DNS_API_TOKEN=your-cloudflare-api-token
 ```
 
+Save the environment.
+
 ### 2.2 Add DNS Challenge Resolver
 
-In Dokploy: **Web Server > Traefik > traefik.yml** — add a DNS challenge resolver alongside the existing one:
+In Dokploy: **Traefik File System** (left sidebar) > open the `traefik.yml` file.
+
+Add a `letsencrypt-wildcard` DNS challenge resolver **alongside** the existing `letsencrypt` HTTP challenge resolver. Your full `traefik.yml` should look like:
 
 ```yaml
+global:
+  sendAnonymousUsage: false
+providers:
+  swarm:
+    exposedByDefault: false
+    watch: true
+  docker:
+    exposedByDefault: false
+    watch: true
+    network: dokploy-network
+  file:
+    directory: /etc/dokploy/traefik/dynamic
+    watch: true
+entryPoints:
+  web:
+    address: :80
+  websecure:
+    address: :443
+    http3:
+      advertisedPort: 443
+    http:
+      tls:
+        certResolver: letsencrypt
+api:
+  insecure: true
 certificatesResolvers:
   letsencrypt:
-    # ... existing HTTP challenge config (keep it)
-  letsencrypt-dns:
     acme:
       email: you@yourdomain.com
-      storage: /etc/dokploy/traefik/dynamic/acme-dns.json
+      storage: /etc/dokploy/traefik/dynamic/acme.json
+      httpChallenge:
+        entryPoint: web
+  letsencrypt-wildcard:
+    acme:
+      email: you@yourdomain.com
+      storage: /etc/dokploy/traefik/dynamic/acme-wildcard.json
       dnsChallenge:
         provider: cloudflare
         resolvers:
           - "1.1.1.1:53"
           - "8.8.8.8:53"
 ```
+
+Save the file, then go back to **Web Server** and click **Traefik > Reload** to apply changes.
+
+> **Note:** The `letsencrypt` resolver (HTTP challenge) is used for the root domain. The `letsencrypt-wildcard` resolver (DNS challenge via Cloudflare) is used for `*.yourdomain.com`. Both coexist.
 
 ---
 
@@ -135,31 +188,73 @@ CRON_SECRET=your-random-secret-here
 In the app's **Domains** tab:
 
 **Domain 1 — Platform root:**
+
+In the app's **Domains** tab, click **Add Domain**:
 - Host: `lmsplatform.com`
+- Port: `3000`
 - HTTPS: Yes
-- Certificate resolver: `letsencrypt` (standard HTTP challenge)
+- Certificate Provider: `Let's Encrypt` (standard HTTP challenge)
 
 **Domain 2 — Wildcard subdomains:**
 
-In the app's **Advanced > Traefik** section, add custom labels:
+> **Important:** Do NOT add `*.lmsplatform.com` as a regular domain in Dokploy — Traefik does not support literal `*` in `Host()` rules and will error with: `"*.lmsplatform.com" is not a valid hostname`. You must use `HostRegexp` via the Advanced config.
+
+In the app's **Advanced** tab, find the Traefik dynamic configuration. You'll see the existing router config for your root domain. Add wildcard routers alongside it.
+
+Here's what the full Advanced config should look like (replace `YOUR-SERVICE-NAME` with the Dokploy-generated service name visible in the existing config, and `YOUR-APP-CONTAINER` with the container hostname):
 
 ```yaml
-# HTTP wildcard router
-- "traefik.http.routers.lms-wildcard.rule=HostRegexp(`^[a-z0-9-]+\\.lmsplatform\\.com$`)"
-- "traefik.http.routers.lms-wildcard.entrypoints=web"
-- "traefik.http.routers.lms-wildcard.service=lms-<SERVICE_HASH>-web"
-- "traefik.http.routers.lms-wildcard.middlewares=redirect-to-https@docker"
+http:
+  routers:
+    # --- Root domain (auto-generated by Dokploy) ---
+    your-app-router:
+      rule: Host(`lmsplatform.com`)
+      service: YOUR-SERVICE-NAME
+      middlewares:
+        - redirect-to-https
+      entryPoints:
+        - web
+    your-app-router-websecure:
+      rule: Host(`lmsplatform.com`)
+      service: YOUR-SERVICE-NAME
+      middlewares: []
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
 
-# HTTPS wildcard router
-- "traefik.http.routers.lms-wildcard-secure.rule=HostRegexp(`^[a-z0-9-]+\\.lmsplatform\\.com$`)"
-- "traefik.http.routers.lms-wildcard-secure.entrypoints=websecure"
-- "traefik.http.routers.lms-wildcard-secure.service=lms-<SERVICE_HASH>-web"
-- "traefik.http.routers.lms-wildcard-secure.tls.certresolver=letsencrypt-dns"
-- "traefik.http.routers.lms-wildcard-secure.tls.domains[0].main=lmsplatform.com"
-- "traefik.http.routers.lms-wildcard-secure.tls.domains[0].sans=*.lmsplatform.com"
+    # --- Wildcard subdomains (add these manually) ---
+    lms-wildcard:
+      rule: HostRegexp(`^[a-z0-9-]+\.lmsplatform\.com$`)
+      service: YOUR-SERVICE-NAME
+      middlewares:
+        - redirect-to-https
+      entryPoints:
+        - web
+    lms-wildcard-secure:
+      rule: HostRegexp(`^[a-z0-9-]+\.lmsplatform\.com$`)
+      service: YOUR-SERVICE-NAME
+      middlewares: []
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt-wildcard
+        domains:
+          - main: lmsplatform.com
+            sans:
+              - "*.lmsplatform.com"
+
+  services:
+    YOUR-SERVICE-NAME:
+      loadBalancer:
+        servers:
+          - url: http://YOUR-APP-CONTAINER:3000
+        passHostHeader: true
 ```
 
-Replace `<SERVICE_HASH>` with the Dokploy-generated service name (visible in the Traefik dashboard or via `docker inspect`).
+**How to find `YOUR-SERVICE-NAME` and `YOUR-APP-CONTAINER`:** Look at the existing config in the Advanced tab — Dokploy auto-generates these when you add the root domain. They follow the pattern `project-name-hash-service-N` (e.g., `guille-personal-lms-lj9e61-service-15`).
+
+After saving, **redeploy** the app. Allow 1-2 minutes for Let's Encrypt to issue the wildcard certificate via DNS challenge.
 
 ### 3.5 Cron Jobs
 
@@ -313,8 +408,70 @@ After deployment, verify:
 
 ---
 
+## 8. Troubleshooting
+
+### Wildcard subdomain returns 404
+
+**Symptom:** `school.lmsplatform.com` returns a Traefik 404 page, but `lmsplatform.com` works.
+
+**Causes and fixes:**
+
+1. **Missing wildcard router:** Check that the `lms-wildcard` and `lms-wildcard-secure` routers exist in the Advanced config. Dokploy's regular domain UI does not support wildcards.
+
+2. **Traefik error `"*.domain.com" is not a valid hostname`:** You added `*.domain.com` as a regular domain in Dokploy's Domains tab. Delete it — wildcards must use `HostRegexp` in the Advanced config.
+
+3. **DNS not resolving:** Run `dig +short school.lmsplatform.com` — it should return your server IP. If not, check that the `*` A record exists in Cloudflare and nameservers have propagated.
+
+4. **Wildcard cert not issued:** Check Traefik logs (**Web Server > Traefik > View Logs**) for ACME errors. Common causes:
+   - `CF_DNS_API_TOKEN` not set in Traefik environment
+   - Cloudflare API token doesn't have `DNS:Edit` permission on the correct zone
+   - `letsencrypt-wildcard` resolver not defined in `traefik.yml`
+   - `acme-wildcard.json` storage path conflict — ensure it's different from the HTTP challenge storage
+
+5. **Cloudflare proxy (orange cloud) enabled on wildcard:** The `*` A record must be **DNS only (grey cloud)**. Cloudflare proxy intercepts TLS and breaks Traefik's DNS challenge.
+
+### Tenant not created after onboarding
+
+**Symptom:** User completes the create-school flow but the subdomain shows "Invalid tenant."
+
+**Cause:** The `create_school` RPC requires an authenticated user (`auth.uid()` must not be null). If the user's session expired or cookies weren't sent, the RPC fails silently on the client.
+
+**Fix:** Check the browser console for RPC errors. The user should log in again and retry the create-school flow. Alternatively, create the tenant manually via SQL:
+
+```sql
+-- Create tenant
+INSERT INTO tenants (name, slug, status)
+VALUES ('School Name', 'school-slug', 'active')
+RETURNING id;
+
+-- Add admin user (replace UUIDs)
+INSERT INTO tenant_users (tenant_id, user_id, role, status)
+VALUES ('tenant-uuid-from-above', 'user-uuid', 'admin', 'active');
+```
+
+### SSL certificate not renewing
+
+Traefik auto-renews Let's Encrypt certificates. If renewal fails:
+
+1. Check Traefik logs for ACME errors
+2. Verify the Cloudflare API token hasn't been revoked
+3. Ensure the `acme-wildcard.json` file is writable
+4. Try deleting the `acme-wildcard.json` file and reloading Traefik to force re-issuance
+
+---
+
 ## Recommendation
 
 **Start with Supabase Cloud** to avoid managing Postgres backups, Auth configuration, and the custom access token hook. Migrate to self-hosted later once traffic justifies it.
 
 The critical work is in **Sections 2-3**: getting Traefik wildcard SSL + DNS challenge working. Once that's done, subdomain routing works automatically via `proxy.ts`.
+
+---
+
+## References
+
+- [Dokploy Domains Documentation](https://docs.dokploy.com/docs/core/domains)
+- [Wildcard SSL in Dokploy — naps62](https://www.naps62.com/posts/wildcard-ssl-in-dokploy)
+- [Dokploy Wildcard Subdomain Discussion #3089](https://github.com/Dokploy/dokploy/discussions/3089)
+- [Traefik DNS Challenge Providers](https://doc.traefik.io/traefik/https/acme/#providers)
+- [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
