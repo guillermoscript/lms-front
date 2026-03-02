@@ -288,7 +288,8 @@ app.get("/auth/callback", (req, res) => {
 });
 
 // MCP endpoint (protected by OAuth bearer token)
-app.post("/mcp", bearerAuth, async (req, res) => {
+// Handle both /mcp and / (the proxy strips /api/mcp prefix, leaving "/" for the root path)
+app.post(["/mcp", "/"], bearerAuth, async (req, res) => {
   const authInfo = req.auth!;
   const userContext: UserContext = {
     userId: authInfo.extra?.userId as string,

@@ -38,7 +38,7 @@ function getOrigin(request: NextRequest): string {
 
 function getSubpath(request: NextRequest): string {
   const path = new URL(request.url).pathname;
-  return path.replace(/^\/api\/mcp/, '') || '/';
+  return path.replace(/^\/api\/mcp/, '') || '/mcp';
 }
 
 // ─── OAuth Metadata (served directly by proxy, tenant-aware) ───────────────
