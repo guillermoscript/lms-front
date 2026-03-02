@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 
 interface McpConsentFormProps {
@@ -11,15 +11,6 @@ interface McpConsentFormProps {
   mcpCallbackUrl: string
 }
 
-/**
- * Client component for MCP OAuth consent approve/deny buttons.
- *
- * On approve: POSTs to MCP server /auth/callback with user identity.
- * The MCP server then generates an auth code and redirects the browser
- * back to the MCP client (Claude Desktop).
- *
- * On deny: Redirects back to MCP client with error=access_denied.
- */
 export function McpConsentForm({
   sessionId,
   userId,
@@ -27,16 +18,22 @@ export function McpConsentForm({
   tenantId,
   mcpCallbackUrl,
 }: McpConsentFormProps) {
-  const [loading, setLoading] = useState<"approve" | "deny" | null>(null)
+  const [state, setState] = useState<"idle" | "redirecting" | "success" | "denied" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
 
-  const handleApprove = async () => {
-    setLoading("approve")
+  // After redirecting, show success state (the redirect may take a moment)
+  useEffect(() => {
+    if (state === "redirecting") {
+      const timer = setTimeout(() => setState("success"), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [state])
+
+  const handleApprove = () => {
+    setState("redirecting")
     setError(null)
 
     try {
-      // Redirect to MCP server callback via GET with query params
-      // The callback will generate an auth code and redirect back to Claude
       const url = new URL(mcpCallbackUrl)
       url.searchParams.set("session_id", sessionId)
       url.searchParams.set("user_id", userId)
@@ -45,19 +42,49 @@ export function McpConsentForm({
       window.location.href = url.toString()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to authorize")
-      setLoading(null)
+      setState("error")
     }
   }
 
   const handleDeny = () => {
-    setLoading("deny")
-    // Close the window or show denied message
+    setState("denied")
     window.close()
-    // If window.close() doesn't work (not opened by script), show message
-    setTimeout(() => {
-      setLoading(null)
-      setError("Authorization denied. You can close this window.")
-    }, 500)
+  }
+
+  if (state === "success") {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+          <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <p className="font-medium">Authorization complete</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You can close this window and return to Claude Desktop.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (state === "denied") {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <div>
+          <p className="font-medium">Authorization denied</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You can close this window.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -70,19 +97,19 @@ export function McpConsentForm({
 
       <Button
         onClick={handleApprove}
-        disabled={loading !== null}
+        disabled={state === "redirecting"}
         className="w-full"
       >
-        {loading === "approve" ? "Authorizing..." : "Approve"}
+        {state === "redirecting" ? "Authorizing..." : "Approve"}
       </Button>
 
       <Button
         onClick={handleDeny}
-        disabled={loading !== null}
+        disabled={state === "redirecting"}
         variant="outline"
         className="w-full"
       >
-        {loading === "deny" ? "Denying..." : "Deny"}
+        Deny
       </Button>
     </div>
   )

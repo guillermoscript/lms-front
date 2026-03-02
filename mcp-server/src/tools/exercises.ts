@@ -212,7 +212,10 @@ export function registerExerciseTools(server: McpServer, auth: AuthManager) {
     async ({ category }) => {
       try {
         const supabase = auth.getClient();
-        let query = supabase.from("prompt_templates").select("id, name, category, description, variables");
+        let query = supabase
+          .from("prompt_templates")
+          .select("id, name, category, description, variables")
+          .or(`is_system.eq.true,created_by.eq.${auth.getUserId()}`);
         if (category) query = query.eq("category", category);
 
         const { data, error } = await query;
@@ -324,6 +327,7 @@ export function registerExerciseTools(server: McpServer, auth: AuthManager) {
             system_prompt: finalSystemPrompt,
             time_limit: time_limit ?? null,
             created_by: auth.getUserId(),
+            tenant_id: auth.getTenantId(),
             template_id: template_id ?? null,
             template_variables: template_variables ?? null,
           })
@@ -345,6 +349,43 @@ export function registerExerciseTools(server: McpServer, auth: AuthManager) {
             type: data.exercise_type,
             difficulty: data.difficulty_level,
           },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  server.registerTool(
+    "lms_delete_exercise",
+    {
+      title: "Delete Exercise",
+      description: "Permanently delete a practice exercise. This action is irreversible.",
+      inputSchema: z.object({ exercise_id: z.number().describe("The exercise ID to delete") }).strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async ({ exercise_id }) => {
+      try {
+        await auth.verifyExerciseOwnership(exercise_id);
+        const supabase = auth.getClient();
+
+        const { data: exercise } = await supabase
+          .from("exercises")
+          .select("title")
+          .eq("id", exercise_id)
+          .single();
+
+        const { error } = await supabase.from("exercises").delete().eq("id", exercise_id);
+        if (error) return errorResult(`Deleting exercise: ${error.message}`);
+
+        return {
+          content: [{ type: "text", text: `Exercise "${exercise?.title ?? exercise_id}" (ID: ${exercise_id}) has been deleted.` }],
+          structuredContent: { success: true, deleted_exercise_id: exercise_id },
         };
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

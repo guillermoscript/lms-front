@@ -153,6 +153,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
             )`
           )
           .eq("exam_id", exam_id)
+          .order("question_id", { referencedTable: "exam_questions" })
           .single();
 
         if (error || !data) return errorResult(`Exam ${exam_id} not found.`);
@@ -294,6 +295,11 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
 
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
+          if ((q.question_type === "multiple_choice" || q.question_type === "true_false") && (!q.options || q.options.length === 0)) {
+            errors.push(`Q${i + 1}: type '${q.question_type}' requires at least one option`);
+            continue;
+          }
+
           const { data: question, error: qError } = await supabase
             .from("exam_questions")
             .insert({
@@ -446,6 +452,10 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
     },
     async ({ exam_id, question_text, question_type, options, ai_grading_criteria, expected_keywords }) => {
       try {
+        if ((question_type === "multiple_choice" || question_type === "true_false") && (!options || options.length === 0)) {
+          return errorResult(`Questions of type '${question_type}' require at least one option.`);
+        }
+
         await auth.verifyExamOwnership(exam_id);
         const supabase = auth.getClient();
 
@@ -565,6 +575,44 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
   );
 
   server.registerTool(
+    "lms_delete_exam",
+    {
+      title: "Delete Exam",
+      description:
+        "Permanently delete an exam and all its questions, options, and submissions. This action is irreversible. Only use on draft exams or when sure there are no important submissions.",
+      inputSchema: z.object({ exam_id: z.number().describe("The exam ID to delete") }).strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async ({ exam_id }) => {
+      try {
+        await auth.verifyExamOwnership(exam_id);
+        const supabase = auth.getClient();
+
+        const { data: exam } = await supabase
+          .from("exams")
+          .select("title")
+          .eq("exam_id", exam_id)
+          .single();
+
+        const { error } = await supabase.from("exams").delete().eq("exam_id", exam_id);
+        if (error) return errorResult(`Deleting exam: ${error.message}`);
+
+        return {
+          content: [{ type: "text", text: `Exam "${exam?.title ?? exam_id}" (ID: ${exam_id}) and all its questions have been deleted.` }],
+          structuredContent: { success: true, deleted_exam_id: exam_id },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  server.registerTool(
     "lms_delete_exam_question",
     {
       title: "Delete Exam Question",
@@ -573,7 +621,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
     },

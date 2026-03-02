@@ -210,6 +210,7 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             description: description ?? null,
             video_url: video_url || null,
             status: "draft",
+            tenant_id: auth.getTenantId(),
           })
           .select("id, title, sequence, status")
           .single();
@@ -350,6 +351,92 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
     }
   );
 
+  server.registerTool(
+    "lms_delete_lesson",
+    {
+      title: "Delete Lesson",
+      description:
+        "Permanently delete a lesson and its associated AI task. This is irreversible. Student completion records for this lesson will also be removed.",
+      inputSchema: z.object({ lesson_id: z.number().describe("The lesson ID to delete") }).strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async ({ lesson_id }) => {
+      try {
+        await auth.verifyLessonOwnership(lesson_id);
+        const supabase = auth.getClient();
+
+        const { data: lesson } = await supabase
+          .from("lessons")
+          .select("title")
+          .eq("id", lesson_id)
+          .single();
+
+        const { error } = await supabase.from("lessons").delete().eq("id", lesson_id);
+        if (error) return errorResult(`Deleting lesson: ${error.message}`);
+
+        return {
+          content: [{ type: "text", text: `Lesson "${lesson?.title ?? lesson_id}" (ID: ${lesson_id}) has been deleted.` }],
+          structuredContent: { success: true, deleted_lesson_id: lesson_id },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  server.registerTool(
+    "lms_get_lesson_ai_task",
+    {
+      title: "Get Lesson AI Task",
+      description: "Get the AI task (instructions and system prompt) configured for a lesson.",
+      inputSchema: z
+        .object({
+          lesson_id: z.number().describe("The lesson ID"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ lesson_id }) => {
+      try {
+        await auth.verifyLessonOwnership(lesson_id);
+        const supabase = auth.getClient();
+
+        const { data, error } = await supabase
+          .from("lessons_ai_tasks")
+          .select("id, lesson_id, task_instructions, system_prompt, created_at, updated_at")
+          .eq("lesson_id", lesson_id)
+          .maybeSingle();
+
+        if (error) return errorResult(`Getting AI task: ${error.message}`);
+        if (!data) {
+          return { content: [{ type: "text", text: `No AI task configured for lesson ${lesson_id}.` }] };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `# AI Task for Lesson ${lesson_id}\n\n**Task Instructions:**\n${data.task_instructions ?? "(not set)"}\n\n**System Prompt:**\n${data.system_prompt ?? "(not set)"}`,
+            },
+          ],
+          structuredContent: data,
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
   // Tool to create or update the AI task attached to a lesson
   server.registerTool(
     "lms_upsert_lesson_ai_task",
@@ -372,6 +459,10 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
     },
     async ({ lesson_id, task_instructions, system_prompt }) => {
       try {
+        if (!task_instructions && !system_prompt) {
+          return errorResult("At least one of task_instructions or system_prompt must be provided.");
+        }
+
         // Verify teacher owns the lesson (or is admin)
         await auth.verifyLessonOwnership(lesson_id);
         const supabase = auth.getClient();
