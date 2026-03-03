@@ -21,6 +21,7 @@ const DEFAULT_FEATURES: PlanFeatures = {
   streaks: true,
   landing_pages: false,
   remove_branding: false,
+  voice_exercises: false,
 }
 
 const DEFAULT_LIMITS: PlanLimits = {
