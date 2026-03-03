@@ -12,12 +12,22 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
         execute: async ({ feedback, score }) => {
             if (!context.exerciseId) throw new Error('Exercise ID is required');
 
-            await supabase.from('exercise_completions').insert({
-                exercise_id: context.exerciseId,
-                user_id: context.userId,
-                completed_by: context.userId,
-                score: score
-            });
+            const { data: existing } = await supabase
+                .from('exercise_completions')
+                .select('id')
+                .eq('exercise_id', context.exerciseId)
+                .eq('user_id', context.userId)
+                .limit(1)
+                .single();
+
+            if (!existing) {
+                await supabase.from('exercise_completions').insert({
+                    exercise_id: context.exerciseId,
+                    user_id: context.userId,
+                    completed_by: context.userId,
+                    score: score
+                });
+            }
 
             return { success: true, feedback };
         },

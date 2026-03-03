@@ -57,6 +57,39 @@ Mantén el tono amable, motivador y concreto. Evita dar respuestas excesivamente
     but explain your evaluation criteria rather than submitting scores.
   `,
 
+    speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; passingScore?: number }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
+    You are an expert speech and communication coach evaluating a student's spoken response.
+
+    Exercise: ${exercise.title}
+    Instructions given to the student: ${exercise.instructions}
+    ${exercise.topic_prompt ? `Topic prompt: ${exercise.topic_prompt}` : ''}
+
+    Speech metrics:
+    - Duration: ${metrics.duration_seconds.toFixed(1)}s
+    - WPM (words per minute): ${metrics.wpm} (ideal range: 120-160 WPM)
+    - Filler words used: ${metrics.filler_count} (um, uh, like, basically, etc.)
+    - Total pauses detected: ${metrics.pause_count}
+    - Long pauses (>1.5s): ${metrics.long_pause_count}
+    - Average pause duration: ${metrics.avg_pause_duration_ms}ms
+
+    Evaluation criteria${exercise.rubric ? ' (as configured by the teacher)' : ''}:
+    ${exercise.rubric?.filler_words !== false ? '- Minimize filler words' : ''}
+    ${exercise.rubric?.pace !== false ? '- Appropriate speaking pace (120-160 WPM is ideal)' : ''}
+    ${exercise.rubric?.structure !== false ? '- Clear structure with introduction, body, and conclusion' : ''}
+    ${exercise.rubric?.confidence !== false ? '- Confident delivery with minimal hesitation' : ''}
+
+    Evaluate the transcript and provide:
+    1. A score from 0-100
+    2. 2-3 specific strengths (what they did well)
+    3. 2-3 concrete improvements (actionable feedback)
+    4. A single "focus_next" — the ONE most impactful thing to practice
+
+    Be encouraging, specific, and constructive. Avoid generic feedback.
+    If the transcript is very short (<10 words), score it low and explain that more content is needed.
+
+    IMPORTANT: If the student's score is ${exercise.passingScore ?? 70} or above, you MUST call the "markExerciseCompleted" tool with the score and a brief positive feedback message. This marks the exercise as completed for the student.
+  `,
+
     examGrader: (question: string, answer: string) => `
     You are grading an exam answer.
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getTranslations } from 'next-intl/server'
 
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
@@ -9,6 +10,7 @@ import CodeExercise from '@/components/exercises/code-exercise'
 import CodeChallengeWrapper from '@/components/exercises/code-challenge-wrapper'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 import ToggleableSection from '@/components/exercises/toggleable-section'
+import AudioExercise from '@/components/exercises/audio-exercise'
 
 interface PageProps {
     params: Promise<{ courseId: string; exerciseId: string }>
@@ -79,6 +81,44 @@ export default async function ExercisePage({ params }: PageProps) {
         .order('created_at', { ascending: false })
         .single()
 
+    // Fetch all completed/failed media submissions for history
+    let submissionHistory: { id: number; ai_evaluation: any; score: any; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    try {
+        const { data: mediaSubmissions } = await supabase
+            .from('exercise_media_submissions')
+            .select('id, ai_evaluation, score, status, media_url, created_at, duration_seconds')
+            .eq('exercise_id', parseInt(exerciseId))
+            .eq('user_id', user.id)
+            .eq('tenant_id', tenantId)
+            .in('status', ['completed', 'failed'])
+            .order('created_at', { ascending: false })
+        submissionHistory = mediaSubmissions ?? []
+    } catch {
+        // RLS or table access may fail — gracefully degrade
+    }
+
+    const passingScore = (exercise.exercise_config as any)?.passing_score ?? 70
+
+    // Count today's submissions for daily attempt tracking
+    let dailyAttemptsUsed = 0
+    const maxDailyAttempts = (exercise.exercise_config as any)?.max_daily_attempts ?? 5
+    if (exercise.exercise_type === 'audio_evaluation') {
+        try {
+            const todayStart = new Date()
+            todayStart.setUTCHours(0, 0, 0, 0)
+            const { count } = await supabase
+                .from('exercise_media_submissions')
+                .select('id', { count: 'exact', head: true })
+                .eq('exercise_id', parseInt(exerciseId))
+                .eq('user_id', user.id)
+                .eq('tenant_id', tenantId)
+                .gte('created_at', todayStart.toISOString())
+            dailyAttemptsUsed = count ?? 0
+        } catch {
+            // Gracefully degrade if query fails
+        }
+    }
+
     const files: Record<string, string> = {}
     exerciseFiles?.forEach((file) => {
         files[file.file_path] = file.content
@@ -105,9 +145,10 @@ export default async function ExercisePage({ params }: PageProps) {
         { href: '#', label: exercise.title },
     ]
 
+    const t = await getTranslations('exercises.audio')
     const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
         <>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">More Exercises</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">{t('moreExercises')}</h3>
             <div className="grid gap-3">
                 {otherExercises.map((ex: any) => (
                     <ExerciseCard
@@ -165,6 +206,16 @@ export default async function ExercisePage({ params }: PageProps) {
                         </ToggleableSection>
                     )}
                 </CodeExercise>
+            ) : exercise.exercise_type === 'audio_evaluation' ? (
+                <AudioExercise
+                    exercise={exercise}
+                    isExerciseCompleted={isExerciseCompleted}
+                    submissionHistory={submissionHistory}
+                    passingScore={passingScore}
+                    isExerciseCompletedSection={otherExercisesSection}
+                    dailyAttemptsUsed={dailyAttemptsUsed}
+                    maxDailyAttempts={maxDailyAttempts}
+                />
             ) : (
                 <EssayExercise
                     exercise={exercise}
