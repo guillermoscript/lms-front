@@ -10,4 +10,5 @@ export const AI_MODELS = {
     tutor: openai('gpt-5-mini'),
     coach: openai('gpt-5-mini'),
     grader: openai('gpt-5-mini'),
+    aristotle: openai('gpt-5-mini'),
 };
