@@ -33,7 +33,7 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
-import { LandingPageRenderer } from "@/components/public/landing-page/landing-page-renderer";
+import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -48,19 +48,13 @@ export default async function LandingPage() {
       if (PAID_PLANS.includes(tenant.plan)) {
         const { data: customPage } = await supabase
           .from('landing_pages')
-          .select('sections, settings')
+          .select('puck_data')
           .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .eq('status', 'published')
           .maybeSingle()
-        if (customPage && Array.isArray(customPage.sections) && customPage.sections.length > 0) {
-          return (
-            <LandingPageRenderer
-              sections={customPage.sections}
-              accentColor={tenant.primary_color}
-              settings={customPage.settings as any}
-            />
-          )
+        if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
+          return <PuckPageRenderer data={customPage.puck_data as any} />
         }
       }
 

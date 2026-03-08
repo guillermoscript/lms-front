@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createClient } from '@/lib/supabase/server'
-import { LandingPageRenderer } from '@/components/public/landing-page/landing-page-renderer'
-import type { LandingSection, LandingPageSettings } from '@/lib/landing-pages/types'
+import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import type { Metadata } from 'next'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -22,14 +21,14 @@ async function getPageData(slug: string) {
   const supabase = await createClient()
   const { data: page } = await supabase
     .from('landing_pages')
-    .select('sections, settings')
+    .select('puck_data, name')
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .eq('is_active', true)
     .eq('status', 'published')
     .maybeSingle()
 
-  if (!page || !Array.isArray(page.sections) || page.sections.length === 0) return null
+  if (!page?.puck_data || typeof page.puck_data !== 'object') return null
   return { page, tenant }
 }
 
@@ -37,11 +36,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   const result = await getPageData(slug)
   if (!result) return {}
-  const settings = result.page.settings as LandingPageSettings | null
+
+  const rootProps = (result.page.puck_data as any)?.root?.props
   return {
-    title: settings?.metaTitle || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    description: settings?.metaDescription,
-    openGraph: settings?.ogImage ? { images: [settings.ogImage] } : undefined,
+    title: rootProps?.metaTitle || result.page.name || slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    description: rootProps?.metaDescription,
+    openGraph: rootProps?.ogImage ? { images: [rootProps.ogImage] } : undefined,
   }
 }
 
@@ -50,11 +50,5 @@ export default async function CustomPage({ params }: PageProps) {
   const result = await getPageData(slug)
   if (!result) notFound()
 
-  return (
-    <LandingPageRenderer
-      sections={result.page.sections as unknown as LandingSection[]}
-      accentColor={result.tenant.primary_color}
-      settings={result.page.settings as unknown as LandingPageSettings}
-    />
-  )
+  return <PuckPageRenderer data={result.page.puck_data as any} />
 }

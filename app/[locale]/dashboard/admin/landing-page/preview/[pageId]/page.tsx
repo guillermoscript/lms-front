@@ -1,12 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { LandingPageRenderer } from '@/components/public/landing-page/landing-page-renderer'
-import { Navbar } from '@/components/public/navbar'
-import { Footer } from '@/components/public/footer'
+import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import { PreviewBanner } from '@/components/admin/landing-page/preview-banner'
-import type { LandingPage, LandingPageSettings } from '@/lib/landing-pages/types'
 
 interface Props {
   params: Promise<{ pageId: string; locale: string }>
@@ -17,10 +14,9 @@ export default async function PreviewPage({ params, searchParams }: Props) {
   const [{ pageId }, search] = await Promise.all([params, searchParams])
   const isIframe = search.iframe === 'true'
 
-  const [role, tenantId, tenant] = await Promise.all([
+  const [role, tenantId] = await Promise.all([
     getUserRole(),
     getCurrentTenantId(),
-    getCurrentTenant(),
   ])
 
   if (role !== 'admin') {
@@ -38,26 +34,15 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     redirect('/dashboard/admin/landing-page')
   }
 
-  const landingPage = page as unknown as LandingPage
-  const settings = (landingPage.settings ?? {}) as LandingPageSettings
+  const puckData = page.puck_data as any
+  if (!puckData || typeof puckData !== 'object') {
+    redirect('/dashboard/admin/landing-page')
+  }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      {!isIframe && (
-        <PreviewBanner status={landingPage.status} />
-      )}
-      {settings.header !== undefined && (
-        <Navbar headerSettings={settings.header} />
-      )}
-      <div className={!isIframe && settings.header !== undefined ? 'pt-16' : ''}>
-        <LandingPageRenderer
-          sections={landingPage.sections}
-          accentColor={tenant?.primary_color}
-        />
-      </div>
-      {settings.footer && (
-        <Footer footerSettings={settings.footer} />
-      )}
+    <div className="min-h-screen">
+      {!isIframe && <PreviewBanner status={page.status} />}
+      <PuckPageRenderer data={puckData} />
     </div>
   )
 }

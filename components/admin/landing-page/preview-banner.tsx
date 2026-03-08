@@ -15,23 +15,24 @@ export function PreviewBanner({ status }: Props) {
   const t = useTranslations('landingPageBuilder.builder')
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-zinc-900/90 backdrop-blur-sm border-b border-zinc-800">
+    <div
+      className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border"
+      role="banner"
+      aria-label="Preview mode"
+    >
       <div className="container mx-auto flex items-center justify-between px-4 h-12">
         <div className="flex items-center gap-3">
-          <IconEye className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-white">{t('previewBanner')}</span>
-          <Badge
-            variant={status === 'published' ? 'default' : 'secondary'}
-            className={`text-[10px] ${status === 'published' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : ''}`}
-          >
+          <IconEye className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+          <span className="text-sm font-medium">{t('previewBanner')}</span>
+          <Badge variant={status === 'published' ? 'default' : 'secondary'}>
             {status}
           </Badge>
-          <span className="text-xs text-zinc-400 hidden sm:inline">{t('previewBannerDescription')}</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">{t('previewBannerDescription')}</span>
         </div>
         <Button
           variant="outline"
           size="sm"
-          className="h-7 text-xs gap-1.5"
+          className="gap-1.5"
           onClick={() => router.push('/dashboard/admin/landing-page')}
         >
           <IconArrowLeft className="w-3.5 h-3.5" />
