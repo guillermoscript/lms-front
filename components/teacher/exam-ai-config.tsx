@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Sparkles, Info, Save } from 'lucide-react'
+import { IconSparkles, IconInfoCircle, IconDeviceFloppy } from '@tabler/icons-react'
 import { updateExamAIConfig, getAIConfigOptions } from '@/app/actions/exam-grading'
 import { toast } from 'sonner'
 
@@ -72,7 +72,7 @@ export function ExamAIConfig({ examId, initialConfig }: ExamAIConfigProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <IconSparkles className="h-5 w-5 text-primary" />
           <div>
             <CardTitle>AI Grading Configuration</CardTitle>
             <CardDescription>
@@ -182,7 +182,7 @@ Example:
 
             {/* Info Alert */}
             <Alert>
-              <Info className="h-4 w-4" />
+              <IconInfoCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Pro Tip:</strong> The AI will combine your custom instructions with the
                 selected persona and tone. For free-text questions, you can also add specific
@@ -195,7 +195,7 @@ Example:
         {/* Save Button */}
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="mr-2 h-4 w-4" />
+            <IconDeviceFloppy className="mr-2 h-4 w-4" />
             {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>

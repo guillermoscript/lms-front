@@ -1,15 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { SubmissionReview } from '@/components/teacher/submission-review'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
+  const t = await getTranslations('dashboard.teacher')
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return notFound()
@@ -26,53 +28,47 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
 
   if (!rawSubmission) return notFound()
 
-  // Fetch student profile
-  const { data: student } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .eq('id', rawSubmission.student_id)
-    .single()
-
-  // Fetch exam questions with options
-  const { data: questions } = await supabase
-    .from('exam_questions')
-    .select(`
-      question_id,
-      question_text,
-      question_type,
-      points,
-      ai_grading_criteria,
-      expected_keywords,
-      question_options (
-        option_id,
-        option_text,
-        is_correct
-      )
-    `)
-    .eq('exam_id', parseInt(examId))
-    .eq('tenant_id', tenantId)
-    .order('question_id', { ascending: true })
-
-  // Fetch answers
-  const { data: answers } = await supabase
-    .from('exam_answers')
-    .select('*')
-    .eq('submission_id', parseInt(submissionId))
-    .eq('tenant_id', tenantId)
-
-  // Fetch question-level AI scores
-  const { data: questionScores } = await supabase
-    .from('exam_question_scores')
-    .select('*')
-    .eq('submission_id', parseInt(submissionId))
-    .eq('tenant_id', tenantId)
-
-  // Fetch overall exam_scores
-  const { data: examScores } = await supabase
-    .from('exam_scores')
-    .select('*')
-    .eq('submission_id', parseInt(submissionId))
-    .eq('tenant_id', tenantId)
+  // Fetch all related data in parallel
+  const [{ data: student }, { data: questions }, { data: answers }, { data: questionScores }, { data: examScores }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('id', rawSubmission.student_id)
+      .single(),
+    supabase
+      .from('exam_questions')
+      .select(`
+        question_id,
+        question_text,
+        question_type,
+        points,
+        ai_grading_criteria,
+        expected_keywords,
+        question_options (
+          option_id,
+          option_text,
+          is_correct
+        )
+      `)
+      .eq('exam_id', parseInt(examId))
+      .eq('tenant_id', tenantId)
+      .order('question_id', { ascending: true }),
+    supabase
+      .from('exam_answers')
+      .select('*')
+      .eq('submission_id', parseInt(submissionId))
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('exam_question_scores')
+      .select('*')
+      .eq('submission_id', parseInt(submissionId))
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('exam_scores')
+      .select('*')
+      .eq('submission_id', parseInt(submissionId))
+      .eq('tenant_id', tenantId),
+  ])
 
   // Build per-question data combining questions, answers, and AI scores
   const questionData = (questions || []).map((q: any) => {
@@ -106,7 +102,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     submission_id: rawSubmission.submission_id,
     exam_id: rawSubmission.exam_id,
     student_id: rawSubmission.student_id,
-    student_name: student?.full_name || 'Unknown Student',
+    student_name: student?.full_name || t('manageCourse.studentList.unknownStudent'),
     submission_date: rawSubmission.submission_date,
     score: rawSubmission.score,
     review_status: rawSubmission.review_status || 'pending',
@@ -180,13 +176,19 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
-      <Link href={`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`}>
-        <Button variant="ghost" size="sm" className="mb-4">
-          <IconArrowLeft className="mr-2 h-4 w-4" />
-          Back to Submissions
-        </Button>
-      </Link>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center gap-2">
+        <Link href={`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('submissions.backToSubmissions')}>
+            <IconArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {submission.student_name}
+          </span>
+        </div>
+      </div>
 
       <SubmissionReview submission={submission} onSave={handleSave} />
     </div>

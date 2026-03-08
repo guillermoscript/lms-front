@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
@@ -49,7 +49,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">{t('accessDenied')}</h1>
+        <h1 className="text-2xl font-bold text-destructive">{t('accessDenied')}</h1>
         <p className="mt-2 text-muted-foreground">{t('notAuthor')}</p>
         <Link href="/dashboard/teacher/courses" className="mt-4 inline-block">
           <Button variant="outline">{t('backToCourses')}</Button>
@@ -68,16 +68,22 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <Link href={`/dashboard/teacher/courses/${courseId}`}>
-          <Button variant="ghost" size="sm" className="mb-4">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            {t('backToCourses')}
-          </Button>
-        </Link>
+        <div className="mb-6 flex items-center gap-2">
+          <Link href={`/dashboard/teacher/courses/${courseId}`}>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourse')}>
+              <IconArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <span className="truncate max-w-[200px]">{course.title}</span>
+            <IconChevronRight className="h-3 w-3 shrink-0" />
+            <span className="font-medium text-foreground">{t('settings')}</span>
+          </div>
+        </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">{t('settings')}</h1>
-          <p className="mt-2 text-muted-foreground">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">{t('settings')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {tForm('descriptionPlaceholder')}
           </p>
         </div>
@@ -91,9 +97,9 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
         {/* Danger Zone */}
         <div className="rounded-lg border border-destructive/30 p-6">
-          <h2 className="text-lg font-semibold text-destructive mb-1">Danger Zone</h2>
+          <h2 className="text-lg font-semibold text-destructive mb-1">{t('dangerZone')}</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Deleting a course is permanent and cannot be undone. Students who are enrolled will lose access immediately.
+            {t('dangerZoneDesc')}
           </p>
           <CourseDeleteButton courseId={parseInt(courseId)} courseTitle={course.title} />
         </div>

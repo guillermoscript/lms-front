@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,10 +9,11 @@ import {
   IconSend,
   IconClock,
 } from '@tabler/icons-react'
-import { deleteNotification, dispatchNotification, updateNotificationStatus } from '@/app/actions/admin/notifications'
+import { deleteNotification, dispatchNotification } from '@/app/actions/admin/notifications'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { ConfirmDialog } from './confirm-dialog'
 
 interface Notification {
   id: number
@@ -40,6 +42,7 @@ interface NotificationsListProps {
 export default function NotificationsList({ notifications }: NotificationsListProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.admin.notifications')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
@@ -88,14 +91,11 @@ export default function NotificationsList({ notifications }: NotificationsListPr
   }
 
   async function handleDelete(id: number) {
-    if (!confirm(t('list.confirmDelete'))) {
-      return
-    }
-
     try {
       const result = await deleteNotification(id)
       if (result.success) {
         toast.success(t('list.toasts.deleted'))
+        setDeletingId(null)
         router.refresh()
       } else {
         throw new Error(result.error)
@@ -175,6 +175,7 @@ export default function NotificationsList({ notifications }: NotificationsListPr
                   size="sm"
                   variant="outline"
                   onClick={() => handleSendNotification(notification.id)}
+                  aria-label={t('list.send')}
                 >
                   <IconSend className="h-4 w-4" />
                 </Button>
@@ -182,7 +183,8 @@ export default function NotificationsList({ notifications }: NotificationsListPr
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleDelete(notification.id)}
+                onClick={() => setDeletingId(notification.id)}
+                aria-label={t('list.delete')}
               >
                 <IconTrash className="h-4 w-4 text-destructive" />
               </Button>
@@ -190,6 +192,16 @@ export default function NotificationsList({ notifications }: NotificationsListPr
           </div>
         </div>
       ))}
+
+      <ConfirmDialog
+        open={deletingId !== null}
+        onOpenChange={(open) => { if (!open) setDeletingId(null) }}
+        title={t('list.confirmDeleteTitle')}
+        description={t('list.confirmDelete')}
+        confirmText={t('list.confirmDeleteAction')}
+        variant="destructive"
+        onConfirm={() => deletingId !== null && handleDelete(deletingId)}
+      />
     </div>
   )
 }

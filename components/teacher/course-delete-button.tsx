@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -25,6 +26,7 @@ interface CourseDeleteButtonProps {
 
 export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButtonProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.courseDelete')
   const [open, setOpen] = useState(false)
   const [enrollmentCount, setEnrollmentCount] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -43,11 +45,11 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
     startTransition(async () => {
       try {
         await archiveCourse(courseId)
-        toast.success('Course archived successfully')
+        toast.success(t('archiveSuccess'))
         setOpen(false)
         router.push('/dashboard/teacher/courses')
       } catch (err: any) {
-        toast.error(err.message || 'Failed to archive course')
+        toast.error(err.message || t('archiveError'))
       }
     })
   }
@@ -56,11 +58,11 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
     startTransition(async () => {
       try {
         await deleteCourse(courseId)
-        toast.success('Course deleted')
+        toast.success(t('deleteSuccess'))
         setOpen(false)
         router.push('/dashboard/teacher/courses')
       } catch (err: any) {
-        toast.error(err.message || 'Failed to delete course')
+        toast.error(err.message || t('deleteError'))
       }
     })
   }
@@ -71,32 +73,32 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
         <IconTrash className="mr-2 h-4 w-4" />
-        Delete Course
+        {t('triggerButton')}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {hasEnrollments
-              ? `${enrollmentCount} student${enrollmentCount === 1 ? '' : 's'} enrolled`
-              : 'Delete course?'}
+              ? t('titleWithEnrollments', { count: enrollmentCount })
+              : t('titleNoEnrollments')}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {hasEnrollments ? (
               <>
-                <strong>{enrollmentCount}</strong> student{enrollmentCount === 1 ? ' is' : 's are'} currently enrolled in{' '}
-                <strong>&quot;{courseTitle}&quot;</strong>. Deleting will immediately remove their access.
+                <strong>{enrollmentCount}</strong> {enrollmentCount === 1 ? t('studentSingular') : t('studentPlural')}{' '}
+                {t('enrolledInCourse', { title: courseTitle })}
                 <br /><br />
-                Consider <strong>archiving</strong> instead — enrolled students will keep access, but the course won&apos;t appear to new students.
+                {t('archiveSuggestion')}
               </>
             ) : (
               <>
-                Are you sure you want to delete <strong>&quot;{courseTitle}&quot;</strong>? This action cannot be undone.
+                {t('confirmDelete', { title: courseTitle })}
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{t('cancel')}</AlertDialogCancel>
           {hasEnrollments && (
             <Button
               variant="outline"
@@ -104,11 +106,11 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
               disabled={isPending}
             >
               {isPending ? (
-                <IconLoader className="mr-2 h-4 w-4 animate-spin" />
+                <IconLoader className="mr-2 h-4 w-4 motion-safe:animate-spin" />
               ) : (
                 <IconArchive className="mr-2 h-4 w-4" />
               )}
-              Archive Instead
+              {t('archiveInstead')}
             </Button>
           )}
           <AlertDialogAction
@@ -117,11 +119,11 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {isPending ? (
-              <IconLoader className="mr-2 h-4 w-4 animate-spin" />
+              <IconLoader className="mr-2 h-4 w-4 motion-safe:animate-spin" />
             ) : (
               <IconTrash className="mr-2 h-4 w-4" />
             )}
-            {hasEnrollments ? 'Delete Anyway' : 'Delete'}
+            {hasEnrollments ? t('deleteAnyway') : t('delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

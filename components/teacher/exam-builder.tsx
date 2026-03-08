@@ -66,6 +66,7 @@ interface ExamBuilderProps {
   courseId: number
   courseTitle: string
   initialData?: any
+  tenantId: string
 }
 
 function SortableQuestion({
@@ -110,6 +111,7 @@ function SortableQuestion({
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+                aria-label={t('dragQuestion')}
               >
                 <IconGripVertical className="h-4 w-4 text-muted-foreground" />
               </div>
@@ -127,6 +129,7 @@ function SortableQuestion({
               size="sm"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => removeQuestion(q.id)}
+              aria-label={t('removeQuestion')}
             >
               <IconTrash className="h-4 w-4" />
             </Button>
@@ -138,7 +141,7 @@ function SortableQuestion({
   )
 }
 
-export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderProps) {
+export function ExamBuilder({ courseId, courseTitle, initialData, tenantId }: ExamBuilderProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.examBuilder')
   const supabase = createClient()
@@ -281,6 +284,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
             ai_grading_criteria: q.ai_grading_criteria,
             expected_keywords: q.expected_keywords,
             grading_rubric: q.grading_rubric,
+            tenant_id: tenantId,
           })
           .select()
           .single()
@@ -293,6 +297,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
               question_id: question.question_id,
               option_text: opt.option_text,
               is_correct: opt.is_correct,
+              tenant_id: tenantId,
             }))
           )
         }
@@ -302,16 +307,16 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
       router.refresh()
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Failed to save exam')
+      setError(err.message || t('saveError'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto container px-4 py-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 animate-in fade-in slide-in-from-left-2 duration-300">
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
           <Button variant="ghost" size="sm" className="mb-4">
             <IconArrowLeft className="mr-2 h-4 w-4" />
@@ -334,12 +339,12 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-destructive bg-destructive/10 p-4">
+        <div className="mb-6 rounded-lg border border-destructive bg-destructive/10 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100 fill-mode-both">
         {/* Exam Details Card */}
         <Card>
           <CardHeader>
@@ -419,7 +424,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
           </div>
 
           {formData.questions.length === 0 ? (
-            <Card className="border-dashed py-12 text-center">
+            <Card className="border-dashed py-12 text-center animate-in fade-in duration-300">
               <CardContent>
                 <p className="text-muted-foreground">{t('noQuestions')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -505,7 +510,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                     }}
                                     placeholder={t('optionPlaceholder', { index: oIdx + 1 })}
                                     disabled={q.question_type === 'true_false'}
-                                    className={cn(opt.is_correct && "border-green-400 focus-visible:ring-green-400 bg-green-50/30")}
+                                    className={cn(opt.is_correct && "border-green-400 focus-visible:ring-green-400 bg-green-50/30 dark:bg-green-950/30")}
                                   />
                                   {q.question_type === 'multiple_choice' && q.options.length > 2 && (
                                     <Button
@@ -515,12 +520,13 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                         const newOpts = q.options.filter((o) => o.id !== opt.id)
                                         updateQuestion(q.id, { options: newOpts })
                                       }}
+                                      aria-label={t('removeOption')}
                                     >
                                       <IconX className="h-3 w-3" />
                                     </Button>
                                   )}
                                   {opt.is_correct && (
-                                    <span className="text-[10px] font-black uppercase text-green-600 shrink-0">
+                                    <span className="text-[10px] font-black uppercase text-green-600 dark:text-green-400 shrink-0">
                                       {t('correctLabel')}
                                     </span>
                                   )}
@@ -566,7 +572,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                 onChange={(e) => updateQuestion(q.id, { grading_rubric: e.target.value })}
                                 placeholder={t('gradingRubricPlaceholder')}
                                 rows={2}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('gradingRubricHint')}</p>
                             </div>
@@ -578,7 +584,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                 onChange={(e) => updateQuestion(q.id, { ai_grading_criteria: e.target.value })}
                                 placeholder={t('aiGradingCriteriaPlaceholder')}
                                 rows={3}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('aiGradingCriteriaHint')}</p>
                             </div>
@@ -593,7 +599,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                   })
                                 }
                                 placeholder={t('expectedKeywordsPlaceholder')}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('expectedKeywordsHint')}</p>
                             </div>
@@ -617,7 +623,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+              <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
             ) : (
               <IconDeviceFloppy className="mr-2 h-4 w-4" />
             )}
@@ -629,7 +635,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
             disabled={loading || !formData.title || formData.questions.length === 0}
           >
             {loading ? (
-              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+              <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
             ) : (
               <IconCircleCheck className="mr-2 h-4 w-4" />
             )}

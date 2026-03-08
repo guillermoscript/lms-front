@@ -24,6 +24,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
+import * as motion from 'motion/react-client'
 
 export default async function AdminDashboardPage({
   params,
@@ -93,17 +95,16 @@ export default async function AdminDashboardPage({
       .limit(5),
   ])
 
-  // Get user details for transactions
-  const transactionsWithUsers = await Promise.all(
-    (recentTransactions || []).map(async (t) => {
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', t.user_id)
-        .single()
-      return { ...t, user: userProfile }
-    })
-  )
+  // Batch-fetch user profiles for transactions (avoids N+1)
+  const transactionUserIds = [...new Set((recentTransactions || []).map(t => t.user_id).filter(Boolean))]
+  const { data: transactionProfiles } = transactionUserIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name').in('id', transactionUserIds)
+    : { data: [] }
+  const profileMap = new Map((transactionProfiles || []).map(p => [p.id, p]))
+  const transactionsWithUsers = (recentTransactions || []).map(t => ({
+    ...t,
+    user: profileMap.get(t.user_id) || null,
+  }))
 
   // Calculate total revenue (successful transactions) — tenant scoped
   const { data: successfulTransactions } = await supabase
@@ -210,6 +211,43 @@ export default async function AdminDashboardPage({
         />
       </div>
 
+      {/* Getting Started Checklist */}
+      <OnboardingChecklist
+        storageKey={`admin-${user.id}`}
+        title={t('onboarding.title')}
+        subtitle={t('onboarding.subtitle')}
+        steps={[
+          {
+            id: 'configure-school',
+            label: t('onboarding.configureSchool'),
+            description: t('onboarding.configureSchoolDesc'),
+            href: '/dashboard/admin/settings',
+            completed: true, // They got through initial onboarding wizard to reach here
+          },
+          {
+            id: 'add-course',
+            label: t('onboarding.addCourse'),
+            description: t('onboarding.addCourseDesc'),
+            href: '/dashboard/teacher/courses/new',
+            completed: (totalCourses || 0) > 0,
+          },
+          {
+            id: 'invite-users',
+            label: t('onboarding.inviteUsers'),
+            description: t('onboarding.inviteUsersDesc'),
+            href: '/dashboard/admin/users',
+            completed: (totalUsers || 0) > 1, // More than just the admin
+          },
+          {
+            id: 'review-billing',
+            label: t('onboarding.reviewBilling'),
+            description: t('onboarding.reviewBillingDesc'),
+            href: '/dashboard/admin/billing/upgrade',
+            completed: planSlug !== 'free',
+          },
+        ]}
+      />
+
       {/* Plan & Usage Banner */}
       <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent ring-1 ring-primary/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.08] via-transparent to-transparent" />
@@ -221,37 +259,37 @@ export default async function AdminDashboardPage({
             <div>
               <div className="flex items-center gap-2.5">
                 <span className="text-sm font-semibold tracking-tight">
-                  {platformPlan?.name || 'Free'} Plan
+                  {platformPlan?.name || 'Free'} {t('plan.label')}
                 </span>
                 <Badge
                   variant={planSlug === 'free' ? 'secondary' : 'default'}
                   className="text-[10px] uppercase tracking-wider"
                 >
-                  {planSlug === 'free' ? 'Current' : 'Active'}
+                  {planSlug === 'free' ? t('plan.current') : t('plan.active')}
                 </Badge>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {planSlug === 'free'
-                  ? 'Upgrade to unlock more courses and students'
-                  : 'Your plan is active and running'}
+                  ? t('plan.upgradeHint')
+                  : t('plan.activeHint')}
               </p>
             </div>
           </div>
           <div className="grid flex-1 gap-5 sm:grid-cols-2 sm:max-w-sm">
             <UsageMeter
-              label="Courses"
+              label={t('plan.courses')}
               current={totalCourses || 0}
               limit={planLimits.max_courses ?? 5}
             />
             <UsageMeter
-              label="Students"
+              label={t('plan.students')}
               current={studentCount || 0}
               limit={planLimits.max_students ?? 50}
             />
           </div>
           <Link href="/dashboard/admin/billing/upgrade">
             <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
-              {planSlug === 'free' ? 'Upgrade' : 'Change Plan'}
+              {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
               <IconArrowUpRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -260,8 +298,14 @@ export default async function AdminDashboardPage({
 
       {/* Stats Grid */}
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
-        {stats.map((stat) => (
-          <Link key={stat.title} href={stat.link} className="group">
+        {stats.map((stat, idx) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.04, duration: 0.25 }}
+          >
+          <Link href={stat.link} className="group">
             <Card className={`relative overflow-hidden transition-all duration-200 ring-1 ring-transparent ${stat.accent} hover:shadow-md`}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
@@ -285,6 +329,7 @@ export default async function AdminDashboardPage({
               </CardContent>
             </Card>
           </Link>
+          </motion.div>
         ))}
       </div>
 
@@ -384,8 +429,8 @@ export default async function AdminDashboardPage({
                       <p className="text-sm font-medium">
                         {transaction.user?.full_name || t('recentActivity.unknown')}
                       </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {transaction.user?.email}
+                      <p className="truncate text-[11px] text-muted-foreground tabular-nums">
+                        {new Date(transaction.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="ml-4 text-right">

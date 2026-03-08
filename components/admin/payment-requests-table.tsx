@@ -110,9 +110,11 @@ export function PaymentRequestsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium">
-                    {request.payment_currency === 'usd' ? '$' : '€'}
-                    {request.payment_amount.toFixed(2)}
+                  <div className="font-medium tabular-nums">
+                    {new Intl.NumberFormat(locale as string, {
+                      style: 'currency',
+                      currency: request.payment_currency.toUpperCase(),
+                    }).format(request.payment_amount)}
                   </div>
                 </TableCell>
                 <TableCell>

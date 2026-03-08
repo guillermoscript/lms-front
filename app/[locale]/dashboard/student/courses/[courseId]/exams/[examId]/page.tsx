@@ -81,25 +81,10 @@ export default async function TakeExamPage({ params }: PageProps) {
     .order('question_id', { foreignTable: 'exam_questions', ascending: true })
     .single()
 
-  console.log('🔍 Exam query result:', {
-    examId,
-    error: examError,
-    hasExam: !!exam,
-    questionsCount: exam?.exam_questions?.length || 0,
-    examKeys: exam ? Object.keys(exam) : [],
-    examData: exam ? {
-      exam_id: exam.exam_id,
-      title: exam.title,
-      status: exam.status,
-      hasQuestionsKey: 'exam_questions' in exam,
-      questionsType: typeof exam.exam_questions,
-      questionsIsArray: Array.isArray(exam.exam_questions),
-      questionsPreview: exam.exam_questions
-    } : null
-  })
-
+  if (examError) {
+    console.error('Error fetching exam:', examError)
+  }
   if (examError || !exam) {
-    console.error('❌ Exam not found or error:', examError)
     notFound()
   }
 
@@ -113,8 +98,6 @@ export default async function TakeExamPage({ params }: PageProps) {
       text: o.option_text,
     })),
   }))
-
-  console.log('✅ Formatted questions:', formattedQuestions.length, 'questions')
 
   return (
     <ExamTaker

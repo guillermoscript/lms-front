@@ -1,5 +1,6 @@
 "use client"
 
+import * as motion from "motion/react-client"
 import { IconBook, IconCircleCheck, IconClock } from "@tabler/icons-react"
 import { useTranslations } from "next-intl"
 
@@ -38,8 +39,14 @@ export function StatsCards({ totalLessonsCompleted, coursesInProgress, coursesCo
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {stats.map((stat) => (
-        <div key={stat.label} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
+      {stats.map((stat, idx) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: idx * 0.05, duration: 0.25 }}
+          className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4"
+        >
           <div className={`p-2.5 rounded-xl ${stat.color}`}>
             <stat.icon size={22} />
           </div>
@@ -50,7 +57,7 @@ export function StatsCards({ totalLessonsCompleted, coursesInProgress, coursesCo
               <span className="text-sm font-medium text-muted-foreground">{stat.suffix}</span>
             </p>
           </div>
-        </div>
+        </motion.div>
       ))}
     </div>
   )

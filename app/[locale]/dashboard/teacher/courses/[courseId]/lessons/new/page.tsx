@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { LessonEditor } from '@/components/teacher/lesson-editor'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -16,9 +16,7 @@ export default async function NewLessonPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/auth/login')
-  }
+  if (!user) return notFound()
 
   // Verify course ownership
   const { data: course } = await supabase
@@ -29,9 +27,7 @@ export default async function NewLessonPage({ params }: PageProps) {
     .eq('tenant_id', tenantId)
     .single()
 
-  if (!course) {
-    notFound()
-  }
+  if (!course) return notFound()
 
   // Get the next sequence number
   const { data: lessons } = await supabase

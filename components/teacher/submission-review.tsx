@@ -137,13 +137,13 @@ export function SubmissionReview({
         return <Badge variant="outline">{t('status.pending')}</Badge>
       case 'ai_reviewed':
         return (
-          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100/80">
+          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950/40">
             {t('status.aiReviewed')}
           </Badge>
         )
       case 'teacher_reviewed':
         return (
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80">
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80 dark:bg-green-950/50 dark:text-green-300 dark:hover:bg-green-950/40">
             {t('status.teacherReviewed')}
           </Badge>
         )
@@ -218,7 +218,7 @@ export function SubmissionReview({
                         </Badge>
                       )}
                       {isPendingReview && (
-                        <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700">
+                        <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-700">
                           <IconHourglass className="mr-1 h-3 w-3" />
                           {t('questions.needsGradingBadge')}
                         </Badge>
@@ -245,8 +245,8 @@ export function SubmissionReview({
                       return (
                         <div key={opt.id} className={cn(
                           "p-3 rounded-lg border flex items-center justify-between text-sm",
-                          opt.is_correct ? "bg-green-50 border-green-200 text-green-900" :
-                            isSelected ? "bg-red-50 border-red-200 text-red-900" : "bg-muted/30"
+                          opt.is_correct ? "bg-green-50 border-green-200 text-green-900 dark:bg-green-950/30 dark:border-green-800 dark:text-green-200" :
+                            isSelected ? "bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-800 dark:text-red-200" : "bg-muted/30"
                         )}>
                           <span className="font-medium">{opt.option_text}</span>
                           <div className="flex items-center gap-2">
@@ -316,7 +316,7 @@ export function SubmissionReview({
                       </div>
                       <div className="flex-1">
                         <Label>{t('teacherOverride.statusLabel')}</Label>
-                        <div className="flex items-center h-10 border rounded px-3 bg-white">
+                        <div className="flex items-center h-10 border rounded px-3 bg-white dark:bg-background">
                           <span className="text-sm font-medium mr-auto">{isCorrect ? t('teacherOverride.correctStatus') : t('teacherOverride.incorrectStatus')}</span>
                         </div>
                       </div>
@@ -418,7 +418,7 @@ export function SubmissionReview({
               disabled={loading}
               className="px-8 shadow-lg shadow-primary/20"
             >
-              {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
               {t('finalReview.saveReviewButton')}
             </Button>
           </div>

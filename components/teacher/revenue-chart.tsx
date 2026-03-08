@@ -1,8 +1,9 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMemo } from 'react'
-import { BarChart } from 'lucide-react'
+import { IconChartBar } from '@tabler/icons-react'
 
 interface Transaction {
   amount: string
@@ -14,6 +15,8 @@ interface RevenueChartProps {
 }
 
 export function RevenueChart({ transactions }: RevenueChartProps) {
+  const t = useTranslations('dashboard.teacher.revenue.chart')
+
   // Group transactions by month
   const monthlyRevenue = useMemo(() => {
     const grouped: { [key: string]: number } = {}
@@ -33,7 +36,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
       .map(([month, revenue]) => ({
         month,
         revenue,
-        label: new Date(month + '-01').toLocaleDateString('en-US', {
+        label: new Date(month + '-01').toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'short',
         }),
@@ -48,14 +51,14 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Revenue Chart</CardTitle>
-          <CardDescription>No data available</CardDescription>
+          <CardTitle>{t('title')}</CardTitle>
+          <CardDescription>{t('empty')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <BarChart className="h-12 w-12 text-muted-foreground mb-4" />
+            <IconChartBar className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              Revenue trends will appear here once you have transactions
+              {t('emptyDescription')}
             </p>
           </div>
         </CardContent>
@@ -66,8 +69,8 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Revenue Chart</CardTitle>
-        <CardDescription>Monthly revenue trends (last 12 months)</CardDescription>
+        <CardTitle>{t('title')}</CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -75,7 +78,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
             <div key={month.month} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">{month.label}</span>
-                <span className="text-muted-foreground">${month.revenue.toFixed(2)}</span>
+                <span className="text-muted-foreground tabular-nums">${month.revenue.toFixed(2)}</span>
               </div>
               <div className="h-8 bg-secondary rounded-md overflow-hidden">
                 <div
@@ -92,14 +95,14 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
         {monthlyRevenue.length > 0 && (
           <div className="mt-6 pt-6 border-t space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Total (12 months)</span>
-              <span className="text-lg font-bold">
+              <span className="font-medium">{t('total')}</span>
+              <span className="text-lg font-bold tabular-nums">
                 ${monthlyRevenue.reduce((sum, m) => sum + m.revenue, 0).toFixed(2)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Average per month</span>
-              <span>
+              <span>{t('average')}</span>
+              <span className="tabular-nums">
                 $
                 {(
                   monthlyRevenue.reduce((sum, m) => sum + m.revenue, 0) / monthlyRevenue.length

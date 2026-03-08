@@ -119,7 +119,7 @@ export function CertificateTemplateForm({ courseId, initialData }: CertificateTe
                                 <IconFileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </div>
                             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
-                                Certificate Information
+                                {t('certificateInfo')}
                             </h2>
                         </div>
 
@@ -175,7 +175,7 @@ export function CertificateTemplateForm({ courseId, initialData }: CertificateTe
                                 <IconBuilding className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                             </div>
                             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
-                                Issuer Details
+                                {t('issuerDetails')}
                             </h2>
                         </div>
 
@@ -221,7 +221,7 @@ export function CertificateTemplateForm({ courseId, initialData }: CertificateTe
                         <div className="space-y-6 pl-[42px]">
                             {/* Color presets */}
                             <div className="space-y-2.5">
-                                <Label className="text-sm font-medium">Color Theme</Label>
+                                <Label className="text-sm font-medium">{t('colorTheme')}</Label>
                                 <div className="flex flex-wrap gap-2">
                                     {COLOR_PRESETS.map((preset) => {
                                         const isActive =
@@ -320,7 +320,7 @@ export function CertificateTemplateForm({ courseId, initialData }: CertificateTe
                         </Button>
                         <Button type="submit" disabled={isLoading} className="gap-2 px-6">
                             {isLoading ? (
-                                <IconLoader2 className="h-4 w-4 animate-spin" />
+                                <IconLoader2 className="h-4 w-4 motion-safe:animate-spin" />
                             ) : (
                                 <IconDeviceFloppy className="h-4 w-4" />
                             )}
@@ -343,7 +343,7 @@ export function CertificateTemplateForm({ courseId, initialData }: CertificateTe
                     />
                 </div>
                 <p className="text-center text-[10px] text-muted-foreground italic">
-                    Live preview — updates as you type
+                    {t('preview.livePreviewHint')}
                 </p>
             </div>
         </div>

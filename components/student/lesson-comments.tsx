@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useLocale } from 'next-intl'
 
 interface CommentUser {
   id: string
@@ -41,9 +42,10 @@ interface Comment {
 interface LessonCommentsProps {
   lessonId: number
   userId: string
+  tenantId: string
 }
 
-export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
+export function LessonComments({ lessonId, userId, tenantId }: LessonCommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,6 +55,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
   const router = useRouter()
   const supabase = createClient()
   const t = useTranslations('courseDetails.lessonComments')
+  const locale = useLocale()
 
   useEffect(() => {
     loadComments()
@@ -80,21 +83,22 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
         return
       }
 
-      // Fetch user profiles
+      // Fetch user profiles and reactions in parallel
       const userIds = Array.from(new Set(commentsData.map(c => c.user_id)))
-      const { data: usersData } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url')
-        .in('id', userIds)
+      const commentIds = commentsData.map(c => c.id)
+
+      const [{ data: usersData }, { data: reactionsData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url')
+          .in('id', userIds),
+        supabase
+          .from('comment_reactions')
+          .select('comment_id, user_id, reaction_type')
+          .in('comment_id', commentIds),
+      ])
 
       const usersMap = new Map(usersData?.map(u => [u.id, u]))
-
-      // Fetch reactions
-      const commentIds = commentsData.map(c => c.id)
-      const { data: reactionsData } = await supabase
-        .from('comment_reactions')
-        .select('comment_id, user_id, reaction_type')
-        .in('comment_id', commentIds)
 
       // Assemble data
       const allComments: Comment[] = commentsData.map(c => {
@@ -162,7 +166,8 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
         lesson_id: lessonId,
         user_id: userId,
         content: content.trim(),
-        parent_comment_id: parentId
+        parent_comment_id: parentId,
+        tenant_id: tenantId,
       })
 
       if (error) throw error
@@ -269,6 +274,7 @@ export function LessonComments({ lessonId, userId }: LessonCommentsProps) {
                 comment={comment}
                 userId={userId}
                 t={t}
+                locale={locale}
                 replyingTo={replyingTo}
                 setReplyingTo={setReplyingTo}
                 onReply={handlePostComment}
@@ -335,6 +341,7 @@ interface CommentItemProps {
   depth?: number
   userId: string
   t: any
+  locale: string
   replyingTo: number | null
   setReplyingTo: (id: number | null) => void
   onReply: (content: string, parentId: number) => void
@@ -348,6 +355,7 @@ function CommentItem({
   depth = 0,
   userId,
   t,
+  locale,
   replyingTo,
   setReplyingTo,
   onReply,
@@ -373,7 +381,7 @@ function CommentItem({
               {comment.user.full_name || comment.user.username || t('unknown')}
             </span>
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: es })}
+              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, ...(locale === 'es' ? { locale: es } : {}) })}
             </span>
           </div>
 
@@ -444,6 +452,7 @@ function CommentItem({
                 depth={depth + 1}
                 userId={userId}
                 t={t}
+                locale={locale}
                 replyingTo={replyingTo}
                 setReplyingTo={setReplyingTo}
                 onReply={onReply}

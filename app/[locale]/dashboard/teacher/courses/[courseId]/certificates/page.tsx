@@ -84,10 +84,10 @@ export default async function CertificatesPage({ params }: PageProps) {
   )
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-6 lg:py-10">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-8 flex items-center gap-2">
-        <Link href={`/dashboard/teacher/courses/${courseId}`}>
+        <Link href={`/dashboard/teacher/courses/${courseId}`} aria-label={t('backToCourses')}>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <IconArrowLeft className="h-4 w-4" />
           </Button>
@@ -123,7 +123,7 @@ export default async function CertificatesPage({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{certificates.length}</p>
-                <p className="text-xs text-muted-foreground font-medium">Certificates Issued</p>
+                <p className="text-xs text-muted-foreground font-medium">{t('certificates.stats.certificatesIssued')}</p>
               </div>
             </div>
           </CardContent>
@@ -136,7 +136,7 @@ export default async function CertificatesPage({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{enrollments.length}</p>
-                <p className="text-xs text-muted-foreground font-medium">Active Students</p>
+                <p className="text-xs text-muted-foreground font-medium">{t('certificates.stats.activeStudents')}</p>
               </div>
             </div>
           </CardContent>
@@ -150,12 +150,12 @@ export default async function CertificatesPage({ params }: PageProps) {
               <div>
                 <p className="text-2xl font-bold tabular-nums">
                   {template ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">Active</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">{t('certificates.stats.active')}</span>
                   ) : (
-                    <span className="text-muted-foreground">None</span>
+                    <span className="text-muted-foreground">{t('certificates.stats.none')}</span>
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground font-medium">Template Status</p>
+                <p className="text-xs text-muted-foreground font-medium">{t('certificates.stats.templateStatus')}</p>
               </div>
             </div>
           </CardContent>
@@ -167,7 +167,7 @@ export default async function CertificatesPage({ params }: PageProps) {
         {/* Left: Template preview */}
         <div className="lg:col-span-2 space-y-5">
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
-            Template Preview
+            {t('certificates.templatePreview')}
           </h2>
 
           {template ? (
@@ -185,16 +185,16 @@ export default async function CertificatesPage({ params }: PageProps) {
               </div>
               <div className="space-y-3 px-1">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">Certificate Name</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('certificates.templates.nameLabel')}</p>
                   <p className="text-sm font-semibold">{template.template_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">Issuer</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('certificates.issuerLabel')}</p>
                   <p className="text-sm">{template.issuer_name}</p>
                 </div>
                 {template.description && (
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Description</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t('certificates.templates.descriptionLabel')}</p>
                     <p className="text-sm text-muted-foreground">{template.description}</p>
                   </div>
                 )}
@@ -204,14 +204,14 @@ export default async function CertificatesPage({ params }: PageProps) {
                       className="h-4 w-4 rounded-full border"
                       style={{ backgroundColor: template.design_settings?.primary_color || '#3B82F6' }}
                     />
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Primary</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.primaryColor')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="h-4 w-4 rounded-full border"
                       style={{ backgroundColor: template.design_settings?.secondary_color || '#1E40AF' }}
                     />
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Secondary</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.secondaryColor')}</span>
                   </div>
                 </div>
               </div>
@@ -222,7 +222,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                 <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
                   <IconAward className="h-8 w-8 text-muted-foreground/30" />
                 </div>
-                <p className="text-sm font-medium mb-1">No template configured</p>
+                <p className="text-sm font-medium mb-1">{t('certificates.noTemplateConfigured')}</p>
                 <p className="text-xs text-muted-foreground mb-4 max-w-[220px]">
                   {t('certificates.templates.noTemplate')}
                 </p>
@@ -246,7 +246,7 @@ export default async function CertificatesPage({ params }: PageProps) {
               </h2>
               {certificates.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] font-bold">
-                  {certificates.length} issued
+                  {t('certificates.issued.count', { count: certificates.length })}
                 </Badge>
               )}
             </div>
@@ -287,11 +287,11 @@ export default async function CertificatesPage({ params }: PageProps) {
                                     <IconUsers className="h-3.5 w-3.5 text-muted-foreground" />
                                   )}
                                 </div>
-                                <span className="font-medium text-sm">{cert.profiles?.full_name || 'Unknown'}</span>
+                                <span className="font-medium text-sm">{cert.profiles?.full_name || t('manageCourse.studentList.unknownStudent')}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                              {new Date(cert.issued_at).toLocaleDateString('en-US', {
+                              {new Date(cert.issued_at).toLocaleDateString(undefined, {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric',
@@ -305,7 +305,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {cert.pdf_url && (
-                                  <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer">
+                                  <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer" aria-label={t('certificates.issued.view')}>
                                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                                       <IconExternalLink className="h-3.5 w-3.5" />
                                     </Button>
@@ -338,7 +338,7 @@ export default async function CertificatesPage({ params }: PageProps) {
           {template && uncertifiedEnrollments.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
-                Eligible Students
+                {t('certificates.eligibleStudents')}
               </h2>
               <Card>
                 <CardContent className="p-0">
@@ -358,7 +358,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                                 <IconUsers className="h-3.5 w-3.5 text-muted-foreground" />
                               )}
                             </div>
-                            <span className="text-sm font-medium">{profile?.full_name || 'Unknown Student'}</span>
+                            <span className="text-sm font-medium">{profile?.full_name || t('manageCourse.studentList.unknownStudent')}</span>
                           </div>
                           <IssueCertificateButton
                             courseId={parseInt(courseId)}

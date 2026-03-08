@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ import {
   IconCircleCheck,
 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
+import confetti from 'canvas-confetti'
 
 interface LessonNavigationProps {
   lessonId: number
@@ -21,6 +22,7 @@ interface LessonNavigationProps {
   isCompleted: boolean
   prevLessonId?: number
   nextLessonId?: number
+  tenantId: string
 }
 
 export function LessonNavigation({
@@ -29,12 +31,15 @@ export function LessonNavigation({
   isCompleted,
   prevLessonId,
   nextLessonId,
+  tenantId,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
   const [loading, setLoading] = useState(false)
   const [completed, setCompleted] = useState(isCompleted)
+  const [, startTransition] = useTransition()
   const router = useRouter()
   const supabase = createClient()
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   async function handleComplete() {
     setLoading(true)
@@ -56,30 +61,50 @@ export function LessonNavigation({
         .eq('user_id', user.id)
 
       setCompleted(false)
+      setLoading(false)
+      startTransition(() => { router.refresh() })
     } else {
       await supabase.from('lesson_completions').insert({
         lesson_id: lessonId,
         user_id: user.id,
+        tenant_id: tenantId,
       })
 
       setCompleted(true)
+      setLoading(false)
+
+      // Celebrate completion with a subtle confetti burst from the button
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        const x = (rect.left + rect.width / 2) / window.innerWidth
+        const y = (rect.top + rect.height / 2) / window.innerHeight
+        confetti({
+          particleCount: 40,
+          spread: 60,
+          origin: { x, y },
+          colors: ['#10b981', '#34d399', '#6ee7b7'],
+          ticks: 120,
+          gravity: 1.2,
+          scalar: 0.8,
+          disableForReducedMotion: true,
+        })
+      }
 
       if (nextLessonId) {
-        setTimeout(() => {
+        startTransition(() => {
           router.push(`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`)
-        }, 500)
+        })
+      } else {
+        startTransition(() => { router.refresh() })
       }
     }
-
-    setLoading(false)
-    router.refresh()
   }
 
   return (
     <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
       <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
         {/* Previous */}
-        <div className="w-32">
+        <div className="flex-1 flex justify-start">
           {prevLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`}>
               <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
@@ -99,18 +124,19 @@ export function LessonNavigation({
 
         {/* Complete button */}
         <Button
+          ref={buttonRef}
           onClick={handleComplete}
           data-testid="lesson-complete-toggle"
           disabled={loading}
           variant={completed ? 'secondary' : 'default'}
           size="sm"
           className={cn(
-            'gap-2 px-5 font-semibold transition-all',
+            'gap-2 px-5 font-semibold transition-all duration-300',
             completed && 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20'
           )}
         >
           {loading ? (
-            <IconLoader2 className="h-4 w-4 animate-spin" />
+            <IconLoader2 className="h-4 w-4 motion-safe:animate-spin" />
           ) : completed ? (
             <IconCircleCheck className="h-4 w-4" />
           ) : (
@@ -121,7 +147,7 @@ export function LessonNavigation({
         </Button>
 
         {/* Next */}
-        <div className="w-32 flex justify-end">
+        <div className="flex-1 flex justify-end">
           {nextLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
               <Button size="sm" className="gap-1.5">

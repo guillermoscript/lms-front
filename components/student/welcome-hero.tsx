@@ -1,5 +1,6 @@
 "use client"
 
+import * as motion from "motion/react-client"
 import { Button } from "@/components/ui/button"
 import { IconArrowRight } from "@tabler/icons-react"
 import Link from "next/link"
@@ -15,7 +16,13 @@ export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted }: W
   const t = useTranslations('welcomeHero')
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 md:p-8 text-primary-foreground" data-testid="welcome-hero">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 md:p-8 text-primary-foreground"
+      data-testid="welcome-hero"
+    >
       {/* Subtle decorative pattern */}
       <div className="absolute inset-0 opacity-10">
         <svg
@@ -52,6 +59,6 @@ export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted }: W
           </Link>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

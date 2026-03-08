@@ -15,7 +15,9 @@
     "continue": "Continuar",
     "close": "Cerrar",
     "viewAll": "Ver Todo",
-    "browseCourses": "Explorar Cursos"
+    "browseCourses": "Explorar Cursos",
+    "completed": "Completado",
+    "lessonsCompleted": "lecciones completadas"
   },
   "auth": {
     "login": {
@@ -108,6 +110,16 @@
       "browseAndEnroll": "Explorar e Inscribirse",
       "noCoursesYet": "Aún no hay cursos",
       "startJourneyDesc": "Comienza tu viaje de aprendizaje inscribiéndote en un curso",
+      "onboarding": {
+        "title": "Primeros Pasos",
+        "subtitle": "Completa estos pasos para comenzar tu aprendizaje.",
+        "browseCourses": "Explorar cursos disponibles",
+        "browseCoursesDesc": "Explora el catálogo de cursos e inscríbete en algo que te interese.",
+        "completeLesson": "Completa tu primera lección",
+        "completeLessonDesc": "Abre un curso y termina al menos una lección.",
+        "finishCourse": "Termina un curso",
+        "finishCourseDesc": "Completa todas las lecciones de un curso para obtener tu certificado."
+      },
       "courses": {
         "title": "Mis Cursos",
         "enrolledMessage": "Estás inscrito en {count} curso{s}",
@@ -234,6 +246,16 @@
       "subtitle": "Esto es lo que está pasando con tus cursos y estudiantes hoy.",
       "createCourse": "Crear Nuevo Curso",
       "promptTemplates": "Plantillas de Prompt",
+      "onboarding": {
+        "title": "Primeros Pasos",
+        "subtitle": "Completa estos pasos para configurar tu primer curso.",
+        "createCourse": "Crea tu primer curso",
+        "createCourseDesc": "Comienza dándole un título y descripción a tu curso.",
+        "addLesson": "Agrega una lección",
+        "addLessonDesc": "Añade contenido para que tus estudiantes aprendan.",
+        "publishCourse": "Publica tu curso",
+        "publishCourseDesc": "Haz visible tu curso para los estudiantes."
+      },
       "stats": {
         "totalCourses": "Total de Cursos",
         "totalLessons": "{count} lecciones en total",
@@ -262,7 +284,14 @@
         "preview": "Vista Previa",
         "noCoursesFound": "No se encontraron cursos",
         "noCoursesDesc": "Aún no has creado ningún curso. ¡Comienza tu viaje de enseñanza hoy!",
-        "createFirstBtn": "Crea tu Primer Curso"
+        "createFirstBtn": "Crea tu Primer Curso",
+        "editCourse": "Editar curso",
+        "previewCourse": "Vista previa del curso",
+        "status": {
+          "draft": "Borrador",
+          "published": "Publicado",
+          "archived": "Archivado"
+        }
       },
       "manageCourse": {
         "notFound": "Curso No Encontrado",
@@ -270,6 +299,10 @@
         "backToCourses": "Volver a Mis Cursos",
         "accessDenied": "Acceso Denegado",
         "notAuthor": "No eres el autor de este curso.",
+        "debugLoggedInUser": "Usuario conectado",
+        "debugCourseAuthor": "Autor del curso",
+        "dangerZone": "Zona de Peligro",
+        "dangerZoneDesc": "Eliminar un curso es permanente y no se puede deshacer. Los estudiantes inscritos perderán el acceso inmediatamente.",
         "enrolledCount": "{count} {count, plural, one {estudiante inscrito} other {estudiantes inscritos}}",
         "settings": "Configuración",
         "min": "min",
@@ -307,7 +340,8 @@
           "description": "Gestiona las lecciones y el contenido de tu curso.",
           "addLesson": "Añadir Lección",
           "noLessons": "No se encontraron lecciones para este curso.",
-          "createFirst": "Crear Primera Lección"
+          "createFirst": "Crear Primera Lección",
+          "editLesson": "Editar Lección"
         },
         "practice": {
           "title": "Ejercicios de Práctica",
@@ -316,7 +350,14 @@
           "noExercises": "Aún no has creado ejercicios.",
           "createFirst": "Crear Primer Ejercicio",
           "noDescription": "No se proporcionó descripción.",
-          "edit": "Editar"
+          "edit": "Editar",
+          "pageDescription": "Diseña y gestiona ejercicios prácticos para tus estudiantes. Aprovecha la IA para crear desafíos atractivos integrados a tu plan de estudios.",
+          "emptyStateDescription": "Crea tu primer ejercicio para ayudar a los estudiantes a practicar y dominar el material del curso. Comienza con una plantilla de IA o crea desde cero.",
+          "getStarted": "Comenzar",
+          "exerciseSingular": "ejercicio",
+          "exercisePlural": "ejercicios",
+          "manageOnPage": "Gestiona los ejercicios en la página dedicada.",
+          "viewAll": "Ver Todos"
         },
         "assessments": {
           "title": "Evaluaciones",
@@ -324,7 +365,8 @@
           "addExam": "Añadir Examen",
           "noExams": "No se encontraron exámenes para este curso.",
           "createFirst": "Crear Primer Examen",
-          "submissions": "Entregas"
+          "submissions": "Entregas",
+          "editExam": "Editar Examen"
         },
         "studentList": {
           "title": "Estudiantes Inscritos",
@@ -366,6 +408,9 @@
             "saveError": "Error al guardar la plantilla de certificado",
             "cancel": "Cancelar",
             "submit": "Guardar Plantilla",
+            "certificateInfo": "Información del Certificado",
+            "issuerDetails": "Detalles del Emisor",
+            "colorTheme": "Tema de Color",
             "preview": {
               "title": "Vista Previa del Certificado",
               "header": "Certificado de Finalización",
@@ -373,9 +418,22 @@
               "successfullyCompleted": "ha completado con éxito los requisitos para",
               "officialIssuer": "Emisor Oficial",
               "issueDate": "Fecha de Emisión",
-              "verified": "Credencial Digital Verificada"
+              "verified": "Credencial Digital Verificada",
+              "livePreviewHint": "Vista previa en vivo — se actualiza mientras escribes",
+              "courseTitle": "Título del Curso"
             }
           },
+          "stats": {
+            "certificatesIssued": "Certificados Emitidos",
+            "activeStudents": "Estudiantes Activos",
+            "templateStatus": "Estado de la Plantilla",
+            "active": "Activa",
+            "none": "Ninguna"
+          },
+          "templatePreview": "Vista Previa de la Plantilla",
+          "issuerLabel": "Emisor",
+          "noTemplateConfigured": "No hay plantilla configurada",
+          "eligibleStudents": "Estudiantes Elegibles",
           "issued": {
             "title": "Certificados Emitidos",
             "count": "{count} certificados emitidos",
@@ -416,11 +474,34 @@
           "published": "El curso es visible para los estudiantes y está listo para la inscripción.",
           "archived": "el curso está oculto del catálogo pero los estudiantes existentes conservan el acceso."
         },
+        "limitReached": "Límite de Cursos Alcanzado",
+        "limitReachedDesc": "Tu plan {plan} está limitado a {limit} cursos. Actualmente tienes {current} cursos. Actualiza tu plan para crear más cursos.",
+        "upgradePlan": "Mejorar Plan",
+        "approachingLimit": "Acercándote al Límite de Cursos",
+        "approachingLimitDesc": "Has usado {current} de {limit} cursos en tu plan {plan}.",
         "actions": {
           "cancel": "Cancelar",
           "update": "Actualizar Curso",
           "create": "Crear Curso"
         }
+      },
+      "courseDelete": {
+        "triggerButton": "Eliminar Curso",
+        "titleWithEnrollments": "{count, plural, one {# estudiante} other {# estudiantes}} inscrito(s)",
+        "titleNoEnrollments": "¿Eliminar curso?",
+        "studentSingular": "estudiante está",
+        "studentPlural": "estudiantes están",
+        "enrolledInCourse": "actualmente inscrito(s) en \"{title}\". Eliminar removerá su acceso inmediatamente.",
+        "archiveSuggestion": "Considera archivar en su lugar — los estudiantes inscritos mantendrán acceso, pero el curso no aparecerá para nuevos estudiantes.",
+        "confirmDelete": "¿Estás seguro de que deseas eliminar \"{title}\"? Esta acción no se puede deshacer.",
+        "cancel": "Cancelar",
+        "archiveInstead": "Archivar en su lugar",
+        "deleteAnyway": "Eliminar de todas formas",
+        "delete": "Eliminar",
+        "archiveSuccess": "Curso archivado exitosamente",
+        "archiveError": "Error al archivar curso",
+        "deleteSuccess": "Curso eliminado",
+        "deleteError": "Error al eliminar curso"
       },
       "examBuilder": {
         "editTitle": "Editar Examen",
@@ -465,7 +546,11 @@
         "expectedKeywordsPlaceholder": "palabra1, palabra2, palabra3",
         "expectedKeywordsHint": "Lista separada por comas de términos clave esperados en la respuesta",
         "saveDraft": "Guardar como Borrador",
-        "publishExam": "Publicar Examen"
+        "publishExam": "Publicar Examen",
+        "saveError": "Error al guardar el examen",
+        "removeQuestion": "Eliminar pregunta",
+        "removeOption": "Eliminar opción",
+        "dragQuestion": "Arrastrar para reordenar pregunta"
       },
       "lessonEditor": {
         "editTitle": "Editar Lección",
@@ -502,7 +587,13 @@
         "previewWriting": "Empieza a escribir para ver una vista previa...",
         "readyForContent": "¡Se ve bien! Ahora escribamos el contenido de la lección.",
         "enterTitleFirst": "Ingresa un título arriba para continuar.",
-        "writeContent": "Escribir Contenido"
+        "writeContent": "Escribir Contenido",
+        "saveError": "Error al guardar la lección",
+        "modeVisual": "Visual",
+        "modeMDX": "MDX",
+        "closePreview": "Cerrar vista previa",
+        "dismissError": "Descartar error",
+        "backToCourse": "Volver a {course}"
       },
       "exerciseBuilder": {
         "details": "Detalles",
@@ -561,41 +652,67 @@
         "passingScoreLabel": "Puntuación Mínima",
         "passingScoreHint": "Puntuación mínima (0-100) que un estudiante debe alcanzar para completar el ejercicio.",
         "dailyAttemptsLabel": "Límite de Intentos Diarios",
-        "dailyAttemptsHint": "Número máximo de intentos que un estudiante puede hacer por día. Pon 0 para ilimitado."
+        "dailyAttemptsHint": "Número máximo de intentos que un estudiante puede hacer por día. Pon 0 para ilimitado.",
+        "statusDraft": "Borrador",
+        "statusPublished": "Publicado",
+        "statusArchived": "Archivado",
+        "timeLimitUnit": "min",
+        "saveError": "Error al guardar el ejercicio",
+        "dismissError": "Descartar error"
       },
       "submissionReview": {
-        "title": "Revisar Entrega",
-        "studentLabel": "Estudiante",
-        "submittedAt": "Entregado el {date}",
-        "gradedBy": "Calificado por {model}",
-        "overallScore": "Calificación General",
-        "pointsSummary": "{earned}/{possible} puntos · La calificación se autocalcula según las puntuaciones de las preguntas",
-        "overallFeedbackLabel": "Comentarios Generales (visible para el estudiante)",
-        "overallFeedbackPlaceholder": "Proporciona comentarios generales sobre el desempeño del estudiante...",
-        "teacherNotesLabel": "Notas del Profesor (privado, no se muestra al estudiante)",
-        "teacherNotesPlaceholder": "Notas internas...",
-        "questionsTitle": "Preguntas",
-        "questionStatus": {
-          "needsGrading": "Necesita Calificación",
-          "overridden": "Anulado",
-          "selected": "Seleccionado",
-          "correct": "Correcto"
+        "status": {
+          "pending": "Pendiente",
+          "aiReviewed": "Revisado por IA",
+          "teacherReviewed": "Revisado por Profesor",
+          "needsAttention": "Requiere Atención"
         },
-        "studentAnswer": "Respuesta del Estudiante",
-        "noAnswer": "No se proporcionó respuesta",
-        "gradingCriteria": "Criterios de calificación",
-        "expectedKeywords": "Palabras clave esperadas",
-        "aiFeedback": "Feedback de IA",
-        "confidence": "{value}% de confianza",
-        "teacherOverride": "Anulación del Profesor",
-        "pointsEarnedLabel": "Puntos Obtenidos",
-        "markAsLabel": "Marcar como:",
-        "markCorrect": "Correcto",
-        "markIncorrect": "Incorrecto",
-        "overrideBtn": "Anular",
-        "gradeBtn": "Calificar",
-        "doneBtn": "Listo",
-        "saveBtn": "Guardar y Finalizar Revisión"
+        "header": {
+          "title": "Revisión de Entrega",
+          "submittedOn": "Entregado el {date}",
+          "aiScore": "Puntaje IA",
+          "finalScore": "Puntaje Final"
+        },
+        "questions": {
+          "title": "Preguntas",
+          "questionLabel": "P{index}",
+          "overriddenBadge": "Anulado",
+          "needsGradingBadge": "Necesita Calificación",
+          "pointsLabel": "puntos",
+          "selectedBadge": "Seleccionado",
+          "correctBadge": "Correcto",
+          "studentAnswerLabel": "Respuesta del Estudiante",
+          "noAnswerProvided": "No se proporcionó respuesta",
+          "gradingCriteria": "Criterios de calificación",
+          "expectedKeywords": "Palabras clave esperadas"
+        },
+        "aiFeedback": {
+          "title": "Feedback de IA",
+          "confidence": "{confidence}% de confianza"
+        },
+        "teacherOverride": {
+          "title": "Anulación del Profesor",
+          "pointsEarnedLabel": "Puntos Obtenidos",
+          "statusLabel": "Estado",
+          "correctStatus": "Correcto",
+          "incorrectStatus": "Incorrecto",
+          "markAsLabel": "Marcar como",
+          "correctButton": "Correcto",
+          "incorrectButton": "Incorrecto",
+          "teacherNotesLabel": "Notas del Profesor",
+          "teacherNotesPlaceholder": "Añadir notas para esta respuesta...",
+          "teacherNotesBadge": "Notas del Profesor",
+          "doneButton": "Listo",
+          "gradeButton": "Calificar",
+          "overrideButton": "Anular"
+        },
+        "finalReview": {
+          "title": "Revisión Final y Feedback",
+          "teacherFeedbackLabel": "Feedback del Profesor",
+          "teacherFeedbackPlaceholder": "Proporciona comentarios generales sobre el desempeño del estudiante...",
+          "finalNotice": "Guardar marcará esta entrega como revisada por el profesor.",
+          "saveReviewButton": "Guardar y Finalizar Revisión"
+        }
       },
       "examSubmissionsReview": {
         "title": "Entregas del Examen",
@@ -650,6 +767,42 @@
         },
         "attentionAlert": "Estas entregas han sido marcadas para revisión debido a puntuaciones de confianza bajas de la IA o evaluaciones pendientes de preguntas de texto libre."
       },
+      "submissions": {
+        "backToSubmissions": "Volver a Entregas"
+      },
+      "templates": {
+        "title": "Plantillas de Prompt",
+        "description": "Gestiona tus plantillas reutilizables de prompts de IA para lecciones y ejercicios.",
+        "createTemplate": "Crear Plantilla",
+        "createDescription": "Diseña una nueva plantilla reutilizable de prompt de IA.",
+        "editTemplate": "Editar Plantilla",
+        "editDescription": "Modifica tu plantilla de prompt y sus variables.",
+        "backToTemplates": "Volver a Plantillas",
+        "yourTemplates": "Tus Plantillas",
+        "yourTemplatesDescription": "Las plantillas del sistema están disponibles para todos. Puedes editar o eliminar tus propias plantillas.",
+        "searchPlaceholder": "Buscar plantillas...",
+        "loading": "Cargando plantillas...",
+        "noTemplates": "No se encontraron plantillas.",
+        "system": "Sistema",
+        "editAction": "Editar",
+        "duplicateAction": "Duplicar",
+        "deleteAction": "Eliminar",
+        "deleteConfirmTitle": "Eliminar Plantilla",
+        "deleteConfirmDescription": "¿Estás seguro de que quieres eliminar esta plantilla? Esta acción no se puede deshacer.",
+        "deleteSuccess": "Plantilla eliminada",
+        "deleteError": "Error al eliminar la plantilla",
+        "duplicateSuccess": "Plantilla duplicada",
+        "duplicateError": "Error al duplicar la plantilla",
+        "loadError": "Error al cargar las plantillas",
+        "copySuffix": "Copia",
+        "table": {
+          "name": "Nombre",
+          "category": "Categoría",
+          "variables": "Variables",
+          "created": "Creado",
+          "actions": "Acciones"
+        }
+      },
       "templateSelector": {
         "titleChoose": "Elige una Plantilla",
         "titleCustomize": "Personalizar Plantilla",
@@ -695,7 +848,127 @@
         "at": "a las",
         "noActivity": "No se encontró actividad reciente.",
         "growthTip": "Consejo de Crecimiento",
-        "growthTipDesc": "Los cursos con ejercicios asistidos por IA tienen tasas de finalización un 45% más altas. ¡Prueba a añadir tareas a tus lecciones!"
+        "growthTipDesc": "Los cursos con ejercicios asistidos por IA tienen tasas de finalización un 45% más altas. ¡Prueba a añadir tareas a tus lecciones!",
+        "anonymous": "Anónimo"
+      },
+      "defaultName": "Profesor",
+      "preview": {
+        "banner": "Modo Vista Previa — Así es como los estudiantes verán tu curso",
+        "backToEditor": "Volver al Editor"
+      },
+      "error": {
+        "title": "No se pudo cargar tu contenido",
+        "description": "Hubo un problema al cargar tu contenido de enseñanza. Por favor, inténtalo de nuevo.",
+        "reference": "Referencia: {digest}",
+        "tryAgain": "Intentar de nuevo",
+        "dashboard": "Panel"
+      },
+      "revenue": {
+        "title": "Panel de Ingresos",
+        "subtitle": "Monitorea los ingresos y pagos de tu escuela",
+        "stripeNotConnected": {
+          "title": "Cuenta de Pago No Conectada",
+          "description": "Conecta tu cuenta de Stripe para empezar a aceptar pagos y recibir transferencias.",
+          "connect": "Conectar Cuenta de Stripe"
+        },
+        "stats": {
+          "totalRevenue": "Ingresos Totales",
+          "totalRevenueSub": "Ingresos totales de estudiantes",
+          "yourShare": "Tu Parte ({percentage}%)",
+          "yourShareSub": "Después de la deducción de la plataforma",
+          "last30Days": "Últimos 30 Días",
+          "transactionCount": "{count} transacciones",
+          "pendingPayout": "Pago Pendiente",
+          "pendingPayoutSub": "Esperando transferencia de Stripe"
+        },
+        "split": {
+          "title": "División de Ingresos",
+          "description": "Cómo se distribuyen los ingresos entre tu escuela y la plataforma",
+          "platformFee": "Comisión de Plataforma",
+          "platformFeeSub": "Mantenimiento y soporte de la plataforma",
+          "yourRevenue": "Tus Ingresos",
+          "yourRevenueSub": "Pagado directamente a tu cuenta de Stripe"
+        },
+        "tabs": {
+          "transactions": "Transacciones Recientes",
+          "payouts": "Historial de Pagos",
+          "chart": "Gráfico de Ingresos"
+        },
+        "transactions": {
+          "title": "Transacciones Recientes",
+          "empty": "Sin transacciones aún",
+          "emptyDescription": "Las transacciones de compras de estudiantes aparecerán aquí",
+          "description": "Todas las compras exitosas de estudiantes",
+          "date": "Fecha",
+          "amount": "Monto",
+          "provider": "Proveedor",
+          "status": "Estado"
+        },
+        "payouts": {
+          "title": "Historial de Pagos",
+          "empty": "Sin pagos aún",
+          "emptyDescription": "Los pagos de Stripe aparecerán aquí una vez procesados",
+          "emptyHint": "Stripe típicamente procesa pagos diaria o semanalmente según tu configuración",
+          "description": "Transferencias de Stripe a tu cuenta bancaria",
+          "period": "Período",
+          "amount": "Monto",
+          "status": "Estado",
+          "paidDate": "Fecha de Pago",
+          "stripeId": "ID de Stripe",
+          "to": "al",
+          "viewOnStripe": "Ver en Stripe"
+        },
+        "chart": {
+          "title": "Gráfico de Ingresos",
+          "empty": "Sin datos disponibles",
+          "emptyDescription": "Las tendencias de ingresos aparecerán aquí cuando tengas transacciones",
+          "description": "Tendencias de ingresos mensuales (últimos 12 meses)",
+          "total": "Total (12 meses)",
+          "average": "Promedio por mes"
+        }
+      },
+      "certificates": {
+        "issueSuccess": "Certificado emitido a {name}",
+        "issueError": "Error al emitir certificado",
+        "notEligible": "El estudiante aún no es elegible para un certificado",
+        "issueGenericError": "Ocurrió un error al emitir el certificado",
+        "issued": "Emitido",
+        "issueCertificate": "Emitir Certificado"
+      },
+      "templateForm": {
+        "basicInfo": "Información Básica",
+        "basicInfoDescription": "Dale un nombre y categoría a tu plantilla",
+        "nameLabel": "Nombre de Plantilla",
+        "namePlaceholder": "ej. Asistente de Gramática",
+        "categoryLabel": "Categoría",
+        "categoryLessonTask": "Tarea de Lección",
+        "categoryExercise": "Ejercicio",
+        "categoryExamGrading": "Calificación de Examen",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "¿Para qué es esta plantilla?",
+        "variables": "Variables",
+        "variablesDescription": "Define marcadores como {{topic}} para usar en tus plantillas",
+        "variablePlaceholder": "nombre_variable",
+        "removeVariable": "Eliminar variable",
+        "noVariables": "Sin variables agregadas aún",
+        "variableExists": "La variable ya existe",
+        "nameRequired": "El nombre de la plantilla es obligatorio",
+        "updateSuccess": "Plantilla actualizada",
+        "createSuccess": "Plantilla creada",
+        "saveError": "Error al guardar",
+        "noContent": "Sin contenido",
+        "update": "Actualizar Plantilla",
+        "create": "Crear Plantilla",
+        "cancel": "Cancelar",
+        "instructionsTab": "Instrucciones",
+        "systemPromptTab": "Prompt del Sistema",
+        "instructionsTitle": "Instrucciones para el Estudiante",
+        "instructionsDescription": "Esto es lo que verá el estudiante. Usa la sintaxis {{variable}}.",
+        "instructionsPlaceholder": "ej. Escribe un ensayo corto sobre {{topic}}...",
+        "systemPromptTitle": "Instrucciones del Sistema IA",
+        "systemPromptDescription": "Instrucciones internas para el modelo de IA. Usa la sintaxis {{variable}}.",
+        "systemPromptPlaceholder": "ej. Eres un asistente útil evaluando un ensayo sobre {{topic}}...",
+        "livePreview": "Vista Previa en Vivo"
       }
     },
     "admin": {
@@ -726,6 +999,13 @@
         "notifications": "Notificaciones",
         "templates": "Plantillas",
         "tenants": "Inquilinos"
+      },
+      "error": {
+        "title": "Error del panel de administración",
+        "description": "Ocurrió un error inesperado al cargar los datos de administración. Por favor, inténtalo de nuevo.",
+        "reference": "Referencia: {code}",
+        "tryAgain": "Intentar de nuevo",
+        "dashboard": "Panel"
       },
       "main": {
         "stats": {
@@ -762,6 +1042,57 @@
             "pending": "Pendiente",
             "failed": "Fallido"
           }
+        },
+        "plan": {
+          "label": "Plan",
+          "current": "Actual",
+          "active": "Activo",
+          "upgradeHint": "Mejora tu plan para desbloquear más cursos y estudiantes",
+          "activeHint": "Tu plan está activo y funcionando",
+          "courses": "Cursos",
+          "students": "Estudiantes",
+          "upgrade": "Mejorar",
+          "changePlan": "Cambiar Plan"
+        },
+        "onboarding": {
+          "title": "Primeros Pasos",
+          "subtitle": "Configura tu escuela en unos simples pasos.",
+          "configureSchool": "Configura tu escuela",
+          "configureSchoolDesc": "Establece el nombre, logo y configuración básica de tu escuela.",
+          "addCourse": "Crea tu primer curso",
+          "addCourseDesc": "Agrega un curso para que los estudiantes puedan inscribirse.",
+          "inviteUsers": "Invita a tus primeros usuarios",
+          "inviteUsersDesc": "Agrega profesores o estudiantes a tu escuela.",
+          "reviewBilling": "Revisa tu plan de facturación",
+          "reviewBillingDesc": "Elige un plan que se adapte a las necesidades de tu escuela."
+        }
+      },
+      "billing": {
+        "overview": {
+          "currentPlan": "Plan Actual",
+          "pastDue": "Pago Vencido",
+          "freePlanDescription": "Estás en el plan gratuito. Mejora para desbloquear más funciones.",
+          "paidPlanDescription": "{fee}% de comisión por transacción en pagos de estudiantes",
+          "manage": "Administrar",
+          "upgrade": "Mejorar",
+          "changePlan": "Cambiar Plan",
+          "period": "Período: {start} — {end}",
+          "daysUntilPayment": "{count, plural, one {# día} other {# días}} hasta el próximo pago",
+          "annualBilling": "Facturación Anual",
+          "monthlyBilling": "Facturación Mensual",
+          "cancelOnDate": "La suscripción se cancelará el {date}",
+          "subscriptionPastDue": "Suscripción Vencida",
+          "pastDueDescription": "No se recibió tu pago. Realiza un pago para mantener las funciones de tu plan y evitar una degradación.",
+          "gracePeriodEnds": "El período de gracia termina en {count, plural, one {# día} other {# días}} ({date})",
+          "makePaymentNow": "Pagar Ahora",
+          "renewalRequired": "Renovación Necesaria Pronto",
+          "renewalDescription": "Tu período de suscripción termina en {count, plural, one {# día} other {# días}}. Renueva ahora para asegurar un servicio ininterrumpido para tus estudiantes.",
+          "courses": "Cursos",
+          "students": "Estudiantes"
+        },
+        "upgrade": {
+          "checkoutError": "Error al crear la sesión de pago",
+          "checkoutFailed": "Error al iniciar el pago. Por favor, inténtalo de nuevo."
         }
       },
       "users": {
@@ -831,6 +1162,7 @@
           "noTransactions": "Aún no hay transacciones"
         },
         "actions": {
+          "menu": "Acciones de usuario",
           "manageRoles": "Gestionar Roles",
           "deactivate": "Desactivar Usuario",
           "reactivate": "Reactivar Usuario",
@@ -1164,6 +1496,7 @@
           "incomplete_expired": "Incompleta Expirada"
         },
         "actions": {
+          "menu": "Acciones",
           "viewUser": "Ver Usuario",
           "cancel": "Cancelar Suscripción",
           "reactivate": "Reactivar Suscripción",
@@ -1375,6 +1708,21 @@
             "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
           }
         },
+        "revenue": {
+          "title": "Ingresos",
+          "description": "Rastrea los ingresos y ganancias de tu escuela",
+          "empty": "Aún no hay datos de ingresos. Comienza a vender cursos para ver tus ganancias aquí.",
+          "totalRevenue": "Ingresos Totales",
+          "transactionCount": "{count, plural, one {# transacción} other {# transacciones}}",
+          "platformFees": "Comisiones de Plataforma",
+          "upgradeToReduce": "Mejora tu plan para reducir comisiones",
+          "netRevenue": "Ingresos Netos",
+          "afterFees": "Después de comisiones",
+          "revenueByProduct": "Ingresos por Producto",
+          "topEarning": "Productos más vendidos",
+          "monthlyTrend": "Tendencia Mensual",
+          "monthlyTrendDescription": "Ingresos de los últimos 12 meses"
+        },
         "notifications": {
           "title": "Notificaciones",
           "description": "Enviar anuncios y mensajes a estudiantes y profesores",
@@ -1441,7 +1789,11 @@
               "send": "Enviar Ahora",
               "delete": "Eliminar"
             },
+            "send": "Enviar notificación",
+            "delete": "Eliminar notificación",
+            "confirmDeleteTitle": "Eliminar Notificación",
             "confirmDelete": "¿Estás seguro de que quieres eliminar esta notificación?",
+            "confirmDeleteAction": "Eliminar",
             "toasts": {
               "sent": "Notificación enviada a {count} usuarios",
               "deleted": "Notificación eliminada con éxito",
@@ -1535,6 +1887,15 @@
             "noAvailable": "No hay cursos publicados disponibles",
             "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
           }
+        },
+        "tenants": {
+          "title": "Gestión de Inquilinos",
+          "superAdmin": "Super Administrador",
+          "slug": "Slug",
+          "plan": "Plan",
+          "members": "Miembros",
+          "created": "Creado",
+          "stripeConnected": "Conectado"
         },
         "plans": {
           "title": "Planes de Suscripción",
@@ -1902,7 +2263,8 @@
     "revenue": "Ingresos",
     "profile": "Perfil",
     "billing": "Facturación",
-    "apiTokens": "Tokens de API"
+    "apiTokens": "Tokens de API",
+    "pages": "Páginas"
   },
   "userNav": {
     "profile": "Perfil",
@@ -2001,7 +2363,8 @@
       "sidebarDescription": "Navega por las lecciones del curso",
       "aiTutorTitle": "Sesión de Tutor de IA",
       "aiTutorDescription": "Completa la tarea para terminar esta lección",
-      "currentTask": "Tarea Actual"
+      "currentTask": "Tarea Actual",
+      "completed": "Completada"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -2043,7 +2406,8 @@
       }
     },
     "lessonSidebar": {
-      "backToCourse": "Volver al curso"
+      "backToCourse": "Volver al curso",
+      "lessonList": "Lecciones del curso"
     },
     "lessonNavigation": {
       "previous": "Anterior",
@@ -2440,7 +2804,8 @@
       "loading": "Cargando reseñas...",
       "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
       "selectRating": "Por favor selecciona una calificación",
-      "errorSubmitting": "Error al enviar la reseña. Por favor intenta de nuevo."
+      "errorSubmitting": "Error al enviar la reseña. Por favor intenta de nuevo.",
+      "starRating": "{star} estrellas"
     }
   },
   "about": {
@@ -2822,15 +3187,15 @@
     }
   },
   "landingPageBuilder": {
-    "title": "Páginas de Destino",
-    "subtitle": "Diseña y publica páginas de destino personalizadas para tu escuela.",
+    "title": "Páginas",
+    "subtitle": "Diseña y publica páginas personalizadas para tu escuela — páginas de inicio, acerca de, contacto y más.",
     "newPage": "Nueva Página",
     "getStarted": "Comenzar",
-    "createFirst": "Crea tu primera página de destino",
-    "createFirstDescription": "Empieza desde una plantilla o desde cero. Personaliza cada sección.",
+    "createFirst": "Crea tu primera página",
+    "createFirstDescription": "Empieza desde una plantilla o desde cero. Crea páginas de inicio, acerca de, FAQ y más.",
     "featureGate": {
       "title": "Constructor de Páginas",
-      "description": "Crea páginas de destino hermosas y personalizables para tu escuela con nuestro constructor visual. Disponible en el plan Starter ($9/mes) y superiores.",
+      "description": "Crea páginas hermosas y personalizables para tu escuela con nuestro constructor visual. Disponible en el plan Starter ($9/mes) y superiores.",
       "upgrade": "Mejorar Plan"
     },
     "pageCard": {
@@ -2842,10 +3207,20 @@
       "deactivate": "Desactivar",
       "duplicate": "Duplicar",
       "delete": "Eliminar",
-      "publishFirst": "Publica la página primero antes de activarla."
+      "publishFirst": "Publica la página primero antes de activarla.",
+      "preview": "Vista previa"
+    },
+    "errors": {
+      "createFailed": "Error al crear la página. Inténtalo de nuevo.",
+      "deleteFailed": "Error al eliminar la página. Inténtalo de nuevo.",
+      "duplicateFailed": "Error al duplicar la página. Inténtalo de nuevo.",
+      "activateFailed": "Error al activar la página. Inténtalo de nuevo.",
+      "deactivateFailed": "Error al desactivar la página. Inténtalo de nuevo.",
+      "saveFailed": "Error al guardar los cambios. Inténtalo de nuevo.",
+      "publishFailed": "Error al publicar la página. Inténtalo de nuevo."
     },
     "deleteDialog": {
-      "title": "¿Eliminar página de destino?",
+      "title": "¿Eliminar página?",
       "description": "Esta acción no se puede deshacer. La página y todas sus secciones serán eliminadas permanentemente.",
       "cancel": "Cancelar",
       "confirm": "Eliminar"
@@ -2854,7 +3229,12 @@
       "title": "Elige un punto de partida",
       "description": "Selecciona una plantilla para comenzar rápidamente, o empieza desde cero. Puedes personalizar todo después.",
       "useTemplate": "Usar Plantilla",
-      "more": "+{count} más"
+      "more": "+{count} más",
+      "choosePageType": "¿Qué tipo de página?",
+      "choosePageTypeDescription": "Elige un tipo de página o ingresa una URL personalizada. Esto determina dónde será accesible la página.",
+      "customSlug": "Personalizado",
+      "customSlugDescription": "Ingresa tu propia URL",
+      "next": "Siguiente"
     },
     "sectionPicker": {
       "title": "Agregar una Sección",
@@ -2919,11 +3299,20 @@
       "noSelection": "Sin sección seleccionada",
       "noSelectionDescription": "Selecciona una sección del panel izquierdo, o agrega una nueva.",
       "settingsDescription": "Configura la navegación del encabezado y el pie de página. Estos ajustes se aplican globalmente.",
+      "pageSlug": "URL de la página",
+      "pageSlugHint": "Usa \"home\" para la página principal. Otras URLs son accesibles en /p/tu-slug.",
       "moveUp": "Mover arriba",
       "moveDown": "Mover abajo",
       "hideSection": "Ocultar sección",
       "showSection": "Mostrar sección",
-      "deleteSection": "Eliminar sección"
+      "deleteSection": "Eliminar sección",
+      "preview": "Vista previa",
+      "previewTitle": "Vista previa en vivo",
+      "refresh": "Actualizar",
+      "openNewTab": "Abrir en nueva pestaña",
+      "previewBanner": "Modo de vista previa",
+      "previewBannerDescription": "Así se verá tu página cuando se publique.",
+      "backToEditor": "Volver al editor"
     },
     "editor": {
       "editContent": "Edita el contenido de esta sección.",
@@ -3220,6 +3609,33 @@
       "completedScore": "Tu Mejor Puntuación",
       "completedOn": "Completado el {date}",
       "exerciseMarkedComplete": "Este ejercicio ha sido marcado como completado. ¡Buen trabajo!"
+    },
+    "list": {
+      "title": "Zona de Práctica",
+      "subtitle": "Desafíate con actividades interactivas y tareas de programación.",
+      "breadcrumb": {
+        "dashboard": "Panel",
+        "exercises": "Ejercicios"
+      },
+      "empty": {
+        "title": "No se encontraron ejercicios",
+        "description": "No hay ejercicios activos para este curso en este momento."
+      }
+    }
+  },
+  "exams": {
+    "list": {
+      "title": "Evaluaciones",
+      "subtitle": "Demuestra tu conocimiento y obtén tu certificación.",
+      "progress": "Progreso de Completado",
+      "breadcrumb": {
+        "dashboard": "Panel",
+        "exams": "Exámenes"
+      },
+      "empty": {
+        "title": "No hay exámenes disponibles",
+        "description": "Las evaluaciones de este curso aparecerán aquí cuando sean publicadas."
+      }
     }
   }
 }

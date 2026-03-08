@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getTranslations } from 'next-intl/server'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { ExamBuilder } from '@/components/teacher/exam-builder'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -11,16 +10,13 @@ interface PageProps {
 export default async function NewExamPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
-  const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/auth/login')
-  }
+  if (!user) return notFound()
 
   // Verify course ownership
   const { data: course } = await supabase
@@ -31,9 +27,7 @@ export default async function NewExamPage({ params }: PageProps) {
     .eq('tenant_id', tenantId)
     .single()
 
-  if (!course) {
-    notFound()
-  }
+  if (!course) return notFound()
 
   // Get the next sequence number
   const { data: exams } = await supabase
@@ -52,6 +46,7 @@ export default async function NewExamPage({ params }: PageProps) {
         courseId={parseInt(courseId)}
         courseTitle={course.title}
         initialData={{ sequence: nextSequence }}
+        tenantId={tenantId}
       />
     </div>
   )

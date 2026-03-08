@@ -246,7 +246,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                   className="gap-1.5"
                 >
                   {restoring ? (
-                    <IconLoader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                    <IconLoader2 aria-hidden="true" className="h-3.5 w-3.5 motion-safe:animate-spin" />
                   ) : (
                     <IconRestore aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
@@ -263,7 +263,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
               <ScrollArea className="flex-1">
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <IconLoader2 aria-hidden="true" className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <IconLoader2 aria-hidden="true" className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Loading history...</p>
                   </div>
                 ) : versions.length === 0 ? (

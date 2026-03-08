@@ -47,52 +47,60 @@ export default async function ExercisePage({ params }: PageProps) {
         notFound()
     }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.id)
-        .single()
-
-    const { data: otherExercises } = await supabase
-        .from('exercises')
-        .select(`
-            *,
-            exercise_completions(id)
-        `)
-        .eq('course_id', parseInt(courseId))
-        .eq('status', 'published')
-        .eq('tenant_id', tenantId)
-        .eq('exercise_completions.user_id', user.id)
-        .neq('id', parseInt(exerciseId))
-        .limit(3)
-
-    const { data: exerciseFiles } = await supabase
-        .from('exercise_files')
-        .select('file_path, content')
-        .eq('exercise_id', parseInt(exerciseId))
-        .eq('tenant_id', tenantId)
-
-    const { data: lastSubmission } = await supabase
-        .from('exercise_code_student_submissions')
-        .select('submission_code')
-        .eq('exercise_id', parseInt(exerciseId))
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .single()
-
-    // Fetch all completed/failed media submissions for history
-    let submissionHistory: { id: number; ai_evaluation: any; score: any; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
-    try {
-        const { data: mediaSubmissions } = await supabase
-            .from('exercise_media_submissions')
-            .select('id, ai_evaluation, score, status, media_url, created_at, duration_seconds')
+    const [{ data: profile }, { data: otherExercises }, { data: exerciseFiles }, { data: lastSubmission }] = await Promise.all([
+        supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', user.id)
+            .single(),
+        supabase
+            .from('exercises')
+            .select(`
+                *,
+                exercise_completions(id)
+            `)
+            .eq('course_id', parseInt(courseId))
+            .eq('status', 'published')
+            .eq('tenant_id', tenantId)
+            .eq('exercise_completions.user_id', user.id)
+            .neq('id', parseInt(exerciseId))
+            .limit(3),
+        supabase
+            .from('exercise_files')
+            .select('file_path, content')
+            .eq('exercise_id', parseInt(exerciseId))
+            .eq('tenant_id', tenantId),
+        supabase
+            .from('exercise_code_student_submissions')
+            .select('submission_code')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', user.id)
             .eq('tenant_id', tenantId)
-            .in('status', ['completed', 'failed'])
             .order('created_at', { ascending: false })
-        submissionHistory = mediaSubmissions ?? []
+            .single(),
+    ])
+
+    // Fetch evaluation history from unified exercise_evaluations table
+    let submissionHistory: { id: number; ai_evaluation: any; score: any; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    try {
+        const { data: evaluations } = await supabase
+            .from('exercise_evaluations')
+            .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at')
+            .eq('exercise_id', parseInt(exerciseId))
+            .eq('user_id', user.id)
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false })
+
+        // Map to legacy format for AudioExercise component compatibility
+        submissionHistory = (evaluations ?? []).map(ev => ({
+            id: Number(ev.id),
+            ai_evaluation: ev.ai_result,
+            score: ev.score,
+            status: ev.passed ? 'completed' : 'failed',
+            media_url: '',
+            created_at: ev.created_at,
+            duration_seconds: (ev.ai_metrics as any)?.duration_seconds ?? null,
+        }))
     } catch {
         // RLS or table access may fail — gracefully degrade
     }
@@ -138,10 +146,11 @@ export default async function ExercisePage({ params }: PageProps) {
         ? exercise.courses[0]?.title
         : (exercise.courses as any)?.title || 'Course'
 
+    const tExList = await getTranslations('exercises.list')
     const breadcrumbLinks = [
-        { href: '/dashboard/student', label: 'Dashboard' },
+        { href: '/dashboard/student', label: tExList('breadcrumb.dashboard') },
         { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
-        { href: `/dashboard/student/courses/${courseId}/exercises`, label: 'Exercises' },
+        { href: `/dashboard/student/courses/${courseId}/exercises`, label: tExList('breadcrumb.exercises') },
         { href: '#', label: exercise.title },
     ]
 
@@ -188,11 +197,12 @@ export default async function ExercisePage({ params }: PageProps) {
                         exerciseId={exercise.id}
                         isExerciseCompleted={isExerciseCompleted}
                         userCode={lastSubmission?.submission_code}
+                        tenantId={tenantId}
                     />
 
                     {otherExercises && otherExercises.length > 0 && (
                         <ToggleableSection
-                            title={<h3 className="font-semibold">Recommended Exercises</h3>}
+                            title={<h3 className="font-semibold">{t('moreExercises')}</h3>}
                         >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                                 {otherExercises.map((ex: any) => (

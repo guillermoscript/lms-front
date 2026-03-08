@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { IconFileText, IconCalendar } from "@tabler/icons-react"
 import { useTranslations } from "next-intl"
 
@@ -19,8 +20,8 @@ interface UpcomingExamsProps {
 export function UpcomingExams({ exams }: UpcomingExamsProps) {
   const t = useTranslations('upcomingExams')
 
-  const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
-  const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }), [])
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }), [])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

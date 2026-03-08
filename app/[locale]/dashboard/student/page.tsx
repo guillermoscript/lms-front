@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 
 async function getData(userId: string, tenantId: string) {
   const supabase = await createClient()
@@ -129,6 +130,36 @@ export default async function StudentDashboard() {
           lessonsCompleted={totalLessonsCompleted}
         />
 
+        {/* Getting Started Checklist */}
+        <OnboardingChecklist
+          storageKey={`student-${user.id}`}
+          title={t('onboarding.title')}
+          subtitle={t('onboarding.subtitle')}
+          steps={[
+            {
+              id: 'browse-courses',
+              label: t('onboarding.browseCourses'),
+              description: t('onboarding.browseCoursesDesc'),
+              href: '/dashboard/student/browse',
+              completed: data.courses.length > 0,
+            },
+            {
+              id: 'complete-lesson',
+              label: t('onboarding.completeLesson'),
+              description: t('onboarding.completeLessonDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: totalLessonsCompleted > 0,
+            },
+            {
+              id: 'finish-course',
+              label: t('onboarding.finishCourse'),
+              description: t('onboarding.finishCourseDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: coursesCompleted.length > 0,
+            },
+          ]}
+        />
+
         {/* Stats Cards */}
         <StatsCards
           totalLessonsCompleted={totalLessonsCompleted}
@@ -162,7 +193,7 @@ export default async function StudentDashboard() {
               <section className="space-y-4">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <IconCircleCheck size={20} className="text-emerald-500" />
-                  Completed
+                  {tCommon('completed')}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {coursesCompleted.slice(0, 4).map((course) => (
@@ -170,7 +201,7 @@ export default async function StudentDashboard() {
                       <div className="bg-card border border-border rounded-xl p-4 hover:border-emerald-500/30 transition-colors group">
                         <h3 className="text-sm font-bold truncate group-hover:text-primary transition-colors">{course.title}</h3>
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                          {course.totalLessons} lessons completed
+                          {course.totalLessons} {tCommon('lessonsCompleted')}
                         </p>
                       </div>
                     </Link>

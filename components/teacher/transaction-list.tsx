@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -10,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DollarSign } from 'lucide-react'
+import { IconCurrencyDollar } from '@tabler/icons-react'
 
 interface Transaction {
   amount: string
@@ -24,18 +25,20 @@ interface TransactionListProps {
 }
 
 export function TransactionList({ transactions }: TransactionListProps) {
+  const t = useTranslations('dashboard.teacher.revenue.transactions')
+
   if (transactions.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>No transactions yet</CardDescription>
+          <CardTitle>{t('title')}</CardTitle>
+          <CardDescription>{t('empty')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+            <IconCurrencyDollar className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              Transactions from student purchases will appear here
+              {t('emptyDescription')}
             </p>
           </div>
         </CardContent>
@@ -46,24 +49,24 @@ export function TransactionList({ transactions }: TransactionListProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
-        <CardDescription>All successful student purchases</CardDescription>
+        <CardTitle>{t('title')}</CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('date')}</TableHead>
+              <TableHead>{t('amount')}</TableHead>
+              <TableHead>{t('provider')}</TableHead>
+              <TableHead>{t('status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.map((transaction, index) => (
               <TableRow key={index}>
                 <TableCell>
-                  {new Date(transaction.created_at).toLocaleDateString('en-US', {
+                  {new Date(transaction.created_at).toLocaleDateString(undefined, {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -71,7 +74,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                     minute: '2-digit',
                   })}
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium tabular-nums">
                   ${parseFloat(transaction.amount).toFixed(2)}
                 </TableCell>
                 <TableCell className="capitalize">

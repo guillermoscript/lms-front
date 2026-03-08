@@ -168,7 +168,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
       }
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Failed to save exercise')
+      setError(err.message || t('saveError'))
       setLoading(false)
     }
   }
@@ -185,29 +185,29 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
     icon: React.ReactNode
     complete: boolean
   }[] = [
-    {
-      key: 'details',
-      label: t('details'),
-      icon: <IconSettings2 className="h-4 w-4" />,
-      complete: isDetailsComplete,
-    },
-    ...(isAudioType ? [{
-      key: 'audio-config' as ExerciseStep,
-      label: t('audioSetupTitle'),
-      icon: <IconMicrophone className="h-4 w-4" />,
-      complete: formData.topic_prompt.trim().length > 0,
-    }] : [{
-      key: 'ai-config' as ExerciseStep,
-      label: t('aiConfigTitle'),
-      icon: <IconRobot className="h-4 w-4" />,
-      complete: hasAIConfig,
-    }]),
-  ]
+      {
+        key: 'details',
+        label: t('details'),
+        icon: <IconSettings2 className="h-4 w-4" />,
+        complete: isDetailsComplete,
+      },
+      ...(isAudioType ? [{
+        key: 'audio-config' as ExerciseStep,
+        label: t('audioSetupTitle'),
+        icon: <IconMicrophone className="h-4 w-4" />,
+        complete: formData.topic_prompt.trim().length > 0,
+      }] : [{
+        key: 'ai-config' as ExerciseStep,
+        label: t('aiConfigTitle'),
+        icon: <IconRobot className="h-4 w-4" />,
+        complete: hasAIConfig,
+      }]),
+    ]
 
   return (
     <div className="flex flex-col">
       {/* ── Toolbar ──────────────────────────────────────── */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75 fill-mode-both">
         {/* Step nav */}
         <nav className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 w-fit">
           {steps.map((step, i) => (
@@ -258,7 +258,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : saveSuccess ? (
               <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
             ) : (
@@ -274,7 +274,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : (
               <IconEye className="h-3.5 w-3.5" />
             )}
@@ -292,6 +292,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
             type="button"
             onClick={() => setError(null)}
             className="text-destructive/60 hover:text-destructive"
+            aria-label={t('dismissError')}
           >
             <IconX className="h-4 w-4" />
           </button>
@@ -300,7 +301,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
 
       {/* ── STEP 1: Details ─────────────────────────────── */}
       {activeStep === 'details' && (
-        <div className="animate-in fade-in slide-in-from-left-2 duration-300 max-w-3xl">
+        <div className="animate-in fade-in slide-in-from-left-2 duration-300 ">
           {/* Title — large borderless input */}
           <div className="mb-8">
             <input
@@ -327,8 +328,8 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
               value={formData.description}
               onChange={(e) => updateField('description', e.target.value)}
               placeholder={t('descriptionPlaceholder')}
-              rows={3}
-              className="resize-none border-muted bg-muted/30 transition-colors focus:bg-background"
+              rows={7}
+              className="border-muted bg-muted/30 transition-colors focus:bg-background"
             />
           </div>
 
@@ -428,7 +429,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
                     }
                     className="h-10 w-20 border-muted bg-muted/30 text-center"
                   />
-                  <span className="text-xs text-muted-foreground">min</span>
+                  <span className="text-xs text-muted-foreground">{t('timeLimitUnit')}</span>
                 </div>
               </div>
 
@@ -445,9 +446,9 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
+                    <SelectItem value="draft">{t('statusDraft')}</SelectItem>
+                    <SelectItem value="published">{t('statusPublished')}</SelectItem>
+                    <SelectItem value="archived">{t('statusArchived')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -475,7 +476,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
 
       {/* ── STEP 2: AI Configuration ────────────────────── */}
       {activeStep === 'ai-config' && (
-        <div className="animate-in fade-in slide-in-from-left-2 duration-300 max-w-3xl">
+        <div className="animate-in fade-in slide-in-from-left-2 duration-300 ">
           {/* Header */}
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
@@ -514,7 +515,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
               onChange={(e) => updateField('instructions', e.target.value)}
               placeholder={t('studentInsPlaceholder')}
               rows={5}
-              className="resize-none border-muted bg-muted/30 transition-colors focus:bg-background"
+              className="border-muted bg-muted/30 transition-colors focus:bg-background"
             />
             <p className="mt-1.5 text-xs text-muted-foreground/70">
               {t('studentInsHint')}
@@ -556,7 +557,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
                 onChange={(e) => updateField('system_prompt', e.target.value)}
                 placeholder={t('aiSystemPromptPlaceholder')}
                 rows={8}
-                className="resize-none rounded-none border-0 bg-transparent font-mono text-[13px] leading-6 text-[#cdd6f4] caret-[#89b4fa] placeholder:text-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="rounded-none border-0 bg-transparent font-mono text-[13px] leading-6 text-[#cdd6f4] caret-[#89b4fa] placeholder:text-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
           </div>
@@ -586,7 +587,7 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
 
       {/* ── STEP: Audio Configuration ────────────────────── */}
       {activeStep === 'audio-config' && (
-        <div className="animate-in fade-in slide-in-from-left-2 duration-300 max-w-3xl space-y-6">
+        <div className="animate-in fade-in slide-in-from-left-2 duration-300  space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10">
@@ -612,8 +613,8 @@ export function ExerciseBuilder({ courseId, lessonId, initialData }: ExerciseBui
               value={formData.topic_prompt}
               onChange={(e) => updateField('topic_prompt', e.target.value)}
               placeholder={t('topicPromptPlaceholder')}
-              rows={3}
-              className="resize-none border-muted bg-muted/30 transition-colors focus:bg-background"
+              rows={7}
+              className="border-muted bg-muted/30 transition-colors focus:bg-background"
             />
             <p className="mt-1.5 text-xs text-muted-foreground/70">
               {t('topicPromptHint')}

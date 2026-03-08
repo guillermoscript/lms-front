@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { IconCircleCheck, IconFileText } from "@tabler/icons-react"
 import { useTranslations } from "next-intl"
 
@@ -17,8 +18,8 @@ interface RecentActivityProps {
 export function RecentActivity({ submissions }: RecentActivityProps) {
   const t = useTranslations('recentActivity')
 
-  const relativeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-  const dateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+  const relativeFormatter = useMemo(() => new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' }), [])
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }), [])
 
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
@@ -47,7 +48,7 @@ export function RecentActivity({ submissions }: RecentActivityProps) {
             {submissions.slice(0, 4).map((submission) => (
               <div
                 key={submission.submission_id}
-                className="flex items-center gap-3 p-3 rounded-xl"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors"
               >
                 <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
                   <IconCircleCheck className="w-4 h-4 text-emerald-500" />

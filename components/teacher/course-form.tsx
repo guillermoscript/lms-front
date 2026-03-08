@@ -104,11 +104,9 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         <CardContent className="space-y-6">
           <Alert variant="destructive">
             <IconAlertTriangle className="h-4 w-4" />
-            <AlertTitle>Course Limit Reached</AlertTitle>
+            <AlertTitle>{t('limitReached')}</AlertTitle>
             <AlertDescription>
-              Your {limitInfo.plan} plan is limited to {limitInfo.limit} courses.
-              You currently have {limitInfo.currentCount} courses.
-              Please upgrade your plan to create more courses.
+              {t('limitReachedDesc', { plan: limitInfo.plan, limit: limitInfo.limit, current: limitInfo.currentCount })}
             </AlertDescription>
           </Alert>
           <div className="flex gap-3">
@@ -120,7 +118,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
             </Link>
             <Link href="/pricing" className="flex-1">
               <Button className="w-full">
-                Upgrade Plan
+                {t('upgradePlan')}
               </Button>
             </Link>
           </div>
@@ -140,9 +138,9 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           {!initialData && limitInfo && limitInfo.canCreate && limitInfo.currentCount / limitInfo.limit > 0.8 && (
             <Alert>
               <IconAlertTriangle className="h-4 w-4" />
-              <AlertTitle>Approaching Course Limit</AlertTitle>
+              <AlertTitle>{t('approachingLimit')}</AlertTitle>
               <AlertDescription>
-                You have used {limitInfo.currentCount} of {limitInfo.limit} courses on your {limitInfo.plan} plan.
+                {t('approachingLimitDesc', { current: limitInfo.currentCount, limit: limitInfo.limit, plan: limitInfo.plan })}
               </AlertDescription>
             </Alert>
           )}
@@ -246,7 +244,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               </Button>
             </Link>
             <Button type="submit" className="flex-1" disabled={loading}>
-              {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
               {initialData ? t('actions.update') : t('actions.create')}
             </Button>
           </div>

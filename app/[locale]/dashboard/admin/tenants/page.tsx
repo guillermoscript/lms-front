@@ -7,7 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function TenantsPage() {
-  const t = await getTranslations('dashboard.admin')
+  const t = await getTranslations('dashboard.admin.tenants')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const isSuper = await isSuperAdmin()
   if (!isSuper) {
@@ -29,8 +29,8 @@ export default async function TenantsPage() {
         ]}
       />
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tenant Management</h1>
-        <Badge variant="outline">Super Admin</Badge>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <Badge variant="outline">{t('superAdmin')}</Badge>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -38,22 +38,37 @@ export default async function TenantsPage() {
           <Card key={tenant.id}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{tenant.name}</CardTitle>
+                <CardTitle className="text-lg truncate">{tenant.name}</CardTitle>
                 <Badge variant={tenant.status === 'active' ? 'default' : 'destructive'}>
                   {tenant.status}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>Slug: <code className="text-xs">{tenant.slug}</code></p>
-                <p>Plan: <span className="capitalize">{tenant.plan}</span></p>
-                <p>Members: {tenant.tenant_users?.[0]?.count || 0}</p>
-                <p>Created: {new Date(tenant.created_at).toLocaleDateString()}</p>
+              <dl className="space-y-1 text-sm text-muted-foreground">
+                <div className="flex gap-1">
+                  <dt>{t('slug')}:</dt>
+                  <dd><code className="text-xs">{tenant.slug}</code></dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{t('plan')}:</dt>
+                  <dd className="capitalize">{tenant.plan}</dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{t('members')}:</dt>
+                  <dd>{tenant.tenant_users?.[0]?.count || 0}</dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{t('created')}:</dt>
+                  <dd>{new Date(tenant.created_at).toLocaleDateString()}</dd>
+                </div>
                 {tenant.stripe_account_id && (
-                  <p>Stripe: Connected</p>
+                  <div className="flex gap-1">
+                    <dt>Stripe:</dt>
+                    <dd>{t('stripeConnected')}</dd>
+                  </div>
                 )}
-              </div>
+              </dl>
             </CardContent>
           </Card>
         ))}

@@ -32,6 +32,7 @@ export function RoleAssignmentDialog({
   onOpenChange
 }: RoleAssignmentDialogProps) {
   const t = useTranslations('dashboard.admin.users.actions.dialogs.roles')
+  const tDialogs = useTranslations('dashboard.admin.users.actions.dialogs')
   const tt = useTranslations('dashboard.admin.users.actions.toasts')
   const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles)
   const [loading, setLoading] = useState(false)
@@ -108,7 +109,7 @@ export function RoleAssignmentDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            {useTranslations('dashboard.admin.users.actions.dialogs')('cancel')}
+            {tDialogs('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? t('saving') : t('save')}

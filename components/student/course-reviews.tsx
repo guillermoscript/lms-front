@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { IconStar, IconStarFilled, IconUser } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 
 interface Review {
   review_id: number
@@ -95,7 +96,7 @@ export function CourseReviews({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (rating === 0) {
-      alert(t('selectRating'))
+      toast.error(t('selectRating'))
       return
     }
 
@@ -118,7 +119,7 @@ export function CourseReviews({
       router.refresh()
     } catch (error) {
       console.error('Error submitting review:', error)
-      alert(t('errorSubmitting'))
+      toast.error(t('errorSubmitting'))
     } finally {
       setSubmitting(false)
     }
@@ -169,6 +170,7 @@ export function CourseReviews({
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
                     className="transition-transform hover:scale-110"
+                    aria-label={t('starRating', { star })}
                   >
                     {star <= (hoverRating || rating) ? (
                       <IconStarFilled className="h-8 w-8 text-yellow-500" />
