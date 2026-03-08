@@ -15,6 +15,7 @@ import {
   IconFileText,
 } from '@tabler/icons-react'
 import { CourseReviews } from '@/components/student/course-reviews'
+import { AristotleStudySection } from '@/components/aristotle/aristotle-study-section'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -72,6 +73,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     { data: exams },
     { data: exercises },
     { data: userReview },
+    { data: tutorConfig },
   ] = await Promise.all([
     course.author_id
       ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
@@ -107,6 +109,12 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
       .single(),
+    supabase
+      .from('course_ai_tutors')
+      .select('enabled')
+      .eq('course_id', numericCourseId)
+      .eq('tenant_id', tenantId)
+      .single(),
   ])
 
   const authorProfile = authorData
@@ -118,6 +126,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const examCount = exams?.length || 0
   const exerciseCount = exercises?.length || 0
   const userHasReviewed = !!userReview
+  const aristotleEnabled = tutorConfig?.enabled ?? false
 
   return (
     <div className="min-h-screen bg-background">
@@ -307,6 +316,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             </div>
           )}
         </div>
+
+        {/* Aristotle Study Tab */}
+        {aristotleEnabled && (
+          <AristotleStudySection courseId={numericCourseId} />
+        )}
 
         {/* Course Reviews */}
         <div className="mt-8">

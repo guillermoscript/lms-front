@@ -55,7 +55,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {course.completedLessons}/{course.totalLessons} lessons
+                  {course.completedLessons}/{course.totalLessons} {t('lessons')}
                 </span>
                 <span className="text-foreground font-bold tabular-nums">{course.progress}%</span>
               </div>

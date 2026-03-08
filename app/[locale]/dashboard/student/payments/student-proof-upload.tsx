@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { IconUpload, IconLoader2 } from '@tabler/icons-react'
 import { uploadStudentPaymentProof } from '@/app/actions/payment-requests'
+import { useTranslations } from 'next-intl'
 
 interface StudentProofUploadProps {
   requestId: number
@@ -15,13 +16,20 @@ export function StudentProofUpload({ requestId }: StudentProofUploadProps) {
   const router = useRouter()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const t = useTranslations('dashboard.student.payments.proofUpload')
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(t('invalidFileType'))
+      return
+    }
+
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File must be less than 10MB')
+      toast.error(t('fileTooLarge'))
       return
     }
 
@@ -30,10 +38,10 @@ export function StudentProofUpload({ requestId }: StudentProofUploadProps) {
       const formData = new FormData()
       formData.append('file', file)
       await uploadStudentPaymentProof(requestId, formData)
-      toast.success('Proof uploaded successfully')
+      toast.success(t('uploadSuccess'))
       router.refresh()
     } catch (e: any) {
-      toast.error(e.message || 'Upload failed')
+      toast.error(e.message || t('uploadFailed'))
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -53,7 +61,7 @@ export function StudentProofUpload({ requestId }: StudentProofUploadProps) {
         ) : (
           <IconUpload className="mr-1 h-3 w-3" />
         )}
-        {uploading ? 'Uploading...' : 'Upload Proof'}
+        {uploading ? t('uploading') : t('uploadProof')}
       </Button>
       <input
         ref={inputRef}

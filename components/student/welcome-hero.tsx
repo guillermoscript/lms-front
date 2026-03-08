@@ -1,8 +1,7 @@
 "use client"
 
-import * as motion from "motion/react-client"
 import { Button } from "@/components/ui/button"
-import { IconArrowRight } from "@tabler/icons-react"
+import { IconArrowRight, IconPlayerPlay } from "@tabler/icons-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 
@@ -10,55 +9,48 @@ interface WelcomeHeroProps {
   userName: string
   coursesInProgress: number
   lessonsCompleted: number
+  nextCourse?: {
+    course_id: number
+    title: string
+  } | null
 }
 
-export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted }: WelcomeHeroProps) {
+export function WelcomeHero({ userName, coursesInProgress, lessonsCompleted, nextCourse }: WelcomeHeroProps) {
   const t = useTranslations('welcomeHero')
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-6 md:p-8 text-primary-foreground"
+    <div
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-2"
       data-testid="welcome-hero"
     >
-      {/* Subtle decorative pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <svg
-          className="absolute right-0 top-0 h-full w-1/2"
-          viewBox="0 0 400 400"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <circle cx="300" cy="100" r="200" stroke="currentColor" strokeWidth="1" opacity="0.3" />
-          <circle cx="350" cy="200" r="150" stroke="currentColor" strokeWidth="1" opacity="0.2" />
-          <circle cx="250" cy="300" r="100" stroke="currentColor" strokeWidth="1" opacity="0.1" />
-        </svg>
+      <div className="space-y-1 min-w-0">
+        <h1 className="text-2xl font-bold tracking-tight truncate">
+          {t('welcomeBack', { userName })}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {coursesInProgress > 0
+            ? t('progressSummary', { courses: coursesInProgress, lessons: lessonsCompleted })
+            : t('getStarted')}
+        </p>
       </div>
 
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-balance">
-            {t('welcomeBack', { userName })}
-          </h1>
-          <p className="text-primary-foreground/70 max-w-lg">
-            {coursesInProgress > 0
-              ? `You have ${coursesInProgress} course${coursesInProgress === 1 ? '' : 's'} in progress and ${lessonsCompleted} lesson${lessonsCompleted === 1 ? '' : 's'} completed. Keep it up!`
-              : 'Start your learning journey by enrolling in a course.'}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3 shrink-0">
-          <Link href="/dashboard/student/browse">
-            <Button variant="secondary" className="font-bold gap-2 h-10 px-5">
-              Browse Courses
-              <IconArrowRight size={16} />
+      <div className="flex flex-wrap gap-2 shrink-0">
+        {nextCourse ? (
+          <Link href={`/dashboard/student/courses/${nextCourse.course_id}`}>
+            <Button className="gap-2 h-9 px-4 font-semibold">
+              <IconPlayerPlay size={15} />
+              {t('continueLearning')}
             </Button>
           </Link>
-        </div>
+        ) : (
+          <Link href="/dashboard/student/browse">
+            <Button variant="outline" className="gap-2 h-9 px-4 font-semibold">
+              {t('browseCourses')}
+              <IconArrowRight size={15} />
+            </Button>
+          </Link>
+        )}
       </div>
-    </motion.div>
+    </div>
   )
 }

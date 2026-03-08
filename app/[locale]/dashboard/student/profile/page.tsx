@@ -161,13 +161,13 @@ function SectionHeader({
 }) {
     return (
         <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
                 <div className={cn('p-2 rounded-xl shrink-0', iconBg, iconColor)}>
                     {icon}
                 </div>
-                <div>
-                    <h2 className="text-lg font-bold leading-tight">{title}</h2>
-                    {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+                <div className="min-w-0">
+                    <h2 className="text-lg font-bold leading-tight truncate">{title}</h2>
+                    {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
                 </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -179,7 +179,7 @@ function SectionHeader({
 }
 
 // ─── Purchased Course Card ────────────────────────────────────────────────────
-function PurchasedCourseCard({ course: ec }: { course: any }) {
+function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
     const isCompleted = ec.progress === 100
     const hasStarted = ec.completedLessons > 0
 
@@ -235,8 +235,8 @@ function PurchasedCourseCard({ course: ec }: { course: any }) {
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] text-muted-foreground">
                                 {ec.totalLessons === 0
-                                    ? 'No lessons yet'
-                                    : `${ec.completedLessons} / ${ec.totalLessons} lessons`}
+                                    ? labels.noLessons
+                                    : `${ec.completedLessons} / ${ec.totalLessons} ${labels.lessons}`}
                             </span>
                             <span className={cn(
                                 "text-[11px] font-bold tabular-nums",
@@ -244,7 +244,7 @@ function PurchasedCourseCard({ course: ec }: { course: any }) {
                                     : hasStarted ? "text-primary"
                                         : "text-muted-foreground"
                             )}>
-                                {isCompleted ? 'Completed' : hasStarted ? `${ec.progress}%` : 'Not started'}
+                                {isCompleted ? labels.completed : hasStarted ? `${ec.progress}%` : labels.notStarted}
                             </span>
                         </div>
                     </div>
@@ -268,6 +268,19 @@ export default async function ProfilePage() {
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
+    const tCommon = await getTranslations('common')
+    const tProgress = await getTranslations('dashboard.student.progress')
+
+    const transactionStatusLabel = (status: string) => {
+        const map: Record<string, string> = {
+            successful: t('txStatus.successful'),
+            pending: t('txStatus.pending'),
+            failed: t('txStatus.failed'),
+            canceled: t('txStatus.canceled'),
+            refunded: t('txStatus.refunded'),
+        }
+        return map[status] || status
+    }
 
     const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
     const currencyFormatter = (amount: number, currency: string) =>
@@ -278,7 +291,7 @@ export default async function ProfilePage() {
             <main className="container mx-auto px-4 md:px-8 py-8 md:py-12">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-black tracking-tight text-balance">{t('editProfile')}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('editProfile')}</h1>
                     <p className="text-muted-foreground mt-1">{t('editProfileSubtitle')}</p>
                 </div>
 
@@ -288,7 +301,7 @@ export default async function ProfilePage() {
 
                         {/* Profile Card */}
                         <Card className="border border-border overflow-hidden">
-                            <div className="h-24 bg-gradient-to-r from-primary/80 to-primary" />
+                            <div className="h-20 bg-primary" />
                             <CardContent className="px-6 pb-6 pt-0 -mt-12 text-center relative">
                                 <Avatar className="h-24 w-24 mx-auto border-4 border-background shadow-xl">
                                     <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Profile'} />
@@ -298,7 +311,7 @@ export default async function ProfilePage() {
                                 </Avatar>
 
                                 <div className="mt-3 space-y-1">
-                                    <h2 className="text-xl font-black tracking-tight truncate">{profile?.full_name || 'Student'}</h2>
+                                    <h2 className="text-xl font-bold tracking-tight truncate">{profile?.full_name || user.email?.split('@')[0]}</h2>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                     <div className="flex justify-center gap-2 pt-1">
                                         {profile?.user_roles?.map((ur: any) => (
@@ -342,13 +355,10 @@ export default async function ProfilePage() {
                         </Card>
 
                         {/* Subscription Card */}
-                        <Card className="border-none bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden relative group">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 motion-safe:group-hover:scale-110 transition-transform duration-500">
-                                <IconCrown size={80} />
-                            </div>
+                        <Card className="border border-border bg-card overflow-hidden">
                             <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    <IconCrown size={18} className="text-amber-300" />
+                                    <IconCrown size={18} className="text-primary" />
                                     {t('currentPlan')}
                                 </CardTitle>
                             </CardHeader>
@@ -356,28 +366,28 @@ export default async function ProfilePage() {
                                 {subscription ? (
                                     <>
                                         <div>
-                                            <h3 className="text-xl font-black">{subscription.plans?.plan_name}</h3>
-                                            <p className="text-primary-foreground/70 text-xs font-medium">
+                                            <h3 className="text-xl font-bold">{subscription.plans?.plan_name}</h3>
+                                            <p className="text-muted-foreground text-xs font-medium">
                                                 {t('renewsOn', { date: dateFormatter.format(new Date(subscription.end_date)) })}
                                             </p>
                                         </div>
                                         <div className="space-y-1.5">
-                                            {subscription.plans?.features?.split(',').slice(0, 3).map((f: string, i: number) => (
-                                                <div key={i} className="flex items-center gap-2 text-sm text-primary-foreground/80">
-                                                    <IconCheck size={14} className="text-emerald-300 shrink-0" />
+                                            {(subscription.plans?.features ?? '').split(',').filter(Boolean).slice(0, 3).map((f: string, i: number) => (
+                                                <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <IconCheck size={14} className="text-emerald-500 shrink-0" />
                                                     <span className="line-clamp-1">{f.trim()}</span>
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button variant="secondary" className="w-full rounded-xl h-10 font-bold">
+                                        <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
                                             {t('manageSubscription')}
                                         </Button>
                                     </>
                                 ) : (
                                     <>
-                                        <p className="text-sm text-primary-foreground/70">{t('noActiveSubscription')}</p>
+                                        <p className="text-sm text-muted-foreground">{t('noActiveSubscription')}</p>
                                         <Link href="/pricing">
-                                            <Button variant="secondary" className="w-full rounded-xl h-10 font-bold">
+                                            <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
                                                 {t('viewPlans')}
                                             </Button>
                                         </Link>
@@ -409,9 +419,9 @@ export default async function ProfilePage() {
                             <CardHeader className="border-b border-border">
                                 <SectionHeader
                                     icon={<IconBook2 size={20} />}
-                                    title="My Courses"
+                                    title={t('myCourses')}
                                     subtitle={enrolledCourses.length > 0
-                                        ? `${enrolledCourses.length} course${enrolledCourses.length !== 1 ? 's' : ''} enrolled`
+                                        ? t('coursesEnrolled', { count: enrolledCourses.length })
                                         : undefined}
                                     badge={enrolledCourses.length > 0 ? (
                                         <Badge variant="outline" className="font-bold text-xs">
@@ -421,7 +431,7 @@ export default async function ProfilePage() {
                                     action={enrolledCourses.length > 0 ? (
                                         <Link href="/dashboard/student/courses">
                                             <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs font-semibold">
-                                                View all
+                                                {tCommon('viewAll')}
                                                 <IconArrowRight size={13} />
                                             </Button>
                                         </Link>
@@ -432,7 +442,16 @@ export default async function ProfilePage() {
                                 {enrolledCourses.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {enrolledCourses.map((ec: any) => (
-                                            <PurchasedCourseCard key={ec.enrollment_id} course={ec} />
+                                            <PurchasedCourseCard
+                                                key={ec.enrollment_id}
+                                                course={ec}
+                                                labels={{
+                                                    noLessons: t('noLessonsYet'),
+                                                    lessons: tCommon('lessons'),
+                                                    completed: tProgress('completed'),
+                                                    notStarted: tProgress('notStarted'),
+                                                }}
+                                            />
                                         ))}
                                     </div>
                                 ) : (
@@ -440,14 +459,14 @@ export default async function ProfilePage() {
                                         <div className="h-14 w-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
                                             <IconBook2 className="h-7 w-7 text-primary/30" />
                                         </div>
-                                        <p className="font-semibold text-foreground">No courses yet</p>
+                                        <p className="font-semibold text-foreground">{t('noCoursesYet')}</p>
                                         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-                                            Courses you enroll in will appear here with your progress.
+                                            {t('noCoursesYetDesc')}
                                         </p>
-                                        <Link href="/dashboard/student/courses" className="mt-4">
+                                        <Link href="/dashboard/student/browse" className="mt-4">
                                             <Button size="sm" variant="outline" className="gap-2 font-semibold">
                                                 <IconPlayerPlay size={15} />
-                                                Browse courses
+                                                {tCommon('browseCourses')}
                                             </Button>
                                         </Link>
                                     </div>
@@ -497,7 +516,7 @@ export default async function ProfilePage() {
                                                                         ? "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5"
                                                                         : "text-muted-foreground border-border"
                                                             )}>
-                                                                {tx.status}
+                                                                {transactionStatusLabel(tx.status)}
                                                             </Badge>
                                                         </td>
                                                     </tr>

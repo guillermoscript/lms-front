@@ -104,21 +104,21 @@ export default async function StudentPaymentsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-    })
+    }).format(new Date(dateString))
   }
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })
+    }).format(new Date(dateString))
   }
 
   const canCancel = (status: string) => {
@@ -186,10 +186,9 @@ export default async function StudentPaymentsPage() {
 
                     return (
                       <TableRow key={request.request_id}>
-                        <TableCell className="font-medium">{product?.name || t('unknownProduct')}</TableCell>
+                        <TableCell className="font-medium max-w-[200px] truncate">{product?.name || t('unknownProduct')}</TableCell>
                         <TableCell>
-                          {request.payment_currency?.toUpperCase() || 'USD'}{' '}
-                          {parseFloat(request.payment_amount || '0').toFixed(2)}
+                          {new Intl.NumberFormat(undefined, { style: 'currency', currency: request.payment_currency || 'USD' }).format(parseFloat(request.payment_amount || '0'))}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusBadge.variant} className="gap-1">
@@ -212,7 +211,7 @@ export default async function StudentPaymentsPage() {
                             {request.proof_url ? (
                               <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
                                 <Button size="sm" variant="ghost">
-                                  {t('viewProof') || 'View Proof'}
+                                  {t('viewProof')}
                                 </Button>
                               </a>
                             ) : canCancel(request.status) ? (
@@ -241,8 +240,8 @@ export default async function StudentPaymentsPage() {
                 <Card key={request.request_id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-base">{product?.name || t('unknownProduct')}</CardTitle>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{product?.name || t('unknownProduct')}</CardTitle>
                         <CardDescription className="mt-1">
                           {formatDateTime(request.created_at)}
                         </CardDescription>
@@ -282,7 +281,7 @@ export default async function StudentPaymentsPage() {
                       {request.proof_url ? (
                         <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
                           <Button size="sm" variant="ghost">
-                            {t('viewProof') || 'View Proof'}
+                            {t('viewProof')}
                           </Button>
                         </a>
                       ) : canCancel(request.status) ? (

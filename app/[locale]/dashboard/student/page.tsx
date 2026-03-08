@@ -6,7 +6,7 @@ import { StatsCards } from '@/components/student/stats-cards'
 import { CourseProgressCard } from '@/components/student/course-progress-card'
 import { UpcomingExams } from '@/components/student/upcoming-exams'
 import { RecentActivity } from '@/components/student/recent-activity'
-import { IconRocket, IconSparkles, IconTrophy, IconCircleCheck } from '@tabler/icons-react'
+import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
@@ -120,15 +120,29 @@ export default async function StudentDashboard() {
   const coursesCompleted = data.courses.filter(c => c.progress === 100)
   const totalLessonsCompleted = data.lessonCompletions.length
 
+  // Find the best "continue" course — the one with most progress that isn't done
+  const nextCourse = coursesInProgress
+    .sort((a, b) => b.progress - a.progress)[0] || null
+
   return (
     <div className="min-h-screen bg-background" data-testid="student-dashboard">
       <main className="container mx-auto px-4 md:px-8 py-8 space-y-8">
-        {/* Welcome Hero */}
+        {/* Welcome + Continue CTA */}
         <WelcomeHero
           userName={user?.user_metadata?.full_name || user.email?.split('@')[0] || 'Student'}
           coursesInProgress={coursesInProgress.length}
           lessonsCompleted={totalLessonsCompleted}
+          nextCourse={nextCourse}
         />
+
+        {/* Inline stats — compact, not card-based */}
+        {data.courses.length > 0 && (
+          <StatsCards
+            totalLessonsCompleted={totalLessonsCompleted}
+            coursesInProgress={coursesInProgress.length}
+            coursesCompleted={coursesCompleted.length}
+          />
+        )}
 
         {/* Getting Started Checklist */}
         <OnboardingChecklist
@@ -158,13 +172,6 @@ export default async function StudentDashboard() {
               completed: coursesCompleted.length > 0,
             },
           ]}
-        />
-
-        {/* Stats Cards */}
-        <StatsCards
-          totalLessonsCompleted={totalLessonsCompleted}
-          coursesInProgress={coursesInProgress.length}
-          coursesCompleted={coursesCompleted.length}
         />
 
         {/* Main Content Grid */}

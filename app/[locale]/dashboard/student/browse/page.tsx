@@ -97,7 +97,7 @@ export default async function BrowseCoursesPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <IconSparkles className="w-6 h-6 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="browse-title">{t('title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight truncate" data-testid="browse-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">
           {t('subtitle')}
@@ -128,7 +128,7 @@ export default async function BrowseCoursesPage() {
           <IconSparkles className="h-4 w-4 text-primary" />
           <AlertTitle className="font-semibold">{t('activeSubscriptionTitle')}</AlertTitle>
           <AlertDescription>
-            {t.rich('activeSubscriptionDesc', {
+            {t('activeSubscriptionDesc', {
               planName: (activeSubscription.plan as any)?.plan_name || 'Premium',
             })}
           </AlertDescription>
@@ -143,7 +143,7 @@ export default async function BrowseCoursesPage() {
       ) : (
         <>
           <div className="mb-4 text-sm text-muted-foreground" data-testid="browse-course-count">
-            {t('showingCourses', { count: courses.length, s: courses.length === 1 ? '' : 's' })}
+            {t('showingCourses', { count: courses.length })}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => {
