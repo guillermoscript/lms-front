@@ -61,19 +61,21 @@ export async function getTemplates(): Promise<ActionResult<LandingPageTemplate[]
 
 export async function createLandingPage(
   name: string,
-  sections?: LandingSection[]
+  sections?: LandingSection[],
+  slug?: string
 ): Promise<ActionResult<LandingPage>> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
     const defaultSections = sections ?? [createSection('hero')]
+    const pageSlug = slug?.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'home'
     const { data, error } = await adminClient
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
         name,
-        slug: 'home',
+        slug: pageSlug,
         sections: defaultSections,
         settings: {},
         is_active: false,
@@ -85,13 +87,13 @@ export async function createLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to create landing page' } as ActionResult<LandingPage>
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to create page' } as ActionResult<LandingPage>
   }
 }
 
 export async function updateLandingPage(
   id: string,
-  updates: { name?: string; sections?: LandingSection[]; settings?: LandingPageSettings }
+  updates: { name?: string; slug?: string; sections?: LandingSection[]; settings?: LandingPageSettings }
 ): Promise<ActionResult<LandingPage>> {
   try {
     await verifyAdminAccess()
@@ -106,9 +108,13 @@ export async function updateLandingPage(
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
+    const sanitized = { ...updates, updated_at: new Date().toISOString() }
+    if (sanitized.slug) {
+      sanitized.slug = sanitized.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'home'
+    }
     const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(sanitized)
       .eq('id', id)
       .select()
       .single()
@@ -116,7 +122,7 @@ export async function updateLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to update landing page' } as ActionResult<LandingPage>
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update page' } as ActionResult<LandingPage>
   }
 }
 

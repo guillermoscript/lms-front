@@ -14,8 +14,10 @@ import {
   IconWorldUpload,
   IconDots,
   IconArrowRight,
+  IconExternalLink,
 } from '@tabler/icons-react'
-import type { LandingPage, LandingPageTemplate } from '@/lib/landing-pages/types'
+import type { LandingPage } from '@/lib/landing-pages/types'
+import type { BuiltInTemplate } from '@/lib/landing-pages/templates'
 import { LandingPageBuilder } from './landing-page-builder'
 import { TemplatePicker } from './template-picker'
 import {
@@ -44,12 +46,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 
 interface Props {
   pages: LandingPage[]
   plan: string
   tenantId: string
-  templates: Array<Omit<LandingPageTemplate, 'id' | 'created_at'>>
+  templates: BuiltInTemplate[]
 }
 
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -112,11 +115,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
 
   const canUseBuilder = PAID_PLANS.includes(plan)
 
-  async function handleCreateFromTemplate(templateSections: LandingPageTemplate['sections'], templateName: string) {
+  async function handleCreateFromTemplate(templateSections: BuiltInTemplate['sections'], templateName: string, slug?: string) {
     setLoading(true)
     setShowTemplatePicker(false)
-    const result = await createLandingPage(`${templateName} Page`, templateSections)
-    if (result.success && result.data) {
+    const result = await createLandingPage(`${templateName} Page`, templateSections, slug)
+    if (!result.success) {
+      toast.error(result.error || t('errors.createFailed'))
+    } else if (result.data) {
       setPages(prev => [result.data!, ...prev])
       setEditingPage(result.data!)
     }
@@ -127,7 +132,9 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
     if (!deleteTarget) return
     setLoading(true)
     const result = await deleteLandingPage(deleteTarget)
-    if (result.success) {
+    if (!result.success) {
+      toast.error(result.error || t('errors.deleteFailed'))
+    } else {
       setPages(prev => prev.filter(p => p.id !== deleteTarget))
     }
     setDeleteTarget(null)
@@ -137,7 +144,9 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   async function handleDuplicate(page: LandingPage) {
     setLoading(true)
     const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
-    if (result.success && result.data) {
+    if (!result.success) {
+      toast.error(result.error || t('errors.duplicateFailed'))
+    } else if (result.data) {
       setPages(prev => [result.data!, ...prev])
     }
     setLoading(false)
@@ -149,10 +158,12 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
       const result = await deactivateLandingPage(page.id)
       if (result.success) {
         setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
+      } else {
+        toast.error(result.error || t('errors.deactivateFailed'))
       }
     } else {
       if (page.status !== 'published') {
-        alert(t('pageCard.publishFirst'))
+        toast.warning(t('pageCard.publishFirst'))
         setLoading(false)
         return
       }
@@ -162,6 +173,8 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
           ...p,
           is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
         })))
+      } else {
+        toast.error(result.error || t('errors.activateFailed'))
       }
     }
     setLoading(false)
@@ -248,12 +261,15 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
               {pages.map(page => (
                 <div
                   key={page.id}
-                  className={`group relative rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer ${
+                  role="button"
+                  tabIndex={0}
+                  className={`group relative rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     page.is_active
                       ? 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50'
                       : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
                   }`}
                   onClick={() => setEditingPage(page)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingPage(page) } }}
                 >
                   {/* Mini preview */}
                   <div className="h-28 rounded-t-xl bg-zinc-950 border-b border-zinc-800/50 overflow-hidden">
@@ -266,7 +282,8 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                       <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-sm truncate">{page.name}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {sectionCount(page.sections?.length ?? 0)}
+                          <span className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">/{page.slug === 'home' ? '' : `p/${page.slug}`}</span>
+                          {' '}&middot; {sectionCount(page.sections?.length ?? 0)}
                           {page.updated_at && (
                             <> &middot; {new Date(page.updated_at).toLocaleDateString()}</>
                           )}
@@ -275,7 +292,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                       <div className="flex items-center gap-1.5 shrink-0">
                         {page.is_active && (
                           <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
                             {t('pageCard.live')}
                           </span>
                         )}
@@ -312,6 +329,9 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                             ) : (
                               <><IconWorldUpload className="w-3.5 h-3.5 mr-2" /> {t('pageCard.activate')}</>
                             )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.open(`/dashboard/admin/landing-page/preview/${page.id}`, '_blank')}>
+                            <IconExternalLink className="w-3.5 h-3.5 mr-2" /> {t('pageCard.preview')}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={loading}>
                             <IconCopy className="w-3.5 h-3.5 mr-2" /> {t('pageCard.duplicate')}

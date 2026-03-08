@@ -26,7 +26,7 @@ export default async function LandingPageAdminPage() {
       <AdminBreadcrumb
         items={[
           { label: 'Admin', href: '/dashboard/admin' },
-          { label: 'Landing Page Builder' },
+          { label: 'Pages' },
         ]}
       />
       <LandingPagesClient
