@@ -70,7 +70,7 @@ export function UserActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" aria-label={t('menu')}>
             <IconDots className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>

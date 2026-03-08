@@ -71,11 +71,12 @@ export function CoursesTable({
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Input
-          type="text"
+          type="search"
           placeholder={t('searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
+          aria-label={t('searchPlaceholder')}
         />
         <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')}>
           <SelectTrigger className="w-[180px]">

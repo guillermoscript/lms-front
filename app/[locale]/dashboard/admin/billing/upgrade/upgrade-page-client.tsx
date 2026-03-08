@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { PlanComparisonTable } from '@/components/admin/plan-comparison-table'
 import { ManualTransferForm } from '@/components/admin/manual-transfer-form'
 import { requestManualPlanUpgrade } from '@/app/actions/admin/billing'
+import { useTranslations } from 'next-intl'
 
 interface UpgradePageClientProps {
   plans: Array<{
@@ -23,6 +25,7 @@ interface UpgradePageClientProps {
 
 export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.admin.billing.upgrade')
   const [loading, setLoading] = useState(false)
   const [manualTransfer, setManualTransfer] = useState<{
     planId: string
@@ -43,11 +46,11 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
       if (data.url) {
         window.location.href = data.url
       } else {
-        alert(data.error || 'Failed to create checkout session')
+        toast.error(data.error || t('checkoutError'))
       }
     } catch (error) {
       console.error('Checkout error:', error)
-      alert('Failed to start checkout. Please try again.')
+      toast.error(t('checkoutFailed'))
     } finally {
       setLoading(false)
     }

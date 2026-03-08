@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function RevenuePage() {
-  const t = await getTranslations('dashboard.admin')
+  const t = await getTranslations('dashboard.admin.revenue')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const revenue = await getRevenueOverview()
 
@@ -18,16 +18,16 @@ export default async function RevenuePage() {
         ]}
       />
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Revenue</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          Track your school&apos;s revenue and earnings
+          {t('description')}
         </p>
       </div>
 
       {revenue.transactionCount === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No revenue data yet. Start selling courses to see your earnings here.
+            {t('empty')}
           </CardContent>
         </Card>
       ) : (
@@ -36,42 +36,42 @@ export default async function RevenuePage() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Total Revenue</CardDescription>
+                <CardDescription>{t('totalRevenue')}</CardDescription>
                 <CardTitle className="text-2xl">
                   {formatCurrency(revenue.totalRevenue, revenue.currency)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">
-                  {revenue.transactionCount} transactions
+                  {t('transactionCount', { count: revenue.transactionCount })}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Platform Fees Paid</CardDescription>
+                <CardDescription>{t('platformFees')}</CardDescription>
                 <CardTitle className="text-2xl text-muted-foreground">
                   {formatCurrency(revenue.platformFees, revenue.currency)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">
-                  Upgrade your plan to reduce fees
+                  {t('upgradeToReduce')}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Net Revenue</CardDescription>
+                <CardDescription>{t('netRevenue')}</CardDescription>
                 <CardTitle className="text-2xl text-green-600 dark:text-green-400">
                   {formatCurrency(revenue.netRevenue, revenue.currency)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">
-                  After platform fees
+                  {t('afterFees')}
                 </p>
               </CardContent>
             </Card>
@@ -81,8 +81,8 @@ export default async function RevenuePage() {
           {revenue.revenueByCourse.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Product</CardTitle>
-                <CardDescription>Top earning products</CardDescription>
+                <CardTitle>{t('revenueByProduct')}</CardTitle>
+                <CardDescription>{t('topEarning')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -103,8 +103,8 @@ export default async function RevenuePage() {
           {revenue.monthlyTrend.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Monthly Trend</CardTitle>
-                <CardDescription>Revenue over the last 12 months</CardDescription>
+                <CardTitle>{t('monthlyTrend')}</CardTitle>
+                <CardDescription>{t('monthlyTrendDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">

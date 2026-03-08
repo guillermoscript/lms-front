@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,6 +28,7 @@ interface TemplateFormProps {
 
 export function TemplateForm({ initialData, id }: TemplateFormProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.templateForm')
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -43,7 +45,7 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
     if (!newVariable) return
     const variable = newVariable.trim().toLowerCase().replace(/\s+/g, '_')
     if (formData.variables.includes(variable)) {
-      toast.error('Variable already exists')
+      toast.error(t('variableExists'))
       return
     }
     setFormData({
@@ -62,7 +64,7 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
 
   const handleSave = async () => {
     if (!formData.name) {
-      toast.error('Template name is required')
+      toast.error(t('nameRequired'))
       return
     }
 
@@ -81,12 +83,12 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
       })
 
       if (res.ok) {
-        toast.success(id ? 'Template updated' : 'Template created')
+        toast.success(id ? t('updateSuccess') : t('createSuccess'))
         router.push('/dashboard/teacher/templates')
         router.refresh()
       } else {
         const data = await res.json()
-        throw new Error(data.error || 'Failed to save')
+        throw new Error(data.error || t('saveError'))
       }
     } catch (error: any) {
       toast.error(error.message)
@@ -96,7 +98,7 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
   }
 
   const renderPreview = (text: string) => {
-    if (!text) return <p className="text-muted-foreground italic">No content</p>
+    if (!text) return <p className="text-muted-foreground italic">{t('noContent')}</p>
     
     let highlighted = text
     formData.variables.forEach((v: string) => {
@@ -130,22 +132,22 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Give your template a name and category</CardDescription>
+            <CardTitle>{t('basicInfo')}</CardTitle>
+            <CardDescription>{t('basicInfoDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Template Name</Label>
+              <Label htmlFor="name">{t('nameLabel')}</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Grammar Assistant"
+                placeholder={t('namePlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">{t('categoryLabel')}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val) => setFormData({ ...formData, category: val })}
@@ -154,20 +156,20 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lesson_task">Lesson Task</SelectItem>
-                  <SelectItem value="exercise">Exercise</SelectItem>
-                  <SelectItem value="exam_grading">Exam Grading</SelectItem>
+                  <SelectItem value="lesson_task">{t('categoryLessonTask')}</SelectItem>
+                  <SelectItem value="exercise">{t('categoryExercise')}</SelectItem>
+                  <SelectItem value="exam_grading">{t('categoryExamGrading')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('descriptionLabel')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="What is this template for?"
+                placeholder={t('descriptionPlaceholder')}
                 rows={3}
               />
             </div>
@@ -177,10 +179,10 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Variables
+              {t('variables')}
               <IconInfoCircle size={16} className="text-muted-foreground" />
             </CardTitle>
-            <CardDescription>Define placeholders like {"{{topic}}"} to use in your templates</CardDescription>
+            <CardDescription>{t('variablesDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
@@ -188,7 +190,7 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
                 value={newVariable}
                 onChange={(e) => setNewVariable(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddVariable()}
-                placeholder="variable_name"
+                placeholder={t('variablePlaceholder')}
               />
               <Button type="button" onClick={handleAddVariable} variant="secondary">
                 <IconPlus size={18} />
@@ -201,13 +203,14 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
                   <button
                     onClick={() => handleRemoveVariable(variable)}
                     className="hover:text-destructive transition-colors"
+                    aria-label={t('removeVariable')}
                   >
                     <IconTrash size={14} />
                   </button>
                 </Badge>
               ))}
               {formData.variables.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">No variables added yet</p>
+                <p className="text-sm text-muted-foreground italic">{t('noVariables')}</p>
               )}
             </div>
           </CardContent>
@@ -216,14 +219,14 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
         <div className="flex gap-3">
           <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2">
             {loading ? (
-              <IconLoader2 className="animate-spin" size={18} />
+              <IconLoader2 className="motion-safe:animate-spin" size={18} />
             ) : (
               <IconDeviceFloppy size={18} />
             )}
-            {id ? 'Update Template' : 'Create Template'}
+            {id ? t('update') : t('create')}
           </Button>
           <Button variant="outline" onClick={() => router.back()}>
-            Cancel
+            {t('cancel')}
           </Button>
         </div>
       </div>
@@ -231,21 +234,21 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
       <div className="space-y-6">
         <Tabs defaultValue="instructions">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="instructions">Instructions</TabsTrigger>
-            <TabsTrigger value="system">System Prompt</TabsTrigger>
+            <TabsTrigger value="instructions">{t('instructionsTab')}</TabsTrigger>
+            <TabsTrigger value="system">{t('systemPromptTab')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="instructions" className="space-y-6 mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Student-Facing Instructions</CardTitle>
-                <CardDescription>This is what the student will see. Use {"{{variable}}"} syntax.</CardDescription>
+                <CardTitle>{t('instructionsTitle')}</CardTitle>
+                <CardDescription>{t('instructionsDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   value={formData.task_description_template}
                   onChange={(e) => setFormData({ ...formData, task_description_template: e.target.value })}
-                  placeholder="e.g. Write a short essay about {{topic}}..."
+                  placeholder={t('instructionsPlaceholder')}
                   rows={8}
                 />
                 <div className="space-y-2">
@@ -261,14 +264,14 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
           <TabsContent value="system" className="space-y-6 mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>AI System Instructions</CardTitle>
-                <CardDescription>Internal instructions for the AI model. Use {"{{variable}}"} syntax.</CardDescription>
+                <CardTitle>{t('systemPromptTitle')}</CardTitle>
+                <CardDescription>{t('systemPromptDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   value={formData.system_prompt_template}
                   onChange={(e) => setFormData({ ...formData, system_prompt_template: e.target.value })}
-                  placeholder="e.g. You are a helpful assistant evaluating an essay about {{topic}}..."
+                  placeholder={t('systemPromptPlaceholder')}
                   rows={8}
                 />
                 <div className="space-y-2">

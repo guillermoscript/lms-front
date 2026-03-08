@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { UsageMeter } from './usage-meter'
 import { IconCreditCard, IconCalendar, IconAlertTriangle } from '@tabler/icons-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface BillingOverviewProps {
   plan: string
@@ -39,6 +40,7 @@ export function BillingOverview({
   transactionFeePercent,
   onManageClick,
 }: BillingOverviewProps) {
+  const t = useTranslations('dashboard.admin.billing.overview')
   const isFree = plan === 'free'
   const periodStart = subscription?.currentPeriodStart ? new Date(subscription.currentPeriodStart) : null
   const periodEnd = billingPeriodEnd ? new Date(billingPeriodEnd) : null
@@ -58,14 +60,14 @@ export function BillingOverview({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                Current Plan
+                {t('currentPlan')}
                 <Badge variant={isFree ? 'secondary' : 'default'}>{planName}</Badge>
-                {isPastDue && <Badge variant="destructive">Past Due</Badge>}
+                {isPastDue && <Badge variant="destructive">{t('pastDue')}</Badge>}
               </CardTitle>
               <CardDescription>
                 {isFree
-                  ? 'You are on the free plan. Upgrade to unlock more features.'
-                  : `${transactionFeePercent}% transaction fee on student payments`
+                  ? t('freePlanDescription')
+                  : t('paidPlanDescription', { fee: transactionFeePercent })
                 }
               </CardDescription>
             </div>
@@ -73,12 +75,12 @@ export function BillingOverview({
               {!isFree && onManageClick && (
                 <Button variant="outline" size="sm" onClick={onManageClick}>
                   <IconCreditCard className="mr-2 h-4 w-4" />
-                  Manage
+                  {t('manage')}
                 </Button>
               )}
               <Link href="/dashboard/admin/billing/upgrade">
                 <Button size="sm">
-                  {isFree ? 'Upgrade' : 'Change Plan'}
+                  {isFree ? t('upgrade') : t('changePlan')}
                 </Button>
               </Link>
             </div>
@@ -93,7 +95,7 @@ export function BillingOverview({
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <IconCalendar className="h-4 w-4" />
                     <span>
-                      Period: {periodStart.toLocaleDateString()} — {periodEnd.toLocaleDateString()}
+                      {t('period', { start: periodStart.toLocaleDateString(), end: periodEnd.toLocaleDateString() })}
                     </span>
                   </div>
                 )}
@@ -101,20 +103,20 @@ export function BillingOverview({
                 {daysUntilEnd !== null && daysUntilEnd > 0 && !isPastDue && (
                   <div className="flex items-center gap-2 font-medium text-primary">
                     <IconCalendar className="h-4 w-4" />
-                    <span>{daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''} until next payment</span>
+                    <span>{t('daysUntilPayment', { count: daysUntilEnd })}</span>
                   </div>
                 )}
 
                 {subscription && (
                   <Badge variant="outline">
-                    {subscription.interval === 'yearly' ? 'Annual Billing' : 'Monthly Billing'}
+                    {subscription.interval === 'yearly' ? t('annualBilling') : t('monthlyBilling')}
                   </Badge>
                 )}
               </div>
 
               {subscription?.cancelAtPeriodEnd && periodEnd && (
                 <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
-                  Subscription will cancel on {periodEnd.toLocaleDateString()}
+                  {t('cancelOnDate', { date: periodEnd.toLocaleDateString() })}
                 </p>
               )}
             </div>
@@ -124,16 +126,16 @@ export function BillingOverview({
             <div className="flex flex-col gap-3 rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm">
               <div className="flex items-start gap-2 text-destructive font-semibold text-base">
                 <IconAlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
-                <span>Subscription Past Due</span>
+                <span>{t('subscriptionPastDue')}</span>
               </div>
               <p className="text-muted-foreground">
-                Your payment was not received. Please make a payment to maintain your current plan features and avoid being downgraded.
+                {t('pastDueDescription')}
               </p>
 
               {gracePeriodEnd && (
                 <div className="rounded bg-destructive/10 p-2 mt-1 border border-destructive/20">
                   <p className="text-destructive font-medium">
-                    Grace period ends in <strong>{daysInGracePeriod} day{daysInGracePeriod !== 1 ? 's' : ''}</strong> ({gracePeriodEnd.toLocaleDateString()})
+                    {t('gracePeriodEnds', { count: daysInGracePeriod ?? 0, date: gracePeriodEnd.toLocaleDateString() })}
                   </p>
                 </div>
               )}
@@ -141,7 +143,7 @@ export function BillingOverview({
               <div className="flex gap-2 pt-2">
                 <Link href="/dashboard/admin/billing/upgrade">
                   <Button variant="destructive" size="sm">
-                    Make Payment Now
+                    {t('makePaymentNow')}
                   </Button>
                 </Link>
               </div>
@@ -152,10 +154,9 @@ export function BillingOverview({
             <div className="flex items-start gap-3 rounded-md bg-yellow-50 dark:bg-yellow-950 p-4 text-sm text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800">
               <IconAlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <p className="font-semibold">Renewal Required Soon</p>
+                <p className="font-semibold">{t('renewalRequired')}</p>
                 <p>
-                  Your subscription period ends in <strong>{daysUntilEnd} day{daysUntilEnd !== 1 ? 's' : ''}</strong>.
-                  Renew now to ensure uninterrupted service for your students.
+                  {t('renewalDescription', { count: daysUntilEnd ?? 0 })}
                 </p>
               </div>
             </div>
@@ -164,12 +165,12 @@ export function BillingOverview({
           {/* Usage Meters */}
           <div className="grid gap-4 md:grid-cols-2">
             <UsageMeter
-              label="Courses"
+              label={t('courses')}
               current={usage.courses.current}
               limit={usage.courses.limit}
             />
             <UsageMeter
-              label="Students"
+              label={t('students')}
               current={usage.students.current}
               limit={usage.students.limit}
             />

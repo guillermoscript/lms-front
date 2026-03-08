@@ -20,6 +20,7 @@ interface CodeChallengeWrapperProps {
     exerciseId: number;
     isExerciseCompleted: boolean;
     userCode?: string;
+    tenantId: string;
 }
 
 const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
@@ -59,6 +60,7 @@ export default function CodeChallengeWrapper({
     exerciseId,
     isExerciseCompleted: initialCompleted,
     userCode,
+    tenantId,
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const supabase = createClient();
@@ -72,7 +74,8 @@ export default function CodeChallengeWrapper({
                 exercise_id: exerciseId,
                 user_id: user.id,
                 completed_by: user.id,
-                score: 100
+                score: 100,
+                tenant_id: tenantId,
             });
         }
     }

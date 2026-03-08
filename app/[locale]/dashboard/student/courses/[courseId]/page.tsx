@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
@@ -10,12 +10,12 @@ import {
   IconBarbell,
   IconBook,
   IconCheck,
-  IconCircle,
   IconClock,
   IconPlayerPlay,
   IconFileText,
 } from '@tabler/icons-react'
 import { CourseReviews } from '@/components/student/course-reviews'
+import { AristotleStudySection } from '@/components/aristotle/aristotle-study-section'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -28,6 +28,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const supabase = await createClient()
   const t = await getTranslations('courseDetails')
   const tenantId = await getCurrentTenantId()
+  const numericCourseId = parseInt(courseId)
 
   const {
     data: { user },
@@ -37,103 +38,95 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', user.id)
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'active')
-    .eq('tenant_id', tenantId)
-    .single()
+  // Verify enrollment + fetch course in parallel
+  const [{ data: enrollment }, { data: course, error }] = await Promise.all([
+    supabase
+      .from('enrollments')
+      .select('enrollment_id')
+      .eq('user_id', user.id)
+      .eq('course_id', numericCourseId)
+      .eq('status', 'active')
+      .eq('tenant_id', tenantId)
+      .single(),
+    supabase
+      .from('courses')
+      .select('course_id, title, description, thumbnail_url, author_id')
+      .eq('course_id', numericCourseId)
+      .eq('tenant_id', tenantId)
+      .single(),
+  ])
 
   if (!enrollment) {
     redirect('/dashboard/student')
   }
 
-  // Get course
-  const { data: course, error } = await supabase
-    .from('courses')
-    .select(`
-      course_id,
-      title,
-      description,
-      thumbnail_url,
-      author_id
-    `)
-    .eq('course_id', parseInt(courseId))
-    .eq('tenant_id', tenantId)
-    .single()
-
-  // Get author profile separately
-  let authorProfile = null
-  if (course && course.author_id) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('full_name, avatar_url')
-      .eq('id', course.author_id)
-      .single()
-    authorProfile = data
-  }
-
   if (error || !course) {
+    console.error('Error fetching course:', error)
     notFound()
   }
 
-  // Get lessons
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('id, title, sequence, description')
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'published')
-    .eq('tenant_id', tenantId)
-    .order('sequence', { ascending: true })
+  // Fetch all remaining data in parallel
+  const [
+    { data: authorData },
+    { data: lessons },
+    { data: completions },
+    { data: exams },
+    { data: exercises },
+    { data: userReview },
+    { data: tutorConfig },
+  ] = await Promise.all([
+    course.author_id
+      ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('lessons')
+      .select('id, title, sequence, description')
+      .eq('course_id', numericCourseId)
+      .eq('status', 'published')
+      .eq('tenant_id', tenantId)
+      .order('sequence', { ascending: true }),
+    supabase
+      .from('lesson_completions')
+      .select('lesson_id')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('exams')
+      .select('exam_id')
+      .eq('course_id', numericCourseId)
+      .eq('status', 'published')
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('exercises')
+      .select('id')
+      .eq('course_id', numericCourseId)
+      .eq('status', 'published')
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('reviews')
+      .select('review_id')
+      .eq('course_id', numericCourseId)
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
+      .single(),
+    supabase
+      .from('course_ai_tutors')
+      .select('enabled')
+      .eq('course_id', numericCourseId)
+      .eq('tenant_id', tenantId)
+      .single(),
+  ])
 
-  // Get completed lessons
-  const { data: completions } = await supabase
-    .from('lesson_completions')
-    .select('lesson_id')
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-
+  const authorProfile = authorData
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
   const totalLessons = lessons?.length || 0
   const completedCount = lessons?.filter((l) => completedLessonIds.has(l.id)).length || 0
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
-
-  // Find next lesson to continue
   const nextLesson = lessons?.find((l) => !completedLessonIds.has(l.id)) || lessons?.[0]
-
-  // Get exams count
-  const { data: exams } = await supabase
-    .from('exams')
-    .select('exam_id')
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'published')
-    .eq('tenant_id', tenantId)
-
   const examCount = exams?.length || 0
-
-  // Get exercises count
-  const { data: exercises } = await supabase
-    .from('exercises')
-    .select('id')
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'published')
-    .eq('tenant_id', tenantId)
-
   const exerciseCount = exercises?.length || 0
-
-  // Check if user has already reviewed this course
-  const { data: userReview } = await supabase
-    .from('reviews')
-    .select('review_id')
-    .eq('course_id', parseInt(courseId))
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-    .single()
-
   const userHasReviewed = !!userReview
+  const aristotleEnabled = tutorConfig?.enabled ?? false
 
   return (
     <div className="min-h-screen bg-background">
@@ -162,7 +155,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
             <div className="flex-1 space-y-4">
               <div className="space-y-2">
-                <h1 className="text-2xl font-black md:text-3xl lg:text-4xl tracking-tight leading-tight">
+                <h1 className="text-2xl font-black md:text-3xl lg:text-4xl tracking-tight leading-tight line-clamp-3">
                   {course.title}
                 </h1>
 
@@ -256,7 +249,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                   <CardContent className="flex items-center gap-4 p-5 md:p-6">
                     <div
                       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
-                          ? 'bg-green-500/20 text-green-500'
+                          ? 'bg-emerald-500/20 text-emerald-600'
                           : 'bg-background text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary shadow-sm border'
                         }`}
                     >
@@ -293,7 +286,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
                     <div className="hidden sm:block">
                       {isCompleted ? (
-                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20 font-bold px-3 py-1">
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 font-bold px-3 py-1">
                           {t('completed')}
                         </Badge>
                       ) : (
@@ -305,7 +298,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     <div className="sm:hidden">
                       <IconPlayerPlay className={cn(
                         "h-5 w-5 transition-transform group-hover:scale-110",
-                        isCompleted ? "text-green-500" : "text-primary"
+                        isCompleted ? "text-emerald-600" : "text-primary"
                       )} />
                     </div>
                   </CardContent>
@@ -323,6 +316,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             </div>
           )}
         </div>
+
+        {/* Aristotle Study Tab */}
+        {aristotleEnabled && (
+          <AristotleStudySection courseId={numericCourseId} />
+        )}
 
         {/* Course Reviews */}
         <div className="mt-8">

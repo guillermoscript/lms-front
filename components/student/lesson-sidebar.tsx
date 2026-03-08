@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { IconCheck, IconCircle, IconPlayerPlay, IconArrowLeft, IconBook } from '@tabler/icons-react'
+import { IconCheck, IconPlayerPlay, IconArrowLeft } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface Lesson {
@@ -45,7 +45,7 @@ export function LessonSidebar({
         {/* Progress bar */}
         <div className="mt-3 space-y-1.5">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="font-medium">{completedCount}/{lessons.length} lessons</span>
+            <span className="font-medium">{completedCount}/{lessons.length}</span>
             <span className="font-bold tabular-nums">{progress}%</span>
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -58,16 +58,16 @@ export function LessonSidebar({
       </div>
 
       {/* Lesson list */}
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-2" aria-label={t('lessonList')}>
         <ul className="space-y-0.5">
-          {lessons.map((lesson, idx) => {
+          {lessons.map((lesson) => {
             const isActive = lesson.id === currentLessonId
-            const isAccessible = true // All published lessons accessible
 
             return (
               <li key={lesson.id}>
                 <Link
                   href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',
                     isActive

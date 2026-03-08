@@ -62,11 +62,12 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
       {/* Search Bar */}
       <div className="mb-4">
         <Input
-          type="text"
+          type="search"
           placeholder={t('searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-md"
+          aria-label={t('searchPlaceholder')}
         />
       </div>
 
@@ -136,7 +137,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                       {isDeactivated ? (
                         <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
                           {t('status.active')}
                         </Badge>
                       )}

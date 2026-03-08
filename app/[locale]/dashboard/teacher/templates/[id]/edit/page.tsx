@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getTranslations } from 'next-intl/server'
 import { TemplateForm } from '@/components/teacher/template-form'
 import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
@@ -16,6 +17,7 @@ export default async function EditTemplatePage({ params }: EditTemplatePageProps
   const { id } = await params
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
+  const t = await getTranslations('dashboard.teacher.templates')
   const { data: template, error } = await supabase
     .from('prompt_templates')
     .select('*')
@@ -30,15 +32,15 @@ export default async function EditTemplatePage({ params }: EditTemplatePageProps
   return (
     <div className="flex-1 space-y-8 p-8 pt-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/teacher/templates">
+        <Link href="/dashboard/teacher/templates" aria-label={t('backToTemplates')}>
           <Button variant="ghost" size="icon">
             <IconArrowLeft size={20} />
           </Button>
         </Link>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Edit Template</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('editTemplate')}</h2>
           <p className="text-muted-foreground">
-            Modify your prompt template and its variables.
+            {t('editDescription')}
           </p>
         </div>
       </div>

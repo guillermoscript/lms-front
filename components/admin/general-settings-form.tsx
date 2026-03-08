@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { updateSettings } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { IconLoader2 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface GeneralSettingsFormProps {
@@ -168,7 +168,7 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
       {/* Submit Button */}
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isSubmitting && <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
           {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>

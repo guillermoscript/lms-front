@@ -2,13 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
 import { LessonContent } from './lesson-content'
-import { IconRobot, IconMenu2, IconSparkles } from '@tabler/icons-react'
+import { IconMenu2, IconSparkles } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
 import { LessonAIChat } from '@/components/student/lesson-ai-chat'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
+import { AnimatedSection } from '@/components/student/animated-section'
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -53,6 +54,9 @@ export default async function LessonPage({ params }: PageProps) {
     })
     .single()
 
+  if (lessonError) {
+    console.error('Error fetching lesson:', lessonError)
+  }
   if (lessonError || !lessonData) {
     notFound()
   }
@@ -64,7 +68,7 @@ export default async function LessonPage({ params }: PageProps) {
     : lessonData.lessons_ai_tasks;
 
   const dbMessages = lessonData.lessons_ai_task_messages || [];
-  const initialMessages = dbMessages.map((msg: any, index: number) => {
+  const initialMessages = dbMessages.map((msg: any) => {
     const parts = [];
 
     if (msg.message) {
@@ -97,19 +101,20 @@ export default async function LessonPage({ params }: PageProps) {
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
-  const { data: allLessons } = await supabase
-    .from('lessons')
-    .select('id, title, sequence')
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'published')
-    .eq('tenant_id', tenantId)
-    .order('sequence', { ascending: true })
-
-  const { data: completions } = await supabase
-    .from('lesson_completions')
-    .select('lesson_id')
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
+  const [{ data: allLessons }, { data: completions }] = await Promise.all([
+    supabase
+      .from('lessons')
+      .select('id, title, sequence')
+      .eq('course_id', parseInt(courseId))
+      .eq('status', 'published')
+      .eq('tenant_id', tenantId)
+      .order('sequence', { ascending: true }),
+    supabase
+      .from('lesson_completions')
+      .select('lesson_id')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId),
+  ])
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
 
@@ -138,11 +143,7 @@ export default async function LessonPage({ params }: PageProps) {
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                   {t('lessonIndex', { count: lesson.sequence })}
                 </span>
-                {isCurrentLessonCompleted && (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] font-bold uppercase tracking-wider h-4 px-1.5">
-                    Completed
-                  </Badge>
-                )}
+                {isCurrentLessonCompleted && <LessonCompletionBadge />}
               </div>
               <h1 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">{lesson.title}</h1>
             </div>
@@ -185,6 +186,7 @@ export default async function LessonPage({ params }: PageProps) {
 
             {/* AI Task Section */}
             {aiTask && (
+              <AnimatedSection delay={0.15}>
               <section className="space-y-5">
                 <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.04] to-transparent overflow-hidden">
                   {/* Task header */}
@@ -224,11 +226,12 @@ export default async function LessonPage({ params }: PageProps) {
                   </div>
                 </div>
               </section>
+              </AnimatedSection>
             )}
 
             {/* Comments Section */}
             <section className="border-t pt-10">
-              <LessonComments lessonId={lesson.id} userId={user.id} />
+              <LessonComments lessonId={lesson.id} userId={user.id} tenantId={tenantId} />
             </section>
           </div>
         </div>
@@ -240,6 +243,7 @@ export default async function LessonPage({ params }: PageProps) {
           isCompleted={isCurrentLessonCompleted}
           prevLessonId={prevLesson?.id}
           nextLessonId={nextLesson?.id}
+          tenantId={tenantId}
         />
       </main>
 

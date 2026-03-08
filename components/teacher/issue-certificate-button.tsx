@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { IconAward, IconLoader2, IconCheck } from '@tabler/icons-react'
 import { toast } from 'sonner'
@@ -22,6 +23,7 @@ export function IssueCertificateButton({
     const [isLoading, setIsLoading] = useState(false)
     const [isSuccess, setIsSuccess] = useState(!!existingCertificateId)
     const router = useRouter()
+    const t = useTranslations('dashboard.teacher.certificates')
 
     const handleIssue = async () => {
         if (isSuccess) return
@@ -42,19 +44,19 @@ export function IssueCertificateButton({
             const result = await response.json()
 
             if (!response.ok) {
-                throw new Error(result.error || 'Failed to issue certificate')
+                throw new Error(result.error || t('issueError'))
             }
 
             if (result.success) {
-                toast.success(`Certificate issued to ${studentName}`)
+                toast.success(t('issueSuccess', { name: studentName }))
                 setIsSuccess(true)
                 router.refresh()
             } else {
-                toast.error(result.reason || 'Student is not yet eligible for a certificate')
+                toast.error(result.reason || t('notEligible'))
             }
         } catch (error: any) {
             console.error('Error issuing certificate:', error)
-            toast.error(error.message || 'An error occurred while issuing the certificate')
+            toast.error(error.message || t('issueGenericError'))
         } finally {
             setIsLoading(false)
         }
@@ -62,9 +64,9 @@ export function IssueCertificateButton({
 
     if (isSuccess) {
         return (
-            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50" disabled>
+            <Button variant="ghost" size="sm" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30" disabled>
                 <IconCheck className="mr-2 h-4 w-4" />
-                Issued
+                {t('issued')}
             </Button>
         )
     }
@@ -78,11 +80,11 @@ export function IssueCertificateButton({
             className="hover:border-primary hover:text-primary"
         >
             {isLoading ? (
-                <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
             ) : (
                 <IconAward className="mr-2 h-4 w-4" />
             )}
-            Issue Certificate
+            {t('issueCertificate')}
         </Button>
     )
 }

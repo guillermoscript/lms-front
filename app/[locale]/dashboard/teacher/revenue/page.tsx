@@ -2,10 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { DollarSign, TrendingUp, Clock, AlertCircle } from 'lucide-react'
+import { IconCurrencyDollar, IconTrendingUp, IconClock, IconAlertCircle } from '@tabler/icons-react'
 import { RevenueChart } from '@/components/teacher/revenue-chart'
 import { PayoutHistory } from '@/components/teacher/payout-history'
 import { TransactionList } from '@/components/teacher/transaction-list'
@@ -20,6 +21,7 @@ export default async function RevenuePage() {
 
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
+  const t = await getTranslations('dashboard.teacher.revenue')
 
   // Get tenant info and revenue split
   const { data: tenant } = await supabase
@@ -73,39 +75,39 @@ export default async function RevenuePage() {
 
   const revenueStats = [
     {
-      title: 'Total Revenue',
+      title: t('stats.totalRevenue'),
       value: `$${totalRevenue.toFixed(2)}`,
-      sub: 'All time revenue from students',
-      icon: DollarSign,
+      sub: t('stats.totalRevenueSub'),
+      icon: IconCurrencyDollar,
       bg: 'bg-blue-50 dark:bg-blue-950/40',
       iconColor: 'text-blue-600 dark:text-blue-400',
       accent: 'group-hover:ring-blue-200 dark:group-hover:ring-blue-800',
     },
     {
-      title: `Your Share (${split?.school_percentage || 80}%)`,
+      title: t('stats.yourShare', { percentage: split?.school_percentage || 80 }),
       value: `$${schoolRevenue.toFixed(2)}`,
       valueColor: 'text-emerald-600 dark:text-emerald-400',
-      sub: 'After platform fee deduction',
-      icon: TrendingUp,
+      sub: t('stats.yourShareSub'),
+      icon: IconTrendingUp,
       bg: 'bg-emerald-50 dark:bg-emerald-950/40',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
       accent: 'group-hover:ring-emerald-200 dark:group-hover:ring-emerald-800',
     },
     {
-      title: 'Last 30 Days',
+      title: t('stats.last30Days'),
       value: `$${recentRevenue.toFixed(2)}`,
-      sub: `${recentTransactions.length} transactions`,
-      icon: Clock,
+      sub: t('stats.transactionCount', { count: recentTransactions.length }),
+      icon: IconClock,
       bg: 'bg-violet-50 dark:bg-violet-950/40',
       iconColor: 'text-violet-600 dark:text-violet-400',
       accent: 'group-hover:ring-violet-200 dark:group-hover:ring-violet-800',
     },
     {
-      title: 'Pending Payout',
+      title: t('stats.pendingPayout'),
       value: `$${pendingPayout.toFixed(2)}`,
       valueColor: 'text-amber-600 dark:text-amber-400',
-      sub: 'Awaiting Stripe transfer',
-      icon: DollarSign,
+      sub: t('stats.pendingPayoutSub'),
+      icon: IconCurrencyDollar,
       bg: 'bg-amber-50 dark:bg-amber-950/40',
       iconColor: 'text-amber-600 dark:text-amber-400',
       accent: 'group-hover:ring-amber-200 dark:group-hover:ring-amber-800',
@@ -115,9 +117,9 @@ export default async function RevenuePage() {
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="revenue-page">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Revenue Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Track your school&apos;s revenue and payouts
+          {t('subtitle')}
         </p>
       </div>
 
@@ -125,18 +127,18 @@ export default async function RevenuePage() {
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-5 ring-1 ring-amber-200 dark:ring-amber-800">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-              <AlertCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />
+              <IconAlertCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Payment Account Not Connected</h3>
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">{t('stripeNotConnected.title')}</h3>
               <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
-                Connect your Stripe account to start accepting payments and receiving payouts.
+                {t('stripeNotConnected.description')}
               </p>
               <a
                 href="/api/stripe/connect"
                 className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 h-8 px-4 transition-colors"
               >
-                Connect Stripe Account
+                {t('stripeNotConnected.connect')}
               </a>
             </div>
           </div>
@@ -168,36 +170,36 @@ export default async function RevenuePage() {
       {/* Platform Fee Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Revenue Split</CardTitle>
+          <CardTitle>{t('split.title')}</CardTitle>
           <CardDescription>
-            How revenue is distributed between your school and the platform
+            {t('split.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Platform Fee</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('split.platformFee')}</span>
                 <Badge variant="secondary" className="text-[10px]">{split?.platform_percentage || 20}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-muted-foreground">
                 ${platformFee.toFixed(2)}
               </div>
               <p className="text-[11px] text-muted-foreground/70">
-                Platform maintenance and support
+                {t('split.platformFeeSub')}
               </p>
             </div>
 
             <div className="rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 p-4 ring-1 ring-emerald-100 dark:ring-emerald-900/40 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Your Revenue</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('split.yourRevenue')}</span>
                 <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">{split?.school_percentage || 80}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                 ${schoolRevenue.toFixed(2)}
               </div>
               <p className="text-[11px] text-muted-foreground/70">
-                Paid directly to your Stripe account
+                {t('split.yourRevenueSub')}
               </p>
             </div>
           </div>
@@ -207,9 +209,9 @@ export default async function RevenuePage() {
       {/* Tabs for different views */}
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="transactions">Recent Transactions</TabsTrigger>
-          <TabsTrigger value="payouts">Payout History</TabsTrigger>
-          <TabsTrigger value="chart">Revenue Chart</TabsTrigger>
+          <TabsTrigger value="transactions">{t('tabs.transactions')}</TabsTrigger>
+          <TabsTrigger value="payouts">{t('tabs.payouts')}</TabsTrigger>
+          <TabsTrigger value="chart">{t('tabs.chart')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4">

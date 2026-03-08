@@ -15,6 +15,7 @@ export interface PlanFeatures {
   streaks: boolean
   landing_pages: boolean
   remove_branding: boolean
+  voice_exercises: boolean
 }
 
 export interface PlanLimits {
@@ -41,6 +42,7 @@ export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   landing_pages: 'starter',
   store: 'pro',
   ai_grading: 'pro',
+  voice_exercises: 'pro',
   remove_branding: 'pro',
   custom_branding: 'business',
   custom_domain: 'business',

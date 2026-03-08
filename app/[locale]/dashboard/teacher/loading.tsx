@@ -2,7 +2,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" role="status" aria-busy="true" aria-label="Loading teacher dashboard">
+      <span className="sr-only">Loading...</span>
       {/* Header with action */}
       <div className="flex items-start justify-between">
         <div className="space-y-2">

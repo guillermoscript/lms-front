@@ -77,7 +77,7 @@ export function ExamSubmissionsReview({
         return (
           <Badge
             variant="secondary"
-            className="flex w-fit items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100/80"
+            className="flex w-fit items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950/40"
           >
             <IconRobot className="h-3 w-3" />
             {t('status.aiReviewed')}
@@ -87,7 +87,7 @@ export function ExamSubmissionsReview({
         return (
           <Badge
             variant="secondary"
-            className="flex w-fit items-center gap-1 bg-green-100 text-green-700 hover:bg-green-100/80"
+            className="flex w-fit items-center gap-1 bg-green-100 text-green-700 hover:bg-green-100/80 dark:bg-green-950/50 dark:text-green-300 dark:hover:bg-green-950/40"
           >
             <IconCheck className="h-3 w-3" />
             {t('status.graded')}

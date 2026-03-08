@@ -88,7 +88,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 <Button
                     type="submit"
                     disabled={isPending}
-                    className="w-full md:w-auto px-8 rounded-2xl h-12 font-black gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+                    className="w-full md:w-auto px-8 rounded-xl h-10 font-semibold gap-2"
                 >
                     {isPending ? (
                         <IconLoader2 size={18} className="animate-spin" />

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     // 1. Fetch exercise details and validate tenant
     const { data: exercise, error } = await supabase
         .from('exercises')
-        .select('title, description, instructions, system_prompt, course_id, course:courses!inner(tenant_id)')
+        .select('title, description, instructions, system_prompt, course_id, exercise_type, course:courses!inner(tenant_id)')
         .eq('id', exerciseId)
         .single()
 
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
             user_id: user.id,
             role: 'user',
             message: lastUserMessage.content,
+            tenant_id: tenantId,
         })
     }
 
@@ -42,13 +43,14 @@ export async function POST(req: Request) {
         model: AI_MODELS.coach,
         system: PROMPTS.exerciseCoach(exercise),
         messages: await convertToModelMessages(messages),
-        tools: createAITools(supabase, { exerciseId, userId: user.id }),
+        tools: createAITools(supabase, { exerciseId, userId: user.id, tenantId, exerciseType: (exercise as any).exercise_type }),
         onFinish: async (event) => {
             await supabase.from('exercise_messages').insert({
                 exercise_id: exerciseId,
                 user_id: user.id,
                 role: 'assistant',
                 message: event.text,
+                tenant_id: tenantId,
             })
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),

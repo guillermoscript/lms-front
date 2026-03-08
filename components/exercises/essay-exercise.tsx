@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import * as motion from "motion/react-client";
 import { Badge } from "@/components/ui/badge";
 import { IconCheck, IconClock, IconFlame, IconInfoCircle, IconSparkles } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,12 @@ export default function EssayExercise({
     return (
         <div className="space-y-6">
             {/* Exercise Header */}
-            <div className="space-y-4">
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+            >
                 <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] px-2.5 py-0.5">
                         {typeLabel}
@@ -77,10 +83,15 @@ export default function EssayExercise({
                         <Markdown>{exercise.description}</Markdown>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Main Layout: Instructions + Chat */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.1 }}
+                className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+            >
                 {/* Left Column: Instructions */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
@@ -111,7 +122,7 @@ export default function EssayExercise({
                         {children}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

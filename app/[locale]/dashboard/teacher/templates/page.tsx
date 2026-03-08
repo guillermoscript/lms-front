@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -17,7 +17,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import {
   IconPlus,
-  IconTemplate,
   IconEdit,
   IconTrash,
   IconCopy,
@@ -33,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/admin/confirm-dialog'
 
 interface Template {
   id: number
@@ -48,10 +48,11 @@ interface Template {
 
 export default function PromptTemplatesPage() {
   const router = useRouter()
+  const t = useTranslations('dashboard.teacher.templates')
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const supabase = createClient()
+  const [deleteId, setDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchTemplates()
@@ -65,27 +66,27 @@ export default function PromptTemplatesPage() {
       setTemplates(data)
     } catch (error) {
       console.error('Error fetching templates:', error)
-      toast.error('Failed to load templates')
+      toast.error(t('loadError'))
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this template?')) return
-
     try {
       const res = await fetch(`/api/teacher/templates/${id}`, {
         method: 'DELETE',
       })
       if (res.ok) {
-        toast.success('Template deleted')
+        toast.success(t('deleteSuccess'))
         fetchTemplates()
       } else {
         throw new Error('Failed to delete')
       }
     } catch (error) {
-      toast.error('Error deleting template')
+      toast.error(t('deleteError'))
+    } finally {
+      setDeleteId(null)
     }
   }
 
@@ -95,7 +96,7 @@ export default function PromptTemplatesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${template.name} (Copy)`,
+          name: `${template.name} (${t('copySuffix')})`,
           description: template.description,
           category: template.category,
           task_description_template: template.task_description_template,
@@ -104,11 +105,11 @@ export default function PromptTemplatesPage() {
         }),
       })
       if (res.ok) {
-        toast.success('Template duplicated')
+        toast.success(t('duplicateSuccess'))
         fetchTemplates()
       }
     } catch (error) {
-      toast.error('Error duplicating template')
+      toast.error(t('duplicateError'))
     }
   }
 
@@ -121,29 +122,29 @@ export default function PromptTemplatesPage() {
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="templates-page">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Prompt Templates</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t('title')}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your reusable AI prompt templates for lessons and exercises.
+            {t('description')}
           </p>
         </div>
         <Link href="/dashboard/teacher/templates/new">
           <Button size="sm" className="gap-2">
             <IconPlus size={16} />
-            Create Template
+            {t('createTemplate')}
           </Button>
         </Link>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Templates</CardTitle>
+          <CardTitle>{t('yourTemplates')}</CardTitle>
           <CardDescription>
-            System templates are available for everyone. You can edit or delete your own templates.
+            {t('yourTemplatesDescription')}
           </CardDescription>
           <div className="relative mt-3">
             <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search templates..."
+              placeholder={t('searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-8 max-w-sm text-sm"
@@ -154,24 +155,24 @@ export default function PromptTemplatesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px] uppercase tracking-wider">Name</TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider">Category</TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider">Variables</TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider">Created</TableHead>
-                <TableHead className="text-[11px] uppercase tracking-wider w-[80px]">Actions</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">{t('table.name')}</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">{t('table.category')}</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">{t('table.variables')}</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider">{t('table.created')}</TableHead>
+                <TableHead className="text-[11px] uppercase tracking-wider w-[80px]">{t('table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
-                    Loading templates...
+                    {t('loading')}
                   </TableCell>
                 </TableRow>
               ) : filteredTemplates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
-                    No templates found.
+                    {t('noTemplates')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -183,7 +184,7 @@ export default function PromptTemplatesPage() {
                         {template.is_system && (
                           <Badge variant="secondary" className="gap-1 text-[10px]">
                             <IconSparkles size={10} />
-                            System
+                            {t('system')}
                           </Badge>
                         )}
                       </div>
@@ -211,26 +212,26 @@ export default function PromptTemplatesPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger>
-                          <Button variant="ghost" size="icon-xs">
+                          <Button variant="ghost" size="icon-xs" aria-label={t('table.actions')}>
                             <IconDotsVertical size={14} />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/teacher/templates/${template.id}/edit`)} className="flex items-center gap-2 text-sm">
                             <IconEdit size={14} />
-                            Edit
+                            {t('editAction')}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicate(template)} className="flex items-center gap-2 text-sm">
                             <IconCopy size={14} />
-                            Duplicate
+                            {t('duplicateAction')}
                           </DropdownMenuItem>
                           {!template.is_system && (
                             <DropdownMenuItem
-                              onClick={() => handleDelete(template.id)}
+                              onClick={() => setDeleteId(template.id)}
                               className="flex items-center gap-2 text-sm text-destructive focus:text-destructive"
                             >
                               <IconTrash size={14} />
-                              Delete
+                              {t('deleteAction')}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -243,6 +244,16 @@ export default function PromptTemplatesPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteId(null) }}
+        title={t('deleteConfirmTitle')}
+        description={t('deleteConfirmDescription')}
+        confirmText={t('deleteAction')}
+        variant="destructive"
+        onConfirm={() => deleteId !== null && handleDelete(deleteId)}
+      />
     </div>
   )
 }

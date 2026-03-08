@@ -3,8 +3,75 @@
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import type { LandingPage, LandingSection, LandingPageSettings, LandingPageTemplate } from '@/lib/landing-pages/types'
-import { createSection } from '@/lib/landing-pages/section-defaults'
+import type { Data } from '@measured/puck'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface LandingPage {
+  id: string
+  tenant_id: string
+  name: string
+  slug: string
+  puck_data: Data
+  is_active: boolean
+  status: 'draft' | 'published'
+  created_at: string
+  updated_at: string
+}
+
+export interface LandingPageTemplate {
+  id: string
+  name: string
+  description: string
+  category: string
+  puck_data: Data
+  is_active: boolean
+  sort_order: number
+}
+
+// ─── Validation helpers ──────────────────────────────────────────────────────
+
+const MAX_NAME_LENGTH = 255
+const MAX_SLUG_LENGTH = 100
+const RESERVED_SLUGS = ['api', 'dashboard', 'admin', 'auth', 'login', 'signup', 'register']
+
+function sanitizeSlug(raw: string | undefined): string {
+  const slug = (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, MAX_SLUG_LENGTH)
+  return slug || 'home'
+}
+
+function validateName(name: string): string | null {
+  if (!name?.trim()) return 'Page name is required'
+  if (name.trim().length > MAX_NAME_LENGTH) return `Page name must be under ${MAX_NAME_LENGTH} characters`
+  return null
+}
+
+function validateSlug(slug: string): string | null {
+  if (RESERVED_SLUGS.includes(slug)) return `"${slug}" is a reserved path and cannot be used as a slug`
+  return null
+}
+
+function friendlyDbError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('unique') || msg.includes('duplicate')) {
+    return 'A page with this slug already exists. Please choose a different slug.'
+  }
+  return msg
+}
+
+// ─── Default Puck data ──────────────────────────────────────────────────────
+
+const DEFAULT_PUCK_DATA: Data = {
+  root: { props: {} },
+  content: [],
+  zones: {},
+}
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
@@ -61,21 +128,28 @@ export async function getTemplates(): Promise<ActionResult<LandingPageTemplate[]
 
 export async function createLandingPage(
   name: string,
-  sections?: LandingSection[]
+  puckData?: Data,
+  slug?: string
 ): Promise<ActionResult<LandingPage>> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
-    const defaultSections = sections ?? [createSection('hero')]
+
+    const nameError = validateName(name)
+    if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+
+    const pageSlug = sanitizeSlug(slug)
+    const slugError = validateSlug(pageSlug)
+    if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name,
-        slug: 'home',
-        sections: defaultSections,
-        settings: {},
+        name: name.trim().slice(0, MAX_NAME_LENGTH),
+        slug: pageSlug,
+        puck_data: puckData ?? DEFAULT_PUCK_DATA,
         is_active: false,
         status: 'draft',
       })
@@ -85,18 +159,23 @@ export async function createLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to create landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
 export async function updateLandingPage(
   id: string,
-  updates: { name?: string; sections?: LandingSection[]; settings?: LandingPageSettings }
+  updates: { name?: string; slug?: string; puck_data?: Data }
 ): Promise<ActionResult<LandingPage>> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
+
+    if (updates.name !== undefined) {
+      const nameError = validateName(updates.name)
+      if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+    }
 
     // Verify ownership
     const { data: existing } = await adminClient
@@ -106,9 +185,23 @@ export async function updateLandingPage(
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
+    const sanitized: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (updates.name) {
+      sanitized.name = updates.name.trim().slice(0, MAX_NAME_LENGTH)
+    }
+    if (updates.slug) {
+      const pageSlug = sanitizeSlug(updates.slug)
+      const slugError = validateSlug(pageSlug)
+      if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+      sanitized.slug = pageSlug
+    }
+    if (updates.puck_data) {
+      sanitized.puck_data = updates.puck_data
+    }
+
     const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(sanitized)
       .eq('id', id)
       .select()
       .single()
@@ -116,7 +209,7 @@ export async function updateLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to update landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -128,19 +221,40 @@ export async function publishLandingPage(id: string): Promise<ActionResult<Landi
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id')
+      .select('tenant_id, slug')
       .eq('id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
-    const { data, error } = await adminClient
+    // Set status to published
+    const { error } = await adminClient
       .from('landing_pages')
       .update({ status: 'published', updated_at: new Date().toISOString() })
       .eq('id', id)
+    if (error) throw error
+
+    // Auto-activate: deactivate other pages with the same slug, then activate this one
+    await adminClient
+      .from('landing_pages')
+      .update({ is_active: false })
+      .eq('tenant_id', tenantId)
+      .eq('slug', existing.slug)
+      .neq('id', id)
+
+    const { data, error: activateError } = await adminClient
+      .from('landing_pages')
+      .update({ is_active: true })
+      .eq('id', id)
       .select()
       .single()
-    if (error) throw error
+    if (activateError) throw activateError
+
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
+    // Revalidate public routes so the published page is served immediately
+    revalidatePath('/[locale]', 'page')
+    if (existing.slug !== 'home') {
+      revalidatePath(`/[locale]/p/${existing.slug}`, 'page')
+    }
     return { success: true, data: data as LandingPage }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to publish landing page' } as ActionResult<LandingPage>
@@ -153,15 +267,15 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
+    // Get the page to find its slug
     const { data: page } = await adminClient
       .from('landing_pages')
-      .select('tenant_id, slug, status')
+      .select('tenant_id, slug')
       .eq('id', id)
       .single()
     if (!page || page.tenant_id !== tenantId) throw new Error('Access denied')
-    if (page.status !== 'published') throw new Error('Page must be published before activating')
 
-    // Deactivate all other pages with same slug
+    // Deactivate other pages with the same slug, then activate this one
     await adminClient
       .from('landing_pages')
       .update({ is_active: false })
@@ -171,12 +285,17 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
 
     const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .update({ is_active: true })
       .eq('id', id)
       .select()
       .single()
     if (error) throw error
+
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
+    revalidatePath('/[locale]', 'page')
+    if (page.slug !== 'home') {
+      revalidatePath(`/[locale]/p/${page.slug}`, 'page')
+    }
     return { success: true, data: data as LandingPage }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to activate landing page' } as ActionResult<LandingPage>
@@ -191,7 +310,7 @@ export async function deactivateLandingPage(id: string): Promise<ActionResult> {
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id')
+      .select('tenant_id, slug')
       .eq('id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
@@ -201,7 +320,12 @@ export async function deactivateLandingPage(id: string): Promise<ActionResult> {
       .update({ is_active: false })
       .eq('id', id)
     if (error) throw error
+
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
+    revalidatePath('/[locale]', 'page')
+    if (existing.slug !== 'home') {
+      revalidatePath(`/[locale]/p/${existing.slug}`, 'page')
+    }
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to deactivate landing page' }
@@ -216,10 +340,11 @@ export async function deleteLandingPage(id: string): Promise<ActionResult> {
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id')
+      .select('tenant_id, is_active')
       .eq('id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
+    if (existing.is_active) throw new Error('Cannot delete an active page. Deactivate it first.')
 
     const { error } = await adminClient
       .from('landing_pages')
@@ -239,6 +364,9 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
+    const nameError = validateName(newName)
+    if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+
     const { data: original } = await adminClient
       .from('landing_pages')
       .select('*')
@@ -247,14 +375,17 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
       .single()
     if (!original) throw new Error('Landing page not found')
 
+    const baseSlug = original.slug
+    const suffix = `-copy-${Date.now().toString(36)}`
+    const dupSlug = `${baseSlug}${suffix}`.slice(0, MAX_SLUG_LENGTH)
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name: newName,
-        slug: original.slug,
-        sections: original.sections,
-        settings: original.settings,
+        name: newName.trim().slice(0, MAX_NAME_LENGTH),
+        slug: dupSlug,
+        puck_data: original.puck_data,
         is_active: false,
         status: 'draft',
       })
@@ -264,6 +395,6 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to duplicate landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }

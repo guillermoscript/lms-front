@@ -239,3 +239,39 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - `docs/FEBRUARY_2026_IMPLEMENTATION_SUMMARY.md` — full record of multi-tenant SaaS implementation
 - `MULTI_TENANT_IMPLEMENTATION_SUMMARY.md` — multi-tenant architecture deep dive
 - `E2E_TESTING_AND_SECURITY_AUDIT_PLAN.md` — 47 test scenarios with steps
+
+## Design Context
+
+### Users
+Both independent educators/creators and established schools/academies. Creators sell courses online as solo operators or small teams; institutions manage students, staff, and curriculum. Users span LATAM and English-speaking markets (en/es). Students need a focused learning environment; teachers/admins need efficient management tools.
+
+### Brand Personality
+**Minimal, elegant, focused.** The interface should feel refined and quiet — letting course content and learning activities take center stage. No visual noise, no unnecessary decoration.
+
+### Emotional Goals
+- **Confidence & clarity** — users feel in control, navigation is obvious, actions are unambiguous
+- **Calm & focus** — distraction-free environment for learning and teaching
+- **Progress & achievement** — sense of momentum through the gamification system, completions, and certificates
+
+### Aesthetic Direction
+- **Visual tone:** Clean, spacious, content-first. Generous whitespace. Subtle hierarchy through typography weight and size rather than color or ornament.
+- **References:** Duolingo/Khan Academy (engaging learning with personality, progress mechanics), Teachable/Thinkific (familiar course platform patterns, functional clarity)
+- **Anti-references:** Overly complex enterprise dashboards, cluttered admin panels, generic Bootstrap templates
+- **Theme:** Light + dark mode supported. Default primary color is open to evolution (currently purple ~293 hue OKLCH). Tenant theming overrides primary/accent via CSS custom properties.
+- **Typography:** Noto Sans (body), Geist Sans/Mono (UI/code). Clean, readable hierarchy.
+- **Icons:** Tabler Icons + Lucide React. Consistent stroke-based outline style.
+- **Motion:** Purposeful and subtle (`motion` library). Respect `prefers-reduced-motion`. Animations should convey state changes, not decorate.
+
+### Design Principles
+1. **Content over chrome** — every pixel should serve the learning experience. Remove anything that doesn't help the user accomplish their task.
+2. **Obvious over clever** — navigation, actions, and status should be immediately understandable. No hidden gestures, no mystery icons.
+3. **Consistent across tenants** — the platform provides a cohesive structural experience while tenants express brand through color and logo, not layout.
+4. **Accessible by default** — WCAG AA compliance. Good contrast ratios, keyboard navigable, screen-reader friendly. Respect reduced-motion preferences.
+5. **Progressive disclosure** — show what's needed now, reveal complexity as users go deeper. Keep surfaces clean, use sheets/dialogs/expandable sections for detail.
+
+### Technical Design Stack
+- **Component library:** Shadcn UI (base-mira variant) with `@base-ui/react` primitives
+- **Styling:** Tailwind CSS v4 with OKLCH color tokens in CSS custom properties
+- **Animations:** `motion` (Framer Motion v12) + `tw-animate-css`
+- **Theming:** `next-themes` (system/light/dark) + tenant CSS variable overrides via `TenantCssVars`
+- **Spacing/radius:** Shadcn defaults with `--radius: 0.625rem` base

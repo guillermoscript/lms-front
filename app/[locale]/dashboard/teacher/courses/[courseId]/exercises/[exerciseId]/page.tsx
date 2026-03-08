@@ -61,11 +61,11 @@ export default async function EditExercisePage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 lg:px-6 lg:py-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}/exercises`}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourses')}>
             <IconArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

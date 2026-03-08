@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   IconLayout,
   IconPlus,
@@ -14,9 +15,12 @@ import {
   IconWorldUpload,
   IconDots,
   IconArrowRight,
+  IconExternalLink,
 } from '@tabler/icons-react'
-import type { LandingPage, LandingPageTemplate } from '@/lib/landing-pages/types'
-import { LandingPageBuilder } from './landing-page-builder'
+import type { LandingPage } from '@/app/actions/admin/landing-pages'
+import type { Data } from '@measured/puck'
+import { deepCloneWithFreshIds } from '@/lib/puck/templates'
+import { PuckEditor } from './puck-editor'
 import { TemplatePicker } from './template-picker'
 import {
   createLandingPage,
@@ -44,307 +48,355 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
+
+interface PuckTemplate {
+  name: string
+  description?: string
+  category: string
+  puck_data: Data
+  sort_order: number
+  pageType: string
+}
 
 interface Props {
   pages: LandingPage[]
   plan: string
   tenantId: string
-  templates: Array<Omit<LandingPageTemplate, 'id' | 'created_at'>>
+  templates: PuckTemplate[]
 }
 
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
-const SECTION_MINI_COLORS: Record<string, string> = {
-  hero: 'bg-blue-500/30',
-  features: 'bg-emerald-500/20',
-  courses: 'bg-amber-500/20',
-  testimonials: 'bg-pink-500/20',
-  faq: 'bg-cyan-500/20',
-  cta: 'bg-orange-500/20',
-  stats: 'bg-violet-500/20',
-  text: 'bg-zinc-500/20',
-  image_text: 'bg-sky-500/20',
-  video: 'bg-red-500/20',
-  pricing: 'bg-green-500/20',
-  team: 'bg-teal-500/20',
-  logo_cloud: 'bg-slate-500/20',
-  gallery: 'bg-fuchsia-500/20',
-  banner: 'bg-yellow-500/20',
-  divider: 'bg-zinc-400/10',
-  contact: 'bg-rose-500/20',
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return new Date(dateStr).toLocaleDateString()
 }
 
-function PageCardPreview({ sections }: { sections: LandingPage['sections'] }) {
-  if (!sections || sections.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-zinc-700 text-xs">
-        Empty
-      </div>
-    )
-  }
-  return (
-    <div className="space-y-0.5 p-1.5">
-      {sections.slice(0, 7).map((s, i) => {
-        const color = SECTION_MINI_COLORS[s.type] || 'bg-zinc-500/20'
-        const isHero = s.type === 'hero'
-        return (
-          <div
-            key={i}
-            className={`rounded-sm ${color} ${isHero ? 'h-5' : 'h-2.5'} ${!s.visible ? 'opacity-30' : ''}`}
-          />
-        )
-      })}
-      {sections.length > 7 && (
-        <div className="text-center text-[8px] text-zinc-600 pt-0.5">+{sections.length - 7}</div>
-      )}
-    </div>
-  )
+function pageUrl(slug: string): string {
+  return slug === 'home' ? '/' : `/p/${slug}`
 }
 
 export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const [pages, setPages] = useState<LandingPage[]>(initialPages)
+
+  useEffect(() => {
+    setPages(initialPages)
+  }, [initialPages])
+
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const pendingRef = useRef(false)
 
   const canUseBuilder = PAID_PLANS.includes(plan)
+  const isLoading = loadingAction !== null
 
-  async function handleCreateFromTemplate(templateSections: LandingPageTemplate['sections'], templateName: string) {
-    setLoading(true)
+  const withGuard = useCallback(async <T,>(actionKey: string, fn: () => Promise<T>): Promise<T | null> => {
+    if (pendingRef.current) return null
+    pendingRef.current = true
+    setLoadingAction(actionKey)
+    try {
+      return await fn()
+    } finally {
+      pendingRef.current = false
+      setLoadingAction(null)
+    }
+  }, [])
+
+  async function handleCreateFromTemplate(puckData: Data, templateName: string, slug?: string) {
+    const result = await withGuard('create', async () => {
+      return createLandingPage(`${templateName} Page`, deepCloneWithFreshIds(puckData), slug)
+    })
+    if (!result) return
     setShowTemplatePicker(false)
-    const result = await createLandingPage(`${templateName} Page`, templateSections)
-    if (result.success && result.data) {
+    if (!result.success) {
+      toast.error(result.error || t('errors.createFailed'))
+    } else if (result.data) {
       setPages(prev => [result.data!, ...prev])
       setEditingPage(result.data!)
+      toast.success(t('errors.createSuccess') ?? 'Page created')
     }
-    setLoading(false)
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
-    setLoading(true)
-    const result = await deleteLandingPage(deleteTarget)
-    if (result.success) {
-      setPages(prev => prev.filter(p => p.id !== deleteTarget))
-    }
+    const targetId = deleteTarget
     setDeleteTarget(null)
-    setLoading(false)
+    await withGuard(`delete-${targetId}`, async () => {
+      const result = await deleteLandingPage(targetId)
+      if (!result.success) {
+        toast.error(result.error || t('errors.deleteFailed'))
+      } else {
+        setPages(prev => prev.filter(p => p.id !== targetId))
+        toast.success(t('errors.deleteSuccess') ?? 'Page deleted')
+      }
+      return result
+    })
   }
 
   async function handleDuplicate(page: LandingPage) {
-    setLoading(true)
-    const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
-    if (result.success && result.data) {
-      setPages(prev => [result.data!, ...prev])
-    }
-    setLoading(false)
+    await withGuard(`duplicate-${page.id}`, async () => {
+      const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
+      if (!result.success) {
+        toast.error(result.error || t('errors.duplicateFailed'))
+      } else if (result.data) {
+        setPages(prev => [result.data!, ...prev])
+        toast.success(t('errors.duplicateSuccess') ?? 'Page duplicated')
+      }
+      return result
+    })
   }
 
   async function handleToggleActive(page: LandingPage) {
-    setLoading(true)
-    if (page.is_active) {
-      const result = await deactivateLandingPage(page.id)
-      if (result.success) {
-        setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
+    await withGuard(`toggle-${page.id}`, async () => {
+      if (page.is_active) {
+        const result = await deactivateLandingPage(page.id)
+        if (result.success) {
+          setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
+        } else {
+          toast.error(result.error || t('errors.deactivateFailed'))
+        }
+        return result
+      } else {
+        if (page.status !== 'published') {
+          toast.warning(t('pageCard.publishFirst'))
+          return null
+        }
+        const result = await activateLandingPage(page.id)
+        if (result.success) {
+          setPages(prev => prev.map(p => ({
+            ...p,
+            is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
+          })))
+        } else {
+          toast.error(result.error || t('errors.activateFailed'))
+        }
+        return result
       }
-    } else {
-      if (page.status !== 'published') {
-        alert(t('pageCard.publishFirst'))
-        setLoading(false)
-        return
-      }
-      const result = await activateLandingPage(page.id)
-      if (result.success) {
-        setPages(prev => prev.map(p => ({
-          ...p,
-          is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
-        })))
-      }
-    }
-    setLoading(false)
+    })
   }
 
+  // ── Puck Editor mode ──
   if (editingPage) {
     return (
-      <LandingPageBuilder
-        page={editingPage}
-        onBack={(updatedPage) => {
-          if (updatedPage) {
-            setPages(prev => prev.map(p => p.id === updatedPage.id ? updatedPage : p))
-          }
+      <PuckEditor
+        pageId={editingPage.id}
+        pageName={editingPage.name}
+        pageStatus={editingPage.status}
+        initialData={editingPage.puck_data || { root: { props: {} }, content: [], zones: {} }}
+        onBack={() => {
+          router.refresh()
           setEditingPage(null)
         }}
       />
     )
   }
 
-  const sectionCount = (count: number) => count === 1 ? `1 ${t('pageCard.section')}` : `${count} ${t('pageCard.sections')}`
-
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
-        </div>
-        {canUseBuilder && (
-          <Button onClick={() => setShowTemplatePicker(true)} disabled={loading} className="gap-2">
-            <IconPlus className="w-4 h-4" />
-            {t('newPage')}
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-6">
       {/* Feature gate for free plan */}
       {!canUseBuilder && (
-        <div className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/50">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5" />
-          <div className="relative flex flex-col items-center justify-center py-16 gap-5 text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-              <IconLock className="w-6 h-6 text-blue-400" />
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+                <IconLock className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-base">{t('featureGate.title')}</h3>
+                <p className="text-muted-foreground text-sm mt-1.5 max-w-md leading-relaxed">
+                  {t('featureGate.description')}
+                </p>
+              </div>
+              <Button onClick={() => router.push('/dashboard/admin/billing/upgrade')} className="gap-2">
+                {t('featureGate.upgrade')}
+                <IconArrowRight className="w-4 h-4" />
+              </Button>
             </div>
-            <div>
-              <h3 className="font-semibold text-lg">{t('featureGate.title')}</h3>
-              <p className="text-muted-foreground text-sm mt-2 max-w-md leading-relaxed">
-                {t('featureGate.description')}
-              </p>
-            </div>
-            <Button onClick={() => router.push('/dashboard/admin/billing/upgrade')} className="gap-2 mt-1">
-              {t('featureGate.upgrade')}
-              <IconArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Pages list */}
       {canUseBuilder && (
         <>
           {pages.length === 0 ? (
-            <div className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/30">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5" />
-              <div className="relative flex flex-col items-center justify-center py-20 gap-5 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-                  <IconLayout className="w-6 h-6 text-blue-400" />
+            <Card>
+              <CardContent className="py-16">
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+                    <IconLayout className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-base">{t('createFirst')}</h3>
+                    <p className="text-muted-foreground text-sm mt-1.5 max-w-sm">
+                      {t('createFirstDescription')}
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowTemplatePicker(true)} className="gap-2">
+                    <IconPlus className="w-4 h-4" />
+                    {t('getStarted')}
+                  </Button>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{t('createFirst')}</h3>
-                  <p className="text-muted-foreground text-sm mt-1 max-w-sm">
-                    {t('createFirstDescription')}
-                  </p>
-                </div>
-                <Button onClick={() => setShowTemplatePicker(true)} className="gap-2 mt-1">
-                  <IconPlus className="w-4 h-4" />
-                  {t('getStarted')}
-                </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map(page => (
-                <div
-                  key={page.id}
-                  className={`group relative rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer ${
-                    page.is_active
-                      ? 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50'
-                      : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
-                  }`}
-                  onClick={() => setEditingPage(page)}
-                >
-                  {/* Mini preview */}
-                  <div className="h-28 rounded-t-xl bg-zinc-950 border-b border-zinc-800/50 overflow-hidden">
-                    <PageCardPreview sections={page.sections} />
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm truncate">{page.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {sectionCount(page.sections?.length ?? 0)}
-                          {page.updated_at && (
-                            <> &middot; {new Date(page.updated_at).toLocaleDateString()}</>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {page.is_active && (
-                          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            {t('pageCard.live')}
-                          </span>
-                        )}
-                        <Badge
-                          variant={page.status === 'published' ? 'default' : 'secondary'}
-                          className="text-[10px] px-1.5 py-0"
-                        >
-                          {page.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Actions row */}
-                    <div className="flex items-center gap-1 mt-3">
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs flex-1 gap-1"
-                        onClick={(e) => { e.stopPropagation(); setEditingPage(page) }}
-                      >
-                        <IconEdit className="w-3 h-3" />
-                        {t('pageCard.edit')}
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <IconDots className="w-3.5 h-3.5" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem onClick={() => handleToggleActive(page)} disabled={loading}>
-                            {page.is_active ? (
-                              <><IconEye className="w-3.5 h-3.5 mr-2" /> {t('pageCard.deactivate')}</>
-                            ) : (
-                              <><IconWorldUpload className="w-3.5 h-3.5 mr-2" /> {t('pageCard.activate')}</>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={loading}>
-                            <IconCopy className="w-3.5 h-3.5 mr-2" /> {t('pageCard.duplicate')}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setDeleteTarget(page.id)}
-                            disabled={loading || page.is_active}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <IconTrash className="w-3.5 h-3.5 mr-2" /> {t('pageCard.delete')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('title')}</CardTitle>
+                <div className="col-start-2 row-span-2 row-start-1 self-start justify-self-end">
+                  <Button onClick={() => setShowTemplatePicker(true)} disabled={isLoading} size="sm" className="gap-2">
+                    <IconPlus className="w-4 h-4" />
+                    {t('newPage')}
+                  </Button>
                 </div>
-              ))}
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr className="text-left text-sm text-muted-foreground">
+                        <th className="pb-3 font-medium">Page</th>
+                        <th className="pb-3 font-medium hidden md:table-cell">URL</th>
+                        <th className="pb-3 font-medium">Status</th>
+                        <th className="pb-3 font-medium hidden md:table-cell">Updated</th>
+                        <th className="pb-3 font-medium"><span className="sr-only">Actions</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {pages.map(page => (
+                        <tr
+                          key={page.id}
+                          className="text-sm cursor-pointer hover:bg-muted/30 transition-colors"
+                          onClick={() => setEditingPage(page)}
+                        >
+                          {/* Name */}
+                          <td className="py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-2 h-2 rounded-full shrink-0 ${page.is_active ? 'bg-emerald-500' : 'bg-border'}`}
+                                aria-hidden="true"
+                              />
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{page.name}</p>
+                                {page.is_active && (
+                                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                    {t('pageCard.live')}
+                                  </span>
+                                )}
+                                {/* URL inline on mobile */}
+                                <p className="text-xs text-muted-foreground font-mono truncate md:hidden">
+                                  {pageUrl(page.slug)}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
 
-              {/* New page card */}
-              <button
-                className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 hover:border-zinc-600 hover:bg-zinc-900/50 transition-all duration-200 min-h-[200px] group"
-                onClick={() => setShowTemplatePicker(true)}
-                disabled={loading}
-              >
-                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-zinc-700 flex items-center justify-center transition-colors mb-3">
-                  <IconPlus className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300" />
+                          {/* URL — hidden on mobile */}
+                          <td className="py-4 hidden md:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs text-muted-foreground truncate">
+                                {pageUrl(page.slug)}
+                              </span>
+                              {page.status === 'published' && (
+                                <a
+                                  href={pageUrl(page.slug)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted shrink-0 transition-colors"
+                                  aria-label={`Open ${page.name} in new tab`}
+                                >
+                                  <IconExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-4">
+                            <Badge
+                              variant={page.status === 'published' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {page.status}
+                            </Badge>
+                          </td>
+
+                          {/* Updated — hidden on mobile */}
+                          <td className="py-4 hidden md:table-cell text-xs text-muted-foreground">
+                            {page.updated_at ? timeAgo(page.updated_at) : '—'}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-4">
+                            <div className="flex justify-end">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={<Button variant="ghost" size="icon" className="h-8 w-8" />}
+                                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                  aria-label={`Actions for ${page.name}`}
+                                >
+                                  <IconDots className="w-4 h-4" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                  <DropdownMenuItem onClick={() => setEditingPage(page)}>
+                                    <IconEdit className="w-4 h-4 mr-2" /> {t('pageCard.edit')}
+                                  </DropdownMenuItem>
+                                  {page.status === 'published' && (
+                                    <DropdownMenuItem
+                                      render={
+                                        <a
+                                          href={`/dashboard/admin/landing-page/preview/${page.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        />
+                                      }
+                                    >
+                                      <IconEye className="w-4 h-4 mr-2" /> {t('pageCard.preview')}
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleToggleActive(page)} disabled={isLoading}>
+                                    {page.is_active ? (
+                                      <><IconEye className="w-4 h-4 mr-2" /> {t('pageCard.deactivate')}</>
+                                    ) : (
+                                      <><IconWorldUpload className="w-4 h-4 mr-2" /> {t('pageCard.activate')}</>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={isLoading}>
+                                    <IconCopy className="w-4 h-4 mr-2" /> {t('pageCard.duplicate')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteTarget(page.id)}
+                                    disabled={isLoading || page.is_active}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <IconTrash className="w-4 h-4 mr-2" /> {t('pageCard.delete')}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <span className="text-sm text-zinc-500 group-hover:text-zinc-300 font-medium transition-colors">
-                  {t('newPage')}
-                </span>
-              </button>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </>
       )}
@@ -354,7 +406,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         onClose={() => setShowTemplatePicker(false)}
         templates={templates}
         onSelect={handleCreateFromTemplate}
-        loading={loading}
+        loading={isLoading}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

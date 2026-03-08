@@ -60,6 +60,7 @@ export default async function EditExamPage({ params }: PageProps) {
         courseId={parseInt(courseId)}
         courseTitle={course.title}
         initialData={exam}
+        tenantId={tenantId}
       />
     </div>
   )

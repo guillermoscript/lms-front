@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import * as motion from 'motion/react-client'
+import Image from 'next/image'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function TeacherCoursesPage() {
@@ -82,10 +83,10 @@ export default async function TeacherCoursesPage() {
                         {t('filter')}
                     </Button>
                     <div className="h-6 w-px bg-border mx-0.5" />
-                    <Button variant="ghost" size="icon-sm" className="text-primary bg-primary/5">
+                    <Button variant="ghost" size="icon-sm" className="text-primary bg-primary/5" aria-label={t('grid')}>
                         <IconLayoutGrid size={16} />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
+                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={t('list')}>
                         <IconList size={16} />
                     </Button>
                 </div>
@@ -105,10 +106,12 @@ export default async function TeacherCoursesPage() {
                                 {/* Thumbnail */}
                                 <div className="relative aspect-video w-full overflow-hidden bg-muted">
                                     {course.thumbnail_url ? (
-                                        <img
+                                        <Image
                                             src={course.thumbnail_url}
                                             alt={course.title}
-                                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            fill
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                            className="object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
                                     ) : (
                                         <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/5 to-primary/15">
@@ -120,7 +123,7 @@ export default async function TeacherCoursesPage() {
                                             variant={course.status === 'published' ? 'default' : 'secondary'}
                                             className={`text-[10px] backdrop-blur-sm ${course.status === 'published' ? 'bg-emerald-100/90 text-emerald-700 dark:bg-emerald-950/90 dark:text-emerald-400' : 'bg-background/80'}`}
                                         >
-                                            {course.status}
+                                            {t(`status.${course.status}`)}
                                         </Badge>
                                     </div>
                                 </div>

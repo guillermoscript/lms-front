@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-review'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionsPage({ params }: { params: Promise<{ courseId: string; examId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
+  const t = await getTranslations('dashboard.teacher')
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return notFound()
@@ -52,7 +54,7 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
     return {
       id: submission.submission_id,
       student_id: submission.student_id,
-      student_name: student?.full_name || 'Unknown Student',
+      student_name: student?.full_name || t('manageCourse.studentList.unknownStudent'),
       submitted_at: submission.submission_date,
       score: submission.score || 0,
       review_status: reviewStatus as 'pending' | 'pending_teacher_review' | 'ai_reviewed' | 'teacher_reviewed',
@@ -63,13 +65,19 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
   })
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <Link href={`/dashboard/teacher/courses/${courseId}`}>
-        <Button variant="ghost" size="sm" className="mb-4">
-          <IconArrowLeft className="mr-2 h-4 w-4" />
-          Back to Course
-        </Button>
-      </Link>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <div className="flex items-center gap-2">
+        <Link href={`/dashboard/teacher/courses/${courseId}`}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('manageCourse.backToCourses')}>
+            <IconArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="truncate max-w-[200px]">{exam.title}</span>
+          <IconChevronRight className="h-3 w-3 shrink-0" />
+          <span className="font-medium text-foreground">{t('manageCourse.assessments.submissions')}</span>
+        </div>
+      </div>
 
       <ExamSubmissionsReview
         examId={parseInt(examId)}

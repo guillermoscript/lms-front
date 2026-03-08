@@ -24,6 +24,7 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconGripVertical,
+  IconChevronRight,
 } from '@tabler/icons-react'
 import {
   DndContext,
@@ -66,6 +67,7 @@ interface ExamBuilderProps {
   courseId: number
   courseTitle: string
   initialData?: any
+  tenantId: string
 }
 
 function SortableQuestion({
@@ -110,6 +112,7 @@ function SortableQuestion({
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+                aria-label={t('dragQuestion')}
               >
                 <IconGripVertical className="h-4 w-4 text-muted-foreground" />
               </div>
@@ -127,6 +130,7 @@ function SortableQuestion({
               size="sm"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => removeQuestion(q.id)}
+              aria-label={t('removeQuestion')}
             >
               <IconTrash className="h-4 w-4" />
             </Button>
@@ -138,7 +142,7 @@ function SortableQuestion({
   )
 }
 
-export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderProps) {
+export function ExamBuilder({ courseId, courseTitle, initialData, tenantId }: ExamBuilderProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.examBuilder')
   const supabase = createClient()
@@ -281,6 +285,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
             ai_grading_criteria: q.ai_grading_criteria,
             expected_keywords: q.expected_keywords,
             grading_rubric: q.grading_rubric,
+            tenant_id: tenantId,
           })
           .select()
           .single()
@@ -293,6 +298,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
               question_id: question.question_id,
               option_text: opt.option_text,
               is_correct: opt.is_correct,
+              tenant_id: tenantId,
             }))
           )
         }
@@ -302,44 +308,48 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
       router.refresh()
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Failed to save exam')
+      setError(err.message || t('saveError'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
-          <Button variant="ghost" size="sm" className="mb-4">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            {t('backToCourse', { course: courseTitle })}
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" aria-label={t('backToCourse', { course: courseTitle })}>
+            <IconArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">
-            {initialData ? t('editTitle') : t('createTitle')}
-          </h1>
-          {initialData?.exam_id && (
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground min-w-0">
+          <span className="truncate max-w-[200px]">{courseTitle}</span>
+          <IconChevronRight className="h-3 w-3 shrink-0" />
+          <span className="font-medium text-foreground">
+            {initialData?.exam_id ? t('editTitle') : t('createTitle')}
+          </span>
+        </div>
+        {initialData?.exam_id && (
+          <div className="ml-auto">
             <VersionHistorySheet
               contentType="exam"
               contentId={initialData.exam_id}
               currentSnapshot={formData}
               onRestore={() => router.refresh()}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+          <IconX className="h-4 w-4 text-destructive shrink-0" />
+          <p className="text-sm text-destructive flex-1">{error}</p>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100 fill-mode-both">
         {/* Exam Details Card */}
         <Card>
           <CardHeader>
@@ -406,23 +416,26 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">{t('questionsTitle')} ({formData.questions.length})</h2>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => addQuestion('multiple_choice')}>
-                <IconPlus className="mr-1 h-4 w-4" /> {t('addMultipleChoice')}
+              <Button size="sm" className="gap-1.5" onClick={() => addQuestion('multiple_choice')}>
+                <IconPlus className="h-3.5 w-3.5" /> {t('addMultipleChoice')}
               </Button>
-              <Button size="sm" onClick={() => addQuestion('true_false')}>
-                <IconPlus className="mr-1 h-4 w-4" /> {t('addTrueFalse')}
+              <Button size="sm" className="gap-1.5" onClick={() => addQuestion('true_false')}>
+                <IconPlus className="h-3.5 w-3.5" /> {t('addTrueFalse')}
               </Button>
-              <Button size="sm" onClick={() => addQuestion('free_text')}>
-                <IconPlus className="mr-1 h-4 w-4" /> {t('addFreeText')}
+              <Button size="sm" className="gap-1.5" onClick={() => addQuestion('free_text')}>
+                <IconPlus className="h-3.5 w-3.5" /> {t('addFreeText')}
               </Button>
             </div>
           </div>
 
           {formData.questions.length === 0 ? (
-            <Card className="border-dashed py-12 text-center">
-              <CardContent>
-                <p className="text-muted-foreground">{t('noQuestions')}</p>
-                <p className="text-sm text-muted-foreground mt-1">
+            <Card className="border-dashed border-2 animate-in fade-in duration-300">
+              <CardContent className="flex flex-col items-center py-16 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                  <IconPlus size={28} className="text-muted-foreground/40" />
+                </div>
+                <h3 className="text-xl font-bold mb-1.5">{t('noQuestions')}</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
                   {t('noQuestionsDesc')}
                 </p>
               </CardContent>
@@ -505,7 +518,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                     }}
                                     placeholder={t('optionPlaceholder', { index: oIdx + 1 })}
                                     disabled={q.question_type === 'true_false'}
-                                    className={cn(opt.is_correct && "border-green-400 focus-visible:ring-green-400 bg-green-50/30")}
+                                    className={cn(opt.is_correct && "border-green-400 focus-visible:ring-green-400 bg-green-50/30 dark:bg-green-950/30")}
                                   />
                                   {q.question_type === 'multiple_choice' && q.options.length > 2 && (
                                     <Button
@@ -515,12 +528,13 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                         const newOpts = q.options.filter((o) => o.id !== opt.id)
                                         updateQuestion(q.id, { options: newOpts })
                                       }}
+                                      aria-label={t('removeOption')}
                                     >
                                       <IconX className="h-3 w-3" />
                                     </Button>
                                   )}
                                   {opt.is_correct && (
-                                    <span className="text-[10px] font-black uppercase text-green-600 shrink-0">
+                                    <span className="text-[10px] font-black uppercase text-green-600 dark:text-green-400 shrink-0">
                                       {t('correctLabel')}
                                     </span>
                                   )}
@@ -540,7 +554,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                 }}
                                 className="w-full border-dashed"
                               >
-                                <IconPlus className="mr-1 h-3 w-3" /> {t('addOption')}
+                                <IconPlus className="h-3 w-3" /> {t('addOption')}
                               </Button>
                             )}
                             {q.question_type === 'true_false' && (
@@ -566,7 +580,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                 onChange={(e) => updateQuestion(q.id, { grading_rubric: e.target.value })}
                                 placeholder={t('gradingRubricPlaceholder')}
                                 rows={2}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('gradingRubricHint')}</p>
                             </div>
@@ -578,7 +592,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                 onChange={(e) => updateQuestion(q.id, { ai_grading_criteria: e.target.value })}
                                 placeholder={t('aiGradingCriteriaPlaceholder')}
                                 rows={3}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('aiGradingCriteriaHint')}</p>
                             </div>
@@ -593,7 +607,7 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
                                   })
                                 }
                                 placeholder={t('expectedKeywordsPlaceholder')}
-                                className="bg-white/80"
+                                className="bg-white/80 dark:bg-white/10"
                               />
                               <p className="text-[10px] text-muted-foreground">{t('expectedKeywordsHint')}</p>
                             </div>
@@ -609,29 +623,31 @@ export function ExamBuilder({ courseId, courseTitle, initialData }: ExamBuilderP
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 pt-6">
+        <div className="flex gap-3 pt-6">
           <Button
             variant="outline"
-            className="flex-1 h-12"
+            size="sm"
+            className="h-8 gap-1.5"
             onClick={() => handleSave(false)}
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : (
-              <IconDeviceFloppy className="mr-2 h-4 w-4" />
+              <IconDeviceFloppy className="h-3.5 w-3.5" />
             )}
             {t('saveDraft')}
           </Button>
           <Button
-            className="flex-1 h-12 shadow-lg"
+            size="sm"
+            className="h-8 gap-1.5"
             onClick={() => handleSave(true)}
             disabled={loading || !formData.title || formData.questions.length === 0}
           >
             {loading ? (
-              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : (
-              <IconCircleCheck className="mr-2 h-4 w-4" />
+              <IconCircleCheck className="h-3.5 w-3.5" />
             )}
             {t('publishExam')}
           </Button>

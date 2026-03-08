@@ -10,20 +10,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   IconArrowLeft,
   IconPlus,
-  IconEdit,
-  IconTrash,
   IconEye,
   IconSettings,
   IconUsers,
   IconBook,
-  IconBolt,
   IconFileText,
   IconTarget,
   IconCertificate,
   IconAward,
   IconExternalLink,
+  IconClock,
+  IconVideo,
+  IconChevronRight,
 } from '@tabler/icons-react'
-import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
+import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -89,11 +89,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
               {t('notAuthor')}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-xs font-mono bg-muted p-4 rounded">
-              <p>Logged-in User: {user.id}</p>
-              <p>Course Author: {course.author_id}</p>
-            </div>
+          <CardContent>
             <Link href="/dashboard/teacher/courses">
               <Button variant="outline">{t('backToCourses')}</Button>
             </Link>
@@ -153,17 +149,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="border-b bg-card sticky top-0 z-10">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Link href="/dashboard/teacher">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+              <div className="flex items-center gap-2 min-w-0">
+                <Link href="/dashboard/teacher" className="shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('backToCourses')}>
                     <IconArrowLeft className="h-4 w-4" />
                   </Button>
                 </Link>
-                <h1 className="text-2xl font-bold tracking-tight">{course.title}</h1>
+                <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
                 <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
                   {t(`status.${course.status}`)}
                 </Badge>
@@ -174,15 +170,15 @@ export default async function CourseManagementPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/dashboard/student/courses/${courseId}`}>
-                <Button variant="outline" size="sm">
-                  <IconEye className="mr-2 h-4 w-4" />
+              <Link href={`/dashboard/teacher/courses/${courseId}/preview`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <IconEye className="h-3.5 w-3.5" />
                   {t('tabs.preview')}
                 </Button>
               </Link>
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`}>
-                <Button variant="outline" size="sm">
-                  <IconSettings className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-2">
+                  <IconSettings className="h-3.5 w-3.5" />
                   {t('settings')}
                 </Button>
               </Link>
@@ -191,79 +187,91 @@ export default async function CourseManagementPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <Tabs defaultValue="lessons" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="lessons" className="flex items-center gap-2">
-              <IconBook size={16} /> {t('tabs.lessons')}
-            </TabsTrigger>
-            <TabsTrigger value="exercises" className="flex items-center gap-2">
-              <IconTarget size={16} /> {t('tabs.exercises')}
-            </TabsTrigger>
-            <TabsTrigger value="exams" className="flex items-center gap-2">
-              <IconFileText size={16} /> {t('tabs.exams')}
-            </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-2">
-              <IconUsers size={16} /> {t('tabs.students')}
-            </TabsTrigger>
-            <TabsTrigger value="certificates" className="flex items-center gap-2">
-              <IconCertificate size={16} /> {t('tabs.certificates')}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">
+              <TabsTrigger value="lessons" className="flex items-center gap-2 whitespace-nowrap">
+                <IconBook size={16} /> {t('tabs.lessons')}
+                {lessons.length > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{lessons.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="exercises" className="flex items-center gap-2 whitespace-nowrap">
+                <IconTarget size={16} /> {t('tabs.exercises')}
+                {exercises.length > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{exercises.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="exams" className="flex items-center gap-2 whitespace-nowrap">
+                <IconFileText size={16} /> {t('tabs.exams')}
+                {exams.length > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{exams.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="students" className="flex items-center gap-2 whitespace-nowrap">
+                <IconUsers size={16} /> {t('tabs.students')}
+                {enrollments.length > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{enrollments.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="certificates" className="flex items-center gap-2 whitespace-nowrap">
+                <IconCertificate size={16} /> {t('tabs.certificates')}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Lessons Tab */}
           <TabsContent value="lessons" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{t('curriculum.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('curriculum.description')}</p>
-              </div>
+              <h2 className="text-lg font-semibold">{t('curriculum.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
-                <Button size="sm">
-                  <IconPlus className="mr-2 h-4 w-4" />
+                <Button size="sm" className="gap-2">
+                  <IconPlus className="h-3.5 w-3.5" />
                   {t('curriculum.addLesson')}
                 </Button>
               </Link>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {lessons.length > 0 ? (
                 lessons.map((lesson) => (
-                  <Card key={lesson.id} className="group hover:border-primary/50 transition-colors">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold">
-                          {lesson.sequence}
-                        </div>
-                        <div>
-                          <h3 className="font-medium group-hover:text-primary transition-colors">{lesson.title}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={lesson.status === 'published' ? 'outline' : 'secondary'} className="text-[10px] h-4">
-                              {t(`status.${lesson.status}`)}
-                            </Badge>
-                            {lesson.video_url && (
-                              <Badge variant="outline" className="text-[10px] h-4">{t('video')}</Badge>
-                            )}
+                  <Link key={lesson.id} href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`} className="block">
+                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                            {lesson.sequence}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{lesson.title}</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {lesson.status !== 'published' && (
+                                <Badge variant="secondary" className="text-[10px] h-4">
+                                  {t(`status.${lesson.status}`)}
+                                </Badge>
+                              )}
+                              {lesson.video_url && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <IconVideo className="h-3 w-3" />
+                                  {t('video')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <IconEdit size={16} />
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))
               ) : (
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <IconBook className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">{t('curriculum.noLessons')}</p>
-                    <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`} className="mt-4">
-                      <Button variant="outline" size="sm">{t('curriculum.createFirst')}</Button>
+                <Card className="border-dashed border-2">
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                      <IconBook size={28} className="text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-1.5">{t('curriculum.noLessons')}</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                      {t('curriculum.description')}
+                    </p>
+                    <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
+                      <Button className="gap-2">
+                        <IconPlus className="h-4 w-4" />
+                        {t('curriculum.createFirst')}
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -274,65 +282,66 @@ export default async function CourseManagementPage({ params }: PageProps) {
           {/* Exercises Tab */}
           <TabsContent value="exercises" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{t('practice.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('practice.description')}</p>
-              </div>
+              <h2 className="text-lg font-semibold">{t('practice.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>
-                <Button size="sm">
-                  <IconPlus className="mr-2 h-4 w-4" />
+                <Button size="sm" className="gap-2">
+                  <IconPlus className="h-3.5 w-3.5" />
                   {t('practice.addExercise')}
                 </Button>
               </Link>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2">
               {exercises.length > 0 ? (
                 exercises.map((exercise) => (
-                  <Card key={exercise.id} className="overflow-hidden hover:border-primary/50 transition-colors">
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">
-                            {t(`exerciseTypes.${(exercise.exercise_type || '').toLowerCase()}`)}
-                          </Badge>
-                          <Badge variant={exercise.status === 'published' ? 'default' : 'secondary'} className="text-[10px] h-4">
-                            {t(`status.${exercise.status}`)}
-                          </Badge>
+                  <Link key={exercise.id} href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
+                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-emerald-500/50 cursor-pointer">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                            <IconTarget size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exercise.title}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {(exercise.exercise_type || '').replace('_', ' ')}
+                              </span>
+                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {t(`difficulty.${exercise.difficulty_level}`)}
+                              </span>
+                              {exercise.status !== 'published' && (
+                                <>
+                                  <span className="text-muted-foreground/30">·</span>
+                                  <Badge variant="secondary" className="text-[10px] h-4">
+                                    {t(`status.${exercise.status}`)}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <Badge variant={
-                          exercise.difficulty_level === 'hard' ? 'destructive' :
-                            exercise.difficulty_level === 'medium' ? 'default' : 'secondary'
-                        } className="capitalize">
-                          {t(`difficulty.${exercise.difficulty_level}`)}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-lg mt-2 line-clamp-1">{exercise.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0 space-y-4">
-                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
-                        {exercise.description || t('practice.noDescription')}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <IconBolt size={12} /> {exercise.time_limit || 0} {t('min')}
-                        </span>
-                        <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8">
-                            {t('practice.edit')} <IconEdit className="ml-2 h-3 w-3" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))
               ) : (
-                <Card className="col-span-full border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <IconTarget className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">{t('practice.noExercises')}</p>
-                    <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`} className="mt-4">
-                      <Button variant="outline" size="sm">{t('practice.createFirst')}</Button>
+                <Card className="border-dashed border-2">
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                      <IconTarget size={28} className="text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-1.5">{t('practice.noExercises')}</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                      {t('practice.description')}
+                    </p>
+                    <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>
+                      <Button className="gap-2">
+                        <IconPlus className="h-4 w-4" />
+                        {t('practice.createFirst')}
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -343,61 +352,63 @@ export default async function CourseManagementPage({ params }: PageProps) {
           {/* Exams Tab */}
           <TabsContent value="exams" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{t('assessments.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('assessments.description')}</p>
-              </div>
+              <h2 className="text-lg font-semibold">{t('assessments.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/exams/new`}>
-                <Button size="sm">
-                  <IconPlus className="mr-2 h-4 w-4" />
+                <Button size="sm" className="gap-2">
+                  <IconPlus className="h-3.5 w-3.5" />
                   {t('assessments.addExam')}
                 </Button>
               </Link>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {exams.length > 0 ? (
                 exams.map((exam) => (
-                  <Card key={exam.exam_id} className="group hover:border-primary/50 transition-colors">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-                          <IconFileText size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-medium group-hover:text-primary transition-colors">{exam.title}</h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              {exam.duration} {t('min')}
-                            </span>
-                            <Badge variant={exam.status === 'published' ? 'outline' : 'secondary'} className="text-[10px] h-4">
-                              {t(`status.${exam.status}`)}
-                            </Badge>
+                  <Link key={exam.exam_id} href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`} className="block">
+                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-amber-500/50 cursor-pointer">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                            <IconFileText size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exam.title}</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <IconClock className="h-3 w-3" />
+                                {exam.duration} {t('min')}
+                              </span>
+                              {exam.status !== 'published' && (
+                                <>
+                                  <span className="text-muted-foreground/30">·</span>
+                                  <Badge variant="secondary" className="text-[10px] h-4">
+                                    {t(`status.${exam.status}`)}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}/submissions`}>
-                          <Button variant="ghost" size="sm" className="h-8">
-                            {t('assessments.submissions')}
-                          </Button>
-                        </Link>
-                        <Link href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <IconEdit size={16} />
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))
               ) : (
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <IconFileText className="h-12 w-12 text-muted-foreground/20 mb-4" />
-                    <p className="text-muted-foreground">{t('assessments.noExams')}</p>
-                    <Link href={`/dashboard/teacher/courses/${courseId}/exams/new`} className="mt-4">
-                      <Button variant="outline" size="sm">{t('assessments.createFirst')}</Button>
+                <Card className="border-dashed border-2">
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                      <IconFileText size={28} className="text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-1.5">{t('assessments.noExams')}</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                      {t('assessments.description')}
+                    </p>
+                    <Link href={`/dashboard/teacher/courses/${courseId}/exams/new`}>
+                      <Button className="gap-2">
+                        <IconPlus className="h-4 w-4" />
+                        {t('assessments.createFirst')}
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -408,85 +419,28 @@ export default async function CourseManagementPage({ params }: PageProps) {
           {/* Students Tab */}
           <TabsContent value="students" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{t('studentList.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('studentList.description')}</p>
-              </div>
+              <h2 className="text-lg font-semibold">{t('studentList.title')}</h2>
             </div>
 
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.student')}</th>
-                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.date')}</th>
-                        <th className="px-4 py-3 text-left font-medium">{t('studentList.table.status')}</th>
-                        <th className="px-4 py-3 text-right font-medium">{t('studentList.table.actions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {enrollments.length > 0 ? (
-                        enrollments.map((enrollment: any) => (
-                          <tr key={enrollment.enrollment_id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center overflow-hidden border">
-                                  {enrollment.profiles?.avatar_url ? (
-                                    <img src={enrollment.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
-                                  ) : (
-                                    <IconUsers className="h-4 w-4 text-muted-foreground" />
-                                  )}
-                                </div>
-                                <span className="font-medium">{enrollment.profiles?.full_name || t('studentList.unknownStudent')}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {new Date(enrollment.enrollment_date).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant="outline" className="capitalize">
-                                {t(`status.${enrollment.status}`)}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <IssueCertificateButton
-                                  courseId={parseInt(courseId)}
-                                  userId={enrollment.user_id}
-                                  studentName={enrollment.profiles?.full_name || t('studentList.unknownStudent')}
-                                  existingCertificateId={issuedCertificates.find((c: any) => c.user_id === enrollment.user_id)?.id}
-                                />
-                                <Button variant="ghost" size="sm">{t('studentList.viewProgress')}</Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                            {t('studentList.noStudents')}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <CourseStudentsTable
+              enrollments={enrollments}
+              issuedCertificates={issuedCertificates}
+              courseId={parseInt(courseId)}
+            />
           </TabsContent>
 
-          {/* Certificates Tab */}
+          {/* Certificates Tab
+             NOTE: IssueCertificateButton is intentionally available in BOTH the Students tab
+             and this Certificates tab. Students tab is for quick per-student actions;
+             this tab provides the full certificate management view with template preview
+             and issued certificates history. If this redundancy becomes confusing,
+             consider removing it from the Students tab and keeping it only here. */}
           <TabsContent value="certificates" className="space-y-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{t('certificates.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('certificates.description')}</p>
-              </div>
+              <h2 className="text-lg font-semibold">{t('certificates.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`}>
-                <Button variant="outline" size="sm">
-                  <IconSettings className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-2">
+                  <IconSettings className="h-3.5 w-3.5" />
                   {certificateTemplate ? t('certificates.templates.edit') : t('certificates.templates.create')}
                 </Button>
               </Link>
@@ -514,16 +468,18 @@ export default async function CourseManagementPage({ params }: PageProps) {
                             className="h-4 w-4 rounded-full border"
                             style={{ backgroundColor: certificateTemplate.design_settings?.primary_color }}
                           />
-                          <span className="text-xs text-muted-foreground">Brand Color</span>
+                          <span className="text-xs text-muted-foreground">{t('certificates.templates.primaryColor')}</span>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                      <IconAward className="h-10 w-10 text-muted-foreground/20 mb-4" />
-                      <p className="text-sm">{t('certificates.templates.noTemplate')}</p>
+                  <Card className="border-dashed border-2">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                        <IconAward size={28} className="text-muted-foreground/40" />
+                      </div>
+                      <h3 className="font-semibold mb-1">{t('certificates.templates.noTemplate')}</h3>
                       <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`} className="mt-4">
                         <Button variant="outline" size="sm">
                           {t('certificates.templates.create')}
@@ -568,7 +524,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                                         <IconUsers className="h-3 w-3 text-muted-foreground" />
                                       )}
                                     </div>
-                                    <span className="font-medium">{cert.profiles?.full_name}</span>
+                                    <span className="font-medium truncate">{cert.profiles?.full_name}</span>
                                   </div>
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">
@@ -579,7 +535,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                   <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="sm">
+                                    <Button variant="ghost" size="sm" aria-label={t('certificates.issued.view')}>
                                       <IconExternalLink className="h-4 w-4" />
                                     </Button>
                                   </a>

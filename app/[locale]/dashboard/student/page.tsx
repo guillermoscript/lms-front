@@ -6,11 +6,12 @@ import { StatsCards } from '@/components/student/stats-cards'
 import { CourseProgressCard } from '@/components/student/course-progress-card'
 import { UpcomingExams } from '@/components/student/upcoming-exams'
 import { RecentActivity } from '@/components/student/recent-activity'
-import { IconRocket, IconSparkles, IconTrophy, IconCircleCheck } from '@tabler/icons-react'
+import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 
 async function getData(userId: string, tenantId: string) {
   const supabase = await createClient()
@@ -119,21 +120,58 @@ export default async function StudentDashboard() {
   const coursesCompleted = data.courses.filter(c => c.progress === 100)
   const totalLessonsCompleted = data.lessonCompletions.length
 
+  // Find the best "continue" course — the one with most progress that isn't done
+  const nextCourse = coursesInProgress
+    .sort((a, b) => b.progress - a.progress)[0] || null
+
   return (
     <div className="min-h-screen bg-background" data-testid="student-dashboard">
       <main className="container mx-auto px-4 md:px-8 py-8 space-y-8">
-        {/* Welcome Hero */}
+        {/* Welcome + Continue CTA */}
         <WelcomeHero
           userName={user?.user_metadata?.full_name || user.email?.split('@')[0] || 'Student'}
           coursesInProgress={coursesInProgress.length}
           lessonsCompleted={totalLessonsCompleted}
+          nextCourse={nextCourse}
         />
 
-        {/* Stats Cards */}
-        <StatsCards
-          totalLessonsCompleted={totalLessonsCompleted}
-          coursesInProgress={coursesInProgress.length}
-          coursesCompleted={coursesCompleted.length}
+        {/* Inline stats — compact, not card-based */}
+        {data.courses.length > 0 && (
+          <StatsCards
+            totalLessonsCompleted={totalLessonsCompleted}
+            coursesInProgress={coursesInProgress.length}
+            coursesCompleted={coursesCompleted.length}
+          />
+        )}
+
+        {/* Getting Started Checklist */}
+        <OnboardingChecklist
+          storageKey={`student-${user.id}`}
+          title={t('onboarding.title')}
+          subtitle={t('onboarding.subtitle')}
+          steps={[
+            {
+              id: 'browse-courses',
+              label: t('onboarding.browseCourses'),
+              description: t('onboarding.browseCoursesDesc'),
+              href: '/dashboard/student/browse',
+              completed: data.courses.length > 0,
+            },
+            {
+              id: 'complete-lesson',
+              label: t('onboarding.completeLesson'),
+              description: t('onboarding.completeLessonDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: totalLessonsCompleted > 0,
+            },
+            {
+              id: 'finish-course',
+              label: t('onboarding.finishCourse'),
+              description: t('onboarding.finishCourseDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: coursesCompleted.length > 0,
+            },
+          ]}
         />
 
         {/* Main Content Grid */}
@@ -162,7 +200,7 @@ export default async function StudentDashboard() {
               <section className="space-y-4">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <IconCircleCheck size={20} className="text-emerald-500" />
-                  Completed
+                  {tCommon('completed')}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {coursesCompleted.slice(0, 4).map((course) => (
@@ -170,7 +208,7 @@ export default async function StudentDashboard() {
                       <div className="bg-card border border-border rounded-xl p-4 hover:border-emerald-500/30 transition-colors group">
                         <h3 className="text-sm font-bold truncate group-hover:text-primary transition-colors">{course.title}</h3>
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                          {course.totalLessons} lessons completed
+                          {course.totalLessons} {tCommon('lessonsCompleted')}
                         </p>
                       </div>
                     </Link>

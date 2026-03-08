@@ -21,6 +21,7 @@ import {
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 
 export default async function TeacherDashboard() {
   const supabase = await createClient()
@@ -113,7 +114,7 @@ export default async function TeacherDashboard() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
             {t.rich('welcome', {
-              userName: profile?.full_name?.split(' ')[0] || 'Teacher'
+              userName: profile?.full_name?.split(' ')[0] || t('defaultName')
             })}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -234,6 +235,36 @@ export default async function TeacherDashboard() {
         </motion.div>
       </div>
 
+      {/* Getting Started Checklist — shown until dismissed */}
+      <OnboardingChecklist
+        storageKey={`teacher-${user.id}`}
+        title={t('onboarding.title')}
+        subtitle={t('onboarding.subtitle')}
+        steps={[
+          {
+            id: 'create-course',
+            label: t('onboarding.createCourse'),
+            description: t('onboarding.createCourseDesc'),
+            href: '/dashboard/teacher/courses/new',
+            completed: totalCourses > 0,
+          },
+          {
+            id: 'add-lesson',
+            label: t('onboarding.addLesson'),
+            description: t('onboarding.addLessonDesc'),
+            href: courses[0] ? `/dashboard/teacher/courses/${courses[0].course_id}` : '/dashboard/teacher/courses/new',
+            completed: totalLessons > 0,
+          },
+          {
+            id: 'publish-course',
+            label: t('onboarding.publishCourse'),
+            description: t('onboarding.publishCourseDesc'),
+            href: courses[0] ? `/dashboard/teacher/courses/${courses[0].course_id}/settings` : '/dashboard/teacher/courses/new',
+            completed: courses.some(c => c.status === 'published'),
+          },
+        ]}
+      />
+
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Courses Section */}
         <Card className="lg:col-span-4">
@@ -283,19 +314,19 @@ export default async function TeacherDashboard() {
                             variant={course.status === 'published' ? 'default' : 'outline'}
                             className={`text-[9px] h-4 py-0 ${course.status === 'published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                           >
-                            {course.status}
+                            {t(`courses.status.${course.status}`)}
                           </Badge>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/dashboard/teacher/courses/${course.course_id}`}>
-                        <Button size="icon-xs" variant="ghost" className="rounded-full">
+                        <Button size="icon-xs" variant="ghost" className="rounded-full" aria-label={t('courses.editCourse')}>
                           <IconEdit size={14} />
                         </Button>
                       </Link>
-                      <Link href={`/dashboard/teacher/courses/${course.course_id}/preview`}>
-                        <Button size="icon-xs" variant="ghost" className="rounded-full">
+                      <Link href={`/dashboard/teacher/courses/${course.course_id}/preview`} prefetch={false}>
+                        <Button size="icon-xs" variant="ghost" className="rounded-full" aria-label={t('courses.previewCourse')}>
                           <IconEye size={14} />
                         </Button>
                       </Link>
@@ -343,7 +374,7 @@ export default async function TeacherDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug">
                         {t.rich('activity.enrolledIn', {
-                          userName: (chunks) => <span className="font-medium text-foreground">{activity.profiles?.full_name || 'Anonymous'}</span>,
+                          userName: (chunks) => <span className="font-medium text-foreground">{activity.profiles?.full_name || t('activity.anonymous')}</span>,
                           courseTitle: (chunks) => <span className="font-medium text-primary">{activity.courses?.title}</span>
                         })}
                       </p>

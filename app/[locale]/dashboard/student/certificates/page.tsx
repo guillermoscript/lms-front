@@ -48,7 +48,7 @@ export default async function StudentCertificatesPage() {
   const uniqueCourses = new Set(certificates?.map(c => c.course_id) || [])
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4 lg:px-8 space-y-6" data-testid="certificates-page">
+    <div className="mx-auto container py-8 px-4 lg:px-8 space-y-6" data-testid="certificates-page">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

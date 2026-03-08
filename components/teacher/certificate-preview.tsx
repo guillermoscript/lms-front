@@ -73,7 +73,7 @@ export function CertificatePreview({ templateName, issuerName, designSettings }:
                     className="text-xl font-bold leading-tight px-4"
                     style={{ color: designSettings.secondary_color }}
                 >
-                    {templateName || "Course Title"}
+                    {templateName || t('preview.courseTitle')}
                 </h1>
 
                 {/* Signatures row */}

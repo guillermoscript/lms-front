@@ -72,7 +72,8 @@ app/actions/admin/
 
 components/admin/landing-page/
   landing-pages-client.tsx    # List view — cards, create, delete, activate
-  landing-page-builder.tsx    # Builder — section list + editor panel
+  landing-page-builder.tsx    # Builder — section list + editor panel + inline preview
+  preview-banner.tsx          # Banner shown on full-page preview
   section-editor.tsx          # Dispatches to per-type editor
   section-picker.tsx          # Dialog to add new sections
   template-picker.tsx         # Dialog to choose starter template
@@ -108,6 +109,8 @@ components/public/landing-page/
 
 app/[locale]/dashboard/admin/landing-page/
   page.tsx              # Admin route — renders LandingPagesClient
+  preview/[pageId]/
+    page.tsx            # Preview route — renders page via admin client
 ```
 
 ---
@@ -127,8 +130,25 @@ Route: `/dashboard/admin/landing-page`
 - Left panel: ordered section list with visibility toggles and delete
 - Right panel: editor form for selected section
 - Add Section button → section picker dialog
-- Top bar: page name, Save (draft), Publish, back to list
+- Top bar: page name, Preview toggle, Open in new tab, Save (draft), Publish, back to list
 - Debounced auto-save on changes
+
+### Preview
+
+Two preview modes are available:
+
+**Inline preview (iframe)**
+- Toggle the "Preview" button in the builder top bar
+- Auto-saves before opening; auto-refreshes the iframe after each save
+- Editor panel shrinks to 420px; the rest is a live iframe of the rendered page
+- Toolbar above the iframe has a manual "Refresh" button
+
+**Full-page preview (new tab)**
+- Click "Open in new tab" in the builder, or use the "Preview" dropdown item on page cards
+- Route: `/dashboard/admin/landing-page/preview/[pageId]`
+- Shows a "Preview Mode" banner at the top with page status and a "Back to Editor" link
+- Uses `createAdminClient()` so draft pages are previewable (bypasses RLS)
+- Verifies `tenant_id` matches the admin's tenant for isolation
 
 ---
 

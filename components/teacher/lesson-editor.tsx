@@ -168,7 +168,7 @@ export function LessonEditor({
       }
     } catch (err: any) {
       console.error('Error saving lesson:', err)
-      setError(err.message || 'Failed to save lesson')
+      setError(err.message || t('saveError'))
       setLoading(false)
     }
   }
@@ -209,7 +209,7 @@ export function LessonEditor({
           {/* Left: back + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0">
             <Link href={`/dashboard/teacher/courses/${courseId}`}>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" aria-label={t('backToCourse', { course: courseTitle })}>
                 <IconArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
@@ -292,7 +292,7 @@ export function LessonEditor({
               disabled={loading || !formData.title}
             >
               {loading ? (
-                <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
               ) : saveSuccess ? (
                 <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
               ) : (
@@ -308,7 +308,7 @@ export function LessonEditor({
               disabled={loading || !formData.title}
             >
               {loading ? (
-                <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
               ) : (
                 <IconEye className="h-3.5 w-3.5" />
               )}
@@ -344,7 +344,7 @@ export function LessonEditor({
           <div className="mx-auto flex max-w-4xl items-center gap-2">
             <IconAlertTriangle className="h-4 w-4 text-destructive shrink-0" />
             <p className="text-sm text-destructive flex-1">{error}</p>
-            <button type="button" onClick={() => setError(null)} className="text-destructive/60 hover:text-destructive">
+            <button type="button" onClick={() => setError(null)} className="text-destructive/60 hover:text-destructive" aria-label={t('dismissError')}>
               <IconX className="h-4 w-4" />
             </button>
           </div>
@@ -509,7 +509,7 @@ export function LessonEditor({
                         )}
                       >
                         <IconLayoutGrid className="h-3.5 w-3.5" />
-                        Visual
+                        {t('modeVisual')}
                       </button>
                       <button
                         type="button"
@@ -522,7 +522,7 @@ export function LessonEditor({
                         )}
                       >
                         <IconCode className="h-3.5 w-3.5" />
-                        MDX
+                        {t('modeMDX')}
                       </button>
                     </div>
                   </div>
@@ -695,6 +695,7 @@ export function LessonEditor({
                   size="sm"
                   className="h-7 w-7 p-0"
                   onClick={() => setShowPreview(false)}
+                  aria-label={t('closePreview')}
                 >
                   <IconX className="h-3.5 w-3.5" />
                 </Button>
@@ -751,7 +752,7 @@ export function LessonEditor({
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : (
               <IconDeviceFloppy className="h-3.5 w-3.5" />
             )}
@@ -764,7 +765,7 @@ export function LessonEditor({
             disabled={loading || !formData.title}
           >
             {loading ? (
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+              <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
             ) : (
               <IconEye className="h-3.5 w-3.5" />
             )}
