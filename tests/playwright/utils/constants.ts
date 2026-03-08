@@ -1,5 +1,5 @@
-export const BASE = 'http://lvh.me:3001'
-export const TENANT_BASE = 'http://code-academy.lvh.me:3001'
+export const BASE = process.env.E2E_BASE_URL || 'http://lvh.me:3000'
+export const TENANT_BASE = process.env.E2E_TENANT_BASE_URL || 'http://code-academy.lvh.me:3000'
 export const LOCALE = 'en'
 
 export const ACCOUNTS = {
