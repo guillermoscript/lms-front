@@ -49,6 +49,7 @@ export async function POST(req: Request) {
                 user_id: user.id,
                 sender: 'user',
                 message: messageText,
+                tenant_id: tenantId,
             })
         }
     }
@@ -58,13 +59,14 @@ export async function POST(req: Request) {
         model: AI_MODELS.tutor,
         system: PROMPTS.lessonTutor(lesson, aiTask),
         messages: await convertToModelMessages(messages),
-        tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id }),
+        tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id, tenantId }),
         onFinish: async (event) => {
             const messageData: any = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
                 message: event.text,
+                tenant_id: tenantId,
             };
             
             // Only add tool_invocations if the column exists (check schema)

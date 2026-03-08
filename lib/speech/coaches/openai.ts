@@ -38,48 +38,6 @@ export class OpenAICoachProvider implements SpeechCoach {
 
     if (!output) throw new Error('AI coach did not return structured output')
 
-    // MUST call markExerciseCompleted if score meets passing threshold
-    const passingScore = context.passingScore ?? 70
-    const shouldComplete = output.score >= passingScore
-    console.log('[SpeechCoach] Score:', output.score, '| Passing:', passingScore, '| Should complete:', shouldComplete, '| Has supabase:', !!options?.supabase, '| exerciseId:', context.exerciseId, '| userId:', context.userId)
-
-    if (shouldComplete) {
-      if (!options?.supabase) throw new Error('Supabase client is required to mark exercise as completed')
-      if (!context.exerciseId) throw new Error('Exercise ID is required to mark exercise as completed')
-      if (!context.userId) throw new Error('User ID is required to mark exercise as completed')
-
-      const { data: existing, error: checkError } = await options.supabase
-        .from('exercise_completions')
-        .select('id')
-        .eq('exercise_id', context.exerciseId)
-        .eq('user_id', context.userId)
-        .limit(1)
-        .single()
-
-      console.log('[SpeechCoach] Existing completion check:', { existing, checkError: checkError?.message })
-
-      if (!existing) {
-        const { data: inserted, error: insertError } = await options.supabase
-          .from('exercise_completions')
-          .insert({
-            exercise_id: context.exerciseId,
-            user_id: context.userId,
-            completed_by: context.userId,
-            score: output.score,
-          })
-          .select('id')
-          .single()
-
-        if (insertError) {
-          console.error('[SpeechCoach] Failed to mark exercise completed:', insertError)
-          throw new Error('Failed to mark exercise as completed: ' + insertError.message)
-        }
-        console.log('[SpeechCoach] Exercise marked as completed:', inserted)
-      } else {
-        console.log('[SpeechCoach] Exercise already completed, skipping')
-      }
-    }
-
     const annotated_transcript = this.buildAnnotatedTranscript(transcription)
 
     return {

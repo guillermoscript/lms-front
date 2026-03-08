@@ -1,8 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { getEngineType } from '@/lib/exercises/engine';
 
-export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: string; lessonId?: string; userId: string; courseId?: string }) => ({
+export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: string; lessonId?: string; userId: string; courseId?: string; tenantId: string; exerciseType?: string }) => ({
     markExerciseCompleted: tool({
         description: 'Mark the exercise as completed when the student succeeds.',
         inputSchema: z.object({
@@ -12,20 +13,26 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
         execute: async ({ feedback, score }) => {
             if (!context.exerciseId) throw new Error('Exercise ID is required');
 
-            const { data: existing } = await supabase
-                .from('exercise_completions')
-                .select('id')
-                .eq('exercise_id', context.exerciseId)
-                .eq('user_id', context.userId)
-                .limit(1)
-                .single();
+            // Upsert completion (ON CONFLICT do nothing)
+            await supabase.from('exercise_completions').insert({
+                exercise_id: context.exerciseId,
+                user_id: context.userId,
+                completed_by: context.userId,
+                score: score,
+                tenant_id: context.tenantId,
+            }).select('id').single();
 
-            if (!existing) {
-                await supabase.from('exercise_completions').insert({
+            // Insert unified evaluation for text-based exercises
+            const engineType = getEngineType(context.exerciseType ?? 'essay');
+            if (engineType === 'text' || engineType === 'simulation') {
+                await supabase.from('exercise_evaluations').insert({
                     exercise_id: context.exerciseId,
                     user_id: context.userId,
-                    completed_by: context.userId,
-                    score: score
+                    tenant_id: context.tenantId,
+                    engine_type: engineType,
+                    score,
+                    passed: true,
+                    ai_result: { feedback },
                 });
             }
 
@@ -52,6 +59,7 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
                 const { error: insertError } = await supabase.from('lesson_completions').insert({
                     user_id: context.userId,
                     lesson_id: context.lessonId,
+                    tenant_id: context.tenantId,
                 });
 
                 if (insertError) {

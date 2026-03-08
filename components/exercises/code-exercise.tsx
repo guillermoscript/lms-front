@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import * as motion from "motion/react-client";
 import { Badge } from "@/components/ui/badge";
 import { IconCode, IconAlertCircle } from "@tabler/icons-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,21 +21,26 @@ export default function CodeExercise({
 }: CodeExerciseProps) {
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex flex-col gap-4">
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-4"
+            >
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+                            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
                                 Coding Challenge
                             </Badge>
                             {isExerciseCompleted && (
-                                <Badge className="bg-green-100 text-green-700">Completed</Badge>
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Completed</Badge>
                             )}
                         </div>
                         <h1 className="text-3xl font-bold tracking-tight">{exercise.title}</h1>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             <Tabs defaultValue="environment" className="space-y-4">
                 <TabsList className="bg-muted/50 p-1">

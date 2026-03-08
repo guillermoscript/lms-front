@@ -119,24 +119,36 @@ export async function POST(req: Request) {
       })
       .eq('id', submissionId)
 
-    // 11. Record exercise completion only if score meets passing threshold
-    if (passed) {
-      const { data: existing } = await adminClient
-        .from('exercise_completions')
-        .select('id')
-        .eq('exercise_id', submission.exercise_id)
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
+    // 11. Insert unified evaluation record
+    const mediaType = submission.media_type === 'video' ? 'video' : 'audio'
+    await adminClient.from('exercise_evaluations').insert({
+      exercise_id: submission.exercise_id,
+      user_id: user.id,
+      tenant_id: tenantId,
+      engine_type: mediaType as 'audio' | 'video',
+      submission_id: submissionId,
+      submission_source: 'exercise_media_submissions',
+      score: evaluation.score,
+      passed,
+      ai_result: {
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+        focus_next: evaluation.focus_next,
+        annotated_transcript: evaluation.annotated_transcript,
+      },
+      ai_metrics: evaluation.metrics as unknown as Record<string, unknown>,
+    })
 
-      if (!existing) {
-        await adminClient.from('exercise_completions').insert({
-          exercise_id: submission.exercise_id,
-          user_id: user.id,
-          completed_by: user.id,
-          score: evaluation.score,
-        })
-      }
+    // 12. Record exercise completion only if score meets passing threshold
+    if (passed) {
+      await adminClient.from('exercise_completions').insert({
+        exercise_id: submission.exercise_id,
+        user_id: user.id,
+        completed_by: user.id,
+        score: evaluation.score,
+        tenant_id: tenantId,
+      }).select('id').single()
+      // unique index (exercise_id, user_id) prevents duplicates
     }
 
     return Response.json({ evaluation, passed, passingScore })
