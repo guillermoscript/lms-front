@@ -54,6 +54,7 @@ export default async function CustomPage({ params }: PageProps) {
     <LandingPageRenderer
       sections={result.page.sections as unknown as LandingSection[]}
       accentColor={result.tenant.primary_color}
+      settings={result.page.settings as unknown as LandingPageSettings}
     />
   )
 }

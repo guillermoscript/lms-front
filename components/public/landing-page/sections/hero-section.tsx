@@ -1,19 +1,22 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
-import type { HeroSectionData } from '@/lib/landing-pages/types'
+import type { HeroSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: HeroSectionData
   accentColor?: string
+  colors?: SectionColors
 }
 
-export function HeroSection({ data, accentColor = '#3B82F6' }: Props) {
+export function HeroSection({ data, accentColor = '#3B82F6', colors }: Props) {
   const alignClass = data.alignment === 'left' ? 'items-start text-left' : data.alignment === 'right' ? 'items-end text-right' : 'items-center text-center'
+  const headingColor = colors?.heading ?? 'text-white'
+  const bodyColor = colors?.body ?? 'text-white/80'
 
   return (
-    <section
-      className="relative py-24 md:py-36 bg-cover bg-center overflow-hidden"
+    <div
+      className="relative bg-cover bg-center overflow-hidden"
       style={data.backgroundImage ? { backgroundImage: `url(${data.backgroundImage})` } : {}}
     >
       {!data.backgroundImage && (
@@ -23,13 +26,13 @@ export function HeroSection({ data, accentColor = '#3B82F6' }: Props) {
         </div>
       )}
       {data.backgroundImage && <div className="absolute inset-0 bg-black/50" />}
-      <div className="container relative z-10 mx-auto px-4 md:px-6">
+      <div className="container relative z-10 mx-auto px-4 md:px-6 py-24 md:py-36">
         <div className={`flex flex-col max-w-3xl gap-6 ${alignClass} ${data.alignment === 'center' ? 'mx-auto' : ''}`}>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white" style={{ textWrap: 'balance' } as React.CSSProperties}>
+          <h1 className={`text-5xl md:text-7xl font-black tracking-tight ${headingColor}`} style={{ textWrap: 'balance' } as React.CSSProperties}>
             {data.title}
           </h1>
           {data.subtitle && (
-            <p className="text-xl text-white/80 max-w-2xl leading-relaxed">{data.subtitle}</p>
+            <p className={`text-xl ${bodyColor} max-w-2xl leading-relaxed`}>{data.subtitle}</p>
           )}
           <div className="flex flex-wrap gap-4">
             {data.ctaText && data.ctaLink && (
@@ -42,7 +45,7 @@ export function HeroSection({ data, accentColor = '#3B82F6' }: Props) {
             )}
             {data.secondaryCtaText && data.secondaryCtaLink && (
               <Link href={data.secondaryCtaLink}>
-                <Button size="lg" variant="outline" className="h-12 px-8 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20">
+                <Button size="lg" variant="outline" className={`h-12 px-8 rounded-xl ${colors?.cardBorder ?? 'border-white/20'} ${colors?.cardBg ?? 'bg-white/10'} ${headingColor} hover:bg-white/20`}>
                   {data.secondaryCtaText}
                 </Button>
               </Link>
@@ -50,6 +53,6 @@ export function HeroSection({ data, accentColor = '#3B82F6' }: Props) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

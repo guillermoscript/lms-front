@@ -1,8 +1,9 @@
 import { IconBrandTwitter, IconBrandFacebook, IconBrandInstagram, IconBrandYoutube, IconBrandLinkedin, IconBrandTiktok, IconBrandGithub, IconMail } from '@tabler/icons-react'
-import type { ContactSectionData, SocialPlatform } from '@/lib/landing-pages/types'
+import type { ContactSectionData, SocialPlatform, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: ContactSectionData
+  colors?: SectionColors
 }
 
 const SOCIAL_ICONS: Record<SocialPlatform, React.ComponentType<{ className?: string }>> = {
@@ -15,21 +16,24 @@ const SOCIAL_ICONS: Record<SocialPlatform, React.ComponentType<{ className?: str
   github: IconBrandGithub,
 }
 
-export function ContactSection({ data }: Props) {
+export function ContactSection({ data, colors }: Props) {
+  const headingColor = colors?.heading ?? 'text-white'
+  const bodyColor = colors?.body ?? 'text-zinc-400'
+
   return (
-    <section className="py-16 md:py-24">
+    <div>
       <div className="container mx-auto px-4 md:px-6 max-w-2xl text-center">
         {data.title && (
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{data.title}</h2>
+          <h2 className={`text-2xl md:text-3xl font-bold ${headingColor} mb-3`}>{data.title}</h2>
         )}
         {data.subtitle && (
-          <p className="text-zinc-400 mb-8">{data.subtitle}</p>
+          <p className={`${bodyColor} mb-8`}>{data.subtitle}</p>
         )}
 
         {data.email && (
           <a
             href={`mailto:${data.email}`}
-            className="inline-flex items-center gap-2 text-zinc-300 hover:text-white transition-colors mb-8"
+            className={`inline-flex items-center gap-2 ${bodyColor} transition-colors mb-8`}
           >
             <IconMail className="w-5 h-5" />
             <span>{data.email}</span>
@@ -57,6 +61,6 @@ export function ContactSection({ data }: Props) {
           </div>
         )}
       </div>
-    </section>
+    </div>
   )
 }

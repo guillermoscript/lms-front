@@ -1,16 +1,13 @@
-import type { DividerSectionData } from '@/lib/landing-pages/types'
+import type { DividerSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: DividerSectionData
+  colors?: SectionColors
 }
 
-const HEIGHT_MAP = { sm: 'py-4', md: 'py-8', lg: 'py-16' }
-
 export function DividerSection({ data }: Props) {
-  const heightClass = HEIGHT_MAP[data.height] || HEIGHT_MAP.md
-
   return (
-    <div className={heightClass}>
+    <div>
       <div className="container mx-auto px-4 md:px-6">
         {data.style === 'line' && (
           <hr className="border-white/10" />
@@ -25,7 +22,6 @@ export function DividerSection({ data }: Props) {
         {data.style === 'gradient' && (
           <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         )}
-        {/* 'space' style renders nothing — just the padding */}
       </div>
     </div>
   )

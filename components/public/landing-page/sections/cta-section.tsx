@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
-import type { CtaSectionData } from '@/lib/landing-pages/types'
+import type { CtaSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: CtaSectionData
   accentColor?: string
+  colors?: SectionColors
 }
 
 export function CtaSection({ data, accentColor = '#3B82F6' }: Props) {
@@ -17,7 +18,7 @@ export function CtaSection({ data, accentColor = '#3B82F6' }: Props) {
         : 'rounded-[2rem] p-12 md:p-20 text-center text-white'
 
   return (
-    <section className="py-20">
+    <div>
       <div className="container mx-auto px-4 md:px-6">
         <div
           className={wrapperClass}
@@ -47,6 +48,6 @@ export function CtaSection({ data, accentColor = '#3B82F6' }: Props) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -58,29 +58,29 @@ interface Props {
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
 const SECTION_MINI_COLORS: Record<string, string> = {
-  hero: 'bg-blue-500/30',
+  hero: 'bg-primary/20',
   features: 'bg-emerald-500/20',
   courses: 'bg-amber-500/20',
   testimonials: 'bg-pink-500/20',
   faq: 'bg-cyan-500/20',
   cta: 'bg-orange-500/20',
   stats: 'bg-violet-500/20',
-  text: 'bg-zinc-500/20',
+  text: 'bg-muted-foreground/10',
   image_text: 'bg-sky-500/20',
   video: 'bg-red-500/20',
   pricing: 'bg-green-500/20',
   team: 'bg-teal-500/20',
-  logo_cloud: 'bg-slate-500/20',
+  logo_cloud: 'bg-muted-foreground/10',
   gallery: 'bg-fuchsia-500/20',
   banner: 'bg-yellow-500/20',
-  divider: 'bg-zinc-400/10',
+  divider: 'bg-muted-foreground/5',
   contact: 'bg-rose-500/20',
 }
 
 function PageCardPreview({ sections }: { sections: LandingPage['sections'] }) {
   if (!sections || sections.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-zinc-700 text-xs">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
         Empty
       </div>
     )
@@ -88,7 +88,7 @@ function PageCardPreview({ sections }: { sections: LandingPage['sections'] }) {
   return (
     <div className="space-y-0.5 p-1.5">
       {sections.slice(0, 7).map((s, i) => {
-        const color = SECTION_MINI_COLORS[s.type] || 'bg-zinc-500/20'
+        const color = SECTION_MINI_COLORS[s.type] || 'bg-muted-foreground/10'
         const isHero = s.type === 'hero'
         return (
           <div
@@ -98,7 +98,7 @@ function PageCardPreview({ sections }: { sections: LandingPage['sections'] }) {
         )
       })}
       {sections.length > 7 && (
-        <div className="text-center text-[8px] text-zinc-600 pt-0.5">+{sections.length - 7}</div>
+        <div className="text-center text-[8px] text-muted-foreground pt-0.5">+{sections.length - 7}</div>
       )}
     </div>
   )
@@ -111,73 +111,95 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const pendingRef = useRef(false)
 
   const canUseBuilder = PAID_PLANS.includes(plan)
+  const isLoading = loadingAction !== null
+
+  const withGuard = useCallback(async <T,>(actionKey: string, fn: () => Promise<T>): Promise<T | null> => {
+    if (pendingRef.current) return null
+    pendingRef.current = true
+    setLoadingAction(actionKey)
+    try {
+      return await fn()
+    } finally {
+      pendingRef.current = false
+      setLoadingAction(null)
+    }
+  }, [])
 
   async function handleCreateFromTemplate(templateSections: BuiltInTemplate['sections'], templateName: string, slug?: string) {
-    setLoading(true)
+    const result = await withGuard('create', async () => {
+      return createLandingPage(`${templateName} Page`, templateSections, slug)
+    })
+    if (!result) return
     setShowTemplatePicker(false)
-    const result = await createLandingPage(`${templateName} Page`, templateSections, slug)
     if (!result.success) {
       toast.error(result.error || t('errors.createFailed'))
     } else if (result.data) {
       setPages(prev => [result.data!, ...prev])
       setEditingPage(result.data!)
+      toast.success(t('errors.createSuccess') ?? 'Page created')
     }
-    setLoading(false)
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
-    setLoading(true)
-    const result = await deleteLandingPage(deleteTarget)
-    if (!result.success) {
-      toast.error(result.error || t('errors.deleteFailed'))
-    } else {
-      setPages(prev => prev.filter(p => p.id !== deleteTarget))
-    }
+    const targetId = deleteTarget
     setDeleteTarget(null)
-    setLoading(false)
+    await withGuard(`delete-${targetId}`, async () => {
+      const result = await deleteLandingPage(targetId)
+      if (!result.success) {
+        toast.error(result.error || t('errors.deleteFailed'))
+      } else {
+        setPages(prev => prev.filter(p => p.id !== targetId))
+        toast.success(t('errors.deleteSuccess') ?? 'Page deleted')
+      }
+      return result
+    })
   }
 
   async function handleDuplicate(page: LandingPage) {
-    setLoading(true)
-    const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
-    if (!result.success) {
-      toast.error(result.error || t('errors.duplicateFailed'))
-    } else if (result.data) {
-      setPages(prev => [result.data!, ...prev])
-    }
-    setLoading(false)
+    await withGuard(`duplicate-${page.id}`, async () => {
+      const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
+      if (!result.success) {
+        toast.error(result.error || t('errors.duplicateFailed'))
+      } else if (result.data) {
+        setPages(prev => [result.data!, ...prev])
+        toast.success(t('errors.duplicateSuccess') ?? 'Page duplicated')
+      }
+      return result
+    })
   }
 
   async function handleToggleActive(page: LandingPage) {
-    setLoading(true)
-    if (page.is_active) {
-      const result = await deactivateLandingPage(page.id)
-      if (result.success) {
-        setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
+    await withGuard(`toggle-${page.id}`, async () => {
+      if (page.is_active) {
+        const result = await deactivateLandingPage(page.id)
+        if (result.success) {
+          setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
+        } else {
+          toast.error(result.error || t('errors.deactivateFailed'))
+        }
+        return result
       } else {
-        toast.error(result.error || t('errors.deactivateFailed'))
+        if (page.status !== 'published') {
+          toast.warning(t('pageCard.publishFirst'))
+          return null
+        }
+        const result = await activateLandingPage(page.id)
+        if (result.success) {
+          setPages(prev => prev.map(p => ({
+            ...p,
+            is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
+          })))
+        } else {
+          toast.error(result.error || t('errors.activateFailed'))
+        }
+        return result
       }
-    } else {
-      if (page.status !== 'published') {
-        toast.warning(t('pageCard.publishFirst'))
-        setLoading(false)
-        return
-      }
-      const result = await activateLandingPage(page.id)
-      if (result.success) {
-        setPages(prev => prev.map(p => ({
-          ...p,
-          is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
-        })))
-      } else {
-        toast.error(result.error || t('errors.activateFailed'))
-      }
-    }
-    setLoading(false)
+    })
   }
 
   if (editingPage) {
@@ -205,7 +227,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
           <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
         </div>
         {canUseBuilder && (
-          <Button onClick={() => setShowTemplatePicker(true)} disabled={loading} className="gap-2">
+          <Button onClick={() => setShowTemplatePicker(true)} disabled={isLoading} className="gap-2">
             <IconPlus className="w-4 h-4" />
             {t('newPage')}
           </Button>
@@ -214,11 +236,11 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
 
       {/* Feature gate for free plan */}
       {!canUseBuilder && (
-        <div className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/50">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5" />
+        <div className="relative overflow-hidden rounded-2xl border border-dashed border-border bg-card/50">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
           <div className="relative flex flex-col items-center justify-center py-16 gap-5 text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-              <IconLock className="w-6 h-6 text-blue-400" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20">
+              <IconLock className="w-6 h-6 text-primary" />
             </div>
             <div>
               <h3 className="font-semibold text-lg">{t('featureGate.title')}</h3>
@@ -238,11 +260,11 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
       {canUseBuilder && (
         <>
           {pages.length === 0 ? (
-            <div className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/30">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5" />
+            <div className="relative overflow-hidden rounded-2xl border border-dashed border-border bg-card/30">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
               <div className="relative flex flex-col items-center justify-center py-20 gap-5 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-                  <IconLayout className="w-6 h-6 text-blue-400" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20">
+                  <IconLayout className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">{t('createFirst')}</h3>
@@ -263,16 +285,17 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                   key={page.id}
                   role="button"
                   tabIndex={0}
+                  aria-label={`Edit page: ${page.name}`}
                   className={`group relative rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     page.is_active
-                      ? 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50'
-                      : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
+                      ? 'border-primary/30 bg-primary/5 hover:border-primary/50'
+                      : 'border-border bg-card/50 hover:border-border/80'
                   }`}
                   onClick={() => setEditingPage(page)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingPage(page) } }}
                 >
                   {/* Mini preview */}
-                  <div className="h-28 rounded-t-xl bg-zinc-950 border-b border-zinc-800/50 overflow-hidden">
+                  <div className="h-28 rounded-t-xl bg-background border-b border-border/50 overflow-hidden">
                     <PageCardPreview sections={page.sections} />
                   </div>
 
@@ -291,8 +314,8 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {page.is_active && (
-                          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
+                          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 motion-safe:animate-pulse" aria-hidden="true" />
                             {t('pageCard.live')}
                           </span>
                         )}
@@ -319,11 +342,12 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                         <DropdownMenuTrigger
                           className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background text-sm hover:bg-accent hover:text-accent-foreground"
                           onClick={(e) => e.stopPropagation()}
+                          aria-label={`Actions for ${page.name}`}
                         >
                           <IconDots className="w-3.5 h-3.5" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem onClick={() => handleToggleActive(page)} disabled={loading}>
+                          <DropdownMenuItem onClick={() => handleToggleActive(page)} disabled={isLoading}>
                             {page.is_active ? (
                               <><IconEye className="w-3.5 h-3.5 mr-2" /> {t('pageCard.deactivate')}</>
                             ) : (
@@ -333,13 +357,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                           <DropdownMenuItem onClick={() => window.open(`/dashboard/admin/landing-page/preview/${page.id}`, '_blank')}>
                             <IconExternalLink className="w-3.5 h-3.5 mr-2" /> {t('pageCard.preview')}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={loading}>
+                          <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={isLoading}>
                             <IconCopy className="w-3.5 h-3.5 mr-2" /> {t('pageCard.duplicate')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => setDeleteTarget(page.id)}
-                            disabled={loading || page.is_active}
+                            disabled={isLoading || page.is_active}
                             className="text-destructive focus:text-destructive"
                           >
                             <IconTrash className="w-3.5 h-3.5 mr-2" /> {t('pageCard.delete')}
@@ -352,18 +376,19 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
               ))}
 
               {/* New page card */}
-              <button
-                className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 hover:border-zinc-600 hover:bg-zinc-900/50 transition-all duration-200 min-h-[200px] group"
+              <Button
+                variant="ghost"
+                className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/30 hover:border-border/80 hover:bg-card/50 transition-all duration-200 min-h-[200px] h-auto group"
                 onClick={() => setShowTemplatePicker(true)}
-                disabled={loading}
+                disabled={isLoading}
               >
-                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-zinc-700 flex items-center justify-center transition-colors mb-3">
-                  <IconPlus className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300" />
+                <div className="w-10 h-10 rounded-xl bg-muted group-hover:bg-accent flex items-center justify-center transition-colors mb-3">
+                  <IconPlus className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
                 </div>
-                <span className="text-sm text-zinc-500 group-hover:text-zinc-300 font-medium transition-colors">
+                <span className="text-sm text-muted-foreground group-hover:text-foreground font-medium transition-colors">
                   {t('newPage')}
                 </span>
-              </button>
+              </Button>
             </div>
           )}
         </>
@@ -374,7 +399,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         onClose={() => setShowTemplatePicker(false)}
         templates={templates}
         onSelect={handleCreateFromTemplate}
-        loading={loading}
+        loading={isLoading}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

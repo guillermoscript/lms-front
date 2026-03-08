@@ -6,6 +6,55 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import type { LandingPage, LandingSection, LandingPageSettings, LandingPageTemplate } from '@/lib/landing-pages/types'
 import { createSection } from '@/lib/landing-pages/section-defaults'
 
+// ─── Validation helpers ──────────────────────────────────────────────────────
+
+const MAX_NAME_LENGTH = 255
+const MAX_SLUG_LENGTH = 100
+const MAX_SECTIONS = 50
+const RESERVED_SLUGS = ['api', 'dashboard', 'admin', 'auth', 'login', 'signup', 'register']
+
+function sanitizeSlug(raw: string | undefined): string {
+  const slug = (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, MAX_SLUG_LENGTH)
+  return slug || 'home'
+}
+
+function validateName(name: string): string | null {
+  if (!name?.trim()) return 'Page name is required'
+  if (name.trim().length > MAX_NAME_LENGTH) return `Page name must be under ${MAX_NAME_LENGTH} characters`
+  return null
+}
+
+function validateSlug(slug: string): string | null {
+  if (RESERVED_SLUGS.includes(slug)) return `"${slug}" is a reserved path and cannot be used as a slug`
+  return null
+}
+
+function validateSections(sections: LandingSection[]): string | null {
+  if (!Array.isArray(sections)) return 'Sections must be an array'
+  if (sections.length > MAX_SECTIONS) return `Maximum ${MAX_SECTIONS} sections allowed`
+  for (const s of sections) {
+    if (!s.id || typeof s.id !== 'string') return 'Each section must have a valid id'
+    if (!s.type || typeof s.type !== 'string') return 'Each section must have a valid type'
+    if (typeof s.visible !== 'boolean') return 'Each section must have a visible flag'
+    if (!s.data || typeof s.data !== 'object') return 'Each section must have a data object'
+  }
+  return null
+}
+
+function friendlyDbError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('unique') || msg.includes('duplicate')) {
+    return 'A page with this slug already exists. Please choose a different slug.'
+  }
+  return msg
+}
+
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getLandingPages(tenantId: string): Promise<ActionResult<LandingPage[]>> {
@@ -68,13 +117,24 @@ export async function createLandingPage(
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
+
+    // Validate inputs
+    const nameError = validateName(name)
+    if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+
+    const pageSlug = sanitizeSlug(slug)
+    const slugError = validateSlug(pageSlug)
+    if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+
     const defaultSections = sections ?? [createSection('hero')]
-    const pageSlug = slug?.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'home'
+    const sectionsError = validateSections(defaultSections)
+    if (sectionsError) return { success: false, error: sectionsError } as ActionResult<LandingPage>
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name,
+        name: name.trim().slice(0, MAX_NAME_LENGTH),
         slug: pageSlug,
         sections: defaultSections,
         settings: {},
@@ -87,7 +147,7 @@ export async function createLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to create page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -100,6 +160,18 @@ export async function updateLandingPage(
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
+    // Validate name if provided
+    if (updates.name !== undefined) {
+      const nameError = validateName(updates.name)
+      if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+    }
+
+    // Validate sections if provided
+    if (updates.sections) {
+      const sectionsError = validateSections(updates.sections)
+      if (sectionsError) return { success: false, error: sectionsError } as ActionResult<LandingPage>
+    }
+
     // Verify ownership
     const { data: existing } = await adminClient
       .from('landing_pages')
@@ -108,10 +180,17 @@ export async function updateLandingPage(
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
-    const sanitized = { ...updates, updated_at: new Date().toISOString() }
-    if (sanitized.slug) {
-      sanitized.slug = sanitized.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'home'
+    const sanitized: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() }
+    if (updates.name) {
+      sanitized.name = updates.name.trim().slice(0, MAX_NAME_LENGTH)
     }
+    if (updates.slug) {
+      const pageSlug = sanitizeSlug(updates.slug)
+      const slugError = validateSlug(pageSlug)
+      if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+      sanitized.slug = pageSlug
+    }
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .update(sanitized)
@@ -122,7 +201,7 @@ export async function updateLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to update page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -159,27 +238,18 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
-    const { data: page } = await adminClient
-      .from('landing_pages')
-      .select('tenant_id, slug, status')
-      .eq('id', id)
-      .single()
-    if (!page || page.tenant_id !== tenantId) throw new Error('Access denied')
-    if (page.status !== 'published') throw new Error('Page must be published before activating')
+    // Use atomic RPC to prevent race conditions
+    const { error: rpcError } = await adminClient.rpc('activate_landing_page', {
+      _page_id: id,
+      _tenant_id: tenantId,
+    })
+    if (rpcError) throw rpcError
 
-    // Deactivate all other pages with same slug
-    await adminClient
-      .from('landing_pages')
-      .update({ is_active: false })
-      .eq('tenant_id', tenantId)
-      .eq('slug', page.slug)
-      .neq('id', id)
-
+    // Fetch updated page to return
     const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .select('*')
       .eq('id', id)
-      .select()
       .single()
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
@@ -222,10 +292,11 @@ export async function deleteLandingPage(id: string): Promise<ActionResult> {
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id')
+      .select('tenant_id, is_active')
       .eq('id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
+    if (existing.is_active) throw new Error('Cannot delete an active page. Deactivate it first.')
 
     const { error } = await adminClient
       .from('landing_pages')
@@ -245,6 +316,9 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
+    const nameError = validateName(newName)
+    if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+
     const { data: original } = await adminClient
       .from('landing_pages')
       .select('*')
@@ -253,12 +327,17 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
       .single()
     if (!original) throw new Error('Landing page not found')
 
+    // Generate unique slug for the duplicate
+    const baseSlug = original.slug
+    const suffix = `-copy-${Date.now().toString(36)}`
+    const dupSlug = `${baseSlug}${suffix}`.slice(0, MAX_SLUG_LENGTH)
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name: newName,
-        slug: original.slug,
+        name: newName.trim().slice(0, MAX_NAME_LENGTH),
+        slug: dupSlug,
         sections: original.sections,
         settings: original.settings,
         is_active: false,
@@ -270,6 +349,6 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: data as LandingPage }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to duplicate landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }

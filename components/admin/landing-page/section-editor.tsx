@@ -1,7 +1,8 @@
 'use client'
 
-import type { LandingSection, SectionType } from '@/lib/landing-pages/types'
+import type { LandingSection, SectionType, SectionStyle } from '@/lib/landing-pages/types'
 import { useTranslations } from 'next-intl'
+import { SectionStyleEditor } from './editors/section-style-editor'
 import { HeroEditor } from './editors/hero-editor'
 import { FeaturesEditor } from './editors/features-editor'
 import { CoursesEditor } from './editors/courses-editor'
@@ -53,6 +54,10 @@ export function SectionEditor({ section, onChange }: Props) {
     onChange({ ...section, data })
   }
 
+  function updateStyle(style: SectionStyle) {
+    onChange({ ...section, style })
+  }
+
   const editorProps = { data: section.data, onChange: updateData }
   const dotColor = SECTION_DOT_COLORS[section.type] || 'bg-zinc-400'
 
@@ -66,6 +71,9 @@ export function SectionEditor({ section, onChange }: Props) {
           <p className="text-sm text-muted-foreground">{t('editContent')}</p>
         </div>
       </div>
+
+      {/* Section style */}
+      <SectionStyleEditor style={section.style} onChange={updateStyle} />
 
       <div className="h-px bg-border" />
 

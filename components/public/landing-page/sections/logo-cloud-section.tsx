@@ -1,20 +1,25 @@
-import type { LogoCloudSectionData } from '@/lib/landing-pages/types'
+import type { LogoCloudSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: LogoCloudSectionData
+  colors?: SectionColors
 }
 
-export function LogoCloudSection({ data }: Props) {
+export function LogoCloudSection({ data, colors }: Props) {
+  const headingColor = colors?.heading ?? 'text-white'
+  const bodyColor = colors?.body ?? 'text-zinc-400'
+  const mutedColor = colors?.muted ?? 'text-zinc-500'
+
   return (
-    <section className="py-16 md:py-24">
+    <div>
       <div className="container mx-auto px-4 md:px-6">
         {(data.title || data.subtitle) && (
           <div className="text-center mb-12">
             {data.title && (
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{data.title}</h2>
+              <h2 className={`text-2xl md:text-3xl font-bold ${headingColor} mb-3`}>{data.title}</h2>
             )}
             {data.subtitle && (
-              <p className="text-zinc-400 max-w-2xl mx-auto">{data.subtitle}</p>
+              <p className={`${bodyColor} max-w-2xl mx-auto`}>{data.subtitle}</p>
             )}
           </div>
         )}
@@ -27,7 +32,7 @@ export function LogoCloudSection({ data }: Props) {
                 className="h-8 md:h-10 w-auto object-contain grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300"
               />
             ) : (
-              <span className="text-lg font-semibold text-zinc-500 hover:text-white transition-colors">
+              <span className={`text-lg font-semibold ${mutedColor} hover:opacity-100 transition-colors`}>
                 {item.name}
               </span>
             )
@@ -43,6 +48,6 @@ export function LogoCloudSection({ data }: Props) {
           })}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

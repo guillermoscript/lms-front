@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid'
 import type { LandingSection, SectionType } from './types'
+import { DEFAULT_SECTION_STYLE } from './style-utils'
 
 export function createSection(type: SectionType): LandingSection {
   return {
@@ -7,6 +8,7 @@ export function createSection(type: SectionType): LandingSection {
     type,
     visible: true,
     data: getDefaultData(type),
+    style: { ...DEFAULT_SECTION_STYLE },
   }
 }
 

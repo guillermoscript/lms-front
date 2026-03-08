@@ -58,6 +58,7 @@ export default async function LandingPage() {
             <LandingPageRenderer
               sections={customPage.sections}
               accentColor={tenant.primary_color}
+              settings={customPage.settings as any}
             />
           )
         }

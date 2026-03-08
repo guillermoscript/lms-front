@@ -17,11 +17,35 @@ export type SectionType =
   | 'divider'
   | 'contact'
 
+// ─── Section style types ──────────────────────────────────────────────────────
+
+export type SectionTheme = 'dark' | 'light' | 'primary' | 'transparent'
+export type SectionPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl'
+
+export interface SectionStyle {
+  theme: SectionTheme
+  padding: SectionPadding
+  backgroundImage?: string
+  backgroundOverlay?: number
+  maxWidth?: 'narrow' | 'default' | 'wide' | 'full'
+}
+
+export interface SectionColors {
+  heading: string
+  body: string
+  muted: string
+  cardBg: string
+  cardBorder: string
+  accent: string
+  sectionBg: string
+}
+
 export interface LandingSection {
   id: string
   type: SectionType
   visible: boolean
   data: Record<string, unknown>
+  style?: SectionStyle
 }
 
 // ─── Per-section data types ───────────────────────────────────────────────────

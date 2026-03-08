@@ -42,8 +42,12 @@ const DEFAULT_FOOTER: FooterSettings = {
 
 export function HeaderFooterEditor({ settings, onChange }: Props) {
   const t = useTranslations('landingPageBuilder.editor.headerFooter')
+  const tSeo = useTranslations('landingPageBuilder.editor.seo')
+  const tAdv = useTranslations('landingPageBuilder.editor.advanced')
   const [headerOpen, setHeaderOpen] = useState(true)
   const [footerOpen, setFooterOpen] = useState(true)
+  const [seoOpen, setSeoOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const header = settings.header || DEFAULT_HEADER
   const footer = settings.footer || DEFAULT_FOOTER
@@ -240,6 +244,72 @@ export function HeaderFooterEditor({ settings, onChange }: Props) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+      </div>
+      {/* ─── SEO & Meta ─── */}
+      <div className="border rounded-lg">
+        <button
+          className="flex items-center gap-2 w-full p-4 text-left font-semibold"
+          onClick={() => setSeoOpen(!seoOpen)}
+        >
+          {seoOpen ? <IconChevronDown className="w-4 h-4" /> : <IconChevronRight className="w-4 h-4" />}
+          {tSeo('title')}
+        </button>
+        {seoOpen && (
+          <div className="px-4 pb-4 space-y-4 border-t pt-4">
+            <div>
+              <TextField
+                label={tSeo('metaTitle')}
+                value={settings.metaTitle ?? ''}
+                onChange={v => onChange({ ...settings, metaTitle: v || undefined })}
+                placeholder={tSeo('metaTitleHint')}
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">{tSeo('metaDescription')}</Label>
+              <textarea
+                value={settings.metaDescription ?? ''}
+                onChange={e => onChange({ ...settings, metaDescription: e.target.value || undefined })}
+                placeholder={tSeo('metaDescriptionHint')}
+                rows={3}
+                maxLength={320}
+                className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {(settings.metaDescription ?? '').length}/160 {tSeo('characters')}
+              </p>
+            </div>
+            <TextField
+              label={tSeo('ogImage')}
+              value={settings.ogImage ?? ''}
+              onChange={v => onChange({ ...settings, ogImage: v || undefined })}
+              placeholder={tSeo('ogImageHint')}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ─── Advanced (customCss) ─── */}
+      <div className="border rounded-lg">
+        <button
+          className="flex items-center gap-2 w-full p-4 text-left font-semibold"
+          onClick={() => setAdvancedOpen(!advancedOpen)}
+        >
+          {advancedOpen ? <IconChevronDown className="w-4 h-4" /> : <IconChevronRight className="w-4 h-4" />}
+          {tAdv('title')}
+        </button>
+        {advancedOpen && (
+          <div className="px-4 pb-4 space-y-2 border-t pt-4">
+            <Label className="text-sm font-medium">{tAdv('customCss')}</Label>
+            <textarea
+              value={settings.customCss ?? ''}
+              onChange={e => onChange({ ...settings, customCss: e.target.value || undefined })}
+              placeholder={tAdv('customCssHint')}
+              rows={10}
+              className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+              spellCheck={false}
+            />
           </div>
         )}
       </div>

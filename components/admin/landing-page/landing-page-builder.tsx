@@ -23,6 +23,10 @@ import {
   IconExternalLink,
   IconRefresh,
   IconLink,
+  IconCopy,
+  IconDeviceDesktop,
+  IconDeviceTablet,
+  IconDeviceMobile,
 } from '@tabler/icons-react'
 import type { LandingPage, LandingSection, SectionType } from '@/lib/landing-pages/types'
 import { createSection } from '@/lib/landing-pages/section-defaults'
@@ -35,6 +39,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 type SidebarTab = 'sections' | 'settings'
+type PreviewMode = 'desktop' | 'tablet' | 'mobile'
 
 const SECTION_DOT_COLORS: Record<string, string> = {
   hero: 'bg-blue-400',
@@ -77,6 +82,7 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
   const [justSaved, setJustSaved] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewKey, setPreviewKey] = useState(0)
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop')
 
   const selectedSection = page.sections.find(s => s.id === selectedSectionId) ?? null
 
@@ -160,6 +166,29 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
       const sections = [...prev.sections]
       ;[sections[idx], sections[newIdx]] = [sections[newIdx], sections[idx]]
       return { ...prev, sections }
+    })
+  }
+
+  function duplicateSection(id: string) {
+    setPage(prev => {
+      const idx = prev.sections.findIndex(s => s.id === id)
+      if (idx === -1) return prev
+      const original = prev.sections[idx]
+      const clone = {
+        ...JSON.parse(JSON.stringify(original)),
+        id: nanoid(),
+      }
+      const sections = [...prev.sections]
+      sections.splice(idx + 1, 0, clone)
+      return { ...prev, sections }
+    })
+    // Select the duplicated section (it will have been inserted after original)
+    setPage(prev => {
+      const idx = prev.sections.findIndex(s => s.id === id)
+      if (idx !== -1 && prev.sections[idx + 1]) {
+        setSelectedSectionId(prev.sections[idx + 1].id)
+      }
+      return prev
     })
   }
 
@@ -268,7 +297,7 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
               aria-selected={sidebarTab === 'sections'}
               aria-controls="panel-sections"
               id="tab-sections"
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-md transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-md transition-colors ${
                 sidebarTab === 'sections'
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -284,7 +313,7 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
               aria-selected={sidebarTab === 'settings'}
               aria-controls="panel-settings"
               id="tab-settings"
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-md transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-md transition-colors ${
                 sidebarTab === 'settings'
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -315,9 +344,10 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                       const dotColor = SECTION_DOT_COLORS[section.type] || 'bg-zinc-400'
 
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={section.id}
-                          className={`flex items-center gap-2 rounded-lg px-2.5 py-2 cursor-pointer text-sm transition-all group ${
+                          className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 cursor-pointer text-sm transition-colors group text-left ${
                             isSelected
                               ? 'bg-background shadow-sm ring-1 ring-border'
                               : 'hover:bg-background/60'
@@ -326,8 +356,8 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                         >
                           {/* Drag handle + color dot */}
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <IconGripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
-                            <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} />
+                            <IconGripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" aria-hidden="true" />
+                            <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} aria-hidden="true" />
                           </div>
 
                           {/* Label + index */}
@@ -336,27 +366,30 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                           </div>
 
                           {/* Hover actions */}
-                          <div className={`flex items-center gap-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          <div className={`flex items-center gap-0.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} onClick={e => e.stopPropagation()}>
                             <button
+                              type="button"
                               className="p-1 rounded hover:bg-muted transition-colors"
-                              onClick={e => { e.stopPropagation(); moveSection(section.id, 'up') }}
-                              title={t('moveUp')}
+                              onClick={() => moveSection(section.id, 'up')}
+                              aria-label={t('moveUp')}
                               disabled={idx === 0}
                             >
                               <IconChevronUp className={`w-3 h-3 ${idx === 0 ? 'text-muted-foreground/20' : ''}`} />
                             </button>
                             <button
+                              type="button"
                               className="p-1 rounded hover:bg-muted transition-colors"
-                              onClick={e => { e.stopPropagation(); moveSection(section.id, 'down') }}
-                              title={t('moveDown')}
+                              onClick={() => moveSection(section.id, 'down')}
+                              aria-label={t('moveDown')}
                               disabled={idx === page.sections.length - 1}
                             >
                               <IconChevronDown className={`w-3 h-3 ${idx === page.sections.length - 1 ? 'text-muted-foreground/20' : ''}`} />
                             </button>
                             <button
+                              type="button"
                               className="p-1 rounded hover:bg-muted transition-colors"
-                              onClick={e => { e.stopPropagation(); toggleVisibility(section.id) }}
-                              title={section.visible ? t('hideSection') : t('showSection')}
+                              onClick={() => toggleVisibility(section.id)}
+                              aria-label={section.visible ? t('hideSection') : t('showSection')}
                             >
                               {section.visible ? (
                                 <IconEye className="w-3 h-3" />
@@ -365,14 +398,27 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                               )}
                             </button>
                             <button
+                              type="button"
+                              className="p-1 rounded hover:bg-muted transition-colors"
+                              onClick={() => duplicateSection(section.id)}
+                              aria-label={t('duplicateSection')}
+                            >
+                              <IconCopy className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
                               className="p-1 rounded hover:bg-muted text-destructive/70 hover:text-destructive transition-colors"
-                              onClick={e => { e.stopPropagation(); deleteSection(section.id) }}
-                              title={t('deleteSection')}
+                              onClick={() => {
+                                if (window.confirm(t('deleteSectionConfirm'))) {
+                                  deleteSection(section.id)
+                                }
+                              }}
+                              aria-label={t('deleteSection')}
                             >
                               <IconTrash className="w-3 h-3" />
                             </button>
                           </div>
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
@@ -384,7 +430,7 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs h-9 gap-1.5 border-dashed hover:border-solid hover:bg-accent/50 transition-all"
+                  className="w-full text-xs h-9 gap-1.5 border-dashed hover:border-solid hover:bg-accent/50 transition-colors"
                   onClick={() => setShowSectionPicker(true)}
                 >
                   <IconPlus className="w-3.5 h-3.5" />
@@ -463,6 +509,22 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
             <div className="flex items-center gap-2 px-3 py-2 border-b bg-zinc-900/50 shrink-0">
               <IconEye className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">{t('previewTitle')}</span>
+              <div className="flex items-center gap-0.5 ml-4 bg-zinc-800/50 rounded-md p-0.5">
+                {([
+                  { mode: 'desktop' as PreviewMode, icon: IconDeviceDesktop },
+                  { mode: 'tablet' as PreviewMode, icon: IconDeviceTablet },
+                  { mode: 'mobile' as PreviewMode, icon: IconDeviceMobile },
+                ]).map(({ mode, icon: Icon }) => (
+                  <button
+                    key={mode}
+                    className={`p-1.5 rounded transition-colors ${previewMode === mode ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    onClick={() => setPreviewMode(mode)}
+                    aria-label={t(mode)}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                ))}
+              </div>
               <div className="ml-auto">
                 <Button
                   variant="ghost"
@@ -475,12 +537,22 @@ export function LandingPageBuilder({ page: initialPage, onBack }: Props) {
                 </Button>
               </div>
             </div>
-            <iframe
-              key={previewKey}
-              src={`/dashboard/admin/landing-page/preview/${page.id}?iframe=true`}
-              className="flex-1 w-full border-0"
-              title="Landing page preview"
-            />
+            <div className="flex-1 flex items-start justify-center overflow-auto p-2">
+              <div
+                className={`h-full transition-[max-width] duration-300 ${
+                  previewMode === 'tablet' ? 'max-w-[768px] w-full' :
+                  previewMode === 'mobile' ? 'max-w-[375px] w-full' :
+                  'w-full'
+                }`}
+              >
+                <iframe
+                  key={previewKey}
+                  src={`/dashboard/admin/landing-page/preview/${page.id}?iframe=true`}
+                  className="w-full h-full border-0 rounded-lg"
+                  title="Landing page preview"
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

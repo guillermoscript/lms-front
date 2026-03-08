@@ -1,25 +1,29 @@
-import type { GallerySectionData } from '@/lib/landing-pages/types'
+import type { GallerySectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: GallerySectionData
+  colors?: SectionColors
 }
 
-export function GallerySection({ data }: Props) {
+export function GallerySection({ data, colors }: Props) {
+  const headingColor = colors?.heading ?? 'text-white'
+  const bodyColor = colors?.body ?? 'text-zinc-400'
+
   const colsClass =
     data.columns === 2 ? 'grid-cols-1 sm:grid-cols-2' :
     data.columns === 4 ? 'grid-cols-2 md:grid-cols-4' :
     'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
 
   return (
-    <section className="py-16 md:py-24">
+    <div>
       <div className="container mx-auto px-4 md:px-6">
         {(data.title || data.subtitle) && (
           <div className="text-center mb-12">
             {data.title && (
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{data.title}</h2>
+              <h2 className={`text-2xl md:text-3xl font-bold ${headingColor} mb-3`}>{data.title}</h2>
             )}
             {data.subtitle && (
-              <p className="text-zinc-400 max-w-2xl mx-auto">{data.subtitle}</p>
+              <p className={`${bodyColor} max-w-2xl mx-auto`}>{data.subtitle}</p>
             )}
           </div>
         )}
@@ -46,6 +50,6 @@ export function GallerySection({ data }: Props) {
           ))}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import type { BannerSectionData } from '@/lib/landing-pages/types'
+import type { BannerSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: BannerSectionData
+  colors?: SectionColors
 }
 
 const STYLE_CLASSES: Record<string, string> = {
@@ -60,7 +61,7 @@ export function BannerSection({ data }: Props) {
   const btnClass = BUTTON_CLASSES[data.style] || BUTTON_CLASSES.info
 
   return (
-    <section className={`border-y ${styleClass}`}>
+    <div className={`border-y ${styleClass}`}>
       <div className="container mx-auto px-4 md:px-6 py-4">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
           <p className="font-medium text-sm md:text-base">{data.text}</p>
@@ -76,6 +77,6 @@ export function BannerSection({ data }: Props) {
           )}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

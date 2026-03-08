@@ -28,35 +28,35 @@ const PAGE_TYPE_PRESETS = [
 ] as const
 
 const CATEGORY_COLORS: Record<string, string> = {
-  education: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  general: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
-  creative: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  business: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  education: 'bg-primary/10 text-primary border-primary/20',
+  general: 'bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20',
+  creative: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+  business: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
 }
 
 const SECTION_MINI_COLORS: Record<string, string> = {
-  hero: 'bg-gradient-to-r from-blue-500/30 to-indigo-500/30',
+  hero: 'bg-gradient-to-r from-primary/30 to-primary/20',
   features: 'bg-emerald-500/20',
   courses: 'bg-amber-500/20',
   testimonials: 'bg-pink-500/20',
   faq: 'bg-cyan-500/20',
   cta: 'bg-orange-500/20',
   stats: 'bg-violet-500/20',
-  text: 'bg-zinc-500/20',
+  text: 'bg-muted-foreground/10',
   image_text: 'bg-sky-500/20',
   video: 'bg-red-500/20',
   pricing: 'bg-green-500/20',
   team: 'bg-teal-500/20',
-  logo_cloud: 'bg-slate-500/20',
+  logo_cloud: 'bg-muted-foreground/10',
   gallery: 'bg-fuchsia-500/20',
   banner: 'bg-yellow-500/20',
-  divider: 'bg-zinc-400/10',
+  divider: 'bg-muted-foreground/5',
   contact: 'bg-rose-500/20',
 }
 
 function MiniPagePreview({ sections }: { sections: LandingSection[] }) {
   return (
-    <div className="w-full rounded-lg bg-zinc-950 border border-zinc-800 p-2 space-y-1">
+    <div className="w-full rounded-lg bg-background border border-border p-2 space-y-1">
       {sections.slice(0, 6).map((s, i) => {
         const color = SECTION_MINI_COLORS[s.type] || 'bg-zinc-500/20'
         const isHero = s.type === 'hero'
@@ -65,7 +65,7 @@ function MiniPagePreview({ sections }: { sections: LandingSection[] }) {
             key={i}
             className={`rounded ${color} flex items-center justify-center ${isHero ? 'h-8' : 'h-4'}`}
           >
-            {isHero && <span className="text-[9px] font-semibold text-white/50 uppercase tracking-wider">Hero</span>}
+            {isHero && <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Hero</span>}
           </div>
         )
       })}
@@ -113,7 +113,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-lg">
               {step === 'template' && (
-                <button type="button" onClick={() => setStep('slug')} onPointerDown={(e) => e.stopPropagation()} className="p-1 rounded hover:bg-muted transition-colors mr-1" aria-label="Back">
+                <button type="button" onClick={() => setStep('slug')} onPointerDown={(e) => e.stopPropagation()} className="p-1 rounded hover:bg-muted transition-colors mr-1" aria-label="Back to page type selection">
                   <IconArrowLeft className="w-4 h-4" />
                 </button>
               )}
@@ -140,8 +140,8 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                     type="button"
                     className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
                       isSelected
-                        ? 'border-blue-500/50 bg-blue-500/5 ring-1 ring-blue-500/30'
-                        : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'
+                        ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30'
+                        : 'border-border hover:border-border/80 bg-card/50'
                     }`}
                     onClick={() => { setSelectedSlug(preset.slug); setCustomSlug('') }}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -163,13 +163,13 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                 type="button"
                 className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
                   selectedSlug === 'custom'
-                    ? 'border-blue-500/50 bg-blue-500/5 ring-1 ring-blue-500/30'
-                    : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'
+                    ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30'
+                    : 'border-border hover:border-border/80 bg-card/50'
                 }`}
                 onClick={() => setSelectedSlug('custom')}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center border bg-zinc-500/10 border-zinc-500/20 text-zinc-400">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center border bg-muted-foreground/10 border-muted-foreground/20 text-muted-foreground">
                   <IconFileText className="w-4 h-4" />
                 </div>
                 <div>
@@ -219,8 +219,8 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                   <button
                     key={idx}
                     className={`group relative flex flex-col rounded-xl border text-left transition-all duration-200 overflow-hidden ${hoveredIdx === idx
-                      ? 'border-blue-500/50 bg-blue-500/5 shadow-lg shadow-blue-500/5 scale-[1.02]'
-                      : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'
+                      ? 'border-primary/50 bg-primary/5 shadow-lg shadow-primary/5 scale-[1.02]'
+                      : 'border-border hover:border-border/80 bg-card/50'
                       }`}
                     onClick={() => handleSelectTemplate(template.sections, template.name)}
                     onMouseEnter={() => setHoveredIdx(idx)}
@@ -243,12 +243,12 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                       )}
                       <div className="flex flex-wrap gap-1 pt-1">
                         {template.sections.slice(0, 4).map((s, i) => (
-                          <span key={i} className="text-[10px] text-zinc-500 bg-zinc-800/80 px-1.5 py-0.5 rounded">
+                          <span key={i} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             {tLabels(s.type as SectionType)}
                           </span>
                         ))}
                         {template.sections.length > 4 && (
-                          <span className="text-[10px] text-zinc-600 px-1">
+                          <span className="text-[10px] text-muted-foreground px-1">
                             {t('more', { count: template.sections.length - 4 })}
                           </span>
                         )}

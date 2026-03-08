@@ -1,22 +1,25 @@
-import type { ImageTextSectionData } from '@/lib/landing-pages/types'
+import type { ImageTextSectionData, SectionColors } from '@/lib/landing-pages/types'
 
 interface Props {
   data: ImageTextSectionData
+  colors?: SectionColors
 }
 
-export function ImageTextSection({ data }: Props) {
+export function ImageTextSection({ data, colors }: Props) {
   const imageRight = data.imagePosition !== 'left'
+  const headingColor = colors?.heading ?? 'text-white'
+  const bodyColor = colors?.body ?? 'text-zinc-400'
 
   return (
-    <section className="py-20">
+    <div>
       <div className="container mx-auto px-4 md:px-6">
         <div className={`grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto ${imageRight ? '' : 'flex-row-reverse'}`}>
           <div className={`space-y-4 ${!imageRight ? 'md:order-2' : ''}`}>
             {data.title && (
-              <h2 className="text-3xl md:text-4xl font-bold text-white">{data.title}</h2>
+              <h2 className={`text-3xl md:text-4xl font-bold ${headingColor}`}>{data.title}</h2>
             )}
             {data.content && (
-              <p className="text-zinc-400 leading-relaxed text-lg">{data.content}</p>
+              <p className={`${bodyColor} leading-relaxed text-lg`}>{data.content}</p>
             )}
           </div>
           {data.imageSrc && (
@@ -30,6 +33,6 @@ export function ImageTextSection({ data }: Props) {
           )}
         </div>
       </div>
-    </section>
+    </div>
   )
 }
