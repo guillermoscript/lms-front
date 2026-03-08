@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
+import { AristotleConfig } from '@/components/teacher/aristotle-config'
 import { Separator } from '@/components/ui/separator'
 
 interface PageProps {
@@ -58,12 +59,20 @@ export default async function CourseSettingsPage({ params }: PageProps) {
     )
   }
 
-  // Get categories for the form
-  const { data: categories } = await supabase
-    .from('course_categories')
-    .select('id, name')
-    .eq('tenant_id', tenantId)
-    .order('name')
+  // Get categories and Aristotle config in parallel
+  const [{ data: categories }, { data: aristotleConfig }] = await Promise.all([
+    supabase
+      .from('course_categories')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .order('name'),
+    supabase
+      .from('course_ai_tutors')
+      .select('tutor_id, enabled, persona, teaching_approach, boundaries')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+  ])
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,6 +100,15 @@ export default async function CourseSettingsPage({ params }: PageProps) {
         <CourseForm
           categories={categories || []}
           initialData={course as any}
+        />
+
+        <Separator className="my-8" />
+
+        {/* Aristotle AI Tutor */}
+        <AristotleConfig
+          courseId={parseInt(courseId)}
+          tenantId={tenantId}
+          initialConfig={aristotleConfig}
         />
 
         <Separator className="my-8" />

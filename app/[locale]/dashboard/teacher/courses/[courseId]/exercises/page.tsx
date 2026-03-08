@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   IconPlus,
-  IconEdit,
   IconArrowLeft,
   IconChevronRight,
   IconCode,
@@ -52,16 +51,16 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
 
   const getExerciseIcon = (type: string) => {
     switch (type) {
-      case 'coding_challenge': return <IconCode className="h-5 w-5 text-primary" />
-      case 'quiz': return <IconBrain className="h-5 w-5 text-primary" />
-      case 'discussion': return <IconMessageCircle className="h-5 w-5 text-primary" />
+      case 'coding_challenge': return <IconCode className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
+      case 'quiz': return <IconBrain className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
+      case 'discussion': return <IconMessageCircle className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
       case 'essay':
-      default: return <IconFileText className="h-5 w-5 text-primary" />
+      default: return <IconFileText className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
     }
   }
 
   return (
-    <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
@@ -83,30 +82,33 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
           <p className="text-sm text-muted-foreground mt-0.5">{t('practice.description')}</p>
         </div>
         <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>
-          <Button size="sm">
-            <IconPlus className="mr-2 h-4 w-4" />
+          <Button size="sm" className="gap-2">
+            <IconPlus className="h-3.5 w-3.5" />
             {t('practice.addExercise')}
           </Button>
         </Link>
       </div>
 
       {exercises && exercises.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <IconTarget className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="font-medium mb-1">{t('practice.noExercises')}</p>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+              <IconTarget size={28} className="text-muted-foreground/40" />
+            </div>
+            <h3 className="text-xl font-bold mb-1.5">{t('practice.noExercises')}</h3>
             <p className="text-sm text-muted-foreground max-w-sm mb-6">
               {t('practice.emptyStateDescription')}
             </p>
             <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>
-              <Button variant="outline" size="sm">
+              <Button className="gap-2">
+                <IconPlus className="h-4 w-4" />
                 {t('practice.getStarted')}
               </Button>
             </Link>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {exercises?.map((exercise, idx) => (
             <motion.div
               key={exercise.id}
@@ -114,56 +116,58 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04, duration: 0.25 }}
             >
-              <Card className="group hover:border-primary/50 transition-colors">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      {getExerciseIcon(exercise.exercise_type)}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-medium group-hover:text-primary transition-colors truncate">
-                        {exercise.title}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px] h-4 capitalize">
-                          {exercise.exercise_type.replace('_', ' ')}
-                        </Badge>
-                        <Badge
-                          variant={
-                            exercise.difficulty_level === 'hard' ? 'destructive' :
-                              exercise.difficulty_level === 'medium' ? 'default' : 'secondary'
-                          }
-                          className="text-[10px] h-4 capitalize"
-                        >
-                          {t(`difficulty.${exercise.difficulty_level}`)}
-                        </Badge>
-                        <Badge variant={exercise.status === 'published' ? 'outline' : 'secondary'} className="text-[10px] h-4">
-                          {t(`status.${exercise.status}`)}
-                        </Badge>
-                        {exercise.lesson && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <IconBooks className="h-3 w-3" />
-                            <span className="truncate max-w-[120px]">{exercise.lesson.title}</span>
+              <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
+                <Card className="group transition-all duration-200 hover:shadow-md hover:border-emerald-500/50 cursor-pointer">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40 shrink-0">
+                        {getExerciseIcon(exercise.exercise_type)}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">
+                          {exercise.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {exercise.exercise_type.replace('_', ' ')}
                           </span>
-                        )}
-                        {exercise.time_limit && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <IconClock className="h-3 w-3" />
-                            {exercise.time_limit}m
+                          <span className="text-muted-foreground/30">·</span>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {t(`difficulty.${exercise.difficulty_level}`)}
                           </span>
-                        )}
+                          {exercise.status !== 'published' && (
+                            <>
+                              <span className="text-muted-foreground/30">·</span>
+                              <Badge variant="secondary" className="text-[10px] h-4">
+                                {t(`status.${exercise.status}`)}
+                              </Badge>
+                            </>
+                          )}
+                          {exercise.lesson && (
+                            <>
+                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <IconBooks className="h-3 w-3" />
+                                <span className="truncate max-w-[120px]">{exercise.lesson.title}</span>
+                              </span>
+                            </>
+                          )}
+                          {exercise.time_limit && (
+                            <>
+                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <IconClock className="h-3 w-3" />
+                                {exercise.time_limit}m
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
-                    <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('practice.edit')}>
-                        <IconEdit size={16} />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+                    <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0 ml-4" />
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           ))}
         </div>

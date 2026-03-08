@@ -65,7 +65,7 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
   })
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
       <div className="flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}`}>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('manageCourse.backToCourses')}>

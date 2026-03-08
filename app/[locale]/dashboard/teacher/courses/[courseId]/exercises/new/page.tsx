@@ -32,9 +32,9 @@ export default async function NewExercisePage({ params }: PageProps) {
   if (!course) return notFound()
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+      <div className="mb-6 flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}/exercises`}>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourses')}>
             <IconArrowLeft className="h-4 w-4" />
