@@ -656,6 +656,56 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             description: "Embedded video player.",
             snippet: '<Video url="https://www.youtube.com/watch?v=VIDEO_ID" />',
           },
+          {
+            name: "Audio",
+            description: "Audio player with optional title.",
+            snippet: '<Audio src="https://example.com/audio.mp3" title="Episode 1" />',
+          },
+          {
+            name: "Embed",
+            description: "Generic iframe embed for external content.",
+            snippet: '<Embed url="https://example.com/interactive" title="Demo" caption="Interactive demo" />',
+          },
+          {
+            name: "FileDownload",
+            description: "Downloadable file attachment with description.",
+            snippet: '<FileDownload url="https://example.com/guide.pdf" filename="guide.pdf" description="Course materials" />',
+          },
+          {
+            name: "Glossary",
+            description: "List of term/definition pairs. Uses JSON.parse for items.",
+            snippet: '<Glossary items={JSON.parse(\'[{"term":"API","definition":"Application Programming Interface"},{"term":"REST","definition":"Representational State Transfer"}]\')} />',
+          },
+          {
+            name: "Comparison",
+            description: "Side-by-side comparison of two options with bullet points. Uses JSON.parse for sides.",
+            snippet: '<Comparison sideA={JSON.parse(\'{"title":"Python","points":["Easy to learn","Great for data science"],"highlight":"positive"}\')} sideB={JSON.parse(\'{"title":"Java","points":["Strongly typed","Enterprise standard"],"highlight":"neutral"}\')} summary="Both are great languages for different use cases." />',
+          },
+          {
+            name: "Table",
+            description: "Data table with headers and rows. Uses JSON.parse for data.",
+            snippet: '<Table headers={JSON.parse(\'["Concepto","Descripción","Ejemplo"]\')} rows={JSON.parse(\'[["Variable","Almacena un valor","let x = 5"],["Función","Bloque reutilizable","function sum(){}"]]\')} striped={true} />',
+          },
+          {
+            name: "FlashcardSet",
+            description: "Deck of flashcards with front/back for self-study. Uses JSON.parse.",
+            snippet: '<FlashcardSet cards={JSON.parse(\'[{"front":"What is HTTP?","back":"HyperText Transfer Protocol"},{"front":"What is DNS?","back":"Domain Name System"}]\')} />',
+          },
+          {
+            name: "FillInTheBlank",
+            description: "Sentence with blank slots for self-check. Uses JSON.parse for segments.",
+            snippet: '<FillInTheBlank segments={JSON.parse(\'[{"type":"text","value":"The capital of France is "},{"type":"blank","value":"Paris"},{"type":"text","value":"."}]\')} explanation="Paris has been the capital since the 10th century." />',
+          },
+          {
+            name: "MatchingPairs",
+            description: "Connect terms to their matches. Uses JSON.parse for pairs.",
+            snippet: '<MatchingPairs pairs={JSON.parse(\'[{"term":"H2O","match":"Water"},{"term":"NaCl","match":"Salt"},{"term":"CO2","match":"Carbon Dioxide"}]\')} explanation="These are common chemical formulas." />',
+          },
+          {
+            name: "Ordering",
+            description: "Arrange items in the correct sequence. Uses JSON.parse for items (provide in correct order).",
+            snippet: '<Ordering items={JSON.parse(\'["Define the problem","Research solutions","Implement","Test","Deploy"]\')} explanation="The software development lifecycle follows these steps." />',
+          },
         ];
 
         let result = "# Componentes MDX disponibles\n\n";

@@ -18,7 +18,15 @@
     "browseCourses": "Explorar Cursos",
     "completed": "Completado",
     "lessonsCompleted": "lecciones completadas",
-    "lessons": "lecciones"
+    "lessons": "lecciones",
+    "courseSelector": {
+      "label": "Cursos Incluidos",
+      "loading": "Cargando cursos...",
+      "search": "Buscar cursos...",
+      "noResults": "No se encontraron cursos",
+      "noAvailable": "No hay cursos publicados disponibles",
+      "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
+    }
   },
   "aristotle": {
     "name": "Aristotle",
@@ -179,6 +187,32 @@
         "finishCourse": "Termina un curso",
         "finishCourseDesc": "Completa todas las lecciones de un curso para obtener tu certificado."
       },
+      "tour": {
+        "welcome": {
+          "title": "Bienvenido a Tu Panel",
+          "description": "Este es tu centro de aprendizaje. Verás un saludo personalizado y una forma rápida de continuar donde lo dejaste."
+        },
+        "stats": {
+          "title": "Tu Progreso de un Vistazo",
+          "description": "Sigue tus estadísticas de aprendizaje — lecciones completadas, cursos en progreso y cursos terminados."
+        },
+        "courses": {
+          "title": "Tus Cursos",
+          "description": "Tus cursos inscritos aparecen aquí con barras de progreso. Haz clic en cualquier curso para volver a donde lo dejaste."
+        },
+        "sidebar": {
+          "title": "Clasificación y Actividad",
+          "description": "Mira cómo te clasificas frente a otros estudiantes, revisa los próximos exámenes y tu actividad reciente."
+        },
+        "sidebarBrowse": {
+          "title": "Descubre Nuevos Cursos",
+          "description": "Explora el catálogo completo de cursos para encontrar nuevos temas que te interesen e inscríbete con un clic."
+        },
+        "sidebarProgress": {
+          "title": "Reporte de Progreso",
+          "description": "Obtén un desglose detallado de tu progreso de aprendizaje en todos los cursos, incluyendo tiempo dedicado y tasas de finalización."
+        }
+      },
       "courses": {
         "title": "Mis Cursos",
         "enrolledMessage": "Estás inscrito en {count, plural, one {# curso} other {# cursos}}",
@@ -325,6 +359,32 @@
       "subtitle": "Esto es lo que está pasando con tus cursos y estudiantes hoy.",
       "createCourse": "Crear Nuevo Curso",
       "promptTemplates": "Plantillas de Prompt",
+      "tour": {
+        "header": {
+          "title": "Vista General del Curso",
+          "description": "Este es tu centro de gestión del curso. Puedes ver el título, el estado y la cantidad de estudiantes inscritos de un vistazo."
+        },
+        "tabs": {
+          "title": "Pestañas de Contenido",
+          "description": "Alterna entre Lecciones, Ejercicios, Exámenes, Estudiantes y Certificados. Cada pestaña te permite gestionar un aspecto diferente de tu curso."
+        },
+        "lessons": {
+          "title": "Lecciones",
+          "description": "Construye tu plan de estudios aquí. Agrega lecciones en secuencia — los estudiantes avanzarán en orden. Haz clic en cualquier lección para editar su contenido."
+        },
+        "exercises": {
+          "title": "Ejercicios Prácticos",
+          "description": "Crea ejercicios prácticos para que los estudiantes apliquen lo aprendido. Soporta desafíos de código, cuestionarios, ensayos y más."
+        },
+        "preview": {
+          "title": "Vista Previa del Curso",
+          "description": "Mira exactamente lo que verán los estudiantes. Previsualiza el contenido de tu curso antes de publicarlo para asegurarte de que todo se vea bien."
+        },
+        "settings": {
+          "title": "Configuración del Curso",
+          "description": "Configura los detalles del curso — título, descripción, miniatura, categoría y estado de publicación. También puedes eliminar el curso aquí."
+        }
+      },
       "onboarding": {
         "title": "Primeros Pasos",
         "subtitle": "Completa estos pasos para configurar tu primer curso.",
@@ -671,7 +731,29 @@
         "modeVisual": "Visual",
         "modeMDX": "MDX",
         "closePreview": "Cerrar vista previa",
-        "dismissError": "Descartar error"
+        "dismissError": "Descartar error",
+        "tour": {
+          "header": {
+            "title": "Editor de Lección",
+            "description": "Aquí es donde construyes tu lección. La ruta de navegación muestra a qué curso pertenece esta lección."
+          },
+          "steps": {
+            "title": "Flujo en Tres Pasos",
+            "description": "Detalles — configura el título, descripción y video. Contenido — escribe el cuerpo de la lección. Tarea IA — opcionalmente agrega un desafío interactivo evaluado por IA."
+          },
+          "editorMode": {
+            "title": "Visual o Código",
+            "description": "Alterna entre el editor visual de bloques (arrastrar y soltar) y el editor de código MDX. Ambos producen el mismo resultado — usa el que prefieras."
+          },
+          "preview": {
+            "title": "Vista Previa en Vivo",
+            "description": "Activa el panel de vista previa lado a lado para ver exactamente lo que verán los estudiantes mientras escribes."
+          },
+          "save": {
+            "title": "Guardar y Publicar",
+            "description": "Guardar Borrador conserva tu trabajo sin hacerlo visible a los estudiantes. Publicar hace la lección visible inmediatamente."
+          }
+        }
       },
       "exerciseBuilder": {
         "details": "Detalles",
@@ -1076,7 +1158,9 @@
         "revenue": "Ingresos",
         "notifications": "Notificaciones",
         "templates": "Plantillas",
-        "tenants": "Inquilinos"
+        "tenants": "Inquilinos",
+        "apiTokens": "Tokens de API",
+        "monetization": "Monetización"
       },
       "error": {
         "title": "Error del panel de administración",
@@ -1143,9 +1227,34 @@
           "inviteUsersDesc": "Agrega profesores o estudiantes a tu escuela.",
           "reviewBilling": "Revisa tu plan de facturación",
           "reviewBillingDesc": "Elige un plan que se adapte a las necesidades de tu escuela."
+        },
+        "tour": {
+          "checklist": {
+            "title": "Lista de Inicio",
+            "description": "Sigue estos pasos para poner tu escuela en marcha. Completa cada uno para desbloquear todo el potencial de tu escuela."
+          },
+          "plan": {
+            "title": "Tu Plan y Uso",
+            "description": "Monitorea los límites de tu plan actual — cursos, estudiantes y facturación. Mejora en cualquier momento."
+          },
+          "stats": {
+            "title": "Resumen de la Escuela",
+            "description": "Ve tus métricas clave de un vistazo — usuarios, cursos, ingresos y más."
+          },
+          "sidebarSettings": {
+            "title": "Configuración de la Escuela",
+            "description": "Personaliza el nombre, marca, dominio y más de tu escuela desde Configuración."
+          },
+          "sidebarCourses": {
+            "title": "Gestionar Contenido",
+            "description": "Crea y gestiona cursos desde la sección de Gestión de Contenido."
+          },
+          "replay": "Repetir recorrido"
         }
       },
       "billing": {
+        "title": "Facturación",
+        "description": "Gestiona la suscripción y facturación de tu escuela",
         "overview": {
           "currentPlan": "Plan Actual",
           "pastDue": "Pago Vencido",
@@ -1283,6 +1392,29 @@
             },
             "cancel": "Cancelar"
           }
+        },
+        "invite": {
+          "button": "Invitar Usuario",
+          "title": "Invita a alguien a tu escuela",
+          "description": "Envía una invitación por correo electrónico o comparte un enlace por WhatsApp.",
+          "roleLabel": "Rol",
+          "roleStudent": "Estudiante",
+          "roleTeacher": "Profesor",
+          "roleHint": "La persona invitada recibirá este rol cuando se una.",
+          "emailLabel": "Correo electrónico",
+          "emailPlaceholder": "nombre@ejemplo.com",
+          "emailRequired": "Por favor ingresa un correo electrónico",
+          "genericError": "Algo salió mal. Inténtalo de nuevo.",
+          "sendEmail": "Enviar Invitación por Email",
+          "sending": "Enviando...",
+          "shareWhatsApp": "WhatsApp",
+          "copyLink": "Copiar Enlace",
+          "copied": "¡Copiado!",
+          "sent": "¡Invitación enviada!",
+          "sentDescription": "Se envió un correo a {email} con instrucciones para unirse.",
+          "inviteAnother": "Invitar a otra persona",
+          "linkNote": "WhatsApp y el enlace compartirán la página de registro de tu escuela.",
+          "whatsappMessage": "¡Estás invitado a unirte a nuestra escuela! Regístrate aquí: {url} (Te unirás como {role})"
         }
       },
       "paymentRequests": {
@@ -1785,335 +1917,6 @@
             "capacity": "Activar Capacidad de Curso",
             "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
           }
-        },
-        "revenue": {
-          "title": "Ingresos",
-          "description": "Rastrea los ingresos y ganancias de tu escuela",
-          "empty": "Aún no hay datos de ingresos. Comienza a vender cursos para ver tus ganancias aquí.",
-          "totalRevenue": "Ingresos Totales",
-          "transactionCount": "{count, plural, one {# transacción} other {# transacciones}}",
-          "platformFees": "Comisiones de Plataforma",
-          "upgradeToReduce": "Mejora tu plan para reducir comisiones",
-          "netRevenue": "Ingresos Netos",
-          "afterFees": "Después de comisiones",
-          "revenueByProduct": "Ingresos por Producto",
-          "topEarning": "Productos más vendidos",
-          "monthlyTrend": "Tendencia Mensual",
-          "monthlyTrendDescription": "Ingresos de los últimos 12 meses"
-        },
-        "notifications": {
-          "title": "Notificaciones",
-          "description": "Enviar anuncios y mensajes a estudiantes y profesores",
-          "buttons": {
-            "templates": "Plantillas",
-            "create": "Crear Notificación"
-          },
-          "stats": {
-            "total": "Total de Notificaciones",
-            "sent": "Enviadas",
-            "scheduled": "Programadas",
-            "drafts": "Borradores"
-          },
-          "manage": {
-            "title": "Gestionar Notificaciones",
-            "description": "Ver y gestionar notificaciones del sistema, anuncios y mensajes dirigidos"
-          },
-          "tabs": {
-            "all": "Todo",
-            "sent": "Enviadas",
-            "scheduled": "Programadas",
-            "drafts": "Borradores"
-          },
-          "types": {
-            "announcement": "Anuncio",
-            "alert": "Alerta",
-            "info": "Información",
-            "success": "Éxito",
-            "warning": "Advertencia",
-            "error": "Error"
-          },
-          "priority": {
-            "low": "Baja",
-            "normal": "Normal",
-            "high": "Alta",
-            "urgent": "Urgente"
-          },
-          "priorityOptions": {
-            "low": "Baja",
-            "normal": "Normal",
-            "high": "Alta",
-            "urgent": "Urgente"
-          },
-          "targets": {
-            "all": "Todos los Usuarios",
-            "role": "Rol Específico",
-            "course": "Estudiantes del Curso"
-          },
-          "list": {
-            "empty": "No se encontraron notificaciones",
-            "status": {
-              "sent": "Enviada",
-              "scheduled": "Programada",
-              "draft": "Borrador",
-              "cancelled": "Cancelada"
-            },
-            "metadata": {
-              "target": "Destino",
-              "sent": "Enviado",
-              "scheduled": "Programado",
-              "created": "Creado"
-            },
-            "actions": {
-              "send": "Enviar Ahora",
-              "delete": "Eliminar"
-            },
-            "send": "Enviar notificación",
-            "delete": "Eliminar notificación",
-            "confirmDeleteTitle": "Eliminar Notificación",
-            "confirmDelete": "¿Estás seguro de que quieres eliminar esta notificación?",
-            "confirmDeleteAction": "Eliminar",
-            "toasts": {
-              "sent": "Notificación enviada a {count} usuarios",
-              "deleted": "Notificación eliminada con éxito",
-              "error": "Error al enviar la notificación",
-              "deleteError": "Error al eliminar la notificación"
-            }
-          },
-          "form": {
-            "title": "Título",
-            "titlePlaceholder": "Título de la notificación",
-            "message": "Mensaje",
-            "messagePlaceholder": "Ingrese el mensaje de su notificación...",
-            "messageHint": "Use llaves dobles para contenido dinámico con plantillas",
-            "type": "Tipo",
-            "priority": "Prioridad",
-            "sendTo": "Enviar a",
-            "targets": {
-              "all": "Todos los Usuarios",
-              "role": "Rol Específico",
-              "course": "Estudiantes del Curso"
-            },
-            "roles": "Roles (separados por comas)",
-            "rolesPlaceholder": "estudiante, profesor",
-            "rolesHint": "Ejemplo: estudiante, profesor, admin",
-            "courseId": "ID del Curso",
-            "courseIdPlaceholder": "Ingrese el ID del curso",
-            "courseIdHint": "Encuentre el ID del curso en la página de gestión de cursos",
-            "delivery": "Entrega",
-            "deliveryDesc": "Enviar inmediatamente o programar para más tarde",
-            "deliveryOptions": {
-              "now": "Enviar Ahora",
-              "schedule": "Programar"
-            },
-            "scheduleFor": "Programar para",
-            "submit": {
-              "send": "Enviar Notificación",
-              "save": "Guardar Borrador"
-            },
-            "toasts": {
-              "success": "Notificación enviada con éxito",
-              "draft": "Notificación guardada como borrador",
-              "error": "Error al crear la notificación"
-            }
-          },
-          "templates": {
-            "title": "Plantillas de Notificación",
-            "description": "Crea plantillas reutilizables con variables dinámicas para notificaciones comunes",
-            "back": "Volver",
-            "create": "Crear Plantilla",
-            "empty": "No se encontraron plantillas",
-            "table": {
-              "name": "Nombre",
-              "type": "Tipo",
-              "subject": "Asunto",
-              "created": "Creado",
-              "actions": "Acciones"
-            },
-            "form": {
-              "name": "Nombre de la Plantilla",
-              "namePlaceholder": "ej., Bienvenida al Curso",
-              "subject": "Asunto de la Plantilla",
-              "subjectPlaceholder": "ej., Bienvenido a {{course_name}}",
-              "content": "Contenido de la Plantilla",
-              "contentPlaceholder": "Ingrese el contenido de su plantilla...",
-              "type": "Tipo de Notificación",
-              "description": "Descripción (opcional)",
-              "submit": {
-                "create": "Crear Plantilla",
-                "update": "Actualizar Plantilla"
-              },
-              "toasts": {
-                "success": "Plantilla creada con éxito",
-                "updated": "Plantilla actualizada con éxito",
-                "error": "Error al crear la plantilla",
-                "deleted": "Plantilla eliminada con éxito"
-              },
-              "dialog": {
-                "title": "Crear Nueva Plantilla",
-                "editTitle": "Editar Plantilla",
-                "description": "Crea plantillas reutilizables para notificaciones del sistema"
-              }
-            }
-          }
-        },
-        "common": {
-          "courseSelector": {
-            "label": "Cursos Incluidos",
-            "loading": "Cargando cursos...",
-            "search": "Buscar cursos...",
-            "noResults": "No se encontraron cursos",
-            "noAvailable": "No hay cursos publicados disponibles",
-            "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
-          }
-        },
-        "tenants": {
-          "title": "Gestión de Inquilinos",
-          "superAdmin": "Super Administrador",
-          "slug": "Slug",
-          "plan": "Plan",
-          "members": "Miembros",
-          "created": "Creado",
-          "stripeConnected": "Conectado"
-        },
-        "plans": {
-          "title": "Planes de Suscripción",
-          "description": "Gestionar planes de suscripción y facturación recurrente",
-          "back": "Volver al Panel",
-          "create": "Crear Plan",
-          "stats": {
-            "total": "Total de Planes",
-            "monthly": "Planes Mensuales",
-            "yearly": "Planes Anuales"
-          },
-          "card": {
-            "monthly": "Mensual",
-            "yearly": "Anual",
-            "course": "curso",
-            "courses": "cursos",
-            "noDescription": "Sin descripción",
-            "perMonth": "al mes",
-            "perYear": "al año",
-            "features": "Características:",
-            "includedCourses": "Cursos Incluidos:",
-            "more": "+{count} más",
-            "edit": "Editar Plan"
-          },
-          "empty": {
-            "title": "Aún no hay planes",
-            "description": "Crea tu primer plan de suscripción para comenzar"
-          },
-          "new": {
-            "title": "Crear Plan de Suscripción",
-            "description": "Crea un nuevo plan de suscripción con facturación recurrente",
-            "back": "Volver a Planes",
-            "details": {
-              "title": "Detalles del Plan",
-              "description": "Los planes de suscripción se crearán automáticamente en Stripe con facturación recurrente."
-            }
-          },
-          "edit": {
-            "title": "Editar Plan de Suscripción",
-            "description": "Actualizar detalles del plan",
-            "back": "Volver a Planes"
-          },
-          "form": {
-            "name": "Nombre del Plan",
-            "namePlaceholder": "ej., Plan Mensual Premium",
-            "description": "Descripción",
-            "descriptionPlaceholder": "Describe qué incluye este plan...",
-            "price": "Precio",
-            "currency": "Moneda",
-            "duration": "Duración",
-            "durationMonthly": "Mensual",
-            "durationYearly": "Anual",
-            "features": "Características (separadas por comas)",
-            "featuresPlaceholder": "Acceso ilimitado, Soporte prioritario, Recursos descargables",
-            "featuresHint": "Ingrese las características separadas por comas. Estas se mostrarán a los clientes.",
-            "saving": "Guardando...",
-            "create": "Crear Plan",
-            "save": "Guardar Cambios",
-            "cancel": "Cancelar",
-            "errors": {
-              "nameRequired": "El nombre del plan es obligatorio",
-              "priceGreater": "El precio debe ser mayor a 0",
-              "generic": "Ocurrió un error"
-            },
-            "toasts": {
-              "createSuccess": "Plan creado con éxito",
-              "updateSuccess": "Plan actualizado con éxito"
-            }
-          }
-        },
-        "products": {
-          "title": "Gestión de Productos",
-          "description": "Gestionar productos e integración con Stripe",
-          "back": "Volver al Panel",
-          "create": "Crear Producto",
-          "stats": {
-            "total": "Total de Productos",
-            "active": "Activos",
-            "archived": "Archivados"
-          },
-          "card": {
-            "course": "curso",
-            "courses": "cursos",
-            "noDescription": "Sin descripción",
-            "includedCourses": "Cursos Incluidos:",
-            "more": "+{count} más",
-            "edit": "Editar",
-            "actions": "Acciones"
-          },
-          "empty": {
-            "title": "Aún no hay productos",
-            "description": "Crea tu primer producto para comenzar"
-          },
-          "new": {
-            "title": "Crear Producto",
-            "description": "Crea un nuevo producto con integración de Stripe",
-            "back": "Volver a Productos",
-            "details": {
-              "title": "Detalles del Producto",
-              "description": "Los productos se crearán automáticamente en Stripe. Vincula cursos para crear paquetes."
-            }
-          },
-          "edit": {
-            "title": "Editar Producto",
-            "description": "Actualizar detalles del producto",
-            "back": "Volver a Productos",
-            "details": {
-              "description": "Los cambios en el precio o la moneda crearán un nuevo precio en Stripe."
-            }
-          },
-          "form": {
-            "name": "Nombre del Producto",
-            "namePlaceholder": "ej., Paquete de Desarrollo Web Completo",
-            "description": "Descripción",
-            "descriptionPlaceholder": "Describe qué incluye este producto...",
-            "price": "Precio",
-            "currency": "Moneda",
-            "image": "URL de la Imagen (opcional)",
-            "imagePlaceholder": "https://ejemplo.com/imagen.jpg",
-            "method": "Método de Pago",
-            "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
-            "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
-            "methodPaypal": "PayPal (Próximamente)",
-            "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
-            "methodStripeHint": "Los estudiantes pueden pagar online al instante",
-            "saving": "Guardando...",
-            "create": "Crear Producto",
-            "save": "Guardar Cambios",
-            "cancel": "Cancelar",
-            "errors": {
-              "nameRequired": "El nombre del producto es obligatorio",
-              "priceGreater": "El precio debe ser mayor a 0",
-              "courseRequired": "Por favor seleccione al menos un curso",
-              "generic": "Ocurrió un error"
-            },
-            "toasts": {
-              "createSuccess": "Producto creado con éxito",
-              "updateSuccess": "Producto actualizado con éxito"
-            }
-          }
         }
       },
       "apiTokens": {
@@ -2174,6 +1977,395 @@
           "revoke": "Revocar token",
           "delete": "Eliminar token"
         }
+      },
+      "plans": {
+        "title": "Planes de Suscripción",
+        "description": "Planes recurrentes que dan acceso continuo a los cursos",
+        "back": "Volver al Panel",
+        "create": "Crear Plan",
+        "stats": {
+          "total": "Total de Planes",
+          "monthly": "Planes Mensuales",
+          "yearly": "Planes Anuales"
+        },
+        "card": {
+          "monthly": "Mensual",
+          "yearly": "Anual",
+          "course": "curso",
+          "courses": "cursos",
+          "noDescription": "Sin descripción",
+          "perMonth": "al mes",
+          "perYear": "al año",
+          "features": "Características:",
+          "includedCourses": "Cursos Incluidos:",
+          "more": "+{count} más",
+          "edit": "Editar Plan"
+        },
+        "empty": {
+          "title": "Aún no hay planes",
+          "description": "Los planes te permiten cobrar a los estudiantes mensual o anualmente. Crea el primero."
+        },
+        "new": {
+          "title": "Crear Plan de Suscripción",
+          "description": "Configura un nuevo plan recurrente para estudiantes",
+          "back": "Volver a Planes",
+          "details": {
+            "title": "Detalles del Plan",
+            "description": "Los planes de suscripción se crearán automáticamente en Stripe con facturación recurrente."
+          }
+        },
+        "edit": {
+          "title": "Editar Plan de Suscripción",
+          "description": "Actualizar detalles del plan",
+          "back": "Volver a Planes"
+        },
+        "form": {
+          "name": "Nombre del Plan",
+          "namePlaceholder": "ej., Plan Mensual Premium",
+          "description": "Descripción",
+          "descriptionPlaceholder": "Describe qué incluye este plan...",
+          "price": "Precio",
+          "currency": "Moneda",
+          "duration": "Duración",
+          "durationMonthly": "Mensual",
+          "durationYearly": "Anual",
+          "features": "Características (separadas por comas)",
+          "featuresPlaceholder": "Acceso ilimitado, Soporte prioritario, Recursos descargables",
+          "featuresHint": "Ingrese las características separadas por comas. Estas se mostrarán a los clientes.",
+          "currencyUsd": "USD ($)",
+          "currencyEur": "EUR (€)",
+          "saving": "Guardando...",
+          "create": "Crear Plan",
+          "save": "Guardar Cambios",
+          "cancel": "Cancelar",
+          "errors": {
+            "nameRequired": "El nombre del plan es obligatorio",
+            "priceGreater": "El precio debe ser mayor a 0",
+            "generic": "Ocurrió un error"
+          },
+          "toasts": {
+            "createSuccess": "Plan creado con éxito",
+            "updateSuccess": "Plan actualizado con éxito"
+          }
+        }
+      },
+      "products": {
+        "title": "Productos",
+        "description": "Paquetes de cursos y artículos individuales que los estudiantes pueden comprar",
+        "back": "Volver al Panel",
+        "create": "Crear Producto",
+        "stats": {
+          "total": "Total de Productos",
+          "active": "Activos",
+          "archived": "Archivados"
+        },
+        "card": {
+          "course": "curso",
+          "courses": "cursos",
+          "noDescription": "Sin descripción",
+          "includedCourses": "Cursos Incluidos:",
+          "more": "+{count} más",
+          "edit": "Editar",
+          "actions": "Acciones",
+          "status": {
+            "active": "Activo",
+            "inactive": "Inactivo"
+          }
+        },
+        "empty": {
+          "title": "Aún no hay productos",
+          "description": "Los productos te permiten vender acceso a uno o más cursos. Crea el primero."
+        },
+        "new": {
+          "title": "Crear Producto",
+          "description": "Crea un nuevo producto con integración de Stripe",
+          "back": "Volver a Productos",
+          "details": {
+            "title": "Detalles del Producto",
+            "description": "Los productos se crearán automáticamente en Stripe. Vincula cursos para crear paquetes."
+          }
+        },
+        "edit": {
+          "title": "Editar Producto",
+          "description": "Actualizar detalles del producto",
+          "back": "Volver a Productos",
+          "details": {
+            "description": "Los cambios en el precio o la moneda crearán un nuevo precio en Stripe."
+          }
+        },
+        "form": {
+          "name": "Nombre del Producto",
+          "namePlaceholder": "ej., Paquete de Desarrollo Web Completo",
+          "description": "Descripción",
+          "descriptionPlaceholder": "Describe qué incluye este producto...",
+          "price": "Precio",
+          "currency": "Moneda",
+          "image": "URL de la Imagen (opcional)",
+          "imagePlaceholder": "https://ejemplo.com/imagen.jpg",
+          "method": "Método de Pago",
+          "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
+          "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
+          "methodPaypal": "PayPal (Próximamente)",
+          "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
+          "methodStripeHint": "Los estudiantes pueden pagar online al instante",
+          "currencyUsd": "USD ($)",
+          "currencyEur": "EUR (€)",
+          "saving": "Guardando...",
+          "create": "Crear Producto",
+          "save": "Guardar Cambios",
+          "cancel": "Cancelar",
+          "errors": {
+            "nameRequired": "El nombre del producto es obligatorio",
+            "priceGreater": "El precio debe ser mayor a 0",
+            "courseRequired": "Por favor seleccione al menos un curso",
+            "generic": "Ocurrió un error"
+          },
+          "toasts": {
+            "createSuccess": "Producto creado con éxito",
+            "updateSuccess": "Producto actualizado con éxito"
+          }
+        },
+        "actions": {
+          "archiveTitle": "Archivar producto",
+          "archiveDescription": "¿Archivar \"{name}\"? Los estudiantes ya no podrán comprarlo.",
+          "archive": "Archivar",
+          "archiveSuccess": "\"{name}\" ha sido archivado",
+          "archiveError": "No se pudo archivar el producto. Inténtalo de nuevo.",
+          "restoreTitle": "Restaurar producto",
+          "restoreDescription": "¿Restaurar \"{name}\"? Volverá a estar disponible para compra.",
+          "restore": "Restaurar",
+          "restoreSuccess": "\"{name}\" ha sido restaurado",
+          "restoreError": "No se pudo restaurar el producto. Inténtalo de nuevo."
+        }
+      },
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Enviar anuncios y mensajes a estudiantes y profesores",
+        "buttons": {
+          "templates": "Plantillas",
+          "create": "Crear Notificación"
+        },
+        "stats": {
+          "total": "Total de Notificaciones",
+          "sent": "Enviadas",
+          "scheduled": "Programadas",
+          "drafts": "Borradores"
+        },
+        "manage": {
+          "title": "Gestionar Notificaciones",
+          "description": "Ver y gestionar notificaciones del sistema, anuncios y mensajes dirigidos"
+        },
+        "tabs": {
+          "all": "Todo",
+          "sent": "Enviadas",
+          "scheduled": "Programadas",
+          "drafts": "Borradores"
+        },
+        "types": {
+          "announcement": "Anuncio",
+          "alert": "Alerta",
+          "info": "Información",
+          "success": "Éxito",
+          "warning": "Advertencia",
+          "error": "Error"
+        },
+        "priority": {
+          "low": "Baja",
+          "normal": "Normal",
+          "high": "Alta",
+          "urgent": "Urgente"
+        },
+        "priorityOptions": {
+          "low": "Baja",
+          "normal": "Normal",
+          "high": "Alta",
+          "urgent": "Urgente"
+        },
+        "targets": {
+          "all": "Todos los Usuarios",
+          "role": "Rol Específico",
+          "course": "Estudiantes del Curso"
+        },
+        "list": {
+          "empty": "No se encontraron notificaciones",
+          "status": {
+            "sent": "Enviada",
+            "scheduled": "Programada",
+            "draft": "Borrador",
+            "cancelled": "Cancelada"
+          },
+          "metadata": {
+            "target": "Destino",
+            "sent": "Enviado",
+            "scheduled": "Programado",
+            "created": "Creado"
+          },
+          "actions": {
+            "send": "Enviar Ahora",
+            "delete": "Eliminar"
+          },
+          "send": "Enviar notificación",
+          "delete": "Eliminar notificación",
+          "confirmDeleteTitle": "Eliminar Notificación",
+          "confirmDelete": "¿Estás seguro de que quieres eliminar esta notificación?",
+          "confirmDeleteAction": "Eliminar",
+          "toasts": {
+            "sent": "Notificación enviada a {count} usuarios",
+            "deleted": "Notificación eliminada con éxito",
+            "error": "Error al enviar la notificación",
+            "deleteError": "Error al eliminar la notificación"
+          }
+        },
+        "form": {
+          "title": "Título",
+          "titlePlaceholder": "Título de la notificación",
+          "message": "Mensaje",
+          "messagePlaceholder": "Ingrese el mensaje de su notificación...",
+          "messageHint": "Use llaves dobles para contenido dinámico con plantillas",
+          "type": "Tipo",
+          "priority": "Prioridad",
+          "sendTo": "Enviar a",
+          "targets": {
+            "all": "Todos los Usuarios",
+            "role": "Rol Específico",
+            "course": "Estudiantes del Curso"
+          },
+          "roles": "Roles (separados por comas)",
+          "rolesPlaceholder": "estudiante, profesor",
+          "rolesHint": "Ejemplo: estudiante, profesor, admin",
+          "courseId": "ID del Curso",
+          "courseIdPlaceholder": "Ingrese el ID del curso",
+          "courseIdHint": "Encuentre el ID del curso en la página de gestión de cursos",
+          "delivery": "Entrega",
+          "deliveryDesc": "Enviar inmediatamente o programar para más tarde",
+          "deliveryOptions": {
+            "now": "Enviar Ahora",
+            "schedule": "Programar"
+          },
+          "scheduleFor": "Programar para",
+          "submit": {
+            "send": "Enviar Notificación",
+            "save": "Guardar Borrador"
+          },
+          "toasts": {
+            "success": "Notificación enviada con éxito",
+            "draft": "Notificación guardada como borrador",
+            "error": "Error al crear la notificación"
+          }
+        },
+        "templates": {
+          "title": "Plantillas de Notificación",
+          "description": "Crea plantillas reutilizables con variables dinámicas para notificaciones comunes",
+          "back": "Volver",
+          "create": "Crear Plantilla",
+          "empty": "No se encontraron plantillas",
+          "table": {
+            "name": "Nombre",
+            "type": "Tipo",
+            "subject": "Asunto",
+            "created": "Creado",
+            "actions": "Acciones"
+          },
+          "form": {
+            "name": "Nombre de la Plantilla",
+            "namePlaceholder": "ej., Bienvenida al Curso",
+            "subject": "Asunto de la Plantilla",
+            "subjectPlaceholder": "ej., Bienvenido a {{course_name}}",
+            "content": "Contenido de la Plantilla",
+            "contentPlaceholder": "Ingrese el contenido de su plantilla...",
+            "type": "Tipo de Notificación",
+            "description": "Descripción (opcional)",
+            "submit": {
+              "create": "Crear Plantilla",
+              "update": "Actualizar Plantilla"
+            },
+            "toasts": {
+              "success": "Plantilla creada con éxito",
+              "updated": "Plantilla actualizada con éxito",
+              "error": "Error al crear la plantilla",
+              "deleted": "Plantilla eliminada con éxito"
+            },
+            "dialog": {
+              "title": "Crear Nueva Plantilla",
+              "editTitle": "Editar Plantilla",
+              "description": "Crea plantillas reutilizables para notificaciones del sistema"
+            }
+          }
+        }
+      },
+      "monetization": {
+        "title": "Monetización",
+        "description": "Todo lo relacionado con vender cursos y generar ingresos",
+        "stripe": {
+          "connected": "Pagos Activos",
+          "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea.",
+          "notConnected": "Pagos No Configurados",
+          "notConnectedDesc": "Conecta una cuenta de Stripe para que los estudiantes puedan pagar con tarjeta y otros métodos en línea.",
+          "connect": "Conectar Stripe"
+        },
+        "split": {
+          "title": "División de Ingresos",
+          "description": "Cómo se reparte cada venta entre tu escuela y la plataforma",
+          "platformFee": "Comisión de Plataforma",
+          "platformFeeDesc": "La plataforma retiene este porcentaje de cada venta",
+          "yourRevenue": "Tu Parte",
+          "yourRevenueDesc": "Recibes este porcentaje de cada venta"
+        },
+        "stats": {
+          "totalRevenue": "Ingresos Totales",
+          "activeProducts": "Productos Activos",
+          "activePlans": "Planes Activos",
+          "activeSubscriptions": "Suscripciones Activas"
+        },
+        "nav": {
+          "title": "Gestionar",
+          "products": "Productos",
+          "productsDesc": "Artículos de compra única para estudiantes",
+          "plans": "Planes",
+          "plansDesc": "Suscripciones recurrentes con cobro mensual o anual",
+          "revenue": "Ingresos",
+          "revenueDesc": "Desglose de ganancias, tendencias y pagos",
+          "transactions": "Transacciones",
+          "transactionsDesc": "Historial completo de cada pago",
+          "subscriptions": "Suscripciones",
+          "subscriptionsDesc": "Suscripciones activas, canceladas y expiradas",
+          "paymentRequests": "Solicitudes de Pago",
+          "paymentRequestsDesc": "Transferencias bancarias y otros pagos manuales"
+        }
+      },
+      "common": {
+        "courseSelector": {
+          "label": "Cursos Incluidos",
+          "loading": "Cargando cursos...",
+          "search": "Buscar cursos...",
+          "noResults": "No se encontraron cursos",
+          "noAvailable": "No hay cursos publicados disponibles",
+          "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
+        }
+      },
+      "revenue": {
+        "title": "Ingresos",
+        "description": "Cuánto ha ganado tu escuela y de dónde provienen los ingresos",
+        "empty": "Aún no hay ingresos. Cuando los estudiantes empiecen a comprar, tus ganancias aparecerán aquí.",
+        "totalRevenue": "Ingresos Totales",
+        "transactionCount": "{count, plural, one {# transacción} other {# transacciones}}",
+        "platformFees": "Comisiones",
+        "upgradeToReduce": "Mejora tu plan para pagar menos comisiones",
+        "netRevenue": "Ingresos Netos",
+        "afterFees": "Lo que recibes después de comisiones",
+        "revenueByProduct": "Ingresos por Producto",
+        "topEarning": "Tus productos con más ventas",
+        "monthlyTrend": "Tendencia Mensual",
+        "monthlyTrendDescription": "Ingresos de los últimos 12 meses"
+      },
+      "tenants": {
+        "title": "Gestión de Inquilinos",
+        "superAdmin": "Super Administrador",
+        "slug": "Slug",
+        "plan": "Plan",
+        "members": "Miembros",
+        "created": "Creado",
+        "stripeConnected": "Conectado"
       }
     },
     "course": {
@@ -2342,7 +2534,13 @@
     "profile": "Perfil",
     "billing": "Facturación",
     "apiTokens": "Tokens de API",
-    "pages": "Páginas"
+    "pages": "Páginas",
+    "analytics": "Analíticas",
+    "monetization": "Monetización",
+    "monetizationOverview": "Resumen",
+    "products": "Productos",
+    "plans": "Planes",
+    "subscriptions": "Suscripciones"
   },
   "userNav": {
     "profile": "Perfil",
@@ -3893,7 +4091,7 @@
       "Plans": "Planes",
       "Plan Name": "Nombre del Plan",
       "Price": "Precio",
-      "Period (e.g. /month)": "Período (ej. /mes)",
+      "Period (eg /month)": "Período (ej. /mes)",
       "Features (one per line)": "Características (una por línea)",
       "Highlighted": "Destacado",
       "Button Label": "Texto del Botón",
@@ -3931,7 +4129,7 @@
       "Column Title": "Título de Columna",
       "Links": "Enlaces",
       "Social Links": "Redes Sociales",
-      "Platform (e.g. Twitter)": "Plataforma (ej. Twitter)",
+      "Platform (eg Twitter)": "Plataforma (ej. Twitter)",
       "Copyright Text": "Texto de Copyright",
       "Separator": "Separador",
       "Number of Avatars": "Número de Avatares",
