@@ -78,6 +78,7 @@ export default async function PaymentRequestsPage({
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('monetization'), href: '/dashboard/admin/monetization' },
                 { label: tBreadcrumbs('paymentRequests') },
               ]}
             />

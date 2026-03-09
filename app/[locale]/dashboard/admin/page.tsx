@@ -10,14 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import {
   IconUsers,
   IconBook,
-  IconCertificate,
   IconCurrencyDollar,
   IconReceipt,
-  IconChartBar,
   IconCrown,
-  IconSettings,
   IconArrowUpRight,
-  IconSparkles,
   IconUserPlus,
 } from '@tabler/icons-react'
 import Link from 'next/link'
@@ -25,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
-import * as motion from 'motion/react-client'
+import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 
 export default async function AdminDashboardPage({
   params,
@@ -44,6 +40,17 @@ export default async function AdminDashboardPage({
 
   if (!user) {
     redirect('/auth/login')
+  }
+
+  // Check if onboarding is completed
+  const { data: adminProfile } = await supabase
+    .from('profiles')
+    .select('onboarding_completed')
+    .eq('id', user.id)
+    .single()
+
+  if (adminProfile && !adminProfile.onboarding_completed) {
+    redirect('/onboarding')
   }
 
   // Get tenant context for all queries
@@ -138,25 +145,26 @@ export default async function AdminDashboardPage({
     .eq('role', 'student')
     .eq('status', 'active')
 
+  // Check if school name has been configured (for checklist)
+  const { data: siteNameSetting } = await supabase
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('setting_key', 'site_name')
+    .maybeSingle()
+  const currentSettings = { site_name: siteNameSetting?.setting_value }
+
   const stats = [
     {
       title: t('stats.totalUsers'),
       value: totalUsers || 0,
       icon: IconUsers,
       link: '/dashboard/admin/users',
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      accent: 'group-hover:ring-blue-200 dark:group-hover:ring-blue-800',
     },
     {
       title: t('stats.activeSubscriptions'),
       value: activeSubscriptions || 0,
-      subtitle: t('stats.monthly'),
       icon: IconCrown,
       link: '/dashboard/admin/subscriptions',
-      bg: 'bg-violet-50 dark:bg-violet-950/40',
-      iconColor: 'text-violet-600 dark:text-violet-400',
-      accent: 'group-hover:ring-violet-200 dark:group-hover:ring-violet-800',
     },
     {
       title: t('stats.totalCourses'),
@@ -164,19 +172,12 @@ export default async function AdminDashboardPage({
       subtitle: t('stats.published', { count: publishedCourses || 0 }),
       icon: IconBook,
       link: '/dashboard/admin/courses',
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
-      accent: 'group-hover:ring-emerald-200 dark:group-hover:ring-emerald-800',
     },
     {
       title: t('stats.pendingPayments'),
       value: pendingPaymentRequests || 0,
-      subtitle: t('stats.awaiting'),
       icon: IconReceipt,
       link: '/dashboard/admin/payment-requests',
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-      accent: 'group-hover:ring-amber-200 dark:group-hover:ring-amber-800',
     },
     {
       title: t('stats.totalRevenue'),
@@ -184,34 +185,22 @@ export default async function AdminDashboardPage({
       subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
       icon: IconCurrencyDollar,
       link: '/dashboard/admin/transactions',
-      bg: 'bg-teal-50 dark:bg-teal-950/40',
-      iconColor: 'text-teal-600 dark:text-teal-400',
-      accent: 'group-hover:ring-teal-200 dark:group-hover:ring-teal-800',
     },
   ]
 
-  const quickActions = [
-    { href: '/dashboard/admin/analytics', icon: IconChartBar, label: t('quickActions.analytics') },
-    { href: '/dashboard/admin/users', icon: IconUsers, label: t('quickActions.manageUsers'), id: 'quick-action-users' },
-    { href: '/dashboard/admin/courses', icon: IconBook, label: t('quickActions.manageCourses') },
-    { href: '/dashboard/admin/subscriptions', icon: IconCrown, label: t('quickActions.subscriptions') },
-    { href: '/dashboard/admin/payment-requests', icon: IconReceipt, label: t('quickActions.paymentRequests') },
-    { href: '/dashboard/admin/transactions', icon: IconCurrencyDollar, label: t('quickActions.viewTransactions') },
-    { href: '/dashboard/admin/enrollments', icon: IconCertificate, label: t('quickActions.viewEnrollments') },
-    { href: '/dashboard/admin/settings', icon: IconSettings, label: t('quickActions.settings') },
-  ]
-
   return (
-    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="admin-dashboard">
-      <div className="mb-6">
-        <AdminBreadcrumb
-          items={[
-            { label: tBreadcrumbs('admin') },
-          ]}
-        />
-      </div>
+    <div className="space-y-6 p-6 lg:p-8" data-testid="admin-dashboard">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin') },
+        ]}
+      />
 
-      {/* Getting Started Checklist */}
+      {/* Guided Tour (client component) */}
+      <AdminDashboardTour userId={user.id} />
+
+      {/* Getting Started Checklist — prominent for new users */}
+      <div data-tour="admin-checklist">
       <OnboardingChecklist
         storageKey={`admin-${user.id}`}
         title={t('onboarding.title')}
@@ -222,7 +211,7 @@ export default async function AdminDashboardPage({
             label: t('onboarding.configureSchool'),
             description: t('onboarding.configureSchoolDesc'),
             href: '/dashboard/admin/settings',
-            completed: true, // They got through initial onboarding wizard to reach here
+            completed: Boolean(currentSettings?.site_name),
           },
           {
             id: 'add-course',
@@ -247,105 +236,63 @@ export default async function AdminDashboardPage({
           },
         ]}
       />
-
-      {/* Plan & Usage Banner */}
-      <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent ring-1 ring-primary/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.08] via-transparent to-transparent" />
-        <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <IconSparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <span className="text-sm font-semibold tracking-tight">
-                  {platformPlan?.name || 'Free'} {t('plan.label')}
-                </span>
-                <Badge
-                  variant={planSlug === 'free' ? 'secondary' : 'default'}
-                  className="text-[10px] uppercase tracking-wider"
-                >
-                  {planSlug === 'free' ? t('plan.current') : t('plan.active')}
-                </Badge>
-              </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {planSlug === 'free'
-                  ? t('plan.upgradeHint')
-                  : t('plan.activeHint')}
-              </p>
-            </div>
-          </div>
-          <div className="grid flex-1 gap-5 sm:grid-cols-2 sm:max-w-sm">
-            <UsageMeter
-              label={t('plan.courses')}
-              current={totalCourses || 0}
-              limit={planLimits.max_courses ?? 5}
-            />
-            <UsageMeter
-              label={t('plan.students')}
-              current={studentCount || 0}
-              limit={planLimits.max_students ?? 50}
-            />
-          </div>
-          <Link href="/dashboard/admin/billing/upgrade">
-            <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
-              {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
-              <IconArrowUpRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.04, duration: 0.25 }}
+      {/* Plan & Usage — compact inline bar */}
+      <div data-tour="admin-plan" className="flex flex-col gap-4 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">
+            {platformPlan?.name || 'Free'} {t('plan.label')}
+          </span>
+          <Badge
+            variant={planSlug === 'free' ? 'secondary' : 'default'}
+            className="text-[10px] uppercase tracking-wider"
           >
-          <Link href={stat.link} className="group">
-            <Card className={`relative overflow-hidden transition-all duration-200 ring-1 ring-transparent ${stat.accent} hover:shadow-md`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {stat.title}
-                    </p>
-                    <p className="mt-2 text-2xl font-bold tracking-tight">
-                      {stat.value}
-                    </p>
-                    {stat.subtitle && (
-                      <p className="mt-1 text-[11px] text-muted-foreground/70">
-                        {stat.subtitle}
-                      </p>
-                    )}
-                  </div>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} strokeWidth={1.75} />
-                  </div>
+            {planSlug === 'free' ? t('plan.current') : t('plan.active')}
+          </Badge>
+        </div>
+        <div className="flex flex-1 items-center gap-6 sm:max-w-sm">
+          <UsageMeter
+            label={t('plan.courses')}
+            current={totalCourses || 0}
+            limit={planLimits.max_courses ?? 5}
+          />
+          <UsageMeter
+            label={t('plan.students')}
+            current={studentCount || 0}
+            limit={planLimits.max_students ?? 50}
+          />
+        </div>
+        <Link href="/dashboard/admin/billing/upgrade">
+          <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
+            {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
+            <IconArrowUpRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* Stats Grid — clean, no color noise */}
+      <div data-tour="admin-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="admin-stats-grid">
+        {stats.map((stat) => (
+          <Link key={stat.title} href={stat.link} className="group">
+            <Card className="transition-colors hover:bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <stat.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
                 </div>
+                <p className="mt-3 text-2xl font-bold tracking-tight">
+                  {stat.value}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {stat.title}
+                </p>
+                {stat.subtitle && (
+                  <p className="text-[11px] text-muted-foreground/60">
+                    {stat.subtitle}
+                  </p>
+                )}
               </CardContent>
             </Card>
-          </Link>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Quick Actions — inline row */}
-      <div className="mb-8 flex flex-wrap gap-2">
-        {quickActions.map((action) => (
-          <Link key={action.href} href={action.href}>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              {...(action.id ? { id: action.id } : {})}
-            >
-              <action.icon className="h-3.5 w-3.5" strokeWidth={2} />
-              {action.label}
-            </Button>
           </Link>
         ))}
       </div>
@@ -471,6 +418,6 @@ export default async function AdminDashboardPage({
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   )
 }

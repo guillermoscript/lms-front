@@ -138,7 +138,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
           <SelectContent>
             <SelectItem value="manual">{t('methodManual')}</SelectItem>
             <SelectItem value="stripe">{t('methodStripe')}</SelectItem>
-            <SelectItem value="paypal">{t('methodPayPal')}</SelectItem>
+            <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
@@ -179,8 +179,8 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="usd">USD ($)</SelectItem>
-              <SelectItem value="eur">EUR (€)</SelectItem>
+              <SelectItem value="usd">{t('currencyUsd')}</SelectItem>
+              <SelectItem value="eur">{t('currencyEur')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

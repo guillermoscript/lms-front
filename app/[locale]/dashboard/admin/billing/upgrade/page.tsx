@@ -12,7 +12,7 @@ export default async function UpgradePage() {
   ])
 
   return (
-    <div className="space-y-6 md:p-6 p-2" data-testid="upgrade-page">
+    <div className="space-y-6 p-6 lg:p-8" data-testid="upgrade-page">
       <AdminBreadcrumb
         items={[
           { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },

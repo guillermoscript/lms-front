@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
-import { IconUsers, IconUserPlus } from '@tabler/icons-react'
 
 interface UserGrowthDataPoint {
   date: string
@@ -36,17 +35,14 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <IconUserPlus className="h-5 w-5 text-blue-500" />
-              {t('title')}
-            </CardTitle>
+            <CardTitle>{t('title')}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('description', { period })}
             </p>
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t('total')}</p>
-            <p className="text-2xl font-bold text-blue-600">{totalUsers}</p>
+            <p className="text-2xl font-bold tracking-tight">{totalUsers}</p>
             <p className="text-xs text-muted-foreground">
               {t('newInPeriod', { count: newUsersInPeriod })}
             </p>
@@ -79,20 +75,21 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
               <Line
                 type="monotone"
                 dataKey="newUsers"
-                stroke="#3b82f6"
+                stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 name={t('newUsersTooltip')}
-                dot={{ fill: '#3b82f6', r: 4 }}
-                activeDot={{ r: 6 }}
+                dot={{ fill: 'hsl(var(--primary))', r: 3 }}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
                 dataKey="totalUsers"
-                stroke="#10b981"
+                stroke="hsl(var(--muted-foreground))"
                 strokeWidth={2}
+                strokeDasharray="4 4"
                 name={t('totalUsersTooltip')}
-                dot={{ fill: '#10b981', r: 4 }}
-                activeDot={{ r: 6 }}
+                dot={false}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>
