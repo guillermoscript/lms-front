@@ -11,6 +11,7 @@ import CodeChallengeWrapper from '@/components/exercises/code-challenge-wrapper'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 import ToggleableSection from '@/components/exercises/toggleable-section'
 import AudioExercise from '@/components/exercises/audio-exercise'
+import ArtifactExercise from '@/components/exercises/artifact-exercise'
 
 interface PageProps {
     params: Promise<{ courseId: string; exerciseId: string }>
@@ -216,6 +217,20 @@ export default async function ExercisePage({ params }: PageProps) {
                         </ToggleableSection>
                     )}
                 </CodeExercise>
+            ) : exercise.exercise_type === 'artifact' ? (
+                <ArtifactExercise
+                    exercise={{
+                        ...exercise,
+                        exercise_config: {
+                            artifact_type: (exercise.exercise_config as any)?.artifact_type,
+                            artifact_html: (exercise.exercise_config as any)?.artifact_html,
+                            passing_score: passingScore,
+                        },
+                    }}
+                    isExerciseCompleted={isExerciseCompleted}
+                    passingScore={passingScore}
+                    isExerciseCompletedSection={otherExercisesSection}
+                />
             ) : exercise.exercise_type === 'audio_evaluation' ? (
                 <AudioExercise
                     exercise={exercise}
