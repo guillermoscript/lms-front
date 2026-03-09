@@ -28,12 +28,13 @@ interface OnboardingWizardProps {
   userId: string
   userName: string
   currentSettings: Record<string, any>
+  redirectTo?: string
 }
 
 const STEPS = ['welcome', 'school', 'branding', 'payment', 'ready'] as const
 type Step = typeof STEPS[number]
 
-export default function OnboardingWizard({ userId, userName, currentSettings }: OnboardingWizardProps) {
+export default function OnboardingWizard({ userId, userName, currentSettings, redirectTo = '/dashboard/admin' }: OnboardingWizardProps) {
   const router = useRouter()
   const t = useTranslations('onboarding')
   const [currentStep, setCurrentStep] = useState<Step>('welcome')
@@ -76,7 +77,7 @@ export default function OnboardingWizard({ userId, userName, currentSettings }: 
 
       if (result.success) {
         toast.success(t('complete.success'))
-        router.push('/dashboard/teacher')
+        router.push(redirectTo)
       } else {
         throw new Error(result.error)
       }
