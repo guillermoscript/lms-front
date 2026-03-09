@@ -138,13 +138,13 @@ END;
 $$;
 
 -- Schedule via pg_cron every 5 minutes (requires pg_cron extension)
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
     PERFORM cron.schedule('publish-scheduled-lessons', '*/5 * * * *', $$SELECT publish_scheduled_lessons()$$);
   END IF;
 END
-$$;
+$do$;
 
 -- 1e. Storage bucket for lesson resources
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
