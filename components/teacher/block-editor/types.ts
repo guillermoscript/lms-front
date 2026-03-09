@@ -15,6 +15,16 @@ export type BlockType =
   | 'image'
   | 'video'
   | 'divider'
+  | 'audio'
+  | 'embed'
+  | 'file-download'
+  | 'glossary'
+  | 'comparison'
+  | 'table'
+  | 'flashcard-set'
+  | 'fill-in-the-blank'
+  | 'matching-pairs'
+  | 'ordering'
 
 export interface BaseBlock {
   id: string
@@ -98,6 +108,73 @@ export interface DividerBlock extends BaseBlock {
   type: 'divider'
 }
 
+export interface AudioBlock extends BaseBlock {
+  type: 'audio'
+  src: string
+  title?: string
+}
+
+export interface EmbedBlock extends BaseBlock {
+  type: 'embed'
+  url: string
+  title?: string
+  caption?: string
+}
+
+export interface FileDownloadBlock extends BaseBlock {
+  type: 'file-download'
+  url: string
+  filename: string
+  description?: string
+}
+
+export interface GlossaryBlock extends BaseBlock {
+  type: 'glossary'
+  items: { term: string; definition: string }[]
+}
+
+export interface ComparisonBlock extends BaseBlock {
+  type: 'comparison'
+  sideA: { title: string; points: string[]; highlight: 'positive' | 'negative' | 'neutral' }
+  sideB: { title: string; points: string[]; highlight: 'positive' | 'negative' | 'neutral' }
+  summary?: string
+}
+
+export interface TableBlock extends BaseBlock {
+  type: 'table'
+  headers: string[]
+  rows: string[][]
+  striped?: boolean
+}
+
+export interface FlashcardSetBlock extends BaseBlock {
+  type: 'flashcard-set'
+  cards: { front: string; back: string }[]
+}
+
+export interface FillInTheBlankSegment {
+  type: 'text' | 'blank'
+  value: string
+}
+
+export interface FillInTheBlankBlock extends BaseBlock {
+  type: 'fill-in-the-blank'
+  segments: FillInTheBlankSegment[]
+  explanation?: string
+}
+
+export interface MatchingPairsBlock extends BaseBlock {
+  type: 'matching-pairs'
+  pairs: { term: string; match: string }[]
+  explanation?: string
+}
+
+export interface OrderingBlock extends BaseBlock {
+  type: 'ordering'
+  items: string[]
+  explanation?: string
+}
+
 export type Block =
   | TextBlock
   | HeadingBlock
@@ -111,6 +188,16 @@ export type Block =
   | ImageBlock
   | VideoBlock
   | DividerBlock
+  | AudioBlock
+  | EmbedBlock
+  | FileDownloadBlock
+  | GlossaryBlock
+  | ComparisonBlock
+  | TableBlock
+  | FlashcardSetBlock
+  | FillInTheBlankBlock
+  | MatchingPairsBlock
+  | OrderingBlock
 
 // Block metadata for the add menu
 export interface BlockMeta {
@@ -133,6 +220,16 @@ export const BLOCK_METAS: BlockMeta[] = [
   { type: 'image', label: 'Imagen', icon: 'photo', description: 'Imagen con caption' },
   { type: 'video', label: 'Video', icon: 'video', description: 'Video embebido' },
   { type: 'divider', label: 'Separador', icon: 'minus', description: 'Línea divisoria' },
+  { type: 'audio', label: 'Audio', icon: 'volume', description: 'Reproductor de audio' },
+  { type: 'embed', label: 'Embed', icon: 'world-www', description: 'Contenido embebido (iframe)' },
+  { type: 'file-download', label: 'Archivo', icon: 'file-download', description: 'Archivo descargable' },
+  { type: 'glossary', label: 'Glosario', icon: 'list-details', description: 'Lista de términos y definiciones' },
+  { type: 'comparison', label: 'Comparación', icon: 'arrows-exchange', description: 'Comparación lado a lado' },
+  { type: 'table', label: 'Tabla', icon: 'table', description: 'Tabla con encabezados y filas' },
+  { type: 'flashcard-set', label: 'Flashcards', icon: 'cards', description: 'Tarjetas de estudio' },
+  { type: 'fill-in-the-blank', label: 'Completar', icon: 'text-plus', description: 'Oración con espacios en blanco' },
+  { type: 'matching-pairs', label: 'Emparejar', icon: 'arrows-shuffle', description: 'Conectar términos con respuestas' },
+  { type: 'ordering', label: 'Ordenar', icon: 'sort-ascending', description: 'Ordenar elementos en secuencia' },
 ]
 
 // Factory to create empty blocks
@@ -164,5 +261,29 @@ export function createBlock(type: BlockType): Block {
       return { id, type: 'video', url: '' }
     case 'divider':
       return { id, type: 'divider' }
+    case 'audio':
+      return { id, type: 'audio', src: '' }
+    case 'embed':
+      return { id, type: 'embed', url: '' }
+    case 'file-download':
+      return { id, type: 'file-download', url: '', filename: '' }
+    case 'glossary':
+      return { id, type: 'glossary', items: [{ term: '', definition: '' }] }
+    case 'comparison':
+      return {
+        id, type: 'comparison',
+        sideA: { title: '', points: [''], highlight: 'positive' },
+        sideB: { title: '', points: [''], highlight: 'negative' },
+      }
+    case 'table':
+      return { id, type: 'table', headers: ['Columna 1', 'Columna 2'], rows: [['', '']] }
+    case 'flashcard-set':
+      return { id, type: 'flashcard-set', cards: [{ front: '', back: '' }] }
+    case 'fill-in-the-blank':
+      return { id, type: 'fill-in-the-blank', segments: [{ type: 'text', value: '' }] }
+    case 'matching-pairs':
+      return { id, type: 'matching-pairs', pairs: [{ term: '', match: '' }, { term: '', match: '' }] }
+    case 'ordering':
+      return { id, type: 'ordering', items: ['', ''] }
   }
 }

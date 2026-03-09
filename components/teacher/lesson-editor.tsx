@@ -204,7 +204,7 @@ export function LessonEditor({
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* ── Top Bar ─────────────────────────────────────────── */}
-      <header className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header data-tour="lesson-header" className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
           {/* Left: back + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0">
@@ -223,7 +223,7 @@ export function LessonEditor({
           </div>
 
           {/* Center: step nav (desktop) */}
-          <nav className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+          <nav data-tour="lesson-steps" className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1">
             {steps.map((step, i) => (
               <button
                 key={step.key}
@@ -269,6 +269,7 @@ export function LessonEditor({
             )}
 
             <Button
+              data-tour="lesson-preview"
               variant="ghost"
               size="sm"
               className="h-8 gap-1.5 text-muted-foreground"
@@ -284,6 +285,7 @@ export function LessonEditor({
 
             <Separator orientation="vertical" className="h-6" />
 
+            <div data-tour="lesson-save" className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -314,6 +316,7 @@ export function LessonEditor({
               )}
               {t('publishLesson')}
             </Button>
+            </div>
           </div>
         </div>
 
@@ -497,7 +500,7 @@ export function LessonEditor({
                     <span className="text-xs text-muted-foreground/50 mr-1">
                       {t('editorMode')}
                     </span>
-                    <div className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
+                    <div data-tour="lesson-editor-mode" className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
                       <button
                         type="button"
                         onClick={() => setContentMode('visual')}

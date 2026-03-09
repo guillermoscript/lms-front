@@ -15,6 +15,16 @@ import {
   IconPhoto,
   IconPlayerPlay,
   IconMinus,
+  IconVolume,
+  IconWorldWww,
+  IconFileDownload,
+  IconListDetails,
+  IconArrowsExchange,
+  IconTable,
+  IconCards,
+  IconTextPlus,
+  IconArrowsShuffle,
+  IconSortAscending,
 } from '@tabler/icons-react'
 import {
   Popover,
@@ -38,6 +48,16 @@ const BLOCK_ICONS: Record<BlockType, { icon: typeof IconAlignLeft; color: string
   image: { icon: IconPhoto, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-950' },
   video: { icon: IconPlayerPlay, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950' },
   divider: { icon: IconMinus, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
+  audio: { icon: IconVolume, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950' },
+  embed: { icon: IconWorldWww, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950' },
+  'file-download': { icon: IconFileDownload, color: 'text-lime-600 dark:text-lime-400', bg: 'bg-lime-50 dark:bg-lime-950' },
+  glossary: { icon: IconListDetails, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950' },
+  comparison: { icon: IconArrowsExchange, color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-50 dark:bg-fuchsia-950' },
+  table: { icon: IconTable, color: 'text-stone-600 dark:text-stone-400', bg: 'bg-stone-100 dark:bg-stone-800' },
+  'flashcard-set': { icon: IconCards, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950' },
+  'fill-in-the-blank': { icon: IconTextPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950' },
+  'matching-pairs': { icon: IconArrowsShuffle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950' },
+  ordering: { icon: IconSortAscending, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-950' },
 }
 
 // Group blocks by category for the palette
@@ -48,15 +68,19 @@ const BLOCK_GROUPS = [
   },
   {
     label: 'Media',
-    types: ['image', 'video', 'code'] as BlockType[],
+    types: ['image', 'video', 'audio', 'embed', 'file-download', 'code'] as BlockType[],
   },
   {
     label: 'Interactivo',
-    types: ['quiz', 'spoiler', 'steps'] as BlockType[],
+    types: ['quiz', 'flashcard-set', 'fill-in-the-blank', 'matching-pairs', 'ordering'] as BlockType[],
   },
   {
-    label: 'Referencia',
-    types: ['vocabulary', 'definition', 'divider'] as BlockType[],
+    label: 'Datos',
+    types: ['table', 'comparison', 'glossary', 'definition'] as BlockType[],
+  },
+  {
+    label: 'Estructura',
+    types: ['steps', 'spoiler', 'vocabulary', 'divider'] as BlockType[],
   },
 ]
 
