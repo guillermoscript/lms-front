@@ -136,7 +136,7 @@ export default async function LessonPage({ params }: PageProps) {
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Lesson header */}
-        <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
+        <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
@@ -145,7 +145,7 @@ export default async function LessonPage({ params }: PageProps) {
                 </span>
                 {isCurrentLessonCompleted && <LessonCompletionBadge />}
               </div>
-              <h1 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">{lesson.title}</h1>
+              <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight line-clamp-1">{lesson.title}</h1>
             </div>
 
             {/* Mobile Sidebar Toggle */}
@@ -177,35 +177,35 @@ export default async function LessonPage({ params }: PageProps) {
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
+          <div className="mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-10 space-y-8 sm:space-y-10">
             <LessonContent
               content={lesson.content}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
             />
 
-            {/* AI Task Section */}
+            {/* AI Task Section — breaks out of content padding on mobile for more width */}
             {aiTask && (
               <AnimatedSection delay={0.15}>
-              <section className="space-y-5">
-                <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.04] to-transparent overflow-hidden">
+              <section className="-mx-3 sm:mx-0">
+                <div className="sm:rounded-2xl border-y sm:border-2 border-primary/10 bg-gradient-to-b from-primary/[0.04] to-transparent overflow-hidden">
                   {/* Task header */}
-                  <div className="px-5 py-4 border-b border-primary/10 bg-primary/[0.03]">
+                  <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-primary/10 bg-primary/[0.03]">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-primary/10 rounded-xl shrink-0">
                         <IconSparkles className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-base text-foreground">{t('aiTutorTitle')}</h3>
+                        <h3 className="font-bold text-sm sm:text-base text-foreground">{t('aiTutorTitle')}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">{t('aiTutorDescription')}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Task description */}
-                  <div className="px-5 py-4">
-                    <div className="bg-card border rounded-xl p-4 shadow-sm">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
+                  <div className="px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="bg-card border rounded-xl p-3 sm:p-4 shadow-sm">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
                         {t('currentTask')}
                       </h4>
                       <p className="text-sm text-foreground leading-relaxed">
@@ -215,13 +215,12 @@ export default async function LessonPage({ params }: PageProps) {
                   </div>
 
                   {/* Chat */}
-                  <div className="px-5 pb-5">
+                  <div className="sm:px-5 sm:pb-5">
                     <LessonAIChat
                       lessonId={lesson.id}
                       taskDescription={aiTask.task_instructions}
                       isCompleted={isCurrentLessonCompleted}
                       initialMessages={initialMessages}
-                      data-testid="lesson-ai-chat"
                     />
                   </div>
                 </div>

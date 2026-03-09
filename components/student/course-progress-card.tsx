@@ -21,10 +21,10 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
 
   return (
     <Link href={`/dashboard/student/courses/${course.course_id}`}>
-      <div className="group bg-card border border-border hover:border-primary/30 rounded-2xl overflow-hidden transition-all hover:shadow-lg">
-        <div className="flex flex-col sm:flex-row gap-0">
+      <div className="group bg-card border border-border hover:border-primary/30 active:border-primary/30 rounded-2xl overflow-hidden transition-all hover:shadow-lg active:shadow-lg">
+        <div className="flex flex-col sm:flex-row">
           {/* Thumbnail */}
-          <div className="sm:w-48 h-36 sm:h-auto bg-muted overflow-hidden shrink-0">
+          <div className="sm:w-48 h-32 sm:h-auto bg-muted overflow-hidden shrink-0">
             {course.thumbnail_url ? (
               <img
                 src={course.thumbnail_url}
@@ -42,7 +42,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 p-5 flex flex-col justify-between">
+          <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-between">
             <div className="space-y-1.5">
               <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                 {course.title}
@@ -52,7 +52,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
               )}
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 sm:mt-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
                   {course.completedLessons}/{course.totalLessons} {t('lessons')}

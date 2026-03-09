@@ -31,9 +31,9 @@ export function StatsCards({ totalLessonsCompleted, coursesInProgress, coursesCo
   ]
 
   return (
-    <div className="flex items-center gap-6 text-sm">
+    <div className="flex items-center gap-3 sm:gap-6 text-sm">
       {stats.map((stat) => (
-        <div key={stat.label} className="flex items-center gap-2 text-muted-foreground">
+        <div key={stat.label} className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
           <stat.icon size={16} className="shrink-0" />
           <span className="font-bold tabular-nums text-foreground">{stat.value}</span>
           <span className="hidden sm:inline">{stat.label}</span>

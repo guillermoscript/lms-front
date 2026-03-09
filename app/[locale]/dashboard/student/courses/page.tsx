@@ -198,11 +198,11 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const hasFilteredEnrollments = filteredEnrollments.length > 0
 
   return (
-    <div className="mx-auto container py-8 px-4 lg:px-8 space-y-6" data-testid="student-courses-page">
+    <div className="mx-auto container py-5 sm:py-8 px-4 lg:px-8 space-y-5 sm:space-y-6" data-testid="student-courses-page">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight" data-testid="my-courses-title">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight" data-testid="my-courses-title">
             {t('title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -247,7 +247,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
 
       {!hasEnrollments ? (
         /* Empty State */
-        <div className="rounded-2xl border-2 border-dashed border-muted-foreground/15 p-16 text-center">
+        <div className="rounded-2xl border-2 border-dashed border-muted-foreground/15 p-8 sm:p-16 text-center">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
             <IconBook2 className="w-7 h-7 text-primary" />
           </div>

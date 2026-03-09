@@ -181,7 +181,7 @@ export default async function ExercisePage({ params }: PageProps) {
     )
 
     return (
-        <div className="mx-auto max-w-7xl py-6 px-4 lg:px-8 space-y-6">
+        <div className="mx-auto max-w-7xl py-3 sm:py-6 px-3 sm:px-4 lg:px-8 space-y-3 sm:space-y-6">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {exercise.exercise_type === 'coding_challenge' ? (

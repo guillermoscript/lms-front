@@ -100,7 +100,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
         !accessStatus.hasAccess && "opacity-75"
       )}>
         {/* Thumbnail */}
-        <div className="relative w-full sm:w-48 md:w-56 shrink-0 aspect-[16/10] sm:aspect-auto overflow-hidden bg-muted">
+        <div className="relative w-full sm:w-48 md:w-56 shrink-0 aspect-[16/9] sm:aspect-auto overflow-hidden bg-muted">
           {course.thumbnail_url || course.image_url ? (
             <Image
               src={course.thumbnail_url || course.image_url}
@@ -153,7 +153,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
                 </p>
               )}
             </div>
-            <Badge variant={accessBadge.variant as any} className="text-[10px] font-bold shrink-0 uppercase tracking-wider">
+            <Badge variant={accessBadge.variant as any} className="text-[11px] font-bold shrink-0 uppercase tracking-wider">
               {accessBadge.text}
             </Badge>
           </div>
@@ -161,7 +161,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
           {/* Progress Section */}
           <div className="mt-auto space-y-2.5">
             {/* Stats row */}
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-3 sm:gap-4 text-xs">
               <span className="text-muted-foreground">
                 <span className="font-bold text-foreground">{progress.lessonsCompleted}</span>/{progress.totalLessons} {t('lessons')}
               </span>
@@ -218,9 +218,9 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
                 {t('renew')}
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-xs font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="flex items-center gap-1 text-xs font-bold text-primary sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 {isCompleted ? t('review') : t('continue')}
-                <IconArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                <IconArrowRight size={13} className="sm:group-hover:translate-x-0.5 transition-transform" />
               </span>
             )}
           </div>

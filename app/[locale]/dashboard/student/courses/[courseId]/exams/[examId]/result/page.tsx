@@ -106,6 +106,31 @@ export default async function ExamResultPage({ params }: PageProps) {
         {}
     )
 
+    // Match answer_text to an option — answer_text may be the option_id (MC)
+    // or the literal text "True"/"False" (TF), so check both
+    function findSelectedOption(options: any[], answerText: string | null | undefined) {
+        if (!answerText || !options) return null
+        return options.find((opt: any) =>
+            opt.option_id.toString() === answerText ||
+            opt.option_text.toLowerCase() === answerText.toLowerCase()
+        ) || null
+    }
+
+    // Build a lookup of whether the student's answer was correct per question
+    const correctOptionsByQuestion = (examData.exam_questions || []).reduce(
+        (acc: Record<number, boolean>, q: any) => {
+            if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
+                const answer = answersByQuestionId[q.question_id]
+                if (answer) {
+                    const selectedOpt = findSelectedOption(q.question_options, answer.answer_text)
+                    acc[q.question_id] = !!selectedOpt?.is_correct
+                }
+            }
+            return acc
+        },
+        {}
+    )
+
     const firstExam = examData;
     const courseData = firstExam?.courses;
     const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || "Course";
@@ -118,37 +143,37 @@ export default async function ExamResultPage({ params }: PageProps) {
     ]
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-8 animate-in fade-in duration-500">
+        <div className="container mx-auto py-5 sm:py-8 px-4 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {/* Score Header */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 md:p-12 text-white shadow-2xl shadow-indigo-200">
-                <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <IconTrophy size={180} stroke={1} />
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 sm:p-8 md:p-12 text-white shadow-2xl shadow-indigo-200">
+                <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10">
+                    <IconTrophy className="h-24 w-24 sm:h-[180px] sm:w-[180px]" stroke={1} />
                 </div>
 
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div className="space-y-4 text-center md:text-left">
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-8">
+                    <div className="space-y-3 sm:space-y-4 text-center md:text-left">
                         <Badge variant="outline" className="text-white border-white/30 bg-white/10 px-3 py-1">
                             Exam Completed
                         </Badge>
-                        <h1 className="text-4xl md:text-5xl font-black">{examData.title}</h1>
-                        <p className="text-indigo-100 max-w-lg">{examData.description}</p>
+                        <h1 className="text-2xl sm:text-4xl md:text-5xl font-black">{examData.title}</h1>
+                        <p className="text-indigo-100 max-w-lg text-sm sm:text-base">{examData.description}</p>
 
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 pt-2 sm:pt-4">
                             <div className="flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-white/10">
-                                    <IconClock size={20} />
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-white/10">
+                                    <IconClock size={18} />
                                 </div>
-                                <span className="text-sm font-medium">Completed on {new Date(submission.submission_date).toLocaleDateString()}</span>
+                                <span className="text-xs sm:text-sm font-medium">Completed on {new Date(submission.submission_date).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-8 flex flex-col items-center justify-center shadow-xl min-w-[200px]">
-                        <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Final Score</span>
-                        <div className="text-6xl font-black mb-2">{Math.round(score || 0)}%</div>
-                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-4">
+                    <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Final Score</span>
+                        <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score || 0)}%</div>
+                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-3 sm:mt-4">
                             <div
                                 className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-1000"
                                 style={{ width: `${score || 0}%` }}
@@ -161,9 +186,9 @@ export default async function ExamResultPage({ params }: PageProps) {
             {/* Review Status Banner */}
             {reviewStatus === 'pending_teacher_review' && (
                 <Card className="border-2 border-amber-200 dark:border-amber-800 shadow-lg overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-600 dark:text-amber-400">
-                            <IconHourglass size={28} />
+                    <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
+                            <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
                             <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200">Pending Teacher Review</h3>
@@ -177,9 +202,9 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {reviewStatus === 'ai_reviewed' && (
                 <Card className="border-2 border-green-200 dark:border-green-800 shadow-lg overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-xl text-green-600 dark:text-green-400">
-                            <IconMessageChatbot size={28} />
+                    <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-green-100 dark:bg-green-900/40 rounded-xl text-green-600 dark:text-green-400 shrink-0">
+                            <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
                             <h3 className="font-bold text-lg text-green-900 dark:text-green-200">AI Evaluated</h3>
@@ -193,9 +218,9 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {reviewStatus === 'teacher_reviewed' && (
                 <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-blue-600 dark:text-blue-400">
-                            <IconUserCheck size={28} />
+                    <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
+                            <IconUserCheck className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
                             <h3 className="font-bold text-lg text-blue-900 dark:text-blue-200">Teacher Reviewed</h3>
@@ -210,15 +235,15 @@ export default async function ExamResultPage({ params }: PageProps) {
             {/* AI Analysis Section */}
             {aiData && (
                 <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                    <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-6 text-white">
+                    <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-4 sm:p-6 text-white">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <IconMessageChatbot size={28} />
+                            <div className="p-2 bg-white/20 rounded-lg shrink-0">
+                                <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                             </div>
-                            <CardTitle className="text-xl font-bold">AI Performance Analysis</CardTitle>
+                            <CardTitle className="text-base sm:text-xl font-bold">AI Performance Analysis</CardTitle>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                         <div className="prose prose-lg dark:prose-invert max-w-none">
                             <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-medium text-base">
                                 {aiData.summary || "Your performance has been evaluated. Review the detailed feedback per question below."}
@@ -229,13 +254,17 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {/* Detailed Review */}
-            <div className="space-y-6">
-                <h2 className="text-2xl font-bold px-2">Detailed Question Review</h2>
+            <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">Detailed Question Review</h2>
                 <div className="space-y-4">
                     {examData.exam_questions?.map((question: any, idx: number) => {
                         const answer = answersByQuestionId[question.question_id];
                         const qScore = questionScoresByQuestionId[question.question_id];
-                        const isCorrect = qScore?.is_correct ?? answer?.is_correct;
+                        // For MC/TF, derive correctness from the options (ground truth);
+                        // for free_text, fall back to scored/answer fields
+                        const isCorrect = (question.question_type === 'multiple_choice' || question.question_type === 'true_false')
+                            ? correctOptionsByQuestion[question.question_id] ?? qScore?.is_correct ?? answer?.is_correct
+                            : qScore?.is_correct ?? answer?.is_correct;
                         const isFreeTextPending = question.question_type === 'free_text' && (!qScore?.ai_feedback || qScore?.ai_confidence === 0);
 
                         return (
@@ -247,71 +276,72 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         ? "border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20"
                                         : "border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20"
                             )}>
-                                <CardHeader className="pb-3 border-b border-muted/10">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                                <CardHeader className="pb-3 border-b border-muted/10 px-4 sm:px-6">
+                                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                                        <div className="space-y-1 min-w-0">
+                                            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">
                                                 Question {idx + 1}
-                                                <Badge variant="secondary" className="lowercase font-medium">{question.question_type.replace('_', ' ')}</Badge>
+                                                <Badge variant="secondary" className="lowercase font-medium text-[10px] sm:text-xs">{question.question_type.replace('_', ' ')}</Badge>
                                             </div>
-                                            <h3 className="text-xl font-bold">{question.question_text}</h3>
+                                            <h3 className="text-base sm:text-xl font-bold">{question.question_text}</h3>
                                         </div>
                                         <div className={cn(
-                                            "p-2 rounded-xl shrink-0",
+                                            "p-1.5 sm:p-2 rounded-xl shrink-0",
                                             isFreeTextPending
                                                 ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
                                                 : isCorrect
                                                     ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
                                                     : "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400"
                                         )}>
-                                            {isFreeTextPending ? <IconHourglass size={28} /> : isCorrect ? <IconCheck size={28} /> : <IconX size={28} />}
+                                            {isFreeTextPending ? <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" /> : isCorrect ? <IconCheck className="h-5 w-5 sm:h-7 sm:w-7" /> : <IconX className="h-5 w-5 sm:h-7 sm:w-7" />}
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="pt-6 space-y-4">
+                                <CardContent className="pt-4 sm:pt-6 space-y-3 sm:space-y-4 px-4 sm:px-6">
                                     {/* Multiple Choice Options */}
                                     {question.question_type === 'multiple_choice' && (
-                                        <div className="grid gap-3">
+                                        <div className="grid gap-2.5 sm:gap-3">
                                             {question.question_options?.map((opt: any) => {
-                                                const isSelected = answer?.answer_text === opt.option_id.toString();
+                                                const isSelected = answer?.answer_text === opt.option_id.toString()
+                                                    || (answer?.answer_text?.toLowerCase() === opt.option_text?.toLowerCase());
                                                 const isOptionCorrect = opt.is_correct;
 
                                                 return (
                                                     <div key={opt.option_id} className={cn(
-                                                        "p-5 rounded-xl border-2 flex items-center justify-between transition-all",
-                                                        // User selected this option AND it's correct
+                                                        "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
                                                         isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        // User selected this option BUT it's wrong
                                                         isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        // User didn't select this BUT it's the correct answer
-                                                        !isSelected && isOptionCorrect && "border-green-500 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        // User didn't select this AND it's not correct
+                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
                                                         !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
                                                     )}>
-                                                        <span className={cn(
-                                                            "font-bold text-base",
-                                                            isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                            isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                            !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                            !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
-                                                        )}>{opt.option_text}</span>
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {isSelected && (
-                                                                <Badge 
-                                                                    className={cn(
-                                                                        "rounded-md font-bold",
-                                                                        isOptionCorrect 
-                                                                            ? "bg-blue-600 dark:bg-blue-500 text-white" 
-                                                                            : "bg-red-600 dark:bg-red-500 text-white"
+                                                        <div className="flex items-start sm:items-center justify-between gap-2">
+                                                            <span className={cn(
+                                                                "font-bold text-sm sm:text-base",
+                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
+                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
+                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
+                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                            )}>{opt.option_text}</span>
+                                                            {(isSelected || isOptionCorrect) && (
+                                                                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                                                    {isSelected && (
+                                                                        <Badge
+                                                                            className={cn(
+                                                                                "rounded-md font-bold text-[10px] sm:text-xs",
+                                                                                isOptionCorrect
+                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
+                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                            )}
+                                                                        >
+                                                                            Your Choice
+                                                                        </Badge>
                                                                     )}
-                                                                >
-                                                                    Your Choice
-                                                                </Badge>
-                                                            )}
-                                                            {isOptionCorrect && (
-                                                                <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold">
-                                                                    ✓ Correct Answer
-                                                                </Badge>
+                                                                    {isOptionCorrect && (
+                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
+                                                                            Correct
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -322,47 +352,48 @@ export default async function ExamResultPage({ params }: PageProps) {
 
                                     {/* True/False Questions */}
                                     {question.question_type === 'true_false' && (
-                                        <div className="grid gap-3">
+                                        <div className="grid gap-2.5 sm:gap-3">
                                             {question.question_options?.map((opt: any) => {
-                                                const isSelected = answer?.answer_text === opt.option_id.toString();
+                                                const isSelected = answer?.answer_text === opt.option_id.toString()
+                                                    || (answer?.answer_text?.toLowerCase() === opt.option_text?.toLowerCase());
                                                 const isOptionCorrect = opt.is_correct;
 
                                                 return (
                                                     <div key={opt.option_id} className={cn(
-                                                        "p-5 rounded-xl border-2 flex items-center justify-between transition-all",
-                                                        // User selected this option AND it's correct
+                                                        "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
                                                         isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        // User selected this option BUT it's wrong
                                                         isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        // User didn't select this BUT it's the correct answer
-                                                        !isSelected && isOptionCorrect && "border-green-500 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        // User didn't select this AND it's not correct
+                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
                                                         !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
                                                     )}>
-                                                        <span className={cn(
-                                                            "font-bold text-lg",
-                                                            isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                            isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                            !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                            !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
-                                                        )}>{opt.option_text}</span>
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {isSelected && (
-                                                                <Badge 
-                                                                    className={cn(
-                                                                        "rounded-md font-bold",
-                                                                        isOptionCorrect 
-                                                                            ? "bg-blue-600 dark:bg-blue-500 text-white" 
-                                                                            : "bg-red-600 dark:bg-red-500 text-white"
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className={cn(
+                                                                "font-bold text-base sm:text-lg",
+                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
+                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
+                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
+                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                            )}>{opt.option_text}</span>
+                                                            {(isSelected || isOptionCorrect) && (
+                                                                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                                                    {isSelected && (
+                                                                        <Badge
+                                                                            className={cn(
+                                                                                "rounded-md font-bold text-[10px] sm:text-xs",
+                                                                                isOptionCorrect
+                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
+                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                            )}
+                                                                        >
+                                                                            Your Choice
+                                                                        </Badge>
                                                                     )}
-                                                                >
-                                                                    Your Choice
-                                                                </Badge>
-                                                            )}
-                                                            {isOptionCorrect && (
-                                                                <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold">
-                                                                    ✓ Correct Answer
-                                                                </Badge>
+                                                                    {isOptionCorrect && (
+                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
+                                                                            Correct
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -380,7 +411,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         return (
                                             <div className="space-y-3">
                                                 <div className={cn(
-                                                    "p-5 rounded-xl border-2",
+                                                    "p-3.5 sm:p-5 rounded-xl border-2",
                                                     isPendingReview
                                                         ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
                                                         : isCorrect
@@ -409,7 +440,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 )}
 
                                                 {isPendingReview && (
-                                                    <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-5 rounded-r-xl">
+                                                    <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-3.5 sm:p-5 rounded-r-xl">
                                                         <div className="flex items-center gap-2 font-bold mb-2 text-amber-900 dark:text-amber-300">
                                                             <IconHourglass size={20} />
                                                             <span>Pending Review</span>
@@ -434,7 +465,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         if (!feedbackText || (question.question_type === 'free_text' && questionScore?.ai_confidence === 0)) return null;
 
                                         return (
-                                            <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-5 rounded-r-xl">
+                                            <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-3.5 sm:p-5 rounded-r-xl">
                                                 <div className="flex items-center gap-2 font-bold mb-2 text-blue-900 dark:text-blue-300">
                                                     {feedbackSource === 'Teacher' ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
                                                     <span>{feedbackSource} Feedback</span>
@@ -451,15 +482,15 @@ export default async function ExamResultPage({ params }: PageProps) {
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-center gap-4 pt-10">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-6 sm:pt-10">
                 <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-                    <Button variant="outline" size="lg" className="rounded-2xl gap-2 font-bold py-6 px-8">
-                        <IconArrowLeft size={20} />
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-2xl gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
+                        <IconArrowLeft size={18} />
                         View All Assessments
                     </Button>
                 </Link>
                 <Link href={`/dashboard/student/courses/${courseId}`}>
-                    <Button size="lg" className="rounded-2xl font-bold py-6 px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
+                    <Button size="lg" className="w-full sm:w-auto rounded-2xl font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
                         Continue Learning
                     </Button>
                 </Link>

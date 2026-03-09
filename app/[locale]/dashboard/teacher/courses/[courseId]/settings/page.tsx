@@ -76,7 +76,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-2">
           <Link href={`/dashboard/teacher/courses/${courseId}`}>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourse')}>

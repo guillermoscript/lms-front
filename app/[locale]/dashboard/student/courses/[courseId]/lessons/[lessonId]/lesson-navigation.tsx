@@ -101,8 +101,8 @@ export function LessonNavigation({
   }
 
   return (
-    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
-      <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
+    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-6">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
         {/* Previous */}
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (

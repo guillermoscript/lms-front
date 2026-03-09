@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonEditor } from '@/components/teacher/lesson-editor'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -48,6 +49,7 @@ export default async function EditLessonPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <LessonEditorTour userId={user.id} />
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

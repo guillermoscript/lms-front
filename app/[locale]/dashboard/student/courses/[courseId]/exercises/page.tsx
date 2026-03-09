@@ -62,15 +62,15 @@ export default async function ExercisesListPage({ params }: PageProps) {
     ]
 
     return (
-        <div className="container mx-auto py-8 px-4 space-y-8">
-            <div className="space-y-4">
+        <div className="container mx-auto py-5 sm:py-8 px-4 space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
                 <BreadcrumbComponent links={breadcrumbLinks} />
                 <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <IconBarbell size={28} />
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <IconBarbell className="h-6 w-6 sm:h-7 sm:w-7" />
                     </div>
                     <div className="min-w-0">
-                        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
                         <p className="text-muted-foreground">{t('subtitle')}</p>
                     </div>
                 </div>

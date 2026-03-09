@@ -78,7 +78,7 @@ export function CourseFilters({
   return (
     <div className={cn("space-y-4", isPending && "opacity-60 pointer-events-none transition-opacity")}>
       {/* Status Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
         {statusOptions.map((opt) => {
           const count = counts[opt.value as keyof typeof counts] ?? 0
           const isActive = currentStatus === opt.value
@@ -87,10 +87,10 @@ export function CourseFilters({
               key={opt.value}
               onClick={() => handleStatusChange(opt.value)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
+                "flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all",
                 isActive
                   ? "bg-foreground text-background shadow-sm"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted"
               )}
             >
               {t(opt.key)}
@@ -108,8 +108,8 @@ export function CourseFilters({
       </div>
 
       {/* Search & Sort Row */}
-      <div className="flex items-center gap-3">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:max-w-sm">
           <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input
             type="text"
@@ -147,7 +147,7 @@ export function CourseFilters({
                     key={opt.value}
                     onClick={() => handleSortChange(opt.value)}
                     className={cn(
-                      "w-full text-left px-3.5 py-2 text-sm transition-colors",
+                      "w-full text-left px-3.5 py-2.5 sm:py-2 text-sm transition-colors",
                       currentSort === opt.value
                         ? "text-foreground font-semibold bg-muted/50"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
