@@ -9,6 +9,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
 import { AristotleConfig } from '@/components/teacher/aristotle-config'
+import { SequentialCompletionToggle } from '@/components/teacher/sequential-completion-toggle'
 import { Separator } from '@/components/ui/separator'
 
 interface PageProps {
@@ -100,6 +101,14 @@ export default async function CourseSettingsPage({ params }: PageProps) {
         <CourseForm
           categories={categories || []}
           initialData={course as any}
+        />
+
+        <Separator className="my-8" />
+
+        {/* Sequential Completion */}
+        <SequentialCompletionToggle
+          courseId={parseInt(courseId)}
+          initialValue={course.require_sequential_completion ?? false}
         />
 
         <Separator className="my-8" />
