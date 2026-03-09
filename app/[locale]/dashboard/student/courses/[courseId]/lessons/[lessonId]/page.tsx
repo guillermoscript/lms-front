@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
 import { LessonContent } from './lesson-content'
-import { IconMenu2, IconSparkles } from '@tabler/icons-react'
+import { LessonResources } from '@/components/student/lesson-resources'
+import { IconMenu2, IconSparkles, IconLock } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
 import { LessonAIChat } from '@/components/student/lesson-ai-chat'
@@ -101,7 +103,7 @@ export default async function LessonPage({ params }: PageProps) {
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
-  const [{ data: allLessons }, { data: completions }] = await Promise.all([
+  const [{ data: allLessons }, { data: completions }, { data: lessonResources }] = await Promise.all([
     supabase
       .from('lessons')
       .select('id, title, sequence')
@@ -114,9 +116,31 @@ export default async function LessonPage({ params }: PageProps) {
       .select('lesson_id')
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId),
+    supabase
+      .from('lesson_resources')
+      .select('id, file_name, file_size, mime_type')
+      .eq('lesson_id', parseInt(lessonId))
+      .eq('tenant_id', tenantId)
+      .order('display_order', { ascending: true }),
   ])
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
+
+  // Sequential prerequisite check
+  const requireSequential = course.require_sequential_completion === true
+  let isLocked = false
+  let prevLessonForUnlock: { id: number; title: string } | null = null
+
+  if (requireSequential && allLessons) {
+    const currentIdx = allLessons.findIndex((l) => l.id === lesson.id)
+    if (currentIdx > 0) {
+      const prevL = allLessons[currentIdx - 1]
+      if (!completedLessonIds.has(prevL.id)) {
+        isLocked = true
+        prevLessonForUnlock = prevL
+      }
+    }
+  }
 
   const sidebarLessons =
     allLessons?.map((l) => ({
@@ -130,6 +154,51 @@ export default async function LessonPage({ params }: PageProps) {
   const prevLesson = currentIndex > 0 ? allLessons?.[currentIndex - 1] : null
   const nextLesson =
     currentIndex < (allLessons?.length ?? 0) - 1 ? allLessons?.[currentIndex + 1] : null
+
+  // Locked lesson — show locked state
+  if (isLocked && prevLessonForUnlock) {
+    return (
+      <div className="flex h-screen bg-background overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden w-full">
+          <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
+            <div className="flex items-center justify-between max-w-4xl mx-auto">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                    {t('lessonIndex', { count: lesson.sequence })}
+                  </span>
+                </div>
+                <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight line-clamp-1">{lesson.title}</h1>
+              </div>
+            </div>
+          </header>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center px-6 max-w-md">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <IconLock className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">{t('lessonLocked')}</h2>
+              <p className="text-sm text-muted-foreground mb-6">{t('completePreviousFirst')}</p>
+              <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonForUnlock.id}`}>
+                <Button size="sm" className="gap-2">
+                  {prevLessonForUnlock.title}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </main>
+        <div className="hidden md:block">
+          <LessonSidebar
+            courseId={parseInt(courseId)}
+            courseTitle={course.title}
+            lessons={sidebarLessons}
+            currentLessonId={lesson.id}
+            requireSequentialCompletion={requireSequential}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -168,6 +237,7 @@ export default async function LessonPage({ params }: PageProps) {
                     courseTitle={course.title}
                     lessons={sidebarLessons}
                     currentLessonId={lesson.id}
+                    requireSequentialCompletion={requireSequential}
                   />
                 </SheetContent>
               </Sheet>
@@ -183,6 +253,13 @@ export default async function LessonPage({ params }: PageProps) {
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
             />
+
+            {/* Lesson Resources */}
+            {lessonResources && lessonResources.length > 0 && (
+              <AnimatedSection delay={0.1}>
+                <LessonResources resources={lessonResources} />
+              </AnimatedSection>
+            )}
 
             {/* AI Task Section — breaks out of content padding on mobile for more width */}
             {aiTask && (
@@ -243,6 +320,7 @@ export default async function LessonPage({ params }: PageProps) {
           prevLessonId={prevLesson?.id}
           nextLessonId={nextLesson?.id}
           tenantId={tenantId}
+          requireSequentialCompletion={requireSequential}
         />
       </main>
 
@@ -253,6 +331,7 @@ export default async function LessonPage({ params }: PageProps) {
           courseTitle={course.title}
           lessons={sidebarLessons}
           currentLessonId={lesson.id}
+          requireSequentialCompletion={requireSequential}
         />
       </div>
     </div>

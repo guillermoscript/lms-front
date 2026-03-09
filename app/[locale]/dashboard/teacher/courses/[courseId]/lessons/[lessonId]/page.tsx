@@ -34,14 +34,22 @@ export default async function EditLessonPage({ params }: PageProps) {
     notFound()
   }
 
-  // Get lesson
-  const { data: lesson } = await supabase
-    .from('lessons')
-    .select('*')
-    .eq('id', parseInt(lessonId))
-    .eq('course_id', parseInt(courseId))
-    .eq('tenant_id', tenantId)
-    .single()
+  // Get lesson and resources in parallel
+  const [{ data: lesson }, { data: resources }] = await Promise.all([
+    supabase
+      .from('lessons')
+      .select('*')
+      .eq('id', parseInt(lessonId))
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+    supabase
+      .from('lesson_resources')
+      .select('id, file_name, file_size, mime_type')
+      .eq('lesson_id', parseInt(lessonId))
+      .eq('tenant_id', tenantId)
+      .order('display_order', { ascending: true }),
+  ])
 
   if (!lesson) {
     notFound()
@@ -62,8 +70,10 @@ export default async function EditLessonPage({ params }: PageProps) {
           video_url: lesson.video_url,
           sequence: lesson.sequence,
           status: lesson.status as 'draft' | 'published' | 'archived',
+          publish_at: lesson.publish_at || null,
           ai_task_description: lesson.ai_task_description || null,
           ai_task_instructions: lesson.ai_task_instructions || null,
+          resources: resources || [],
         }}
       />
     </div>

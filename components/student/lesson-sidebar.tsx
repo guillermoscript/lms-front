@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { IconCheck, IconPlayerPlay, IconArrowLeft } from '@tabler/icons-react'
+import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface Lesson {
@@ -17,6 +17,7 @@ interface LessonSidebarProps {
   courseTitle: string
   lessons: Lesson[]
   currentLessonId?: number
+  requireSequentialCompletion?: boolean
 }
 
 export function LessonSidebar({
@@ -24,6 +25,7 @@ export function LessonSidebar({
   courseTitle,
   lessons,
   currentLessonId,
+  requireSequentialCompletion = false,
 }: LessonSidebarProps) {
   const t = useTranslations('components.lessonSidebar')
   const completedCount = lessons.filter(l => l.isCompleted).length
@@ -60,49 +62,73 @@ export function LessonSidebar({
       {/* Lesson list */}
       <nav className="flex-1 p-2" aria-label={t('lessonList')}>
         <ul className="space-y-0.5">
-          {lessons.map((lesson) => {
+          {lessons.map((lesson, index) => {
             const isActive = lesson.id === currentLessonId
 
-            return (
-              <li key={lesson.id}>
-                <Link
-                  href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {/* Status indicator */}
-                  <span className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-0.5 transition-all',
-                    lesson.isCompleted
+            // A lesson is locked if sequential mode is on and any earlier lesson is not completed
+            const isLocked = requireSequentialCompletion && !lesson.isCompleted && index > 0 &&
+              lessons.slice(0, index).some(l => !l.isCompleted)
+
+            const content = (
+              <>
+                {/* Status indicator */}
+                <span className={cn(
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold mt-0.5 transition-all',
+                  isLocked
+                    ? 'bg-muted text-muted-foreground/50'
+                    : lesson.isCompleted
                       ? 'bg-emerald-500 text-white'
                       : isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
-                  )}>
-                    {lesson.isCompleted ? (
-                      <IconCheck className="h-3.5 w-3.5" />
-                    ) : isActive ? (
-                      <IconPlayerPlay className="h-3 w-3" />
-                    ) : (
-                      <span>{lesson.sequence}</span>
-                    )}
-                  </span>
+                )}>
+                  {isLocked ? (
+                    <IconLock className="h-3 w-3" />
+                  ) : lesson.isCompleted ? (
+                    <IconCheck className="h-3.5 w-3.5" />
+                  ) : isActive ? (
+                    <IconPlayerPlay className="h-3 w-3" />
+                  ) : (
+                    <span>{lesson.sequence}</span>
+                  )}
+                </span>
 
-                  <div className="flex-1 min-w-0">
-                    <span className={cn(
-                      'line-clamp-2 leading-snug text-[13px]',
-                      isActive ? 'font-semibold' : 'font-medium',
-                      lesson.isCompleted && !isActive && 'line-through opacity-60'
-                    )}>
-                      {lesson.title}
-                    </span>
+                <div className="flex-1 min-w-0">
+                  <span className={cn(
+                    'line-clamp-2 leading-snug text-[13px]',
+                    isActive ? 'font-semibold' : 'font-medium',
+                    lesson.isCompleted && !isActive && 'line-through opacity-60',
+                    isLocked && 'opacity-50'
+                  )}>
+                    {lesson.title}
+                  </span>
+                </div>
+              </>
+            )
+
+            return (
+              <li key={lesson.id}>
+                {isLocked ? (
+                  <div
+                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
+                    title={t('locked')}
+                  >
+                    {content}
                   </div>
-                </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {content}
+                  </Link>
+                )}
               </li>
             )
           })}
