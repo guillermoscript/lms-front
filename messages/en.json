@@ -444,6 +444,8 @@
         "dangerZoneDesc": "Deleting a course is permanent and cannot be undone. Students who are enrolled will lose access immediately.",
         "enrolledCount": "{count} {count, plural, one {student} other {students}} enrolled",
         "settings": "Settings",
+        "sequentialCompletion": "Sequential lesson completion",
+        "sequentialCompletionDescription": "When enabled, students must complete lessons in order. They cannot skip ahead to later lessons.",
         "min": "min",
         "video": "Video",
         "status": {
@@ -587,6 +589,32 @@
             "view": "View Certificate",
             "revoke": "Revoke",
             "revokeConfirm": "Revoke this certificate? The student will lose their credential and the verification link will stop working."
+          }
+        },
+        "tour": {
+          "header": {
+            "title": "Course Overview",
+            "description": "This is your course management hub. Here you can see the course title, status, and enrollment count."
+          },
+          "tabs": {
+            "title": "Content Tabs",
+            "description": "Navigate between lessons, exercises, exams, students, and certificates using these tabs."
+          },
+          "lessons": {
+            "title": "Lessons",
+            "description": "Manage your course curriculum here. Add, reorder, and edit lessons to build your course structure."
+          },
+          "exercises": {
+            "title": "Exercises",
+            "description": "Create practice exercises to help students apply what they've learned."
+          },
+          "preview": {
+            "title": "Preview Course",
+            "description": "See your course as students will see it. Check the layout and content before publishing."
+          },
+          "settings": {
+            "title": "Course Settings",
+            "description": "Configure course details, pricing, visibility, and other settings."
           }
         }
       },
@@ -732,6 +760,20 @@
         "modeMDX": "MDX",
         "closePreview": "Close preview",
         "dismissError": "Dismiss error",
+        "resources": "Resources",
+        "resourcesDescription": "Upload downloadable files for students (PDFs, worksheets, etc.)",
+        "uploadFiles": "Upload files",
+        "dropFilesHere": "or drag and drop",
+        "maxFileSize": "Max 10MB per file",
+        "noResources": "No resources uploaded yet",
+        "deleteResource": "Delete resource",
+        "uploading": "Uploading...",
+        "publishAt": "Schedule publish",
+        "publishAtHint": "Leave empty to publish manually. Scheduled lessons auto-publish at the set time.",
+        "clearSchedule": "Clear",
+        "scheduledFor": "Scheduled: {date}",
+        "scheduleLesson": "Schedule",
+        "saveFirstForResources": "Save the lesson as a draft first to upload resources.",
         "tour": {
           "header": {
             "title": "Lesson Editor",
@@ -2802,7 +2844,11 @@
       "aiTutorTitle": "AI Tutor Session",
       "aiTutorDescription": "Complete the task to finish this lesson",
       "currentTask": "Current Task",
-      "completed": "Completed"
+      "completed": "Completed",
+      "resources": "Resources",
+      "downloadFile": "Download",
+      "lessonLocked": "Lesson locked",
+      "completePreviousFirst": "Complete the previous lesson to unlock this one."
     },
     "lessonAIChat": {
       "suggestions": {
@@ -2845,7 +2891,8 @@
     },
     "lessonSidebar": {
       "backToCourse": "Back to course",
-      "lessonList": "Course lessons"
+      "lessonList": "Course lessons",
+      "locked": "Locked — complete previous lessons first"
     },
     "lessonNavigation": {
       "previous": "Previous",
@@ -2855,7 +2902,8 @@
       "done": "Done",
       "complete": "Complete",
       "next": "Next",
-      "finishCourse": "Finish Course"
+      "finishCourse": "Finish Course",
+      "completeFirst": "Complete this lesson first"
     },
     "lessonComments": {
       "title": "Comments ({count})",
@@ -3881,6 +3929,18 @@
     }
   },
   "exercises": {
+    "artifact": {
+      "typeLabel": "Interactive Exercise",
+      "evaluating": "Evaluating your submission...",
+      "score": "Score",
+      "passed": "Passed",
+      "failed": "Not Yet",
+      "feedback": "Feedback",
+      "strengths": "Strengths",
+      "improvements": "Areas to Improve",
+      "tryAgain": "Try Again",
+      "rateLimited": "Too many submissions. Please wait a moment before trying again."
+    },
     "audio": {
       "title": "Audio Exercise",
       "instructions": "Instructions",

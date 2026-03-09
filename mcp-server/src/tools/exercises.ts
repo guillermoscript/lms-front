@@ -24,6 +24,7 @@ const exerciseTypes = [
   "true_false",
   "fill_in_the_blank",
   "discussion",
+  "artifact",
 ] as const;
 const difficultyLevels = ["easy", "medium", "hard"] as const;
 
@@ -343,6 +344,196 @@ export function registerExerciseTools(server: McpServer, auth: AuthManager) {
               text: `Exercise created: **${data.title}** (ID: ${data.id}) [${data.exercise_type}] [${data.difficulty_level}]`,
             },
           ],
+          structuredContent: {
+            id: data.id,
+            title: data.title,
+            type: data.exercise_type,
+            difficulty: data.difficulty_level,
+          },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  server.registerTool(
+    "lms_create_artifact_exercise",
+    {
+      title: "Create Artifact Exercise",
+      description:
+        "Create an interactive artifact exercise using custom HTML that renders in a sandboxed iframe. Students interact with the HTML and submit their work for AI-powered evaluation.",
+      inputSchema: z
+        .object({
+          course_id: z.number().describe("The course ID"),
+          lesson_id: z.number().optional().describe("Optional lesson ID to link to"),
+          title: z.string().min(1).describe("Exercise title"),
+          instructions: z.string().describe("Instructions visible to students"),
+          artifact_html: z.string().describe("Full interactive HTML to render in sandboxed iframe"),
+          artifact_type: z
+            .enum(["code_editor", "spreadsheet", "essay", "simulation", "custom"])
+            .describe("Type of artifact"),
+          evaluation_criteria: z
+            .string()
+            .describe("Server-side only criteria for AI evaluation (never sent to browser)"),
+          system_prompt: z
+            .string()
+            .optional()
+            .describe("Optional AI evaluator persona/system prompt (server-side only)"),
+          difficulty_level: z.enum(difficultyLevels).describe("Difficulty level"),
+          passing_score: z.number().int().min(0).max(100).default(70).describe("Minimum score to pass (default 70)"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async ({
+      course_id,
+      lesson_id,
+      title,
+      instructions,
+      artifact_html,
+      artifact_type,
+      evaluation_criteria,
+      system_prompt,
+      difficulty_level,
+      passing_score,
+    }) => {
+      try {
+        await auth.verifyCourseOwnership(course_id);
+        const supabase = auth.getClient();
+
+        const exercise_config = {
+          artifact_type,
+          artifact_html,
+          evaluation_criteria,
+          system_prompt: system_prompt ?? null,
+          passing_score: passing_score ?? 70,
+        };
+
+        const { data, error } = await supabase
+          .from("exercises")
+          .insert({
+            course_id,
+            lesson_id: lesson_id ?? null,
+            title,
+            instructions,
+            exercise_type: "artifact" as any,
+            difficulty_level,
+            exercise_config,
+            created_by: auth.getUserId(),
+            tenant_id: auth.getTenantId(),
+          })
+          .select("id, title, exercise_type, difficulty_level")
+          .single();
+
+        if (error) return errorResult(`Creating artifact exercise: ${error.message}`);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Artifact exercise created: **${data.title}** (ID: ${data.id}) [${artifact_type}] [${data.difficulty_level}]`,
+            },
+          ],
+          structuredContent: {
+            id: data.id,
+            title: data.title,
+            type: data.exercise_type,
+            artifact_type,
+            difficulty: data.difficulty_level,
+          },
+        };
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  server.registerTool(
+    "lms_update_artifact_exercise",
+    {
+      title: "Update Artifact Exercise",
+      description: "Update an artifact exercise's HTML, evaluation criteria, or other fields.",
+      inputSchema: z
+        .object({
+          exercise_id: z.number().describe("The exercise ID"),
+          title: z.string().optional().describe("New title"),
+          instructions: z.string().optional().describe("New instructions"),
+          artifact_html: z.string().optional().describe("New HTML content"),
+          artifact_type: z
+            .enum(["code_editor", "spreadsheet", "essay", "simulation", "custom"])
+            .optional()
+            .describe("New artifact type"),
+          evaluation_criteria: z.string().optional().describe("New evaluation criteria"),
+          system_prompt: z.string().optional().describe("New system prompt"),
+          difficulty_level: z.enum(difficultyLevels).optional().describe("New difficulty"),
+          passing_score: z.number().int().min(0).max(100).optional().describe("New passing score"),
+        })
+        .strict(),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({
+      exercise_id,
+      title,
+      instructions,
+      artifact_html,
+      artifact_type,
+      evaluation_criteria,
+      system_prompt,
+      difficulty_level,
+      passing_score,
+    }) => {
+      try {
+        await auth.verifyExerciseOwnership(exercise_id);
+        const supabase = auth.getClient();
+
+        // Fetch current exercise to merge config
+        const { data: current, error: fetchError } = await supabase
+          .from("exercises")
+          .select("exercise_config, exercise_type")
+          .eq("id", exercise_id)
+          .single();
+
+        if (fetchError || !current) return errorResult(`Exercise ${exercise_id} not found.`);
+        if (current.exercise_type !== "artifact") {
+          return errorResult(`Exercise ${exercise_id} is not an artifact exercise.`);
+        }
+
+        const currentConfig = (current.exercise_config as Record<string, any>) ?? {};
+        const updatedConfig = { ...currentConfig };
+
+        if (artifact_html !== undefined) updatedConfig.artifact_html = artifact_html;
+        if (artifact_type !== undefined) updatedConfig.artifact_type = artifact_type;
+        if (evaluation_criteria !== undefined) updatedConfig.evaluation_criteria = evaluation_criteria;
+        if (system_prompt !== undefined) updatedConfig.system_prompt = system_prompt;
+        if (passing_score !== undefined) updatedConfig.passing_score = passing_score;
+
+        const updateData: Record<string, unknown> = { exercise_config: updatedConfig };
+        if (title !== undefined) updateData.title = title;
+        if (instructions !== undefined) updateData.instructions = instructions;
+        if (difficulty_level !== undefined) updateData.difficulty_level = difficulty_level;
+
+        const { data, error } = await supabase
+          .from("exercises")
+          .update(updateData)
+          .eq("id", exercise_id)
+          .select("id, title, exercise_type, difficulty_level")
+          .single();
+
+        if (error) return errorResult(`Updating artifact exercise: ${error.message}`);
+
+        return {
+          content: [{ type: "text", text: `Artifact exercise updated: **${data.title}** (ID: ${data.id})` }],
           structuredContent: {
             id: data.id,
             title: data.title,

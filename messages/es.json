@@ -444,6 +444,8 @@
         "dangerZoneDesc": "Eliminar un curso es permanente y no se puede deshacer. Los estudiantes inscritos perderán el acceso inmediatamente.",
         "enrolledCount": "{count} {count, plural, one {estudiante inscrito} other {estudiantes inscritos}}",
         "settings": "Configuración",
+        "sequentialCompletion": "Completar lecciones en orden",
+        "sequentialCompletionDescription": "Cuando está activado, los estudiantes deben completar las lecciones en orden. No pueden avanzar a lecciones posteriores.",
         "min": "min",
         "video": "Video",
         "status": {
@@ -587,6 +589,32 @@
             "view": "Ver Certificado",
             "revoke": "Revocar",
             "revokeConfirm": "¿Revocar este certificado? El estudiante perderá su credencial y el enlace de verificación dejará de funcionar."
+          }
+        },
+        "tour": {
+          "header": {
+            "title": "Vista General del Curso",
+            "description": "Este es tu centro de gestión del curso. Aquí puedes ver el título, estado y cantidad de inscripciones."
+          },
+          "tabs": {
+            "title": "Pestañas de Contenido",
+            "description": "Navega entre lecciones, ejercicios, exámenes, estudiantes y certificados usando estas pestañas."
+          },
+          "lessons": {
+            "title": "Lecciones",
+            "description": "Gestiona el plan de estudios de tu curso. Añade, reordena y edita lecciones para construir la estructura."
+          },
+          "exercises": {
+            "title": "Ejercicios",
+            "description": "Crea ejercicios de práctica para ayudar a los estudiantes a aplicar lo aprendido."
+          },
+          "preview": {
+            "title": "Vista Previa del Curso",
+            "description": "Mira tu curso como lo verán los estudiantes. Revisa el diseño y contenido antes de publicar."
+          },
+          "settings": {
+            "title": "Configuración del Curso",
+            "description": "Configura los detalles del curso, precios, visibilidad y otros ajustes."
           }
         }
       },
@@ -732,6 +760,20 @@
         "modeMDX": "MDX",
         "closePreview": "Cerrar vista previa",
         "dismissError": "Descartar error",
+        "resources": "Recursos",
+        "resourcesDescription": "Sube archivos descargables para los estudiantes (PDFs, hojas de cálculo, etc.)",
+        "uploadFiles": "Subir archivos",
+        "dropFilesHere": "o arrastra y suelta",
+        "maxFileSize": "Máximo 10MB por archivo",
+        "noResources": "Aún no se han subido recursos",
+        "deleteResource": "Eliminar recurso",
+        "uploading": "Subiendo...",
+        "publishAt": "Programar publicación",
+        "publishAtHint": "Deja vacío para publicar manualmente. Las lecciones programadas se publican automáticamente.",
+        "clearSchedule": "Limpiar",
+        "scheduledFor": "Programado: {date}",
+        "scheduleLesson": "Programar",
+        "saveFirstForResources": "Guarda la lección como borrador primero para subir recursos.",
         "tour": {
           "header": {
             "title": "Editor de Lección",
@@ -2647,7 +2689,11 @@
       "aiTutorTitle": "Sesión de Tutor de IA",
       "aiTutorDescription": "Completa la tarea para terminar esta lección",
       "currentTask": "Tarea Actual",
-      "completed": "Completada"
+      "completed": "Completada",
+      "resources": "Recursos",
+      "downloadFile": "Descargar",
+      "lessonLocked": "Lección bloqueada",
+      "completePreviousFirst": "Completa la lección anterior para desbloquear esta."
     },
     "lessonAIChat": {
       "suggestions": {
@@ -2690,7 +2736,8 @@
     },
     "lessonSidebar": {
       "backToCourse": "Volver al curso",
-      "lessonList": "Lecciones del curso"
+      "lessonList": "Lecciones del curso",
+      "locked": "Bloqueada — completa las lecciones anteriores primero"
     },
     "lessonNavigation": {
       "previous": "Anterior",
@@ -2700,7 +2747,8 @@
       "done": "Hecho",
       "complete": "Completar",
       "next": "Siguiente",
-      "finishCourse": "Finalizar Curso"
+      "finishCourse": "Finalizar Curso",
+      "completeFirst": "Completa esta lección primero"
     },
     "lessonComments": {
       "title": "Comentarios ({count})",
@@ -3874,6 +3922,18 @@
     }
   },
   "exercises": {
+    "artifact": {
+      "typeLabel": "Ejercicio Interactivo",
+      "evaluating": "Evaluando tu entrega...",
+      "score": "Puntuación",
+      "passed": "Aprobado",
+      "failed": "Aún no",
+      "feedback": "Retroalimentación",
+      "strengths": "Fortalezas",
+      "improvements": "Áreas de Mejora",
+      "tryAgain": "Intentar de Nuevo",
+      "rateLimited": "Demasiadas entregas. Por favor espera un momento antes de intentar de nuevo."
+    },
     "audio": {
       "title": "Ejercicio de Audio",
       "instructions": "Instrucciones",
