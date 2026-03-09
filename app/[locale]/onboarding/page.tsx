@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import OnboardingWizard from '@/components/onboarding/onboarding-wizard'
@@ -22,8 +23,20 @@ export default async function OnboardingPage() {
     .eq('id', user.id)
     .single()
 
+  // Get user's role in current tenant
+  const tenantId = await getCurrentTenantId()
+  const { data: tenantUser } = await supabase
+    .from('tenant_users')
+    .select('role')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', user.id)
+    .single()
+
+  const role = tenantUser?.role || 'teacher'
+  const redirectTo = role === 'admin' ? '/dashboard/admin' : '/dashboard/teacher'
+
   if (profile?.onboarding_completed) {
-    redirect('/dashboard/teacher')
+    redirect(redirectTo)
   }
 
   // Get current tenant settings
@@ -42,6 +55,7 @@ export default async function OnboardingPage() {
       userId={user.id}
       userName={profile?.full_name || user.email?.split('@')[0] || ''}
       currentSettings={currentSettings}
+      redirectTo={redirectTo}
     />
   )
 }

@@ -154,7 +154,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
         const { data, error } = await supabase
           .from("courses")
           .select(
-            `course_id, title, description, status, tags, created_at, updated_at,
+            `course_id, title, description, status, tags, require_sequential_completion, created_at, updated_at,
             lessons(id, title, sequence, status),
             exams(exam_id, title, exam_date, duration, status),
             enrollments(count)`
@@ -176,6 +176,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
             description: data.description,
             status: data.status,
             tags: data.tags,
+            require_sequential_completion: data.require_sequential_completion,
             enrollment_count: enrollCount,
             created_at: data.created_at,
             updated_at: data.updated_at,
@@ -203,6 +204,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           result += `**Status:** ${data.status}\n`;
           result += `**Description:** ${data.description ?? "None"}\n`;
           result += `**Tags:** ${data.tags ?? "None"}\n`;
+          result += `**Sequential Completion:** ${data.require_sequential_completion ? "Yes" : "No"}\n`;
           result += `**Enrollments:** ${enrollCount}\n`;
           result += `**Created:** ${data.created_at}\n\n`;
 
@@ -301,7 +303,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
     "lms_update_course",
     {
       title: "Update Course",
-      description: "Update course metadata such as title, description, tags, or status.",
+      description: "Update course metadata such as title, description, tags, status, or sequential completion mode.",
       inputSchema: z
         .object({
           course_id: z.number().describe("The course ID"),
@@ -309,6 +311,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
           description: z.string().optional().describe("New description"),
           tags: z.string().optional().describe("New tags (comma-separated)"),
           status: z.enum(["draft", "published", "archived"]).optional().describe("New status"),
+          require_sequential_completion: z.boolean().optional().describe("When true, students must complete lessons in order"),
         })
         .strict(),
       annotations: {
@@ -318,7 +321,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, title, description, tags, status }) => {
+    async ({ course_id, title, description, tags, status, require_sequential_completion }) => {
       try {
         await auth.verifyCourseOwnership(course_id);
         const supabase = auth.getClient();
@@ -328,6 +331,7 @@ export function registerCourseTools(server: McpServer, auth: AuthManager) {
         if (description !== undefined) updateData.description = description;
         if (tags !== undefined) updateData.tags = tags ? tags.split(",").map((t) => t.trim()) : null;
         if (status !== undefined) updateData.status = status;
+        if (require_sequential_completion !== undefined) updateData.require_sequential_completion = require_sequential_completion;
 
         if (Object.keys(updateData).length === 0) {
           return { content: [{ type: "text", text: "No fields to update." }] };

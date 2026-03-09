@@ -66,6 +66,29 @@ export async function joinCurrentSchool() {
     }
   }
 
+  // Check for pending invitation to determine role
+  const userEmail = user.email?.toLowerCase()
+  let assignedRole: 'student' | 'teacher' = 'student'
+
+  if (userEmail) {
+    const { data: invitation } = await adminClient
+      .from('tenant_invitations')
+      .select('id, role')
+      .eq('tenant_id', tenantId)
+      .eq('email', userEmail)
+      .eq('status', 'pending')
+      .single()
+
+    if (invitation) {
+      assignedRole = invitation.role as 'student' | 'teacher'
+      // Mark invitation as accepted
+      await adminClient
+        .from('tenant_invitations')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', invitation.id)
+    }
+  }
+
   // Add user to tenant (use admin client to bypass RLS — user's JWT has their
   // current tenant_id, not the one they're joining, so RLS would block the insert)
   const { error } = await adminClient
@@ -73,7 +96,7 @@ export async function joinCurrentSchool() {
     .insert({
       tenant_id: tenantId,
       user_id: user.id,
-      role: 'student',
+      role: assignedRole,
       status: 'active',
     })
 

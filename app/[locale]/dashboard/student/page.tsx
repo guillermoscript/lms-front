@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
+import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 
 async function getData(userId: string, tenantId: string) {
   const supabase = await createClient()
@@ -126,25 +127,33 @@ export default async function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="student-dashboard">
-      <main className="container mx-auto px-4 md:px-8 py-8 space-y-8">
+      {/* Guided Tour */}
+      <StudentDashboardTour userId={user.id} />
+
+      <main className="container mx-auto px-4 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Welcome + Continue CTA */}
+        <div data-tour="student-welcome">
         <WelcomeHero
           userName={user?.user_metadata?.full_name || user.email?.split('@')[0] || 'Student'}
           coursesInProgress={coursesInProgress.length}
           lessonsCompleted={totalLessonsCompleted}
           nextCourse={nextCourse}
         />
+        </div>
 
         {/* Inline stats — compact, not card-based */}
         {data.courses.length > 0 && (
+          <div data-tour="student-stats">
           <StatsCards
             totalLessonsCompleted={totalLessonsCompleted}
             coursesInProgress={coursesInProgress.length}
             coursesCompleted={coursesCompleted.length}
           />
+          </div>
         )}
 
         {/* Getting Started Checklist */}
+        <div data-tour="student-checklist">
         <OnboardingChecklist
           storageKey={`student-${user.id}`}
           title={t('onboarding.title')}
@@ -173,11 +182,12 @@ export default async function StudentDashboard() {
             },
           ]}
         />
+        </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Left Column - Courses */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8" data-tour="student-courses">
             {/* In Progress Courses */}
             {coursesInProgress.length > 0 && (
               <section className="space-y-4">
@@ -205,7 +215,7 @@ export default async function StudentDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {coursesCompleted.slice(0, 4).map((course) => (
                     <Link key={course.course_id} href={`/dashboard/student/courses/${course.course_id}`}>
-                      <div className="bg-card border border-border rounded-xl p-4 hover:border-emerald-500/30 transition-colors group">
+                      <div className="bg-card border border-border rounded-xl p-3.5 sm:p-4 hover:border-emerald-500/30 active:border-emerald-500/30 transition-colors group">
                         <h3 className="text-sm font-bold truncate group-hover:text-primary transition-colors">{course.title}</h3>
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
                           {course.totalLessons} {tCommon('lessonsCompleted')}
@@ -220,7 +230,7 @@ export default async function StudentDashboard() {
             {/* Empty State — no courses at all */}
             {data.courses.length === 0 && (
               data.hasActiveSubscription ? (
-                <div className="bg-card border border-primary/20 rounded-2xl p-10 text-center">
+                <div className="bg-card border border-primary/20 rounded-2xl p-6 sm:p-10 text-center">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <IconSparkles className="h-7 w-7" />
                   </div>
@@ -235,7 +245,7 @@ export default async function StudentDashboard() {
                   </Link>
                 </div>
               ) : (
-                <div className="bg-card border border-border rounded-2xl p-10 text-center">
+                <div className="bg-card border border-border rounded-2xl p-6 sm:p-10 text-center">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <IconRocket className="h-7 w-7" />
                   </div>
@@ -252,7 +262,7 @@ export default async function StudentDashboard() {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="student-sidebar">
             <MiniLeaderboard />
             <UpcomingExams exams={data.upcomingExams} />
             <RecentActivity submissions={data.examSubmissions} />

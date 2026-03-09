@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -148,8 +149,11 @@ export default async function CourseManagementPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* Guided Tour */}
+      <CourseEditorTour userId={user.id} />
+
       {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
+      <header data-tour="course-header" className="border-b bg-card sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
@@ -170,13 +174,13 @@ export default async function CourseManagementPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link href={`/dashboard/teacher/courses/${courseId}/preview`}>
+              <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconEye className="h-3.5 w-3.5" />
                   {t('tabs.preview')}
                 </Button>
               </Link>
-              <Link href={`/dashboard/teacher/courses/${courseId}/settings`}>
+              <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconSettings className="h-3.5 w-3.5" />
                   {t('settings')}
@@ -190,7 +194,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <Tabs defaultValue="lessons" className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">
+            <TabsList data-tour="course-tabs" className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">
               <TabsTrigger value="lessons" className="flex items-center gap-2 whitespace-nowrap">
                 <IconBook size={16} /> {t('tabs.lessons')}
                 {lessons.length > 0 && <span className="ml-0.5 text-xs text-muted-foreground">{lessons.length}</span>}
@@ -214,7 +218,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
           </div>
 
           {/* Lessons Tab */}
-          <TabsContent value="lessons" className="space-y-4">
+          <TabsContent value="lessons" className="space-y-4" data-tour="course-lessons">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t('curriculum.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
@@ -280,7 +284,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
           </TabsContent>
 
           {/* Exercises Tab */}
-          <TabsContent value="exercises" className="space-y-4">
+          <TabsContent value="exercises" className="space-y-4" data-tour="course-exercises">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t('practice.title')}</h2>
               <Link href={`/dashboard/teacher/courses/${courseId}/exercises/new`}>

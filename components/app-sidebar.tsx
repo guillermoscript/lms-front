@@ -7,18 +7,23 @@ import { useTranslations } from "next-intl"
 import {
     IconBook,
     IconBookmark,
+    IconCalendar,
     IconCertificate,
     IconChartBar,
     IconCoins,
     IconCreditCard,
+    IconCrown,
     IconCurrencyDollar,
     IconDashboard,
     IconKey,
     IconLayout,
     IconLogout,
     IconPlus,
+    IconReceipt,
     IconSearch,
     IconSettings,
+    IconShoppingCart,
+    IconTrendingUp,
     IconTrophy,
     IconUsers,
 } from "@tabler/icons-react"
@@ -44,6 +49,7 @@ interface NavItem {
     title: string
     href: string
     icon: React.ComponentType<{ className?: string }>
+    tourId?: string
 }
 
 interface NavGroup {
@@ -73,7 +79,7 @@ function NavSection({ group }: { group: NavGroup }) {
             <SidebarGroupContent>
                 <SidebarMenu>
                     {group.items.map((item) => (
-                        <SidebarMenuItem key={item.href}>
+                        <SidebarMenuItem key={item.href} {...(item.tourId ? { 'data-tour': item.tourId } : {})}>
                             <SidebarMenuButton
                                 render={<Link href={item.href} />}
                                 isActive={isNavActive(item.href, pathname)}
@@ -115,19 +121,25 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     items: [
                         { title: t('users'), href: "/dashboard/admin/users", icon: IconUsers },
                         { title: t('allCourses'), href: "/dashboard/admin/courses", icon: IconBook },
+                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
+                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus, tourId: 'sidebar-create-course' },
                         { title: t('enrollments'), href: "/dashboard/admin/enrollments", icon: IconCertificate },
-                        { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconCurrencyDollar },
+                        { title: t('analytics'), href: "/dashboard/admin/analytics", icon: IconChartBar },
                         { title: t('billing'), href: "/dashboard/admin/billing", icon: IconCreditCard },
                         { title: t('pages'), href: "/dashboard/admin/landing-page", icon: IconLayout },
+                        { title: t('settings'), href: "/dashboard/admin/settings", icon: IconSettings, tourId: 'sidebar-settings' },
                         { title: t('apiTokens'), href: "/dashboard/admin/api-tokens", icon: IconKey },
                     ],
                 },
                 {
-                    label: t('contentManagement'),
+                    label: t('monetization'),
                     items: [
-                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook },
-                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus },
-                        { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
+                        { title: t('monetizationOverview'), href: "/dashboard/admin/monetization", icon: IconCurrencyDollar },
+                        { title: t('products'), href: "/dashboard/admin/products", icon: IconShoppingCart },
+                        { title: t('plans'), href: "/dashboard/admin/plans", icon: IconCalendar },
+                        { title: t('revenue'), href: "/dashboard/admin/revenue", icon: IconTrendingUp },
+                        { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconReceipt },
+                        { title: t('subscriptions'), href: "/dashboard/admin/subscriptions", icon: IconCrown },
                     ],
                 },
             ],
@@ -141,8 +153,8 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     label: t('contentManagement'),
                     items: [
-                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook },
-                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus },
+                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
+                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus, tourId: 'sidebar-create-course' },
                         { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
                     ],
                 },
@@ -164,7 +176,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     label: t('discover'),
                     items: [
-                        { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch },
+                        { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse' },
                         { title: t('courseCatalog'), href: "/courses", icon: IconBook },
                     ],
                 },
@@ -172,7 +184,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     label: t('resources'),
                     items: [
                         { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
-                        { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar },
+                        { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar, tourId: 'sidebar-progress' },
                         { title: t('completed'), href: "/dashboard/student/courses?status=completed", icon: IconTrophy },
                         { title: t('pointStore'), href: "/dashboard/student/store", icon: IconCoins },
                     ],

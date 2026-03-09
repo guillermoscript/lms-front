@@ -62,7 +62,65 @@ function blockToMdx(block: Block): string {
     
     case 'divider':
       return '---'
-    
+
+    case 'audio': {
+      const title = block.title ? ` title="${escapeQuotes(block.title)}"` : ''
+      return `<Audio src="${block.src}"${title} />`
+    }
+
+    case 'embed': {
+      const title = block.title ? ` title="${escapeQuotes(block.title)}"` : ''
+      const caption = block.caption ? ` caption="${escapeQuotes(block.caption)}"` : ''
+      return `<Embed url="${block.url}"${title}${caption} />`
+    }
+
+    case 'file-download': {
+      const desc = block.description ? ` description="${escapeQuotes(block.description)}"` : ''
+      return `<FileDownload url="${block.url}" filename="${escapeQuotes(block.filename)}"${desc} />`
+    }
+
+    case 'glossary': {
+      const itemsJson = escapeSingleQuotes(JSON.stringify(block.items))
+      return `<Glossary items={JSON.parse('${itemsJson}')} />`
+    }
+
+    case 'comparison': {
+      const sideAJson = escapeSingleQuotes(JSON.stringify(block.sideA))
+      const sideBJson = escapeSingleQuotes(JSON.stringify(block.sideB))
+      const summary = block.summary ? ` summary="${escapeQuotes(block.summary)}"` : ''
+      return `<Comparison sideA={JSON.parse('${sideAJson}')} sideB={JSON.parse('${sideBJson}')}${summary} />`
+    }
+
+    case 'table': {
+      const headersJson = escapeSingleQuotes(JSON.stringify(block.headers))
+      const rowsJson = escapeSingleQuotes(JSON.stringify(block.rows))
+      const striped = block.striped ? ' striped={true}' : ''
+      return `<Table headers={JSON.parse('${headersJson}')} rows={JSON.parse('${rowsJson}')}${striped} />`
+    }
+
+    case 'flashcard-set': {
+      const cardsJson = escapeSingleQuotes(JSON.stringify(block.cards))
+      return `<FlashcardSet cards={JSON.parse('${cardsJson}')} />`
+    }
+
+    case 'fill-in-the-blank': {
+      const segmentsJson = escapeSingleQuotes(JSON.stringify(block.segments))
+      const explanation = block.explanation ? ` explanation="${escapeQuotes(block.explanation)}"` : ''
+      return `<FillInTheBlank segments={JSON.parse('${segmentsJson}')}${explanation} />`
+    }
+
+    case 'matching-pairs': {
+      const pairsJson = escapeSingleQuotes(JSON.stringify(block.pairs))
+      const explanation = block.explanation ? ` explanation="${escapeQuotes(block.explanation)}"` : ''
+      return `<MatchingPairs pairs={JSON.parse('${pairsJson}')}${explanation} />`
+    }
+
+    case 'ordering': {
+      const itemsJson = escapeSingleQuotes(JSON.stringify(block.items))
+      const explanation = block.explanation ? ` explanation="${escapeQuotes(block.explanation)}"` : ''
+      return `<Ordering items={JSON.parse('${itemsJson}')}${explanation} />`
+    }
+
     default:
       return ''
   }
@@ -237,7 +295,191 @@ export function mdxToBlocks(mdx: string): Block[] {
       i++
       continue
     }
-    
+
+    // Audio component
+    if (line.includes('<Audio')) {
+      const srcMatch = line.match(/src="([^"]*)"/)
+      const titleMatch = line.match(/title="([^"]*)"/)
+      blocks.push({
+        id: nanoid(),
+        type: 'audio',
+        src: srcMatch?.[1] || '',
+        title: titleMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // Embed component
+    if (line.includes('<Embed')) {
+      const urlMatch = line.match(/url="([^"]*)"/)
+      const titleMatch = line.match(/title="([^"]*)"/)
+      const captionMatch = line.match(/caption="([^"]*)"/)
+      blocks.push({
+        id: nanoid(),
+        type: 'embed',
+        url: urlMatch?.[1] || '',
+        title: titleMatch?.[1],
+        caption: captionMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // FileDownload component
+    if (line.includes('<FileDownload')) {
+      const urlMatch = line.match(/url="([^"]*)"/)
+      const filenameMatch = line.match(/filename="([^"]*)"/)
+      const descMatch = line.match(/description="([^"]*)"/)
+      blocks.push({
+        id: nanoid(),
+        type: 'file-download',
+        url: urlMatch?.[1] || '',
+        filename: filenameMatch?.[1] || '',
+        description: descMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // Glossary component (JSON.parse pattern)
+    if (line.includes('<Glossary') && line.includes('items=')) {
+      const jsonMatch = line.match(/items=\{JSON\.parse\('(.+?)'\)\}/)
+      let items = [{ term: '', definition: '' }]
+      if (jsonMatch) {
+        try { items = JSON.parse(jsonMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({ id: nanoid(), type: 'glossary', items })
+      i++
+      continue
+    }
+
+    // Comparison component (JSON.parse pattern)
+    if (line.includes('<Comparison')) {
+      const sideAMatch = line.match(/sideA=\{JSON\.parse\('(.+?)'\)\}/)
+      const sideBMatch = line.match(/sideB=\{JSON\.parse\('(.+?)'\)\}/)
+      const summaryMatch = line.match(/summary="([^"]*)"/)
+      let sideA = { title: '', points: [''], highlight: 'positive' as const }
+      let sideB = { title: '', points: [''], highlight: 'negative' as const }
+      if (sideAMatch) {
+        try { sideA = JSON.parse(sideAMatch[1]) } catch { /* keep default */ }
+      }
+      if (sideBMatch) {
+        try { sideB = JSON.parse(sideBMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({
+        id: nanoid(),
+        type: 'comparison',
+        sideA,
+        sideB,
+        summary: summaryMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // Table component (JSON.parse pattern)
+    if (line.includes('<Table') && line.includes('headers=')) {
+      const headersMatch = line.match(/headers=\{JSON\.parse\('(.+?)'\)\}/)
+      const rowsMatch = line.match(/rows=\{JSON\.parse\('(.+?)'\)\}/)
+      const stripedMatch = line.match(/striped=\{true\}/)
+      let headers = ['', '']
+      let rows = [['', '']]
+      if (headersMatch) {
+        try { headers = JSON.parse(headersMatch[1]) } catch { /* keep default */ }
+      }
+      if (rowsMatch) {
+        try { rows = JSON.parse(rowsMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({
+        id: nanoid(),
+        type: 'table',
+        headers,
+        rows,
+        striped: !!stripedMatch,
+      })
+      i++
+      continue
+    }
+
+    // FlashcardSet component (JSON.parse pattern)
+    if (line.includes('<FlashcardSet')) {
+      const cardsMatch = line.match(/cards=\{JSON\.parse\('(.+?)'\)\}/)
+      let cards = [{ front: '', back: '' }]
+      if (cardsMatch) {
+        try { cards = JSON.parse(cardsMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({ id: nanoid(), type: 'flashcard-set', cards })
+      i++
+      continue
+    }
+
+    // FillInTheBlank component (JSON.parse pattern)
+    if (line.includes('<FillInTheBlank')) {
+      const segmentsMatch = line.match(/segments=\{JSON\.parse\('(.+?)'\)\}/)
+      const explanationMatch = line.match(/explanation="([^"]*)"/)
+      let segments = [{ type: 'text' as const, value: '' }]
+      if (segmentsMatch) {
+        try { segments = JSON.parse(segmentsMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({
+        id: nanoid(),
+        type: 'fill-in-the-blank',
+        segments,
+        explanation: explanationMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // MatchingPairs component (JSON.parse pattern)
+    if (line.includes('<MatchingPairs')) {
+      const pairsMatch = line.match(/pairs=\{JSON\.parse\('(.+?)'\)\}/)
+      const explanationMatch = line.match(/explanation="([^"]*)"/)
+      let pairs = [{ term: '', match: '' }, { term: '', match: '' }]
+      if (pairsMatch) {
+        try { pairs = JSON.parse(pairsMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({
+        id: nanoid(),
+        type: 'matching-pairs',
+        pairs,
+        explanation: explanationMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // Ordering component (JSON.parse pattern)
+    if (line.includes('<Ordering')) {
+      const itemsMatch = line.match(/items=\{JSON\.parse\('(.+?)'\)\}/)
+      const explanationMatch = line.match(/explanation="([^"]*)"/)
+      let items = ['', '']
+      if (itemsMatch) {
+        try { items = JSON.parse(itemsMatch[1]) } catch { /* keep default */ }
+      }
+      blocks.push({
+        id: nanoid(),
+        type: 'ordering',
+        items,
+        explanation: explanationMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // Video component
+    if (line.includes('<Video')) {
+      const urlMatch = line.match(/url="([^"]*)"/)
+      blocks.push({
+        id: nanoid(),
+        type: 'video',
+        url: urlMatch?.[1] || '',
+      })
+      i++
+      continue
+    }
+
     // Default: treat as text paragraph
     // Collect consecutive non-special lines as one text block
     const textLines: string[] = [line]

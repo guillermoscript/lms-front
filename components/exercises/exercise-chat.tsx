@@ -26,7 +26,6 @@ import {
     type PromptInputMessage,
     PromptInputProvider,
     usePromptInputController,
-    PromptInputTools
 } from "@/components/ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { DefaultChatTransport } from "ai";
@@ -141,7 +140,7 @@ function InnerExerciseChat({
     const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
     return (
-        <div className="relative flex flex-col h-[500px] sm:h-[600px] md:h-[650px] overflow-hidden bg-background rounded-2xl border-2 shadow-sm">
+        <div className="relative flex flex-col h-[min(500px,65vh)] sm:h-[600px] md:h-[650px] overflow-hidden bg-background rounded-xl sm:rounded-2xl border sm:border-2 shadow-sm">
             {/* Chat Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-muted/30">
                 <div className="flex items-center gap-2 sm:gap-2.5">
@@ -167,7 +166,7 @@ function InnerExerciseChat({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all"
                         onClick={handleRestart}
                         disabled={isRestarting || isLoading}
                         aria-label="Restart conversation"
@@ -179,13 +178,13 @@ function InnerExerciseChat({
 
             {/* Messages Area */}
             <Conversation>
-                <ConversationContent>
+                <ConversationContent className="gap-4 sm:gap-8 p-3 sm:p-4">
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-4 sm:p-6 md:p-8 text-center">
-                            <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 md:mb-5">
-                                <IconRobot className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary/60" aria-hidden="true" />
+                        <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-1 sm:p-4 md:p-6 text-center">
+                            <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mb-2 sm:mb-4">
+                                <IconRobot className="h-5 w-5 sm:h-7 sm:w-7 text-primary/60" aria-hidden="true" />
                             </div>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1 sm:mb-1.5">
+                            <h3 className="text-sm sm:text-lg font-bold text-foreground mb-1 sm:mb-1.5">
                                 Hi {firstName}!
                             </h3>
                             <p className="max-w-sm mx-auto text-xs sm:text-sm leading-relaxed">
@@ -250,13 +249,9 @@ function InnerExerciseChat({
                         <PromptInputBody>
                             <PromptInputTextarea
                                 placeholder="Type your response..."
-                                className="min-h-[48px] sm:min-h-[52px] text-sm"
                             />
                         </PromptInputBody>
                         <PromptInputFooter>
-                            <PromptInputTools>
-                                <span />
-                            </PromptInputTools>
                             <PromptInputSubmit status={status as any} />
                         </PromptInputFooter>
                     </PromptInput>

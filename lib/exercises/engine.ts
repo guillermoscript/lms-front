@@ -11,6 +11,7 @@ const ENGINE_MAP: Record<string, EngineType> = {
   audio_evaluation: 'audio',
   video_evaluation: 'video',
   real_time_conversation: 'simulation',
+  artifact: 'simulation',
 }
 
 export function getEngineType(exerciseType: string): EngineType {

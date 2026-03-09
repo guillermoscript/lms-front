@@ -32,30 +32,22 @@ export function EngagementMetrics({
       title: t('metrics.enrollments'),
       value: totalEnrollments,
       icon: IconCertificate,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-950',
     },
     {
       title: t('metrics.activeStudents'),
       value: activeStudents,
       subtitle: t('metrics.activePeriod'),
       icon: IconUsers,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-950',
     },
     {
       title: t('metrics.lessonCompletions'),
       value: totalLessonCompletions,
       icon: IconCheckbox,
-      color: 'text-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-950',
     },
     {
       title: t('metrics.examSubmissions'),
       value: totalExamSubmissions,
       icon: IconTrendingUp,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-950',
     },
   ]
 
@@ -74,7 +66,7 @@ export function EngagementMetrics({
             <span className="text-sm font-medium">
               {t('completionRate')}
             </span>
-            <span className="text-2xl font-bold text-green-600">
+            <span className="text-2xl font-bold tracking-tight">
               {averageCompletionRate.toFixed(1)}%
             </span>
           </div>
@@ -85,22 +77,15 @@ export function EngagementMetrics({
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {metrics.map((metric) => (
-            <div
-              key={metric.title}
-              className="flex items-center gap-4 rounded-lg border p-4"
-            >
-              <div className={`rounded-lg p-3 ${metric.bgColor}`}>
-                <metric.icon className={`h-6 w-6 ${metric.color}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{metric.title}</p>
-                <p className="text-2xl font-bold">{metric.value}</p>
-                {metric.subtitle && (
-                  <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
-                )}
-              </div>
+            <div key={metric.title} className="rounded-lg border p-4">
+              <metric.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+              <p className="mt-3 text-2xl font-bold tracking-tight">{metric.value}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{metric.title}</p>
+              {metric.subtitle && (
+                <p className="text-[11px] text-muted-foreground/60">{metric.subtitle}</p>
+              )}
             </div>
           ))}
         </div>

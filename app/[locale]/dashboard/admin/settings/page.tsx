@@ -47,117 +47,123 @@ export default async function SettingsPage() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
 
   return (
-    <div className="space-y-6 p-6 lg:p-8" data-testid="settings-page">
-      <AdminBreadcrumb
-        items={[
-          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
-          { label: tBreadcrumbs('settings') },
-        ]}
-      />
+    <div className="min-h-screen bg-background" data-testid="settings-page">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {t('description')}
-        </p>
-      </div>
+      <header className="border-b bg-card">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-4">
+            <AdminBreadcrumb
+              items={[
+                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('settings') },
+              ]}
+            />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+        </div>
+      </header>
 
-      {/* Referral Program */}
-      {referralCode && (
-        <ReferralLinkCard
-          code={referralCode.code}
-          usedCount={referralCode.used_count ?? 0}
-          discountMonths={referralCode.discount_months ?? 1}
-          referrerRewardMonths={referralCode.referrer_reward_months ?? 1}
-          appUrl={appUrl}
-        />
-      )}
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          {/* Tabbed Settings Interface */}
+          <Tabs defaultValue="general" className="space-y-6">
+            <TabsList className="flex w-full overflow-x-auto lg:w-auto">
+              <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
+              <TabsTrigger value="branding">{t('tabs.branding')}</TabsTrigger>
+              <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
+              <TabsTrigger value="payment">{t('tabs.payment')}</TabsTrigger>
+              <TabsTrigger value="enrollment">{t('tabs.enrollment')}</TabsTrigger>
+            </TabsList>
 
-      {/* Tabbed Settings Interface */}
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
-          <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
-          <TabsTrigger value="branding">{t('tabs.branding')}</TabsTrigger>
-          <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
-          <TabsTrigger value="payment">{t('tabs.payment')}</TabsTrigger>
-          <TabsTrigger value="enrollment">{t('tabs.enrollment')}</TabsTrigger>
-        </TabsList>
+            {/* General Settings */}
+            <TabsContent value="general">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('sections.general.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.general.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GeneralSettingsForm settings={settings.general || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        {/* General Settings */}
-        <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sections.general.title')}</CardTitle>
-              <CardDescription>
-                {t('sections.general.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <GeneralSettingsForm settings={settings.general || {}} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Branding Settings */}
+            <TabsContent value="branding">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('sections.branding.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.branding.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BrandingSettingsForm settings={settings.general || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        {/* Branding Settings */}
-        <TabsContent value="branding" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sections.branding.title')}</CardTitle>
-              <CardDescription>
-                {t('sections.branding.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BrandingSettingsForm settings={settings.general || {}} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Email Settings */}
+            <TabsContent value="email">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('sections.email.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.email.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EmailSettingsForm settings={settings.email || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        {/* Email Settings */}
-        <TabsContent value="email" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sections.email.title')}</CardTitle>
-              <CardDescription>
-                {t('sections.email.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmailSettingsForm settings={settings.email || {}} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Payment Settings */}
+            <TabsContent value="payment">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('sections.payment.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.payment.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PaymentSettingsForm settings={settings.payment || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        {/* Payment Settings */}
-        <TabsContent value="payment" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sections.payment.title')}</CardTitle>
-              <CardDescription>
-                {t('sections.payment.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentSettingsForm settings={settings.payment || {}} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Enrollment Settings */}
+            <TabsContent value="enrollment">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('sections.enrollment.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.enrollment.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EnrollmentSettingsForm settings={settings.enrollment || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
-        {/* Enrollment Settings */}
-        <TabsContent value="enrollment" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sections.enrollment.title')}</CardTitle>
-              <CardDescription>
-                {t('sections.enrollment.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EnrollmentSettingsForm settings={settings.enrollment || {}} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {/* Referral Program — secondary, below main settings */}
+          {referralCode && (
+            <ReferralLinkCard
+              code={referralCode.code}
+              usedCount={referralCode.used_count ?? 0}
+              discountMonths={referralCode.discount_months ?? 1}
+              referrerRewardMonths={referralCode.referrer_reward_months ?? 1}
+              appUrl={appUrl}
+            />
+          )}
+        </div>
+      </main>
     </div>
   )
 }

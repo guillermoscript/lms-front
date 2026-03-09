@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { IconArchive, IconRestore } from '@tabler/icons-react'
@@ -19,17 +20,18 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
   const [showRestoreDialog, setShowRestoreDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const t = useTranslations('dashboard.admin.products.actions')
 
   const handleArchive = async () => {
     setLoading(true)
     const result = await archiveProduct(productId)
 
     if (result.success) {
-      toast.success(`Product "${productName}" archived`)
+      toast.success(t('archiveSuccess', { name: productName }))
       setShowArchiveDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to archive product')
+      toast.error(result.error || t('archiveError'))
     }
 
     setLoading(false)
@@ -40,11 +42,11 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
     const result = await restoreProduct(productId)
 
     if (result.success) {
-      toast.success(`Product "${productName}" restored`)
+      toast.success(t('restoreSuccess', { name: productName }))
       setShowRestoreDialog(false)
       router.refresh()
     } else {
-      toast.error(result.error || 'Failed to restore product')
+      toast.error(result.error || t('restoreError'))
     }
 
     setLoading(false)
@@ -76,9 +78,9 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
       <ConfirmDialog
         open={showArchiveDialog}
         onOpenChange={setShowArchiveDialog}
-        title="Archive Product"
-        description={`Are you sure you want to archive "${productName}"? It will no longer be available for purchase.`}
-        confirmText="Archive"
+        title={t('archiveTitle')}
+        description={t('archiveDescription', { name: productName })}
+        confirmText={t('archive')}
         variant="destructive"
         onConfirm={handleArchive}
       />
@@ -87,9 +89,9 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
       <ConfirmDialog
         open={showRestoreDialog}
         onOpenChange={setShowRestoreDialog}
-        title="Restore Product"
-        description={`Are you sure you want to restore "${productName}"? It will become available for purchase again.`}
-        confirmText="Restore"
+        title={t('restoreTitle')}
+        description={t('restoreDescription', { name: productName })}
+        confirmText={t('restore')}
         onConfirm={handleRestore}
       />
     </>

@@ -34,7 +34,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
 
     return (
         <Link href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`} className="block group">
-            <Card className="h-full hover:shadow-lg hover:border-primary/20 transition-all duration-200 overflow-hidden relative">
+            <Card className="h-full hover:shadow-lg hover:border-primary/20 active:scale-[0.98] transition-all duration-200 overflow-hidden relative">
                 {isCompleted && (
                     <div className="absolute top-3 right-3 z-10">
                         <div className="bg-emerald-500 text-white p-1 rounded-full shadow-md">
@@ -43,7 +43,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                     </div>
                 )}
 
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3">
                         <div className={cn(
                             "p-2.5 rounded-xl transition-transform duration-200",
@@ -65,7 +65,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                         </p>
                     </div>
 
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+                    <div className="flex items-center justify-between mt-3 pt-2.5 sm:mt-4 sm:pt-3 border-t border-border/50">
                         <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                             {exercise.time_limit && (
                                 <div className="flex items-center gap-1">
@@ -81,7 +81,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                         <IconChevronRight
                             size={16}
                             stroke={3}
-                            className="text-primary/0 group-hover:text-primary transition-all group-hover:translate-x-0.5"
+                            className="text-primary/40 sm:text-primary/0 sm:group-hover:text-primary transition-all sm:group-hover:translate-x-0.5"
                         />
                     </div>
                 </CardContent>

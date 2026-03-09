@@ -23,6 +23,7 @@ interface LessonNavigationProps {
   prevLessonId?: number
   nextLessonId?: number
   tenantId: string
+  requireSequentialCompletion?: boolean
 }
 
 export function LessonNavigation({
@@ -32,6 +33,7 @@ export function LessonNavigation({
   prevLessonId,
   nextLessonId,
   tenantId,
+  requireSequentialCompletion = false,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
   const [loading, setLoading] = useState(false)
@@ -101,8 +103,8 @@ export function LessonNavigation({
   }
 
   return (
-    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-4 py-3 md:px-6">
-      <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto">
+    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-6">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
         {/* Previous */}
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (
@@ -149,12 +151,19 @@ export function LessonNavigation({
         {/* Next */}
         <div className="flex-1 flex justify-end">
           {nextLessonId ? (
-            <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
-              <Button size="sm" className="gap-1.5">
+            requireSequentialCompletion && !completed ? (
+              <Button size="sm" className="gap-1.5" disabled title={t('completeFirst')}>
                 <span className="hidden sm:inline">{t('next')}</span>
                 <IconArrowRight className="h-4 w-4" />
               </Button>
-            </Link>
+            ) : (
+              <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
+                <Button size="sm" className="gap-1.5">
+                  <span className="hidden sm:inline">{t('next')}</span>
+                  <IconArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
               <Button size="sm" className="gap-1.5">

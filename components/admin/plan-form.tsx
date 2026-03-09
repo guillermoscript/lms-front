@@ -147,8 +147,8 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="usd">USD ($)</SelectItem>
-              <SelectItem value="eur">EUR (€)</SelectItem>
+              <SelectItem value="usd">{t('currencyUsd')}</SelectItem>
+              <SelectItem value="eur">{t('currencyEur')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

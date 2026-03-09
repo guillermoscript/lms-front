@@ -132,7 +132,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       {/* Header with course info */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-5xl px-4 py-6 md:py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:py-6 md:py-8 sm:px-6 lg:px-8">
           <Link
             href="/dashboard/student"
             className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -153,9 +153,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               </div>
             )}
 
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-3 sm:space-y-4">
               <div className="space-y-2">
-                <h1 className="text-2xl font-black md:text-3xl lg:text-4xl tracking-tight leading-tight line-clamp-3">
+                <h1 className="text-xl font-black sm:text-2xl md:text-3xl lg:text-4xl tracking-tight leading-tight line-clamp-3">
                   {course.title}
                 </h1>
 
@@ -195,27 +195,27 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               </div>
 
               {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-3 sm:pt-4">
                 {nextLesson && (
                   <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
-                    <Button size="lg" className="w-full h-12 md:h-14 text-lg font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                      <IconPlayerPlay className="mr-2 h-6 w-6 fill-current" />
+                    <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl shadow-md hover:shadow-lg active:shadow-lg transition-all">
+                      <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
                       {completedCount > 0 ? t('continue') : t('startNow')}
                     </Button>
                   </Link>
                 )}
                 {exerciseCount > 0 && (
                   <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-lg font-bold rounded-xl border-2">
-                      <IconBarbell className="mr-2 h-6 w-6" />
+                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
+                      <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                       {t('exercises', { count: exerciseCount })}
                     </Button>
                   </Link>
                 )}
                 {examCount > 0 && (
                   <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-lg font-bold rounded-xl border-2">
-                      <IconFileText className="mr-2 h-6 w-6" />
+                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
+                      <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                       {t('exams', { count: examCount })}
                     </Button>
                   </Link>
@@ -227,9 +227,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       </header>
 
       {/* Lessons list */}
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black tracking-tight">{t('curriculum')}</h2>
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-5 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight">{t('curriculum')}</h2>
           <Badge variant="outline" className="font-bold border-2">
             {t('lessonsCount', { count: totalLessons })}
           </Badge>
@@ -245,10 +245,10 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
                 className="group"
               >
-                <Card className="transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-1 rounded-2xl overflow-hidden border-2 border-transparent bg-muted/30">
-                  <CardContent className="flex items-center gap-4 p-5 md:p-6">
+                <Card className="transition-all hover:border-primary/50 active:border-primary/50 hover:shadow-md rounded-2xl overflow-hidden border-2 border-transparent bg-muted/30">
+                  <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 md:p-6">
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
+                      className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
                           ? 'bg-emerald-500/20 text-emerald-600'
                           : 'bg-background text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary shadow-sm border'
                         }`}
@@ -263,7 +263,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors truncate">
+                      <h3 className="font-bold text-base sm:text-lg group-hover:text-primary transition-colors truncate">
                         {lesson.title}
                       </h3>
                       {lesson.description ? (

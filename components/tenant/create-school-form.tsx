@@ -64,9 +64,9 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
     const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     if (platformDomain && platformDomain !== 'localhost') {
       const protocol = window.location.protocol // Preserves http: or https:
-      window.location.href = `${protocol}//${slug}.${platformDomain}/dashboard/admin`
+      window.location.href = `${protocol}//${slug}.${platformDomain}/onboarding`
     } else {
-      router.push('/dashboard/admin')
+      router.push('/onboarding')
     }
   }
 

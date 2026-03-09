@@ -36,6 +36,7 @@ export default async function NewPlanPage() {
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('monetization'), href: '/dashboard/admin/monetization' },
                 { label: tBreadcrumbs('plans'), href: '/dashboard/admin/plans' },
                 { label: tBreadcrumbs('newPlan') },
               ]}

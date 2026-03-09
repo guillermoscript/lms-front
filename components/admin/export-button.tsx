@@ -35,7 +35,7 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ data, period }: ExportButtonProps) {
-  const t = useTranslations('dashboard.admin.analytics.export')
+  const t = useTranslations('dashboard.admin.analytics.exportOptions')
   const downloadCSV = (content: string, filename: string) => {
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
@@ -110,12 +110,14 @@ export function ExportButton({ data, period }: ExportButtonProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button variant="outline" size="sm">
-          <IconDownload className="mr-2 h-4 w-4" />
-          {t('button')}
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="sm" className="gap-2">
+            <IconDownload className="h-4 w-4" />
+            {t('button')}
+          </Button>
+        }
+      />
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={exportAll}>{t('all')}</DropdownMenuItem>
         <DropdownMenuItem onClick={exportSummary}>{t('summary')}</DropdownMenuItem>

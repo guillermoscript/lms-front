@@ -64,6 +64,7 @@ export default async function AdminPlansPage() {
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('monetization'), href: '/dashboard/admin/monetization' },
                 { label: tBreadcrumbs('plans') },
               ]}
             />
@@ -225,9 +226,11 @@ export default async function AdminPlansPage() {
             <div className="col-span-full">
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <IconCalendar className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">{t('empty.title')}</p>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <IconCalendar className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                  <p className="text-sm font-medium mb-1">{t('empty.title')}</p>
+                  <p className="text-xs text-muted-foreground mb-4">
                     {t('empty.description')}
                   </p>
                   <Link href="/dashboard/admin/plans/new">

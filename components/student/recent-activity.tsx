@@ -48,7 +48,7 @@ export function RecentActivity({ submissions }: RecentActivityProps) {
             {submissions.slice(0, 4).map((submission) => (
               <div
                 key={submission.submission_id}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent/50 transition-colors"
               >
                 <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
                   <IconCircleCheck className="w-4 h-4 text-emerald-500" />

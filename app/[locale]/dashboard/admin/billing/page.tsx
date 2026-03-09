@@ -4,7 +4,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { BillingDashboardClient } from './billing-dashboard-client'
 
 export default async function BillingPage() {
-  const t = await getTranslations('dashboard.admin')
+  const t = await getTranslations('dashboard.admin.billing')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const [status, paymentRequests] = await Promise.all([
     getSubscriptionStatus(),
@@ -12,7 +12,7 @@ export default async function BillingPage() {
   ])
 
   return (
-    <div className="space-y-6 md:p-6 p-2" data-testid="billing-page">
+    <div className="space-y-6 p-6 lg:p-8" data-testid="billing-page">
       <AdminBreadcrumb
         items={[
           { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
@@ -20,9 +20,9 @@ export default async function BillingPage() {
         ]}
       />
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-        <p className="text-muted-foreground">
-          Manage your school&apos;s subscription and billing
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {t('description')}
         </p>
       </div>
 

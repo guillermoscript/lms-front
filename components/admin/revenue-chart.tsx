@@ -4,8 +4,6 @@ import { useTranslations } from 'next-intl'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
@@ -13,9 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
-import { IconCurrencyDollar } from '@tabler/icons-react'
 
 interface RevenueDataPoint {
   date: string
@@ -38,17 +34,14 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <IconCurrencyDollar className="h-5 w-5 text-green-500" />
-              {t('title')}
-            </CardTitle>
+            <CardTitle>{t('title')}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('description', { period })}
             </p>
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t('total')}</p>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold tracking-tight">
               ${totalRevenue.toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -63,8 +56,8 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -91,11 +84,10 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
                   return [value, 'Transactions']
                 }}
               />
-              <Legend />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#10b981"
+                stroke="hsl(var(--primary))"
                 strokeWidth={2}
                 fill="url(#revenueGradient)"
                 name={t('tooltip')}

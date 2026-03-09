@@ -44,13 +44,13 @@ export default function EssayExercise({
     const typeLabel = typeLabels[exercise.exercise_type] || "Exercise";
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Exercise Header */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-3 sm:space-y-4"
             >
                 <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] px-2.5 py-0.5">
@@ -90,38 +90,38 @@ export default function EssayExercise({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: 0.1 }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+                className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6"
             >
-                {/* Left Column: Instructions */}
-                <div className="lg:col-span-4 space-y-6">
-                    <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-primary/10 bg-primary/[0.03]">
+                {/* Instructions */}
+                <div className="lg:col-span-4 order-1">
+                    <div className="rounded-xl sm:rounded-2xl border sm:border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
+                        <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-primary/10 bg-primary/[0.03]">
                             <h2 className="font-bold text-xs flex items-center gap-2 text-primary uppercase tracking-wider">
                                 <IconInfoCircle size={14} aria-hidden="true" />
                                 Instructions
                             </h2>
                         </div>
-                        <div className="px-5 py-4">
+                        <div className="px-4 py-3 sm:px-5 sm:py-4">
                             <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/80 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-bold prose-li:text-foreground/80 prose-headings:text-sm">
                                 <Markdown>{exercise.instructions}</Markdown>
                             </div>
                         </div>
                     </div>
-
-                    {/* Other Exercises */}
-                    {isExerciseCompletedSection && (
-                        <div className="space-y-4">
-                            {isExerciseCompletedSection}
-                        </div>
-                    )}
                 </div>
 
-                {/* Right Column: AI Chat */}
-                <div className="lg:col-span-8">
+                {/* AI Chat — before "More Exercises" on mobile */}
+                <div className="lg:col-span-8 order-2">
                     <div className="lg:sticky lg:top-6">
                         {children}
                     </div>
                 </div>
+
+                {/* Other Exercises — last on mobile */}
+                {isExerciseCompletedSection && (
+                    <div className="lg:col-span-4 order-3 space-y-4">
+                        {isExerciseCompletedSection}
+                    </div>
+                )}
             </motion.div>
         </div>
     );

@@ -3,16 +3,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
 import {
-  IconArrowLeft,
   IconUser,
   IconShield,
 } from '@tabler/icons-react'
 import { UsersTable } from '@/components/admin/users-table'
+import { InviteUserDialog } from '@/components/admin/invite-user-dialog'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 
 export default async function AdminUsersPage() {
   const t = await getTranslations('dashboard.admin.users')
@@ -72,85 +71,73 @@ export default async function AdminUsersPage() {
     enrollmentCounts.set(e.user_id, (enrollmentCounts.get(e.user_id) || 0) + 1)
   })
 
+  const joinUrl = await getSchoolJoinUrl()
+
   return (
-    <div className="min-h-screen bg-background" data-testid="users-page">
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mb-4">
-            <AdminBreadcrumb
-              items={[
-                { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
-                { label: tBreadcrumbs('users') },
-              ]}
-            />
-          </div>
+    <div className="space-y-6 p-6 lg:p-8" data-testid="users-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('users') },
+        ]}
+      />
+
+      <div className="flex items-center justify-between">
+        <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
-      </header>
+        <InviteUserDialog joinUrl={joinUrl} />
+      </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 grid gap-3 md:grid-cols-3">
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.totalUsers')}</p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight">{profiles?.length || 0}</p>
-                </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconUser className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.teachers')}</p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight">
-                    {Array.from(rolesMap.values()).filter((roles) => roles.includes('teacher')).length}
-                  </p>
-                </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconShield className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.students')}</p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight">
-                    {Array.from(rolesMap.values()).filter((roles) => roles.includes('student')).length}
-                  </p>
-                </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
-                  <IconUser className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+      <div className="grid gap-3 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle>{t('table.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UsersTable
-              profiles={profiles || []}
-              rolesMap={rolesMap}
-              enrollmentCounts={enrollmentCounts}
-            />
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <IconUser className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">{profiles?.length || 0}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t('stats.totalUsers')}</p>
           </CardContent>
         </Card>
-      </main>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <IconShield className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {Array.from(rolesMap.values()).filter((roles) => roles.includes('teacher')).length}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t('stats.teachers')}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <IconUser className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">
+              {Array.from(rolesMap.values()).filter((roles) => roles.includes('student')).length}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t('stats.students')}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('table.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <UsersTable
+            profiles={profiles || []}
+            rolesMap={rolesMap}
+            enrollmentCounts={enrollmentCounts}
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }

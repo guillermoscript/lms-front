@@ -65,6 +65,27 @@ The content should be written in MDX format suitable for an LMS. Include:
 - Key takeaways at the end
 - A brief summary
 
+**Available MDX components** (use \`lms_list_mdx_components\` for full reference with snippets):
+- **Callout** — Colored boxes for info/warning/tip/success/danger notes
+- **Spoiler** — Collapsible content for solutions or hints
+- **Quiz** — Multiple choice self-check questions
+- **Steps** — Numbered step-by-step instructions
+- **Vocabulary** — Words with translations (language courses)
+- **Definition** — Term definitions
+- **Video** — Embedded YouTube/Vimeo video
+- **Audio** — Audio player with optional title
+- **Embed** — Iframe embed for external interactive content
+- **FileDownload** — Downloadable file attachment
+- **Glossary** — List of term/definition pairs
+- **Comparison** — Side-by-side A vs B comparison with bullet points
+- **Table** — Data table with headers and rows
+- **FlashcardSet** — Deck of front/back study cards
+- **FillInTheBlank** — Sentences with blank slots for self-check
+- **MatchingPairs** — Connect terms to their matches
+- **Ordering** — Arrange items in the correct sequence
+
+Use these components to make lessons interactive and engaging. Components that accept complex data (Glossary, Comparison, Table, FlashcardSet, FillInTheBlank, MatchingPairs, Ordering) use \`JSON.parse('...')\` for their props.
+
 After generating the content, use the \`update_lesson\` tool to save it to the appropriate lesson.`,
           },
         },

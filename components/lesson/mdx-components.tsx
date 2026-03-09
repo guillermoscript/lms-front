@@ -22,6 +22,15 @@ import {
   Compare,
   CodeCompare,
   BeforeAfter,
+  Audio,
+  Embed,
+  FileDownload,
+  Comparison,
+  Table,
+  FlashcardSet,
+  FillInTheBlank,
+  MatchingPairs,
+  Ordering,
 } from './index'
 
 import { mdxComponents as uiComponents } from '@/components/ui/mdx-components'
@@ -102,6 +111,21 @@ export const lessonMdxComponents: MDXComponents = {
   Compare,
   CodeCompare,
   BeforeAfter,
+
+  // Rich media
+  Audio,
+  Embed,
+  FileDownload,
+
+  // Structured data
+  Comparison,
+  Table,
+
+  // Interactive learning aids
+  FlashcardSet,
+  FillInTheBlank,
+  MatchingPairs,
+  Ordering,
 }
 
 export default lessonMdxComponents

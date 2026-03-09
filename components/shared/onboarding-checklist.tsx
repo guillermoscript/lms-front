@@ -49,7 +49,7 @@ export function OnboardingChecklist({ storageKey, title, subtitle, steps }: Onbo
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="relative overflow-hidden border-primary/20 bg-primary/[0.02] mb-8">
+      <Card className="relative overflow-hidden border-primary/20 bg-primary/[0.02]">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>

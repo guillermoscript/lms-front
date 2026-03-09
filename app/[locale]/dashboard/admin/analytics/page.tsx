@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { RevenueChart } from '@/components/admin/revenue-chart'
 import { UserGrowthChart } from '@/components/admin/user-growth-chart'
@@ -268,20 +267,20 @@ export default async function AnalyticsPage({
 
   coursePopularityData.sort((a, b) => b.enrollments - a.enrollments)
 
-  const periodLabel = t(`periodLabels.${period === '7' ? 'last7days' : period === '30' ? 'last30days' : period === '90' ? 'last90days' : period === '365' ? 'lastYear' : 'generic'}`, { days: period })
+  const periodKeys: Record<string, string> = { '7': 'last7days', '30': 'last30days', '90': 'last90days', '365': 'lastYear' }
+  const periodLabel = t(`periodLabels.${periodKeys[period] || 'generic'}`, { days: period })
 
   return (
-    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="analytics-page">
-      <div className="mb-4">
-        <AdminBreadcrumb
-          items={[
-            { label: t('breadcrumbs.admin'), href: '/dashboard/admin' },
-            { label: t('breadcrumbs.analytics') },
-          ]}
-        />
-      </div>
+    <div className="space-y-6 p-6 lg:p-8" data-testid="analytics-page">
+      <AdminBreadcrumb
+        items={[
+          { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+          { label: tBreadcrumbs('analytics') },
+        ]}
+      />
+
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
@@ -303,58 +302,38 @@ export default async function AnalyticsPage({
             period={period}
           />
           <div className="flex gap-1">
-            <Link href="?period=7">
-              <Button variant={period === '7' ? 'default' : 'outline'} size="sm" className="text-xs">
-                {t('periods.7days')}
-              </Button>
-            </Link>
-            <Link href="?period=30">
-              <Button variant={period === '30' ? 'default' : 'outline'} size="sm" className="text-xs">
-                {t('periods.30days')}
-              </Button>
-            </Link>
-            <Link href="?period=90">
-              <Button variant={period === '90' ? 'default' : 'outline'} size="sm" className="text-xs">
-                {t('periods.90days')}
-              </Button>
-            </Link>
-            <Link href="?period=365">
-              <Button variant={period === '365' ? 'default' : 'outline'} size="sm" className="text-xs">
-                {t('periods.1year')}
-              </Button>
-            </Link>
+            {(['7', '30', '90', '365'] as const).map((p) => (
+              <Link key={p} href={`?period=${p}`}>
+                <Button variant={period === p ? 'default' : 'outline'} size="sm" className="text-xs">
+                  {t(`periods.${p === '365' ? '1year' : `${p}days`}`)}
+                </Button>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="space-y-6">
-        {/* Revenue Chart */}
-        <RevenueChart
-          data={revenueData}
-          totalRevenue={totalRevenue}
-          period={periodLabel}
-        />
+      <RevenueChart
+        data={revenueData}
+        totalRevenue={totalRevenue}
+        period={periodLabel}
+      />
 
-        {/* User Growth Chart */}
-        <UserGrowthChart
-          data={userGrowthData}
-          totalUsers={totalUsers || 0}
-          period={periodLabel}
-        />
+      <UserGrowthChart
+        data={userGrowthData}
+        totalUsers={totalUsers || 0}
+        period={periodLabel}
+      />
 
-        {/* Engagement Metrics */}
-        <EngagementMetrics
-          totalEnrollments={totalEnrollments || 0}
-          activeStudents={activeStudents}
-          averageCompletionRate={averageCompletionRate}
-          totalLessonCompletions={totalLessonCompletions || 0}
-          totalExamSubmissions={totalExamSubmissions || 0}
-        />
+      <EngagementMetrics
+        totalEnrollments={totalEnrollments || 0}
+        activeStudents={activeStudents}
+        averageCompletionRate={averageCompletionRate}
+        totalLessonCompletions={totalLessonCompletions || 0}
+        totalExamSubmissions={totalExamSubmissions || 0}
+      />
 
-        {/* Course Popularity */}
-        <CoursePopularityChart data={coursePopularityData} />
-      </div>
-    </main>
+      <CoursePopularityChart data={coursePopularityData} />
+    </div>
   )
 }

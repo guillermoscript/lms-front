@@ -13,6 +13,16 @@ import type {
   DefinitionBlock,
   ImageBlock,
   VideoBlock,
+  AudioBlock,
+  EmbedBlock,
+  FileDownloadBlock,
+  GlossaryBlock,
+  ComparisonBlock,
+  TableBlock,
+  FlashcardSetBlock,
+  FillInTheBlankBlock,
+  MatchingPairsBlock,
+  OrderingBlock,
 } from './types'
 import { TextBlockEditor } from './editors/text-block'
 import { HeadingBlockEditor } from './editors/heading-block'
@@ -26,6 +36,16 @@ import { DefinitionBlockEditor } from './editors/definition-block'
 import { ImageBlockEditor } from './editors/image-block'
 import { VideoBlockEditor } from './editors/video-block'
 import { DividerBlockEditor } from './editors/divider-block'
+import { AudioBlockEditor } from './editors/audio-block'
+import { EmbedBlockEditor } from './editors/embed-block'
+import { FileDownloadBlockEditor } from './editors/file-download-block'
+import { GlossaryBlockEditor } from './editors/glossary-block'
+import { ComparisonBlockEditor } from './editors/comparison-block'
+import { TableBlockEditor } from './editors/table-block'
+import { FlashcardSetBlockEditor } from './editors/flashcard-set-block'
+import { FillInTheBlankBlockEditor } from './editors/fill-in-the-blank-block'
+import { MatchingPairsBlockEditor } from './editors/matching-pairs-block'
+import { OrderingBlockEditor } from './editors/ordering-block'
 
 interface BlockRendererProps {
   block: Block
@@ -58,6 +78,26 @@ export function BlockRenderer({ block, onChange }: BlockRendererProps) {
       return <VideoBlockEditor block={block} onChange={onChange} />
     case 'divider':
       return <DividerBlockEditor />
+    case 'audio':
+      return <AudioBlockEditor block={block} onChange={onChange} />
+    case 'embed':
+      return <EmbedBlockEditor block={block} onChange={onChange} />
+    case 'file-download':
+      return <FileDownloadBlockEditor block={block} onChange={onChange} />
+    case 'glossary':
+      return <GlossaryBlockEditor block={block} onChange={onChange} />
+    case 'comparison':
+      return <ComparisonBlockEditor block={block} onChange={onChange} />
+    case 'table':
+      return <TableBlockEditor block={block} onChange={onChange} />
+    case 'flashcard-set':
+      return <FlashcardSetBlockEditor block={block} onChange={onChange} />
+    case 'fill-in-the-blank':
+      return <FillInTheBlankBlockEditor block={block} onChange={onChange} />
+    case 'matching-pairs':
+      return <MatchingPairsBlockEditor block={block} onChange={onChange} />
+    case 'ordering':
+      return <OrderingBlockEditor block={block} onChange={onChange} />
     default:
       return <div className="text-muted-foreground text-sm">Bloque desconocido</div>
   }

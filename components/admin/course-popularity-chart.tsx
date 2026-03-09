@@ -11,9 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts'
-import { IconTrophy, IconUsers } from '@tabler/icons-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -28,30 +26,16 @@ interface CoursePopularityChartProps {
   data: CoursePopularityData[]
 }
 
-const COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-]
-
 export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
   const t = useTranslations('dashboard.admin.analytics.coursePopularity')
-  const topCourses = data.slice(0, 8) // Show top 8 courses
+  const topCourses = data.slice(0, 8)
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <IconTrophy className="h-5 w-5 text-yellow-500" />
-              {t('title')}
-            </CardTitle>
+            <CardTitle>{t('title')}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('description')}
             </p>
@@ -89,11 +73,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                     return [value, t('enrollmentsTooltip')]
                   }}
                 />
-                <Bar dataKey="enrollments" radius={[0, 4, 4, 0]}>
-                  {topCourses.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
+                <Bar dataKey="enrollments" radius={[0, 4, 4, 0]} fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
 
@@ -101,25 +81,19 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
             <div className="mt-6 space-y-2">
               <h4 className="text-sm font-medium">{t('detailsTitle')}</h4>
               <div className="space-y-2">
-                {topCourses.map((course, index) => (
+                {topCourses.map((course) => (
                   <div
                     key={course.courseId}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <div>
-                        <p className="text-sm font-medium">{course.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('enrollmentsCount', { count: course.enrollments })}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-sm font-medium">{course.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('enrollmentsCount', { count: course.enrollments })}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-green-600">
+                      <p className="text-sm font-medium">
                         {course.completionRate.toFixed(0)}%
                       </p>
                       <p className="text-xs text-muted-foreground">{t('completionLabel')}</p>

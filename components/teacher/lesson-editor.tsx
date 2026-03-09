@@ -28,6 +28,8 @@ import {
   IconVideo,
   IconSparkles,
   IconX,
+  IconPaperclip,
+  IconCalendarEvent,
 } from '@tabler/icons-react'
 import { MDXPreview } from './mdx-preview'
 import { ImprovedTemplateSelector } from './improved-template-selector'
@@ -35,6 +37,7 @@ import { AIPreviewModal } from './ai-preview-modal'
 import { VersionHistorySheet } from './version-history-sheet'
 import { BlockEditor } from './block-editor'
 import MarkdownEditor from './markdown-editor'
+import { LessonResourcesManager } from './lesson-resources-manager'
 import { cn } from '@/lib/utils'
 
 interface LessonEditorProps {
@@ -49,12 +52,14 @@ interface LessonEditorProps {
     video_url: string | null
     sequence: number
     status: 'draft' | 'published' | 'archived'
+    publish_at: string | null
     ai_task_description: string | null
     ai_task_instructions: string | null
+    resources?: { id: number; file_name: string; file_size: number; mime_type: string }[]
   }
 }
 
-type EditorStep = 'details' | 'content' | 'ai-task'
+type EditorStep = 'details' | 'content' | 'resources' | 'ai-task'
 
 export function LessonEditor({
   courseId,
@@ -83,6 +88,7 @@ export function LessonEditor({
         : `# Nuevo tema\n\nEscribe el contenido de la lección aquí...\n\n<Callout type="info">Añade los objetivos de aprendizaje aquí</Callout>`),
     video_url: initialData?.video_url || '',
     sequence: initialData?.sequence || initialSequence,
+    publish_at: initialData?.publish_at || '',
     ai_task_description: initialData?.ai_task_description || '',
     ai_task_instructions: initialData?.ai_task_instructions || '',
   })
@@ -112,6 +118,7 @@ export function LessonEditor({
     setError(null)
 
     try {
+      const isScheduled = !publish && formData.publish_at
       const lessonData = {
         course_id: courseId,
         title: formData.title,
@@ -120,6 +127,7 @@ export function LessonEditor({
         video_url: formData.video_url || null,
         sequence: formData.sequence,
         status: publish ? ('published' as const) : ('draft' as const),
+        publish_at: isScheduled ? formData.publish_at : null,
       }
 
       let lessonId: number | undefined = initialData?.id
@@ -179,6 +187,7 @@ export function LessonEditor({
   const hasAITask =
     formData.ai_task_description.trim().length > 0 ||
     formData.ai_task_instructions.trim().length > 0
+  const hasResources = (initialData?.resources?.length ?? 0) > 0
 
   const steps: { key: EditorStep; label: string; icon: React.ReactNode; complete: boolean }[] = [
     {
@@ -194,6 +203,12 @@ export function LessonEditor({
       complete: isContentComplete,
     },
     {
+      key: 'resources',
+      label: t('resources'),
+      icon: <IconPaperclip className="h-4 w-4" />,
+      complete: hasResources,
+    },
+    {
       key: 'ai-task',
       label: t('aiTaskTitle'),
       icon: <IconRobot className="h-4 w-4" />,
@@ -204,7 +219,7 @@ export function LessonEditor({
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* ── Top Bar ─────────────────────────────────────────── */}
-      <header className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header data-tour="lesson-header" className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
           {/* Left: back + breadcrumb */}
           <div className="flex items-center gap-2 min-w-0">
@@ -219,11 +234,17 @@ export function LessonEditor({
               <span className="font-medium text-foreground truncate">
                 {initialData ? t('editTitle') : t('createTitle')}
               </span>
+              {formData.publish_at && (
+                <Badge variant="secondary" className="ml-2 text-[10px] shrink-0">
+                  <IconCalendarEvent className="mr-1 h-3 w-3" />
+                  {t('scheduledFor', { date: new Date(formData.publish_at).toLocaleDateString() })}
+                </Badge>
+              )}
             </div>
           </div>
 
           {/* Center: step nav (desktop) */}
-          <nav className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+          <nav data-tour="lesson-steps" className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1">
             {steps.map((step, i) => (
               <button
                 key={step.key}
@@ -269,6 +290,7 @@ export function LessonEditor({
             )}
 
             <Button
+              data-tour="lesson-preview"
               variant="ghost"
               size="sm"
               className="h-8 gap-1.5 text-muted-foreground"
@@ -284,6 +306,7 @@ export function LessonEditor({
 
             <Separator orientation="vertical" className="h-6" />
 
+            <div data-tour="lesson-save" className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -314,6 +337,7 @@ export function LessonEditor({
               )}
               {t('publishLesson')}
             </Button>
+            </div>
           </div>
         </div>
 
@@ -459,6 +483,41 @@ export function LessonEditor({
                   </div>
                 </div>
 
+                {/* Publish scheduling */}
+                {(!initialData || initialData.status === 'draft') && (
+                  <div className="mb-8">
+                    <Label
+                      htmlFor="publish_at"
+                      className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground"
+                    >
+                      <IconCalendarEvent className="h-3.5 w-3.5" />
+                      {t('publishAt')}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        id="publish_at"
+                        type="datetime-local"
+                        value={formData.publish_at}
+                        onChange={(e) => updateField('publish_at', e.target.value)}
+                        className="w-auto border-muted bg-muted/30 transition-colors focus:bg-background"
+                      />
+                      {formData.publish_at && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs text-muted-foreground"
+                          onClick={() => updateField('publish_at', '')}
+                        >
+                          {t('clearSchedule')}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-xs text-muted-foreground/70">
+                      {t('publishAtHint')}
+                    </p>
+                  </div>
+                )}
+
                 {/* Next step prompt */}
                 <div className="rounded-xl border border-dashed border-muted-foreground/20 bg-muted/20 p-6 text-center">
                   <p className="mb-3 text-sm text-muted-foreground">
@@ -497,7 +556,7 @@ export function LessonEditor({
                     <span className="text-xs text-muted-foreground/50 mr-1">
                       {t('editorMode')}
                     </span>
-                    <div className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
+                    <div data-tour="lesson-editor-mode" className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
                       <button
                         type="button"
                         onClick={() => setContentMode('visual')}
@@ -577,7 +636,36 @@ export function LessonEditor({
               </div>
             )}
 
-            {/* ── STEP 3: AI Task ───────────────────────────── */}
+            {/* ── STEP 3: Resources ─────────────────────────── */}
+            {activeStep === 'resources' && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {initialData?.id ? (
+                  <LessonResourcesManager
+                    lessonId={initialData.id}
+                    initialResources={initialData.resources || []}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-muted-foreground/20 bg-muted/20 p-8 text-center">
+                    <IconPaperclip className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      {t('saveFirstForResources')}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2"
+                      onClick={() => handleSave(false)}
+                      disabled={loading || !formData.title}
+                    >
+                      <IconDeviceFloppy className="h-3.5 w-3.5" />
+                      {t('saveDraft')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── STEP 4: AI Task ───────────────────────────── */}
             {activeStep === 'ai-task' && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
                 <div className="mb-6">

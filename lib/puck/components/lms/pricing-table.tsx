@@ -33,7 +33,7 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
       arrayFields: {
         name: { type: 'text', label: 'Plan Name' },
         price: { type: 'text', label: 'Price' },
-        period: { type: 'text', label: 'Period (e.g. /month)' },
+        period: { type: 'text', label: 'Period (eg /month)' },
         description: { type: 'text', label: 'Description' },
         features: { type: 'textarea', label: 'Features (one per line)' },
         highlighted: {

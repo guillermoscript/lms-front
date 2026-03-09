@@ -56,6 +56,7 @@ export default async function EditPlanPage({ params }: PageProps) {
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('monetization'), href: '/dashboard/admin/monetization' },
                 { label: tBreadcrumbs('plans'), href: '/dashboard/admin/plans' },
                 { label: tBreadcrumbs('editPlan') },
               ]}

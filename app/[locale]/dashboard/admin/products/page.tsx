@@ -60,6 +60,7 @@ export default async function AdminProductsPage() {
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+                { label: tBreadcrumbs('monetization'), href: '/dashboard/admin/monetization' },
                 { label: tBreadcrumbs('products') },
               ]}
             />
@@ -143,7 +144,7 @@ export default async function AdminProductsPage() {
                             variant={isActive ? 'default' : 'secondary'}
                             className={`text-[10px] ${isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                           >
-                            {product.status}
+                            {t(`card.status.${product.status}`)}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
                             {courseCount} {courseCount === 1 ? t('card.course') : t('card.courses')}
@@ -209,9 +210,11 @@ export default async function AdminProductsPage() {
             <div className="col-span-full">
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <IconShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">{t('empty.title')}</p>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <IconShoppingCart className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                  <p className="text-sm font-medium mb-1">{t('empty.title')}</p>
+                  <p className="text-xs text-muted-foreground mb-4">
                     {t('empty.description')}
                   </p>
                   <Link href="/dashboard/admin/products/new">

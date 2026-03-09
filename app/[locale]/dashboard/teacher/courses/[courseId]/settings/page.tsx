@@ -9,6 +9,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
 import { AristotleConfig } from '@/components/teacher/aristotle-config'
+import { SequentialCompletionToggle } from '@/components/teacher/sequential-completion-toggle'
 import { Separator } from '@/components/ui/separator'
 
 interface PageProps {
@@ -76,7 +77,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-2">
           <Link href={`/dashboard/teacher/courses/${courseId}`}>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourse')}>
@@ -100,6 +101,14 @@ export default async function CourseSettingsPage({ params }: PageProps) {
         <CourseForm
           categories={categories || []}
           initialData={course as any}
+        />
+
+        <Separator className="my-8" />
+
+        {/* Sequential Completion */}
+        <SequentialCompletionToggle
+          courseId={parseInt(courseId)}
+          initialValue={course.require_sequential_completion ?? false}
         />
 
         <Separator className="my-8" />

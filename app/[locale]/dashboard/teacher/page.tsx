@@ -22,6 +22,7 @@ import {
 import * as motion from 'motion/react-client'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
+import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
 
 export default async function TeacherDashboard() {
   const supabase = await createClient()
@@ -110,7 +111,10 @@ export default async function TeacherDashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-dashboard">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Guided Tour (client component) */}
+      <TeacherDashboardTour userId={user.id} />
+
+      <div data-tour="teacher-welcome" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
             {t.rich('welcome', {
@@ -137,7 +141,7 @@ export default async function TeacherDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div data-tour="teacher-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -267,7 +271,7 @@ export default async function TeacherDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Courses Section */}
-        <Card className="lg:col-span-4">
+        <Card data-tour="teacher-courses" className="lg:col-span-4">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>{t('courses.title')}</CardTitle>

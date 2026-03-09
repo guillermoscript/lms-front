@@ -48,7 +48,7 @@ export function UpcomingExams({ exams }: UpcomingExamsProps) {
             {exams.slice(0, 3).map((exam) => (
               <div
                 key={exam.exam_id}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent/50 transition-colors"
               >
                 <div className="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
                   <IconFileText className="w-4 h-4 text-orange-500" />

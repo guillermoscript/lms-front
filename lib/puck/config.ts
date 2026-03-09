@@ -119,19 +119,24 @@ const categoryDefinitions = {
   },
 }
 
-function translateFieldLabel(label: string, t: (key: string) => string): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Translator = { (key: string): string; has: (key: string) => boolean } | any
+
+function translateFieldLabel(label: string, t: Translator): string {
+  // Only translate simple keys: alphanumeric with spaces/hyphens/underscores, no dots or special chars
+  // Dots are invalid in next-intl keys, and labels like "Small (640px)" or "→" are not translatable
+  if (!/^[a-zA-Z][a-zA-Z0-9 _-]*$/.test(label)) return label
   try {
     const key = `fieldLabels.${label}`
-    const translated = t(key)
-    // next-intl returns the key path for missing translations
-    return translated === key ? label : translated
+    if (typeof t.has === 'function' && !t.has(key)) return label
+    return t(key)
   } catch {
     return label
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function translateFields(fields: Record<string, any>, t: (key: string) => string): Record<string, any> {
+function translateFields(fields: Record<string, any>, t: Translator): Record<string, any> {
   const translated: Record<string, unknown> = {}
   for (const [key, field] of Object.entries(fields)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -154,7 +159,7 @@ function translateFields(fields: Record<string, any>, t: (key: string) => string
   return translated
 }
 
-export function createPuckConfig(t: (key: string) => string): Config {
+export function createPuckConfig(t: Translator): Config {
   const translatedComponents: Config['components'] = {}
   for (const [key, component] of Object.entries(componentDefinitions)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

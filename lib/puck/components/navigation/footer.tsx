@@ -51,7 +51,7 @@ export const Footer: ComponentConfig<FooterProps> = {
       type: 'array',
       label: 'Social Links',
       arrayFields: {
-        platform: { type: 'text', label: 'Platform (e.g. Twitter)' },
+        platform: { type: 'text', label: 'Platform (eg Twitter)' },
         url: { type: 'text', label: 'URL' },
       },
       defaultItemProps: { platform: 'Twitter', url: '#' },

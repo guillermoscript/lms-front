@@ -24,3 +24,18 @@ export { Definition, Glossary } from './definition'
 
 // Comparison components
 export { Compare, CodeCompare, BeforeAfter } from './compare'
+
+// Rich media components
+export { Audio } from './audio'
+export { Embed } from './embed'
+export { FileDownload } from './file-download'
+
+// Structured data components
+export { Comparison } from './comparison'
+export { Table } from './table'
+
+// Interactive learning aid components
+export { FlashcardSet } from './flashcard-set'
+export { FillInTheBlank } from './fill-in-the-blank'
+export { MatchingPairs } from './matching-pairs'
+export { Ordering } from './ordering'
