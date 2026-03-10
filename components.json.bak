@@ -6,12 +6,13 @@
   "tailwind": {
     "config": "",
     "css": "app/globals.css",
-    "baseColor": "zinc",
+    "baseColor": "gray",
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "phosphor",
-  "rtl": false,
+  "iconLibrary": "tabler",
+  "menuColor": "default",
+  "menuAccent": "bold",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -19,8 +20,6 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "menuColor": "default",
-  "menuAccent": "bold",
   "registries": {
     "@supabase": "https://supabase.com/ui/r/{name}.json"
   }
