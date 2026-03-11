@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, type ReactNode } from 'react'
+import type { StoredPreset } from '@/lib/themes/presets'
 
 export interface TenantInfo {
   id: string
@@ -11,6 +12,8 @@ export interface TenantInfo {
   secondary_color: string
   plan: string
   settings?: Record<string, any>
+  /** Active theme preset, if one has been applied */
+  theme_preset?: StoredPreset | null
 }
 
 const TenantContext = createContext<TenantInfo | null>(null)

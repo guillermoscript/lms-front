@@ -12,10 +12,13 @@ import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import BrandingSettingsForm from '@/components/admin/branding-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
+import Link from 'next/link'
+import { IconPalette } from '@tabler/icons-react'
 
 export default async function SettingsPage() {
   const t = await getTranslations('dashboard.admin.settings')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
+  const tAppearance = await getTranslations('dashboard.admin.appearance')
   // Verify admin role
   const role = await getUserRole()
   if (role !== 'admin') {
@@ -71,6 +74,7 @@ export default async function SettingsPage() {
             <TabsList className="flex w-full overflow-x-auto lg:w-auto">
               <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
               <TabsTrigger value="branding">{t('tabs.branding')}</TabsTrigger>
+              <TabsTrigger value="appearance">{t('tabs.appearance')}</TabsTrigger>
               <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
               <TabsTrigger value="payment">{t('tabs.payment')}</TabsTrigger>
               <TabsTrigger value="enrollment">{t('tabs.enrollment')}</TabsTrigger>
@@ -102,6 +106,35 @@ export default async function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <BrandingSettingsForm settings={settings.general || {}} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Appearance — links to dedicated page */}
+            <TabsContent value="appearance">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{tAppearance('title')}</CardTitle>
+                  <CardDescription>
+                    {tAppearance('description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link
+                    href="/dashboard/admin/appearance"
+                    className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <IconPalette className="h-[18px] w-[18px] text-primary" strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{tAppearance('settingsLink.title')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tAppearance('settingsLink.description')}
+                      </p>
+                    </div>
+                    <span className="text-sm text-muted-foreground">&rarr;</span>
+                  </Link>
                 </CardContent>
               </Card>
             </TabsContent>

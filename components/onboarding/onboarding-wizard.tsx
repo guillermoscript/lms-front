@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { completeOnboarding } from '@/app/actions/onboarding'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
+import { OnboardingAppearanceStep } from './onboarding-appearance-step'
 import {
   GraduationCap,
   Palette,
@@ -43,9 +50,6 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
   // Form state
   const [schoolName, setSchoolName] = useState(currentSettings.site_name?.value || '')
   const [schoolDescription, setSchoolDescription] = useState(currentSettings.site_description?.value || '')
-  const [logoUrl, setLogoUrl] = useState(currentSettings.logo_url?.value || '')
-  const [primaryColor, setPrimaryColor] = useState(currentSettings.primary_color?.value || '#2563eb')
-  const [secondaryColor, setSecondaryColor] = useState(currentSettings.secondary_color?.value || '#7c3aed')
   const [isConnectingStripe, setIsConnectingStripe] = useState(false)
 
   const stepIndex = STEPS.indexOf(currentStep)
@@ -70,9 +74,6 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
       const result = await completeOnboarding({
         schoolName: schoolName || 'My School',
         schoolDescription: schoolDescription || 'An online learning platform',
-        logoUrl,
-        primaryColor,
-        secondaryColor,
       })
 
       if (result.success) {
@@ -94,9 +95,6 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
       const result = await completeOnboarding({
         schoolName: schoolName || 'My School',
         schoolDescription: schoolDescription || 'An online learning platform',
-        logoUrl,
-        primaryColor,
-        secondaryColor,
       })
 
       if (result.success) {
@@ -237,7 +235,7 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
         </Card>
       )}
 
-      {/* Step: Branding */}
+      {/* Step: Branding / Appearance */}
       {currentStep === 'branding' && (
         <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
           <CardHeader>
@@ -247,113 +245,14 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
               </div>
               <div>
                 <CardTitle className="text-xl text-white">{t('branding.title')}</CardTitle>
-                <CardDescription className="text-zinc-400">{t('branding.description')}</CardDescription>
+                <CardDescription className="text-zinc-400">
+                  Pick a color theme, font, and border radius for your school
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl" className="text-zinc-300">{t('branding.logoLabel')}</Label>
-              <Input
-                id="logoUrl"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder={t('branding.logoPlaceholder')}
-                className="bg-zinc-800/50 border-zinc-700 text-white"
-              />
-              <p className="text-sm text-zinc-500">{t('branding.logoHint')}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="primaryColor" className="text-zinc-300">{t('branding.primaryLabel')}</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-zinc-700 cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    id="primaryColor"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="bg-zinc-800/50 border-zinc-700 text-white flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="secondaryColor" className="text-zinc-300">{t('branding.secondaryLabel')}</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-zinc-700 cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    id="secondaryColor"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="bg-zinc-800/50 border-zinc-700 text-white flex-1"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Preview */}
-            <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-800/20">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">{t('branding.preview')}</p>
-              <div className="flex items-center gap-3 mb-4">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt="Logo"
-                    className="h-8 max-w-[160px] object-contain"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                ) : (
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    {schoolName?.[0]?.toUpperCase() || 'S'}
-                  </div>
-                )}
-                <span className="font-semibold text-white">{schoolName || 'Your School'}</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-lg text-white text-xs font-medium"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  Primary
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 rounded-lg text-white text-xs font-medium"
-                  style={{ backgroundColor: secondaryColor }}
-                >
-                  Secondary
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-between pt-4">
-              <Button variant="ghost" onClick={goBack} className="text-zinc-400 hover:text-white">
-                <ArrowLeft className="mr-2 w-4 h-4" />
-                {t('back')}
-              </Button>
-              <Button
-                onClick={goNext}
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-              >
-                {t('next')}
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </div>
+          <CardContent>
+            <OnboardingAppearanceStep onComplete={goNext} onBack={goBack} />
           </CardContent>
         </Card>
       )}
@@ -480,18 +379,8 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
                 <span className="text-white font-medium">{schoolName || 'My School'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">{t('branding.primaryLabel')}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: primaryColor }} />
-                  <span className="text-white text-sm">{primaryColor}</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">{t('branding.secondaryLabel')}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: secondaryColor }} />
-                  <span className="text-white text-sm">{secondaryColor}</span>
-                </div>
+                <span className="text-zinc-500 text-sm">Theme</span>
+                <span className="text-white text-sm">Customized via Appearance</span>
               </div>
             </div>
 

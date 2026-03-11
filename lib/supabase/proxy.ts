@@ -1,10 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Derive root domain for cross-subdomain cookie sharing
+function getCookieDomain(): string | undefined {
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
+  if (!platformDomain) return undefined
+  const domain = platformDomain.split(':')[0]
+  if (domain === 'localhost' || domain === '127.0.0.1') return undefined
+  return `.${domain}`
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+
+  const cookieDomain = getCookieDomain()
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
@@ -22,7 +33,10 @@ export async function updateSession(request: NextRequest) {
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              ...(cookieDomain ? { domain: cookieDomain } : {}),
+            })
           )
         },
       },

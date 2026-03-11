@@ -234,8 +234,16 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: { session } } = await supabase.auth.getSession()
+  let user = null
+  let session = null
+  try {
+    const { data: userData } = await supabase.auth.getUser()
+    user = userData.user
+    const { data: sessionData } = await supabase.auth.getSession()
+    session = sessionData.session
+  } catch {
+    // Invalid/expired JWT — treat as unauthenticated
+  }
 
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
   if (session?.access_token) {
