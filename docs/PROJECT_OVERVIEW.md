@@ -1,292 +1,168 @@
 # Project Overview
 
-## 🎓 What is LMS V2?
+## What is this?
 
-LMS V2 is a modern, AI-powered Learning Management System built from the ground up with exceptional user experience as the top priority. It enables teachers to easily create and manage educational content while providing students with an intuitive, engaging learning experience.
+A multi-tenant SaaS Learning Management System. Schools operate as independent tenants on subdomains (`school-slug.platform.com`). Teachers create courses with rich content, students learn with AI assistance, and admins manage billing, users, and analytics. Supports English and Spanish.
 
-## 🎯 Project Goals
-
-### Primary Goals
-1. **Exceptional Student UX** - Make learning simple, engaging, and effective
-2. **Simple Teacher Tools** - Enable teachers to create content without friction
-3. **AI-Powered Learning** - Leverage AI for personalized learning and automated grading
-4. **Modern Tech Stack** - Built with Next.js 16, Supabase, and modern best practices
-
-### Non-Goals
-- Not a MOOC platform (not designed for massive scale)
-- Not a live classroom tool (focus on self-paced learning)
-- Not a learning analytics platform (basic analytics only)
-
-## 🏛️ Architecture
-
-### High-Level Architecture
+## Architecture
 
 ```
-┌─────────────┐
-│   Next.js   │ ← Frontend + API Routes
-│   App 16    │
-└──────┬──────┘
-       │
-       ├─────────────┐
-       │             │
-┌──────▼──────┐ ┌───▼────────┐
-│  Supabase   │ │ AI Services│
-│  (Database) │ │  (Gemini)  │
-│  (Auth)     │ │            │
-│  (Storage)  │ │            │
-└─────────────┘ └────────────┘
+                    ┌──────────────────┐
+                    │    Next.js 16    │
+                    │   (App Router)   │
+                    └────────┬─────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+ ┌────────▼────────┐ ┌──────▼──────┐ ┌─────────▼─────────┐
+ │    Supabase     │ │  AI Services│ │      Stripe       │
+ │  PostgreSQL 15  │ │  Vercel AI  │ │  Connect + Billing│
+ │  Auth / Storage │ │  OpenAI     │ │                   │
+ └─────────────────┘ └─────────────┘ └───────────────────┘
 ```
 
-### Technology Stack
+### Tech Stack
 
-**Frontend**
-- **Framework**: Next.js 16.1.5 (App Router, React 19)
-- **UI Library**: Shadcn UI (base-mira theme)
-- **Styling**: Tailwind CSS v4
-- **Icons**: Tabler Icons
-- **Fonts**: Noto Sans (UI), Geist Mono (code)
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16.1.5 (App Router, React 19) |
+| UI | Shadcn UI (base-mira variant), Tailwind CSS v4 |
+| Icons | Tabler Icons, Lucide React |
+| Fonts | Noto Sans (body), Geist Sans/Mono (UI/code) |
+| Database | Supabase (PostgreSQL 15, 65+ tables) |
+| Auth | Supabase Auth with JWT custom claims |
+| Storage | Supabase Storage |
+| AI | Vercel AI SDK with OpenAI (gpt-5-mini) |
+| Payments | Stripe Connect (student payments) + Stripe Billing (school plans) |
+| i18n | next-intl (en/es) |
+| Landing Pages | Puck v0.20 drag-and-drop visual editor |
+| Animations | motion (Framer Motion v12) |
+| Testing | Playwright E2E (47 scenarios) |
 
-**Backend**
-- **Database**: Supabase (PostgreSQL 15)
-- **Auth**: Supabase Auth
-- **Storage**: Supabase Storage
-- **API**: Next.js API Routes + Supabase Direct Queries (via RLS)
+### Multi-Tenancy
 
-**AI Integration**
-- **Provider**: Google Gemini 2.0 (primary)
-- **Use Cases**: Exam grading, exercise assistance, content suggestions
+Every request passes through `proxy.ts` (the single middleware), which:
+1. Extracts tenant slug from subdomain
+2. Resolves tenant ID and injects `x-tenant-id` header
+3. Checks `tenant_users` membership
+4. Enforces role-based route guards
 
-**Payments**
-- **Provider**: Stripe
-- **Features**: One-time purchases, subscriptions, automatic enrollment
+All database queries use RLS and explicit `tenant_id` filters. The `profiles` table is global (no tenant_id).
 
-## 👥 User Roles
+## User Roles
 
-### Student
-- Browse and enroll in courses
-- Complete lessons and exercises
-- Take exams with AI feedback
-- Track learning progress
-- Get AI assistance with exercises
+| Role | Scope | Description |
+|------|-------|-------------|
+| Student | Per-tenant | Enrolls in courses, completes lessons, takes exams, earns XP |
+| Teacher | Per-tenant | Creates courses, builds lessons/exams, reviews submissions |
+| Admin | Per-tenant | Manages users, billing, analytics, landing pages, settings |
+| Super Admin | Platform-wide | Manages all tenants, platform plans, impersonation (via `super_admins` table) |
 
-### Teacher
-- Create and manage courses
-- Write lessons (MDX format)
-- Build exams with multiple question types
-- Review student submissions (AI-assisted)
-- Track student progress
+Roles are stored in `tenant_users` (authoritative source). JWT claims include `tenant_role`, `user_role`, `tenant_id`, and `is_super_admin`.
 
-### Admin
-- Manage all courses and users
-- Approve/reject course publications
-- Monitor transactions and subscriptions
-- Assign roles to users
-- View system analytics
+## Key Features
 
-## 🔄 User Flows
+### Content Creation (Teacher)
+- **Block Editor** with 22 block types: text, heading, callout, code, quiz, spoiler, steps, vocabulary, definition, image, video, divider, audio, embed, file-download, glossary, comparison, table, flashcard-set, fill-in-the-blank, matching-pairs, ordering
+- **Exercise Builder** with 11 exercise types: essay, coding_challenge, quiz, multiple_choice, true_false, fill_in_the_blank, discussion, audio_evaluation, video_evaluation, real_time_conversation, artifact
+- **Exam System** with multiple question types and AI-assisted grading
+- Sequential lesson completion and lesson resources (attachments)
 
-### Student Learning Flow
-```
-1. Browse Courses
-   ↓
-2. Enroll (free or paid)
-   ↓
-3. View Course → Select Lesson
-   ↓
-4. Read Lesson Content
-   ↓
-5. Complete Lesson (mark as done)
-   ↓
-6. (Optional) Get AI Help with Exercise
-   ↓
-7. Take Exam
-   ↓
-8. Receive AI Feedback
-   ↓
-9. Move to Next Lesson
-```
+### Learning Experience (Student)
+- Course enrollment (free, paid via Stripe, or manual/offline payment)
+- Lesson viewer with progress tracking
+- AI-powered exam feedback
+- **Aristotle AI Tutor** — context-aware AI assistant with session persistence
+- Gamification: XP, levels, streaks, achievements, leaderboard, point store (12 tables)
+- **Certificates** with PDF generation and public QR-code verification at `/verify/[code]`
 
-### Teacher Content Creation Flow
-```
-1. Create Course (title, description, image)
-   ↓
-2. Add Lessons (MDX editor)
-   ↓
-3. (Optional) Add Exercises with AI evaluation
-   ↓
-4. Create Exam (questions + auto-grading rules)
-   ↓
-5. Publish Course
-   ↓
-6. Review Student Submissions (AI-assisted)
-```
+### School Management (Admin)
+- User management with role assignment
+- **Invitation system** for onboarding users
+- Transaction and subscription monitoring
+- Revenue dashboard with analytics
+- **Landing Page Builder** — Puck v0.20 visual editor with 32 components across 4 categories and 8 built-in templates
+- Tenant settings (branding, theme, payment config)
+- **Onboarding wizard** for new schools
+- **Guided tours** (driver.js)
 
-## 🗄️ Database Philosophy
+### Platform (Super Admin)
+- Tenant management and oversight
+- 5-tier pricing with feature gating (Free, Starter, Pro, Business, Enterprise)
+- Platform billing via Stripe Checkout + manual bank transfer
+- Referral system, impersonation, platform analytics
 
-### Direct Queries via RLS (Preferred)
-Instead of server actions for every CRUD operation, we use **Row Level Security (RLS)** policies to control data access directly from the client:
+### Payments
 
-```typescript
-// ✅ GOOD: Direct query with RLS protection
-const { data } = await supabase
-  .from('courses')
-  .select('*')
-  .eq('id', courseId)
-  .single()
-```
+Two separate Stripe integrations:
 
-```typescript
-// ❌ AVOID: Server actions for simple CRUD
-// Only use server actions for complex business logic
-```
+| | Student Payments (Connect) | School Billing (Platform) |
+|--|--|--|
+| Who pays | Student pays school | School admin pays platform |
+| Stripe mode | PaymentIntents with Connect | Checkout + Subscriptions |
+| Revenue split | Configurable (default 80/20) | Fixed tier pricing |
+| Webhook | `/api/stripe/webhook` | `/api/stripe/platform-webhook` |
 
-### When to Use Server Actions
-- Complex multi-step operations (e.g., payment processing)
-- Operations requiring service role permissions
-- Operations that need to interact with external APIs
-- Business logic that shouldn't be exposed to client
+Manual/offline payment flow: student submits payment request, admin confirms, system enrolls.
 
-### When to Use Database Functions
-- Reusable business logic (e.g., `enroll_user()`)
-- Triggers (e.g., auto-create profile on signup)
-- Complex queries that need to be consistent
-- Operations that modify multiple tables atomically
+### AI Integration
+- **Aristotle AI Tutor**: context-aware tutoring with course/lesson context and session persistence
+- **Exam grading**: AI-assisted evaluation with detailed feedback
+- **Exercise assistance**: real-time AI help across exercise types
+- **MCP Server**: 27 tools for AI agent integration with the platform
+- Provider: Vercel AI SDK with OpenAI (gpt-5-mini)
 
-## 🎨 Design Principles
-
-### UX Principles
-1. **Simplicity First** - Remove unnecessary complexity
-2. **Visual Feedback** - Users always know what's happening
-3. **Progressive Disclosure** - Show what's needed, hide what's not
-4. **Consistency** - Similar actions work the same way everywhere
-
-### Code Principles
-1. **No Over-Engineering** - Build what's needed, not what might be needed
-2. **Type Safety** - Use TypeScript properly
-3. **Direct Queries** - Use RLS instead of server actions when possible
-4. **Reusable Components** - DRY, but don't abstract too early
-
-## 📊 Key Metrics
-
-### Success Metrics
-- **Student Engagement**: Lesson completion rate
-- **Teacher Satisfaction**: Time to create a course
-- **Learning Outcomes**: Exam pass rates
-- **Platform Health**: Active users, course enrollments
-
-## 🔐 Security
-
-### Authentication
-- Supabase Auth with email/password
-- JWT tokens with role claims
-- Automatic profile creation on signup
-
-### Authorization
-- Role-based access control (student, teacher, admin)
-- Row Level Security on all tables
-- Route protection via Next.js middleware
-
-### Data Protection
-- No sensitive data in client code
-- Environment variables for secrets
-- Supabase service role key for admin operations only
-
-## 🚀 Deployment
-
-### Environments
-- **Development**: Local Supabase + Next.js dev server
-- **Production**: Vercel + Supabase Cloud
-
-### CI/CD
-- Automatic deployments on push to main (Vercel)
-- Database migrations via Supabase CLI
-- Environment variables managed in Vercel
-
-## 📈 Project Phases & Status
-
-### Phase 1 - Fresh Setup ✅
-- Next.js 16 + Shadcn UI (Lyra theme)
-- Tailwind CSS v4 with @theme syntax
-- Tabler Icons + JetBrains Mono font
-
-### Phase 2 - Database Setup ✅
-- Supabase connection
-- Complete schema (44 tables)
-- Database functions preserved
-
-### Phase 3 - Authentication ✅
-- Supabase Auth with email/password
-- JWT role claims (`custom_access_token_hook`)
-- Role-based routing via proxy.ts
-- Protected dashboard routes
-
-### Phase 4 - Stripe Integration ✅
-- Payment intent creation
-- Webhook handling
-- Automatic enrollment via triggers
-
-### Phase 5 - Student Dashboard ✅
-- Main dashboard with enrolled courses
-- Course overview with progress tracking
-- Lesson viewer (markdown, video, navigation)
-- Lesson completion tracking
-- Exam system (take exam, submit, review results)
-
-### Phase 6 - Teacher Dashboard 🔄 (Next)
-- Course creation and management
-- Lesson editor (MDX)
-- Exam builder
-- Student submission review
-
-### Phase 7 - Admin Dashboard (Pending)
-- User management
-- Course oversight
-- Transaction monitoring
-
-### Phase 8 - Additional Features (Pending)
-- Comments on lessons
-- Reviews/ratings
-- Notifications
-
-### Phase 9 - Internationalization (Pending)
-- Multi-language support
-
-### Phase 10 - AI Documentation (Pending)
-- Document AI integration points
-
-### Phase 11 - Testing ✅
-- Playwright E2E tests (47 scenarios across 4 test files)
-- Multi-tenant isolation, auth security, payment security, comprehensive audit
-
-### Phase 12 - Gamification ✅
-- XP, levels, streaks, achievements, leaderboard, point store
-- Multi-tenant scoped gamification profiles
-
-### Phase 13 - Certificates ✅
-- Certificate templates, auto-issuance on course completion
-- QR-code public verification at `/verify/[code]`
-
-### Phase 14 - Monetization ✅
-- School billing via Stripe Checkout + manual bank transfer
-- 5-tier pricing (Free → Enterprise) with feature gating
-- Dynamic transaction fees (10% → 0%)
+### Additional Features
 - LATAM payment support (MXN, COP, CLP, PEN, ARS, BRL)
-- Revenue dashboard for school admins
-- See `docs/MONETIZATION.md` for full details
+- Notification system with templates and preferences
+- Course categories
+- Dark/light mode with tenant theme overrides
 
-## 🤝 Development Team
+## Database
 
-This is a **solo project** with AI assistance, rebuilt from a 1-year-old production LMS with significant technical debt.
+65+ tables organized into key groups:
 
-### Original Version Issues
-- Complex server actions for simple CRUD
-- Overengineered abstractions
-- Inconsistent UI patterns
-- Poor mobile experience
+| Group | Key Tables |
+|-------|-----------|
+| Multi-tenancy | `tenants`, `tenant_users`, `tenant_settings`, `super_admins` |
+| Users | `profiles` (global), `user_roles` |
+| Content | `courses`, `lessons`, `exercises`, `exams`, `exam_questions`, `question_options` |
+| Progress | `enrollments`, `lesson_completions`, `exam_submissions` |
+| Commerce | `products`, `plans`, `transactions`, `subscriptions`, `payment_requests` |
+| Revenue | `revenue_splits`, `payouts`, `invoices` |
+| Platform Billing | `platform_plans`, `platform_subscriptions`, `platform_payment_requests` |
+| Gamification | 12 tables (`gamification_profiles`, `xp_transactions`, `levels`, `achievements`, etc.) |
+| Certificates | `certificates`, `certificate_templates` |
+| Notifications | `notifications`, `user_notifications`, `notification_templates`, `notification_preferences` |
+| Landing Pages | `landing_pages` (with `puck_data` JSONB column) |
 
-### V2 Improvements
-- RLS-based direct queries
-- Modern Shadcn UI
-- Consistent patterns
-- Mobile-first design
-- Comprehensive documentation (this!)
+All tenant-scoped tables use RLS. Direct queries with explicit `tenant_id` filters are preferred over server actions for reads.
+
+## Project Phases (All Complete)
+
+| Phase | Scope | Highlights |
+|-------|-------|-----------|
+| 1 | Foundation | Next.js 16, Supabase, Shadcn UI (base-mira), Tailwind CSS v4 |
+| 2 | Database | 65+ tables, RLS policies, database functions and RPCs |
+| 3 | Core LMS | Auth, enrollment, lessons, exams, progress tracking |
+| 4 | AI Integration | Vercel AI SDK with OpenAI (gpt-5-mini), Aristotle AI Tutor, exam grading |
+| 5 | Gamification | 12 tables: XP, levels, streaks, achievements, leaderboard, point store |
+| 6 | Teacher Dashboard | Block editor (22 block types), exercise builder (11 types), exam builder |
+| 7 | Admin Dashboard | Monetization, billing, analytics, user management, invitations |
+| 8 | i18n | next-intl with English and Spanish |
+| 9 | Multi-tenant SaaS | Subdomain routing, RLS, tenant settings, platform super admin panel |
+| 10 | Landing Page Builder | Puck v0.20 visual editor, 32 components, 8 templates |
+
+## Deployment
+
+- **Production**: Vercel + Supabase Cloud
+- **Development**: Local Supabase + Next.js dev server (`lvh.me:3000` for subdomain testing)
+- **CI/CD**: Automatic deployments via Vercel, database migrations via Supabase CLI
+
+## Key Documentation
+
+- `docs/DATABASE_SCHEMA.md` — complete schema with relationships
+- `docs/AUTH.md` — authentication flows
+- `docs/AI_AGENT_GUIDE.md` — detailed patterns for AI agents
+- `docs/MONETIZATION.md` — billing, feature gating, LATAM payments
+- `CLAUDE.md` — development guidelines and known pitfalls

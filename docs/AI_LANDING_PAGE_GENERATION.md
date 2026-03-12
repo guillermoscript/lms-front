@@ -1,5 +1,7 @@
 # AI Landing Page Generation — Design Document
 
+> **Note:** This document describes a planned AI generation approach for the **old section-based landing page builder**, which has been replaced by the **Puck v0.20 visual editor** (see `LANDING_PAGE_BUILDER.md`). The concepts here would need to be adapted to generate Puck-compatible `puck_data` JSON instead of `sections[]` arrays. The current landing page system uses `landing_pages.puck_data` (JSONB column) with 32 Puck components across 4 categories.
+
 Status: **Brainstorm / Pre-implementation**
 Target plans: Starter and above (same gate as the builder)
 

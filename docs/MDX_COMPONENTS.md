@@ -6,6 +6,8 @@ This document describes the custom MDX components available for creating interac
 
 Lesson content is stored in the database as MDX (Markdown + JSX) and rendered using `next-mdx-remote-client`. This allows teachers to create rich, interactive content using simple markdown syntax combined with custom React components.
 
+> **Note:** While MDX components remain the rendering foundation for lesson content, teachers primarily create content through the **Block Editor** — a visual editing interface that serializes to MDX. See the [Block Editor](#block-editor) section below for details.
+
 ## Available Components
 
 ### 1. Callouts
@@ -332,6 +334,55 @@ console.log(`${greeting}, ${name}!`);
 ```
 </Solution>
 ```
+
+---
+
+## Block Editor
+
+The **Block Editor** is the primary lesson editing interface for teachers. It provides a visual, drag-and-drop editing experience that wraps MDX content in a structured block-based editor.
+
+**Location:** `components/teacher/block-editor/`
+
+### How It Works
+
+1. Teachers create content using visual blocks in the editor
+2. Blocks are serialized to MDX via `serializer.ts`
+3. The resulting MDX is stored in `lessons.content` and rendered using the MDX components documented above
+
+### Block Types (22 total)
+
+The block editor supports all standard MDX component types plus additional interactive block types:
+
+| Block Type | Description |
+|-----------|-------------|
+| Text / Heading | Rich text and headings (standard MDX) |
+| Code | Code blocks with syntax highlighting |
+| Image / Video | Media embeds |
+| Quiz | Interactive multiple-choice questions |
+| Callout | Info/warning/tip/success/danger callouts |
+| Steps | Sequential instruction blocks |
+| Vocabulary | Language learning word cards |
+| Spoiler / Solution | Collapsible content |
+| **Audio** | Audio file playback blocks |
+| **Embed** | External content embeds (YouTube, etc.) |
+| **File-Download** | Downloadable file attachments |
+| **Flashcard-Set** | Interactive flashcard decks |
+| **Fill-in-the-Blank** | Cloze-style exercises |
+| **Matching-Pairs** | Match items between two columns |
+| **Ordering** | Drag-to-reorder exercises |
+| **Comparison** | Side-by-side content comparison |
+| **Table** | Structured data tables |
+| **Glossary** | Term-definition collections |
+
+The block types marked in bold go beyond the base MDX component set and are unique to the block editor experience.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `components/teacher/block-editor/block-editor.tsx` | Main editor component |
+| `components/teacher/block-editor/serializer.ts` | Converts blocks to MDX string |
+| `components/teacher/block-editor/blocks/` | Individual block type components |
 
 ---
 

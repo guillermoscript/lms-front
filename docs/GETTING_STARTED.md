@@ -28,13 +28,16 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your_anon_key_here
 # Optional: Service role key for admin operations (DO NOT COMMIT!)
 # SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
-# Stripe (for student payments via Connect)
+# Platform domain (required for subdomain routing)
+NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000   # Local dev (use lmsplatform.com in prod)
+
+# Stripe Connect (for student payments to schools)
 # STRIPE_SECRET_KEY=sk_test_...
 # NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-# STRIPE_WEBHOOK_SECRET=whsec_...
+# STRIPE_WEBHOOK_SECRET=whsec_...              # Webhook: /api/stripe/webhook
 
-# Stripe Platform Billing (for school plan subscriptions)
-# STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...
+# Stripe Platform Billing (for school plan subscriptions to the platform)
+# STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...     # Webhook: /api/stripe/platform-webhook
 ```
 
 Get your keys from:
@@ -125,59 +128,80 @@ See `MULTI_TENANT_TESTING_REPORT.md` for full testing details.
 
 ```
 lms-front/
-├── app/                          # Next.js App Router
-│   ├── [locale]/                # i18n locale segment (en, es)
-│   │   ├── auth/               # Auth pages (login, signup, etc.)
-│   │   ├── dashboard/          # Protected dashboards
-│   │   │   ├── student/       # Student dashboard
-│   │   │   ├── teacher/       # Teacher dashboard
-│   │   │   └── admin/         # Admin dashboard
-│   │   ├── checkout/           # Payment checkout pages
-│   │   ├── courses/            # Public course catalog
-│   │   ├── pricing/            # Public pricing page
-│   │   ├── create-school/      # School creation page
-│   │   └── join-school/        # Join a school page
-│   ├── actions/                # Server actions
-│   │   ├── admin/             # Admin actions
-│   │   ├── teacher/           # Teacher actions (course creation, etc.)
-│   │   ├── payment-requests.ts # Manual payment flow
-│   │   └── join-school.ts     # Join school action
-│   └── api/                    # API routes
-│       └── stripe/            # Stripe webhooks + payment intent + billing
+├── app/
+│   ├── [locale]/                 # All routes wrapped in locale (en, es)
+│   │   ├── (public)/            # Public pages (homepage, courses, etc.)
+│   │   ├── auth/                # Auth pages (login, signup, etc.)
+│   │   ├── dashboard/
+│   │   │   ├── admin/          # Admin dashboard (25+ pages)
+│   │   │   ├── student/        # Student dashboard (16+ pages)
+│   │   │   └── teacher/        # Teacher dashboard (30+ pages)
+│   │   ├── platform/            # Super admin panel
+│   │   ├── create-school/       # School creation flow
+│   │   ├── join-school/         # Join school via invitation
+│   │   └── onboarding/         # Post-signup onboarding
+│   ├── actions/
+│   │   ├── admin/               # Admin server actions (billing, categories, courses, invitations, landing-pages, etc.)
+│   │   ├── teacher/             # Teacher server actions
+│   │   └── platform/            # Platform super admin actions
+│   └── api/
+│       ├── auth/                # Auth callbacks
+│       ├── chat/                # AI chat endpoints (aristotle, exercises, lesson-task)
+│       ├── exercises/           # Exercise evaluation (artifact, media)
+│       ├── stripe/              # Payment webhooks & endpoints
+│       ├── certificates/        # Certificate verification & generation
+│       ├── teacher/             # Teacher tools (grading, preview, templates)
+│       ├── cron/                # Scheduled tasks
+│       └── mcp/                 # MCP protocol endpoint
 │
-├── components/                   # React components
-│   ├── ui/                      # Shadcn UI components (base-mira)
-│   ├── tenant/                  # Tenant-specific components
-│   └── ...
+├── components/
+│   ├── admin/                    # Admin components (landing-page/, invite-user, etc.)
+│   ├── aristotle/                # AI tutor panel
+│   ├── exercises/                # Exercise UIs (artifact, audio, code, essay)
+│   ├── gamification/             # Leaderboard, achievements, store
+│   ├── lesson/                   # Lesson content blocks (22 types)
+│   ├── onboarding/               # Onboarding wizard
+│   ├── student/                  # Student-specific components
+│   ├── teacher/                  # Teacher tools (block-editor/, exercise-builder)
+│   ├── tenant/                   # Tenant management (create-school, css-vars)
+│   ├── tours/                    # Guided tours (driver.js)
+│   ├── ui/                       # Shadcn UI primitives (base-mira)
+│   └── shared/                   # Shared components (feature-gate, onboarding-checklist)
 │
-├── lib/                         # Utilities
-│   ├── supabase/               # Supabase clients
-│   │   ├── client.ts           # Browser client
-│   │   ├── server.ts           # Server client
-│   │   ├── admin.ts            # Admin client (bypass RLS)
-│   │   ├── proxy.ts            # Session update for middleware
-│   │   ├── tenant.ts           # getCurrentTenantId()
-│   │   └── get-user-role.ts    # Role utilities (reads tenant_users)
-│   ├── plans/                  # Plan features & gating utilities
-│   ├── hooks/                  # Client hooks (usePlanFeatures, etc.)
-│   ├── currency.ts             # Multi-currency utilities (LATAM support)
-│   └── utils.ts                # General utilities (cn, etc.)
+├── lib/
+│   ├── ai/                       # AI config, prompts (aristotle, grading)
+│   ├── puck/                     # Landing page builder (config, components/, templates/)
+│   ├── supabase/                 # DB clients (server, client, admin, tenant, proxy)
+│   │   ├── client.ts            # Browser client
+│   │   ├── server.ts            # Server client
+│   │   ├── admin.ts             # Admin client (bypass RLS)
+│   │   ├── proxy.ts             # Session update for middleware
+│   │   ├── tenant.ts            # getCurrentTenantId()
+│   │   └── get-user-role.ts     # Role utilities (reads tenant_users)
+│   ├── hooks/                    # React hooks (usePlanFeatures, useEnrollment)
+│   ├── plans/                    # Feature gating (features.ts)
+│   ├── payments/                 # Stripe integration
+│   ├── email/                    # Email templates
+│   ├── speech/                   # Speech evaluation
+│   ├── exercises/                # Exercise engine
+│   ├── certificates/             # Certificate logic
+│   ├── themes/                   # Theme presets
+│   └── services/                 # Business logic services
 │
-├── docs/                        # Documentation
-│   ├── MULTI_TENANT_TESTING_REPORT.md  # Multi-tenant test results
-│   ├── DATABASE_SCHEMA.md      # Database reference
-│   ├── AUTH.md                 # Auth guide
-│   └── ...
+├── mcp-server/                   # MCP server for AI agent integration
+├── messages/                     # i18n messages (en.json, es.json)
+├── supabase/                     # Supabase config
+│   ├── migrations/              # Database migrations (63+ files)
+│   └── config.toml              # Local Supabase config
+├── tests/                        # Playwright E2E tests
 │
-├── supabase/                    # Supabase config
-│   ├── migrations/             # Database migrations (many files)
-│   └── config.toml             # Local Supabase config
-│
-├── proxy.ts                     # Single middleware (tenant + i18n + auth)
-├── .env.local                   # Environment variables (DO NOT COMMIT!)
-├── package.json                 # Dependencies
-└── tsconfig.json               # TypeScript config
+├── proxy.ts                      # THE ONLY middleware file (tenant + i18n + auth)
+├── .env.local                    # Environment variables (DO NOT COMMIT!)
+├── package.json                  # Dependencies
+└── tsconfig.json                # TypeScript config
 ```
+
+**Important:** `proxy.ts` is the single middleware file for the entire application. Do NOT create a `middleware.ts` file — it will conflict with `proxy.ts`.
 
 ## 🧪 Verify Setup
 
@@ -260,32 +284,34 @@ supabase db reset
 
 ⚠️ **Warning**: This deletes ALL local data!
 
-## 🔑 Managing Roles
+## Managing Roles
+
+The `tenant_users` table is the **authoritative source** for user roles within a tenant. The `user_roles` table stores global roles but `tenant_users.role` is what `getUserRole()` checks first.
 
 ### Change Your Role (for testing)
 
 **Via SQL Editor** (Supabase Studio):
 
 ```sql
--- Make yourself a teacher
+-- Set your role within a specific tenant (authoritative source)
+-- Roles: 'student', 'teacher', 'admin'
+UPDATE tenant_users
+SET role = 'teacher'
+WHERE user_id = auth.uid()
+  AND tenant_id = '00000000-0000-0000-0000-000000000001';
+
+-- If no tenant_users row exists, insert one
+INSERT INTO tenant_users (user_id, tenant_id, role)
+VALUES (auth.uid(), '00000000-0000-0000-0000-000000000001', 'teacher')
+ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = 'teacher';
+
+-- Global role (fallback only — tenant_users takes priority)
 INSERT INTO user_roles (user_id, role)
 VALUES (auth.uid(), 'teacher')
 ON CONFLICT (user_id, role) DO NOTHING;
-
--- Make yourself an admin
-INSERT INTO user_roles (user_id, role)
-VALUES (auth.uid(), 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-
--- Remove a role
-DELETE FROM user_roles
-WHERE user_id = auth.uid() AND role = 'teacher';
 ```
 
-**Refresh your session** to see the new role:
-```bash
-# Log out and log back in
-```
+**Refresh your session** to see the new role — call `supabase.auth.refreshSession()` or log out and back in to get updated JWT claims.
 
 ## 📝 Common Commands
 
@@ -342,9 +368,10 @@ cat .env.local
 ### Page shows "Unauthorized"
 
 1. Check if you're logged in: `/auth/login`
-2. Verify your role: Check `user_roles` table
-3. Check middleware is working: Add console.log
+2. Verify your role: Check `tenant_users` table (authoritative) and `user_roles` table (fallback)
+3. Check `proxy.ts` is working (this is the only middleware file — not `middleware.ts`)
 4. Verify RLS policies allow access
+5. After changing roles, call `supabase.auth.refreshSession()` to update JWT claims
 
 ## 📚 Next Steps
 

@@ -76,6 +76,10 @@ t('tour.header.title') // resolves to dashboard.teacher.manageCourse.tour.header
 | Landing Page Builder | `/dashboard/admin/landing-page` | Medium | Puck drag-and-drop, templates, preview |
 | Billing/Upgrade | `/dashboard/admin/billing` | Low | Plan tiers, upgrade flow |
 | User Management | `/dashboard/admin/users` | Low | Invite flow, role management |
+| Aristotle AI Tutor | `/dashboard/student/...` | Medium | AI-powered tutoring interface |
+| Invitation System | `/dashboard/admin/users` | Low | Sending and managing user invitations |
+
+> **Note:** No tours exist yet for the Aristotle AI tutor, Puck landing page builder, or the invitation system. These are candidates for future tour implementations as those features mature.
 
 ## Adding a New Tour
 

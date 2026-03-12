@@ -2,7 +2,7 @@
 
 > Quick copy-paste solutions for frequent development tasks
 
-## 🔐 Authentication
+## Authentication
 
 ### Get Current User
 ```typescript
@@ -16,7 +16,16 @@ const { data: { user } } = await supabase.auth.getUser()
 ```typescript
 import { getUserRole } from '@/lib/supabase/get-user-role'
 
+// Returns the tenant-scoped role from tenant_users table
+// Falls back to global user_role if no tenant role found
 const role = await getUserRole() // 'student' | 'teacher' | 'admin' | null
+```
+
+### Get Tenant Context
+```typescript
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+
+const tenantId = await getCurrentTenantId() // reads x-tenant-id header set by proxy.ts
 ```
 
 ### Protect a Page
@@ -52,13 +61,53 @@ export default async function TeacherOnlyPage() {
 }
 ```
 
-## 🗄️ Database Queries
+## Database Queries
 
-### Simple Select
+> **IMPORTANT:** All queries on tenant-scoped tables MUST include a `tenant_id` filter. RLS is enabled, but explicit filters are required for clarity and performance.
+
+### Standard Query Pattern (Server Components)
 ```typescript
+import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 const { data, error } = await supabase
   .from('courses')
   .select('*')
+  .eq('tenant_id', tenantId)
+  .eq('status', 'published')
+```
+
+### Admin Client (Bypass RLS)
+```typescript
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+
+// Use for service-role operations — bypasses RLS
+const adminClient = createAdminClient()
+const tenantId = await getCurrentTenantId()
+
+// IMPORTANT: Manually validate tenant ownership before writes
+const { data: resource } = await adminClient
+  .from('products')
+  .select('tenant_id')
+  .eq('product_id', id)
+  .single()
+
+if (resource.tenant_id !== tenantId) throw new Error('Access denied')
+```
+
+### Simple Select
+```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
+const { data, error } = await supabase
+  .from('courses')
+  .select('*')
+  .eq('tenant_id', tenantId)
   .eq('status', 'published')
 ```
 
@@ -67,6 +116,7 @@ const { data, error } = await supabase
 const { data } = await supabase
   .from('lessons')
   .select('*')
+  .eq('tenant_id', tenantId)
   .eq('course_id', courseId)
   .eq('status', 'published')
   .order('sequence', { ascending: true })
@@ -77,7 +127,8 @@ const { data } = await supabase
 const { data, error } = await supabase
   .from('courses')
   .select('*')
-  .eq('id', courseId)
+  .eq('tenant_id', tenantId)
+  .eq('course_id', courseId)
   .single()
 
 if (!data) {
@@ -96,12 +147,13 @@ const { data } = await supabase
       avatar_url
     ),
     lessons (
-      id,
+      lesson_id,
       title,
       sequence
     )
   `)
-  .eq('id', courseId)
+  .eq('tenant_id', tenantId)
+  .eq('course_id', courseId)
   .single()
 ```
 
@@ -112,6 +164,7 @@ const { data, error } = await supabase
   .insert({
     title: 'New Course',
     author_id: userId,
+    tenant_id: tenantId,
     status: 'draft',
   })
   .select()
@@ -123,7 +176,8 @@ const { data, error } = await supabase
 const { data, error } = await supabase
   .from('courses')
   .update({ status: 'published' })
-  .eq('id', courseId)
+  .eq('tenant_id', tenantId)
+  .eq('course_id', courseId)
   .select()
 ```
 
@@ -132,7 +186,8 @@ const { data, error } = await supabase
 const { error } = await supabase
   .from('courses')
   .delete()
-  .eq('id', courseId)
+  .eq('tenant_id', tenantId)
+  .eq('course_id', courseId)
 ```
 
 ### Count Records
@@ -140,6 +195,7 @@ const { error } = await supabase
 const { count } = await supabase
   .from('enrollments')
   .select('*', { count: 'exact', head: true })
+  .eq('tenant_id', tenantId)
   .eq('user_id', userId)
 ```
 
@@ -151,7 +207,89 @@ const { data, error } = await supabase.rpc('enroll_user', {
 })
 ```
 
-## 🎨 UI Components
+## UI Components
+
+### Button Component
+
+Button uses `@base-ui/react` — it does **not** support the `asChild` prop. To make a button act as a link, wrap `<Link>` around `<Button>`:
+
+```typescript
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+
+// Correct — wrap Link around Button
+<Link href="/dashboard">
+  <Button>Go to Dashboard</Button>
+</Link>
+
+// Wrong — asChild is not supported
+<Button asChild>
+  <Link href="/dashboard">Go to Dashboard</Link>
+</Button>
+```
+
+### BreadcrumbLink (base-ui render prop)
+```typescript
+import { BreadcrumbLink } from '@/components/ui/breadcrumb'
+import Link from 'next/link'
+
+// Correct — use render prop
+<BreadcrumbLink render={<Link href="/dashboard" />}>
+  Dashboard
+</BreadcrumbLink>
+
+// Wrong — asChild is not supported
+<BreadcrumbLink asChild>
+  <Link href="/dashboard">Dashboard</Link>
+</BreadcrumbLink>
+```
+
+### DropdownMenuTrigger (base-ui render prop)
+```typescript
+import { DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+
+// Correct — use render prop
+<DropdownMenuTrigger render={<Button variant="outline">Options</Button>} />
+
+// Wrong — asChild is not supported
+<DropdownMenuTrigger asChild>
+  <Button variant="outline">Options</Button>
+</DropdownMenuTrigger>
+```
+
+### Feature Gating
+
+#### Component-based gating
+```typescript
+import { FeatureGate } from '@/components/shared/feature-gate'
+
+// Only renders children if the tenant's plan includes the feature
+<FeatureGate feature="landing_pages">
+  <LandingPageBuilder />
+</FeatureGate>
+```
+
+#### Hook-based gating
+```typescript
+'use client'
+
+import { usePlanFeatures } from '@/lib/hooks/use-plan-features'
+
+export function MyComponent() {
+  const { features, isLoading } = usePlanFeatures()
+
+  if (isLoading) return <Spinner />
+
+  return (
+    <div>
+      <p>Current plan: {features.plan_name}</p>
+      <p>Course limit: {features.max_courses}</p>
+      {features.has_landing_pages && <LandingPageLink />}
+    </div>
+  )
+}
+```
 
 ### Basic Page Layout
 ```typescript
@@ -182,7 +320,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 </Card>
 ```
 
-### Button Component
+### Button Variants
 ```typescript
 import { Button } from '@/components/ui/button'
 
@@ -197,12 +335,14 @@ import { Button } from '@/components/ui/button'
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function MyForm() {
+export function MyForm({ tenantId }: { tenantId: string }) {
   const [loading, setLoading] = useState(false)
+  const supabase = createClient()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -211,10 +351,9 @@ export function MyForm() {
     const formData = new FormData(e.currentTarget)
     const title = formData.get('title') as string
 
-    // Submit to database
     const { error } = await supabase
       .from('courses')
-      .insert({ title })
+      .insert({ title, tenant_id: tenantId })
 
     setLoading(false)
   }
@@ -236,7 +375,7 @@ export function MyForm() {
 
 ### Loading State
 ```typescript
-// app/page/loading.tsx
+// app/[locale]/page/loading.tsx
 export default function Loading() {
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -251,7 +390,7 @@ export default function Loading() {
 
 ### Error Boundary
 ```typescript
-// app/page/error.tsx
+// app/[locale]/page/error.tsx
 'use client'
 
 import { Button } from '@/components/ui/button'
@@ -273,7 +412,7 @@ export default function Error({
 }
 ```
 
-## 🔄 Client-Side Actions
+## Client-Side Actions
 
 ### Mark Lesson as Complete
 ```typescript
@@ -295,9 +434,10 @@ export function CompleteLessonButton({ lessonId }: { lessonId: number }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // NOTE: lesson_completions uses `user_id`, NOT `student_id`
     await supabase.from('lesson_completions').insert({
       lesson_id: lessonId,
-      student_id: user.id,
+      user_id: user.id,
     })
 
     setLoading(false)
@@ -332,7 +472,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 
-export function DeleteCourseButton({ courseId }: { courseId: number }) {
+export function DeleteCourseButton({ courseId, tenantId }: { courseId: string; tenantId: string }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -340,7 +480,11 @@ export function DeleteCourseButton({ courseId }: { courseId: number }) {
   async function handleDelete() {
     setLoading(true)
 
-    await supabase.from('courses').delete().eq('id', courseId)
+    await supabase
+      .from('courses')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('course_id', courseId)
 
     router.push('/dashboard/teacher/courses')
     router.refresh()
@@ -348,9 +492,7 @@ export function DeleteCourseButton({ courseId }: { courseId: number }) {
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive">Delete Course</Button>
-      </AlertDialogTrigger>
+      <AlertDialogTrigger render={<Button variant="destructive">Delete Course</Button>} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -371,10 +513,13 @@ export function DeleteCourseButton({ courseId }: { courseId: number }) {
 }
 ```
 
-## 📊 Common Queries
+## Common Queries
 
 ### Get Student's Enrolled Courses
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 const { data: enrollments } = await supabase
   .from('enrollments')
   .select(`
@@ -386,18 +531,23 @@ const { data: enrollments } = await supabase
       )
     )
   `)
+  .eq('tenant_id', tenantId)
   .eq('user_id', userId)
   .eq('status', 'active')
 ```
 
 ### Get Course with Progress
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
+// NOTE: lesson_completions uses `user_id`, NOT `student_id`
 const { data } = await supabase
   .from('courses')
   .select(`
     *,
     lessons (
-      id,
+      lesson_id,
       title,
       sequence,
       lesson_completions!inner (
@@ -405,8 +555,9 @@ const { data } = await supabase
       )
     )
   `)
-  .eq('id', courseId)
-  .eq('lessons.lesson_completions.student_id', userId)
+  .eq('tenant_id', tenantId)
+  .eq('course_id', courseId)
+  .eq('lessons.lesson_completions.user_id', userId)
   .single()
 
 // Calculate progress
@@ -419,6 +570,9 @@ const progress = (completedLessons / totalLessons) * 100
 
 ### Get Teacher's Courses
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 const { data } = await supabase
   .from('courses')
   .select(`
@@ -426,12 +580,16 @@ const { data } = await supabase
     lessons (count),
     enrollments (count)
   `)
+  .eq('tenant_id', tenantId)
   .eq('author_id', userId)
   .order('created_at', { ascending: false })
 ```
 
 ### Get Exam with Questions
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 const { data: exam } = await supabase
   .from('exams')
   .select(`
@@ -441,16 +599,19 @@ const { data: exam } = await supabase
       question_options (*)
     )
   `)
-  .eq('id', examId)
+  .eq('tenant_id', tenantId)
+  .eq('exam_id', examId)
   .order('sequence', { foreignTable: 'exam_questions' })
   .order('sequence', { foreignTable: 'exam_questions.question_options' })
   .single()
 ```
 
-## 🎯 Role Management
+## Role Management
 
 ### Check if User is Admin
 ```typescript
+import { getUserRole } from '@/lib/supabase/get-user-role'
+
 const role = await getUserRole()
 const isAdmin = role === 'admin'
 ```
@@ -470,7 +631,7 @@ DELETE FROM user_roles
 WHERE user_id = 'user-uuid' AND role = 'teacher';
 ```
 
-## 🔧 Utilities
+## Utilities
 
 ### Format Date
 ```typescript
@@ -528,7 +689,7 @@ export function SearchInput() {
 }
 ```
 
-## 📱 Responsive Design
+## Responsive Design
 
 ### Grid Layout
 ```typescript
@@ -551,7 +712,7 @@ export function SearchInput() {
 </div>
 ```
 
-## 🐛 Error Handling
+## Error Handling
 
 ### Try-Catch with Toast
 ```typescript
@@ -562,7 +723,9 @@ import { toast } from 'sonner'
 
 async function handleSubmit() {
   try {
-    const { error } = await supabase.from('courses').insert(data)
+    const { error } = await supabase
+      .from('courses')
+      .insert({ ...data, tenant_id: tenantId })
 
     if (error) throw error
 
@@ -576,7 +739,10 @@ async function handleSubmit() {
 
 ### Check for Errors
 ```typescript
-const { data, error } = await supabase.from('courses').select('*')
+const { data, error } = await supabase
+  .from('courses')
+  .select('*')
+  .eq('tenant_id', tenantId)
 
 if (error) {
   console.error('Database error:', error)
@@ -586,7 +752,7 @@ if (error) {
 // Now safe to use data
 ```
 
-## 🎨 Common Tailwind Patterns
+## Common Tailwind Patterns
 
 ```typescript
 // Container

@@ -60,6 +60,7 @@ Your Platform (lvh.me or yourdomain.com)
 - A [Stripe](https://stripe.com) account with Connect enabled
 - (Optional) A [Mailgun](https://mailgun.com) account for transactional email
 - (Optional) An [OpenAI](https://openai.com) API key for AI features
+- (Optional) MCP server for AI assistant integration (see `docs/MCP_SETUP.md`)
 
 ### 2b. Clone and install
 
@@ -386,14 +387,18 @@ When they share it and a new school signs up:
 
 ### Step 1: School owner creates their school
 
-They go to `yourdomain.com/en/create-school` and fill in:
+They go to `yourdomain.com/en/create-school` — a **unified create-school flow** with cross-subdomain authentication that handles:
 - School name
 - Subdomain slug (e.g. `myacademy` → `myacademy.yourdomain.com`)
-- Their email
+- Account creation or existing account login
 
 This creates a `tenants` row and makes them the school admin.
 
 They start on the **Free plan** (5 courses, 50 students, 10% transaction fee).
+
+### Step 1b: Onboarding wizard
+
+After school creation, admins are guided through an **onboarding wizard** that walks them through initial setup steps (branding, first course, payment configuration). This reduces the blank-slate experience and helps new schools get started quickly.
 
 ### Step 2: School admin sets up their school
 
@@ -435,9 +440,17 @@ A product is the thing students pay for. It can bundle multiple courses.
 
 Option A — Students find the school and join at `myacademy.yourdomain.com`
 
-Option B — Admin sends direct enrollment:
-- Go to `/dashboard/admin/users` → **Invite User** → enter their email
-- They get an email with a magic link to join
+Option B — Admin uses the **invitation system**:
+- Go to `/dashboard/admin/users` → **Invite User** → enter their email and role
+- They get an email invitation to join the school
+- Invitations can be managed (resend, revoke) from the admin panel
+
+### Step 5b: School admin creates a landing page
+
+Admins can build a public-facing landing page using the **Puck v0.20 visual editor**:
+- Go to `/dashboard/admin/landing-page` → drag-and-drop editor with 32 components
+- Choose from 8 built-in templates (Modern Academy, Minimal, Bold Creator, etc.)
+- Preview and publish — the landing page appears at the school's subdomain root
 
 ### Step 6: School upgrades their plan (when they outgrow Free)
 

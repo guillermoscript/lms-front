@@ -210,8 +210,8 @@ Referrer reward is delayed until first payment to prevent abuse.
 
 #### Integration Points
 
-- `app/[locale]/create-school/page.tsx` — reads `?ref=CODE` from query params
-- `app/actions/onboarding.ts` — calls `applyReferralCode(code, newTenantId)` after tenant creation
+- `app/[locale]/create-school/page.tsx` — **unified create-school flow** with cross-subdomain authentication; reads `?ref=CODE` from query params
+- `app/actions/onboarding.ts` — calls `applyReferralCode(code, newTenantId)` after tenant creation; also handles the **onboarding wizard** that guides new school admins through initial setup
 - `app/api/stripe/platform-webhook/route.ts` — calls `rewardReferrer()` on `invoice.paid`
 - School settings page — "Get your referral link" card (planned)
 

@@ -194,15 +194,18 @@ In a new Claude conversation:
 **Symptoms**: API returns 403 error
 
 **Solutions**:
-1. ✅ Verify your user role:
+1. ✅ Verify your user role — the `tenant_users` table is **authoritative** for roles within a tenant (not just `user_roles`):
    ```sql
+   -- Check tenant-scoped role (authoritative)
+   SELECT * FROM tenant_users WHERE user_id = '<your-user-id>';
+   -- Check global role (fallback)
    SELECT * FROM user_roles WHERE user_id = '<your-user-id>';
    ```
 2. ✅ If you're a student, ask an admin to upgrade your role
 3. ✅ Admins can assign roles via admin dashboard or SQL:
    ```sql
-   INSERT INTO user_roles (user_id, role)
-   VALUES ('<user-id>', 'teacher')
+   INSERT INTO tenant_users (user_id, tenant_id, role)
+   VALUES ('<user-id>', '<tenant-id>', 'teacher')
    ON CONFLICT DO NOTHING;
    ```
 
@@ -371,7 +374,7 @@ ALLOWED_ORIGIN=https://your-domain.com
 
 ## 📚 Available MCP Tools
 
-The server exposes 27 tools across 5 categories:
+The server currently exposes 27 tools across 5 categories (courses, lessons, exercises, exams, analytics). Future tools may cover landing pages, invitations, certificates, and other features as the platform evolves.
 
 ### Courses (5 tools)
 - `list_courses` - List your courses

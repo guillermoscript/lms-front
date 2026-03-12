@@ -179,5 +179,36 @@ npx playwright test -g "Authentication Flow"
 
 ---
 
-**Last Updated**: March 1, 2026
+---
+
+## Security-Focused E2E Test Suite
+
+In addition to the functional test suite above, there are 4 security-focused test files in `tests/playwright/`:
+
+| File | Tests | Priority | Focus |
+|------|-------|----------|-------|
+| `multi-tenant-isolation.spec.ts` | 8 | P0 | Cross-tenant data isolation, RLS enforcement |
+| `authentication-security.spec.ts` | 6 | P0 | Auth flows, session handling, role enforcement |
+| `payment-security.spec.ts` | 7 | P0 | Payment integrity, Stripe webhook validation |
+| `comprehensive-security-audit.spec.ts` | 26 | P1/P2 | Broad security coverage across all features |
+
+**Total security tests:** 47
+
+---
+
+## Test Coverage Gaps
+
+The following newer features do not yet have automated test coverage:
+
+- **Puck landing page builder** — visual editor, templates, publish flow
+- **Guided tours** — Driver.js onboarding tours for dashboards and editors
+- **Onboarding wizard** — new school setup wizard
+- **Invitation system** — user invitations with role assignment
+- **Aristotle AI tutor** — AI-powered student assistance
+- **Artifact/voice exercises** — interactive exercise types
+- **Block editor** — visual lesson content editor (22 block types)
+
+---
+
+**Last Updated**: March 2026
 **Tester**: Claude Code + Playwright

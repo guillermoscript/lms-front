@@ -1,12 +1,12 @@
 # Development Workflow
 
-## 🔄 Day-to-Day Development
+## Day-to-Day Development
 
 ### Starting Your Day
 
 1. **Pull latest changes**:
    ```bash
-   git pull origin v2-rebuild
+   git pull origin master
    ```
 
 2. **Install any new dependencies**:
@@ -26,7 +26,7 @@
    npm run dev
    ```
 
-## 📋 Feature Development Process
+## Feature Development Process
 
 ### 1. Plan the Feature
 
@@ -63,6 +63,7 @@ CREATE TABLE course_progress (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(tenant_id),
   progress_percentage NUMERIC DEFAULT 0,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, course_id)
@@ -84,9 +85,9 @@ supabase db push
 
 ### 3. Create the Page/Component
 
-**File structure**:
+**File structure** (all routes live under `app/[locale]/`):
 ```
-app/dashboard/student/courses/[courseId]/
+app/[locale]/dashboard/student/courses/[courseId]/
 ├── page.tsx          # Main server component
 ├── loading.tsx       # Loading state (optional)
 └── error.tsx         # Error boundary (optional)
@@ -95,6 +96,7 @@ app/dashboard/student/courses/[courseId]/
 **Example page.tsx**:
 ```typescript
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { CourseView } from './CourseView'
 
@@ -104,6 +106,7 @@ export default async function CoursePage({
   params: { courseId: string }
 }) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
 
   // Check auth
   const {
@@ -114,7 +117,7 @@ export default async function CoursePage({
     redirect('/auth/login')
   }
 
-  // Fetch data with RLS
+  // Fetch data with RLS — always filter by tenant_id
   const { data: course, error } = await supabase
     .from('courses')
     .select(`
@@ -131,8 +134,9 @@ export default async function CoursePage({
         enrolled_at
       )
     `)
+    .eq('tenant_id', tenantId)
     .eq('id', params.courseId)
-    .eq('lessons.lesson_completions.student_id', user.id)
+    .eq('lessons.lesson_completions.user_id', user.id)
     .eq('enrollments.user_id', user.id)
     .single()
 
@@ -223,17 +227,17 @@ export function CompleteLessonButton({
     if (!user) return
 
     if (isCompleted) {
-      // Uncomplete
+      // Uncomplete — lesson_completions uses user_id (NOT student_id)
       await supabase
         .from('lesson_completions')
         .delete()
         .eq('lesson_id', lessonId)
-        .eq('student_id', user.id)
+        .eq('user_id', user.id)
     } else {
-      // Complete
+      // Complete — lesson_completions uses user_id (NOT student_id)
       await supabase.from('lesson_completions').insert({
         lesson_id: lessonId,
-        student_id: user.id,
+        user_id: user.id,
       })
     }
 
@@ -252,26 +256,13 @@ export function CompleteLessonButton({
 ### 6. Test Locally
 
 **Manual testing checklist**:
-- ✅ Page loads without errors
-- ✅ Data displays correctly
-- ✅ Loading states work
-- ✅ Error states work
-- ✅ Interactions work (buttons, forms, etc.)
-- ✅ Mobile responsive
-- ✅ Role-based access works (test as different roles)
-
-**Test different roles**:
-```sql
--- Change your role temporarily
-UPDATE user_roles
-SET role = 'teacher'
-WHERE user_id = auth.uid();
-
--- Change back
-UPDATE user_roles
-SET role = 'student'
-WHERE user_id = auth.uid();
-```
+- Page loads without errors
+- Data displays correctly
+- Loading states work
+- Error states work
+- Interactions work (buttons, forms, etc.)
+- Mobile responsive
+- Role-based access works (test as different roles)
 
 ### 7. Commit Changes
 
@@ -288,10 +279,10 @@ git commit -m "feat: add course progress tracking for students
 - Show completed/total lessons count"
 
 # Push to branch
-git push origin v2-rebuild
+git push origin master
 ```
 
-## 🎨 UI Development Patterns
+## UI Development Patterns
 
 ### Using Shadcn Components
 
@@ -304,6 +295,45 @@ npx shadcn@latest add card
 npx shadcn@latest add button
 npx shadcn@latest add form
 npx shadcn@latest add dialog
+```
+
+### Base UI Component Gotchas
+
+This project uses `@base-ui/react` under the hood for several Shadcn components. This changes how certain props work:
+
+**Button** -- no `asChild` prop. Wrap `<Link>` around `<Button>` instead:
+```typescript
+// Correct
+<Link href="/dashboard">
+  <Button>Go to Dashboard</Button>
+</Link>
+
+// Wrong -- asChild does not exist on this Button
+<Button asChild>
+  <Link href="/dashboard">Go to Dashboard</Link>
+</Button>
+```
+
+**DropdownMenuTrigger** -- uses `render` prop, NOT `asChild`:
+```typescript
+// Correct
+<DropdownMenuTrigger render={<Button variant="outline">Open Menu</Button>} />
+
+// Wrong
+<DropdownMenuTrigger asChild>
+  <Button variant="outline">Open Menu</Button>
+</DropdownMenuTrigger>
+```
+
+**BreadcrumbLink** -- uses `render` prop:
+```typescript
+// Correct
+<BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
+
+// Wrong
+<BreadcrumbLink asChild>
+  <Link href="/dashboard">Dashboard</Link>
+</BreadcrumbLink>
 ```
 
 ### Component Organization
@@ -319,7 +349,8 @@ components/
 │   └── lesson-viewer.tsx
 ├── teacher/              # Teacher-specific components
 │   ├── course-form.tsx
-│   └── exam-builder.tsx
+│   ├── exam-builder.tsx
+│   └── block-editor/    # Rich content editor (see below)
 └── shared/               # Shared components
     ├── navbar.tsx
     └── footer.tsx
@@ -328,12 +359,12 @@ components/
 ### Styling Guidelines
 
 ```typescript
-// ✅ GOOD: Use Tailwind utility classes
+// GOOD: Use Tailwind utility classes
 <div className="flex items-center gap-4 p-6 bg-card border border-border rounded-lg">
   <h2 className="text-2xl font-bold">Title</h2>
 </div>
 
-// ✅ GOOD: Use cn() for conditional classes
+// GOOD: Use cn() for conditional classes
 import { cn } from '@/lib/utils'
 
 <div className={cn(
@@ -342,26 +373,49 @@ import { cn } from '@/lib/utils'
   isDisabled && "opacity-50 cursor-not-allowed"
 )}>
 
-// ❌ BAD: Inline styles
+// BAD: Inline styles
 <div style={{ padding: '24px', backgroundColor: '#fff' }}>
 ```
 
-## 🗄️ Database Development
+## Middleware
+
+**`proxy.ts` is the ONLY middleware file.** Do NOT create a `middleware.ts` file -- it will conflict.
+
+`proxy.ts` handles:
+1. Subdomain extraction and tenant resolution
+2. `x-tenant-id` header injection
+3. `tenant_users` membership checks (redirects non-members to `/join-school`)
+4. Role-based route guards (`/dashboard/student`, `/dashboard/teacher`, `/dashboard/admin`)
+5. i18n locale detection
+
+**Getting tenant context in server components:**
+```typescript
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+const tenantId = await getCurrentTenantId() // reads x-tenant-id header
+```
+
+## Database Development
 
 ### Writing Queries
 
+**All queries MUST filter by `tenant_id`** -- RLS is enabled on all tenant-scoped tables, but explicit filters are still required for clarity and performance.
+
 **Simple queries**:
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 // SELECT
 const { data } = await supabase
   .from('courses')
   .select('*')
+  .eq('tenant_id', tenantId)
   .eq('status', 'published')
 
 // INSERT
 const { data } = await supabase
   .from('courses')
-  .insert({ title: 'New Course', author_id: userId })
+  .insert({ title: 'New Course', author_id: userId, tenant_id: tenantId })
   .select()
   .single()
 
@@ -369,17 +423,22 @@ const { data } = await supabase
 const { data } = await supabase
   .from('courses')
   .update({ status: 'published' })
+  .eq('tenant_id', tenantId)
   .eq('id', courseId)
 
 // DELETE
 const { data } = await supabase
   .from('courses')
   .delete()
+  .eq('tenant_id', tenantId)
   .eq('id', courseId)
 ```
 
 **Complex queries with joins**:
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 const { data } = await supabase
   .from('courses')
   .select(`
@@ -396,6 +455,7 @@ const { data } = await supabase
     ),
     enrollments (count)
   `)
+  .eq('tenant_id', tenantId)
   .eq('status', 'published')
   .order('created_at', { ascending: false })
 ```
@@ -409,21 +469,97 @@ const { data } = await supabase.rpc('enroll_user', {
 })
 ```
 
+### Important Schema Notes
+
+- **`lesson_completions`** uses `user_id`, NOT `student_id`
+- **`exam_submissions`** uses `student_id` and `submission_date` (not `user_id`/`submitted_at`)
+- **`product_courses`** can have multiple rows per course -- NEVER use `.single()` on it
+- **`profiles`** is global (no `tenant_id` column) and has NO `email` column
+- **Transaction `status`** values: `pending`, `successful`, `failed`, `archived`, `canceled`, `refunded` (note: `successful`, not `succeeded`)
+
+### Client Imports
+
+- Server components / Route Handlers: `createClient()` from `@/lib/supabase/server`
+- Client components: `createClient()` from `@/lib/supabase/client`
+- Admin operations (bypass RLS): `createAdminClient()` from `@/lib/supabase/admin`
+
 ### Testing RLS Policies
 
 ```typescript
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
 // Test as different users
 const { data: studentData } = await supabase
   .from('courses')
   .select('*')
+  .eq('tenant_id', tenantId)
 
 // If RLS is working correctly:
 // - Students see only enrolled courses
 // - Teachers see only their courses
-// - Admins see all courses
+// - Admins see all courses within the tenant
 ```
 
-## 🧪 Testing Strategy
+## Multi-Tenant Testing
+
+### Local Subdomain Testing
+
+Set `NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000` in your `.env.local` for local subdomain testing. `lvh.me` resolves to `127.0.0.1`, so subdomains work without `/etc/hosts` changes.
+
+**Access different tenants locally:**
+```
+http://school-slug.lvh.me:3000        # Accesses tenant with slug "school-slug"
+http://another-school.lvh.me:3000     # Accesses tenant with slug "another-school"
+http://lvh.me:3000                    # Platform root (no tenant)
+```
+
+### Simulating Subdomains in Development
+
+If you cannot use `lvh.me`, pass the `x-tenant-slug` header to simulate a subdomain:
+```bash
+curl -H "x-tenant-slug: my-school" http://localhost:3000/api/courses
+```
+
+### Test Accounts
+
+| Email | Role | Tenant |
+|-------|------|--------|
+| `student@e2etest.com` | Student | Default School |
+| `owner@e2etest.com` | Admin | Default School |
+| `creator@codeacademy.com` | Admin | Code Academy Pro |
+| `alice@student.com` | Student | Code Academy Pro |
+
+All passwords: `password123`
+
+## Content Editors
+
+### Puck Landing Page Editor
+
+The platform includes a visual drag-and-drop landing page builder powered by Puck v0.20.
+
+- **Config**: `lib/puck/config.ts` -- 32 components across 4 categories
+- **Components**: `lib/puck/components/{primitives,layout,lms,navigation}/`
+- **Templates**: `lib/puck/templates/index.ts` -- 8 built-in templates (Blank, Modern Academy, Minimal, Bold Creator, Course Catalog, About, Contact, FAQ)
+- **Editor**: `components/admin/landing-page/puck-editor.tsx` (client component wrapping `<Puck>`)
+- **Renderer**: `components/public/landing-page/puck-page-renderer.tsx` (client component using `<Render>`)
+- **Asset upload**: `app/actions/admin/landing-page-assets.ts`
+- **Server actions**: `app/actions/admin/landing-pages.ts`
+- **DB storage**: `landing_pages.puck_data` (JSONB column)
+
+Layout components use `DropZone` from `@measured/puck` and must be client components.
+
+### Block Editor (Lesson Content)
+
+The block editor lets teachers create rich lesson content using a structured block system.
+
+- **Location**: `components/teacher/block-editor/`
+- **Block types**: 22 block types (text, code, image, video, quiz, etc.)
+- **Serialization**: Blocks serialize to MDX via `serializer.ts`
+- **Drag and drop**: Powered by `@dnd-kit` for block reordering
+- **Note**: Use `nanoid()` for IDs instead of `crypto.randomUUID()` (the latter fails on HTTP)
+
+## Testing Strategy
 
 ### Manual Testing
 
@@ -433,8 +569,8 @@ const { data: studentData } = await supabase
    - UI updates properly
 
 2. **Error Cases**:
-   - What if user isn't logged in?
-   - What if data doesn't exist?
+   - What if user is not logged in?
+   - What if data does not exist?
    - What if query fails?
 
 3. **Edge Cases**:
@@ -443,9 +579,28 @@ const { data: studentData } = await supabase
    - Special characters in input
    - Concurrent updates
 
+### E2E Tests
+
+E2E tests live in `tests/playwright/`. Run them with:
+```bash
+npx playwright test                    # Run all E2E tests
+npx playwright test --ui               # Interactive test runner
+npx playwright test -g "test name"     # Run single test
+```
+
+### Pre-Commit Checklist
+
+Before every commit, verify:
+- [ ] `npm run build` passes (TypeScript + lint check)
+- [ ] `tenant_id` filter on every database query
+- [ ] Tested with all relevant roles (student, teacher, admin)
+- [ ] Loading and error states handled
+- [ ] No console errors
+- [ ] Feature works on mobile (responsive)
+
 ### Testing Checklist
 
-Before committing:
+Before requesting review:
 - [ ] Feature works in Chrome
 - [ ] Feature works on mobile (responsive)
 - [ ] Loading states display correctly
@@ -454,17 +609,16 @@ Before committing:
 - [ ] No console errors
 - [ ] No TypeScript errors (`npm run build`)
 - [ ] RLS policies allow correct access
-- [ ] Unauthorized users can't access
+- [ ] Unauthorized users cannot access protected resources
 
-## 🔧 Debugging
+## Debugging
 
-### Common Issues & Solutions
+### Common Issues and Solutions
 
 **Issue**: "User not authenticated"
 ```typescript
-// Check session
-const { data: { session } } = await supabase.auth.getSession()
-console.log('Session:', session)
+// Use getUser() for server-verified auth (NOT getSession())
+const { data: { user } } = await supabase.auth.getUser()
 
 // Refresh if needed
 const { data } = await supabase.auth.refreshSession()
@@ -472,10 +626,14 @@ const { data } = await supabase.auth.refreshSession()
 
 **Issue**: Query returns empty array
 ```typescript
-// Check RLS policies
+const supabase = await createClient()
+const tenantId = await getCurrentTenantId()
+
+// Check RLS policies -- make sure tenant_id filter is included
 const { data, error } = await supabase
   .from('courses')
   .select('*')
+  .eq('tenant_id', tenantId)
 
 console.log('Error:', error) // Will show RLS violations
 ```
@@ -486,6 +644,7 @@ console.log('Error:', error) // Will show RLS violations
 const { data: course } = await supabase
   .from('courses')
   .select('*')
+  .eq('tenant_id', tenantId)
   .eq('id', courseId)
   .single()
 
@@ -496,6 +655,12 @@ if (!course) {
 // Now safe to use course.title, etc.
 ```
 
+**Issue**: After switching tenants, data is stale
+```typescript
+// After a tenant switch, always refresh the session to get updated JWT claims
+await supabase.auth.refreshSession()
+```
+
 ### Using Browser DevTools
 
 1. **Network tab**: Check Supabase API calls
@@ -503,7 +668,7 @@ if (!course) {
 3. **React DevTools**: Inspect component state
 4. **Application tab**: Check cookies/localStorage
 
-## 📦 Adding Dependencies
+## Adding Dependencies
 
 ```bash
 # Install dependency
@@ -522,9 +687,9 @@ git commit -m "chore: add package-name dependency"
 - Check if functionality exists in existing deps
 - Read package documentation
 - Check bundle size impact
-- Verify it's actively maintained
+- Verify it is actively maintained
 
-## 🚀 Deployment Workflow
+## Deployment Workflow
 
 ### Before Deploying
 
@@ -551,12 +716,12 @@ git commit -m "chore: add package-name dependency"
 supabase db push --linked
 
 # Or via Supabase Dashboard
-# → Database → Migrations → Run pending migrations
+# -> Database -> Migrations -> Run pending migrations
 ```
 
 ### Vercel Deployment
 
-**Automatic** (when pushing to main):
+**Automatic** (when pushing to master):
 - Vercel detects push
 - Runs `npm run build`
 - Deploys to production
@@ -566,7 +731,7 @@ supabase db push --linked
 vercel deploy
 ```
 
-## 📝 Code Review Checklist
+## Code Review Checklist
 
 Before requesting review:
 - [ ] Code follows existing patterns
@@ -578,34 +743,41 @@ Before requesting review:
 - [ ] Mobile responsive
 - [ ] TypeScript types are correct
 - [ ] RLS policies tested
+- [ ] All queries filter by `tenant_id`
 - [ ] Documentation updated (if needed)
 
-## 🎯 Best Practices
+## Best Practices
 
-### DO ✅
+### DO
 - Use TypeScript strictly
 - Handle loading and error states
 - Make components responsive
 - Use Shadcn components when available
+- Filter all queries by `tenant_id`
 - Test as different roles
 - Write meaningful commit messages
 - Keep functions small and focused
 - Use descriptive variable names
+- Use `getUser()` for auth checks (server-verified)
 
-### DON'T ❌
+### DO NOT
 - Skip error handling
-- Use `any` type
+- Use `any` type (except for Stripe API v2025 type workarounds)
 - Bypass RLS for convenience
 - Commit `.env.local`
 - Leave console.logs in production code
 - Over-engineer simple features
 - Duplicate code without good reason
 - Ignore TypeScript errors
+- Create a `middleware.ts` file (use `proxy.ts` only)
+- Use `.single()` on `product_courses` queries
+- Use `student_id` on `lesson_completions` (use `user_id`)
 
-## 📚 Resources
+## Resources
 
 - **Next.js Docs**: https://nextjs.org/docs
 - **Supabase Docs**: https://supabase.com/docs
 - **Shadcn UI**: https://ui.shadcn.com
 - **Tailwind CSS**: https://tailwindcss.com
+- **Puck Editor**: https://puckeditor.com
 - **Project Docs**: Check `docs/` folder

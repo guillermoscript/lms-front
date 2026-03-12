@@ -2,13 +2,13 @@
 
 **Implementation**: next-intl
 **Supported Languages**: English (en), Spanish (es)
-**Status**: ✅ Fully Configured
+**Status**: Fully Configured
 
 ---
 
 ## Overview
 
-This LMS platform supports multiple languages using `next-intl`, a powerful i18n library for Next.js 13+. Users can switch between languages dynamically, and their preference is preserved across sessions.
+This LMS platform supports multiple languages using `next-intl`, a powerful i18n library for Next.js. Users can switch between languages dynamically, and their preference is preserved across sessions.
 
 ---
 
@@ -16,8 +16,8 @@ This LMS platform supports multiple languages using `next-intl`, a powerful i18n
 
 | Code | Language | Status |
 |------|----------|--------|
-| `en` | English  | ✅ Complete |
-| `es` | Español  | ✅ Complete |
+| `en` | English  | Complete |
+| `es` | Español  | Complete |
 
 **Default Language**: English (`en`)
 
@@ -32,8 +32,10 @@ This LMS platform supports multiple languages using `next-intl`, a powerful i18n
 ├── components/
 │   └── language-switcher.tsx   # Language switcher component
 ├── i18n.ts                     # i18n configuration
-└── middleware.ts               # Locale detection middleware
+└── proxy.ts                    # Locale detection & tenant resolution middleware
 ```
+
+> **Note:** `proxy.ts` is the ONLY middleware file in this project. Do not create a `middleware.ts` file — it will conflict with `proxy.ts`.
 
 ---
 
@@ -43,28 +45,46 @@ This LMS platform supports multiple languages using `next-intl`, a powerful i18n
 All translation files are located in the `/messages` directory with the naming convention `{locale}.json`.
 
 ### Structure
-Translations are organized hierarchically by feature:
+Translations are organized hierarchically by feature. The `messages/en.json` and `messages/es.json` files contain **100+ top-level namespaces**. Key groups include:
 
 ```json
 {
-  "common": { ... },      // Common UI elements
-  "auth": { ... },        // Authentication
+  "common": { ... },          // Common UI elements
+  "auth": { ... },            // Authentication
   "dashboard": {
-    "student": { ... },   // Student dashboard
-    "teacher": { ... },   // Teacher dashboard
-    "admin": { ... }      // Admin dashboard
+    "student": { ... },       // Student dashboard
+    "teacher": { ... },       // Teacher dashboard
+    "admin": { ... }          // Admin dashboard
   },
-  "course": { ... },      // Course-related
-  "lesson": { ... },      // Lesson-related
-  "exam": { ... },        // Exam-related
-  "review": { ... },      // Reviews
-  "enrollment": { ... },  // Enrollments
-  "user": { ... },        // User management
-  "transaction": { ... }, // Transactions
-  "stats": { ... },       // Statistics
-  "actions": { ... },     // Actions/buttons
-  "validation": { ... },  // Form validation
-  "messages": { ... }     // System messages
+  "course": { ... },          // Course-related
+  "lesson": { ... },          // Lesson-related
+  "exam": { ... },            // Exam-related
+  "review": { ... },          // Reviews
+  "enrollment": { ... },      // Enrollments
+  "user": { ... },            // User management
+  "transaction": { ... },     // Transactions
+  "stats": { ... },           // Statistics
+  "actions": { ... },         // Actions/buttons
+  "validation": { ... },      // Form validation
+  "messages": { ... },        // System messages
+  "aristotle": { ... },       // AI tutor
+  "puck": { ... },            // Puck visual editor
+  "builder": { ... },         // Page builder
+  "landing": { ... },         // Landing pages
+  "certificates": { ... },    // Certificate system
+  "achievements": { ... },    // Gamification achievements
+  "levels": { ... },          // Gamification levels
+  "store": { ... },           // Gamification store
+  "billing": { ... },         // School billing
+  "plans": { ... },           // Platform plans
+  "features": { ... },        // Feature gating
+  "limits": { ... },          // Plan limits
+  "appearance": { ... },      // Appearance settings
+  "branding": { ... },        // Tenant branding
+  "theme": { ... },           // Theme settings
+  "onboarding": { ... },      // Onboarding flows
+  "invitations": { ... },     // User invitations
+  "tours": { ... }            // Guided tours
 }
 ```
 
@@ -172,30 +192,30 @@ export default function Layout() {
 - Dropdown selector with language names
 - Current language highlighted
 - Preserves current path when switching
-- Updates URL with locale prefix (e.g., `/en/dashboard` → `/es/dashboard`)
+- Updates URL with locale prefix (e.g., `/en/dashboard` to `/es/dashboard`)
 
 ---
 
 ## URL Structure
 
-### Default (English)
+The `[locale]` segment is **always present** in all routes. All app routes live under `app/[locale]/`.
+
+### English
 ```
-/dashboard/student              # No prefix for default locale
-/dashboard/teacher
-/auth/login
+/en/dashboard/student
+/en/dashboard/teacher
+/en/auth/login
 ```
 
 ### Spanish
 ```
-/es/dashboard/student           # Spanish prefix
+/es/dashboard/student
 /es/dashboard/teacher
 /es/auth/login
 ```
 
 ### Configuration
-The middleware uses `localePrefix: 'as-needed'`:
-- Default locale (English): No prefix
-- Other locales (Spanish): Prefixed with locale code
+The `proxy.ts` middleware handles locale detection and routing. The `[locale]` segment is always present in the URL for both default and non-default locales.
 
 ---
 
@@ -221,7 +241,7 @@ Create `messages/fr.json` by copying `messages/en.json` and translating all stri
 
 ### Step 3: Update Middleware
 
-Edit `middleware.ts`:
+Edit `proxy.ts` to include the new locale in its matcher and detection logic:
 
 ```typescript
 export const config = {
@@ -285,18 +305,28 @@ export const config = {
 - `success`, `saveSuccess`, `deleteSuccess`, `errorOccurred`
 - `confirmDelete`, `unsavedChanges`
 
+### Newer Namespaces
+- **`aristotle`** — AI tutor interface
+- **`puck`** / **`builder`** / **`landing`** — Visual page builder and landing pages
+- **`certificates`** — Certificate generation and verification
+- **`achievements`** / **`levels`** / **`store`** — Gamification system
+- **`billing`** / **`plans`** / **`features`** / **`limits`** — Monetization and feature gating
+- **`appearance`** / **`branding`** / **`theme`** — Tenant theming and customization
+- **`onboarding`** — Onboarding flows for new schools and users
+- **`invitations`** — User invitation system
+- **`tours`** — Guided product tours
+
 ---
 
 ## Best Practices
 
 ### 1. **Always Use Translation Keys**
-❌ **Don't**: Hardcode strings
+Do not hardcode strings:
 ```typescript
+// Wrong
 <h1>Welcome to the Dashboard</h1>
-```
 
-✅ **Do**: Use translation keys
-```typescript
+// Correct
 <h1>{t('dashboard.student.welcome')}</h1>
 ```
 
@@ -316,16 +346,17 @@ Group related translations under a common namespace:
 Use clear, semantic key names:
 ```json
 {
-  "submitReview": "Submit Review",        // ✅ Clear
-  "btn1": "Submit Review"                 // ❌ Unclear
+  "submitReview": "Submit Review",
+  "btn1": "Submit Review"
 }
 ```
+The first is clear; the second is not.
 
 ### 4. **Avoid Nested Components in Translations**
 Translation strings should be plain text, not JSX:
 ```json
 {
-  "terms": "I agree to the Terms and Conditions"  // ✅
+  "terms": "I agree to the Terms and Conditions"
 }
 ```
 
@@ -408,7 +439,7 @@ diff <(jq -r 'keys' messages/en.json) <(jq -r 'keys' messages/es.json)
 **Symptom**: Language resets on page refresh
 
 **Solution**:
-- The middleware handles persistence via URL
+- The `proxy.ts` middleware handles persistence via URL
 - Ensure all internal links use the locale-aware router
 - Don't use regular `<a>` tags, use Next.js `<Link>`
 
@@ -502,7 +533,7 @@ export default function StudentDashboard() {
 - **next-intl Documentation**: https://next-intl-docs.vercel.app/
 - **Translation Files**: `/messages/`
 - **Configuration**: `/i18n.ts`
-- **Middleware**: `/middleware.ts`
+- **Middleware**: `/proxy.ts` (the only middleware file — handles locale detection, tenant resolution, auth, and role routing)
 
 ---
 
@@ -517,5 +548,5 @@ For translation contributions or issues:
 
 ---
 
-**Last Updated**: January 31, 2026
-**Version**: 1.0.0
+**Last Updated**: March 11, 2026
+**Version**: 2.0.0

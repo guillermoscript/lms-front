@@ -33,6 +33,7 @@ Implemented the full business monetization stack for the LMS platform:
 | Certificates | Basic | Custom | Custom | Custom | Custom |
 | Analytics | — | Basic | Advanced | Advanced | Advanced |
 | AI Auto-Grading | — | — | Yes | Yes | Yes |
+| Voice Exercises | — | — | Yes | Yes | Yes |
 | Custom Branding | — | — | — | Yes | Yes |
 | Custom Domain | — | — | — | Yes | Yes |
 | API Access | — | — | — | — | Yes |
@@ -115,6 +116,7 @@ All plan checks should go through this function, NOT hardcoded constants.
 | `/dashboard/admin/billing` | Billing dashboard: current plan, usage meters, pending requests |
 | `/dashboard/admin/billing/upgrade` | Plan comparison + checkout (Stripe or bank transfer) |
 | `/dashboard/admin/revenue` | Revenue dashboard with summary cards and trends |
+| `/dashboard/admin/landing-page` | Landing page builder using **Puck v0.20** visual editor (feature-gated to Starter+) |
 | `/platform-pricing` | **Public** pricing page for school owners (no auth required) |
 
 ### Components
@@ -134,7 +136,7 @@ All plan checks should go through this function, NOT hardcoded constants.
 
 | File | Purpose |
 |------|---------|
-| `lib/plans/features.ts` | `PlanFeatures`/`PlanLimits` types, `canAccessFeature()`, `isAtLimit()`, `FEATURE_REQUIRED_PLAN` map |
+| `lib/plans/features.ts` | `PlanFeatures`/`PlanLimits` types, `canAccessFeature()`, `isAtLimit()`, `FEATURE_REQUIRED_PLAN` map (includes `voice_exercises: 'pro'`, `ai_grading: 'pro'`, `landing_pages: 'starter'`) |
 | `lib/hooks/use-plan-features.ts` | Client hook: calls `get-plan-features` edge function, returns `{ plan, features, limits, loading }` |
 | `lib/currency.ts` | `toCents()`/`fromCents()`/`formatCurrency()`, zero-decimal handling, `SUPPORTED_CURRENCIES`, `getRoutingNumberLabel()` |
 

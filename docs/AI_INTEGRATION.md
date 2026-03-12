@@ -1,1303 +1,338 @@
 # AI Integration Guide
 
-**Status**: 📋 Documentation Complete (Implementation Pending)
-**AI Provider**: Google Gemini 2.0 Flash (Recommended)
-**Alternative**: OpenAI GPT-4o
+**Status**: Fully implemented
+**AI SDK**: Vercel AI SDK (`ai` package) with OpenAI provider (`@ai-sdk/openai`)
+**Model**: `gpt-5-mini` (centrally configured in `lib/ai/config.ts`)
+**Streaming**: `UIMessageStreamResponse` for chat endpoints
+**Limits**: `maxDuration: 120s`, `maxSteps: 10`
 
 ---
 
-## Overview
+## Architecture
 
-This LMS platform uses AI to enhance learning experiences in three key areas:
+### Standard AI Flow
 
-1. **Exercise Chat** - Help students understand exercises and debug code
-2. **Exam Auto-Grading** - Evaluate exam submissions and provide feedback
-3. **Course Q&A** - Answer student questions about course content
+```
+1. User triggers AI action (chat message, submit artifact, record audio)
+   ↓
+2. Client sends request to API route
+   ↓
+3. API route authenticates user via supabase.auth.getUser()
+   ↓
+4. API route verifies enrollment + tenant ownership
+   ↓
+5. API route fetches context from Supabase (exercise, lesson, course structure)
+   ↓
+6. Vercel AI SDK calls OpenAI with context + system prompt
+   ↓
+7. Streaming response sent back via UIMessageStreamResponse (chat)
+   or generateText returns structured output (evaluations)
+   ↓
+8. On completion, save results to database (onFinish callback or explicit insert)
+```
 
-All AI features use streaming responses for better UX and are integrated with existing database tables via RLS-protected queries.
+### Central Configuration
+
+**File**: `lib/ai/config.ts`
+
+```typescript
+import { openai } from '@ai-sdk/openai'
+
+export const AI_CONFIG = {
+    defaultModel: openai('gpt-5-mini'),
+    maxDuration: 120,
+    maxSteps: 10,
+}
+
+export const AI_MODELS = {
+    tutor: openai('gpt-5-mini'),
+    coach: openai('gpt-5-mini'),
+    grader: openai('gpt-5-mini'),
+    aristotle: openai('gpt-5-mini'),
+}
+```
+
+All AI endpoints import from `AI_MODELS` — changing the model in one place updates the entire platform.
+
+### AI Tools (Function Calling)
+
+**File**: `lib/ai/tools.ts`
+
+The AI SDK `tool()` function defines two tools that chat endpoints can invoke:
+
+- **`markExerciseCompleted`** — Inserts into `exercise_completions` and `exercise_evaluations` when a student demonstrates mastery. Accepts `feedback` (string) and `score` (0-100).
+- **`markLessonCompleted`** — Inserts into `lesson_completions` when a student finishes a lesson task. Accepts `feedback` (string).
+
+Both tools receive a context object with `exerciseId`, `lessonId`, `userId`, `courseId`, `tenantId`, and `exerciseType`.
 
 ---
 
-## Architecture Pattern
+## AI Features
 
-### Standard AI Integration Flow
+### 1. Aristotle AI Tutor
 
-```
-1. User triggers AI action (submit exam, ask question)
-   ↓
-2. Client component sends request to API route
-   ↓
-3. API route validates user/permissions
-   ↓
-4. API route fetches context from Supabase (RLS-protected)
-   ↓
-5. API route calls AI model with context + prompt
-   ↓
-6. AI streams response back to client
-   ↓
-7. On completion, save results to database
-```
+Course-level AI tutor that provides context-aware assistance to students.
 
-### Key Principles
+**Components** (`components/aristotle/`):
+- `aristotle-panel.tsx` — Floating chat panel UI
+- `aristotle-provider.tsx` — React context provider for Aristotle state
+- `aristotle-trigger.tsx` — Button to open/close the panel
+- `aristotle-study-section.tsx` — Study section integration
+- `aristotle-study-tab.tsx` — Tab-based study view
+- `aristotle-context-setter.tsx` — Sets current page context (lesson, exercise)
+- `session-list.tsx` — Past session history
 
-- **Server-Side AI Calls**: Never expose API keys to client
-- **RLS Protection**: Use server-side Supabase client with service role only for admin operations
-- **Streaming Responses**: Use ReadableStream for real-time feedback
-- **Context Injection**: Include relevant course/lesson/exercise data in prompts
-- **Error Handling**: Graceful fallbacks if AI fails
-- **Cost Monitoring**: Log token usage and implement rate limits
+**API Routes**:
+- `POST /api/chat/aristotle` — Main chat endpoint (streaming)
+- `POST /api/chat/aristotle/restart` — Start a new session
 
----
+**Key Files**:
+- `lib/ai/aristotle-prompt.ts` — Builds system prompt from teacher config, course structure, student progress, session memory, and current page context
+- `lib/ai/aristotle-summary.ts` — Generates session summaries via `generateText()` when sessions end; summaries are injected into future sessions as memory
 
-## 1. Exercise Chat Assistant
+**How It Works**:
+1. Verifies enrollment in the course (RLS + explicit check)
+2. Checks that Aristotle is enabled via `course_ai_tutors` table
+3. Fetches course structure (lessons, exercises, exams), student progress (completions, scores), and past session summaries in parallel
+4. Gets or creates a session in `aristotle_sessions` (30-minute idle timeout)
+5. Detects current page context (lesson or exercise) from URL
+6. Builds a rich system prompt via `buildAristotlePrompt()` with teacher persona, course structure, progress, memory, and behavioral guardrails
+7. Streams response via `streamText()` + `toUIMessageStreamResponse()`
+8. Saves both user and assistant messages to `aristotle_messages`
 
-### Purpose
-Help students understand exercises, debug code, and learn concepts without giving direct answers.
-
-### User Flow
-
-```
-Student viewing exercise → Clicks "Get Help" →
-Opens chat interface → Types question →
-AI provides hints/explanations →
-Student tries again → Repeats until solved
-```
-
-### Database Tables
-
-**Existing Tables** (already in schema):
-- `exercises` - Exercise content and instructions
-- `exercise_messages` - Chat message history
-
-**Schema**:
-```sql
--- exercises table
-CREATE TABLE exercises (
-  exercise_id SERIAL PRIMARY KEY,
-  lesson_id INTEGER REFERENCES lessons(id),
-  title TEXT NOT NULL,
-  description TEXT,
-  instructions TEXT,
-  starter_code TEXT,
-  solution_code TEXT,
-  difficulty TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- exercise_messages table
-CREATE TABLE exercise_messages (
-  message_id SERIAL PRIMARY KEY,
-  exercise_id INTEGER REFERENCES exercises(exercise_id),
-  user_id UUID REFERENCES auth.users(id),
-  content TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'user' or 'assistant'
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### API Route Implementation
-
-**File**: `app/api/chat/exercise/route.ts`
-
-```typescript
-import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { NextRequest, NextResponse } from 'next/server'
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
-
-export async function POST(request: NextRequest) {
-  try {
-    const { exerciseId, message, userId } = await request.json()
-
-    // Validate inputs
-    if (!exerciseId || !message || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // Get authenticated user
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user || user.id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get exercise context (RLS allows students to view exercises in enrolled courses)
-    const { data: exercise, error: exerciseError } = await supabase
-      .from('exercises')
-      .select(`
-        *,
-        lesson:lessons(
-          title,
-          content,
-          course:courses(title, description)
-        )
-      `)
-      .eq('exercise_id', exerciseId)
-      .single()
-
-    if (exerciseError || !exercise) {
-      return NextResponse.json({ error: 'Exercise not found' }, { status: 404 })
-    }
-
-    // Get previous chat history
-    const { data: chatHistory } = await supabase
-      .from('exercise_messages')
-      .select('role, content')
-      .eq('exercise_id', exerciseId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-
-    // Build AI prompt with context
-    const systemPrompt = `You are a helpful programming tutor for an online learning platform.
-
-**Your Role:**
-- Help students understand programming concepts
-- Provide hints and guidance, not direct answers
-- Debug code and explain errors
-- Encourage problem-solving
-
-**Guidelines:**
-- Never provide the complete solution code
-- Ask leading questions to guide thinking
-- Explain concepts clearly with examples
-- Be encouraging and patient
-- If student is stuck, give progressively stronger hints
-
-**Current Exercise Context:**
-Course: ${exercise.lesson.course.title}
-Lesson: ${exercise.lesson.title}
-Exercise: ${exercise.title}
-Description: ${exercise.description}
-Instructions: ${exercise.instructions}
-
-${exercise.starter_code ? `Starter Code:\n\`\`\`\n${exercise.starter_code}\n\`\`\`` : ''}
-`
-
-    // Build chat messages
-    const messages = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      ...(chatHistory || []).map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      })),
-      { role: 'user', parts: [{ text: message }] },
-    ]
-
-    // Save user message to database
-    await supabase.from('exercise_messages').insert({
-      exercise_id: exerciseId,
-      user_id: userId,
-      content: message,
-      role: 'user',
-    })
-
-    // Generate AI response (streaming)
-    const chat = model.startChat({ history: messages.slice(0, -1) })
-    const result = await chat.sendMessageStream(message)
-
-    // Create readable stream
-    const encoder = new TextEncoder()
-    let fullResponse = ''
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text()
-            fullResponse += text
-            controller.enqueue(encoder.encode(text))
-          }
-
-          // Save assistant response to database
-          await supabase.from('exercise_messages').insert({
-            exercise_id: exerciseId,
-            user_id: userId,
-            content: fullResponse,
-            role: 'assistant',
-          })
-
-          controller.close()
-        } catch (error) {
-          console.error('Stream error:', error)
-          controller.error(error)
-        }
-      },
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-      },
-    })
-  } catch (error) {
-    console.error('Exercise chat error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate response' },
-      { status: 500 }
-    )
-  }
-}
-```
-
-### Client Component
-
-**File**: `components/student/exercise-chat.tsx`
-
-```typescript
-'use client'
-
-import { useState, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { IconSend, IconSparkles } from '@tabler/icons-react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-interface ExerciseChatProps {
-  exerciseId: number
-  userId: string
-}
-
-export function ExerciseChat({ exerciseId, userId }: ExerciseChatProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Load chat history on mount
-  useEffect(() => {
-    loadChatHistory()
-  }, [exerciseId])
-
-  async function loadChatHistory() {
-    const response = await fetch(`/api/chat/exercise/history?exerciseId=${exerciseId}`)
-    if (response.ok) {
-      const data = await response.json()
-      setMessages(data.messages || [])
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const userMessage = input.trim()
-    setInput('')
-    setIsLoading(true)
-
-    // Add user message to UI
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }])
-
-    try {
-      // Send to API
-      const response = await fetch('/api/chat/exercise', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exerciseId,
-          userId,
-          message: userMessage,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Failed to get response')
-
-      // Stream response
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantMessage = ''
-
-      while (reader) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const text = decoder.decode(value)
-        assistantMessage += text
-
-        // Update UI with streaming text
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1]
-          if (lastMessage?.role === 'assistant') {
-            return [...prev.slice(0, -1), { role: 'assistant', content: assistantMessage }]
-          }
-          return [...prev, { role: 'assistant', content: assistantMessage }]
-        })
-      }
-    } catch (error) {
-      console.error('Chat error:', error)
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <IconSparkles className="h-5 w-5 text-primary" />
-          AI Exercise Assistant
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Messages */}
-          <div className="h-96 overflow-y-auto space-y-4 p-4 border rounded-lg">
-            {messages.length === 0 && (
-              <p className="text-muted-foreground text-center">
-                Ask me anything about this exercise! I'm here to help.
-              </p>
-            )}
-
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.role === 'assistant' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                )}
-                <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
-                {msg.role === 'user' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>You</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question about this exercise..."
-              className="resize-none"
-              rows={2}
-              disabled={isLoading}
-            />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
-              <IconSend className="h-4 w-4" />
-            </Button>
-          </form>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-```
+**Database Tables**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`
 
 ---
 
-## 2. Exam Auto-Grading
+### 2. Exercise AI Chat
 
-### Purpose
-Automatically evaluate student exam submissions and provide detailed feedback for each question.
+AI coaching for exercise submissions. Guides students through exercises without giving direct answers.
 
-### User Flow
+**Component**: `components/exercises/exercise-chat.tsx`
 
-```
-Student completes exam → Clicks "Submit" →
-Shows loading state → AI evaluates answers →
-Saves score + feedback to database →
-Redirects to results page with AI feedback
-```
+**API Routes**:
+- `POST /api/chat/exercises/student` — Main chat endpoint (streaming)
+- `POST /api/chat/exercises/student/restart` — Reset conversation
 
-### Database Tables
+**How It Works**:
+1. Fetches exercise details including custom `system_prompt` from the exercise record
+2. Uses `PROMPTS.exerciseCoach()` from `lib/ai/prompts.ts` to build system prompt
+3. Provides the `markExerciseCompleted` tool so the AI can mark completion when the student demonstrates mastery
+4. Messages saved to `exercise_messages` table
+5. Tenant validated via course FK join
 
-**Existing Tables**:
-- `exams` - Exam metadata
-- `exam_questions` - Individual questions
-- `question_options` - Multiple choice options
-- `exam_submissions` - Student submissions with AI feedback
-
-**Key Schema**:
-```sql
-CREATE TABLE exam_submissions (
-  submission_id SERIAL PRIMARY KEY,
-  exam_id INTEGER REFERENCES exams(exam_id),
-  student_id UUID REFERENCES auth.users(id),
-  answers JSONB NOT NULL, -- { "question_id": "answer" }
-  score NUMERIC,
-  ai_data JSONB, -- AI feedback per question
-  submitted_at TIMESTAMPTZ DEFAULT NOW(),
-  graded_at TIMESTAMPTZ
-);
-```
-
-**Existing Database Function** (already implemented):
-```sql
-CREATE FUNCTION save_exam_feedback(
-  submission_id INTEGER,
-  exam_id INTEGER,
-  student_id UUID,
-  answers JSONB,
-  overall_feedback TEXT,
-  score NUMERIC
-) RETURNS VOID AS $$
-BEGIN
-  UPDATE exam_submissions
-  SET
-    ai_data = jsonb_build_object(
-      'overall_feedback', overall_feedback,
-      'graded_at', NOW()
-    ),
-    score = score,
-    graded_at = NOW()
-  WHERE submission_id = submission_id;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### API Route Implementation
-
-**File**: `app/api/exams/submit/route.ts`
-
-```typescript
-import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { NextRequest, NextResponse } from 'next/server'
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
-
-export async function POST(request: NextRequest) {
-  try {
-    const { examId, answers } = await request.json()
-
-    // Get authenticated user
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get exam with questions
-    const { data: exam, error: examError } = await supabase
-      .from('exams')
-      .select(`
-        *,
-        questions:exam_questions(
-          question_id,
-          question_text,
-          question_type,
-          correct_answer,
-          points,
-          options:question_options(option_id, option_text, is_correct)
-        )
-      `)
-      .eq('exam_id', examId)
-      .single()
-
-    if (examError || !exam) {
-      return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
-    }
-
-    // Create submission first (to get submission_id)
-    const { data: submission, error: submissionError } = await supabase
-      .from('exam_submissions')
-      .insert({
-        exam_id: examId,
-        student_id: user.id,
-        answers: answers,
-      })
-      .select('submission_id')
-      .single()
-
-    if (submissionError || !submission) {
-      return NextResponse.json({ error: 'Failed to create submission' }, { status: 500 })
-    }
-
-    // Build AI grading prompt
-    const gradingPrompt = `You are an expert educator grading a student's exam submission.
-
-**Exam Title:** ${exam.title}
-**Total Questions:** ${exam.questions.length}
-
-**Your Task:**
-1. Evaluate each answer carefully
-2. For multiple choice: Check if correct option was selected
-3. For true/false: Check if correct
-4. For free text: Evaluate based on accuracy and completeness
-5. Provide constructive feedback for each question
-6. Calculate total score as percentage
-
-**Output Format (JSON):**
-{
-  "questions": [
-    {
-      "question_id": 1,
-      "student_answer": "...",
-      "is_correct": true/false,
-      "points_earned": 5,
-      "feedback": "Excellent! Your answer demonstrates..."
-    }
-  ],
-  "total_score": 85,
-  "overall_feedback": "Great work overall! You showed strong understanding..."
-}
-
-**Questions and Student Answers:**
-
-${exam.questions
-  .map((q, idx) => {
-    const studentAnswer = answers[q.question_id]
-    return `
-**Question ${idx + 1}** (${q.points} points)
-Type: ${q.question_type}
-Question: ${q.question_text}
-
-${
-  q.question_type === 'multiple_choice'
-    ? `Options:\n${q.options.map((opt) => `- ${opt.option_text} ${opt.is_correct ? '(CORRECT)' : ''}`).join('\n')}`
-    : q.question_type === 'true_false'
-      ? `Correct Answer: ${q.correct_answer}`
-      : `Expected concepts: ${q.correct_answer || 'Use your judgment'}`
-}
-
-Student Answer: ${studentAnswer || '(No answer provided)'}
-`
-  })
-  .join('\n---\n')}
-
-Return ONLY valid JSON, no additional text.`
-
-    // Call AI for grading
-    const result = await model.generateContent(gradingPrompt)
-    const responseText = result.response.text()
-
-    // Parse AI response
-    let gradingData
-    try {
-      // Extract JSON from response (handle markdown code blocks)
-      const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || responseText.match(/\{[\s\S]*\}/)
-      const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText
-      gradingData = JSON.parse(jsonText)
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', responseText)
-      return NextResponse.json({ error: 'AI grading failed' }, { status: 500 })
-    }
-
-    // Save feedback using database function
-    const { error: feedbackError } = await supabase.rpc('save_exam_feedback', {
-      submission_id: submission.submission_id,
-      exam_id: examId,
-      student_id: user.id,
-      answers: answers,
-      overall_feedback: gradingData.overall_feedback,
-      score: gradingData.total_score,
-    })
-
-    if (feedbackError) {
-      console.error('Failed to save feedback:', feedbackError)
-      return NextResponse.json({ error: 'Failed to save feedback' }, { status: 500 })
-    }
-
-    // Also save per-question feedback in ai_data
-    await supabase
-      .from('exam_submissions')
-      .update({
-        ai_data: {
-          overall_feedback: gradingData.overall_feedback,
-          question_feedback: gradingData.questions,
-          graded_at: new Date().toISOString(),
-        },
-      })
-      .eq('submission_id', submission.submission_id)
-
-    return NextResponse.json({
-      success: true,
-      submissionId: submission.submission_id,
-      score: gradingData.total_score,
-    })
-  } catch (error) {
-    console.error('Exam submission error:', error)
-    return NextResponse.json({ error: 'Failed to submit exam' }, { status: 500 })
-  }
-}
-```
-
-### Client Integration
-
-**File**: `app/dashboard/student/courses/[courseId]/exams/[examId]/page.tsx`
-
-```typescript
-'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
-
-export default function TakeExamPage({ exam, userId }: { exam: any; userId: string }) {
-  const [answers, setAnswers] = useState<Record<number, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
-
-  async function handleSubmit() {
-    // Confirm submission
-    if (!confirm('Are you sure you want to submit your exam? This cannot be undone.')) {
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      const response = await fetch('/api/exams/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          examId: exam.exam_id,
-          answers,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Submission failed')
-
-      const data = await response.json()
-
-      toast.success(`Exam submitted! Score: ${data.score}%`)
-      router.push(`/dashboard/student/courses/${exam.course_id}/exams/${exam.exam_id}/results`)
-    } catch (error) {
-      console.error('Submission error:', error)
-      toast.error('Failed to submit exam. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1>{exam.title}</h1>
-
-      {exam.questions.map((question: any, idx: number) => (
-        <Card key={question.question_id}>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              Question {idx + 1} ({question.points} points)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p>{question.question_text}</p>
-
-            {question.question_type === 'multiple_choice' && (
-              <RadioGroup
-                value={answers[question.question_id] || ''}
-                onValueChange={(value) =>
-                  setAnswers({ ...answers, [question.question_id]: value })
-                }
-              >
-                {question.options.map((option: any) => (
-                  <div key={option.option_id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.option_id.toString()} id={`option-${option.option_id}`} />
-                    <Label htmlFor={`option-${option.option_id}`}>{option.option_text}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-
-            {question.question_type === 'true_false' && (
-              <RadioGroup
-                value={answers[question.question_id] || ''}
-                onValueChange={(value) =>
-                  setAnswers({ ...answers, [question.question_id]: value })
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="true" id={`q${question.question_id}-true`} />
-                  <Label htmlFor={`q${question.question_id}-true`}>True</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="false" id={`q${question.question_id}-false`} />
-                  <Label htmlFor={`q${question.question_id}-false`}>False</Label>
-                </div>
-              </RadioGroup>
-            )}
-
-            {question.question_type === 'free_text' && (
-              <Textarea
-                value={answers[question.question_id] || ''}
-                onChange={(e) =>
-                  setAnswers({ ...answers, [question.question_id]: e.target.value })
-                }
-                placeholder="Type your answer here..."
-                rows={4}
-              />
-            )}
-          </CardContent>
-        </Card>
-      ))}
-
-      <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
-      </Button>
-    </div>
-  )
-}
-```
+**Supports all exercise types** — the exercise's `system_prompt` field lets teachers customize AI behavior per exercise.
 
 ---
 
-## 3. Course Q&A Chat
+### 3. Artifact Exercise Evaluation
 
-### Purpose
-General course chatbot that students can use to ask questions about course content, concepts, or get clarification.
+Non-streaming AI evaluation of HTML/CSS/JS artifact submissions.
 
-### Database Tables
+**API Route**: `POST /api/exercises/artifact/evaluate`
 
-**New Table Needed**:
-```sql
-CREATE TABLE course_chat_messages (
-  message_id SERIAL PRIMARY KEY,
-  course_id INTEGER REFERENCES courses(course_id),
-  user_id UUID REFERENCES auth.users(id),
-  content TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'user' or 'assistant'
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+**How It Works**:
+1. Validates exercise is type `artifact` and belongs to tenant
+2. Verifies enrollment
+3. **Rate limited**: max 10 evaluations per hour per exercise+user (checked via `exercise_evaluations` table)
+4. Uses `generateText()` with `AI_MODELS.grader` to evaluate the submission
+5. Parses structured JSON response: `{ score, feedback, strengths, improvements }`
+6. Inserts into `exercise_evaluations` and `exercise_completions` (if passed)
+7. Returns `{ score, feedback, passed, strengths, improvements, passingScore }`
 
--- RLS Policies
-CREATE POLICY "Students view own course chat"
-ON course_chat_messages FOR SELECT
-TO authenticated
-USING (user_id = auth.uid());
+**Passing score** is configurable per exercise via `exercise_config.passing_score` (default: 70).
 
-CREATE POLICY "Students insert own course chat"
-ON course_chat_messages FOR INSERT
-TO authenticated
-WITH CHECK (user_id = auth.uid());
-```
+---
 
-### API Route
+### 4. Voice/Audio Exercise Evaluation
 
-**File**: `app/api/chat/course/route.ts`
+Speech-to-text transcription followed by AI coaching evaluation.
 
-```typescript
-import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { NextRequest, NextResponse } from 'next/server'
+**API Routes**:
+- `POST /api/exercises/media/upload-url` — Get a signed upload URL for audio recording
+- `POST /api/exercises/media/signed-url` — Get a signed URL for playback
+- `POST /api/exercises/media/analyze` — Transcribe + AI evaluate
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+**Speech Pipeline** (`lib/speech/`):
+- `types.ts` — Defines `TranscriptionResult`, `SpeechMetrics`, `SpeechEvaluation`, `STTProvider`, `SpeechCoach` interfaces
+- `registry.ts` — Registry of STT providers and speech coaches
+- `pipeline.ts` — Orchestrates STT → metrics computation → AI evaluation
+- `providers/assemblyai.ts` — AssemblyAI STT provider
+- `providers/vapi.ts` — Vapi STT provider
+- `coaches/openai.ts` — OpenAI-based speech coach
+- `coaches/gemini.ts` — Gemini-based speech coach
 
-export async function POST(request: NextRequest) {
-  try {
-    const { courseId, message, userId } = await request.json()
+**How It Works**:
+1. Student records audio via `MediaRecorderComponent`, uploads to `exercise-media` Supabase bucket
+2. Creates `exercise_media_submissions` record with status `pending`
+3. On analyze: atomically transitions status `pending` → `processing` (prevents concurrent analysis)
+4. Gets signed URL for the stored audio file
+5. Runs speech pipeline: STT provider transcribes audio → computes metrics (WPM, filler words, pauses) → AI coach evaluates
+6. Speech metrics include: WPM, filler word count, pause count, long pause count, average pause duration, duration
+7. AI evaluation returns: score, strengths, improvements, focus_next, annotated_transcript
+8. Saves to `exercise_media_submissions`, `exercise_evaluations`, and `exercise_completions` (if passed)
 
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+**Configurable per exercise**: STT provider (`assemblyai` or `vapi`), AI coach (`openai` or `gemini`), rubric criteria (filler words, pace, structure, confidence), topic prompt, passing score.
 
-    if (authError || !user || user.id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+---
 
-    // Get course context with all lessons
-    const { data: course } = await supabase
-      .from('courses')
-      .select(`
-        *,
-        lessons(title, content, sequence)
-      `)
-      .eq('course_id', courseId)
-      .single()
+### 5. Lesson Task AI Chat
 
-    if (!course) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
-    }
+AI tutoring for lesson activities/tasks.
 
-    // Build course knowledge base
-    const courseContext = `
-**Course:** ${course.title}
-**Description:** ${course.description}
+**API Routes**:
+- `POST /api/chat/lesson-task` — Main chat endpoint (streaming)
+- `POST /api/chat/lesson-task/restart` — Reset conversation
 
-**Lessons:**
-${course.lessons
-  .sort((a, b) => a.sequence - b.sequence)
-  .map((lesson) => `- ${lesson.title}: ${lesson.content.substring(0, 200)}...`)
-  .join('\n')}
-`
+**How It Works**:
+1. Fetches lesson with associated `lessons_ai_tasks` record (task instructions + custom system prompt)
+2. Uses `PROMPTS.lessonTutor()` to build system prompt with lesson content and task instructions
+3. Provides the `markLessonCompleted` tool so the AI can mark the lesson done when the student demonstrates understanding
+4. Messages saved to `lessons_ai_task_messages` table
+5. Tenant validated via course FK join
 
-    const systemPrompt = `You are a knowledgeable course assistant for an online learning platform.
+---
 
-**Your Role:**
-- Answer questions about course content
-- Clarify concepts covered in lessons
-- Provide additional examples and explanations
-- Help students understand relationships between topics
-- Encourage continued learning
+### 6. Exam Auto-Grading
 
-**Guidelines:**
-- Base answers on course content when possible
-- If question is outside course scope, say so and offer to help with course topics
-- Use clear, educational language
-- Provide examples when helpful
-- Be encouraging and supportive
+AI grading for exam submissions, with configurable persona and feedback style.
 
-**Course Context:**
-${courseContext}
-`
+**API Route**: `POST /api/teacher/exams/[examId]/grade` — Teacher-initiated grading for individual submissions
 
-    // Get chat history
-    const { data: chatHistory } = await supabase
-      .from('course_chat_messages')
-      .select('role, content')
-      .eq('course_id', courseId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(20) // Last 20 messages
+**Server Action**: `app/actions/exam-grading.ts` — `gradeExamWithAI()` function, also callable from student exam submission flow
 
-    // Save user message
-    await supabase.from('course_chat_messages').insert({
-      course_id: courseId,
-      user_id: userId,
-      content: message,
-      role: 'user',
-    })
+**How It Works**:
+1. Separates questions into auto-gradable (multiple choice, true/false) and free-text
+2. Auto-grades MC/TF programmatically with 100% confidence
+3. For free-text questions: builds a prompt using configurable AI persona, feedback tone, and detail level
+4. Uses `generateText()` with structured output to grade each free-text answer
+5. Awards partial credit based on rubric, grading criteria, and expected keywords
+6. Saves results via `save_exam_feedback` RPC
+7. If AI grading is disabled, marks free-text questions as "pending teacher review"
 
-    // Build chat messages
-    const messages = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      ...(chatHistory || []).map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      })),
-      { role: 'user', parts: [{ text: message }] },
-    ]
+**AI Configuration** (per exam, stored in `exam_ai_configs`):
+- **Personas**: `professional_educator`, `friendly_tutor`, `strict_professor`, `supportive_mentor`
+- **Feedback tones**: `encouraging`, `neutral`, `constructive`, `challenging`
+- **Detail levels**: `brief`, `moderate`, `detailed`, `comprehensive`
+- **Custom grading prompt**: Teacher-provided additional instructions
 
-    // Generate streaming response
-    const chat = model.startChat({ history: messages.slice(0, -1) })
-    const result = await chat.sendMessageStream(message)
+**Teacher Override**: `POST /api/teacher/submissions/[submissionId]/override` — Teachers can override AI-assigned scores and feedback.
 
-    const encoder = new TextEncoder()
-    let fullResponse = ''
+---
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text()
-            fullResponse += text
-            controller.enqueue(encoder.encode(text))
-          }
+### 7. Exercise Templates & Preview
 
-          // Save assistant response
-          await supabase.from('course_chat_messages').insert({
-            course_id: courseId,
-            user_id: userId,
-            content: fullResponse,
-            role: 'assistant',
-          })
+Reusable prompt templates for exercises, with teacher preview capability.
 
-          controller.close()
-        } catch (error) {
-          console.error('Stream error:', error)
-          controller.error(error)
-        }
-      },
-    })
+**API Routes**:
+- `GET /api/teacher/templates` — List templates
+- `POST /api/teacher/templates` — Create template
+- `GET /api/teacher/templates/[id]` — Get template
+- `PUT /api/teacher/templates/[id]` — Update template
+- `POST /api/teacher/preview/exercise` — Preview exercise AI behavior without affecting student data
+- `POST /api/teacher/preview/lesson-task` — Preview lesson task AI behavior
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-      },
-    })
-  } catch (error) {
-    console.error('Course chat error:', error)
-    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 })
-  }
-}
-```
+**Preview prompts** (from `lib/ai/prompts.ts`) clearly indicate preview mode and instruct the AI to explain evaluation criteria rather than submitting scores.
+
+---
+
+## Prompt System
+
+**File**: `lib/ai/prompts.ts`
+
+All prompts are centralized in the `PROMPTS` object:
+
+| Prompt | Used By | Purpose |
+|--------|---------|---------|
+| `exerciseCoach()` | Exercise chat | Guides students through exercises using exercise title, description, instructions, and custom system prompt |
+| `lessonTutor()` | Lesson task chat | Tutors students on lesson content with task instructions |
+| `lessonTaskTemplate()` | Lesson task chat (structured variant) | More structured tutoring prompt with step-by-step guidance |
+| `speechCoach()` | Voice exercise evaluation | Evaluates speech with metrics (WPM, fillers, pauses) and rubric |
+| `examGrader()` | Exam grading API route | Grades individual free-text answers with scoring criteria |
+| `previewExercise()` | Teacher preview | Exercise preview mode |
+| `previewLesson()` | Teacher preview | Lesson task preview mode |
+
+Aristotle has its own prompt builder in `lib/ai/aristotle-prompt.ts` due to the complexity of its context assembly.
+
+---
+
+## Feature Gating
+
+| Feature | Required Plan |
+|---------|--------------|
+| AI Grading | `pro` or above |
+| Voice Exercises | `pro` or above |
+
+Feature gating is enforced via `get_plan_features(_tenant_id)` RPC and the `<FeatureGate>` component.
+
+---
+
+## Security
+
+### Authentication & Authorization
+- Every AI endpoint calls `supabase.auth.getUser()` (server-verified, not JWT-based)
+- Enrollment verification before AI access (checks `enrollments` table with `status = 'active'` and `tenant_id`)
+- Tenant isolation: all queries filter by `tenant_id`, validated via course FK joins
+
+### Rate Limiting
+- Artifact evaluations: max 10 per hour per exercise+user (enforced via `exercise_evaluations` count)
+- Speech analysis: atomic `pending` → `processing` status transition prevents concurrent analysis of the same submission
+
+### API Key Protection
+- All AI calls happen server-side in API routes and server actions
+- `OPENAI_API_KEY` is never exposed to the client
+- No AI SDK imports in client components
+
+---
+
+## Database Tables (AI-Specific)
+
+| Table | Purpose |
+|-------|---------|
+| `course_ai_tutors` | Per-course Aristotle configuration (persona, teaching approach, boundaries, enabled flag) |
+| `aristotle_sessions` | Aristotle chat sessions with summary and topics |
+| `aristotle_messages` | Individual messages within Aristotle sessions |
+| `exercise_messages` | Exercise chat message history |
+| `exercise_evaluations` | Unified evaluation records across all exercise types (text, simulation, audio, video) |
+| `exercise_completions` | Exercise completion records with scores |
+| `exercise_media_submissions` | Audio/video submission records with status, AI evaluation, and score |
+| `lessons_ai_tasks` | Lesson task configuration (instructions, system prompt) |
+| `lessons_ai_task_messages` | Lesson task chat message history |
+| `exam_ai_configs` | Per-exam AI grading configuration (persona, tone, detail level, custom prompt) |
+| `exam_submissions` | Exam submissions with `ai_data` JSONB and `review_status` |
+| `exam_scores` | Exam score records with feedback |
+| `exam_answers` | Individual exam answers with `is_correct` and `feedback` |
 
 ---
 
 ## Environment Variables
 
-Add to `.env.local`:
-
 ```bash
-# Google Gemini API
-GOOGLE_GENERATIVE_AI_API_KEY=your_google_api_key_here
-
-# Alternative: OpenAI (if using GPT-4 instead)
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=sk-...              # Required for all AI features
 ```
 
-**Get API Keys:**
-- **Google Gemini**: https://aistudio.google.com/app/apikey
-- **OpenAI**: https://platform.openai.com/api-keys
-
----
-
-## Model Comparison
-
-### Google Gemini 2.0 Flash (Recommended)
-
-**Pros:**
-- Extremely fast (low latency)
-- High quality responses
-- Large context window (1M tokens)
-- Free tier available (generous limits)
-- Good at code understanding
-- Supports streaming
-
-**Cons:**
-- Newer model (less battle-tested)
-- Rate limits on free tier
-
-**Pricing (Paid Tier):**
-- Input: $0.075 per 1M tokens
-- Output: $0.30 per 1M tokens
-
-### OpenAI GPT-4o
-
-**Pros:**
-- Very high quality responses
-- Excellent at complex reasoning
-- Well-documented
-- Reliable and stable
-
-**Cons:**
-- More expensive
-- Slower than Gemini Flash
-- Smaller context window (128K tokens)
-
-**Pricing:**
-- Input: $2.50 per 1M tokens
-- Output: $10.00 per 1M tokens
-
-**Recommendation**: Use **Gemini 2.0 Flash** for best cost/performance ratio.
-
----
-
-## Rate Limiting & Cost Management
-
-### Implement Rate Limits
-
-**Per User Rate Limiting**:
-
-```typescript
-// lib/rate-limit.ts
-import { createClient } from '@/lib/supabase/server'
-
-export async function checkRateLimit(userId: string, action: string, limit: number = 20) {
-  const supabase = await createClient()
-
-  // Count actions in last hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-
-  const { count } = await supabase
-    .from('ai_usage_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('action', action)
-    .gte('created_at', oneHourAgo)
-
-  if (count && count >= limit) {
-    throw new Error(`Rate limit exceeded. Max ${limit} ${action} requests per hour.`)
-  }
-
-  // Log this usage
-  await supabase.from('ai_usage_logs').insert({
-    user_id: userId,
-    action,
-    timestamp: new Date().toISOString(),
-  })
-
-  return true
-}
-```
-
-**Usage Logging Table**:
-
-```sql
-CREATE TABLE ai_usage_logs (
-  log_id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id),
-  action TEXT NOT NULL, -- 'exercise_chat', 'exam_grading', 'course_chat'
-  tokens_used INTEGER,
-  cost_usd NUMERIC(10, 6),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_ai_usage_user_action ON ai_usage_logs(user_id, action, created_at);
-```
-
-### Monitor Costs
-
-Create admin dashboard page to track AI costs:
-
-```typescript
-// app/dashboard/admin/ai-usage/page.tsx
-const { data: usage } = await supabase
-  .from('ai_usage_logs')
-  .select('*')
-  .gte('created_at', thirtyDaysAgo)
-
-const totalCost = usage?.reduce((sum, log) => sum + (log.cost_usd || 0), 0) || 0
-const totalRequests = usage?.length || 0
-```
-
----
-
-## Testing AI Integration
-
-### Manual Testing Checklist
-
-**Exercise Chat:**
-- [ ] Chat interface loads correctly
-- [ ] Messages stream in real-time
-- [ ] Chat history persists across sessions
-- [ ] AI provides helpful hints (not direct answers)
-- [ ] Error handling works (network failure, API error)
-
-**Exam Grading:**
-- [ ] Submission creates record in database
-- [ ] AI evaluates all question types correctly
-- [ ] Feedback is constructive and accurate
-- [ ] Score calculation is correct
-- [ ] Results page displays feedback properly
-
-**Course Q&A:**
-- [ ] Chat answers questions about course content
-- [ ] Handles off-topic questions gracefully
-- [ ] Maintains conversation context
-- [ ] Chat history loads on page refresh
-
-### Automated Testing (Optional)
-
-```typescript
-// tests/ai/exercise-chat.spec.ts
-import { test, expect } from '@playwright/test'
-
-test('exercise chat works', async ({ page }) => {
-  await page.goto('/dashboard/student/courses/1/exercises/1')
-
-  // Type question
-  await page.fill('textarea[placeholder*="Ask a question"]', 'How do I start?')
-  await page.click('button[type="submit"]')
-
-  // Wait for response
-  await expect(page.locator('text=AI Exercise Assistant')).toBeVisible()
-  await expect(page.locator('.assistant-message')).toBeVisible({ timeout: 10000 })
-})
-```
-
----
-
-## Security Considerations
-
-### API Key Protection
-
-**Never expose API keys to client:**
-- ✅ Store in `.env.local` (server-side only)
-- ✅ Call AI from API routes (server-side)
-- ❌ Never import API keys in client components
-- ❌ Never send API keys to browser
-
-### User Authorization
-
-**Always verify user permissions:**
-
-```typescript
-// In every API route
-const supabase = await createClient()
-const { data: { user }, error } = await supabase.auth.getUser()
-
-if (error || !user) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-}
-
-// Verify user has access to the resource (course, exercise, exam)
-const { data: enrollment } = await supabase
-  .from('enrollments')
-  .select('*')
-  .eq('user_id', user.id)
-  .eq('course_id', courseId)
-  .eq('status', 'active')
-  .single()
-
-if (!enrollment) {
-  return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-}
-```
-
-### Input Sanitization
-
-**Prevent prompt injection:**
-
-```typescript
-function sanitizeInput(text: string): string {
-  // Remove system-level instructions
-  return text
-    .replace(/system:|assistant:|user:/gi, '')
-    .replace(/```/g, '')
-    .trim()
-}
-
-const sanitizedMessage = sanitizeInput(message)
-```
-
----
-
-## Deployment
-
-### Environment Setup
-
-**Production `.env` variables:**
-
+Optional (for speech pipeline):
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# AI
-GOOGLE_GENERATIVE_AI_API_KEY=your-gemini-api-key
-
-# Optional
-OPENAI_API_KEY=sk-...
-```
-
-### Vercel Deployment
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy
-
-**Vercel Configuration**:
-- Build Command: `npm run build`
-- Output Directory: `.next`
-- Install Command: `npm install`
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue 1: "API key not found" error**
-
-**Solution**: Verify environment variable is set correctly
-```bash
-echo $GOOGLE_GENERATIVE_AI_API_KEY
-# Should output your key
-```
-
-**Issue 2: Streaming not working**
-
-**Solution**: Ensure API route returns proper streaming response
-```typescript
-return new Response(stream, {
-  headers: {
-    'Content-Type': 'text/plain; charset=utf-8',
-    'Transfer-Encoding': 'chunked',
-  },
-})
-```
-
-**Issue 3: AI gives direct answers instead of hints**
-
-**Solution**: Improve system prompt to emphasize guidance over answers
-```typescript
-const systemPrompt = `CRITICAL: Never provide complete solutions.
-Always ask leading questions and provide hints only.`
-```
-
-**Issue 4: Rate limit exceeded**
-
-**Solution**: Implement caching for common questions
-```typescript
-// Check cache before calling AI
-const cached = await redis.get(`chat:${exerciseId}:${hash(message)}`)
-if (cached) return cached
+ASSEMBLYAI_API_KEY=...             # AssemblyAI STT provider
+VAPI_API_KEY=...                   # Vapi STT provider (alternative)
 ```
 
 ---
 
-## Next Steps
+## Key File Index
 
-### Implementation Order
-
-1. **Create Database Tables** (course_chat_messages)
-2. **Install AI SDK** (`npm install @google/generative-ai`)
-3. **Implement Exam Grading First** (highest priority)
-4. **Add Exercise Chat** (enhances learning)
-5. **Add Course Q&A** (nice to have)
-6. **Setup Rate Limiting** (prevent abuse)
-7. **Create Admin Monitoring** (track costs)
-8. **Test Thoroughly** (all scenarios)
-
-### Future Enhancements
-
-- [ ] Code execution for programming exercises
-- [ ] Image analysis for diagram/visual questions
-- [ ] Voice-to-text for audio input
-- [ ] Personalized learning recommendations
-- [ ] Automated course content generation
-- [ ] Plagiarism detection
-- [ ] Student progress predictions
-
----
-
-## Support & Resources
-
-**Documentation:**
-- Google Gemini Docs: https://ai.google.dev/gemini-api/docs
-- OpenAI API Docs: https://platform.openai.com/docs
-
-**Community:**
-- Next.js Discord: https://discord.gg/nextjs
-- Supabase Discord: https://discord.supabase.com
-
-**Internal Docs:**
-- `docs/DATABASE_SCHEMA.md` - Database tables and relationships
-- `docs/AUTH.md` - Authentication flows
-- `docs/API_ROUTES.md` - API endpoint reference
-
----
-
-**Last Updated**: January 31, 2026
-**Version**: 1.0.0
-**Status**: Ready for Implementation
+| File | Purpose |
+|------|---------|
+| `lib/ai/config.ts` | Central model configuration |
+| `lib/ai/prompts.ts` | All prompt templates |
+| `lib/ai/tools.ts` | AI function-calling tools (markExerciseCompleted, markLessonCompleted) |
+| `lib/ai/aristotle-prompt.ts` | Aristotle system prompt builder |
+| `lib/ai/aristotle-summary.ts` | Session summary generation |
+| `lib/speech/types.ts` | Speech pipeline type definitions |
+| `lib/speech/registry.ts` | STT provider and speech coach registry |
+| `lib/speech/pipeline.ts` | Speech analysis orchestration |
+| `lib/speech/providers/` | STT provider implementations (AssemblyAI, Vapi) |
+| `lib/speech/coaches/` | Speech coach implementations (OpenAI, Gemini) |
+| `app/actions/exam-grading.ts` | Server action for exam AI grading with configurable personas |
+| `components/aristotle/` | Aristotle UI components (panel, provider, trigger, context setter) |
+| `components/exercises/exercise-chat.tsx` | Exercise chat UI component |
