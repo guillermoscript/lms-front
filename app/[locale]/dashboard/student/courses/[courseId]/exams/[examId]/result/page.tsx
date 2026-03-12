@@ -4,7 +4,7 @@ import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { IconTrophy, IconCheck, IconX, IconClock, IconMessageChatbot, IconArrowLeft, IconUserCheck, IconHourglass } from '@tabler/icons-react'
+import { IconTrophy, IconCheck, IconX, IconClock, IconMessageChatbot, IconArrowLeft, IconUserCheck, IconHourglass, IconCertificate } from '@tabler/icons-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -87,6 +87,14 @@ export default async function ExamResultPage({ params }: PageProps) {
     if (!submission) {
         redirect(`/dashboard/student/courses/${courseId}/exams/${examId}`)
     }
+
+    // Check if a certificate was issued for this course
+    const { data: certificate } = await supabase
+        .from('certificates')
+        .select('certificate_id, verification_code')
+        .eq('user_id', user.id)
+        .eq('course_id', parseInt(courseId))
+        .maybeSingle()
 
     const score = submission.score ?? submission.exam_scores?.[0]?.score
     const aiData = submission.ai_data as any
@@ -228,6 +236,29 @@ export default async function ExamResultPage({ params }: PageProps) {
                                 Your exam has been reviewed and finalized by your teacher.
                             </p>
                         </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Certificate Banner */}
+            {certificate && (
+                <Card className="border-2 border-emerald-200 dark:border-emerald-800 shadow-lg overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+                    <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                        <div className="p-2.5 sm:p-3 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                            <IconCertificate className="h-5 w-5 sm:h-7 sm:w-7" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-200">Certificate Earned!</h3>
+                            <p className="text-emerald-800 dark:text-emerald-300 text-sm">
+                                Congratulations! You have completed all requirements for this course and earned a certificate.
+                            </p>
+                        </div>
+                        <Link href={`/verify/${certificate.verification_code}`}>
+                            <Button variant="outline" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold gap-2 whitespace-nowrap">
+                                <IconCertificate className="h-4 w-4" />
+                                View Certificate
+                            </Button>
+                        </Link>
                     </CardContent>
                 </Card>
             )}
