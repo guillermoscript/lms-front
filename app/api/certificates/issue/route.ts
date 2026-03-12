@@ -47,20 +47,22 @@ export async function POST(request: NextRequest) {
     const studentId = targetUserId || user.id
 
     if (isTeacherIssue) {
-      // Verify teacher/admin role
-      const { data: roles } = await supabase
-        .from('user_roles')
+      // Verify teacher/admin role via tenant_users (authoritative)
+      const { data: tenantUser } = await supabase
+        .from('tenant_users')
         .select('role')
         .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle()
 
-      const isTeacherOrAdmin = roles?.some(r => r.role === 'teacher' || r.role === 'admin')
+      const isTeacherOrAdmin = tenantUser?.role === 'teacher' || tenantUser?.role === 'admin'
       if (!isTeacherOrAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
       // Verify teacher owns this course (unless admin)
-      const isAdmin = roles?.some(r => r.role === 'admin')
-      if (!isAdmin && course.author_id !== user.id) {
+      if (tenantUser?.role !== 'admin' && course.author_id !== user.id) {
         return NextResponse.json({ error: 'Not authorized for this course' }, { status: 403 })
       }
     }
@@ -203,11 +205,11 @@ async function simplifiedIssuance(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('full_name, username')
     .eq('id', userId)
     .single()
 
-  const studentName = profile?.full_name || profile?.email || 'Student'
+  const studentName = profile?.full_name || profile?.username || 'Student'
 
   // Get template (optional)
   const { data: template } = await supabase

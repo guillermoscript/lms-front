@@ -12,9 +12,11 @@ import {
   IconCheck,
   IconLoader2,
   IconCircleCheck,
+  IconCertificate,
 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
+import { toast } from 'sonner'
 
 interface LessonNavigationProps {
   lessonId: number
@@ -36,8 +38,10 @@ export function LessonNavigation({
   requireSequentialCompletion = false,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
+  const tGamification = useTranslations('gamification')
   const [loading, setLoading] = useState(false)
   const [completed, setCompleted] = useState(isCompleted)
+  const [certificateCode, setCertificateCode] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const router = useRouter()
   const supabase = createClient()
@@ -69,11 +73,11 @@ export function LessonNavigation({
       await supabase.from('lesson_completions').insert({
         lesson_id: lessonId,
         user_id: user.id,
-        tenant_id: tenantId,
       })
 
       setCompleted(true)
       setLoading(false)
+      toast.success(tGamification('xpAwarded.lesson_completion'))
 
       // Celebrate completion with a subtle confetti burst from the button
       if (buttonRef.current) {
@@ -92,6 +96,26 @@ export function LessonNavigation({
         })
       }
 
+      // Check if a certificate was auto-issued after this lesson completion
+      const { data: cert } = await supabase
+        .from('certificates')
+        .select('certificate_id, verification_code')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .maybeSingle()
+
+      if (cert?.verification_code) {
+        setCertificateCode(cert.verification_code)
+        toast.success('Certificate Earned!', {
+          description: 'You have completed all requirements and earned a certificate for this course.',
+          duration: 8000,
+          action: {
+            label: 'View',
+            onClick: () => router.push(`/verify/${cert.verification_code}`),
+          },
+        })
+      }
+
       if (nextLessonId) {
         startTransition(() => {
           router.push(`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`)
@@ -103,6 +127,23 @@ export function LessonNavigation({
   }
 
   return (
+    <>
+    {certificateCode && (
+      <div className="shrink-0 border-t border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 px-3 py-2 sm:px-4 sm:py-3">
+        <div className="flex items-center justify-center gap-3 max-w-4xl mx-auto">
+          <IconCertificate className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            Certificate earned for this course!
+          </span>
+          <Link href={`/verify/${certificateCode}`}>
+            <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold gap-1.5">
+              <IconCertificate className="h-3.5 w-3.5" />
+              View
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )}
     <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-6">
       <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
         {/* Previous */}
@@ -175,5 +216,6 @@ export function LessonNavigation({
         </div>
       </div>
     </footer>
+    </>
   )
 }

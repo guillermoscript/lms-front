@@ -169,6 +169,7 @@ export async function issueCertificate(
                 completion_data: eligibility.completion,
                 issued_at: issuedAt.toISOString(),
                 expires_at: expiresAt?.toISOString(),
+                tenant_id: template.course.tenant_id,
             })
             .select()
             .single();
@@ -195,7 +196,7 @@ export async function issueCertificate(
                 signatureTitle: template.signature_title,
                 signatureImage: template.signature_image_url,
                 score: eligibility.completion.averageExamScore,
-                designConfig: template.design_config,
+                designConfig: template.design_settings,
             },
             certificate.certificate_id,
             supabase
@@ -210,7 +211,7 @@ export async function issueCertificate(
                 issuedDate: issuedAt,
                 issuerName,
                 issuerLogo: template.logo_url,
-                badgeColor: template.design_config?.primaryColor,
+                badgeColor: template.design_settings?.primary_color,
                 credential: signedCredential,
             },
             certificate.certificate_id,
@@ -242,6 +243,7 @@ export async function issueCertificate(
         // 15. Send notification to student
         await supabase.from('notifications').insert({
             user_id: userId,
+            tenant_id: template.course.tenant_id,
             notification_type: 'certificate_issued',
             message: `Congratulations! You've earned a certificate for completing ${template.course.title}`,
             metadata: {
