@@ -552,6 +552,34 @@
             "certificateInfo": "Certificate Information",
             "issuerDetails": "Issuer Details",
             "colorTheme": "Color Theme",
+            "logoLabel": "Organization Logo",
+            "logoDescription": "Upload your school or organization logo to appear on certificates",
+            "uploadLogo": "Upload Logo",
+            "changeLogo": "Change Logo",
+            "signature": "Signature",
+            "signatureNameLabel": "Signer Name",
+            "signatureNamePlaceholder": "e.g. Dr. Jane Smith",
+            "signatureTitleLabel": "Signer Title",
+            "signatureTitlePlaceholder": "e.g. Director of Education",
+            "signatureImageLabel": "Signature Image",
+            "signatureImageDescription": "Upload a signature image (transparent PNG recommended)",
+            "uploadSignature": "Upload Signature",
+            "changeSignature": "Change Signature",
+            "completionCriteria": "Completion Criteria",
+            "minLessonCompletion": "Minimum Lesson Completion",
+            "minLessonCompletionHint": "Percentage of lessons that must be completed to earn the certificate",
+            "minExamPassScore": "Minimum Exam Pass Score",
+            "minExamPassScoreHint": "Minimum score required on exams to qualify for the certificate",
+            "requiresAllExams": "Require All Exams",
+            "requiresAllExamsHint": "Students must pass every exam in the course, not just the average",
+            "expiration": "Certificate Validity",
+            "enableExpiration": "Set Expiration Date",
+            "enableExpirationHint": "Certificates will expire after the specified number of days",
+            "expirationDays": "Valid For",
+            "days": "days",
+            "expirationPreview": "Approximately {years} year(s)",
+            "uploadSuccess": "Image uploaded successfully",
+            "uploadError": "Failed to upload image",
             "preview": {
               "title": "Certificate Preview",
               "header": "Certificate of Completion",
@@ -3125,6 +3153,11 @@
         "leaderboardLocked": "Leaderboard — Upgrade to Basic",
         "achievementsLocked": "Achievements — Upgrade to Basic",
         "storeLocked": "Point Store — Upgrade to Professional"
+      },
+      "xpAwarded": {
+        "lesson_completion": "+100 XP — Lesson completed!",
+        "exercise_completion": "+50 XP — Exercise completed!",
+        "exam_submission": "+200 XP — Exam submitted!"
       }
     },
     "paymentRequestForm": {
@@ -3299,6 +3332,12 @@
         "advanced": "Advanced"
       }
     }
+  },
+  "courseSearch": {
+    "placeholder": "Search courses...",
+    "allCategories": "All",
+    "noResults": "No courses found matching your search.",
+    "clearFilters": "Clear filters"
   },
   "coursePublicDetails": {
     "breadcrumbs": {

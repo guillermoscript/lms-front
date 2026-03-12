@@ -552,6 +552,34 @@
             "certificateInfo": "Información del Certificado",
             "issuerDetails": "Detalles del Emisor",
             "colorTheme": "Tema de Color",
+            "logoLabel": "Logo de la Organización",
+            "logoDescription": "Sube el logo de tu escuela u organización para que aparezca en los certificados",
+            "uploadLogo": "Subir Logo",
+            "changeLogo": "Cambiar Logo",
+            "signature": "Firma",
+            "signatureNameLabel": "Nombre del Firmante",
+            "signatureNamePlaceholder": "p. ej. Dra. María García",
+            "signatureTitleLabel": "Cargo del Firmante",
+            "signatureTitlePlaceholder": "p. ej. Directora de Educación",
+            "signatureImageLabel": "Imagen de Firma",
+            "signatureImageDescription": "Sube una imagen de firma (se recomienda PNG transparente)",
+            "uploadSignature": "Subir Firma",
+            "changeSignature": "Cambiar Firma",
+            "completionCriteria": "Criterios de Completación",
+            "minLessonCompletion": "Completación Mínima de Lecciones",
+            "minLessonCompletionHint": "Porcentaje de lecciones que deben completarse para obtener el certificado",
+            "minExamPassScore": "Puntuación Mínima de Exámenes",
+            "minExamPassScoreHint": "Puntuación mínima requerida en exámenes para calificar al certificado",
+            "requiresAllExams": "Requerir Todos los Exámenes",
+            "requiresAllExamsHint": "Los estudiantes deben aprobar todos los exámenes del curso, no solo el promedio",
+            "expiration": "Validez del Certificado",
+            "enableExpiration": "Establecer Fecha de Expiración",
+            "enableExpirationHint": "Los certificados expirarán después del número de días especificado",
+            "expirationDays": "Válido Por",
+            "days": "días",
+            "expirationPreview": "Aproximadamente {years} año(s)",
+            "uploadSuccess": "Imagen subida con éxito",
+            "uploadError": "Error al subir la imagen",
             "preview": {
               "title": "Vista Previa del Certificado",
               "header": "Certificado de Finalización",
@@ -2970,6 +2998,11 @@
         "leaderboardLocked": "Tabla de Clasificación — Actualiza a Básico",
         "achievementsLocked": "Logros — Actualiza a Básico",
         "storeLocked": "Tienda de Puntos — Actualiza a Profesional"
+      },
+      "xpAwarded": {
+        "lesson_completion": "+100 XP — ¡Lección completada!",
+        "exercise_completion": "+50 XP — ¡Ejercicio completado!",
+        "exam_submission": "+200 XP — ¡Examen enviado!"
       }
     },
     "paymentRequestForm": {
@@ -3292,6 +3325,12 @@
         "advanced": "Avanzado"
       }
     }
+  },
+  "courseSearch": {
+    "placeholder": "Buscar cursos...",
+    "allCategories": "Todos",
+    "noResults": "No se encontraron cursos que coincidan con tu búsqueda.",
+    "clearFilters": "Limpiar filtros"
   },
   "coursePublicDetails": {
     "breadcrumbs": {
