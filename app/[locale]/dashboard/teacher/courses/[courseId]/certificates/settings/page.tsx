@@ -73,6 +73,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
 
             <CertificateTemplateForm
                 courseId={parseInt(courseId)}
+                tenantId={tenantId}
                 initialData={template}
             />
         </div>

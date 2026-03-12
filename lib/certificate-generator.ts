@@ -14,7 +14,12 @@ interface CertificateData {
     primary_color?: string
     secondary_color?: string
     show_qr_code?: boolean
+    logo_url?: string
   } | null
+  signatureName?: string | null
+  signatureTitle?: string | null
+  signatureImageUrl?: string | null
+  logoUrl?: string | null
 }
 
 export function generateCertificateHTML(data: CertificateData): string {
@@ -27,6 +32,10 @@ export function generateCertificateHTML(data: CertificateData): string {
   const primaryColor = data.designSettings?.primary_color || '#b8860b'
   const secondaryColor = data.designSettings?.secondary_color || '#1a1a2e'
   const issuer = escapeHtml(data.issuerName || 'LMS Platform')
+  const logoUrl = data.logoUrl || data.designSettings?.logo_url || ''
+  const sigName = data.signatureName ? escapeHtml(data.signatureName) : ''
+  const sigTitle = data.signatureTitle ? escapeHtml(data.signatureTitle) : ''
+  const sigImageUrl = data.signatureImageUrl || ''
 
   const scoreSection = data.score != null
     ? `<div class="score">
@@ -34,6 +43,19 @@ export function generateCertificateHTML(data: CertificateData): string {
         <span class="score-value">${Math.round(data.score)}%</span>
       </div>`
     : ''
+
+  const sealSection = logoUrl
+    ? `<div class="logo"><img src="${escapeHtml(logoUrl)}" alt="Logo" class="logo-img" /></div>`
+    : `<div class="seal">
+        <span class="seal-icon">${issuer.substring(0, 3).toUpperCase()}</span>
+      </div>`
+
+  const signatureSection = sigImageUrl
+    ? `<img src="${escapeHtml(sigImageUrl)}" alt="Signature" class="signature-img" />`
+    : ''
+
+  const signerName = sigName || issuer
+  const signerTitle = sigTitle || 'Official Issuer'
 
   return `
 <!DOCTYPE html>
@@ -136,6 +158,17 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: ${primaryColor};
       font-weight: 700;
       font-family: 'Playfair Display', serif;
+    }
+
+    .logo {
+      margin-bottom: 16px;
+    }
+
+    .logo-img {
+      height: 80px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
     }
 
     .header-text {
@@ -245,6 +278,14 @@ export function generateCertificateHTML(data: CertificateData): string {
       gap: 4px;
     }
 
+    .signature-img {
+      height: 40px;
+      width: auto;
+      max-width: 160px;
+      object-fit: contain;
+      margin-bottom: 4px;
+    }
+
     .footer-line { width: 160px; height: 1px; background: #ccc; }
     .footer-label { font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #999; }
     .footer-value { font-size: 13px; font-weight: 400; color: #333; }
@@ -303,9 +344,7 @@ export function generateCertificateHTML(data: CertificateData): string {
     <div class="top-accent"></div>
 
     <div class="content">
-      <div class="seal">
-        <span class="seal-icon">${issuer.substring(0, 3).toUpperCase()}</span>
-      </div>
+      ${sealSection}
 
       <div class="header-text">${issuer}</div>
       <div class="title">Certificate of Completion</div>
@@ -323,14 +362,15 @@ export function generateCertificateHTML(data: CertificateData): string {
 
       <div class="footer">
         <div class="footer-item">
+          ${signatureSection}
+          <div class="footer-value">${signerName}</div>
+          <div class="footer-line"></div>
+          <div class="footer-label">${signerTitle}</div>
+        </div>
+        <div class="footer-item">
           <div class="footer-value">${formattedDate}</div>
           <div class="footer-line"></div>
           <div class="footer-label">Date</div>
-        </div>
-        <div class="footer-item">
-          <div class="footer-value">${issuer}</div>
-          <div class="footer-line"></div>
-          <div class="footer-label">Issued By</div>
         </div>
       </div>
     </div>

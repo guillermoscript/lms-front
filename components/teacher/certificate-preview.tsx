@@ -11,9 +11,21 @@ interface CertificatePreviewProps {
         secondary_color: string
         show_qr_code: boolean
     }
+    signatureName?: string
+    signatureTitle?: string
+    signatureImageUrl?: string
+    logoUrl?: string
 }
 
-export function CertificatePreview({ templateName, issuerName, designSettings }: CertificatePreviewProps) {
+export function CertificatePreview({
+    templateName,
+    issuerName,
+    designSettings,
+    signatureName,
+    signatureTitle,
+    signatureImageUrl,
+    logoUrl
+}: CertificatePreviewProps) {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
 
     const mockStudentName = "Jane Doe"
@@ -33,16 +45,24 @@ export function CertificatePreview({ templateName, issuerName, designSettings }:
             }} />
 
             <div className="px-10 py-8 flex flex-col items-center text-center space-y-6">
-                {/* Award icon */}
-                <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center"
-                    style={{
-                        background: `linear-gradient(135deg, ${designSettings.primary_color}15, ${designSettings.secondary_color}15)`,
-                        color: designSettings.primary_color
-                    }}
-                >
-                    <IconAward size={36} stroke={1.5} />
-                </div>
+                {/* Logo or Award icon */}
+                {logoUrl ? (
+                    <img
+                        src={logoUrl}
+                        alt="Logo"
+                        className="h-16 w-16 object-contain"
+                    />
+                ) : (
+                    <div
+                        className="w-16 h-16 rounded-full flex items-center justify-center"
+                        style={{
+                            background: `linear-gradient(135deg, ${designSettings.primary_color}15, ${designSettings.secondary_color}15)`,
+                            color: designSettings.primary_color
+                        }}
+                    >
+                        <IconAward size={36} stroke={1.5} />
+                    </div>
+                )}
 
                 {/* Header text */}
                 <div className="space-y-1.5">
@@ -79,9 +99,20 @@ export function CertificatePreview({ templateName, issuerName, designSettings }:
                 {/* Signatures row */}
                 <div className="w-full grid grid-cols-2 gap-8 pt-4 mt-2">
                     <div className="text-left space-y-1.5">
+                        {signatureImageUrl ? (
+                            <img
+                                src={signatureImageUrl}
+                                alt="Signature"
+                                className="h-8 w-auto object-contain mb-1"
+                            />
+                        ) : null}
                         <div className="h-px w-full bg-gray-200" />
-                        <p className="font-semibold text-sm text-gray-800">{issuerName || "LMS Academy"}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('preview.officialIssuer')}</p>
+                        <p className="font-semibold text-sm text-gray-800">
+                            {signatureName || issuerName || "LMS Academy"}
+                        </p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                            {signatureTitle || t('preview.officialIssuer')}
+                        </p>
                     </div>
                     <div className="text-right space-y-1.5">
                         <div className="h-px w-full bg-gray-200" />

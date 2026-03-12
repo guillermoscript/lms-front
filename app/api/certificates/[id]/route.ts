@@ -28,7 +28,11 @@ export async function GET(
         certificate_templates (
           template_name,
           issuer_name,
-          design_settings
+          design_settings,
+          signature_name,
+          signature_title,
+          signature_image_url,
+          logo_url
         )
       `)
       .eq('certificate_id', id)
@@ -88,6 +92,7 @@ export async function GET(
     }
 
     // HTML view (default)
+    const template = certificate.certificate_templates
     const html = generateCertificateHTML({
       certificateNumber: certificate.verification_code,
       studentName,
@@ -95,7 +100,11 @@ export async function GET(
       completionDate: new Date(certificate.issued_at),
       score,
       issuerName,
-      designSettings: certificate.certificate_templates?.design_settings,
+      designSettings: template?.design_settings,
+      signatureName: template?.signature_name,
+      signatureTitle: template?.signature_title,
+      signatureImageUrl: template?.signature_image_url,
+      logoUrl: template?.logo_url,
     })
 
     // Increment view count
