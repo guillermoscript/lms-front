@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconPlayerPlay, IconCheck, IconRotateClockwise, IconRobot } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 interface CodeChallengeWrapperProps {
@@ -63,6 +64,7 @@ export default function CodeChallengeWrapper({
     tenantId,
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
+    const tGamification = useTranslations("gamification");
     const supabase = createClient();
 
     const handleComplete = async () => {
@@ -77,6 +79,7 @@ export default function CodeChallengeWrapper({
                 score: 100,
                 tenant_id: tenantId,
             });
+            toast.success(tGamification("xpAwarded.exercise_completion"));
         }
     }
 

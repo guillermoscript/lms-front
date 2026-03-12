@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import Markdown from 'react-markdown'
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
+import { toast } from 'sonner'
 import {
   IconCheck,
   IconClock,
@@ -60,6 +61,7 @@ export default function ArtifactExercise({
 }: ArtifactExerciseProps) {
   const t = useTranslations('exercises.artifact')
   const tAudio = useTranslations('exercises.audio')
+  const tGamification = useTranslations('gamification')
 
   const config = exercise.exercise_config ?? {}
   const artifactHtml = config.artifact_html ?? ''
@@ -134,6 +136,7 @@ export default function ArtifactExercise({
           origin: { y: 0.6 },
           colors: ['#3b82f6', '#10b981', '#f59e0b'],
         })
+        toast.success(tGamification('xpAwarded.exercise_completion'))
       }
     } catch (err: any) {
       console.error('Artifact evaluation error:', err)

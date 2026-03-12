@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { IconRobot, IconCheck, IconRotateClockwise2, IconSparkles } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,7 @@ function InnerExerciseChat({
     profile,
 }: ExerciseChatProps) {
     const router = useRouter();
+    const tGamification = useTranslations("gamification");
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
     const { textInput } = usePromptInputController();
@@ -96,6 +98,7 @@ function InnerExerciseChat({
                 toast.success("Exercise Completed!", {
                     description: feedback,
                 });
+                toast.success(tGamification("xpAwarded.exercise_completion"));
                 router.refresh();
             }
         }
