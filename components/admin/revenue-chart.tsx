@@ -78,9 +78,9 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
                   borderRadius: '8px',
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: number | undefined, name: string | undefined) => {
+                formatter={(value: any, name: any) => {
                   if (value === undefined || name === undefined) return ['N/A', 'Unknown']
-                  if (name === 'revenue') return [`$${value.toFixed(2)}`, t('tooltip')]
+                  if (name === 'revenue') return [`$${Number(value).toFixed(2)}`, t('tooltip')]
                   return [value, 'Transactions']
                 }}
               />

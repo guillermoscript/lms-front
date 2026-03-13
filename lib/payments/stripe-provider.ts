@@ -21,7 +21,7 @@ export class StripePaymentProvider implements IPaymentProvider {
 
   constructor(apiKey: string) {
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2025-12-15.clover',
+      apiVersion: '2026-02-25.clover',
     })
   }
 

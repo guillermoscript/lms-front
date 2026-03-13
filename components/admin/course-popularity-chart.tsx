@@ -68,7 +68,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                     borderRadius: '8px',
                   }}
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  formatter={(value: number | undefined) => {
+                  formatter={(value: any) => {
                     if (value === undefined) return 'N/A'
                     return [value, t('enrollmentsTooltip')]
                   }}
