@@ -172,12 +172,12 @@ ON CONFLICT (provider, provider_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 4. PROFILES  (global — no tenant_id)
 -- ---------------------------------------------------------------------------
-INSERT INTO profiles (id, full_name, username)
+INSERT INTO profiles (id, full_name, username, onboarding_completed)
 VALUES
-  ('a1000000-0000-0000-0000-000000000001', 'Test Student',          'test_student'),
-  ('a1000000-0000-0000-0000-000000000002', 'School Owner',          'school_owner'),
-  ('a1000000-0000-0000-0000-000000000003', 'Code Academy Creator',  'ca_creator'),
-  ('a1000000-0000-0000-0000-000000000004', 'Alice Student',         'alice_student')
+  ('a1000000-0000-0000-0000-000000000001', 'Test Student',          'test_student',   false),
+  ('a1000000-0000-0000-0000-000000000002', 'School Owner',          'school_owner',   true),
+  ('a1000000-0000-0000-0000-000000000003', 'Code Academy Creator',  'ca_creator',     true),
+  ('a1000000-0000-0000-0000-000000000004', 'Alice Student',         'alice_student',  false)
 ON CONFLICT (id) DO NOTHING;
 
 

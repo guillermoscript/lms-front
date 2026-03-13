@@ -365,6 +365,26 @@
       "createCourse": "Create New Course",
       "promptTemplates": "Prompt Templates",
       "tour": {
+        "welcome": {
+          "title": "Welcome to Your Dashboard",
+          "description": "This is your teaching hub. See an overview of your courses, student activity, and quick actions to manage your content."
+        },
+        "stats": {
+          "title": "Your Teaching Stats",
+          "description": "Track your key metrics — total courses, active students, and exam submissions at a glance."
+        },
+        "courses": {
+          "title": "Your Courses",
+          "description": "All your courses appear here with lesson counts and student enrollment. Click Edit to update content or Preview to see the student view."
+        },
+        "sidebarCourses": {
+          "title": "Course Management",
+          "description": "Access your full course list from here. View, edit, and manage all your courses in one place."
+        },
+        "sidebarCreate": {
+          "title": "Create a New Course",
+          "description": "Click here to start building a new course. Add a title, description, and start adding lessons right away."
+        },
         "header": {
           "title": "Course Overview",
           "description": "This is your course management hub. You can see the course title, status badge, and enrolled student count at a glance."

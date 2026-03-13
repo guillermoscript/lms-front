@@ -365,6 +365,26 @@
       "createCourse": "Crear Nuevo Curso",
       "promptTemplates": "Plantillas de Prompt",
       "tour": {
+        "welcome": {
+          "title": "Bienvenido a tu Panel",
+          "description": "Este es tu centro de enseñanza. Ve un resumen de tus cursos, actividad de estudiantes y acciones rápidas para gestionar tu contenido."
+        },
+        "stats": {
+          "title": "Tus Estadísticas de Enseñanza",
+          "description": "Monitorea tus métricas clave — total de cursos, estudiantes activos y entregas de exámenes de un vistazo."
+        },
+        "courses": {
+          "title": "Tus Cursos",
+          "description": "Todos tus cursos aparecen aquí con conteo de lecciones e inscripciones. Haz clic en Editar para actualizar el contenido o Vista Previa para ver la vista del estudiante."
+        },
+        "sidebarCourses": {
+          "title": "Gestión de Cursos",
+          "description": "Accede a tu lista completa de cursos desde aquí. Ve, edita y gestiona todos tus cursos en un solo lugar."
+        },
+        "sidebarCreate": {
+          "title": "Crear un Nuevo Curso",
+          "description": "Haz clic aquí para comenzar a construir un nuevo curso. Agrega un título, descripción y comienza a añadir lecciones de inmediato."
+        },
         "header": {
           "title": "Vista General del Curso",
           "description": "Este es tu centro de gestión del curso. Puedes ver el título, el estado y la cantidad de estudiantes inscritos de un vistazo."
