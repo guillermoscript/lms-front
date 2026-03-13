@@ -29,7 +29,7 @@ export function CertificatePreview({
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
 
     const mockStudentName = "Jane Doe"
-    const mockDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    const mockDate = new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
     const mockCode = "VERIFY-MOCK-12345"
 
     return (

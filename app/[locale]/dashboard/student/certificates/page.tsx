@@ -69,7 +69,7 @@ export default async function StudentCertificatesPage() {
         <Link href="/dashboard/student/courses">
           <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs font-bold">
             <IconBook2 size={14} />
-            My Courses
+            {t('myCourses')}
           </Button>
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <IconAward size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Total</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsTotal')}</span>
             </div>
             <p className="text-2xl font-black tabular-nums">{certificates.length}</p>
           </div>
@@ -91,7 +91,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
                 <IconBook2 size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Courses</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsCourses')}</span>
             </div>
             <p className="text-2xl font-black tabular-nums">{uniqueCourses.size}</p>
           </div>
@@ -100,7 +100,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <IconTrophy size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Latest</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsLatest')}</span>
             </div>
             <p className="text-sm font-bold truncate">
               {certificates[0]?.courses?.title || '-'}

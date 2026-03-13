@@ -167,7 +167,7 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 | | |
 |---|---|
 | **Auth** | Yes (`getUser()`) |
-| **Description** | Returns a certificate as HTML (default) or PDF download (`?format=pdf`). Owner or admin access required. |
+| **Description** | Returns a certificate as HTML (default) or PDF download (`?format=pdf`). Owner or admin access required. Passes template design_settings (colors, logo, signature) to both HTML and PDF generators. |
 
 **Path Params:** `id` -- certificate UUID.
 
@@ -177,9 +177,11 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 |-------|------|-------------|
 | `format` | `string?` | Set to `pdf` for PDF download; omit for HTML view |
 
-**Success Response:** `text/html` (HTML certificate) or `application/pdf` (PDF binary).
+**Success Response:** `text/html` (luxury-styled HTML certificate) or `application/pdf` (PDF with matching design — guilloche pattern, frames, QR code, signature).
 
 **Error Responses:** `401` unauthorized, `403` forbidden (not owner/admin or wrong tenant), `404` not found.
+
+> **Note:** For public/unauthenticated access, use `/api/certificates/view/[code]` instead (by verification code, no auth required).
 
 ---
 
@@ -275,12 +277,33 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 
 ---
 
+### `GET /api/certificates/view/[code]`
+
+| | |
+|---|---|
+| **Auth** | No (public endpoint) |
+| **Description** | Renders the certificate as a styled HTML page by verification code. No authentication required — used by the public verification page's "View Certificate" button. Uses `createAdminClient()` to bypass RLS. |
+
+**Path Params:** `code` -- 20-character verification code.
+
+**Success Response (200):** `text/html` — Full luxury-styled HTML certificate with Cormorant Garamond typography, guilloche watermark, template colors/logo/signature, and a "Print / Save as PDF" button.
+
+**Error Responses:**
+
+| Status | Condition |
+|--------|-----------|
+| `404` | Certificate not found |
+| `410` | Certificate revoked |
+| `500` | Internal error |
+
+**Cache:** `public, max-age=3600` (1 hour)
+
 ### `GET /api/certificates/verify/[code]`
 
 | | |
 |---|---|
 | **Auth** | No (public endpoint) |
-| **Description** | Publicly verifies a certificate by its verification code. Rate-limited to 10 requests/minute per IP. |
+| **Description** | Publicly verifies a certificate by its verification code (JSON API). Rate-limited to 10 requests/minute per IP. |
 
 **Path Params:** `code` -- 20-character verification code.
 

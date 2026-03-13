@@ -278,7 +278,8 @@
           "share": "Share",
           "verify": "Verify",
           "issuedBy": "Issued by {issuer}",
-          "issuedOn": "Issued on {date}"
+          "issuedOn": "Issued on {date}",
+          "verified": "Verified"
         }
       },
       "store": {
@@ -311,7 +312,11 @@
         "noCertificates": "No Certificates Yet",
         "noCertificatesDescription": "Complete courses to earn certificates. Keep learning!",
         "browseCourses": "Browse Courses",
-        "earned": "{count} certificates earned"
+        "earned": "{count} certificates earned",
+        "myCourses": "My Courses",
+        "statsTotal": "Total",
+        "statsCourses": "Courses",
+        "statsLatest": "Latest"
       },
       "payments": {
         "title": "Payment Requests",
@@ -4361,6 +4366,30 @@
       "course": "Course {number}",
       "courseDescription": "An engaging course designed to help you master new skills and advance your career.",
       "home": "Home"
+    }
+  },
+  "verification": {
+    "verifiedCredential": "Verified Credential",
+    "certificateRevoked": "Certificate Revoked",
+    "completed": "completed",
+    "issuingOrganization": "Issuing Organization",
+    "credential": "Credential",
+    "certificateOfCompletion": "Certificate of Completion",
+    "issued": "Issued",
+    "expires": "Expires",
+    "score": "Score",
+    "signedBy": "Signed by",
+    "verificationId": "Verification ID",
+    "valid": "Valid",
+    "revoked": "Revoked",
+    "downloadPdf": "Download PDF",
+    "viewCertificate": "View Certificate",
+    "viewCourse": "View Course",
+    "footerText": "This credential was issued on {date} and can be independently verified using the code above.",
+    "notFound": {
+      "title": "Certificate Not Found",
+      "description": "The verification code does not match any certificate in our records, or the certificate has been removed.",
+      "returnHome": "Return Home"
     }
   }
 }

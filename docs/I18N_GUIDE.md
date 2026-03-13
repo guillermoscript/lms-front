@@ -71,7 +71,8 @@ Translations are organized hierarchically by feature. The `messages/en.json` and
   "puck": { ... },            // Puck visual editor
   "builder": { ... },         // Page builder
   "landing": { ... },         // Landing pages
-  "certificates": { ... },    // Certificate system
+  "certificates": { ... },    // Certificate system (root-level keys)
+  "verification": { ... },    // Public certificate verification page
   "achievements": { ... },    // Gamification achievements
   "levels": { ... },          // Gamification levels
   "store": { ... },           // Gamification store
@@ -308,7 +309,8 @@ export const config = {
 ### Newer Namespaces
 - **`aristotle`** — AI tutor interface
 - **`puck`** / **`builder`** / **`landing`** — Visual page builder and landing pages
-- **`certificates`** — Certificate generation and verification
+- **`certificates`** — Certificate generation and verification (root-level: getCertificate, viewCertificate, generating, etc.)
+- **`verification`** — Public certificate verification page (verifiedCredential, certificateRevoked, issuingOrganization, verificationId, footerText, notFound.*)
 - **`achievements`** / **`levels`** / **`store`** — Gamification system
 - **`billing`** / **`plans`** / **`features`** / **`limits`** — Monetization and feature gating
 - **`appearance`** / **`branding`** / **`theme`** — Tenant theming and customization
@@ -521,7 +523,7 @@ export default function StudentDashboard() {
 
 ### Future Features
 - [ ] RTL (Right-to-Left) support for Arabic/Hebrew
-- [ ] Date/time localization
+- [x] Date/time localization (certificates use locale-aware `toLocaleDateString`)
 - [ ] Number formatting per locale
 - [ ] Currency formatting
 - [ ] Timezone support
@@ -548,5 +550,5 @@ For translation contributions or issues:
 
 ---
 
-**Last Updated**: March 11, 2026
-**Version**: 2.0.0
+**Last Updated**: March 13, 2026
+**Version**: 2.1.0

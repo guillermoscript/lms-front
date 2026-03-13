@@ -35,7 +35,7 @@ export function CertificateButton({
 
   async function handleClick() {
     if (hasExisting) {
-      window.open(`/api/certificates/${certificateId}`, '_blank')
+      window.open(`/api/certificates/${certificateId}`, '_blank') // auth-protected, user is logged in
       return
     }
 

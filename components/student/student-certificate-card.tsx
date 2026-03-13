@@ -62,7 +62,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                     className="text-[8px] font-bold uppercase tracking-[0.2em] mb-1"
                                     style={{ color: `${primaryColor}90` }}
                                 >
-                                    Certificate
+                                    {t('view')}
                                 </div>
                                 <div className="text-[10px] font-bold leading-tight line-clamp-2 text-foreground/80">
                                     {courseTitle}
@@ -72,7 +72,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                     style={{ background: `linear-gradient(90deg, transparent, ${primaryColor}60, transparent)` }}
                                 />
                                 <div className="text-[7px] text-muted-foreground/60 uppercase tracking-wider">
-                                    {issuedDate.toLocaleDateString('en', { month: 'short', year: 'numeric' })}
+                                    {issuedDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                                 </div>
                             </div>
                         </div>
@@ -90,7 +90,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                             className="text-[9px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shrink-0"
                                         >
                                             <IconShieldCheck size={9} className="mr-0.5" />
-                                            Verified
+                                            {t('verified')}
                                         </Badge>
                                     </div>
                                     {templateName && (
@@ -120,7 +120,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-2 pt-1">
-                                <a href={`/api/certificates/${certificate.certificate_id}`} target="_blank" rel="noreferrer">
+                                <a href={`/api/certificates/view/${certificate.verification_code}`} target="_blank" rel="noreferrer">
                                     <Button variant="outline" size="sm" className="h-8 text-xs font-semibold gap-1.5">
                                         <IconExternalLink size={13} />
                                         {t('view')}

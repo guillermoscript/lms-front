@@ -278,7 +278,8 @@
           "share": "Compartir",
           "verify": "Verificar",
           "issuedBy": "Emitido por {issuer}",
-          "issuedOn": "Emitido el {date}"
+          "issuedOn": "Emitido el {date}",
+          "verified": "Verificado"
         }
       },
       "store": {
@@ -311,7 +312,11 @@
         "noCertificates": "Sin Certificados Aún",
         "noCertificatesDescription": "Completa cursos para obtener certificados. ¡Sigue aprendiendo!",
         "browseCourses": "Explorar Cursos",
-        "earned": "{count} certificados obtenidos"
+        "earned": "{count} certificados obtenidos",
+        "myCourses": "Mis Cursos",
+        "statsTotal": "Total",
+        "statsCourses": "Cursos",
+        "statsLatest": "Más Reciente"
       },
       "payments": {
         "title": "Solicitudes de Pago",
@@ -4354,6 +4359,30 @@
       "course": "Curso {number}",
       "courseDescription": "Un curso interactivo diseñado para ayudarte a dominar nuevas habilidades y avanzar en tu carrera.",
       "home": "Inicio"
+    }
+  },
+  "verification": {
+    "verifiedCredential": "Credencial Verificada",
+    "certificateRevoked": "Certificado Revocado",
+    "completed": "completó",
+    "issuingOrganization": "Organización Emisora",
+    "credential": "Credencial",
+    "certificateOfCompletion": "Certificado de Finalización",
+    "issued": "Emitido",
+    "expires": "Expira",
+    "score": "Puntuación",
+    "signedBy": "Firmado por",
+    "verificationId": "ID de Verificación",
+    "valid": "Válido",
+    "revoked": "Revocado",
+    "downloadPdf": "Descargar PDF",
+    "viewCertificate": "Ver Certificado",
+    "viewCourse": "Ver Curso",
+    "footerText": "Esta credencial fue emitida el {date} y puede ser verificada de forma independiente usando el código anterior.",
+    "notFound": {
+      "title": "Certificado No Encontrado",
+      "description": "El código de verificación no coincide con ningún certificado en nuestros registros, o el certificado ha sido eliminado.",
+      "returnHome": "Volver al Inicio"
     }
   }
 }

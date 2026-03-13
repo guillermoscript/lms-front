@@ -69,6 +69,7 @@ export async function GET(
 
     // PDF download
     if (format === 'pdf') {
+      const tmpl = certificate.certificate_templates
       const pdfBuffer = await generateCertificatePDF({
         studentName,
         courseTitle,
@@ -77,9 +78,12 @@ export async function GET(
         verificationCode: certificate.verification_code,
         verificationUrl,
         issuerName,
-        issuerLogo: certificate.certificate_templates?.design_settings?.logo_url,
+        issuerLogo: tmpl?.logo_url || tmpl?.design_settings?.logo_url,
+        signatureName: tmpl?.signature_name,
+        signatureTitle: tmpl?.signature_title,
+        signatureImage: tmpl?.signature_image_url,
         score,
-        designConfig: certificate.certificate_templates?.design_settings,
+        designConfig: tmpl?.design_settings,
       })
 
       const safeName = courseTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()
