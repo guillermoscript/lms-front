@@ -156,13 +156,15 @@ Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dash
 
 **Key RPCs:**
 ```typescript
-supabase.rpc('enroll_user', { _user_id, _product_id })
-supabase.rpc('handle_new_subscription', { _user_id, _plan_id })
+supabase.rpc('enroll_user', { _user_id, _product_id })          // Product purchase → auto-enroll in product_courses
+supabase.rpc('handle_new_subscription', { _user_id, _plan_id }) // Creates subscription ONLY (no auto-enrollment)
 supabase.rpc('award_xp', { p_user_id, p_action_type, p_reference_id })
 supabase.rpc('create_exam_submission', { student_id, exam_id, answers })
 supabase.rpc('save_exam_feedback', { submission_id, exam_id, student_id, answers, overall_feedback, score })
 supabase.rpc('get_plan_features', { _tenant_id })  // Returns plan features/limits for billing
 ```
+
+**Subscription model:** Subscriptions grant **access**, not auto-enrollment. Students self-enroll in courses they want via `/dashboard/student/browse` using the `useEnrollment()` hook. `plan_courses` defines which courses a plan covers. When a subscription expires, only the courses the student explicitly enrolled in are disabled.
 
 **`product_courses`** can have multiple rows per course (one course → many products). Never use `.single()` on it.
 
@@ -236,6 +238,7 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - `docs/AUTH.md` — auth flows
 - `docs/AI_AGENT_GUIDE.md` — detailed patterns
 - `docs/MONETIZATION.md` — school billing, feature gating, LATAM payments, revenue dashboard
+- `docs/COMMUNITY_SPACES.md` — community feed, comments, reactions, polls, moderation, security
 - `docs/FEBRUARY_2026_IMPLEMENTATION_SUMMARY.md` — full record of multi-tenant SaaS implementation
 - `MULTI_TENANT_IMPLEMENTATION_SUMMARY.md` — multi-tenant architecture deep dive
 - `E2E_TESTING_AND_SECURITY_AUDIT_PLAN.md` — 47 test scenarios with steps

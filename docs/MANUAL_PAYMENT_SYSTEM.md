@@ -1,244 +1,326 @@
-# Manual/Offline Payment System
+# Payment System — Complete Reference
 
 ## Overview
 
-The LMS now supports **manual/offline payments** for students who cannot or prefer not to use online payment processors. This is perfect for:
+The LMS has **two separate payment systems** with manual/offline support:
 
-- Bank transfers
-- Invoice-based payments
-- Wire transfers
-- Cash payments
-- Custom payment arrangements
+1. **Student Payments** — Students pay schools for courses/plans (`payment_requests` + `transactions` + `enrollments`)
+2. **Platform Billing** — Schools pay the platform for their subscription plan (`platform_payment_requests` + `platform_subscriptions`)
 
-## How It Works
+Both support **Stripe** (automatic) and **Manual Bank Transfer** (admin-reviewed).
 
-### For Admins
+---
 
-1. **Create Product with Manual Payment**
-   - Navigate to `/dashboard/admin/products/new`
-   - Select "Manual/Offline Payment" as the payment method
-   - Fill in product details (name, price, courses, etc.)
-   - Save the product
+## System 1: Student → School Payments
 
-2. **What Happens**
-   - Product is stored in database with `payment_provider = 'manual'`
-   - No external payment processor API calls
-   - Product gets local IDs (e.g., `manual_prod_1738525200_abc123`)
-   - Product appears in student catalog with "Contact for Payment" button
+### Sequence Diagram — Product Purchase (Manual)
 
-3. **Processing Manual Payments**
-   - Students submit contact form with their details
-   - Admin receives notification/email with payment request
-   - Admin sends payment instructions to student
-   - After payment confirmed, admin manually enrolls student
-
-### For Students
-
-1. **Discover Manual Payment Products**
-   - Browse available courses on student dashboard
-   - Products with manual payment show "Contact for Payment" button
-
-2. **Request Payment Information**
-   - Click "Contact for Payment"
-   - Fill out contact form with:
-     - Name
-     - Email
-     - Phone (optional)
-     - Message (optional)
-   - Submit request
-
-3. **Receive Payment Instructions**
-   - Admin sends payment details via email
-   - Student makes payment via agreed method
-   - Student gets enrolled after payment confirmation
-
-## Architecture
-
-### Payment Provider Interface
-
-```typescript
-class ManualPaymentProvider implements IPaymentProvider {
-  readonly provider: PaymentProvider = 'manual'
-
-  // No external API calls needed
-  // Just generates local IDs and returns metadata
-  createProduct(params) { /* ... */ }
-  createPrice(params) { /* ... */ }
-  updateProduct(id, params) { /* ... */ }
-  archiveProduct(id) { /* ... */ }
-}
+```
+Student                        School Admin                    Database
+  │                               │                              │
+  │── Browse courses ──────────>  │                              │
+  │── /checkout/manual?productId=X                               │
+  │── Fill form (name,email,msg)  │                              │
+  │── Submit ──────────────────>  │                              │
+  │   createPaymentRequest()      │                              │
+  │                               │<── payment_request ──────────│ status='pending'
+  │                               │                              │
+  │                               │── Send Instructions ──────>  │ status='contacted'
+  │<── Gets bank details ────────│                              │
+  │── Pays offline (bank) ──────> │                              │
+  │                               │── Confirm Received ────────> │ status='payment_received'
+  │                               │                              │
+  │                               │── Complete & Enroll ───────> │
+  │                               │   completeAndEnroll():       │
+  │                               │   1. INSERT transaction      │ status='successful'
+  │                               │   2. enroll_user() RPC       │
+  │                               │      FOR EACH product_course │
+  │                               │        INSERT enrollment     │ status='active'
+  │                               │                              │ tenant_id from product_courses
+  │                               │   3. UPDATE payment_request  │ status='completed'
+  │                               │                              │
+  │── Access course ──────────> ✅│                              │
 ```
 
-### Database Schema
+### Sequence Diagram — Plan Subscription (Manual)
 
-Products table includes:
-```sql
-payment_provider VARCHAR NOT NULL DEFAULT 'stripe'
-provider_product_id TEXT  -- e.g., 'manual_prod_123'
-provider_price_id TEXT    -- e.g., 'manual_price_456'
+```
+Student                        School Admin                    Database
+  │                               │                              │
+  │── Browse plans ────────────>  │                              │
+  │── /checkout/manual?planId=X   │                              │
+  │── Fill form + Submit ───────> │                              │
+  │   createPaymentRequest()      │                              │
+  │                               │<── payment_request ──────────│ plan_id set, status='pending'
+  │                               │                              │
+  │                               │── (same admin review flow)   │
+  │                               │                              │
+  │                               │── Complete & Enroll ───────> │
+  │                               │   completeAndEnroll():       │
+  │                               │   1. INSERT transaction      │ plan_id, status='successful'
+  │                               │   2. handle_new_sub() RPC    │
+  │                               │      INSERT subscription     │ status='active', tenant_id
+  │                               │   3. UPDATE payment_request  │ status='completed'
+  │                               │                              │
+  │── Browse courses ───────────> │                              │
+  │   /dashboard/student/browse   │                              │
+  │   (sees plan courses)         │                              │
+  │── Click "Enroll Now" ──────>  │                              │
+  │   useEnrollment() hook        │                              │
+  │   INSERT enrollment           │                       ───────│ subscription_id, status='active'
+  │── Access enrolled course ──>  ✅                             │
+  │                               │                              │
+  │         ┌─── [Cron: 3AM UTC daily] ───────────────────────── │
+  │         │ subscription.end_date < NOW()                      │
+  │         │ → subscription_status = 'expired'                  │
+  │         │ → TRIGGER: enrollments.status = 'disabled'         │
+  │         └────────────────────────────────────────────────────>│
+  │                               │                              │
+  │── Loses access (re-subscribe)                                │
 ```
 
-### Components
+> **Note:** Subscriptions grant ACCESS to courses — they do NOT auto-enroll.
+> Students self-enroll in the courses they want via the browse page.
+> This keeps enrollment metrics accurate (only courses the student chose).
 
-1. **Product Form** (`components/admin/product-form.tsx`)
-   - Payment method selector
-   - Conditional help text based on provider
-   - Form validation
+### Sequence Diagram — Stripe Payment (Automatic)
 
-2. **Manual Payment Dialog** (`components/student/manual-payment-dialog.tsx`)
-   - Contact form for students
-   - Sends payment request
-   - Shows next steps
-
-## Testing
-
-### Automated Tests
-
-Run Playwright tests:
-```bash
-./test-manual-payment.sh
+```
+Student                        Stripe                         Database
+  │                               │                              │
+  │── Checkout ─────────────────> │                              │
+  │── PaymentIntent ──────────> │                              │
+  │                               │── webhook: succeeded ──────> │
+  │                               │   UPDATE transaction         │ status='successful'
+  │                               │   TRIGGER manage_transactions│
+  │                               │   → enroll_user() OR         │
+  │                               │     handle_new_subscription()│
+  │                               │   → enrollments created      │ status='active'
+  │                               │                              │
+  │── Access course ──────────> ✅│                              │
 ```
 
-Or manually:
-```bash
-npm run dev  # Start server
-npx playwright test tests/admin/products-manual-payment.spec.ts
+### Payment Request Status Flow
+
+```
+  pending ─────── Admin reviews ──────> contacted
+     │                                      │
+     │                              Student pays offline
+     │                                      │
+     │                                      ▼
+     │                              payment_received
+     │                                      │
+     │                            Admin clicks "Complete & Enroll"
+     │                                      │
+     │                                      ▼
+     │                                 completed ✅
+     │                                  (enrolled)
+     │
+     └──── Student or Admin cancels ──> cancelled ❌
 ```
 
-### Test Coverage
+### Student Subscription Lifecycle
 
-- ✅ Create product with manual payment
-- ✅ Create product with Stripe payment
-- ✅ Edit product and change payment provider
-- ✅ Validate form fields
-- ✅ Archive and restore products
-- ✅ Student contact form submission
-- ✅ Database persistence
+```
+  ┌──────────┐     end_date passes      ┌──────────┐
+  │  active   │ ──── cron 3AM UTC ────> │  expired  │
+  └──────────┘                          └──────────┘
+       │                                      │
+       │ student self-enrolls                 │ trigger
+       │ in courses via browse                ▼
+       │                              enrollments.status
+       │ re-subscribe                  = 'disabled'
+       └──────────────────────────────────────┘
+```
 
-### Manual Testing Checklist
+**Subscription = access grant, not auto-enrollment.**
+- `plan_courses` defines which courses the plan covers
+- Students browse available courses and click "Enroll Now"
+- Only courses the student explicitly chose get enrollment records
+- When subscription expires, only those enrollments are disabled
 
-**Admin Flow:**
-- [ ] Navigate to `/dashboard/admin/products/new`
-- [ ] Select "Manual/Offline Payment"
-- [ ] Verify help text appears
-- [ ] Fill form and submit
-- [ ] Verify product created successfully
-- [ ] Check database: `payment_provider = 'manual'`
-- [ ] Edit product and change to Stripe
-- [ ] Verify updates work correctly
+### Key Tables
 
-**Student Flow:**
-- [ ] Login as student
-- [ ] Find manual payment product
-- [ ] Click "Contact for Payment"
-- [ ] Fill contact form
-- [ ] Submit and verify success message
-- [ ] Check admin receives notification
+| Table | Purpose |
+|-------|---------|
+| `payment_requests` | Student manual payment requests (per tenant) |
+| `transactions` | Payment records (Stripe + manual) |
+| `enrollments` | Course access (product_id OR subscription_id) |
+| `subscriptions` | Time-limited plan access |
+| `product_courses` | Product → Course mappings (has tenant_id) |
+| `plan_courses` | Plan → Course mappings (no tenant_id, scoped via plan) |
+
+### Key RPCs
+
+| RPC | What It Does |
+|-----|-------------|
+| `enroll_user(_user_id, _product_id)` | Loops ALL product_courses, creates enrollments with `status='active'`, `tenant_id` |
+| `handle_new_subscription(_user_id, _plan_id, _transaction_id)` | Creates subscription only (no auto-enrollment; students self-enroll via browse) |
+| `handle_student_subscription_expiry()` | Cron: expires active subscriptions past `end_date` |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/[locale]/checkout/manual/page.tsx` | Manual checkout page (products + plans) |
+| `components/student/payment-request-form.tsx` | Student payment request form |
+| `app/actions/payment-requests.ts` | Server actions: create, review, complete & enroll |
+| `app/[locale]/dashboard/admin/payment-requests/page.tsx` | Admin payment requests management |
+| `components/admin/payment-requests-table.tsx` | Admin table with manage dialog |
+| `lib/hooks/use-enrollment.ts` | Client hook for subscription-based self-enrollment |
+| `components/student/browse-course-card.tsx` | Course card with "Enroll Now" for plan subscribers |
+| `supabase/migrations/20260316000000_fix_enrollment_rpcs.sql` | RPC rewrites, trigger, cron |
+
+---
+
+## System 2: School → Platform Billing
+
+### Sequence Diagram — Manual Plan Upgrade
+
+```
+Tenant Admin                   Super Admin                    Database
+  │                               │                              │
+  │── /dashboard/admin/billing/upgrade                           │
+  │── See plan comparison table   │                              │
+  │── Click "Pay via bank transfer"                              │
+  │── Fill ManualTransferForm     │                              │
+  │   (bank ref, proof, notes)    │                              │
+  │── Submit ──────────────────>  │                              │
+  │   requestManualPlanUpgrade()  │                              │
+  │                               │<── platform_payment_request ─│ status='pending'
+  │                               │                              │ request_type='upgrade'
+  │                               │                              │
+  │                               │── /platform/billing          │
+  │                               │   See pending requests table │
+  │                               │   Review: school, plan, amt  │
+  │                               │                              │
+  │                               │── Click "Confirm" ─────────> │
+  │                               │   confirmManualPayment():    │
+  │                               │   1. Validate plan limits    │
+  │                               │   2. UPDATE request          │ status='confirmed'
+  │                               │   3. UPSERT subscription     │ status='active'
+  │                               │                              │ payment_method='manual_transfer'
+  │                               │   4. UPDATE tenant           │ plan='starter'
+  │                               │                              │ billing_status='active'
+  │                               │   5. UPSERT revenue_splits   │ transaction_fee updated
+  │                               │                              │
+  │── Features unlocked ────────> ✅                             │
+  │                               │                              │
+  │   ── OR ──                    │                              │
+  │                               │── Click "Reject" ──────────> │
+  │                               │   rejectManualPayment():     │
+  │                               │   UPDATE request             │ status='rejected'
+  │                               │                              │ notes=reason
+  │── Still on old plan ────────> ❌                             │
+```
+
+### Sequence Diagram — Stripe Plan Upgrade
+
+```
+Tenant Admin                   Stripe                         Database
+  │                               │                              │
+  │── Click "Subscribe" ────────> │                              │
+  │── /api/stripe/checkout-session│                              │
+  │── Stripe Checkout hosted page │                              │
+  │── Pays with card ───────────> │                              │
+  │                               │── webhook: session.completed─│
+  │                               │   UPSERT subscription        │ status='active'
+  │                               │   UPDATE tenant              │ plan=new_plan
+  │                               │   UPSERT revenue_splits      │
+  │                               │                              │
+  │── Plan activated ──────────── ✅                             │
+```
+
+### Platform Payment Request Status Flow
+
+```
+  pending ──────── Super admin reviews ──────> confirmed ✅
+     │                                           │
+     │                                   subscription activated
+     │                                   tenant plan upgraded
+     │                                   revenue splits updated
+     │
+     └──────── Super admin rejects ──────────> rejected ❌
+                                                  │
+                                          notes = rejection reason
+                                          tenant stays on current plan
+```
+
+### Platform Subscription Lifecycle
+
+```
+  ┌──────────┐   period_end passes    ┌──────────┐   grace_period_end   ┌──────────┐
+  │  active   │ ── cron 2AM UTC ───> │ past_due  │ ── cron 2AM UTC ──> │ canceled  │
+  └──────────┘                       └──────────┘   (7 days later)     └──────────┘
+       ▲                                   │                                │
+       │          grace_period_end =       │                                │
+       │          period_end + 7 days      │                      tenant.plan = 'free'
+       │                                   │                      billing_status = 'free'
+       │                                   │                      revenue_splits reset
+       │ renew (new manual request         │                      to 10% platform fee
+       │  or Stripe payment)               │
+       └───────────────────────────────────┘
+```
+
+### Platform Plan Limits
+
+| Plan | Courses | Students | Fee | Price/mo |
+|------|---------|----------|-----|----------|
+| Free | 5 | 50 | 10% | $0 |
+| Starter | 15 | 200 | 5% | $9 |
+| Pro | 100 | 1,000 | 2% | $29 |
+| Business | Unlimited | 5,000 | 0% | $79 |
+| Enterprise | Unlimited | Unlimited | 0% | $199 |
+
+### Key Tables
+
+| Table | Purpose |
+|-------|---------|
+| `platform_plans` | Plan definitions (slug, prices, features, limits) |
+| `platform_subscriptions` | One per tenant (UNIQUE on tenant_id) |
+| `platform_payment_requests` | Manual upgrade/renewal requests |
+| `tenants` | `plan`, `billing_status`, `billing_period_end` columns |
+| `revenue_splits` | Platform fee % per tenant (updated on plan change) |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/[locale]/dashboard/admin/billing/upgrade/` | Tenant upgrade page (plan comparison + manual form) |
+| `app/actions/admin/billing.ts` | Tenant actions: request upgrade, upload proof, renew |
+| `app/[locale]/platform/billing/` | Super admin billing panel |
+| `app/[locale]/platform/billing/billing-actions.tsx` | Super admin confirm/reject buttons |
+| `app/actions/platform/plans.ts` | Super admin actions: confirm, reject, force change |
+| `app/api/stripe/checkout-session/route.ts` | Stripe Checkout for plan upgrades |
+| `app/api/stripe/platform-webhook/route.ts` | Stripe webhook for billing events |
+
+---
+
+## Two Stripe Integrations
+
+| | Student Payments (Connect) | School Billing (Platform) |
+|--|--|--|
+| **Who pays** | Student pays school | School admin pays platform |
+| **Stripe mode** | Stripe Connect (PaymentIntents) | Stripe Billing (Checkout + Subscriptions) |
+| **Webhook** | `/api/stripe/webhook` | `/api/stripe/platform-webhook` |
+| **Env var** | `STRIPE_WEBHOOK_SECRET` | `STRIPE_PLATFORM_WEBHOOK_SECRET` |
+| **Customer ID** | `profiles.stripe_customer_id` | `tenants.stripe_customer_id` |
+| **Manual flow** | `payment_requests` table | `platform_payment_requests` table |
+| **Result** | Course enrollment | Plan upgrade + feature unlock |
+| **Expiry cron** | `handle_student_subscription_expiry()` 3AM | `handle_manual_subscription_expiry()` 2AM |
+
+---
 
 ## Configuration
 
-### Environment Variables
-
-No additional environment variables needed for manual payments!
-
-For other providers:
 ```bash
-# Stripe
+# Student Payments (Connect)
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-# PayPal (future)
-PAYPAL_CLIENT_ID=...
-PAYPAL_CLIENT_SECRET=...
+# School Billing (Platform)
+STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...
+
+# No additional env vars needed for manual payments
 ```
-
-## Adding More Payment Providers
-
-To add a new provider (e.g., Binance, Crypto):
-
-1. **Create Provider Class**
-   ```typescript
-   // lib/payments/binance-provider.ts
-   export class BinancePaymentProvider implements IPaymentProvider {
-     readonly provider = 'binance'
-     // Implement interface methods
-   }
-   ```
-
-2. **Register in Factory**
-   ```typescript
-   // lib/payments/index.ts
-   case 'binance':
-     return new BinancePaymentProvider(apiKey, apiSecret)
-   ```
-
-3. **Add to UI**
-   ```typescript
-   // components/admin/product-form.tsx
-   <SelectItem value="binance">Binance Pay</SelectItem>
-   ```
-
-That's it! The system is designed to be easily extensible.
-
-## Migration from Stripe-Only
-
-If you have existing Stripe products, they will continue to work. The system supports:
-
-- ✅ Legacy Stripe products (migrated automatically)
-- ✅ New multi-provider products
-- ✅ Mix of manual and Stripe products
-- ✅ Changing provider on existing products
-
-## Future Enhancements
-
-### Phase 1 (Current) ✅
-- Manual payment provider
-- Contact form for students
-- Multi-provider architecture
-
-### Phase 2 (Planned)
-- Email notifications to admin on payment requests
-- Pending transaction tracking
-- Manual enrollment workflow
-- Payment confirmation emails
-
-### Phase 3 (Future)
-- Invoice generation
-- Payment tracking dashboard
-- Automatic reminders
-- Receipt generation
-
-## FAQ
-
-**Q: Do manual payments work immediately?**
-A: No, manual payments require admin intervention. Students request payment info, then admin manually enrolls them after confirming payment.
-
-**Q: Can I have both Stripe and manual products?**
-A: Yes! You can create products with different payment providers. Students see the appropriate payment method for each product.
-
-**Q: What if I want to switch a product from Stripe to manual?**
-A: Just edit the product and change the payment method. The system will handle the transition.
-
-**Q: Do I need Stripe API keys for manual payments?**
-A: No! Manual payments don't require any external API keys.
-
-**Q: Can students choose payment method?**
-A: No, payment method is set per product by the admin. Create separate products if you want to offer both options.
-
-## Support
-
-For issues or questions:
-1. Check test results: `./test-manual-payment.sh`
-2. Review logs in console
-3. Check database: `SELECT * FROM products WHERE payment_provider = 'manual'`
-
-## Summary
-
-The manual payment system provides a flexible, zero-setup way to sell courses offline while maintaining the architecture to support online payments via Stripe, PayPal, or any future provider.
-
-**Key Benefits:**
-- ✅ No API keys needed for offline payments
-- ✅ Works alongside Stripe for online payments
-- ✅ Easy to add more payment providers
-- ✅ Fully tested with Playwright
-- ✅ Ready for production
