@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
 import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
+import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server";
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextIntlClientProvider } from 'next-intl';
@@ -85,6 +86,13 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={notoSans.variable} suppressHydrationWarning>
+      <head>
+        <TenantCssVarsServer
+          themePreset={tenantInfo?.theme_preset}
+          primaryColor={tenantInfo?.primary_color}
+          secondaryColor={tenantInfo?.secondary_color}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
