@@ -20,15 +20,15 @@ export async function PoweredByBanner() {
     : `https://${platformDomain}`
 
   return (
-    <div className="border-t border-white/5 bg-[#0A0A0A] py-2.5">
+    <div className="border-t border-border bg-muted/30 py-2.5">
       <div className="container mx-auto px-4 text-center">
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           {t('text')}{' '}
           <a
             href={platformUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2"
+            className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
             {t('brandName')}
           </a>
@@ -37,7 +37,7 @@ export async function PoweredByBanner() {
             href={`${platformUrl}/create-school`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2"
+            className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
             {t('createSchool')}
           </a>

@@ -56,7 +56,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
     const logoColor = brandingOverrides.primary_color || tenant?.primary_color || '#3B82F6';
 
     return (
-        <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md">
+        <nav className="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
             <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
 
                 {/* Logo + Tenant Branding */}
@@ -72,7 +72,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                                 <span className="font-bold text-white">{brandName[0]?.toUpperCase()}</span>
                             </div>
                         )}
-                        <span className="font-bold text-lg text-white tracking-tight">
+                        <span className="font-bold text-lg text-foreground tracking-tight">
                             {brandName}
                         </span>
                     </Link>
@@ -86,30 +86,30 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                 <div className="hidden md:flex items-center space-x-8">
                     {isMainPlatform ? (
                         <>
-                            <Link href="/#features" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                            <Link href="/#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                 {t('features')}
                             </Link>
-                            <Link href="/platform-pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                            <Link href="/platform-pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                 {t('pricing')}
                             </Link>
-                            <Link href="/creators" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                            <Link href="/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                 {t('creators')}
                             </Link>
                         </>
                     ) : headerSettings?.navLinks && headerSettings.navLinks.length > 0 ? (
                         <>
                             {headerSettings.navLinks.map((link, idx) => (
-                                <Link key={idx} href={link.href} className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                                <Link key={idx} href={link.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                     {link.label}
                                 </Link>
                             ))}
                         </>
                     ) : (
                         <>
-                            <Link href="/courses" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                            <Link href="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                 {t('courses')}
                             </Link>
-                            <Link href="/about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                            <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                                 {t('about')}
                             </Link>
                         </>
@@ -122,7 +122,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
 
                     {user ? (
                         <Link href="/dashboard/student">
-                            <Button variant="default" className="bg-white text-black hover:bg-zinc-200">
+                            <Button variant="outline">
                                 {t('dashboard')}
                             </Button>
                         </Link>
@@ -130,26 +130,26 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                         <>
                             {(headerSettings?.showLoginButton !== false) && (
                                 <Link href="/auth/login" className="hidden sm:inline-block">
-                                    <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-white/5">
+                                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                                         {t('login')}
                                     </Button>
                                 </Link>
                             )}
                             {headerSettings?.ctaText && headerSettings?.ctaLink ? (
                                 <Link href={headerSettings.ctaLink}>
-                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                    <Button className="font-medium">
                                         {headerSettings.ctaText}
                                     </Button>
                                 </Link>
                             ) : isMainPlatform ? (
                                 <Link href="/create-school">
-                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                    <Button className="font-medium">
                                         {t('startFree')} →
                                     </Button>
                                 </Link>
                             ) : (
                                 <Link href="/auth/sign-up?next=/join-school">
-                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 font-medium">
+                                    <Button className="font-medium">
                                         {t('join')} {tenant?.name}
                                     </Button>
                                 </Link>

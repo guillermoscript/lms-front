@@ -2,7 +2,7 @@ import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
 import { PoweredByBanner } from "@/components/public/powered-by-banner";
 import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -13,13 +13,12 @@ async function hasPuckPage(): Promise<boolean> {
         if (tenantId === DEFAULT_TENANT_ID) return false
         const tenant = await getCurrentTenant()
         if (!tenant || !PAID_PLANS.includes(tenant.plan)) return false
-        const supabase = await createClient()
-        const { data } = await supabase
+        const adminClient = createAdminClient()
+        const { data } = await adminClient
             .from('landing_pages')
-            .select('id')
+            .select('page_id')
             .eq('tenant_id', tenantId)
-            .eq('is_active', true)
-            .eq('status', 'published')
+            .eq('is_published', true)
             .limit(1)
             .maybeSingle()
         return !!data
@@ -47,7 +46,7 @@ export default async function PublicLayout({
     }
 
     return (
-        <div className="flex min-h-screen flex-col bg-black text-white selection:bg-blue-500/30">
+        <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/30">
             <Navbar />
             <main className="flex-1">
                 {children}
