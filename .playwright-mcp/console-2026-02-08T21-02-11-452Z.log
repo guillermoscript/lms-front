@@ -1,1 +1,0 @@
-[    6085ms] [ERROR] Failed to load resource: the server responded with a status of 406 (Not Acceptable) @ http://127.0.0.1:54321/rest/v1/enrollments?select=enrollment_id&user_id=eq.4d2dbb2c-818f-4a90-8095-6a52e92f8c44&course_id=eq.1&status=eq.active:0
