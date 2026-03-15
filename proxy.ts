@@ -222,14 +222,29 @@ export default async function proxy(request: NextRequest) {
   intlResponse.headers.set('x-tenant-id', tenantId)
   supabaseResponse.headers.set('x-tenant-id', tenantId)
 
-  // Create client to check session
+  // Create client to check session — writes refreshed cookies to supabaseResponse
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll() { /* handled by updateSession */ },
+        setAll(cookiesToSet) {
+          // Propagate refreshed JWT cookies to the response so tenant switch
+          // takes effect immediately (fixes stale get_tenant_id() in RLS)
+          const cookieDomain = (() => {
+            const d = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.split(':')[0]
+            if (!d || d === 'localhost' || d === '127.0.0.1') return undefined
+            return `.${d}`
+          })()
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              ...(cookieDomain ? { domain: cookieDomain } : {}),
+            })
+          )
+        },
       },
     }
   )
@@ -239,10 +254,14 @@ export default async function proxy(request: NextRequest) {
   try {
     const { data: userData } = await supabase.auth.getUser()
     user = userData.user
-    const { data: sessionData } = await supabase.auth.getSession()
-    session = sessionData.session
+    if (user) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      session = sessionData.session
+    }
   } catch {
     // Invalid/expired JWT — treat as unauthenticated
+    user = null
+    session = null
   }
 
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
@@ -295,6 +314,33 @@ export default async function proxy(request: NextRequest) {
     // Use tenant_users role (authoritative) over JWT claim for routing
     if (membership?.role) {
       userRole = membership.role as 'student' | 'teacher' | 'admin'
+    }
+
+    // Sync app_metadata.tenant_id if it doesn't match the current subdomain tenant.
+    // This ensures get_tenant_id() in RLS policies returns the correct tenant.
+    const jwtTenantId = session?.access_token
+      ? (() => { try { return JSON.parse(atob(session.access_token.split('.')[1])).tenant_id } catch { return null } })()
+      : null
+
+    if (jwtTenantId !== tenantId) {
+      // Update user's app_metadata so the next JWT refresh includes the correct tenant_id
+      try {
+        await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+          method: 'PUT',
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            app_metadata: { tenant_id: tenantId },
+          }),
+        })
+        // Refresh the session so the JWT gets updated claims immediately
+        await supabase.auth.refreshSession()
+      } catch {
+        // Non-blocking — next request will retry
+      }
     }
   }
 

@@ -50,13 +50,18 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: DO NOT REMOVE auth.getUser()
   // A simple mistake could make it very hard to debug issues with users being randomly logged out.
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-  } catch (e) {
-    // If this fails, it's likely a database connection issue or schema mismatch
-    // We continue anyway as the main proxy will handle redirects if session is missing
-    console.error('Error in updateSession getUser:', e)
+    await supabase.auth.getUser()
+  } catch (e: any) {
+    // If refresh token is invalid/expired, clear auth cookies so we stop retrying
+    if (e?.code === 'refresh_token_not_found' || e?.message?.includes('Refresh Token Not Found')) {
+      const cookieNames = request.cookies.getAll()
+        .map(c => c.name)
+        .filter(name => name.startsWith('sb-'))
+      for (const name of cookieNames) {
+        request.cookies.delete(name)
+        supabaseResponse.cookies.delete(name)
+      }
+    }
   }
 
   return supabaseResponse
