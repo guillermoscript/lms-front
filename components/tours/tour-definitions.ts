@@ -182,6 +182,61 @@ export function getLessonEditorTour(
   ]
 }
 
+export function getCommunityTour(
+  t: (key: string) => string,
+  userRole: 'student' | 'teacher' | 'admin'
+): DriveStep[] {
+  const steps: DriveStep[] = [
+    {
+      element: '[data-tour="community-header"]',
+      popover: {
+        title: t('tour.welcome.title'),
+        description: t('tour.welcome.description'),
+      },
+    },
+    {
+      element: '[data-tour="community-composer"]',
+      popover: {
+        title: t('tour.composer.title'),
+        description: t('tour.composer.description'),
+      },
+    },
+    {
+      element: '[data-tour="community-filters"]',
+      popover: {
+        title: t('tour.filters.title'),
+        description: t('tour.filters.description'),
+      },
+    },
+    {
+      element: '[data-tour="community-feed"]',
+      popover: {
+        title: t('tour.feed.title'),
+        description: t('tour.feed.description'),
+      },
+    },
+    {
+      element: '[data-tour="community-reactions"]',
+      popover: {
+        title: t('tour.reactions.title'),
+        description: t('tour.reactions.description'),
+      },
+    },
+  ]
+
+  if (userRole === 'admin') {
+    steps.push({
+      element: '[data-tour="community-moderation"]',
+      popover: {
+        title: t('tour.moderation.title'),
+        description: t('tour.moderation.description'),
+      },
+    })
+  }
+
+  return steps
+}
+
 export function getAdminDashboardTour(
   t: (key: string) => string
 ): DriveStep[] {

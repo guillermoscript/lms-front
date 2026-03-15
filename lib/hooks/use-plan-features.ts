@@ -22,6 +22,7 @@ const DEFAULT_FEATURES: PlanFeatures = {
   landing_pages: false,
   remove_branding: false,
   voice_exercises: false,
+  community: false,
 }
 
 const DEFAULT_LIMITS: PlanLimits = {

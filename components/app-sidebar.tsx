@@ -15,9 +15,11 @@ import {
     IconCrown,
     IconCurrencyDollar,
     IconDashboard,
+    IconFileInvoice,
     IconKey,
     IconLayout,
     IconLogout,
+    IconMessages,
     IconPalette,
     IconPlus,
     IconReceipt,
@@ -121,6 +123,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     label: t('management'),
                     items: [
                         { title: t('users'), href: "/dashboard/admin/users", icon: IconUsers },
+                        { title: t('community'), href: "/dashboard/admin/community", icon: IconMessages },
                         { title: t('allCourses'), href: "/dashboard/admin/courses", icon: IconBook },
                         { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
                         { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus, tourId: 'sidebar-create-course' },
@@ -142,6 +145,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('revenue'), href: "/dashboard/admin/revenue", icon: IconTrendingUp },
                         { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconReceipt },
                         { title: t('subscriptions'), href: "/dashboard/admin/subscriptions", icon: IconCrown },
+                        { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests", icon: IconFileInvoice },
                     ],
                 },
             ],
@@ -150,6 +154,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     label: t('main'),
                     items: [
                         { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
+                        { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
                     ],
                 },
                 {
@@ -173,6 +178,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     items: [
                         { title: t('dashboard'), href: "/dashboard/student", icon: IconDashboard },
                         { title: t('myCourses'), href: "/dashboard/student/courses", icon: IconBookmark },
+                        { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
                     ],
                 },
                 {
@@ -185,6 +191,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     label: t('resources'),
                     items: [
+                        { title: t('myPayments'), href: "/dashboard/student/payments", icon: IconCreditCard },
                         { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
                         { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar, tourId: 'sidebar-progress' },
                         { title: t('completed'), href: "/dashboard/student/courses?status=completed", icon: IconTrophy },
