@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getActivePreset } from '@/app/actions/admin/theme'
+import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemePresetSelector } from '@/components/admin/theme-preset-selector'
 import { ThemePreview } from '@/components/admin/theme-preview'
+import BrandingSettingsForm from '@/components/admin/branding-settings-form'
 
 export default async function AppearancePage() {
   const role = await getUserRole()
@@ -14,9 +16,12 @@ export default async function AppearancePage() {
   }
 
   const t = await getTranslations('dashboard.admin.appearance')
+  const tSettings = await getTranslations('dashboard.admin.settings')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
 
   const activePreset = await getActivePreset()
+  const settingsResult = await getAllSettingsByCategory()
+  const settings = settingsResult.success ? settingsResult.data : null
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,7 +50,7 @@ export default async function AppearancePage() {
             <ThemePreview />
           </div>
 
-          {/* Right: Theme controls */}
+          {/* Right: Theme controls + Branding */}
           <div className="order-1 lg:order-2 space-y-6">
             <Card>
               <CardHeader>
@@ -58,6 +63,20 @@ export default async function AppearancePage() {
                 <ThemePresetSelector activePreset={activePreset} />
               </CardContent>
             </Card>
+
+            {settings && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{tSettings('sections.branding.title')}</CardTitle>
+                  <CardDescription>
+                    {tSettings('sections.branding.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BrandingSettingsForm settings={settings.general || {}} />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
