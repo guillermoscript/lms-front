@@ -7,7 +7,8 @@ import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 
 export interface PaymentRequestFormData {
-  productId: number
+  productId?: number
+  planId?: number
   contactName: string
   contactEmail: string
   contactPhone?: string
@@ -34,20 +35,47 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
     throw new Error('Not authenticated')
   }
 
-  // Verify product exists and belongs to tenant
-  const { data: product } = await supabase
-    .from('products')
-    .select('product_id, name, price, currency, payment_provider')
-    .eq('product_id', data.productId)
-    .eq('tenant_id', tenantId)
-    .single()
-
-  if (!product) {
-    throw new Error('Product not found')
+  if (!data.productId && !data.planId) {
+    throw new Error('Must provide either productId or planId')
   }
 
-  if (product.payment_provider !== 'manual') {
-    throw new Error('This product does not support manual payments')
+  let paymentAmount: number
+  let paymentCurrency: string
+
+  if (data.productId) {
+    // Verify product exists and belongs to tenant
+    const { data: product } = await supabase
+      .from('products')
+      .select('product_id, name, price, currency, payment_provider')
+      .eq('product_id', data.productId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!product) {
+      throw new Error('Product not found')
+    }
+
+    if (product.payment_provider !== 'manual') {
+      throw new Error('This product does not support manual payments')
+    }
+
+    paymentAmount = parseFloat(product.price)
+    paymentCurrency = product.currency || 'usd'
+  } else {
+    // Verify plan exists and belongs to tenant
+    const { data: plan } = await supabase
+      .from('plans')
+      .select('plan_id, plan_name, price, currency')
+      .eq('plan_id', data.planId!)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!plan) {
+      throw new Error('Plan not found')
+    }
+
+    paymentAmount = parseFloat(plan.price)
+    paymentCurrency = plan.currency || 'usd'
   }
 
   // Create payment request
@@ -55,14 +83,15 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
     .from('payment_requests')
     .insert({
       user_id: user.id,
-      product_id: data.productId,
+      product_id: data.productId || null,
+      plan_id: data.planId || null,
       contact_name: data.contactName,
       contact_email: data.contactEmail,
       contact_phone: data.contactPhone || null,
       message: data.message || null,
       status: 'pending',
-      payment_amount: parseFloat(product.price),
-      payment_currency: product.currency || 'usd',
+      payment_amount: paymentAmount,
+      payment_currency: paymentCurrency,
       tenant_id: tenantId,
     })
     .select()
@@ -203,10 +232,10 @@ export async function completeAndEnroll(requestId: number) {
     throw new Error('Unauthorized')
   }
 
-  // Get full request details
+  // Get full request details with product and plan joins
   const { data: request, error: fetchError } = await supabase
     .from('payment_requests')
-    .select('*, product:products(product_id, name, price, currency)')
+    .select('*, product:products(product_id, name, price, currency), plan:plans(plan_id, plan_name, price, currency)')
     .eq('request_id', requestId)
     .single()
 
@@ -218,12 +247,17 @@ export async function completeAndEnroll(requestId: number) {
     throw new Error('Can only complete requests with confirmed payment')
   }
 
+  // Use admin client to bypass RLS — admin is inserting transaction/enrollment
+  // on behalf of the student (uid() != user_id would fail with regular client)
+  const adminClient = await createAdminClient()
+
   // Create transaction record
-  const { data: transaction, error: transactionError } = await supabase
+  const { data: transaction, error: transactionError } = await adminClient
     .from('transactions')
     .insert({
       user_id: request.user_id,
-      product_id: request.product_id,
+      product_id: request.product_id || null,
+      plan_id: request.plan_id || null,
       amount: request.payment_amount,
       currency: request.payment_currency,
       payment_method: `manual - ${request.payment_method}`,
@@ -238,8 +272,30 @@ export async function completeAndEnroll(requestId: number) {
     throw new Error('Failed to create transaction')
   }
 
+  // Enroll user: call appropriate RPC based on product vs plan
+  if (request.product_id) {
+    const { error: enrollError } = await adminClient.rpc('enroll_user', {
+      _user_id: request.user_id,
+      _product_id: request.product_id,
+    })
+    if (enrollError) {
+      console.error('Failed to enroll user:', enrollError)
+      throw new Error('Failed to enroll user: ' + enrollError.message)
+    }
+  } else if (request.plan_id) {
+    const { error: subError } = await adminClient.rpc('handle_new_subscription', {
+      _user_id: request.user_id,
+      _plan_id: request.plan_id,
+      _transaction_id: transaction.transaction_id,
+    })
+    if (subError) {
+      console.error('Failed to create subscription:', subError)
+      throw new Error('Failed to create subscription: ' + subError.message)
+    }
+  }
+
   // Update payment request status
-  const { error: updateError } = await supabase
+  const { error: updateError } = await adminClient
     .from('payment_requests')
     .update({
       status: 'completed',
@@ -294,6 +350,49 @@ export async function updatePaymentRequest(
   }
 
   try {
+    // If setting status to "completed" and the request has received payment,
+    // use the completeAndEnroll flow to actually create the enrollment
+    if (updates.status === 'completed') {
+      // Fetch current status to check if we should trigger enrollment
+      const { data: currentRequest } = await supabase
+        .from('payment_requests')
+        .select('status, product_id, plan_id')
+        .eq('request_id', requestId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (currentRequest && currentRequest.status === 'payment_received') {
+        // Use the proper enrollment flow
+        return await completeAndEnroll(requestId)
+          .then((result) => ({ success: true }))
+          .catch((err) => ({ success: false, error: err instanceof Error ? err.message : 'Failed to complete and enroll' }))
+      }
+
+      // If current status is not payment_received but has a product/plan,
+      // still trigger enrollment (admin is fast-tracking)
+      if (currentRequest && (currentRequest.product_id || currentRequest.plan_id) &&
+          currentRequest.status !== 'completed' && currentRequest.status !== 'cancelled') {
+        // First set status to payment_received so completeAndEnroll will accept it
+        await supabase
+          .from('payment_requests')
+          .update({
+            status: 'payment_received',
+            payment_confirmed_at: new Date().toISOString(),
+            ...(updates.paymentMethod && { payment_method: updates.paymentMethod }),
+            ...(updates.paymentInstructions && { payment_instructions: updates.paymentInstructions }),
+            ...(updates.adminNotes && { admin_notes: updates.adminNotes }),
+            processed_by: user!.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('request_id', requestId)
+          .eq('tenant_id', tenantId)
+
+        return await completeAndEnroll(requestId)
+          .then((result) => ({ success: true }))
+          .catch((err) => ({ success: false, error: err instanceof Error ? err.message : 'Failed to complete and enroll' }))
+      }
+    }
+
     const { error } = await supabase
       .from('payment_requests')
       .update({
@@ -301,7 +400,7 @@ export async function updatePaymentRequest(
         ...(updates.paymentMethod && { payment_method: updates.paymentMethod }),
         ...(updates.paymentInstructions && { payment_instructions: updates.paymentInstructions }),
         ...(updates.adminNotes && { admin_notes: updates.adminNotes }),
-        processed_by: user.id,
+        processed_by: user!.id,
         updated_at: new Date().toISOString(),
       })
       .eq('request_id', requestId)
