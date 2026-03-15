@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import type { Metadata } from 'next'
 
@@ -18,14 +18,13 @@ async function getPageData(slug: string) {
   const tenant = await getCurrentTenant()
   if (!tenant || !PAID_PLANS.includes(tenant.plan)) return null
 
-  const supabase = await createClient()
-  const { data: page } = await supabase
+  const adminClient = createAdminClient()
+  const { data: page } = await adminClient
     .from('landing_pages')
-    .select('puck_data, name')
+    .select('puck_data, title')
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
-    .eq('is_active', true)
-    .eq('status', 'published')
+    .eq('is_published', true)
     .maybeSingle()
 
   if (!page?.puck_data || typeof page.puck_data !== 'object') return null
@@ -39,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const rootProps = (result.page.puck_data as any)?.root?.props
   return {
-    title: rootProps?.metaTitle || result.page.name || slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    title: rootProps?.metaTitle || result.page.title || slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
     description: rootProps?.metaDescription,
     openGraph: rootProps?.ogImage ? { images: [rootProps.ogImage] } : undefined,
   }

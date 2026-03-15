@@ -1,4 +1,5 @@
 import type { Data } from '@measured/puck'
+import { sectionSpacingDefaults } from '../utils/section-spacing'
 
 export interface PuckTemplate {
   name: string
@@ -11,9 +12,17 @@ export interface PuckTemplate {
 
 // Counter to generate unique-per-template IDs at module level.
 // Fresh IDs are generated when templates are applied via deepCloneWithFreshIds().
+// LMS component types that use section spacing
+const SPACED_COMPONENTS = new Set([
+  'FeaturesGrid', 'CourseGrid', 'TestimonialGrid', 'CtaBlock',
+  'PricingTable', 'FaqAccordion', 'StatsCounter', 'ContactForm',
+  'LogoCloud', 'Banner', 'TeamGrid', 'ImageGallery', 'SocialProof',
+])
+
 let idCounter = 0
 function c(type: string, props: Record<string, unknown>, id?: string) {
-  return { type, props: { id: id || `${type}-tpl-${++idCounter}`, ...props } }
+  const spacing = SPACED_COMPONENTS.has(type) ? sectionSpacingDefaults : {}
+  return { type, props: { id: id || `${type}-tpl-${++idCounter}`, ...spacing, ...props } }
 }
 
 /** Deep-clone a template's puck_data and assign fresh random IDs to all components */

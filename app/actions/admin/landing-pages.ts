@@ -8,13 +8,13 @@ import type { Data } from '@measured/puck'
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface LandingPage {
-  id: string
+  id: string        // mapped from page_id
   tenant_id: string
-  name: string
+  name: string      // mapped from title
   slug: string
   puck_data: Data
-  is_active: boolean
-  status: 'draft' | 'published'
+  is_active: boolean // mapped from is_published
+  status: 'draft' | 'published' // derived from is_published
   created_at: string
   updated_at: string
 }
@@ -27,6 +27,23 @@ export interface LandingPageTemplate {
   puck_data: Data
   is_active: boolean
   sort_order: number
+}
+
+// ─── Row mapping ─────────────────────────────────────────────────────────────
+
+/** Map a DB row (page_id, title, is_published) to our LandingPage interface */
+function mapRow(row: Record<string, unknown>): LandingPage {
+  return {
+    id: row.page_id as string,
+    tenant_id: row.tenant_id as string,
+    name: row.title as string,
+    slug: row.slug as string,
+    puck_data: row.puck_data as Data,
+    is_active: row.is_published as boolean,
+    status: (row.is_published as boolean) ? 'published' : 'draft',
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+  }
 }
 
 // ─── Validation helpers ──────────────────────────────────────────────────────
@@ -58,7 +75,11 @@ function validateSlug(slug: string): string | null {
 }
 
 function friendlyDbError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err)
+  const msg = err instanceof Error
+    ? err.message
+    : typeof err === 'object' && err !== null && 'message' in err
+      ? String((err as { message: unknown }).message)
+      : String(err)
   if (msg.includes('unique') || msg.includes('duplicate')) {
     return 'A page with this slug already exists. Please choose a different slug.'
   }
@@ -85,9 +106,9 @@ export async function getLandingPages(tenantId: string): Promise<ActionResult<La
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
     if (error) throw error
-    return { success: true, data: (data ?? []) as LandingPage[] }
+    return { success: true, data: (data ?? []).map(mapRow) }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch landing pages' } as ActionResult<LandingPage[]>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage[]>
   }
 }
 
@@ -99,13 +120,13 @@ export async function getLandingPage(id: string): Promise<ActionResult<LandingPa
     const { data, error } = await adminClient
       .from('landing_pages')
       .select('*')
-      .eq('id', id)
+      .eq('page_id', id)
       .eq('tenant_id', tenantId)
       .single()
     if (error) throw error
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -120,7 +141,7 @@ export async function getTemplates(): Promise<ActionResult<LandingPageTemplate[]
     if (error) throw error
     return { success: true, data: (data ?? []) as LandingPageTemplate[] }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch templates' } as ActionResult<LandingPageTemplate[]>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPageTemplate[]>
   }
 }
 
@@ -147,17 +168,16 @@ export async function createLandingPage(
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name: name.trim().slice(0, MAX_NAME_LENGTH),
+        title: name.trim().slice(0, MAX_NAME_LENGTH),
         slug: pageSlug,
         puck_data: puckData ?? DEFAULT_PUCK_DATA,
-        is_active: false,
-        status: 'draft',
+        is_published: false,
       })
       .select()
       .single()
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
     return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
@@ -181,13 +201,13 @@ export async function updateLandingPage(
     const { data: existing } = await adminClient
       .from('landing_pages')
       .select('tenant_id')
-      .eq('id', id)
+      .eq('page_id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
     const sanitized: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (updates.name) {
-      sanitized.name = updates.name.trim().slice(0, MAX_NAME_LENGTH)
+      sanitized.title = updates.name.trim().slice(0, MAX_NAME_LENGTH)
     }
     if (updates.slug) {
       const pageSlug = sanitizeSlug(updates.slug)
@@ -202,12 +222,12 @@ export async function updateLandingPage(
     const { data, error } = await adminClient
       .from('landing_pages')
       .update(sanitized)
-      .eq('id', id)
+      .eq('page_id', id)
       .select()
       .single()
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
     return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
@@ -222,42 +242,26 @@ export async function publishLandingPage(id: string): Promise<ActionResult<Landi
     const { data: existing } = await adminClient
       .from('landing_pages')
       .select('tenant_id, slug')
-      .eq('id', id)
+      .eq('page_id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
-    // Set status to published
-    const { error } = await adminClient
+    const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ status: 'published', updated_at: new Date().toISOString() })
-      .eq('id', id)
-    if (error) throw error
-
-    // Auto-activate: deactivate other pages with the same slug, then activate this one
-    await adminClient
-      .from('landing_pages')
-      .update({ is_active: false })
-      .eq('tenant_id', tenantId)
-      .eq('slug', existing.slug)
-      .neq('id', id)
-
-    const { data, error: activateError } = await adminClient
-      .from('landing_pages')
-      .update({ is_active: true })
-      .eq('id', id)
+      .update({ is_published: true, updated_at: new Date().toISOString() })
+      .eq('page_id', id)
       .select()
       .single()
-    if (activateError) throw activateError
+    if (error) throw error
 
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
-    // Revalidate public routes so the published page is served immediately
     revalidatePath('/[locale]', 'page')
     if (existing.slug !== 'home') {
       revalidatePath(`/[locale]/p/${existing.slug}`, 'page')
     }
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to publish landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -267,38 +271,20 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
-    // Get the page to find its slug
-    const { data: page } = await adminClient
-      .from('landing_pages')
-      .select('tenant_id, slug')
-      .eq('id', id)
-      .single()
-    if (!page || page.tenant_id !== tenantId) throw new Error('Access denied')
-
-    // Deactivate other pages with the same slug, then activate this one
-    await adminClient
-      .from('landing_pages')
-      .update({ is_active: false })
-      .eq('tenant_id', tenantId)
-      .eq('slug', page.slug)
-      .neq('id', id)
-
     const { data, error } = await adminClient
       .from('landing_pages')
-      .update({ is_active: true })
-      .eq('id', id)
+      .update({ is_published: true, updated_at: new Date().toISOString() })
+      .eq('page_id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single()
     if (error) throw error
 
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     revalidatePath('/[locale]', 'page')
-    if (page.slug !== 'home') {
-      revalidatePath(`/[locale]/p/${page.slug}`, 'page')
-    }
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to activate landing page' } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }
 }
 
@@ -311,14 +297,14 @@ export async function deactivateLandingPage(id: string): Promise<ActionResult> {
     const { data: existing } = await adminClient
       .from('landing_pages')
       .select('tenant_id, slug')
-      .eq('id', id)
+      .eq('page_id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
     const { error } = await adminClient
       .from('landing_pages')
-      .update({ is_active: false })
-      .eq('id', id)
+      .update({ is_published: false })
+      .eq('page_id', id)
     if (error) throw error
 
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
@@ -328,7 +314,7 @@ export async function deactivateLandingPage(id: string): Promise<ActionResult> {
     }
     return { success: true }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to deactivate landing page' }
+    return { success: false, error: friendlyDbError(err) }
   }
 }
 
@@ -340,21 +326,21 @@ export async function deleteLandingPage(id: string): Promise<ActionResult> {
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id, is_active')
-      .eq('id', id)
+      .select('tenant_id, is_published')
+      .eq('page_id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
-    if (existing.is_active) throw new Error('Cannot delete an active page. Deactivate it first.')
+    if (existing.is_published) throw new Error('Cannot delete a published page. Unpublish it first.')
 
     const { error } = await adminClient
       .from('landing_pages')
       .delete()
-      .eq('id', id)
+      .eq('page_id', id)
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to delete landing page' }
+    return { success: false, error: friendlyDbError(err) }
   }
 }
 
@@ -370,7 +356,7 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
     const { data: original } = await adminClient
       .from('landing_pages')
       .select('*')
-      .eq('id', id)
+      .eq('page_id', id)
       .eq('tenant_id', tenantId)
       .single()
     if (!original) throw new Error('Landing page not found')
@@ -383,17 +369,16 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
       .from('landing_pages')
       .insert({
         tenant_id: tenantId,
-        name: newName.trim().slice(0, MAX_NAME_LENGTH),
+        title: newName.trim().slice(0, MAX_NAME_LENGTH),
         slug: dupSlug,
         puck_data: original.puck_data,
-        is_active: false,
-        status: 'draft',
+        is_published: false,
       })
       .select()
       .single()
     if (error) throw error
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
-    return { success: true, data: data as LandingPage }
+    return { success: true, data: mapRow(data) }
   } catch (err) {
     return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
   }

@@ -121,11 +121,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
     if (!result) return
     setShowTemplatePicker(false)
     if (!result.success) {
-      toast.error(result.error || t('errors.createFailed'))
+      const errorMsg = typeof result.error === 'string' ? result.error : t('errors.createFailed')
+      console.error('[landing-page] create failed:', result)
+      toast.error(errorMsg)
     } else if (result.data) {
       setPages(prev => [result.data!, ...prev])
       setEditingPage(result.data!)
-      toast.success(t('errors.createSuccess') ?? 'Page created')
+      toast.success(t('errors.createSuccess'))
     }
   }
 
@@ -136,10 +138,10 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
     await withGuard(`delete-${targetId}`, async () => {
       const result = await deleteLandingPage(targetId)
       if (!result.success) {
-        toast.error(result.error || t('errors.deleteFailed'))
+        toast.error(typeof result.error === 'string' ? result.error : t('errors.deleteFailed'))
       } else {
         setPages(prev => prev.filter(p => p.id !== targetId))
-        toast.success(t('errors.deleteSuccess') ?? 'Page deleted')
+        toast.success(t('errors.deleteSuccess'))
       }
       return result
     })
@@ -149,10 +151,10 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
     await withGuard(`duplicate-${page.id}`, async () => {
       const result = await duplicateLandingPage(page.id, `${page.name} (Copy)`)
       if (!result.success) {
-        toast.error(result.error || t('errors.duplicateFailed'))
+        toast.error(typeof result.error === 'string' ? result.error : t('errors.duplicateFailed'))
       } else if (result.data) {
         setPages(prev => [result.data!, ...prev])
-        toast.success(t('errors.duplicateSuccess') ?? 'Page duplicated')
+        toast.success(t('errors.duplicateSuccess'))
       }
       return result
     })
@@ -165,7 +167,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         if (result.success) {
           setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_active: false } : p))
         } else {
-          toast.error(result.error || t('errors.deactivateFailed'))
+          toast.error(typeof result.error === 'string' ? result.error : t('errors.deactivateFailed'))
         }
         return result
       } else {
@@ -180,7 +182,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
             is_active: p.id === page.id ? true : (p.slug === page.slug ? false : p.is_active),
           })))
         } else {
-          toast.error(result.error || t('errors.activateFailed'))
+          toast.error(typeof result.error === 'string' ? result.error : t('errors.activateFailed'))
         }
         return result
       }

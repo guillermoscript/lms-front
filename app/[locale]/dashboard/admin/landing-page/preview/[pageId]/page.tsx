@@ -27,7 +27,7 @@ export default async function PreviewPage({ params, searchParams }: Props) {
   const { data: page } = await adminClient
     .from('landing_pages')
     .select('*')
-    .eq('id', pageId)
+    .eq('page_id', pageId)
     .single()
 
   if (!page || page.tenant_id !== tenantId) {
@@ -41,7 +41,7 @@ export default async function PreviewPage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen">
-      {!isIframe && <PreviewBanner status={page.status} />}
+      {!isIframe && <PreviewBanner status={page.is_published ? 'published' : 'draft'} />}
       <PuckPageRenderer data={puckData} />
     </div>
   )

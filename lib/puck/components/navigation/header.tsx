@@ -1,7 +1,10 @@
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
+import { useState, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 type NavLink = {
   label: string
@@ -15,6 +18,7 @@ export type HeaderProps = {
   ctaLabel: string
   ctaHref: string
   showLogin: boolean
+  showLanguageSwitcher: boolean
   sticky: boolean
   transparent: boolean
 }
@@ -38,6 +42,14 @@ export const Header: ComponentConfig<HeaderProps> = {
     showLogin: {
       type: 'radio',
       label: 'Show Login Button',
+      options: [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+      ],
+    },
+    showLanguageSwitcher: {
+      type: 'radio',
+      label: 'Show Language Switcher',
       options: [
         { label: 'Yes', value: true },
         { label: 'No', value: false },
@@ -71,11 +83,35 @@ export const Header: ComponentConfig<HeaderProps> = {
     ctaLabel: 'Enroll Now',
     ctaHref: '/courses',
     showLogin: true,
+    showLanguageSwitcher: true,
     sticky: true,
     transparent: false,
   },
-  render: ({ logo, logoText, navLinks, ctaLabel, ctaHref, showLogin, sticky, transparent }) => {
+  render: ({ logo, logoText, navLinks, ctaLabel, ctaHref, showLogin, showLanguageSwitcher = true, sticky, transparent }) => {
     const t = useTranslations('puck.render')
+    const [user, setUser] = useState<{ id: string } | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+      const supabase = createClient()
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data.user ? { id: data.user.id } : null)
+        setLoading(false)
+      })
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ? { id: session.user.id } : null)
+      })
+      return () => subscription.unsubscribe()
+    }, [])
+
+    const handleSignOut = useCallback(async () => {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      window.location.href = '/auth/login'
+    }, [])
+
+    const isAuthenticated = !loading && user !== null
+
     return (
       <header
         className={cn(
@@ -123,19 +159,35 @@ export const Header: ComponentConfig<HeaderProps> = {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            {showLogin && (
-              <a href="/auth/login" className="no-underline">
-                <Button variant="ghost" size="sm">
-                  {t('logIn')}
+            {showLanguageSwitcher && <LanguageSwitcher />}
+            {!loading && isAuthenticated ? (
+              <>
+                <a href="/dashboard" className="no-underline">
+                  <Button variant="ghost" size="sm">
+                    {t('dashboard')}
+                  </Button>
+                </a>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  {t('logOut')}
                 </Button>
-              </a>
-            )}
-            {ctaLabel && ctaHref && (
-              <a href={ctaHref} className="no-underline">
-                <Button size="sm">
-                  {ctaLabel}
-                </Button>
-              </a>
+              </>
+            ) : (
+              <>
+                {showLogin && (
+                  <a href="/auth/login" className="no-underline">
+                    <Button variant="ghost" size="sm">
+                      {t('logIn')}
+                    </Button>
+                  </a>
+                )}
+                {ctaLabel && ctaHref && (
+                  <a href={ctaHref} className="no-underline">
+                    <Button size="sm">
+                      {ctaLabel}
+                    </Button>
+                  </a>
+                )}
+              </>
             )}
           </div>
         </div>

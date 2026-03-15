@@ -32,6 +32,7 @@ import {
 import { getTranslations } from "next-intl/server";
 import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 
@@ -46,12 +47,13 @@ export default async function LandingPage() {
     if (tenant) {
       // Check if tenant has a paid plan with a custom active landing page
       if (PAID_PLANS.includes(tenant.plan)) {
-        const { data: customPage } = await supabase
+        const adminClient = createAdminClient()
+        const { data: customPage } = await adminClient
           .from('landing_pages')
           .select('puck_data')
           .eq('tenant_id', tenantId)
-          .eq('is_active', true)
-          .eq('status', 'published')
+          .eq('slug', 'home')
+          .eq('is_published', true)
           .maybeSingle()
         if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
           return <PuckPageRenderer data={customPage.puck_data as any} />

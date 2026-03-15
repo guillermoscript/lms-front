@@ -105,16 +105,19 @@ const marginYMap: Record<string, string> = {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /** Outer wrapper classes (padding + margin) */
-export function sectionOuterClass(props: SectionSpacingProps): string {
+export function sectionOuterClass(props: Partial<SectionSpacingProps>): string {
+  const py = props.paddingY ?? sectionSpacingDefaults.paddingY
+  const px = props.paddingX ?? sectionSpacingDefaults.paddingX
+  const my = props.marginY ?? sectionSpacingDefaults.marginY
   return cn(
-    paddingYMap[props.paddingY] || '',
-    paddingXMap[props.paddingX] || '',
-    marginYMap[props.marginY] || '',
+    paddingYMap[py] || '',
+    paddingXMap[px] || '',
+    marginYMap[my] || '',
   )
 }
 
 /** Inner wrapper classes (max-width + centering) */
-export function sectionInnerClass(props: SectionSpacingProps): string {
-  const mw = maxWidthMap[props.maxWidth]
+export function sectionInnerClass(props: Partial<SectionSpacingProps>): string {
+  const mw = maxWidthMap[props.maxWidth ?? sectionSpacingDefaults.maxWidth]
   return mw ? cn(mw, 'mx-auto') : ''
 }
