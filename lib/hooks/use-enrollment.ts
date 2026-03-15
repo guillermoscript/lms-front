@@ -75,6 +75,13 @@ export function useEnrollment() {
         }
       }
 
+      // Get tenant_id from the subscription (authoritative source)
+      const { data: subTenant } = await supabase
+        .from('subscriptions')
+        .select('tenant_id')
+        .eq('subscription_id', subscriptionId)
+        .single()
+
       // Create enrollment with subscription_id
       const { error: enrollError } = await supabase
         .from('enrollments')
@@ -84,6 +91,7 @@ export function useEnrollment() {
           subscription_id: subscriptionId,
           status: 'active',
           enrollment_date: new Date().toISOString(),
+          tenant_id: subTenant?.tenant_id,
         })
 
       if (enrollError) {
