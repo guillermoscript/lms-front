@@ -1604,11 +1604,13 @@
         },
         "table": {
           "headers": {
+            "id": "ID",
             "student": "Student",
             "product": "Product",
             "amount": "Amount",
             "date": "Date",
             "status": "Status",
+            "invoice": "Invoice",
             "actions": "Actions"
           },
           "noRequests": "No payment requests found",
@@ -1623,6 +1625,82 @@
           "payment_received": "Payment Received",
           "completed": "Completed",
           "cancelled": "Cancelled"
+        },
+        "detail": {
+          "title": "Payment Request #{id}",
+          "created": "Created {date}",
+          "studentInfo": "Student Information",
+          "studentMessage": "Student Message",
+          "productInfo": "Product / Plan",
+          "includedCourses": "Included Courses",
+          "paymentDetails": "Payment Details",
+          "paymentMethod": "Payment Method",
+          "paymentInstructions": "Payment Instructions",
+          "paymentDeadline": "Payment Deadline",
+          "paymentConfirmed": "Payment Confirmed",
+          "invoiceNumber": "Invoice Number",
+          "adminSection": "Admin Actions",
+          "adminNotes": "Admin Notes",
+          "processedBy": "Processed By",
+          "actions": {
+            "sendInstructions": "Send Payment Instructions",
+            "confirmPayment": "Confirm Payment Received",
+            "completeEnroll": "Complete & Enroll Student",
+            "cancel": "Cancel Request"
+          },
+          "dialogs": {
+            "instructions": {
+              "title": "Send Payment Instructions",
+              "description": "Provide payment details for the student to complete their purchase.",
+              "method": "Payment Method",
+              "instructions": "Instructions",
+              "placeholder": "Enter bank details, wire instructions, or other payment information...",
+              "hint": "These instructions will be sent to the student's email.",
+              "deadline": "Payment Deadline",
+              "deadlineOptional": "Optional"
+            },
+            "confirm": {
+              "title": "Confirm Payment Received",
+              "description": "Confirm that the student's payment has been received. This does not yet grant course access.",
+              "notes": "Admin Notes",
+              "notesPlaceholder": "Any notes about the payment (optional)..."
+            },
+            "complete": {
+              "title": "Complete & Enroll Student",
+              "description": "This will create a transaction record and enroll the student in the associated courses. This action cannot be undone."
+            },
+            "cancel": {
+              "title": "Cancel Payment Request",
+              "description": "Are you sure you want to cancel this payment request? The student will be notified.",
+              "reason": "Cancellation Reason",
+              "reasonPlaceholder": "Reason for cancellation (optional)..."
+            }
+          },
+          "common": {
+            "cancel": "Cancel",
+            "sending": "Sending...",
+            "send": "Send Instructions",
+            "confirming": "Confirming...",
+            "confirm": "Confirm Payment",
+            "completing": "Enrolling...",
+            "complete": "Complete & Enroll",
+            "back": "Go Back",
+            "cancelling": "Cancelling...",
+            "cancelRequest": "Cancel Request"
+          },
+          "errors": {
+            "instructionsRequired": "Payment method and instructions are required.",
+            "instructionsFailed": "Failed to send instructions.",
+            "confirmFailed": "Failed to confirm payment.",
+            "completeFailed": "Failed to complete enrollment.",
+            "cancelFailed": "Failed to cancel request."
+          },
+          "success": {
+            "instructionsSent": "Payment instructions sent to the student.",
+            "paymentConfirmed": "Payment has been confirmed.",
+            "completed": "Student has been enrolled successfully!",
+            "cancelled": "Payment request has been cancelled."
+          }
         },
         "dialog": {
           "title": "Payment Request #{id}",
@@ -2861,7 +2939,10 @@
     "monetizationOverview": "Overview",
     "products": "Products",
     "plans": "Plans",
-    "subscriptions": "Subscriptions"
+    "subscriptions": "Subscriptions",
+    "paymentRequests": "Payment Requests",
+    "myPayments": "My Payments",
+    "community": "Community"
   },
   "userNav": {
     "profile": "Profile",
@@ -3469,6 +3550,9 @@
     "item": "Item",
     "product": "Product",
     "free": "Free",
+    "duration": "{days} days access",
+    "secureCheckout": "Secure checkout",
+    "included": "What's included",
     "enrollment": {
       "title": "Complete Enrollment",
       "description": "This course is free. Click below to start learning.",
@@ -4385,7 +4469,9 @@
       "message": "Message",
       "course": "Course {number}",
       "courseDescription": "An engaging course designed to help you master new skills and advance your career.",
-      "home": "Home"
+      "home": "Home",
+      "logOut": "Log out",
+      "dashboard": "Dashboard"
     }
   },
   "verification": {
@@ -4410,6 +4496,163 @@
       "title": "Certificate Not Found",
       "description": "The verification code does not match any certificate in our records, or the certificate has been removed.",
       "returnHome": "Return Home"
+    }
+  },
+  "community": {
+    "title": "Community",
+    "schoolFeedDescription": "Connect with your school community",
+    "courseFeedDescription": "Discuss and collaborate with your classmates",
+    "newPost": "New Post",
+    "writePost": "What's on your mind?",
+    "addTitle": "Add title",
+    "post": "Post",
+    "posting": "Posting...",
+    "posted": "Post created",
+    "editPost": "Edit Post",
+    "deletePost": "Delete Post",
+    "confirmDelete": "Are you sure you want to delete this post?",
+    "postDeleted": "Post deleted",
+    "reply": "Reply",
+    "writeReply": "Write a reply...",
+    "replyPosted": "Reply posted",
+    "comments": "{count, plural, one {# comment} other {# comments}}",
+    "noComments": "No comments yet",
+    "beFirstComment": "Be the first to comment",
+    "showComments": "Show comments",
+    "hideComments": "Hide comments",
+    "reactions": {
+      "like": "Like",
+      "helpful": "Helpful",
+      "insightful": "Insightful",
+      "fire": "Fire"
+    },
+    "filters": {
+      "all": "All",
+      "posts": "Posts",
+      "discussions": "Discussions",
+      "polls": "Polls",
+      "milestones": "Milestones",
+      "byTeachers": "By Teachers",
+      "byStudents": "By Students"
+    },
+    "pinned": "Pinned",
+    "locked": "Locked",
+    "lockedMessage": "This post is locked. No new comments can be added.",
+    "hidden": "Hidden",
+    "pin": "Pin post",
+    "unpin": "Unpin post",
+    "lock": "Lock post",
+    "unlock": "Unlock post",
+    "hide": "Hide post",
+    "flag": "Report",
+    "flagTitle": "Report Content",
+    "flagDescription": "Describe why you're reporting this content",
+    "flagReason": "Reason",
+    "flagSubmit": "Submit Report",
+    "flagSubmitted": "Report submitted",
+    "muted": "You are currently muted",
+    "mutedUntil": "You are muted until {date}",
+    "mutedIndefinite": "You are muted from posting. Contact an admin for more information.",
+    "unknownUser": "Unknown user",
+    "emptySchool": "No posts yet. Be the first to share something!",
+    "emptyCourse": "No discussions yet. Start the conversation!",
+    "loadMore": "Load more",
+    "loadingMore": "Loading...",
+    "noMorePosts": "You've reached the end",
+    "errorLoading": "Error loading posts",
+    "errorPosting": "Error creating post",
+    "errorReaction": "Error updating reaction",
+    "discussionPrompt": "Discussion Prompt",
+    "graded": "Graded",
+    "linkedLesson": "Linked to: {lesson}",
+    "linkedToLesson": "Linked to lesson",
+    "createPrompt": "Create Discussion Prompt",
+    "promptTitle": "Prompt Title",
+    "promptContent": "Prompt Content",
+    "selectLesson": "Link to a lesson (optional)",
+    "noLesson": "No lesson",
+    "gradedToggle": "Graded discussion",
+    "poll": {
+      "title": "Create Poll",
+      "question": "Question",
+      "options": "Options",
+      "addOption": "Add option",
+      "removeOption": "Remove",
+      "minOptions": "At least 2 options required",
+      "maxOptions": "Maximum 10 options",
+      "vote": "Vote",
+      "voted": "You voted",
+      "totalVotes": "{count, plural, one {# vote} other {# votes}}",
+      "results": "Results"
+    },
+    "milestone": {
+      "courseCompleted": "{name} completed the course {course}!",
+      "certificateEarned": "{name} earned a certificate!",
+      "levelUp": "{name} reached level {level}!",
+      "streak": "{name} is on a {days}-day streak!"
+    },
+    "moderation": {
+      "title": "Community Moderation",
+      "description": "Manage flagged content and user mutes",
+      "flaggedContent": "Flagged Content",
+      "mutedUsers": "Muted Users",
+      "noFlags": "No pending flags",
+      "noMutes": "No muted users",
+      "reviewFlag": "Review",
+      "dismissFlag": "Dismiss",
+      "flagReviewed": "Flag reviewed",
+      "muteUser": "Mute User",
+      "unmuteUser": "Unmute",
+      "muteReason": "Reason for muting",
+      "muteUntil": "Mute until (optional)",
+      "userMuted": "User muted",
+      "userUnmuted": "User unmuted",
+      "reportedBy": "Reported by {name}",
+      "reportReason": "Reason: {reason}"
+    },
+    "settings": {
+      "title": "Community",
+      "description": "Configure community features for your school",
+      "studentPostsSchoolFeed": "Allow student posts in school feed",
+      "studentPostsSchoolFeedDesc": "Students can create posts in the school-wide community feed",
+      "studentPolls": "Allow student polls",
+      "studentPollsDesc": "Students can create polls in the community",
+      "milestonePosts": "Auto-generate milestone posts",
+      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions"
+    },
+    "uploadImage": "Upload image",
+    "uploading": "Uploading...",
+    "imageUploaded": "Image uploaded",
+    "attachImage": "Attach image",
+    "tour": {
+      "welcome": {
+        "title": "Welcome to Community",
+        "description": "This is your school's community space. Share updates, ask questions, and connect with fellow members."
+      },
+      "composer": {
+        "title": "Create a Post",
+        "description": "Write what's on your mind, add a title or image, and share it with the community. Teachers can also create discussion prompts."
+      },
+      "filters": {
+        "title": "Filter Posts",
+        "description": "Use these filters to browse by post type (discussions, polls, milestones) or by author role (teachers, students)."
+      },
+      "feed": {
+        "title": "Community Feed",
+        "description": "Posts from your school community appear here, with the newest first. Pinned posts always stay at the top."
+      },
+      "reactions": {
+        "title": "React & Comment",
+        "description": "Show appreciation with reactions (like, helpful, insightful, fire) or click comments to join the conversation."
+      },
+      "moderation": {
+        "title": "Moderation Tools",
+        "description": "As an admin, you can review flagged content, mute users, and manage the community from here."
+      }
+    },
+    "upgrade": {
+      "title": "Community is a premium feature",
+      "description": "Upgrade to the Starter plan or higher to access the community feed."
     }
   }
 }

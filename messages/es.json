@@ -1602,14 +1602,16 @@
           "all": "Todos ({count})"
         },
         "table": {
-          "id": "ID",
-          "student": "Estudiante",
-          "product": "Producto",
-          "amount": "Monto",
-          "status": "Estado",
-          "invoice": "Factura",
-          "date": "Fecha",
-          "actions": "Acciones",
+          "headers": {
+            "id": "ID",
+            "student": "Estudiante",
+            "product": "Producto",
+            "amount": "Monto",
+            "status": "Estado",
+            "invoice": "Factura",
+            "date": "Fecha",
+            "actions": "Acciones"
+          },
           "noRequests": "No se encontraron solicitudes de pago",
           "manage": "Gestionar"
         },
@@ -1619,6 +1621,82 @@
           "payment_received": "Pago Recibido",
           "completed": "Completado",
           "cancelled": "Cancelado"
+        },
+        "detail": {
+          "title": "Solicitud de Pago #{id}",
+          "created": "Creada el {date}",
+          "studentInfo": "Información del Estudiante",
+          "studentMessage": "Mensaje del Estudiante",
+          "productInfo": "Producto / Plan",
+          "includedCourses": "Cursos Incluidos",
+          "paymentDetails": "Detalles del Pago",
+          "paymentMethod": "Método de Pago",
+          "paymentInstructions": "Instrucciones de Pago",
+          "paymentDeadline": "Fecha Límite de Pago",
+          "paymentConfirmed": "Pago Confirmado",
+          "invoiceNumber": "Número de Factura",
+          "adminSection": "Acciones de Administrador",
+          "adminNotes": "Notas del Administrador",
+          "processedBy": "Procesado Por",
+          "actions": {
+            "sendInstructions": "Enviar Instrucciones de Pago",
+            "confirmPayment": "Confirmar Pago Recibido",
+            "completeEnroll": "Completar e Inscribir Estudiante",
+            "cancel": "Cancelar Solicitud"
+          },
+          "dialogs": {
+            "instructions": {
+              "title": "Enviar Instrucciones de Pago",
+              "description": "Proporcione los detalles de pago para que el estudiante complete su compra.",
+              "method": "Método de Pago",
+              "instructions": "Instrucciones",
+              "placeholder": "Ingrese datos bancarios, instrucciones de transferencia u otra información de pago...",
+              "hint": "Estas instrucciones se enviarán al correo del estudiante.",
+              "deadline": "Fecha Límite de Pago",
+              "deadlineOptional": "Opcional"
+            },
+            "confirm": {
+              "title": "Confirmar Pago Recibido",
+              "description": "Confirme que se ha recibido el pago del estudiante. Esto aún no otorga acceso al curso.",
+              "notes": "Notas del Administrador",
+              "notesPlaceholder": "Notas sobre el pago (opcional)..."
+            },
+            "complete": {
+              "title": "Completar e Inscribir Estudiante",
+              "description": "Esto creará un registro de transacción e inscribirá al estudiante en los cursos asociados. Esta acción no se puede deshacer."
+            },
+            "cancel": {
+              "title": "Cancelar Solicitud de Pago",
+              "description": "¿Está seguro de que desea cancelar esta solicitud de pago? El estudiante será notificado.",
+              "reason": "Motivo de Cancelación",
+              "reasonPlaceholder": "Motivo de la cancelación (opcional)..."
+            }
+          },
+          "common": {
+            "cancel": "Cancelar",
+            "sending": "Enviando...",
+            "send": "Enviar Instrucciones",
+            "confirming": "Confirmando...",
+            "confirm": "Confirmar Pago",
+            "completing": "Inscribiendo...",
+            "complete": "Completar e Inscribir",
+            "back": "Volver",
+            "cancelling": "Cancelando...",
+            "cancelRequest": "Cancelar Solicitud"
+          },
+          "errors": {
+            "instructionsRequired": "El método de pago y las instrucciones son obligatorios.",
+            "instructionsFailed": "Error al enviar las instrucciones.",
+            "confirmFailed": "Error al confirmar el pago.",
+            "completeFailed": "Error al completar la inscripción.",
+            "cancelFailed": "Error al cancelar la solicitud."
+          },
+          "success": {
+            "instructionsSent": "Instrucciones de pago enviadas al estudiante.",
+            "paymentConfirmed": "El pago ha sido confirmado.",
+            "completed": "¡El estudiante ha sido inscrito exitosamente!",
+            "cancelled": "La solicitud de pago ha sido cancelada."
+          }
         },
         "dialog": {
           "title": "Solicitud de Pago #{id}",
@@ -2706,7 +2784,10 @@
     "monetizationOverview": "Resumen",
     "products": "Productos",
     "plans": "Planes",
-    "subscriptions": "Suscripciones"
+    "subscriptions": "Suscripciones",
+    "paymentRequests": "Solicitudes de Pago",
+    "myPayments": "Mis Pagos",
+    "community": "Comunidad"
   },
   "userNav": {
     "profile": "Perfil",
@@ -3462,6 +3543,9 @@
     "item": "Artículo",
     "product": "Producto",
     "free": "Gratis",
+    "duration": "{days} días de acceso",
+    "secureCheckout": "Pago seguro",
+    "included": "Qué incluye",
     "enrollment": {
       "title": "Completar Inscripción",
       "description": "Este curso es gratuito. Haz clic abajo para comenzar a aprender.",
@@ -4378,7 +4462,9 @@
       "message": "Mensaje",
       "course": "Curso {number}",
       "courseDescription": "Un curso interactivo diseñado para ayudarte a dominar nuevas habilidades y avanzar en tu carrera.",
-      "home": "Inicio"
+      "home": "Inicio",
+      "logOut": "Cerrar sesión",
+      "dashboard": "Panel"
     }
   },
   "verification": {
@@ -4403,6 +4489,163 @@
       "title": "Certificado No Encontrado",
       "description": "El código de verificación no coincide con ningún certificado en nuestros registros, o el certificado ha sido eliminado.",
       "returnHome": "Volver al Inicio"
+    }
+  },
+  "community": {
+    "title": "Comunidad",
+    "schoolFeedDescription": "Conecta con tu comunidad escolar",
+    "courseFeedDescription": "Discute y colabora con tus compañeros",
+    "newPost": "Nueva Publicación",
+    "writePost": "¿Qué tienes en mente?",
+    "addTitle": "Agregar título",
+    "post": "Publicar",
+    "posting": "Publicando...",
+    "posted": "Publicación creada",
+    "editPost": "Editar Publicación",
+    "deletePost": "Eliminar Publicación",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta publicación?",
+    "postDeleted": "Publicación eliminada",
+    "reply": "Responder",
+    "writeReply": "Escribe una respuesta...",
+    "replyPosted": "Respuesta publicada",
+    "comments": "{count, plural, one {# comentario} other {# comentarios}}",
+    "noComments": "Sin comentarios aún",
+    "beFirstComment": "Sé el primero en comentar",
+    "showComments": "Mostrar comentarios",
+    "hideComments": "Ocultar comentarios",
+    "reactions": {
+      "like": "Me gusta",
+      "helpful": "Útil",
+      "insightful": "Interesante",
+      "fire": "Fuego"
+    },
+    "filters": {
+      "all": "Todo",
+      "posts": "Publicaciones",
+      "discussions": "Discusiones",
+      "polls": "Encuestas",
+      "milestones": "Logros",
+      "byTeachers": "De Profesores",
+      "byStudents": "De Estudiantes"
+    },
+    "pinned": "Fijado",
+    "locked": "Bloqueado",
+    "lockedMessage": "Esta publicación está bloqueada. No se pueden agregar nuevos comentarios.",
+    "hidden": "Oculto",
+    "pin": "Fijar publicación",
+    "unpin": "Desfijar publicación",
+    "lock": "Bloquear publicación",
+    "unlock": "Desbloquear publicación",
+    "hide": "Ocultar publicación",
+    "flag": "Reportar",
+    "flagTitle": "Reportar Contenido",
+    "flagDescription": "Describe por qué estás reportando este contenido",
+    "flagReason": "Motivo",
+    "flagSubmit": "Enviar Reporte",
+    "flagSubmitted": "Reporte enviado",
+    "muted": "Actualmente estás silenciado",
+    "mutedUntil": "Estás silenciado hasta {date}",
+    "mutedIndefinite": "Estás silenciado. Contacta a un administrador para más información.",
+    "unknownUser": "Usuario desconocido",
+    "emptySchool": "No hay publicaciones aún. ¡Sé el primero en compartir algo!",
+    "emptyCourse": "No hay discusiones aún. ¡Inicia la conversación!",
+    "loadMore": "Cargar más",
+    "loadingMore": "Cargando...",
+    "noMorePosts": "Has llegado al final",
+    "errorLoading": "Error al cargar publicaciones",
+    "errorPosting": "Error al crear publicación",
+    "errorReaction": "Error al actualizar reacción",
+    "discussionPrompt": "Tema de Discusión",
+    "graded": "Calificada",
+    "linkedLesson": "Vinculada a: {lesson}",
+    "linkedToLesson": "Vinculada a lección",
+    "createPrompt": "Crear Tema de Discusión",
+    "promptTitle": "Título del Tema",
+    "promptContent": "Contenido del Tema",
+    "selectLesson": "Vincular a una lección (opcional)",
+    "noLesson": "Sin lección",
+    "gradedToggle": "Discusión calificada",
+    "poll": {
+      "title": "Crear Encuesta",
+      "question": "Pregunta",
+      "options": "Opciones",
+      "addOption": "Agregar opción",
+      "removeOption": "Eliminar",
+      "minOptions": "Se requieren al menos 2 opciones",
+      "maxOptions": "Máximo 10 opciones",
+      "vote": "Votar",
+      "voted": "Votaste",
+      "totalVotes": "{count, plural, one {# voto} other {# votos}}",
+      "results": "Resultados"
+    },
+    "milestone": {
+      "courseCompleted": "¡{name} completó el curso {course}!",
+      "certificateEarned": "¡{name} obtuvo un certificado!",
+      "levelUp": "¡{name} alcanzó el nivel {level}!",
+      "streak": "¡{name} lleva una racha de {days} días!"
+    },
+    "moderation": {
+      "title": "Moderación de Comunidad",
+      "description": "Gestiona contenido reportado y usuarios silenciados",
+      "flaggedContent": "Contenido Reportado",
+      "mutedUsers": "Usuarios Silenciados",
+      "noFlags": "Sin reportes pendientes",
+      "noMutes": "Sin usuarios silenciados",
+      "reviewFlag": "Revisar",
+      "dismissFlag": "Descartar",
+      "flagReviewed": "Reporte revisado",
+      "muteUser": "Silenciar Usuario",
+      "unmuteUser": "Desilenciar",
+      "muteReason": "Motivo del silenciamiento",
+      "muteUntil": "Silenciar hasta (opcional)",
+      "userMuted": "Usuario silenciado",
+      "userUnmuted": "Usuario desilenciado",
+      "reportedBy": "Reportado por {name}",
+      "reportReason": "Motivo: {reason}"
+    },
+    "settings": {
+      "title": "Comunidad",
+      "description": "Configura las funciones de comunidad para tu escuela",
+      "studentPostsSchoolFeed": "Permitir publicaciones de estudiantes en el feed escolar",
+      "studentPostsSchoolFeedDesc": "Los estudiantes pueden crear publicaciones en el feed general de la comunidad",
+      "studentPolls": "Permitir encuestas de estudiantes",
+      "studentPollsDesc": "Los estudiantes pueden crear encuestas en la comunidad",
+      "milestonePosts": "Generar publicaciones de logros automáticamente",
+      "milestonePostsDesc": "Crear automáticamente publicaciones de celebración para logros como completar cursos"
+    },
+    "uploadImage": "Subir imagen",
+    "uploading": "Subiendo...",
+    "imageUploaded": "Imagen subida",
+    "attachImage": "Adjuntar imagen",
+    "tour": {
+      "welcome": {
+        "title": "Bienvenido a la Comunidad",
+        "description": "Este es el espacio comunitario de tu escuela. Comparte novedades, haz preguntas y conecta con otros miembros."
+      },
+      "composer": {
+        "title": "Crear una Publicación",
+        "description": "Escribe lo que piensas, agrega un título o imagen, y compártelo con la comunidad. Los profesores también pueden crear temas de discusión."
+      },
+      "filters": {
+        "title": "Filtrar Publicaciones",
+        "description": "Usa estos filtros para buscar por tipo (discusiones, encuestas, logros) o por rol del autor (profesores, estudiantes)."
+      },
+      "feed": {
+        "title": "Feed de la Comunidad",
+        "description": "Las publicaciones de tu comunidad escolar aparecen aquí, con las más recientes primero. Las fijadas siempre se mantienen arriba."
+      },
+      "reactions": {
+        "title": "Reaccionar y Comentar",
+        "description": "Muestra tu aprecio con reacciones (me gusta, útil, interesante, fuego) o haz clic en comentarios para unirte a la conversación."
+      },
+      "moderation": {
+        "title": "Herramientas de Moderación",
+        "description": "Como administrador, puedes revisar contenido reportado, silenciar usuarios y gestionar la comunidad desde aquí."
+      }
+    },
+    "upgrade": {
+      "title": "La comunidad es una función premium",
+      "description": "Mejora al plan Starter o superior para acceder al feed de comunidad."
     }
   }
 }
