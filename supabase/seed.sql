@@ -68,8 +68,8 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status)
-VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'pro', 'active')
+INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'pro', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 
@@ -94,8 +94,8 @@ VALUES
   'student@e2etest.com',
   crypt('password123', gen_salt('bf')),
   now(),
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"full_name":"Test Student"}'::jsonb,
+  '{"provider":"email","providers":["email"],"tenant_id":"00000000-0000-0000-0000-000000000001"}'::jsonb,
+  '{"full_name":"Test Student","preferred_tenant_id":"00000000-0000-0000-0000-000000000001"}'::jsonb,
   now(), now(), '', '', '', ''
 ),
 -- owner@e2etest.com / password123  (admin of Default School + super admin)
@@ -106,8 +106,8 @@ VALUES
   'owner@e2etest.com',
   crypt('password123', gen_salt('bf')),
   now(),
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"full_name":"School Owner"}'::jsonb,
+  '{"provider":"email","providers":["email"],"tenant_id":"00000000-0000-0000-0000-000000000001"}'::jsonb,
+  '{"full_name":"School Owner","preferred_tenant_id":"00000000-0000-0000-0000-000000000001"}'::jsonb,
   now(), now(), '', '', '', ''
 ),
 -- creator@codeacademy.com / password123  (admin of Code Academy)
@@ -118,8 +118,8 @@ VALUES
   'creator@codeacademy.com',
   crypt('password123', gen_salt('bf')),
   now(),
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"full_name":"Code Academy Creator"}'::jsonb,
+  '{"provider":"email","providers":["email"],"tenant_id":"00000000-0000-0000-0000-000000000002"}'::jsonb,
+  '{"full_name":"Code Academy Creator","preferred_tenant_id":"00000000-0000-0000-0000-000000000002"}'::jsonb,
   now(), now(), '', '', '', ''
 ),
 -- alice@student.com / password123  (student of Code Academy)
@@ -130,8 +130,8 @@ VALUES
   'alice@student.com',
   crypt('password123', gen_salt('bf')),
   now(),
-  '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"full_name":"Alice Student"}'::jsonb,
+  '{"provider":"email","providers":["email"],"tenant_id":"00000000-0000-0000-0000-000000000002"}'::jsonb,
+  '{"full_name":"Alice Student","preferred_tenant_id":"00000000-0000-0000-0000-000000000002"}'::jsonb,
   now(), now(), '', '', '', ''
 )
 ON CONFLICT (id) DO NOTHING;
@@ -464,7 +464,7 @@ ON CONFLICT (product_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 14. ENROLLMENTS
 -- student@e2etest.com enrolled in Default School courses
--- alice@student.com   enrolled in Code Academy courses
+-- alice@student.com   has NO enrollments — tests plan purchase → self-enroll flow
 -- ---------------------------------------------------------------------------
 INSERT INTO enrollments (enrollment_id, user_id, course_id, product_id, status, tenant_id)
 OVERRIDING SYSTEM VALUE
@@ -484,22 +484,6 @@ VALUES
   1002,                                     -- Web Dev Starter (free)
   'active',
   '00000000-0000-0000-0000-000000000001'
-),
-(
-  2001,
-  'a1000000-0000-0000-0000-000000000004',  -- alice@student.com
-  2001,                                     -- Python for Beginners
-  2001,                                     -- Python Mastery Bundle
-  'active',
-  '00000000-0000-0000-0000-000000000002'
-),
-(
-  2002,
-  'a1000000-0000-0000-0000-000000000004',
-  2002,                                     -- Data Analysis with Pandas
-  2001,
-  'active',
-  '00000000-0000-0000-0000-000000000002'
 )
 ON CONFLICT (enrollment_id) DO NOTHING;
 
@@ -527,6 +511,16 @@ VALUES
 ON CONFLICT (plan_id) DO NOTHING;
 
 SELECT setval('plans_plan_id_seq', 10000, false);
+
+
+-- ---------------------------------------------------------------------------
+-- 15b. PLAN → COURSE LINKS  (handle_new_subscription enrolls via plan_courses)
+-- ---------------------------------------------------------------------------
+INSERT INTO plan_courses (plan_id, course_id)
+VALUES
+  (2001, 2001),  -- Code Academy Pro Monthly → Python for Beginners
+  (2001, 2002)   -- Code Academy Pro Monthly → Data Analysis with Pandas
+ON CONFLICT DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
@@ -580,6 +574,23 @@ VALUES
   ('00000000-0000-0000-0000-000000000002', 'site_name',     '{"value":"Code Academy Pro"}'::jsonb),
   ('00000000-0000-0000-0000-000000000002', 'primary_color', '{"value":"#7c3aed"}'::jsonb)
 ON CONFLICT (tenant_id, setting_key) DO NOTHING;
+
+
+-- ---------------------------------------------------------------------------
+-- 18. PLATFORM SUBSCRIPTIONS  (Code Academy is on Pro plan)
+-- ---------------------------------------------------------------------------
+INSERT INTO platform_subscriptions (tenant_id, plan_id, status, payment_method, interval, current_period_start, current_period_end, cancel_at_period_end)
+VALUES (
+  '00000000-0000-0000-0000-000000000002',
+  (SELECT plan_id FROM platform_plans WHERE slug = 'pro'),
+  'active',
+  'manual_transfer',
+  'monthly',
+  NOW(),
+  NOW() + interval '30 days',
+  false
+)
+ON CONFLICT (tenant_id) DO NOTHING;
 
 
 -- ===========================================================================
