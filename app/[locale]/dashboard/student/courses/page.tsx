@@ -37,6 +37,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
+
   // Enrich enrollments with related data
   let enrichedEnrollments: any[] = []
 

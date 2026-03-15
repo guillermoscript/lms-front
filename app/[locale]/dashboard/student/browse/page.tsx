@@ -60,7 +60,6 @@ export default async function BrowseCoursesPage({
         .from('plan_courses')
         .select('course_id')
         .eq('plan_id', planId)
-        .eq('tenant_id', tenantId)
 
       // If plan_courses has entries, restrict to those; if empty, allow all
       if (planCourses && planCourses.length > 0) {
