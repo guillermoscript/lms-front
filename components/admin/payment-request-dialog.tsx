@@ -52,14 +52,19 @@ interface PaymentRequest {
   user: {
     id: string
     full_name: string
-    email: string
-  }
+  } | null
   product: {
     product_id: number
     name: string
     price: number
     currency: string
-  }
+  } | null
+  plan: {
+    plan_id: number
+    plan_name: string
+    price: number
+    currency: string
+  } | null
 }
 
 interface PaymentRequestDialogProps {
@@ -153,7 +158,7 @@ export function PaymentRequestDialog({
         <DialogHeader>
           <DialogTitle>{t('dialog.title', { id: request.request_id })}</DialogTitle>
           <DialogDescription>
-            {t('dialog.description', { name: request.user.full_name })}
+            {t('dialog.description', { name: request.user?.full_name || request.contact_name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -164,11 +169,11 @@ export function PaymentRequestDialog({
             <div className="grid gap-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.student')}:</span>
-                <span className="font-medium">{request.user.full_name}</span>
+                <span className="font-medium">{request.user?.full_name || request.contact_name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.email')}:</span>
-                <span>{request.user.email}</span>
+                <span>{request.contact_email}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.phone')}:</span>
@@ -176,7 +181,7 @@ export function PaymentRequestDialog({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.product')}:</span>
-                <span className="font-medium">{request.product.name}</span>
+                <span className="font-medium">{request.product?.name || request.plan?.plan_name || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.amount')}:</span>

@@ -110,7 +110,7 @@ export async function rejectManualPayment(requestId: string, reason: string) {
     .from('platform_payment_requests')
     .update({
       status: 'rejected',
-      admin_notes: reason,
+      notes: reason,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)

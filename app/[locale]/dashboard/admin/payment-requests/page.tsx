@@ -43,12 +43,17 @@ export default async function PaymentRequestsPage({
       *,
       user:profiles!payment_requests_user_id_fkey(
         id,
-        full_name,
-        email
+        full_name
       ),
       product:products(
         product_id,
         name,
+        price,
+        currency
+      ),
+      plan:plans(
+        plan_id,
+        plan_name,
         price,
         currency
       )

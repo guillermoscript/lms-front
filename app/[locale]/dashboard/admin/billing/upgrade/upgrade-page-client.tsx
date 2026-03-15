@@ -68,9 +68,9 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
     })
   }
 
-  const handleManualSubmit = async () => {
+  const handleManualSubmit = async (bankReference: string, notes: string) => {
     if (!manualTransfer) return
-    await requestManualPlanUpgrade(manualTransfer.planId, manualTransfer.interval)
+    await requestManualPlanUpgrade(manualTransfer.planId, manualTransfer.interval, bankReference, notes)
   }
 
   if (manualTransfer) {

@@ -34,14 +34,19 @@ interface PaymentRequest {
   user: {
     id: string
     full_name: string
-    email: string
-  }
+  } | null
   product: {
     product_id: number
     name: string
     price: number
     currency: string
-  }
+  } | null
+  plan: {
+    plan_id: number
+    plan_name: string
+    price: number
+    currency: string
+  } | null
 }
 
 // Assuming PaymentRequestWithUser is equivalent to PaymentRequest for this context,
@@ -98,15 +103,15 @@ export function PaymentRequestsTable({
                 </TableCell>
                 <TableCell>
                   <div>
-                    <div className="font-medium">{request.user.full_name}</div>
+                    <div className="font-medium">{request.user?.full_name || request.contact_name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {request.user.email}
+                      {request.contact_email}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="max-w-xs truncate">
-                    {request.product.name}
+                    {request.product?.name || request.plan?.plan_name || '—'}
                   </div>
                 </TableCell>
                 <TableCell>

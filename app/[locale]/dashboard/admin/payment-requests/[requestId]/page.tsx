@@ -50,7 +50,6 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
       user:profiles!payment_requests_user_id_fkey(
         id,
         full_name,
-        email,
         avatar_url
       ),
       product:products(
@@ -65,6 +64,13 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
             title
           )
         )
+      ),
+      plan:plans(
+        plan_id,
+        plan_name,
+        description,
+        price,
+        currency
       ),
       processor:profiles!payment_requests_processed_by_fkey(
         id,
@@ -198,7 +204,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Product Information */}
+          {/* Product / Plan Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -208,10 +214,12 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-1">{request.product.name}</h3>
-                {request.product.description && (
+                <h3 className="font-semibold mb-1">
+                  {request.product?.name || request.plan?.plan_name || '—'}
+                </h3>
+                {(request.product?.description || request.plan?.description) && (
                   <p className="text-sm text-muted-foreground">
-                    {request.product.description}
+                    {request.product?.description || request.plan?.description}
                   </p>
                 )}
               </div>
@@ -225,7 +233,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                 </span>
               </div>
 
-              {request.product.product_courses && request.product.product_courses.length > 0 && (
+              {request.product?.product_courses && request.product.product_courses.length > 0 && (
                 <>
                   <Separator />
                   <div>

@@ -4,29 +4,53 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { enrollUser, enrollFree } from '@/app/[locale]/(public)/checkout/actions';
 import { createPaymentRequest } from '@/app/actions/payment-requests';
 import { useRouter } from 'next/navigation';
-import { Loader2, CreditCard, Banknote, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useTranslations } from 'next-intl';
+import {
+    IconLoader2,
+    IconCreditCard,
+    IconBuildingBank,
+    IconCheck,
+    IconLock,
+    IconCalendar,
+} from '@tabler/icons-react';
 
 interface CheckoutFormProps {
     courseId?: string;
     planId?: string;
     title: string;
+    description?: string | null;
     price: number | string;
+    formattedPrice?: string | null;
     productId?: number;
+    durationDays?: number;
+    features?: string | null;
+    userName?: string;
+    userEmail?: string;
 }
 
-export function CheckoutForm({ courseId, planId, title, price, productId }: CheckoutFormProps) {
+export function CheckoutForm({
+    courseId,
+    planId,
+    title,
+    description,
+    price,
+    formattedPrice,
+    productId,
+    durationDays,
+    features,
+    userName,
+    userEmail,
+}: CheckoutFormProps) {
     const [loading, setLoading] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
     const [offlineData, setOfflineData] = useState({
-        name: '',
-        email: '',
+        name: userName || '',
+        email: userEmail || '',
         phone: '',
         message: ''
     });
@@ -34,6 +58,12 @@ export function CheckoutForm({ courseId, planId, title, price, productId }: Chec
     const t = useTranslations('checkout');
 
     const isFree = typeof price === 'number' ? price === 0 : price === t('free');
+    const displayPrice = formattedPrice || (typeof price === 'number' ? `$${price}` : price);
+
+    // Parse features string into list (features are stored as newline or comma-separated text)
+    const featureList = features
+        ? features.split(/[\n,]+/).map(f => f.trim()).filter(Boolean)
+        : [];
 
     const handleEnroll = async () => {
         setLoading(true);
@@ -50,23 +80,29 @@ export function CheckoutForm({ courseId, planId, title, price, productId }: Chec
                 toast.success(t('toasts.paymentSuccess'));
                 router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
             } else {
-                // Offline payment request
-                if (!productId) {
-                    throw new Error("Product ID required for manual payment");
-                }
-                const result = await createPaymentRequest({
-                    productId,
-                    contactName: offlineData.name,
-                    contactEmail: offlineData.email,
-                    contactPhone: offlineData.phone,
-                    message: offlineData.message
-                });
-
-                if (result.success) {
+                // Offline payment — works for both products and plans
+                if (productId) {
+                    await createPaymentRequest({
+                        productId,
+                        contactName: offlineData.name,
+                        contactEmail: offlineData.email,
+                        contactPhone: offlineData.phone,
+                        message: offlineData.message
+                    });
                     toast.success(t('toasts.requestSent'));
-                    router.push('/dashboard/student');
+                    router.push('/dashboard/student/payments');
+                } else if (planId) {
+                    await createPaymentRequest({
+                        planId: parseInt(planId),
+                        contactName: offlineData.name,
+                        contactEmail: offlineData.email,
+                        contactPhone: offlineData.phone,
+                        message: offlineData.message
+                    });
+                    toast.success(t('toasts.requestSent'));
+                    router.push('/dashboard/student/payments');
                 } else {
-                    throw new Error(result.error || "Failed to create payment request");
+                    throw new Error("No product or plan to process");
                 }
             }
         } catch (error) {
@@ -76,135 +112,176 @@ export function CheckoutForm({ courseId, planId, title, price, productId }: Chec
         }
     };
 
+    // ─── Order summary block (shared between free and paid) ───
+    const orderSummary = (
+        <div className="border-b border-border px-6 py-5 sm:px-8">
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">{t('item')}</p>
+                    <p className="mt-0.5 font-semibold">{title}</p>
+                    {description && (
+                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                            {description}
+                        </p>
+                    )}
+                    {durationDays && (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <IconCalendar className="h-3.5 w-3.5" />
+                            {t('duration', { days: durationDays })}
+                        </p>
+                    )}
+                </div>
+                <span className="shrink-0 text-2xl font-extrabold tabular-nums tracking-tight">
+                    {isFree ? t('free') : displayPrice}
+                </span>
+            </div>
+
+            {/* Features list */}
+            {featureList.length > 0 && (
+                <div className="mt-4 border-t border-border pt-4">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">{t('included')}</p>
+                    <ul className="space-y-1.5">
+                        {featureList.map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                                <IconCheck className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                                {feature}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+
+    // ─── Free enrollment ───
     if (isFree) {
         return (
-            <Card className="w-full max-w-2xl mx-auto bg-zinc-900/40 backdrop-blur-xl border-zinc-800/80 rounded-[2.5rem] shadow-2xl overflow-hidden">
-                <CardHeader className="p-10 text-center">
-                    <CardTitle className="text-white text-3xl font-black tracking-tight">{t('enrollment.title')}</CardTitle>
-                    <CardDescription className="text-zinc-500 font-medium">{t('enrollment.description')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6 px-10">
-                    <div className="p-8 bg-zinc-800/30 rounded-3xl border border-zinc-700/50 text-center shadow-inner">
-                        <div className="flex justify-center mb-6">
-                            <div className="bg-green-500/10 p-4 rounded-full border border-green-500/20">
-                                <CheckCircle2 className="h-10 w-10 text-green-500" />
-                            </div>
-                        </div>
-                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">{t('item')}</div>
-                        <div className="font-black text-white text-2xl tracking-tight mb-2">{title}</div>
-                        <div className="text-3xl font-black text-green-400 mt-4 tracking-tighter uppercase">{t('free')}</div>
-                    </div>
-                </CardContent>
-                <CardFooter className="p-10">
+            <div className="rounded-xl border border-border bg-card">
+                {orderSummary}
+
+                <div className="px-6 py-4 sm:px-8">
                     <Button
-                        className="w-full bg-green-600 hover:bg-green-500 text-white font-black h-16 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-green-600/20 text-lg"
+                        className="w-full"
                         onClick={handleEnroll}
                         disabled={loading}
                     >
-                        {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                        {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {loading ? t('enrollment.enrolling') : t('enrollment.button')}
                     </Button>
-                </CardFooter>
-            </Card>
+                </div>
+            </div>
         );
     }
 
+    // ─── Paid checkout ───
     return (
-        <Card className="w-full max-w-2xl mx-auto bg-zinc-900/40 backdrop-blur-xl border-zinc-800/80 rounded-[2.5rem] shadow-2xl overflow-hidden">
-            <CardContent className="space-y-8 p-10">
-                <div className="p-6 bg-zinc-800/30 rounded-3xl border border-zinc-700/50 shadow-inner">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">{t('item')}</div>
-                            <div className="font-black text-white text-xl tracking-tight">{title}</div>
-                        </div>
-                        <div className="text-3xl font-black text-white tracking-tighter">
-                            {typeof price === 'number' ? `$${price}` : price}
-                        </div>
-                    </div>
-                </div>
+        <div className="rounded-xl border border-border bg-card">
+            {orderSummary}
 
-                <Tabs defaultValue="card" className="w-full" onValueChange={(v) => setPaymentMethod(v as any)}>
-                    <TabsList className="grid grid-cols-2 w-full bg-zinc-800/50 p-1 rounded-2xl border border-zinc-700/50 h-14">
-                        <TabsTrigger value="card" className="rounded-xl font-bold data-[state=active]:bg-zinc-700 data-[state=active]:text-white transition-all">
-                            <CreditCard className="w-4 h-4 mr-2" />
+            {/* Payment methods */}
+            <div className="px-6 py-6 sm:px-8">
+                <Tabs defaultValue="card" onValueChange={(v) => v && setPaymentMethod(v as 'card' | 'offline')}>
+                    <TabsList className="w-full">
+                        <TabsTrigger value="card" className="flex-1 gap-1.5">
+                            <IconCreditCard className="h-3.5 w-3.5" />
                             {t('payment.card')}
                         </TabsTrigger>
-                        <TabsTrigger value="offline" className="rounded-xl font-bold data-[state=active]:bg-zinc-700 data-[state=active]:text-white transition-all">
-                            <Banknote className="w-4 h-4 mr-2" />
+                        <TabsTrigger value="offline" className="flex-1 gap-1.5">
+                            <IconBuildingBank className="h-3.5 w-3.5" />
                             {t('payment.offline')}
                         </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="card" className="space-y-5 mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="space-y-2">
-                            <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.cardholder')}</Label>
-                            <Input placeholder="John Doe" className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium" />
+                    <TabsContent value="card" className="mt-5 space-y-4">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
+                            <Input id="cardholder" placeholder="John Doe" disabled={loading} />
                         </div>
-                        <div className="space-y-2">
-                            <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.cardNumber')}</Label>
-                            <div className="relative group">
-                                <Input placeholder="4242 4242 4242 4242" className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 pl-12 focus:bg-zinc-800 transition-all font-medium" />
-                                <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+                        <div className="space-y-1.5">
+                            <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
+                            <div className="relative">
+                                <Input
+                                    id="cardNumber"
+                                    placeholder="4242 4242 4242 4242"
+                                    className="pl-10"
+                                    disabled={loading}
+                                />
+                                <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.expiry')}</Label>
-                                <Input placeholder="MM/YY" className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
+                                <Input id="expiry" placeholder="MM/YY" disabled={loading} />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.cvc')}</Label>
-                                <Input placeholder="123" className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium" />
+                            <div className="space-y-1.5">
+                                <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
+                                <Input id="cvc" placeholder="123" disabled={loading} />
                             </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="offline" className="space-y-5 mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="bg-blue-500/5 border border-blue-500/20 p-4 rounded-xl text-xs text-blue-400/80 leading-relaxed font-medium">
+                    <TabsContent value="offline" className="mt-5 space-y-4">
+                        <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                             {t('payment.offlineInstructions')}
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.contactName')}</Label>
+                        </p>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="offlineName" className="text-xs font-medium">{t('payment.contactName')}</Label>
                             <Input
+                                id="offlineName"
                                 placeholder="Your Name"
-                                className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium"
                                 value={offlineData.name}
                                 onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
+                                disabled={loading}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.contactEmail')}</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="offlineEmail" className="text-xs font-medium">{t('payment.contactEmail')}</Label>
                             <Input
+                                id="offlineEmail"
                                 type="email"
                                 placeholder="email@example.com"
-                                className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium"
                                 value={offlineData.email}
                                 onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
+                                disabled={loading}
+                                readOnly={!!userEmail}
+                                className={userEmail ? 'bg-muted' : ''}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label className="text-zinc-400 font-bold text-xs uppercase tracking-wider">{t('payment.contactPhone')}</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="offlinePhone" className="text-xs font-medium">{t('payment.contactPhone')}</Label>
                             <Input
+                                id="offlinePhone"
                                 placeholder="+1 234 567 8900"
-                                className="bg-zinc-800/50 border-zinc-700/50 text-white rounded-xl h-12 px-4 focus:bg-zinc-800 transition-all font-medium"
                                 value={offlineData.phone}
                                 onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
+                                disabled={loading}
                             />
                         </div>
                     </TabsContent>
                 </Tabs>
-            </CardContent>
-            <CardFooter className="p-10 pt-0">
+            </div>
+
+            {/* Submit */}
+            <div className="border-t border-border px-6 py-4 sm:px-8">
                 <Button
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black h-16 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-blue-600/20 text-lg"
+                    className="w-full"
                     onClick={handleEnroll}
                     disabled={loading}
                 >
-                    {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                    {loading ? t('payment.processing') : paymentMethod === 'card' ? t('payment.button') : t('payment.requestButton')}
+                    {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading
+                        ? t('payment.processing')
+                        : paymentMethod === 'card'
+                            ? t('payment.button')
+                            : t('payment.requestButton')
+                    }
                 </Button>
-            </CardFooter>
-        </Card>
+                <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                    <IconLock className="h-3 w-3" />
+                    {t('secureCheckout')}
+                </p>
+            </div>
+        </div>
     );
 }

@@ -14,6 +14,7 @@ interface SearchParams {
 
 export default async function CheckoutPage(props: { params: Promise<{ locale: string }>, searchParams: Promise<SearchParams> }) {
     const searchParams = await props.searchParams;
+    const { locale } = await props.params;
     const { courseId, planId } = searchParams;
     const t = await getTranslations('checkout');
 
@@ -27,20 +28,30 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
     const tenantId = await getCurrentTenantId();
 
+    // Get user profile for pre-filling forms
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+    const userName = profile?.full_name || '';
+    const userEmail = user.email || '';
+
     // Empty state if no course or plan is provided
     if (!courseId && !planId) {
         return (
-            <div className="container min-h-[70vh] flex flex-col items-center justify-center py-24 px-4 text-center">
-                <div className="w-24 h-24 bg-zinc-900 rounded-3xl flex items-center justify-center mb-8 border border-zinc-800 shadow-2xl">
-                    <PackageSearch className="w-12 h-12 text-zinc-600" />
+            <div className="min-h-[70vh] flex flex-col items-center justify-center py-24 px-4 text-center">
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+                    <PackageSearch className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h1 className="text-3xl font-black text-white mb-4 tracking-tight">{t('empty.title')}</h1>
-                <p className="text-zinc-500 max-w-md mb-10 leading-relaxed font-medium">
+                <h1 className="text-2xl font-bold tracking-tight">{t('empty.title')}</h1>
+                <p className="mt-2 max-w-md text-sm text-muted-foreground">
                     {t('empty.description')}
                 </p>
-                <Link href="/courses">
-                    <Button className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold h-12 px-8 rounded-xl border border-zinc-700/50 transition-all hover:scale-105 active:scale-95 gap-2">
-                        <ArrowLeft className="w-4 h-4" />
+                <Link href="/courses" className="mt-8">
+                    <Button variant="outline" className="gap-2">
+                        <ArrowLeft className="h-4 w-4" />
                         {t('empty.button')}
                     </Button>
                 </Link>
@@ -49,24 +60,28 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     }
 
     let title = t('product');
+    let description: string | null = null;
     let price: number | string = t('free');
+    let currency = 'USD';
     let productId: number | undefined = undefined;
+    let durationDays: number | undefined = undefined;
+    let features: string | null = null;
 
     if (courseId) {
         const { data: course } = await supabase
             .from("courses")
-            .select("title")
+            .select("title, description")
             .eq("course_id", courseId)
             .eq("tenant_id", tenantId)
             .single();
 
         if (course) {
             title = course.title;
+            description = course.description;
 
-            // Get product price and payment provider from product_courses (pick first match)
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency, payment_provider)")
+                .select("product_id, product:products(price, currency, payment_provider, description)")
                 .eq("course_id", courseId)
                 .eq("tenant_id", tenantId)
                 .limit(1);
@@ -74,47 +89,64 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             if (productCourses?.[0]?.product) {
                 const product = productCourses[0].product as any;
                 price = parseFloat(product.price);
+                currency = product.currency?.toUpperCase() || 'USD';
                 productId = productCourses[0].product_id;
+                if (product.description) description = product.description;
 
-                // Redirect to manual checkout if payment provider is manual
                 if (product.payment_provider === 'manual') {
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
                 }
             }
         }
     } else if (planId) {
-        // Fetch plan from database with payment provider
         const { data: dbPlan } = await supabase
             .from("plans")
-            .select("plan_name, price, plan_id, payment_provider")
+            .select("plan_name, price, plan_id, currency, payment_provider, description, duration_in_days, features")
             .eq("plan_id", planId)
             .eq("tenant_id", tenantId)
             .single();
 
         if (dbPlan) {
             title = dbPlan.plan_name;
+            description = dbPlan.description;
             price = parseFloat(dbPlan.price);
+            currency = dbPlan.currency?.toUpperCase() || 'USD';
+            durationDays = dbPlan.duration_in_days;
+            features = dbPlan.features;
 
-            // Redirect to manual checkout if payment provider is manual
             if (dbPlan.payment_provider === 'manual') {
                 redirect(`/checkout/manual?planId=${planId}`);
             }
         }
     }
 
+    const formattedPrice = typeof price === 'number'
+        ? new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 2 }).format(price)
+        : null;
+
     return (
-        <div className="container py-24 px-4 max-w-4xl mx-auto">
-            <div className="mb-12 text-center">
-                <h1 className="text-4xl font-black text-white tracking-tight mb-4">{t('title')}</h1>
-                <p className="text-zinc-500 font-medium">{t('description')}</p>
+        <div className="min-h-screen bg-background">
+            <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
+                {/* Header */}
+                <div className="mb-8 text-center">
+                    <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
+                </div>
+
+                <CheckoutForm
+                    courseId={courseId}
+                    planId={planId}
+                    title={title}
+                    description={description}
+                    price={price}
+                    formattedPrice={formattedPrice}
+                    productId={productId}
+                    durationDays={durationDays}
+                    features={features}
+                    userName={userName}
+                    userEmail={userEmail}
+                />
             </div>
-            <CheckoutForm
-                courseId={courseId}
-                planId={planId}
-                title={title}
-                price={price}
-                productId={productId}
-            />
         </div>
     );
 }

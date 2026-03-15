@@ -120,7 +120,7 @@ export async function getAvailablePlans() {
 /**
  * Request a plan upgrade via manual bank transfer
  */
-export async function requestManualPlanUpgrade(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
+export async function requestManualPlanUpgrade(planId: string, interval: 'monthly' | 'yearly' = 'monthly', bankReference?: string, notes?: string) {
   const { user, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
@@ -159,6 +159,9 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
       amount,
       currency: 'usd',
       status: 'pending',
+      request_type: 'upgrade',
+      bank_reference: bankReference || null,
+      notes: notes || null,
     })
     .select('request_id')
     .single()
