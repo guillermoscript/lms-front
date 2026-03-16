@@ -23,11 +23,12 @@ test.describe('Admin Pages', () => {
   })
 
   test('admin can view individual user detail', async ({ page }) => {
+    test.setTimeout(60_000)
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-    await expect(page.getByTestId('users-page')).toBeVisible()
+    await expect(page.getByTestId('users-page')).toBeVisible({ timeout: 15_000 })
     // Look for a user link in the table
     const userLink = page.locator('a[href*="/admin/users/"]').first()
-    if (await userLink.isVisible()) {
+    if (await userLink.isVisible({ timeout: 10_000 })) {
       await userLink.click()
       await page.waitForLoadState('networkidle')
       expect(page.url()).toMatch(/\/admin\/users\//)

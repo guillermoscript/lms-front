@@ -1,101 +1,90 @@
-# Student Exams E2E Test Specification
+# Student Exam Flows — Test Specification
 
-Source of truth for student exam-taking E2E tests. Covers exam list, exam taker UI, question interaction, and result viewing.
+> Source of truth for `tests/playwright/student-exams.spec.ts`
+> Last updated: 2026-03-16
+> Verified via Playwright MCP browser exploration
 
-## Test Accounts
+## Test Data
 
-| Account | Email | Tenant | Role |
-|---------|-------|--------|------|
-| Tenant Student | `alice@student.com` | Code Academy (code-academy.lvh.me:3000) | student |
+| Item | Value |
+|------|-------|
+| Tenant | Code Academy Pro (`00000000-0000-0000-0000-000000000002`) |
+| Base URL | `http://code-academy.lvh.me:3000` |
+| Student | Alice (`alice@student.com` / `password123`, ID: `a1000000-0000-0000-0000-000000000004`) |
+| Course | 2001 "Python for Beginners" |
+| Exam | 2001 "Python Fundamentals — Final Exam" (10 questions, 60 min, true/false + multiple choice) |
+| Product | 2001 "Python Mastery Bundle" (covers course 2001) |
 
-Password: `password123`
+## Setup / Teardown
 
-## Seeded Data
+**beforeAll:**
+- Clean any prior exam submissions for Alice on exam 2001
+- Clean any prior enrollment for Alice in course 2001
+- Insert enrollment: Alice → course 2001 via product 2001, status `active`
 
-- **Course 2001**: On Code Academy tenant (00000000-0000-0000-0000-000000000002)
-- **Exam 2001**: "Python Fundamentals -- Final Exam" on course 2001
-- Alice is enrolled in Code Academy courses
-- Exam has questions of types: multiple_choice, true_false, free_text
+**afterAll:**
+- Delete exam submissions for Alice on exam 2001
+- Delete seeded enrollment
 
----
+**Why:** Alice is seeded with enrollment in course 2002 only. Course 2001 (which has the exam) requires explicit enrollment. Without it, the exam taker page redirects to dashboard.
 
-## 1. Course Detail -- Exams Link
+## Test Cases
 
-**File:** `student-exams.spec.ts`
-**Route:** `/en/dashboard/student/courses/2001`
+### 1. Exams List Page (`/dashboard/student/courses/2001/exams`)
 
-| # | Assertion | Selector | Type |
-|---|-----------|----------|------|
-| 1.1 | Course detail page loads with title | `h1` | locator |
-| 1.2 | Exams button/link is visible when course has exams | `a[href*="/exams"]` | locator |
+| # | Test | Assertions | Selectors |
+|---|------|------------|-----------|
+| 1.1 | Page loads with exam title | h1 "Assessments" visible, h3 "Python Fundamentals" visible | `getByRole('heading', { level: 1 })`, `getByRole('heading', { name: /Python Fundamentals/i })` |
+| 1.2 | Card shows duration + status | "60 minutes" text visible, "Not Started" or "Start Exam" visible | `getByText(/60 minutes/i)`, `getByText(/Not Started\|Start Exam/i)` |
+| 1.3 | Start Exam action link | "Start Exam" link visible, href contains `/exams/2001` | `getByRole('link', { name: /Start Exam/i })` |
 
----
+### 2. Exam Taker UI (`/dashboard/student/courses/2001/exams/2001`)
 
-## 2. Exams List Page
+| # | Test | Assertions | Selectors |
+|---|------|------------|-----------|
+| 2.1 | Title, progress, timer | h1 "Python Fundamentals", "Progress: 0/10", "Time Left" + MM:SS format | `getByRole('heading', { level: 1 })`, `getByText(/Progress.*0\/10/i)`, `getByText(/Time Left/i)` |
+| 2.2 | Question 1 label + text | "Question 1" indicator visible, h2 question text visible | `getByText(/Question 1/i)`, `getByRole('heading', { level: 2 })` |
+| 2.3 | Navigation buttons | "Previous" visible + disabled, "Next Question" visible + enabled | `getByRole('button', { name: /Previous/i })`, `getByRole('button', { name: /Next Question/i })` |
+| 2.4 | Answer options (radiogroup) | Radiogroup visible, at least 2 radio options | `getByRole('radiogroup')`, `getByRole('radio')` |
 
-**File:** `student-exams.spec.ts`
-**Route:** `/en/dashboard/student/courses/2001/exams`
+### 3. Exam Question Interaction
 
-| # | Assertion | Selector | Type |
-|---|-----------|----------|------|
-| 2.1 | Exams list page loads with title (Assessments heading) | `h1` with text matching "Assessments" or exams title | text |
-| 2.2 | At least one exam card is visible with title | Exam card with exam title text | text |
-| 2.3 | Exam card shows duration info | Text matching "minutes" | text |
+| # | Test | Assertions | Selectors |
+|---|------|------------|-----------|
+| 3.1 | Select answer + navigate | Click first radio → progress updates to 1/10, click Next → "Question 2", click Previous → "Question 1" | `getByRole('radio').first()`, `getByText(/Progress.*1\/10/i)`, `getByText(/Question 2/i)` |
+| 3.2 | Last question submit button | Navigate to last question (click Next repeatedly until gone), verify `exam-finish-submit` button visible + enabled with "Finish & Submit" text. **NEVER CLICK IT.** | `getByTestId('exam-finish-submit')` |
 
----
+## UI Reference (from MCP browser snapshot)
 
-## 3. Exam Taker UI
+```
+Exam Taker Layout:
+┌─────────────────────────────────────────────────────────┐
+│ [icon] Python Fundamentals — Final Exam                 │
+│         PROGRESS: 0/10  ━━━━━━━━━━                     │
+│                                          TIME LEFT      │
+│                                           59:52         │
+├─────────────────────────────────────────────────────────┤
+│                    QUESTION 1                           │
+│                                                         │
+│   In Python, variables declared inside a function       │
+│   are accessible outside that function by default.      │
+│                                                         │
+│   ┌──────────────┐  ┌──────────────┐                   │
+│   │    True       │  │    False     │                   │
+│   │    ( )        │  │    ( )       │                   │
+│   └──────────────┘  └──────────────┘                   │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│  < Previous (disabled)          Next Question >         │
+│                           (last Q: Finish & Submit)     │
+└─────────────────────────────────────────────────────────┘
+```
 
-**File:** `student-exams.spec.ts`
-**Route:** `/en/dashboard/student/courses/2001/exams/2001`
+## Notes
 
-**Note:** If Alice has already submitted exam 2001, she will be redirected to the result page. Tests must handle both states.
-
-| # | Assertion | Selector | Type |
-|---|-----------|----------|------|
-| 3.1 | Exam taker loads with exam title in header | Text matching exam title | text |
-| 3.2 | Progress indicator shows question count (e.g. "0/N") | Text matching progress pattern | text |
-| 3.3 | Question text is displayed | `h2` element with question text | locator |
-| 3.4 | Question type indicator shows "Question 1" | Text matching "Question 1" | text |
-| 3.5 | "Next Question" button is visible (if not last question) | Button with text "Next Question" | text |
-
----
-
-## 4. Exam Question Interaction
-
-**File:** `student-exams.spec.ts`
-**Route:** `/en/dashboard/student/courses/2001/exams/2001`
-
-| # | Assertion | Selector | Type |
-|---|-----------|----------|------|
-| 4.1 | Multiple choice: radio button options are visible and clickable | `label` elements with radio inputs | locator |
-| 4.2 | Navigate to next question via "Next Question" button | Click button, verify Question 2 appears | interaction |
-| 4.3 | Navigate back via "Previous" button | Click Previous, verify Question 1 reappears | interaction |
-
-**IMPORTANT:** Do NOT click "Finish & Submit" (`[data-testid="exam-finish-submit"]`). Only test UI rendering and navigation.
-
----
-
-## 5. Exam Results (Prior Submission)
-
-**File:** `student-exams.spec.ts`
-**Route:** `/en/dashboard/student/courses/2001/exams/2001/result`
-
-If Alice has a prior submission for exam 2001, this page should show:
-
-| # | Assertion | Selector | Type |
-|---|-----------|----------|------|
-| 5.1 | Result page shows "Exam Completed" badge or score | Text matching "Exam Completed" or "Final Score" | text |
-| 5.2 | Detailed question review section is visible | Text matching "Detailed Question Review" | text |
-| 5.3 | Navigation buttons visible (View All Assessments, Continue Learning) | Buttons/links with those texts | text |
-
----
-
-## Important Notes
-
-- Use `loginAsTenantStudent` helper (alice@student.com on Code Academy)
-- Base URL: `TENANT_BASE` from constants (code-academy.lvh.me:3000)
-- `test.setTimeout(60_000)` for all tests (pages involve server-side data fetching)
-- The exam-taker page redirects to `/result` if a submission already exists -- tests must handle this
-- Do NOT submit the exam (avoid creating exam_submissions records)
-- The `[data-testid="exam-finish-submit"]` button exists but must NOT be clicked
+- The exam has 10 questions — navigating to the last takes ~10 clicks
+- First question is true/false (radiogroup with 2 options)
+- Timer counts down from 60:00
+- `data-testid="exam-finish-submit"` only appears on the last question (replaces "Next Question")
+- If Alice already submitted, she gets redirected to `/result` — but our beforeAll cleans submissions
+- The `valid_enrollment` CHECK constraint requires `product_id` OR `subscription_id` — we use product 2001

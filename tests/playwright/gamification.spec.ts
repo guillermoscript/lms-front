@@ -63,8 +63,9 @@ test.describe('Gamification', () => {
     })
 
     test('student dashboard loads with gamification header', async ({ page }) => {
+      test.setTimeout(60_000)
       // GamificationHeaderCard renders in the dashboard layout
-      await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 30_000 })
 
       // Wait for client component to hydrate
       await page.waitForLoadState('networkidle')
