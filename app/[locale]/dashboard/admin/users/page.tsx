@@ -28,7 +28,7 @@ export default async function AdminUsersPage() {
 
   const tenantId = await getCurrentTenantId()
 
-  // Get tenant members first, then fetch their profiles
+  // Get tenant members first (needed for profile lookup)
   const { data: tenantMembers } = await supabase
     .from('tenant_users')
     .select('user_id, role')
@@ -37,15 +37,22 @@ export default async function AdminUsersPage() {
 
   const memberUserIds = tenantMembers?.map((m) => m.user_id) || []
 
-  // Get profiles only for users in this tenant
-  const { data: rawProfiles } = await supabase
-    .from('profiles')
-    .select('*')
-    .in('id', memberUserIds.length > 0 ? memberUserIds : ['00000000-0000-0000-0000-000000000000'])
-    .order('created_at', { ascending: false })
+  // Parallelize: profiles, enrollments, and joinUrl are independent
+  const adminClient = createAdminClient()
+  const [{ data: rawProfiles }, { data: enrollments }, joinUrl] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*')
+      .in('id', memberUserIds.length > 0 ? memberUserIds : ['00000000-0000-0000-0000-000000000000'])
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('enrollments')
+      .select('user_id')
+      .eq('tenant_id', tenantId),
+    getSchoolJoinUrl(),
+  ])
 
   // Get emails from auth.users via admin client
-  const adminClient = createAdminClient()
   const profiles = await Promise.all(
     (rawProfiles || []).map(async (p) => {
       const { data } = await adminClient.auth.admin.getUserById(p.id)
@@ -60,18 +67,10 @@ export default async function AdminUsersPage() {
     rolesMap.set(m.user_id, [...existing, m.role])
   })
 
-  // Get enrollment counts (filtered by tenant)
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select('user_id')
-    .eq('tenant_id', tenantId)
-
   const enrollmentCounts = new Map<string, number>()
   enrollments?.forEach((e) => {
     enrollmentCounts.set(e.user_id, (enrollmentCounts.get(e.user_id) || 0) + 1)
   })
-
-  const joinUrl = await getSchoolJoinUrl()
 
   return (
     <div className="space-y-6 p-6 lg:p-8" data-testid="users-page">

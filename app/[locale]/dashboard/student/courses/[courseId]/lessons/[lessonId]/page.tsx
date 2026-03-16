@@ -7,7 +7,20 @@ import { LessonResources } from '@/components/student/lesson-resources'
 import { IconMenu2, IconSparkles, IconLock } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
-import { LessonAIChat } from '@/components/student/lesson-ai-chat'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const LessonAIChat = dynamic(
+  () => import('@/components/student/lesson-ai-chat').then(m => m.LessonAIChat),
+  {
+    loading: () => (
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    ),
+  }
+)
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
@@ -36,14 +49,14 @@ export default async function LessonPage({ params }: PageProps) {
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
     .select(`
-      *,
-      courses(*),
+      id, title, sequence, content, video_url, embed_code, course_id,
+      courses(title, require_sequential_completion),
       lesson_comments(*,
         profiles(*),
         comment_reactions(*)
       ),
-      lessons_ai_tasks(*),
-      lessons_ai_task_messages(*),
+      lessons_ai_tasks(task_instructions),
+      lessons_ai_task_messages(id, message, sender, created_at),
       lesson_completions(lesson_id, user_id)
     `)
     .eq('id', parseInt(lessonId))
@@ -64,7 +77,7 @@ export default async function LessonPage({ params }: PageProps) {
   }
 
   const lesson = lessonData;
-  const course = lessonData.courses;
+  const course = lessonData.courses as unknown as { title: string; require_sequential_completion: boolean | null };
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks;
@@ -102,6 +115,61 @@ export default async function LessonPage({ params }: PageProps) {
   });
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
+
+  // Transform server-fetched comments into the shape LessonComments expects
+  const initialComments = (() => {
+    const rawComments = lessonData.lesson_comments || []
+    if (rawComments.length === 0) return []
+
+    type RawComment = {
+      id: number
+      content: string
+      created_at: string
+      user_id: string
+      parent_comment_id: number | null
+      profiles: { id: string; full_name: string | null; username: string | null; avatar_url: string | null } | null
+      comment_reactions: { comment_id: number; user_id: string; reaction_type: string }[]
+    }
+
+    const allComments = (rawComments as RawComment[]).map((c) => ({
+      id: c.id,
+      content: c.content,
+      created_at: c.created_at,
+      user_id: c.user_id,
+      parent_comment_id: c.parent_comment_id,
+      user: c.profiles
+        ? { id: c.profiles.id, full_name: c.profiles.full_name, username: c.profiles.username, avatar_url: c.profiles.avatar_url }
+        : { id: c.user_id, full_name: 'Unknown', username: null, avatar_url: null },
+      reactions: (c.comment_reactions || []).map((r) => ({
+        user_id: r.user_id,
+        reaction_type: r.reaction_type as 'like' | 'dislike' | 'boring' | 'funny',
+      })),
+      replies: [] as any[],
+    }))
+
+    // Build tree structure
+    const rootComments = allComments.filter((c) => c.parent_comment_id === null)
+    const replyMap = new Map<number, typeof allComments>()
+    allComments.forEach((c) => {
+      if (c.parent_comment_id) {
+        const replies = replyMap.get(c.parent_comment_id) || []
+        replies.push(c)
+        replyMap.set(c.parent_comment_id, replies)
+      }
+    })
+
+    const attachReplies = (comment: (typeof allComments)[0]): (typeof allComments)[0] => {
+      const replies = replyMap.get(comment.id) || []
+      const sortedReplies = replies.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      return { ...comment, replies: sortedReplies.map(attachReplies) }
+    }
+
+    return rootComments
+      .map(attachReplies)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  })()
 
   const [{ data: allLessons }, { data: completions }, { data: lessonResources }] = await Promise.all([
     supabase
@@ -307,7 +375,7 @@ export default async function LessonPage({ params }: PageProps) {
 
             {/* Comments Section */}
             <section className="border-t pt-10">
-              <LessonComments lessonId={lesson.id} userId={user.id} tenantId={tenantId} />
+              <LessonComments lessonId={lesson.id} userId={user.id} tenantId={tenantId} initialComments={initialComments} />
             </section>
           </div>
         </div>

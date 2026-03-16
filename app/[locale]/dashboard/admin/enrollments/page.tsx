@@ -40,33 +40,26 @@ export default async function AdminEnrollmentsPage({
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
-  // Get user profiles (profiles table is global - no tenant_id, no email column)
+  // Get user profiles, courses, and emails in parallel
   const userIds = enrollments?.map((e) => e.user_id) || []
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .in('id', userIds.length > 0 ? userIds : ['none'])
-
-  // Get emails from auth.users via admin client
+  const courseIds = enrollments?.map((e) => e.course_id) || []
   const adminClient = createAdminClient()
+
+  const [{ data: profiles }, { data: courses }, ...emailResults] = await Promise.all([
+    supabase.from('profiles').select('id, full_name')
+      .in('id', userIds.length > 0 ? userIds : ['none']),
+    supabase.from('courses').select('course_id, title')
+      .eq('tenant_id', tenantId)
+      .in('course_id', courseIds.length > 0 ? courseIds : [-1]),
+    ...userIds.map(uid => adminClient.auth.admin.getUserById(uid)),
+  ])
+
   const emailMap = new Map<string, string>()
-  for (const uid of userIds) {
-    const { data } = await adminClient.auth.admin.getUserById(uid)
-    if (data?.user?.email) {
-      emailMap.set(uid, data.user.email)
-    }
-  }
+  emailResults.forEach((result, i) => {
+    if (result.data?.user?.email) emailMap.set(userIds[i], result.data.user.email)
+  })
 
   const usersMap = new Map(profiles?.map((u) => [u.id, { ...u, email: emailMap.get(u.id) || '' }]))
-
-  // Get courses
-  const courseIds = enrollments?.map((e) => e.course_id) || []
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('course_id, title')
-    .eq('tenant_id', tenantId)
-    .in('course_id', courseIds)
-
   const coursesMap = new Map(courses?.map((c) => [c.course_id, c]))
 
   const activeCount = enrollments?.filter((e) => e.status === 'active').length || 0

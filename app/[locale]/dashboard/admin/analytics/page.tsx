@@ -53,14 +53,54 @@ export default async function AnalyticsPage({
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - daysAgo)
 
-  // Calculate revenue data by day
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('amount, status, created_at')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'successful')
-    .gte('created_at', startDate.toISOString())
-    .order('created_at', { ascending: true })
+  // Active students (users with activity in last 30 days)
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  // Parallelize all independent data queries
+  const [
+    { data: transactions },
+    { data: tenantUserIds },
+    { count: totalUsers },
+    { count: totalEnrollments },
+    { data: activeStudentIds },
+    { count: totalLessonCompletions },
+    { count: totalExamSubmissions },
+    { data: enrollmentsWithProgress },
+    { data: coursesWithEnrollments },
+  ] = await Promise.all([
+    supabase.from('transactions').select('amount, status, created_at')
+      .eq('tenant_id', tenantId).eq('status', 'successful')
+      .gte('created_at', startDate.toISOString()).order('created_at', { ascending: true }),
+    supabase.from('tenant_users').select('user_id, created_at')
+      .eq('tenant_id', tenantId).eq('status', 'active')
+      .gte('created_at', startDate.toISOString()).order('created_at', { ascending: true }),
+    supabase.from('tenant_users').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('enrollments').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabase.from('lesson_completions').select('user_id')
+      .eq('tenant_id', tenantId).gte('completed_at', thirtyDaysAgo.toISOString()),
+    supabase.from('lesson_completions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabase.from('exam_submissions').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabase.from('enrollments').select(`
+      enrollment_id,
+      course:courses (
+        course_id,
+        lessons:lessons (count)
+      )
+    `).eq('tenant_id', tenantId),
+    supabase.from('courses').select(`
+      course_id,
+      title,
+      enrollments:enrollments (count),
+      lessons:lessons (
+        lesson_id
+      )
+    `).eq('tenant_id', tenantId).eq('status', 'published'),
+  ])
 
   // Group revenue by date
   const revenueByDate = new Map<string, { revenue: number; transactions: number }>()
@@ -82,24 +122,9 @@ export default async function AnalyticsPage({
     transactions: data.transactions,
   }))
 
-  // Calculate user growth data (filter by tenant members)
-  const { data: tenantUserIds } = await supabase
-    .from('tenant_users')
-    .select('user_id, created_at')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
-    .gte('created_at', startDate.toISOString())
-    .order('created_at', { ascending: true })
-
+  // Calculate user growth data
   const profiles = tenantUserIds?.map((tu) => ({ created_at: tu.created_at })) || []
 
-  const { count: totalUsers } = await supabase
-    .from('tenant_users')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
-
-  // Group users by date
   const usersByDate = new Map<string, number>()
   let runningTotal = (totalUsers || 0) - (profiles?.length || 0)
 
@@ -118,48 +143,9 @@ export default async function AnalyticsPage({
     }
   })
 
-  // Get engagement metrics
-  const { count: totalEnrollments } = await supabase
-    .from('enrollments')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-
-  // Active students (users with activity in last 30 days)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-  const { data: activeStudentIds } = await supabase
-    .from('lesson_completions')
-    .select('user_id')
-    .eq('tenant_id', tenantId)
-    .gte('completed_at', thirtyDaysAgo.toISOString())
-
   const activeStudents = new Set(activeStudentIds?.map((s) => s.user_id)).size
 
-  const { count: totalLessonCompletions } = await supabase
-    .from('lesson_completions')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-
-  const { count: totalExamSubmissions } = await supabase
-    .from('exam_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-
   // Calculate average completion rate
-  const { data: enrollmentsWithProgress } = await supabase
-    .from('enrollments')
-    .select(
-      `
-      enrollment_id,
-      course:courses (
-        course_id,
-        lessons:lessons (count)
-      )
-    `
-    )
-    .eq('tenant_id', tenantId)
-
   let totalCompletionRate = 0
   let validEnrollments = 0
 
@@ -193,22 +179,6 @@ export default async function AnalyticsPage({
 
   const averageCompletionRate =
     validEnrollments > 0 ? (totalCompletionRate / validEnrollments) * 100 : 0
-
-  // Get course popularity data
-  const { data: coursesWithEnrollments } = await supabase
-    .from('courses')
-    .select(
-      `
-      course_id,
-      title,
-      enrollments:enrollments (count),
-      lessons:lessons (
-        lesson_id
-      )
-    `
-    )
-    .eq('tenant_id', tenantId)
-    .eq('status', 'published')
 
   const coursePopularityData = await Promise.all(
     (coursesWithEnrollments || []).map(async (course) => {

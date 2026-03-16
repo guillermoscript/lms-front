@@ -1,7 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ExerciseBuilder } from '@/components/teacher/exercise-builder'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const ExerciseBuilder = dynamic(
+  () => import('@/components/teacher/exercise-builder').then(m => m.ExerciseBuilder),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    ),
+  }
+)
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
@@ -32,7 +47,7 @@ export default async function NewExercisePage({ params }: PageProps) {
   if (!course) return notFound()
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
         <Link href={`/dashboard/teacher/courses/${courseId}/exercises`}>

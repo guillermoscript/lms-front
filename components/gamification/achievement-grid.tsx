@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useGamification, Achievement } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
+import { useAchievements, Achievement } from "@/lib/hooks/use-achievements";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconLock, IconCheck, IconAward } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -9,11 +10,12 @@ import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 
 export function AchievementGrid() {
-    const { allAchievements, achievementsLoading, refreshAchievements, summary } = useGamification();
+    const { summary } = useGamificationSummary();
+    const { achievements: allAchievements, loading: achievementsLoading, fetch: fetchAchievements } = useAchievements();
 
     useEffect(() => {
         if (summary?.features?.achievements) {
-            refreshAchievements();
+            fetchAchievements();
         }
     }, [summary?.features?.achievements]);
     const t = useTranslations('components.gamification');

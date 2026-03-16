@@ -29,8 +29,9 @@ export default async function EditPlanPage({ params }: PageProps) {
 
   const tenantId = await getCurrentTenantId()
 
-  // Fetch plan with courses (tenant-scoped)
-  const { data: plan, error } = await supabase
+  // Fetch plan with courses and published courses in parallel
+  const [{ data: plan, error }, { data: courses }] = await Promise.all([
+    supabase
     .from('plans')
     .select(`
       *,
@@ -41,7 +42,14 @@ export default async function EditPlanPage({ params }: PageProps) {
     .eq('plan_id', parseInt(planId))
     .eq('tenant_id', tenantId)
     .is('deleted_at', null)
-    .single()
+    .single(),
+    supabase
+      .from('courses')
+      .select('course_id, title')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .order('title'),
+  ])
 
   if (error || !plan) {
     notFound()
@@ -80,7 +88,7 @@ export default async function EditPlanPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PlanForm mode="edit" initialData={plan} />
+            <PlanForm mode="edit" initialData={plan} courses={courses || []} />
           </CardContent>
         </Card>
       </main>

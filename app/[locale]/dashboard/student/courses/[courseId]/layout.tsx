@@ -2,7 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AristotleProvider } from '@/components/aristotle/aristotle-provider'
 import { AristotleTrigger } from '@/components/aristotle/aristotle-trigger'
-import { AristotlePanel } from '@/components/aristotle/aristotle-panel'
+import dynamic from 'next/dynamic'
+
+const AristotlePanel = dynamic(
+  () => import('@/components/aristotle/aristotle-panel').then(m => m.AristotlePanel),
+)
 import { AristotleContextSetter } from '@/components/aristotle/aristotle-context-setter'
 
 interface LayoutProps {

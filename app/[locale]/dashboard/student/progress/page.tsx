@@ -49,35 +49,18 @@ export default async function StudentProgressPage() {
   // Get all course IDs for enrolled courses
   const courseIds = enrollments?.map((e) => e.course_id) || []
 
-  // Fetch lessons for enrolled courses
-  const { data: lessons } = courseIds.length > 0
-    ? await supabase
-        .from('lessons')
-        .select('id, course_id, title')
-        .in('course_id', courseIds)
-        .eq('status', 'published')
-    : { data: [] }
-
-  // Fetch lesson completions
-  const { data: completions } = await supabase
-    .from('lesson_completions')
-    .select('lesson_id, completed_at')
-    .eq('user_id', user.id)
-
-  // Fetch exams for enrolled courses
-  const { data: exams } = courseIds.length > 0
-    ? await supabase
-        .from('exams')
-        .select('exam_id, course_id, title, passing_score')
-        .in('course_id', courseIds)
-    : { data: [] }
-
-  // Fetch exam submissions
-  const { data: examSubmissions } = await supabase
-    .from('exam_submissions')
-    .select('exam_id, score, submission_date')
-    .eq('student_id', user.id)
-    .eq('tenant_id', tenantId)
+  // Parallelize all 4 queries (all independent once we have courseIds and user.id)
+  const [{ data: lessons }, { data: completions }, { data: exams }, { data: examSubmissions }] = await Promise.all([
+    courseIds.length > 0
+      ? supabase.from('lessons').select('id, course_id, title').in('course_id', courseIds).eq('status', 'published')
+      : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[] }),
+    supabase.from('lesson_completions').select('lesson_id, completed_at').eq('user_id', user.id),
+    courseIds.length > 0
+      ? supabase.from('exams').select('exam_id, course_id, title, passing_score').in('course_id', courseIds)
+      : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string; passing_score: number }[] }),
+    supabase.from('exam_submissions').select('exam_id, score, submission_date')
+      .eq('student_id', user.id).eq('tenant_id', tenantId),
+  ])
 
   // Build maps
   const completionSet = new Set(completions?.map((c) => c.lesson_id) || [])

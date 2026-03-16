@@ -1,6 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { ExamBuilder } from '@/components/teacher/exam-builder'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const ExamBuilder = dynamic(
+  () => import('@/components/teacher/exam-builder').then(m => m.ExamBuilder),
+  {
+    loading: () => (
+      <div className="mx-auto max-w-4xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    ),
+  }
+)
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -46,7 +64,6 @@ export default async function NewExamPage({ params }: PageProps) {
         courseId={parseInt(courseId)}
         courseTitle={course.title}
         initialData={{ sequence: nextSequence }}
-        tenantId={tenantId}
       />
     </div>
   )

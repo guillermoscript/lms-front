@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
-import { useGamification } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
+import { usePointStore } from "@/lib/hooks/use-point-store";
 import { PointStoreItem } from "./point-store-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconShoppingBag, IconCoins, IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 export function StoreSection() {
-    const { storeItems, storeLoading, summary, refreshStore } = useGamification();
+    const { summary } = useGamificationSummary();
+    const { items: storeItems, loading: storeLoading, fetch: fetchStore } = usePointStore();
     const t = useTranslations('components.gamification');
 
     useEffect(() => {
         if (summary?.features?.store) {
-            refreshStore();
+            fetchStore();
         }
     }, [summary?.features?.store]);
 

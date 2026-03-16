@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -9,39 +8,20 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslations } from 'next-intl'
 import { IconSearch } from '@tabler/icons-react'
 
-interface Course {
+export interface CourseOption {
   course_id: number
   title: string
-  status: string
 }
 
 interface CourseSelectorProps {
+  courses: CourseOption[]
   selectedCourses: number[]
   onChange: (courseIds: number[]) => void
 }
 
-export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProps) {
+export function CourseSelector({ courses, selectedCourses, onChange }: CourseSelectorProps) {
   const t = useTranslations('common.courseSelector')
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-
-  useEffect(() => {
-    async function loadCourses() {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('courses')
-        .select('course_id, title, status')
-        .eq('status', 'published')
-        .order('title')
-
-      if (!error && data) {
-        setCourses(data)
-      }
-      setLoading(false)
-    }
-    loadCourses()
-  }, [])
 
   const toggleCourse = (courseId: number) => {
     if (selectedCourses.includes(courseId)) {
@@ -54,17 +34,6 @@ export function CourseSelector({ selectedCourses, onChange }: CourseSelectorProp
   const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        <Label>{t('label')}</Label>
-        <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-          {t('loading')}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-2">

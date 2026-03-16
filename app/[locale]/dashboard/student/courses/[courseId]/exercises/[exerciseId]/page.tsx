@@ -3,15 +3,51 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
 
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
 import EssayExercise from '@/components/exercises/essay-exercise'
 import CodeExercise from '@/components/exercises/code-exercise'
-import CodeChallengeWrapper from '@/components/exercises/code-challenge-wrapper'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 import ToggleableSection from '@/components/exercises/toggleable-section'
-import AudioExercise from '@/components/exercises/audio-exercise'
-import ArtifactExercise from '@/components/exercises/artifact-exercise'
+
+const AudioExercise = dynamic(
+  () => import('@/components/exercises/audio-exercise'),
+  {
+    loading: () => (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-12 w-32 mx-auto" />
+      </div>
+    ),
+  }
+)
+
+const CodeChallengeWrapper = dynamic(
+  () => import('@/components/exercises/code-challenge-wrapper'),
+  {
+    loading: () => (
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    ),
+  }
+)
+
+const ArtifactExercise = dynamic(
+  () => import('@/components/exercises/artifact-exercise'),
+  {
+    loading: () => (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    ),
+  }
+)
 
 interface PageProps {
     params: Promise<{ courseId: string; exerciseId: string }>

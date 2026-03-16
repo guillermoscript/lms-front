@@ -1,6 +1,6 @@
 "use client";
 
-import { useGamification } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
 import { cn } from "@/lib/utils";
 import { IconStar } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
@@ -16,7 +16,7 @@ export function XPProgressCircle({
     strokeWidth = 8,
     className
 }: XPProgressCircleProps) {
-    const { summary, loading } = useGamification();
+    const { summary, loading } = useGamificationSummary();
     const t = useTranslations('components.gamification');
 
     if (loading || !summary) {

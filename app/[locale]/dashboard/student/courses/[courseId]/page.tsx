@@ -14,8 +14,16 @@ import {
   IconPlayerPlay,
   IconFileText,
 } from '@tabler/icons-react'
-import { CourseReviews } from '@/components/student/course-reviews'
-import { AristotleStudySection } from '@/components/aristotle/aristotle-study-section'
+import { CourseReviews, type Review } from '@/components/student/course-reviews'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const AristotleStudySection = dynamic(
+  () => import('@/components/aristotle/aristotle-study-section').then(m => m.AristotleStudySection),
+  {
+    loading: () => <Skeleton className="h-12 w-full rounded-xl" />,
+  }
+)
 import { getTranslations } from 'next-intl/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
@@ -74,6 +82,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     { data: exercises },
     { data: userReview },
     { data: tutorConfig },
+    { data: reviewsData },
   ] = await Promise.all([
     course.author_id
       ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
@@ -105,9 +114,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     supabase
       .from('reviews')
       .select('review_id')
-      .eq('course_id', numericCourseId)
+      .eq('entity_type', 'courses')
+      .eq('entity_id', numericCourseId)
       .eq('user_id', user.id)
-      .eq('tenant_id', tenantId)
       .single(),
     supabase
       .from('course_ai_tutors')
@@ -115,6 +124,12 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .eq('course_id', numericCourseId)
       .eq('tenant_id', tenantId)
       .single(),
+    supabase
+      .from('reviews')
+      .select('review_id, rating, review_text, created_at, user_id')
+      .eq('entity_type', 'courses')
+      .eq('entity_id', numericCourseId)
+      .order('created_at', { ascending: false }),
   ])
 
   const authorProfile = authorData
@@ -127,6 +142,24 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const exerciseCount = exercises?.length || 0
   const userHasReviewed = !!userReview
   const aristotleEnabled = tutorConfig?.enabled ?? false
+
+  // Build initial reviews with user profiles
+  let initialReviews: Review[] = []
+  if (reviewsData && reviewsData.length > 0) {
+    const reviewUserIds = reviewsData.map((r) => r.user_id)
+    const { data: reviewProfiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, username')
+      .in('id', reviewUserIds)
+    const profilesMap = new Map(reviewProfiles?.map((p) => [p.id, p]) || [])
+    initialReviews = reviewsData.map((r) => ({
+      review_id: r.review_id,
+      rating: r.rating,
+      review_text: r.review_text,
+      created_at: r.created_at,
+      user: profilesMap.get(r.user_id) || { full_name: null, username: 'Unknown' },
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -328,6 +361,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             courseId={parseInt(courseId)}
             userId={user.id}
             userHasReviewed={userHasReviewed}
+            initialReviews={initialReviews}
           />
         </div>
       </main>

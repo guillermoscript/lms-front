@@ -19,9 +19,11 @@ export default async function PaymentRequestsPage({
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
-  const role = await getUserRole()
-  const tenantId = await getCurrentTenantId()
-  const superAdmin = await isSuperAdmin()
+  const [role, tenantId, superAdmin] = await Promise.all([
+    getUserRole(),
+    getCurrentTenantId(),
+    isSuperAdmin(),
+  ])
 
   const {
     data: { user },

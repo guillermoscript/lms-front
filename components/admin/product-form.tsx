@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CourseSelector } from './course-selector'
+import { CourseSelector, type CourseOption } from './course-selector'
 import { createProduct, updateProduct } from '@/app/actions/admin/products'
 import { PaymentProvider } from '@/lib/payments'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -34,9 +34,10 @@ interface Product {
 interface ProductFormProps {
   mode: 'create' | 'edit'
   initialData?: Product
+  courses: CourseOption[]
 }
 
-export function ProductForm({ mode, initialData }: ProductFormProps) {
+export function ProductForm({ mode, initialData, courses }: ProductFormProps) {
   const t = useTranslations('dashboard.admin.products.form')
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -201,6 +202,7 @@ export function ProductForm({ mode, initialData }: ProductFormProps) {
 
       {/* Course Selector */}
       <CourseSelector
+        courses={courses}
         selectedCourses={formData.courseIds}
         onChange={(courseIds) => setFormData({ ...formData, courseIds })}
       />

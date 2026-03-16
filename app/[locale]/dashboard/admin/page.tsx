@@ -113,23 +113,28 @@ export default async function AdminDashboardPage({
     user: profileMap.get(t.user_id) || null,
   }))
 
-  // Calculate total revenue (successful transactions) — tenant scoped
-  const { data: successfulTransactions } = await supabase
-    .from('transactions')
-    .select('amount')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'successful')
+  // Parallelize post-stats queries
+  const adminClient = await createAdminClient()
+  const [
+    { data: successfulTransactions },
+    { data: tenant },
+    { count: studentCount },
+    { data: siteNameSetting },
+  ] = await Promise.all([
+    supabase.from('transactions').select('amount')
+      .eq('tenant_id', tenantId).eq('status', 'successful'),
+    adminClient.from('tenants').select('plan')
+      .eq('id', tenantId).single(),
+    adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
+    supabase.from('tenant_settings').select('setting_value')
+      .eq('setting_key', 'site_name').maybeSingle(),
+  ])
 
   const totalRevenue =
     successfulTransactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
-  // Get plan info for usage widget
-  const adminClient = await createAdminClient()
-  const { data: tenant } = await adminClient
-    .from('tenants')
-    .select('plan')
-    .eq('id', tenantId)
-    .single()
+  // platformPlan depends on tenant.plan -- must be sequential
   const planSlug = tenant?.plan || 'free'
   const { data: platformPlan } = await adminClient
     .from('platform_plans')
@@ -138,19 +143,7 @@ export default async function AdminDashboardPage({
     .eq('is_active', true)
     .single()
   const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
-  const { count: studentCount } = await adminClient
-    .from('tenant_users')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('role', 'student')
-    .eq('status', 'active')
 
-  // Check if school name has been configured (for checklist)
-  const { data: siteNameSetting } = await supabase
-    .from('tenant_settings')
-    .select('setting_value')
-    .eq('setting_key', 'site_name')
-    .maybeSingle()
   const currentSettings = { site_name: siteNameSetting?.setting_value }
 
   const stats = [

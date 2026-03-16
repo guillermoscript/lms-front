@@ -20,7 +20,19 @@ import {
 import type { LandingPage } from '@/app/actions/admin/landing-pages'
 import type { Data } from '@measured/puck'
 import { deepCloneWithFreshIds } from '@/lib/puck/templates'
-import { PuckEditor } from './puck-editor'
+import dynamic from 'next/dynamic'
+
+const PuckEditor = dynamic(
+  () => import('./puck-editor').then(m => m.PuckEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    ),
+  }
+)
 import { TemplatePicker } from './template-picker'
 import {
   createLandingPage,

@@ -23,26 +23,14 @@ export default async function RevenuePage() {
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher.revenue')
 
-  // Get tenant info and revenue split
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('name, stripe_account_id')
-    .eq('id', tenantId)
-    .single()
-
-  const { data: split } = await supabase
-    .from('revenue_splits')
-    .select('platform_percentage, school_percentage')
-    .eq('tenant_id', tenantId)
-    .single()
-
-  // Get all successful transactions
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('amount, status, payment_provider, created_at')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'successful')
-    .order('created_at', { ascending: false })
+  // Parallelize all 4 independent queries
+  const [{ data: tenant }, { data: split }, { data: transactions }, { data: payouts }] = await Promise.all([
+    supabase.from('tenants').select('name, stripe_account_id').eq('id', tenantId).single(),
+    supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
+    supabase.from('transactions').select('amount, status, payment_provider, created_at')
+      .eq('tenant_id', tenantId).eq('status', 'successful').order('created_at', { ascending: false }),
+    supabase.from('payouts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(10),
+  ])
 
   // Calculate revenue metrics
   const totalRevenue = transactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0
@@ -58,14 +46,6 @@ export default async function RevenuePage() {
   ) || []
 
   const recentRevenue = recentTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0)
-
-  // Get payout history
-  const { data: payouts } = await supabase
-    .from('payouts')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .limit(10)
 
   // Calculate pending payout
   const pendingPayout = payouts?.find(p => p.status === 'pending')?.amount || 0

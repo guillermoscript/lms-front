@@ -1,6 +1,6 @@
 "use client";
 
-import { useGamification } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
 import { Progress, ProgressTrack, ProgressIndicator } from "@/components/ui/progress";
 import {
     IconTrophy,
@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export function GamificationHeaderCard() {
-    const { summary, loading } = useGamification();
+    const { summary, loading } = useGamificationSummary();
     const t = useTranslations('components.gamification');
 
     if (loading) {

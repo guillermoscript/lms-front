@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
-interface Review {
+export interface Review {
   review_id: number
   rating: number
   review_text: string | null
@@ -25,30 +25,26 @@ interface CourseReviewsProps {
   courseId: number
   userId: string
   userHasReviewed: boolean
+  initialReviews: Review[]
 }
 
 export function CourseReviews({
   courseId,
   userId,
   userHasReviewed: initialHasReviewed,
+  initialReviews,
 }: CourseReviewsProps) {
-  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviews, setReviews] = useState<Review[]>(initialReviews)
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState('')
-  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [userHasReviewed, setUserHasReviewed] = useState(initialHasReviewed)
   const router = useRouter()
   const supabase = createClient()
   const t = useTranslations('courseDetails.courseReviews')
 
-  useEffect(() => {
-    loadReviews()
-  }, [courseId])
-
   async function loadReviews() {
-    setLoading(true)
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -88,8 +84,6 @@ export function CourseReviews({
       setUserHasReviewed(hasReviewed || false)
     } catch (error) {
       console.error('Error loading reviews:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -198,7 +192,7 @@ export function CourseReviews({
           </form>
         )}
 
-        {userHasReviewed && !loading && (
+        {userHasReviewed && (
           <p className="mb-6 text-sm text-muted-foreground">
             {t('alreadyReviewed')}
           </p>
@@ -206,9 +200,7 @@ export function CourseReviews({
 
         {/* Reviews List */}
         <div className="space-y-4">
-          {loading ? (
-            <p className="py-8 text-center text-muted-foreground">{t('loading')}</p>
-          ) : reviews.length === 0 ? (
+          {reviews.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
               {t('noReviews')}
             </p>

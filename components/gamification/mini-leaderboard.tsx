@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useGamification } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
+import { useLeaderboard } from "@/lib/hooks/use-leaderboard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTrophy, IconMedal, IconTrendingUp, IconLock } from "@tabler/icons-react";
@@ -9,11 +10,12 @@ import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 export function MiniLeaderboard() {
-    const { leaderboard, leaderboardLoading, refreshLeaderboard, summary } = useGamification();
+    const { summary } = useGamificationSummary();
+    const { leaderboard, loading: leaderboardLoading, fetch: fetchLeaderboard } = useLeaderboard();
 
     useEffect(() => {
         if (summary?.features?.leaderboard) {
-            refreshLeaderboard();
+            fetchLeaderboard();
         }
     }, [summary?.features?.leaderboard]);
     const t = useTranslations('components.gamification');

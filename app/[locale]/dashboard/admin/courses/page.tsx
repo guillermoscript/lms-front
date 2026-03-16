@@ -35,31 +35,22 @@ export default async function AdminCoursesPage() {
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
-  // Get author profiles
+  // Get author profiles, enrollment counts, and lesson counts in parallel
   const authorIds = courses?.map((c) => c.author_id) || []
-  const { data: authors } = await supabase
-    .from('profiles')
-    .select('id, full_name, email')
-    .in('id', authorIds)
+
+  const [{ data: authors }, { data: enrollments }, { data: lessons }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, email')
+      .in('id', authorIds.length > 0 ? authorIds : ['none']),
+    supabase.from('enrollments').select('course_id').eq('tenant_id', tenantId),
+    supabase.from('lessons').select('course_id').eq('tenant_id', tenantId),
+  ])
 
   const authorsMap = new Map(authors?.map((a) => [a.id, a]))
-
-  // Get enrollment counts
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select('course_id')
-    .eq('tenant_id', tenantId)
 
   const enrollmentCounts = new Map<number, number>()
   enrollments?.forEach((e) => {
     enrollmentCounts.set(e.course_id, (enrollmentCounts.get(e.course_id) || 0) + 1)
   })
-
-  // Get lesson counts
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('course_id')
-    .eq('tenant_id', tenantId)
 
   const lessonCounts = new Map<number, number>()
   lessons?.forEach((l) => {

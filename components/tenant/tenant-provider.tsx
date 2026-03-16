@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, use, type ReactNode } from 'react'
 import type { StoredPreset } from '@/lib/themes/presets'
 
 export interface TenantInfo {
@@ -33,5 +33,5 @@ export function TenantProvider({
 }
 
 export function useTenant() {
-  return useContext(TenantContext)
+  return use(TenantContext)
 }

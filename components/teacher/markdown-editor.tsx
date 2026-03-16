@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useImperativeHandle, useRef, forwardRef } from 'react'
+import React, { useImperativeHandle, useRef } from 'react'
 
 interface MarkdownEditorProps {
   id?: string
@@ -9,6 +9,7 @@ interface MarkdownEditorProps {
   rows?: number
   placeholder?: string
   className?: string
+  ref?: React.Ref<MarkdownEditorHandle>
 }
 
 export type MarkdownEditorHandle = {
@@ -16,8 +17,9 @@ export type MarkdownEditorHandle = {
   focus: () => void
 }
 
-const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ id, value, onChange, rows = 12, placeholder, className }, ref) => {
+export default function MarkdownEditor({
+  id, value, onChange, rows = 12, placeholder, className, ref,
+}: MarkdownEditorProps) {
     const taRef = useRef<HTMLTextAreaElement | null>(null)
 
     useImperativeHandle(ref, () => ({
@@ -116,9 +118,4 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
         />
       </div>
     )
-  }
-)
-
-MarkdownEditor.displayName = 'MarkdownEditor'
-
-export default MarkdownEditor
+}
