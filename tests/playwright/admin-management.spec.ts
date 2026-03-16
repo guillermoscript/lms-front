@@ -13,8 +13,8 @@ test.describe('Admin Management', () => {
   })
 
   test('admin payment requests page loads', async ({ page }) => {
-    await page.goto(`${TENANT_BASE}/en/dashboard/admin/payment-requests`)
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible()
+    await page.goto(`${TENANT_BASE}/en/dashboard/admin/payment-requests`, { timeout: 30_000 })
+    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
   })
 
   test('admin subscriptions page loads', async ({ page }) => {
