@@ -4,6 +4,23 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
+/**
+ * Playwright Test Configuration
+ *
+ * Projects:
+ *   desktop-chromium  — Default desktop tests (fast)
+ *   mobile            — Pixel 5 mobile viewport
+ *   human             — Desktop with slow-mo (500ms) for demos and debugging
+ *   human-mobile      — Mobile with slow-mo (500ms) for demos and debugging
+ *
+ * Usage:
+ *   npx playwright test                                    # desktop only
+ *   npx playwright test --project=mobile                   # mobile only
+ *   npx playwright test --project=human                    # slow desktop (human speed)
+ *   npx playwright test --project=human-mobile             # slow mobile
+ *   npx playwright test --project=desktop-chromium --project=mobile  # both viewports
+ *   npx playwright test --headed --project=human           # visible browser, human speed
+ */
 export default defineConfig({
   testDir: 'tests/playwright',
   timeout: 30_000,
@@ -29,6 +46,22 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'human',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { slowMo: 500 },
+        video: 'on',
+      },
+    },
+    {
+      name: 'human-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        launchOptions: { slowMo: 500 },
+        video: 'on',
+      },
     },
   ],
 });
