@@ -745,8 +745,10 @@ Verify features are properly gated by plan:
 
 ## E2E Automated Test Coverage (Playwright)
 
-> Updated: 2026-03-16 — **169 passing, 0 failed, 2 skipped**
+> Updated: 2026-03-18 — **~243 tests, 0 failed**
 > Run: `npx playwright test --project='desktop-chromium'`
+> Human speed: `npx playwright test --headed --project=human`
+> Mobile: `npx playwright test --project=mobile`
 > Specs: `tests/playwright/specs/*.spec.md` (source of truth for each test file)
 
 ### Test Files Overview
@@ -758,57 +760,67 @@ Verify features are properly gated by plan:
 | 3 | `payment-flows.spec.ts` | 6 | `specs/payment-flows.spec.md` | 2.4, 2.5, 10.2 |
 | 4 | `admin-pages.spec.ts` | 10 | `specs/admin-dashboard.spec.md` | 4.1–4.9, 4.14 |
 | 5 | `admin-management.spec.ts` | 8 | `specs/admin-dashboard.spec.md` | 4.8, 4.10, 4.13, 4.18, 4.19 |
-| 6 | `teacher-courses.spec.ts` | 9 | `specs/teacher-courses.spec.md` | 3.1, 3.9, 3.10, 3.12 |
-| 7 | `teacher-content.spec.ts` | 16 | `specs/teacher-content-crud.spec.md` | 3.2, 3.4, 3.5, 3.9 |
-| 8 | `student-courses.spec.ts` | 11 | `specs/student-flows.spec.md` | 2.1, 2.6, 2.7, 2.8, 2.12 |
-| 9 | `student-features.spec.ts` | 9 | `specs/student-features.spec.md` | 2.12, 2.13, 2.14 |
-| 10 | `community.spec.ts` | 8 | `specs/community-spaces.spec.md` | 7.1, 7.5 |
-| 11 | `gamification.spec.ts` | 10 | `specs/gamification.spec.md` | 5.1–5.6 |
-| 12 | `evaluations-security.spec.ts` | 15 | `specs/evaluations-security.spec.md` | 2.6, 2.10, 9.1 |
-| 13 | `platform-panel.spec.ts` | 31 | `specs/platform-panel.spec.md` | 8.1–8.5 |
-| 14 | `feature-gating.spec.ts` | 4 | `specs/feature-gating-i18n.spec.md` | 13 |
-| 15 | `i18n.spec.ts` | 4 | `specs/feature-gating-i18n.spec.md` | 14 |
+| 6 | `admin-crud.spec.ts` | 18 | `specs/admin-crud.spec.md` | 4.2, 4.4, 4.5, 4.6, 4.7 |
+| 7 | `teacher-courses.spec.ts` | 9 | `specs/teacher-courses.spec.md` | 3.1, 3.9, 3.10, 3.12 |
+| 8 | `teacher-content.spec.ts` | 16 | `specs/teacher-content-crud.spec.md` | 3.2, 3.4, 3.5, 3.9 |
+| 9 | `student-courses.spec.ts` | 11 | `specs/student-flows.spec.md` | 2.1, 2.6, 2.7, 2.8, 2.12 |
+| 10 | `student-features.spec.ts` | 9 | `specs/student-features.spec.md` | 2.12, 2.13, 2.14 |
+| 11 | `student-exams.spec.ts` | 9 | `specs/student-exams.spec.md` | 2.9 |
+| 12 | `enrollment-flows.spec.ts` | 10 | `specs/enrollment-flows.spec.md` | 2.1, 2.4, 4.8 |
+| 13 | `course-publishing.spec.ts` | 7 | `specs/course-publishing.spec.md` | 3.7 |
+| 14 | `community.spec.ts` | 8 | `specs/community-spaces.spec.md` | 7.1, 7.5 |
+| 15 | `community-interactions.spec.ts` | 10 | `specs/community-interactions.spec.md` | 7.1, 7.4, 7.5 |
+| 16 | `gamification.spec.ts` | 10 | `specs/gamification.spec.md` | 5.1–5.6 |
+| 17 | `certificate-verification.spec.ts` | 5 | `specs/certificate-verification.spec.md` | 6.3 |
+| 18 | `evaluations-security.spec.ts` | 15 | `specs/evaluations-security.spec.md` | 2.6, 2.10, 9.1 |
+| 19 | `platform-panel.spec.ts` | 31 | `specs/platform-panel.spec.md` | 8.1–8.5 |
+| 20 | `feature-gating.spec.ts` | 4 | `specs/feature-gating-i18n.spec.md` | 13 |
+| 21 | `i18n.spec.ts` | 4 | `specs/feature-gating-i18n.spec.md` | 14 |
+| 22 | `ui-states.spec.ts` | 12 | `specs/ui-states.spec.md` | 1.6, 11.2, 12.2, 12.3, 14 |
 
 ### Coverage by MVP Section
 
 | Section | Priority | Manual Items | E2E Tests | Auto Coverage | What's Automated | What Needs Manual Testing |
 |---------|----------|-------------|-----------|---------------|------------------|--------------------------|
-| **1. Auth & Onboarding** | P0 | 35 | 12 | ~34% | Login UI, invalid creds, route guards, sign-up form, CSRF, security headers, role redirect | Actual sign-up flow (email), password reset, school creation, join school, language switching |
-| **2. Student Journeys** | P0 | 67 | 26 | ~39% | Browse page, course detail, lesson content+toggle, comments section, reviews section, enrollment status variants, progress page, profile, payments, certificates, store | Free/paid enrollment E2E, Stripe checkout, manual payment, exam taking, exercise submission, AI tutor, block type rendering |
-| **3. Teacher Journeys** | P0 | 55 | 25 | ~45% | Dashboard, course list, create form, course detail tabs (lessons/exercises/exams/certs), lesson editor (existing+new, step nav), exercise builder (form+step nav), exam builder (form+add questions), cert template form, revenue, templates | Actual lesson save/publish, block editor content creation, exam grading, course publishing, AI templates |
-| **4. Admin Journeys** | P0 | 95 | 18 | ~19% | Dashboard+stats, users list+detail, courses, enrollments, transactions, products, plans, categories, settings, subscriptions, notifications, billing+upgrade, analytics | CRUD operations (create/edit/delete), landing page builder, appearance/branding, community moderation, API tokens |
-| **5. Gamification** | P1 | 30 | 10 | ~33% | Store page+items, XP header card, streak indicator, leaderboard, profile stats/calendar/achievements | Actual XP earning, level-up, streak mechanics, achievement triggers, coin purchases, multi-tenant isolation |
-| **6. Certificates** | P1 | 16 | 1 | ~6% | Certificates page loads | Certificate issuance, PDF download, verification page, revocation |
-| **7. Community** | P1 | 24 | 8 | ~33% | Student/teacher/admin community page loads, feed structure, composer, filters, moderation button | Post creation, comments, reactions, polls, pinning, locking, muting, cross-tenant |
-| **8. Platform Super Admin** | P1 | 20 | 31 | ~100% | Security guards, overview metrics, tenant management (list+detail+search+filter), billing tabs, plan editing, referral codes, impersonation | Fully covered |
-| **9. Multi-Tenant Isolation** | P0 | 22 | 25 | ~100% | Data isolation (courses, browse, pricing), subdomain routing, role guards, non-member redirect, DB-level tenant_id checks, exercise isolation, lesson completion tenant_id | Fully covered |
-| **10. Payment Security** | P0 | 12 | 6 | ~50% | Checkout auth requirement, payment request scoping, CSRF, pricing page rendering | Stripe webhook validation, price tampering, double payment prevention |
-| **11. Responsive & Dark** | P2 | 14 | 0 | 0% | — | All manual (mobile viewport, dark mode toggle, contrast) |
-| **12. Edge Cases** | P1 | 14 | 0 | 0% | — | All manual (loading states, empty states, error handling, session expiry) |
-| **13. Feature Gating** | P1 | 20 | 4 | ~20% | Billing usage meters, upgrade page, public pricing, course creation limits | Per-feature verification across plans |
-| **14. i18n** | P2 | 12 | 4 | ~33% | /en and /es routing, Spanish login page, locale persistence | Full spot-check of all pages in both languages |
+| **1. Auth & Onboarding** | P0 | 35 | 16 | ~46% | Login UI, invalid creds, route guards, sign-up form, CSRF, security headers, role redirect, language switching (en/es) | Actual sign-up flow (email), password reset, school creation, join school |
+| **2. Student Journeys** | P0 | 67 | 45 | ~67% | Browse page, enrollment status, course detail, lesson content+toggle, comments, reviews, exam list+taker+navigation+options, progress, profile, payments, certificates, store, payment requests | Stripe checkout, free enrollment click, exercise submission, AI tutor, block type rendering |
+| **3. Teacher Journeys** | P0 | 55 | 32 | ~58% | Dashboard, course list, create form, course detail tabs, lesson editor, exercise builder, exam builder, cert template, revenue, templates, course settings, publish/draft toggle | Actual lesson save, block editor content, exam grading, AI templates |
+| **4. Admin Journeys** | P0 | 95 | 36 | ~38% | Dashboard+stats, users list+detail+search, courses, enrollments+stats, transactions, products (form+edit+course selector), plans (form+course selector), categories, settings, subscriptions, notifications, billing+upgrade, analytics, payment request management | Landing page builder, appearance/branding, API tokens, actual CRUD submissions |
+| **5. Gamification** | P1 | 30 | 10 | ~33% | Store page+items, XP header card, streak indicator, leaderboard, profile stats/calendar/achievements | Actual XP earning, level-up, streak mechanics, achievement triggers, coin purchases |
+| **6. Certificates** | P1 | 16 | 6 | ~38% | Certificates page, public verification page (valid+invalid code), student name, verification code display | Certificate issuance, PDF download, revocation |
+| **7. Community** | P1 | 24 | 18 | ~75% | Student/teacher/admin page loads, feed structure, composer, filters, moderation button, feature gating (upgrade nudge), DB-level post creation, tenant isolation, sidebar links | Post creation via UI, comments, reactions, polls, pinning/locking/muting |
+| **8. Platform Super Admin** | P1 | 20 | 31 | ~100% | Fully covered |
+| **9. Multi-Tenant Isolation** | P0 | 22 | 25 | ~100% | Fully covered |
+| **10. Payment Security** | P0 | 12 | 16 | ~75% | Checkout auth, payment request scoping+lifecycle, CSRF, pricing, payment status updates, tenant-scoped payments | Stripe webhook validation, price tampering |
+| **11. Responsive & Dark** | P2 | 14 | 3 | ~21% | Dark mode toggle (applies/removes class), mobile project available | Full mobile viewport spot-check, contrast, charts |
+| **12. Edge Cases** | P1 | 14 | 6 | ~43% | Empty states (certs, payments, progress, store), 404 page with nav links | Loading states, error handling, session expiry |
+| **13. Feature Gating** | P1 | 20 | 6 | ~30% | Billing usage, upgrade page, public pricing, course limits, community upgrade nudge | Per-feature verification across all plans |
+| **14. i18n** | P2 | 12 | 8 | ~67% | /en and /es routing, Spanish login, locale persistence, language switcher, URL changes | Full spot-check of all pages in both languages |
 
 ### Summary
 
 | Priority | Manual Items | E2E Tests | Automated | Remaining Manual |
 |----------|-------------|-----------|-----------|-----------------|
-| **P0** | 286 | 112 | ~39% | ~174 items |
-| **P1** | 124 | 54 | ~44% | ~70 items |
-| **P2** | 26 | 4 | ~15% | ~22 items |
-| **Total** | **436** | **169** | **~39%** | **~267 items** |
+| **P0** | 286 | 170 | **~59%** | ~116 items |
+| **P1** | 124 | 77 | **~62%** | ~47 items |
+| **P2** | 26 | 11 | **~42%** | ~15 items |
+| **Total** | **436** | **~243** | **~56%** | **~178 items** |
 
 ### Strongest Coverage (can rely on E2E)
 - Multi-tenant isolation (100%) — data, routing, role guards, DB-level
 - Platform super admin (100%) — all pages, CRUD, search, filters
-- Teacher content builders (45%) — form rendering, step navigation, tab switching
-- Auth route guards (34%) — all protected routes, role-based redirects
+- Payment security (75%) — request lifecycle, tenant scoping, CSRF
+- Community spaces (75%) — pages, gating, DB isolation, moderation
+- Student journeys (67%) — browse, lessons, exams, comments, reviews
+- i18n (67%) — routing, switching, text verification
 
-### Biggest Gaps (need manual testing)
-- Admin CRUD operations (19%) — create/edit products, plans, users
-- Certificate lifecycle (6%) — issuance, PDF, verification
-- Responsive design (0%) — all mobile/dark mode
-- Edge cases (0%) — loading states, errors, session expiry
-- Payment E2E (50%) — Stripe integration, webhook flow
+### Biggest Gaps (still need manual testing)
+- Stripe payment flow — requires external service
+- Actual sign-up/password reset — requires email
+- Admin CRUD submissions — forms render but not submitted
+- Certificate issuance — auto-issuance trigger not tested
+- AI tutor — requires API
+- Exercise submission — requires AI evaluation
 
 ---
 
