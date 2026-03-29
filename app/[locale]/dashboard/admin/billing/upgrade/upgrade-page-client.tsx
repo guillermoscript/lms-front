@@ -7,6 +7,7 @@ import { PlanComparisonTable } from '@/components/admin/plan-comparison-table'
 import { ManualTransferForm } from '@/components/admin/manual-transfer-form'
 import { requestManualPlanUpgrade } from '@/app/actions/admin/billing'
 import { useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 
 interface UpgradePageClientProps {
   plans: Array<{
@@ -25,8 +26,10 @@ interface UpgradePageClientProps {
 
 export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps) {
   const router = useRouter()
+  const locale = useLocale()
   const t = useTranslations('dashboard.admin.billing.upgrade')
   const [loading, setLoading] = useState(false)
+  const [manualSubmitted, setManualSubmitted] = useState(false)
   const [manualTransfer, setManualTransfer] = useState<{
     planId: string
     planName: string
@@ -70,7 +73,13 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
 
   const handleManualSubmit = async (bankReference: string, notes: string) => {
     if (!manualTransfer) return
-    await requestManualPlanUpgrade(manualTransfer.planId, manualTransfer.interval, bankReference, notes)
+    try {
+      await requestManualPlanUpgrade(manualTransfer.planId, manualTransfer.interval, bankReference, notes)
+      setManualSubmitted(true)
+    } catch (e: any) {
+      toast.error(e.message || t('submitError'))
+      throw e
+    }
   }
 
   if (manualTransfer) {
@@ -80,7 +89,13 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
         amount={manualTransfer.amount}
         interval={manualTransfer.interval}
         onSubmit={handleManualSubmit}
-        onCancel={() => setManualTransfer(null)}
+        onCancel={() => {
+          if (manualSubmitted) {
+            router.push(`/${locale}/dashboard/admin/billing`)
+          } else {
+            setManualTransfer(null)
+          }
+        }}
       />
     )
   }
