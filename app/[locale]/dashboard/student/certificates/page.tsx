@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { IconCertificate, IconBook2, IconTrophy, IconAward } from '@tabler/icons-react'
@@ -13,11 +13,8 @@ export default async function StudentCertificatesPage() {
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.certificates')
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -39,7 +36,7 @@ export default async function StudentCertificatesPage() {
         signature_title
       )
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .is('revoked_at', null)
     .order('issued_at', { ascending: false })

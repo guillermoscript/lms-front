@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,10 +9,9 @@ import { Button } from '@/components/ui/button'
 
 export default async function JoinSchoolPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
+  const userId = await getCurrentUserId()
   // Redirect to login if not authenticated
-  if (!user) {
+  if (!userId) {
     redirect('/auth/login?next=/join-school')
   }
 
@@ -43,7 +42,7 @@ export default async function JoinSchoolPage() {
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 
@@ -82,7 +81,7 @@ export default async function JoinSchoolPage() {
   const { data: otherMemberships } = await supabase
     .from('tenant_users')
     .select('tenant_id, tenants(name, slug)')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .neq('tenant_id', tenantId)
 
   return (

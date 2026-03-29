@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { IconTrophy, IconCheck, IconX, IconClock, IconMessageChatbot, IconArrowLeft, IconUserCheck, IconHourglass, IconCertificate } from '@tabler/icons-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
     params: Promise<{ courseId: string; examId: string }>
@@ -16,8 +17,8 @@ export default async function ExamResultPage({ params }: PageProps) {
     const { courseId, examId } = await params
     const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/auth/login')
+    const userId = await getCurrentUserId()
+    if (!userId) redirect('/auth/login')
 
     // Fetch complete exam data as requested by user
     const { data: examData, error } = await supabase
@@ -75,7 +76,7 @@ export default async function ExamResultPage({ params }: PageProps) {
         )
     `)
         .eq('exam_id', parseInt(examId))
-        .eq('exam_submissions.student_id', user.id)
+        .eq('exam_submissions.student_id', userId)
         .single()
 
     if (error || !examData) {
@@ -92,7 +93,7 @@ export default async function ExamResultPage({ params }: PageProps) {
     const { data: certificate } = await supabase
         .from('certificates')
         .select('certificate_id, verification_code')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('course_id', parseInt(courseId))
         .maybeSingle()
 

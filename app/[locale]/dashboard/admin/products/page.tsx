@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,11 +24,8 @@ export default async function AdminProductsPage() {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

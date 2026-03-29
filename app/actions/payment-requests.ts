@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 
@@ -28,10 +28,10 @@ export interface PaymentInstructionsData {
  */
 export async function createPaymentRequest(data: PaymentRequestFormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const tenantId = await getCurrentTenantId()
 
-  if (!user) {
+  if (!userId) {
     throw new Error('Not authenticated')
   }
 
@@ -82,7 +82,7 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
   const { data: request, error } = await supabase
     .from('payment_requests')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       product_id: data.productId || null,
       plan_id: data.planId || null,
       contact_name: data.contactName,
@@ -114,12 +114,12 @@ export async function sendPaymentInstructions(
   instructions: PaymentInstructionsData
 ) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user || (role !== 'admin' && !superAdmin)) {
+  if (!userId || (role !== 'admin' && !superAdmin)) {
     throw new Error('Unauthorized')
   }
 
@@ -148,7 +148,7 @@ export async function sendPaymentInstructions(
       payment_deadline: instructions.paymentDeadline || null,
       payment_amount: instructions.paymentAmount,
       payment_currency: instructions.paymentCurrency,
-      processed_by: user.id,
+      processed_by: userId,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
@@ -170,12 +170,12 @@ export async function sendPaymentInstructions(
  */
 export async function confirmPaymentReceived(requestId: number, adminNotes?: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user || (role !== 'admin' && !superAdmin)) {
+  if (!userId || (role !== 'admin' && !superAdmin)) {
     throw new Error('Unauthorized')
   }
 
@@ -201,7 +201,7 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
       status: 'payment_received',
       payment_confirmed_at: new Date().toISOString(),
       admin_notes: adminNotes || null,
-      processed_by: user.id,
+      processed_by: userId,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
@@ -223,12 +223,12 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
  */
 export async function completeAndEnroll(requestId: number) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user || (role !== 'admin' && !superAdmin)) {
+  if (!userId || (role !== 'admin' && !superAdmin)) {
     throw new Error('Unauthorized')
   }
 
@@ -299,7 +299,7 @@ export async function completeAndEnroll(requestId: number) {
     .from('payment_requests')
     .update({
       status: 'completed',
-      processed_by: user.id,
+      processed_by: userId,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
@@ -329,12 +329,12 @@ export async function updatePaymentRequest(
   }
 ) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user || (role !== 'admin' && !superAdmin)) {
+  if (!userId || (role !== 'admin' && !superAdmin)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -381,7 +381,7 @@ export async function updatePaymentRequest(
             ...(updates.paymentMethod && { payment_method: updates.paymentMethod }),
             ...(updates.paymentInstructions && { payment_instructions: updates.paymentInstructions }),
             ...(updates.adminNotes && { admin_notes: updates.adminNotes }),
-            processed_by: user!.id,
+            processed_by: userId!,
             updated_at: new Date().toISOString(),
           })
           .eq('request_id', requestId)
@@ -400,7 +400,7 @@ export async function updatePaymentRequest(
         ...(updates.paymentMethod && { payment_method: updates.paymentMethod }),
         ...(updates.paymentInstructions && { payment_instructions: updates.paymentInstructions }),
         ...(updates.adminNotes && { admin_notes: updates.adminNotes }),
-        processed_by: user!.id,
+        processed_by: userId!,
         updated_at: new Date().toISOString(),
       })
       .eq('request_id', requestId)
@@ -433,12 +433,12 @@ export async function confirmPaymentAndEnroll(requestId: number) {
  */
 export async function generateInvoice(requestId: number) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user || (role !== 'admin' && !superAdmin)) {
+  if (!userId || (role !== 'admin' && !superAdmin)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -501,17 +501,17 @@ export async function generateInvoice(requestId: number) {
 export async function uploadStudentPaymentProof(requestId: number, formData: FormData) {
   const supabase = await createClient()
   const adminClient = await createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const tenantId = await getCurrentTenantId()
 
-  if (!user) throw new Error('Not authenticated')
+  if (!userId) throw new Error('Not authenticated')
 
   // Verify request belongs to user and tenant
   const { data: request } = await supabase
     .from('payment_requests')
     .select('request_id, user_id, tenant_id')
     .eq('request_id', requestId)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 
@@ -522,7 +522,7 @@ export async function uploadStudentPaymentProof(requestId: number, formData: For
   if (file.size > 10 * 1024 * 1024) throw new Error('File must be less than 10MB')
 
   const ext = file.name.split('.').pop() || 'bin'
-  const path = `student/${tenantId}/${user.id}/${requestId}/proof.${ext}`
+  const path = `student/${tenantId}/${userId}/${requestId}/proof.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('payment-proofs')
@@ -553,12 +553,12 @@ export async function uploadStudentPaymentProof(requestId: number, formData: For
  */
 export async function cancelPaymentRequest(requestId: number, reason?: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getCurrentUserId()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  if (!user) {
+  if (!userId) {
     throw new Error('Not authenticated')
   }
 
@@ -575,7 +575,7 @@ export async function cancelPaymentRequest(requestId: number, reason?: string) {
 
   // Students can only cancel their own pending/contacted requests
   if (role !== 'admin' && !superAdmin) {
-    if (request.user_id !== user.id) {
+    if (request.user_id !== userId) {
       throw new Error('You can only cancel your own requests')
     }
     if (request.status !== 'pending' && request.status !== 'contacted') {

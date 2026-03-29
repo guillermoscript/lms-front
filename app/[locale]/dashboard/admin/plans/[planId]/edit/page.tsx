@@ -7,7 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { PlanForm } from '@/components/admin/plan-form'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ planId: string }>
@@ -19,11 +19,8 @@ export default async function EditPlanPage({ params }: PageProps) {
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

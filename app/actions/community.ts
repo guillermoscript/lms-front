@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
@@ -28,9 +28,9 @@ async function isUserMuted(tenantId: string, userId: string): Promise<boolean> {
 // Helper to get authenticated user or throw
 async function getAuthenticatedUser() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-  return { supabase, user }
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
+  return { supabase, userId }
 }
 
 /**
@@ -38,12 +38,12 @@ async function getAuthenticatedUser() {
  */
 export async function createPost(formData: FormData): Promise<ActionResult<{ id: string }>> {
   try {
-    const { supabase, user } = await getAuthenticatedUser()
+    const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
 
     // Check mute status
-    if (await isUserMuted(tenantId, user.id)) {
+    if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted and cannot create posts' }
     }
 
@@ -94,7 +94,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
           .from('enrollments')
           .select('enrollment_id')
           .eq('course_id', parseInt(courseId))
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('tenant_id', tenantId)
           .eq('status', 'active')
           .single()
@@ -138,7 +138,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       .from('community_posts')
       .insert({
         tenant_id: tenantId,
-        author_id: user.id,
+        author_id: userId,
         content: content.trim(),
         title: title?.trim() || null,
         post_type: postType,
@@ -176,7 +176,7 @@ export async function updatePost(
   title?: string
 ): Promise<ActionResult> {
   try {
-    const { supabase, user } = await getAuthenticatedUser()
+    const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
 
@@ -200,7 +200,7 @@ export async function updatePost(
       return { success: false, error: 'Access denied' }
     }
 
-    if (post.author_id !== user.id && role !== 'admin' && role !== 'teacher') {
+    if (post.author_id !== userId && role !== 'admin' && role !== 'teacher') {
       return { success: false, error: 'You can only edit your own posts' }
     }
 
@@ -232,7 +232,7 @@ export async function updatePost(
  */
 export async function deletePost(postId: string): Promise<ActionResult> {
   try {
-    const { supabase, user } = await getAuthenticatedUser()
+    const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
 
@@ -252,7 +252,7 @@ export async function deletePost(postId: string): Promise<ActionResult> {
       return { success: false, error: 'Access denied' }
     }
 
-    if (post.author_id !== user.id && role !== 'admin' && role !== 'teacher') {
+    if (post.author_id !== userId && role !== 'admin' && role !== 'teacher') {
       return { success: false, error: 'You can only delete your own posts' }
     }
 
@@ -284,7 +284,7 @@ export async function createComment(
   parentCommentId?: string
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const { supabase, user } = await getAuthenticatedUser()
+    const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     if (!content || content.trim().length === 0) {
@@ -296,7 +296,7 @@ export async function createComment(
     }
 
     // Check mute status
-    if (await isUserMuted(tenantId, user.id)) {
+    if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted and cannot comment' }
     }
 
@@ -332,7 +332,7 @@ export async function createComment(
           .from('enrollments')
           .select('enrollment_id')
           .eq('course_id', post.course_id)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('tenant_id', tenantId)
           .eq('status', 'active')
           .single()
@@ -363,7 +363,7 @@ export async function createComment(
       .insert({
         post_id: postId,
         tenant_id: tenantId,
-        author_id: user.id,
+        author_id: userId,
         content: content.trim(),
         parent_comment_id: parentCommentId || null,
       })
@@ -388,7 +388,7 @@ export async function createComment(
  */
 export async function deleteComment(commentId: string): Promise<ActionResult> {
   try {
-    const { supabase, user } = await getAuthenticatedUser()
+    const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
 
@@ -408,7 +408,7 @@ export async function deleteComment(commentId: string): Promise<ActionResult> {
       return { success: false, error: 'Access denied' }
     }
 
-    if (comment.author_id !== user.id && role !== 'admin' && role !== 'teacher') {
+    if (comment.author_id !== userId && role !== 'admin' && role !== 'teacher') {
       return { success: false, error: 'You can only delete your own comments' }
     }
 
@@ -440,11 +440,11 @@ export async function toggleReaction(
   reactionType: 'like' | 'helpful' | 'insightful' | 'fire'
 ): Promise<ActionResult<{ added: boolean }>> {
   try {
-    const { user } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     // Muted users cannot react
-    if (await isUserMuted(tenantId, user.id)) {
+    if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted' }
     }
 
@@ -455,7 +455,7 @@ export async function toggleReaction(
       .from('community_reactions')
       .select('id')
       .eq('tenant_id', tenantId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('reaction_type', reactionType)
 
     if (targetType === 'post') {
@@ -482,7 +482,7 @@ export async function toggleReaction(
       // Add new reaction
       const insertData: Record<string, unknown> = {
         tenant_id: tenantId,
-        user_id: user.id,
+        user_id: userId,
         reaction_type: reactionType,
       }
 
@@ -515,12 +515,12 @@ export async function toggleReaction(
  */
 export async function createPoll(formData: FormData): Promise<ActionResult<{ id: string }>> {
   try {
-    const { user } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
 
     // Check mute status
-    if (await isUserMuted(tenantId, user.id)) {
+    if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted and cannot create polls' }
     }
 
@@ -586,7 +586,7 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
       .from('community_posts')
       .insert({
         tenant_id: tenantId,
-        author_id: user.id,
+        author_id: userId,
         title: title.trim(),
         content: content.trim(),
         post_type: 'poll',
@@ -640,11 +640,11 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
  */
 export async function castVote(postId: string, optionId: string): Promise<ActionResult> {
   try {
-    const { user } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     // Muted users cannot vote
-    if (await isUserMuted(tenantId, user.id)) {
+    if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted' }
     }
 
@@ -686,7 +686,7 @@ export async function castVote(postId: string, optionId: string): Promise<Action
       .from('community_poll_votes')
       .select('id')
       .eq('post_id', postId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId)
       .single()
 
@@ -700,7 +700,7 @@ export async function castVote(postId: string, optionId: string): Promise<Action
       .insert({
         post_id: postId,
         option_id: optionId,
-        user_id: user.id,
+        user_id: userId,
         tenant_id: tenantId,
       })
 
@@ -742,7 +742,7 @@ export async function uploadCommunityAsset(
   formData: FormData
 ): Promise<ActionResult<{ url: string }>> {
   try {
-    const { user } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     const file = formData.get('file') as File | null
@@ -777,7 +777,7 @@ export async function uploadCommunityAsset(
     const sanitizedName = file.name.replace(/[\/\\:*?"<>|]/g, '')
     const ext = sanitizedName.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${nanoid()}.${ext}`
-    const filePath = `${tenantId}/${user.id}/${fileName}`
+    const filePath = `${tenantId}/${userId}/${fileName}`
 
     const adminClient = createAdminClient()
     const { error } = await adminClient.storage
@@ -815,7 +815,7 @@ export async function createFlag(
   reason: string
 ): Promise<ActionResult> {
   try {
-    const { user } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     if (!reason.trim() || reason.length > 1000) {
@@ -826,7 +826,7 @@ export async function createFlag(
 
     const insertData: Record<string, unknown> = {
       tenant_id: tenantId,
-      reporter_id: user.id,
+      reporter_id: userId,
       reason: reason.trim(),
     }
 

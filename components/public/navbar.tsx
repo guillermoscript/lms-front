@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { NavbarTenantSwitcher } from "@/components/tenant/navbar-tenant-switcher";
 import type { HeaderSettings } from "@/lib/landing-pages/types";
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -15,7 +16,7 @@ interface NavbarProps {
 
 export async function Navbar({ headerSettings }: NavbarProps = {}) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const userId = await getCurrentUserId()
     const t = await getTranslations('navbar');
     const tenant = await getCurrentTenant();
 
@@ -39,11 +40,11 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
 
     // Get user's tenants for the switcher
     let userTenants: any[] = [];
-    if (user) {
+    if (userId) {
         const { data } = await supabase
             .from('tenant_users')
             .select('role, tenant:tenants(id, slug, name)')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('status', 'active');
         userTenants = (data || []).map((tu: any) => ({
             ...tu.tenant,
@@ -120,7 +121,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                 <div className="flex items-center space-x-4">
                     {(headerSettings?.showLanguageSwitcher !== false) && <LanguageSwitcher />}
 
-                    {user ? (
+                    {userId ? (
                         <Link href="/dashboard/student">
                             <Button variant="outline">
                                 {t('dashboard')}

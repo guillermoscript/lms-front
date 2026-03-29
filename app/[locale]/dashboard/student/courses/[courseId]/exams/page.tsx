@@ -5,7 +5,7 @@ import ExamCard from '@/components/exercises/exam-card'
 import { IconCertificate, IconProgress } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -17,8 +17,8 @@ export default async function ExamsPage({ params }: PageProps) {
   const t = await getTranslations('exams.list')
   const tenantId = await getCurrentTenantId()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const userId = await getCurrentUserId()
+  if (!userId) redirect('/auth/login')
 
   // Consolidated query
   const { data: exams, error } = await supabase
@@ -48,7 +48,7 @@ export default async function ExamsPage({ params }: PageProps) {
     .eq('course_id', parseInt(courseId))
     .eq('status', 'published')
     .eq('tenant_id', tenantId)
-    .eq('exam_submissions.student_id', user.id)
+    .eq('exam_submissions.student_id', userId)
     .order('sequence')
 
   if (error) {

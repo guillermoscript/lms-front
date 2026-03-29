@@ -20,7 +20,7 @@ import {
   IconBolt
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
 
@@ -29,11 +29,8 @@ export default async function TeacherDashboard() {
   const t = await getTranslations('dashboard.teacher')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -45,7 +42,7 @@ export default async function TeacherDashboard() {
             lessons(id),
             exams(exam_id)
         `)
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
@@ -94,7 +91,7 @@ export default async function TeacherDashboard() {
     supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
   ])
 
@@ -112,7 +109,7 @@ export default async function TeacherDashboard() {
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-dashboard">
       {/* Guided Tour (client component) */}
-      <TeacherDashboardTour userId={user.id} />
+      <TeacherDashboardTour userId={userId} />
 
       <div data-tour="teacher-welcome" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -241,7 +238,7 @@ export default async function TeacherDashboard() {
 
       {/* Getting Started Checklist — shown until dismissed */}
       <OnboardingChecklist
-        storageKey={`teacher-${user.id}`}
+        storageKey={`teacher-${userId}`}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
         steps={[

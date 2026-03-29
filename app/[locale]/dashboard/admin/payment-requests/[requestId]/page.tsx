@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,11 +29,8 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

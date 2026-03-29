@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
@@ -34,11 +34,8 @@ export default async function AdminDashboardPage({
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -46,7 +43,7 @@ export default async function AdminDashboardPage({
   const { data: adminProfile } = await supabase
     .from('profiles')
     .select('onboarding_completed')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (adminProfile && !adminProfile.onboarding_completed) {
@@ -190,12 +187,12 @@ export default async function AdminDashboardPage({
       />
 
       {/* Guided Tour (client component) */}
-      <AdminDashboardTour userId={user.id} />
+      <AdminDashboardTour userId={userId} />
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">
       <OnboardingChecklist
-        storageKey={`admin-${user.id}`}
+        storageKey={`admin-${userId}`}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
         steps={[

@@ -19,7 +19,7 @@ const LessonEditor = dynamic(
     ),
   }
 )
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
 
 interface PageProps {
@@ -31,11 +31,8 @@ export default async function EditLessonPage({ params }: PageProps) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -44,7 +41,7 @@ export default async function EditLessonPage({ params }: PageProps) {
     .from('courses')
     .select('course_id, title')
     .eq('course_id', parseInt(courseId))
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 
@@ -75,7 +72,7 @@ export default async function EditLessonPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <LessonEditorTour userId={user.id} />
+      <LessonEditorTour userId={userId} />
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

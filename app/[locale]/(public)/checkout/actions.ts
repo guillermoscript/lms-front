@@ -2,6 +2,7 @@
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 /**
  * Mock enrollment for testing checkout flow
@@ -15,9 +16,8 @@ import { revalidatePath } from 'next/cache';
 export async function enrollUser(courseId?: string, planId?: string, paymentMethod: string = 'mock_test') {
     // 1. Authenticate user
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
         throw new Error("You must be logged in to enroll.");
     }
 
@@ -40,7 +40,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
             const { data: transaction, error: txError } = await supabase
                 .from('transactions')
                 .insert({
-                    user_id: user.id,
+                    user_id: userId,
                     product_id: product.product_id,
                     amount: product.price,
                     currency: product.currency,
@@ -58,7 +58,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
             // Call enroll_user RPC function
             // This function checks for transaction and enrolls in linked courses
             const { error: enrollError } = await supabase.rpc('enroll_user', {
-                _user_id: user.id,
+                _user_id: userId,
                 _product_id: product.product_id
             });
 
@@ -86,7 +86,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
             const { data: transaction, error: txError } = await supabase
                 .from('transactions')
                 .insert({
-                    user_id: user.id,
+                    user_id: userId,
                     plan_id: plan.plan_id,
                     amount: plan.price,
                     currency: plan.currency,
@@ -103,7 +103,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
 
             // Call handle_new_subscription RPC function
             const { error: subError } = await supabase.rpc('handle_new_subscription', {
-                _user_id: user.id,
+                _user_id: userId,
                 _plan_id: plan.plan_id,
                 _transaction_id: transaction.transaction_id
             });
@@ -130,9 +130,8 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
  */
 export async function enrollFree(courseId?: string, planId?: string) {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
         throw new Error("You must be logged in to enroll.");
     }
 
@@ -188,7 +187,7 @@ export async function enrollFree(courseId?: string, planId?: string) {
             const { error } = await supabase
                 .from('enrollments')
                 .insert({
-                    user_id: user.id,
+                    user_id: userId,
                     course_id: parseInt(courseId),
                     product_id: productId,
                     status: 'active',

@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-react'
 import { UsersTable } from '@/components/admin/users-table'
 import { InviteUserDialog } from '@/components/admin/invite-user-dialog'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 
@@ -18,11 +18,8 @@ export default async function AdminUsersPage() {
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

@@ -6,15 +6,14 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher')
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return notFound()
+  const userId = await getCurrentUserId()
+  if (!userId) return notFound()
 
   const { courseId, examId, submissionId } = await params
 
@@ -126,8 +125,8 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   }) => {
     'use server'
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    const userId = await getCurrentUserId()
+    if (!userId) return
 
     // Update individual question scores
     for (const qo of overrides.question_overrides) {
@@ -139,7 +138,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
           points_earned: qo.points_earned,
           points_possible: questionData.find(q => q.question_id === qo.question_id)?.points_possible || 10,
           is_correct: qo.is_correct,
-          teacher_id: user.id,
+          teacher_id: userId,
           teacher_notes: qo.teacher_notes,
           is_overridden: true,
           reviewed_at: new Date().toISOString(),
@@ -155,7 +154,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         exam_id: rawSubmission.exam_id,
         score: overrides.score,
         feedback: overrides.feedback,
-        teacher_id: user.id,
+        teacher_id: userId,
         teacher_notes: overrides.teacher_notes,
         is_overridden: true,
         reviewed_at: new Date().toISOString(),

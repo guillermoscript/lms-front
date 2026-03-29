@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconArrowLeft, IconChevronRight, IconSettings, IconAward, IconUsers, IconShieldCheck, IconExternalLink } from '@tabler/icons-react'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { CertificatePreview } from '@/components/teacher/certificate-preview'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
@@ -21,8 +21,8 @@ export default async function CertificatesPage({ params }: PageProps) {
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const userId = await getCurrentUserId()
+  if (!userId) redirect('/auth/login')
 
   const role = await getUserRole()
 
@@ -35,7 +35,7 @@ export default async function CertificatesPage({ params }: PageProps) {
 
   if (!course) notFound()
 
-  const isOwner = course.author_id === user.id
+  const isOwner = course.author_id === userId
   const isAdmin = role === 'admin'
 
   if (!isOwner && !isAdmin) {

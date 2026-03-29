@@ -2,20 +2,19 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .single()
@@ -24,7 +23,7 @@ async function verifyAdminAccess() {
     throw new Error('Only school admins can manage billing')
   }
 
-  return { user, tenantId, supabase }
+  return { userId, tenantId, supabase }
 }
 
 /**
@@ -121,7 +120,7 @@ export async function getAvailablePlans() {
  * Request a plan upgrade via manual bank transfer
  */
 export async function requestManualPlanUpgrade(planId: string, interval: 'monthly' | 'yearly' = 'monthly', bankReference?: string, notes?: string) {
-  const { user, tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
   // Get plan details
@@ -154,7 +153,7 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
     .insert({
       tenant_id: tenantId,
       plan_id: planId,
-      requested_by: user.id,
+      requested_by: userId,
       interval,
       amount,
       currency: 'usd',
@@ -245,15 +244,14 @@ async function checkDowngradeLimits(
 export async function confirmManualPayment(requestId: string) {
   const supabase = await createClient()
   const adminClient = await createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   // Verify super admin
   const { data: superAdmin } = await adminClient
     .from('super_admins')
     .select('user_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   if (!superAdmin) throw new Error('Only super admins can confirm payments')
@@ -279,7 +277,7 @@ export async function confirmManualPayment(requestId: string) {
     .from('platform_payment_requests')
     .update({
       status: 'confirmed',
-      confirmed_by: user.id,
+      confirmed_by: userId,
       confirmed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -392,7 +390,7 @@ export async function cancelSubscription() {
  * Upload payment proof for a platform payment request (school admin)
  */
 export async function uploadPaymentProof(requestId: string, formData: FormData) {
-  const { user, tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
   // Verify request belongs to tenant
@@ -446,7 +444,7 @@ export async function uploadPaymentProof(requestId: string, formData: FormData) 
  * Request a manual subscription renewal (before current period ends)
  */
 export async function requestManualRenewal() {
-  const { user, tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
   // Get current subscription
@@ -491,7 +489,7 @@ export async function requestManualRenewal() {
     .insert({
       tenant_id: tenantId,
       plan_id: subscription.plan_id,
-      requested_by: user.id,
+      requested_by: userId,
       interval: subscription.interval,
       amount,
       currency: 'usd',

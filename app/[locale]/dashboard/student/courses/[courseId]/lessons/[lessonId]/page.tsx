@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
 import { AnimatedSection } from '@/components/student/animated-section'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -38,11 +38,8 @@ export default async function LessonPage({ params }: PageProps) {
   const t = await getTranslations('components.lessons')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -61,8 +58,8 @@ export default async function LessonPage({ params }: PageProps) {
     `)
     .eq('id', parseInt(lessonId))
     .eq('tenant_id', tenantId)
-    .eq('lessons_ai_task_messages.user_id', user.id)
-    .eq('lesson_completions.user_id', user.id)
+    .eq('lessons_ai_task_messages.user_id', userId)
+    .eq('lesson_completions.user_id', userId)
     .order('created_at', {
       ascending: true,
       referencedTable: 'lessons_ai_task_messages'
@@ -182,7 +179,7 @@ export default async function LessonPage({ params }: PageProps) {
     supabase
       .from('lesson_completions')
       .select('lesson_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId),
     supabase
       .from('lesson_resources')
@@ -375,7 +372,7 @@ export default async function LessonPage({ params }: PageProps) {
 
             {/* Comments Section */}
             <section className="border-t pt-10">
-              <LessonComments lessonId={lesson.id} userId={user.id} tenantId={tenantId} initialComments={initialComments} />
+              <LessonComments lessonId={lesson.id} userId={userId} tenantId={tenantId} initialComments={initialComments} />
             </section>
           </div>
         </div>

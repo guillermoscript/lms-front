@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; exerciseId: string }>
@@ -33,9 +33,8 @@ export default async function EditExercisePage({ params }: PageProps) {
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
   const tenantId = await getCurrentTenantId()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -60,7 +59,7 @@ export default async function EditExercisePage({ params }: PageProps) {
 
   if (!course) return notFound()
 
-  const isOwner = course.author_id === user.id
+  const isOwner = course.author_id === userId
   const isAdmin = role === 'admin'
 
   if (!isOwner && !isAdmin) {

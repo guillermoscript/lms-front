@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ManualPaymentButton } from '@/components/student/manual-payment-button'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function ProductDetailPage({
   params
@@ -25,8 +26,7 @@ export default async function ProductDetailPage({
   }
 
   // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser()
-
+  const userId = await getCurrentUserId()
   return (
     <div className="container mx-auto py-12">
       <div className="max-w-2xl mx-auto">
@@ -58,7 +58,7 @@ export default async function ProductDetailPage({
             )}
 
             <div className="pt-4">
-              {user ? (
+              {userId ? (
                 <ManualPaymentButton
                   productId={product.product_id}
                   productName={product.name}

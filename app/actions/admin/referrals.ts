@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 
 /**
@@ -30,8 +30,8 @@ export async function getOrCreateTenantReferralCode() {
 
   // Create a new code for this tenant
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   const { data: tenant } = await adminClient
     .from('tenants')

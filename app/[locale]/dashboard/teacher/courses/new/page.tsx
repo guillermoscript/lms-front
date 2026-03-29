@@ -5,18 +5,15 @@ import { CourseForm } from '@/components/teacher/course-form'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewCoursePage() {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.newCourse')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

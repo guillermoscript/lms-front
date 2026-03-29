@@ -2,12 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 export async function updateProfile(formData: FormData) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) throw new Error("Unauthorized");
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error("Unauthorized");
 
     const full_name = formData.get("full_name") as string;
     const username = formData.get("username") as string;
@@ -22,7 +22,7 @@ export async function updateProfile(formData: FormData) {
             website,
             bio,
         })
-        .eq("id", user.id);
+        .eq("id", userId);
 
     if (error) throw new Error(error.message);
 

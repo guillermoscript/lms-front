@@ -12,7 +12,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface SearchParams {
   period?: string
@@ -32,11 +32,8 @@ export default async function AnalyticsPage({
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

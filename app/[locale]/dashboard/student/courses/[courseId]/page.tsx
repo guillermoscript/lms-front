@@ -25,7 +25,7 @@ const AristotleStudySection = dynamic(
   }
 )
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -38,11 +38,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const tenantId = await getCurrentTenantId()
   const numericCourseId = parseInt(courseId)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -51,7 +48,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     supabase
       .from('enrollments')
       .select('enrollment_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('course_id', numericCourseId)
       .eq('status', 'active')
       .eq('tenant_id', tenantId)
@@ -97,7 +94,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     supabase
       .from('lesson_completions')
       .select('lesson_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId),
     supabase
       .from('exams')
@@ -116,7 +113,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .select('review_id')
       .eq('entity_type', 'courses')
       .eq('entity_id', numericCourseId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single(),
     supabase
       .from('course_ai_tutors')
@@ -359,7 +356,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
         <div className="mt-8">
           <CourseReviews
             courseId={parseInt(courseId)}
-            userId={user.id}
+            userId={userId}
             userHasReviewed={userHasReviewed}
             initialReviews={initialReviews}
           />

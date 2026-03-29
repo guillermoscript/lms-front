@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { IconArrowLeft, IconFolderOpen } from '@tabler/icons-react'
 import { CategoriesTable } from '@/components/admin/categories-table'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminCategoriesPage() {
@@ -15,11 +15,8 @@ export default async function AdminCategoriesPage() {
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 

@@ -12,7 +12,7 @@ import {
   IconFileText,
 } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
 
 interface PageProps {
@@ -25,11 +25,8 @@ export default async function CoursePreviewPage({ params }: PageProps) {
   const t = await getTranslations('courseDetails')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -40,7 +37,7 @@ export default async function CoursePreviewPage({ params }: PageProps) {
     .from('courses')
     .select('course_id, title, description, thumbnail_url, author_id')
     .eq('course_id', numericCourseId)
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

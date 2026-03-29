@@ -16,7 +16,7 @@ import {
   IconCreditCard,
 } from '@tabler/icons-react'
 import { UserActions } from '@/components/admin/user-actions'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 interface PageProps {
@@ -31,11 +31,8 @@ export default async function UserDetailPage({ params }: PageProps) {
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const currentUserId = await getCurrentUserId()
+  if (!currentUserId) {
     redirect('/auth/login')
   }
 

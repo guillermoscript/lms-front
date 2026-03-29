@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 import { IconAlertCircle, IconSparkles, IconTrophy, IconSearch } from '@tabler/icons-react'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function BrowseCoursesPage({
   searchParams,
@@ -22,11 +22,8 @@ export default async function BrowseCoursesPage({
   const sanitizedSearch = search?.replace(/[%_\\]/g, '') || ''
 
   // Get authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -67,7 +64,7 @@ export default async function BrowseCoursesPage({
         price
       )
     `)
-      .eq('user_id', user.id).eq('tenant_id', tenantId)
+      .eq('user_id', userId).eq('tenant_id', tenantId)
       .eq('subscription_status', 'active')
       .gte('end_date', new Date().toISOString())
       .order('end_date', { ascending: false }),
@@ -75,7 +72,7 @@ export default async function BrowseCoursesPage({
       .eq('tenant_id', tenantId).order('name'),
     query,
     supabase.from('enrollments').select('course_id')
-      .eq('user_id', user.id).eq('tenant_id', tenantId).eq('status', 'active'),
+      .eq('user_id', userId).eq('tenant_id', tenantId).eq('status', 'active'),
   ])
 
   const activeSubscription = subscriptions?.[0]

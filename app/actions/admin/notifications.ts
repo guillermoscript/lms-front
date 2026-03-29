@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 type NotificationType = 'announcement' | 'alert' | 'info' | 'success' | 'warning' | 'error'
@@ -41,9 +41,8 @@ export async function createNotification(data: NotificationData): Promise<Action
     const role = await getUserRole()
     const tenantId = await getCurrentTenantId()
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -66,7 +65,7 @@ export async function createNotification(data: NotificationData): Promise<Action
         .eq('tenant_id', tenantId)
         .single()
 
-      if (!course || course.author_id !== user.id) {
+      if (!course || course.author_id !== userId) {
         return { success: false, error: 'You can only create notifications for your own courses' }
       }
     }
@@ -78,7 +77,7 @@ export async function createNotification(data: NotificationData): Promise<Action
       .from('notifications')
       .insert({
         ...data,
-        created_by: user.id,
+        created_by: userId,
         status: data.scheduled_for ? 'scheduled' : 'draft',
         tenant_id: tenantId
       })
@@ -246,9 +245,8 @@ export async function getUserNotifications(
 ): Promise<ActionResponse> {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -258,7 +256,7 @@ export async function getUserNotifications(
         *,
         notification:notifications(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -285,9 +283,8 @@ export async function markNotificationAsRead(
 ): Promise<ActionResponse> {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -298,7 +295,7 @@ export async function markNotificationAsRead(
         in_app_read_at: new Date().toISOString(),
       })
       .eq('id', userNotificationId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) throw error
 
@@ -316,9 +313,8 @@ export async function markNotificationAsRead(
 export async function markAllNotificationsAsRead(): Promise<ActionResponse> {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -328,7 +324,7 @@ export async function markAllNotificationsAsRead(): Promise<ActionResponse> {
         in_app_read: true,
         in_app_read_at: new Date().toISOString(),
       })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('in_app_read', false)
 
     if (error) throw error
@@ -349,9 +345,8 @@ export async function dismissNotification(
 ): Promise<ActionResponse> {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -362,7 +357,7 @@ export async function dismissNotification(
         dismissed_at: new Date().toISOString(),
       })
       .eq('id', userNotificationId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) throw error
 

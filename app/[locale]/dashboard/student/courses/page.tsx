@@ -6,7 +6,7 @@ import { CourseFilters } from '@/components/student/course-filters'
 import { Button } from '@/components/ui/button'
 import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   searchParams: Promise<{
@@ -21,11 +21,8 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   const params = await searchParams
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -33,7 +30,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const { data: enrollments, error } = await supabase
     .from('enrollments')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
@@ -62,9 +59,9 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       supabase.from('exams').select('exam_id, title, sequence, passing_score, allow_retake, course_id')
         .in('course_id', courseIds).eq('tenant_id', tenantId),
       supabase.from('lesson_completions').select('lesson_id, completed_at')
-        .eq('user_id', user.id).eq('tenant_id', tenantId),
+        .eq('user_id', userId).eq('tenant_id', tenantId),
       supabase.from('exam_submissions').select('submission_id, exam_id, submission_date, score')
-        .eq('student_id', user.id).eq('tenant_id', tenantId),
+        .eq('student_id', userId).eq('tenant_id', tenantId),
       productIds.length > 0
         ? supabase.from('products').select('product_id, name')
             .in('product_id', productIds).eq('tenant_id', tenantId)
@@ -216,7 +213,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const { count: certificateCount } = await supabase
     .from('certificates')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .is('revoked_at', null)
 
@@ -313,7 +310,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
                 <EnrolledCourseCard
                   key={enrollment.enrollment_id}
                   enrollment={enrollment}
-                  userId={user.id}
+                  userId={userId}
                 />
               ))}
             </div>

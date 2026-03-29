@@ -11,6 +11,7 @@ import {
   IconClock,
   IconTrophy,
 } from '@tabler/icons-react'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -20,11 +21,8 @@ export default async function ExamReviewPage({ params }: PageProps) {
   const { courseId, examId } = await params
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -49,7 +47,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
       ai_data
     `)
     .eq('exam_id', parseInt(examId))
-    .eq('student_id', user.id)
+    .eq('student_id', userId)
     .single()
 
   if (!submission) {

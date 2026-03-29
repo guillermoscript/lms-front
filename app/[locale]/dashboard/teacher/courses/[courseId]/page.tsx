@@ -24,7 +24,7 @@ import {
   IconChevronRight,
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 
 interface PageProps {
@@ -37,11 +37,8 @@ export default async function CourseManagementPage({ params }: PageProps) {
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -76,7 +73,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
   }
 
   // Ownership check - simplified for debugging but keeping security in mind
-  const isOwner = course.author_id === user.id
+  const isOwner = course.author_id === userId
 
   if (!isOwner) {
     return (
@@ -150,7 +147,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Guided Tour */}
-      <CourseEditorTour userId={user.id} />
+      <CourseEditorTour userId={userId} />
 
       {/* Header */}
       <header data-tour="course-header" className="border-b bg-card sticky top-0 z-10">

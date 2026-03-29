@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 type TemplateCategory = 'system' | 'course' | 'payment' | 'enrollment' | 'exam' | 'custom'
@@ -99,9 +99,8 @@ export async function createNotificationTemplate(
     }
 
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -112,7 +111,7 @@ export async function createNotificationTemplate(
       .insert({
         ...data,
         variables: data.variables || [],
-        created_by: user.id,
+        created_by: userId,
         tenant_id: tenantId
       })
       .select()

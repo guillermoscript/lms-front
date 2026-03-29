@@ -18,15 +18,14 @@ import {
   IconTarget,
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function ExercisesPage({ params }: { params: Promise<{ courseId: string }> }) {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return notFound()
+  const userId = await getCurrentUserId()
+  if (!userId) return notFound()
 
   const { courseId } = await params
 
@@ -35,7 +34,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
     .from('courses')
     .select('*')
     .eq('course_id', courseId)
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

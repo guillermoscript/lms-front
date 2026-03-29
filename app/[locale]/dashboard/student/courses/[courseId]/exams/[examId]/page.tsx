@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ExamTaker } from './exam-taker'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -12,11 +12,8 @@ export default async function TakeExamPage({ params }: PageProps) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -24,7 +21,7 @@ export default async function TakeExamPage({ params }: PageProps) {
   const { data: enrollment } = await supabase
     .from('enrollments')
     .select('enrollment_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('course_id', parseInt(courseId))
     .eq('status', 'active')
     .eq('tenant_id', tenantId)
@@ -39,7 +36,7 @@ export default async function TakeExamPage({ params }: PageProps) {
     .from('exam_submissions')
     .select('submission_id')
     .eq('exam_id', parseInt(examId))
-    .eq('student_id', user.id)
+    .eq('student_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

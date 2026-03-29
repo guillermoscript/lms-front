@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -24,11 +24,8 @@ export default async function AdminCommunityPage() {
     redirect('/dashboard/admin')
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -81,7 +78,7 @@ export default async function AdminCommunityPage() {
     adminClient
       .from('community_reactions')
       .select('post_id, reaction_type')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId),
     adminClient
       .from('community_flags')
@@ -125,7 +122,7 @@ export default async function AdminCommunityPage() {
       adminClient
         .from('community_poll_votes')
         .select('post_id, option_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('post_id', pollPostIds),
     ])
 
@@ -152,7 +149,7 @@ export default async function AdminCommunityPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <CommunityTour userId={user.id} userRole="admin" />
+      <CommunityTour userId={userId} userRole="admin" />
       <header className="border-b bg-card">
         <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">
@@ -188,7 +185,7 @@ export default async function AdminCommunityPage() {
           initialPosts={enrichedPosts}
           initialHasMore={enrichedPosts.length >= 20}
           userRole={role}
-          userId={user.id}
+          userId={userId}
           tenantId={tenantId}
         />
       </main>

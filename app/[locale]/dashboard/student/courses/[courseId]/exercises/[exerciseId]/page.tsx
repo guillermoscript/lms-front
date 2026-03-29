@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
 
 import dynamic from 'next/dynamic'
@@ -58,8 +58,8 @@ export default async function ExercisePage({ params }: PageProps) {
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/auth/login')
+    const userId = await getCurrentUserId()
+    if (!userId) redirect('/auth/login')
 
     const { data: exercise, error: exerciseError } = await supabase
         .from('exercises')
@@ -71,8 +71,8 @@ export default async function ExercisePage({ params }: PageProps) {
     `)
         .eq('id', parseInt(exerciseId))
         .eq('tenant_id', tenantId)
-        .eq('exercise_completions.user_id', user.id)
-        .eq('exercise_messages.user_id', user.id)
+        .eq('exercise_completions.user_id', userId)
+        .eq('exercise_messages.user_id', userId)
         .order('created_at', {
             referencedTable: 'exercise_messages',
             ascending: true,
@@ -88,7 +88,7 @@ export default async function ExercisePage({ params }: PageProps) {
         supabase
             .from('profiles')
             .select('full_name, avatar_url')
-            .eq('id', user.id)
+            .eq('id', userId)
             .single(),
         supabase
             .from('exercises')
@@ -99,7 +99,7 @@ export default async function ExercisePage({ params }: PageProps) {
             .eq('course_id', parseInt(courseId))
             .eq('status', 'published')
             .eq('tenant_id', tenantId)
-            .eq('exercise_completions.user_id', user.id)
+            .eq('exercise_completions.user_id', userId)
             .neq('id', parseInt(exerciseId))
             .limit(3),
         supabase
@@ -111,7 +111,7 @@ export default async function ExercisePage({ params }: PageProps) {
             .from('exercise_code_student_submissions')
             .select('submission_code')
             .eq('exercise_id', parseInt(exerciseId))
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
             .single(),
@@ -124,7 +124,7 @@ export default async function ExercisePage({ params }: PageProps) {
             .from('exercise_evaluations')
             .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at')
             .eq('exercise_id', parseInt(exerciseId))
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
 
@@ -155,7 +155,7 @@ export default async function ExercisePage({ params }: PageProps) {
                 .from('exercise_media_submissions')
                 .select('id', { count: 'exact', head: true })
                 .eq('exercise_id', parseInt(exerciseId))
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .eq('tenant_id', tenantId)
                 .gte('created_at', todayStart.toISOString())
             dailyAttemptsUsed = count ?? 0
@@ -225,7 +225,7 @@ export default async function ExercisePage({ params }: PageProps) {
                 <CodeExercise
                     exercise={exercise}
                     isExerciseCompleted={isExerciseCompleted}
-                    studentId={user.id}
+                    studentId={userId}
                     courseId={courseId}
                 >
                     <CodeChallengeWrapper
@@ -284,7 +284,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     courseId={courseId}
                     isExerciseCompleted={isExerciseCompleted}
                     profile={profile}
-                    studentId={user.id}
+                    studentId={userId}
                     isExerciseCompletedSection={otherExercisesSection}
                 >
                     {chatComponent}

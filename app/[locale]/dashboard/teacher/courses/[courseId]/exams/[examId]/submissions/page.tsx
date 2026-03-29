@@ -5,15 +5,14 @@ import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-review'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionsPage({ params }: { params: Promise<{ courseId: string; examId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher')
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return notFound()
+  const userId = await getCurrentUserId()
+  if (!userId) return notFound()
 
   const { courseId, examId } = await params
 

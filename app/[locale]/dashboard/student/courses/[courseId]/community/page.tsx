@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -21,11 +21,8 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
   const role = await getUserRole()
   const numericCourseId = parseInt(courseId)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -36,7 +33,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
     adminClient
       .from('enrollments')
       .select('enrollment_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('course_id', numericCourseId)
       .eq('status', 'active')
       .eq('tenant_id', tenantId)
@@ -101,7 +98,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
     adminClient
       .from('community_reactions')
       .select('post_id, reaction_type')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId),
   ])
 
@@ -140,7 +137,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
       adminClient
         .from('community_poll_votes')
         .select('post_id, option_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('post_id', pollPostIds),
     ])
 
@@ -187,7 +184,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
           initialPosts={enrichedPosts}
           initialHasMore={enrichedPosts.length >= 20}
           userRole={role as 'student' | 'teacher' | 'admin'}
-          userId={user.id}
+          userId={userId}
           tenantId={tenantId}
         />
       </main>

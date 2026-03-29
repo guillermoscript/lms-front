@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -22,8 +22,8 @@ export default async function CommunityModerationPage() {
     redirect('/dashboard/admin')
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const userId = await getCurrentUserId()
+  if (!userId) redirect('/auth/login')
 
   // Fetch flagged content and muted users in parallel
   const [{ data: flags }, { data: mutedUsers }] = await Promise.all([

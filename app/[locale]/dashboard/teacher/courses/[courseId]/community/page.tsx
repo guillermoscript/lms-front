@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -25,11 +25,8 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
     redirect('/dashboard')
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -48,7 +45,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
   }
 
   // Only the course author or an admin can access
-  if (course.author_id !== user.id && role !== 'admin') {
+  if (course.author_id !== userId && role !== 'admin') {
     redirect('/dashboard/teacher')
   }
 
@@ -96,7 +93,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
     adminClient
       .from('community_reactions')
       .select('post_id, reaction_type')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('tenant_id', tenantId),
   ])
 
@@ -135,7 +132,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
       adminClient
         .from('community_poll_votes')
         .select('post_id, option_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('post_id', pollPostIds),
     ])
 
@@ -182,7 +179,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
           initialPosts={enrichedPosts}
           initialHasMore={enrichedPosts.length >= 20}
           userRole={role}
-          userId={user.id}
+          userId={userId}
           tenantId={tenantId}
         />
       </main>

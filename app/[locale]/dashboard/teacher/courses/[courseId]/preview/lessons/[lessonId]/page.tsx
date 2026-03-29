@@ -5,7 +5,7 @@ import { IconMenu2, IconSparkles, IconArrowLeft, IconArrowRight } from '@tabler/
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
 import { PreviewLessonSidebar } from './preview-lesson-sidebar'
 import Link from 'next/link'
@@ -21,11 +21,8 @@ export default async function LessonPreviewPage({ params }: PageProps) {
   const tNav = await getTranslations('components.lessonNavigation')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -34,7 +31,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
     .from('courses')
     .select('course_id')
     .eq('course_id', parseInt(courseId))
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

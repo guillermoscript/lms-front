@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { sendEmail } from '@/lib/email/send'
 import { invitationTemplate } from '@/lib/email/templates/invitation'
@@ -27,8 +27,8 @@ export async function createInvitation({
   }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     return { success: false, error: 'Not authenticated' }
   }
 
@@ -55,7 +55,7 @@ export async function createInvitation({
       tenant_id: tenantId,
       email: email.toLowerCase(),
       role,
-      invited_by: user.id,
+      invited_by: userId,
     })
 
   if (insertError) {
@@ -75,7 +75,7 @@ export async function createInvitation({
       const { data: inviterProfile } = await adminClient
         .from('profiles')
         .select('full_name')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       const joinUrl = buildJoinUrl(tenant?.slug)

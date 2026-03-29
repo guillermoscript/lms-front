@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 interface OnboardingData {
@@ -19,9 +19,8 @@ interface CreateSchoolData {
 export async function createSchoolForUser(data: CreateSchoolData) {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false as const, error: 'Not authenticated. Please sign in first.' }
     }
 
@@ -50,7 +49,7 @@ export async function createSchoolForUser(data: CreateSchoolData) {
       .from('tenant_users')
       .insert({
         tenant_id: tenant.id,
-        user_id: user.id,
+        user_id: userId,
         role: 'admin',
         status: 'active',
       })
@@ -77,9 +76,8 @@ export async function createSchoolForUser(data: CreateSchoolData) {
 export async function completeOnboarding(data: OnboardingData) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -110,7 +108,7 @@ export async function completeOnboarding(data: OnboardingData) {
     await adminClient
       .from('profiles')
       .update({ onboarding_completed: true })
-      .eq('id', user.id)
+      .eq('id', userId)
 
     revalidatePath('/dashboard/admin/settings')
     revalidatePath('/dashboard/teacher')

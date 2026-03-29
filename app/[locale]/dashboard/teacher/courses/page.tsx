@@ -19,18 +19,15 @@ import {
 import { Input } from '@/components/ui/input'
 import * as motion from 'motion/react-client'
 import Image from 'next/image'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function TeacherCoursesPage() {
     const supabase = await createClient()
     const t = await getTranslations('dashboard.teacher.courses')
     const tenantId = await getCurrentTenantId()
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
         redirect('/auth/login')
     }
 
@@ -43,7 +40,7 @@ export default async function TeacherCoursesPage() {
             exams:exams(count),
             enrollments:enrollments(count)
         `)
-        .eq('author_id', user.id)
+        .eq('author_id', userId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
 

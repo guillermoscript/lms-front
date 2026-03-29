@@ -20,7 +20,7 @@ const ExamBuilder = dynamic(
     ),
   }
 )
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -32,11 +32,8 @@ export default async function EditExamPage({ params }: PageProps) {
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -45,7 +42,7 @@ export default async function EditExamPage({ params }: PageProps) {
     .from('courses')
     .select('course_id, title')
     .eq('course_id', parseInt(courseId))
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

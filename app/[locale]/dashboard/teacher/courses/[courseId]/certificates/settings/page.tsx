@@ -22,7 +22,7 @@ const CertificateTemplateForm = dynamic(
     ),
   }
 )
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 
 interface PageProps {
@@ -35,8 +35,8 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
     const t = await getTranslations('dashboard.teacher.manageCourse')
     const tenantId = await getCurrentTenantId()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/auth/login')
+    const userId = await getCurrentUserId()
+    if (!userId) redirect('/auth/login')
 
     const role = await getUserRole()
 
@@ -49,7 +49,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
 
     if (!course) notFound()
 
-    const isOwner = course.author_id === user.id
+    const isOwner = course.author_id === userId
     const isAdmin = role === 'admin'
 
     if (!isOwner && !isAdmin) {

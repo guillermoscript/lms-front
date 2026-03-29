@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { randomBytes, createHash } from 'crypto'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 export interface McpToken {
   id: number
@@ -25,8 +26,8 @@ export async function createMcpToken(name: string, expiresInDays?: number) {
   }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   const rawToken = randomBytes(32).toString('hex')
   const tokenHash = hashToken(rawToken)
@@ -38,7 +39,7 @@ export async function createMcpToken(name: string, expiresInDays?: number) {
   const { error } = await supabase
     .from('mcp_api_tokens')
     .insert({
-      user_id: user.id,
+      user_id: userId,
       token_hash: tokenHash,
       name,
       expires_at: expiresAt,
@@ -60,13 +61,13 @@ export async function listMcpTokens(): Promise<{ data: McpToken[] | null; error:
   }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { data: null, error: 'Not authenticated' }
+  const userId = await getCurrentUserId()
+  if (!userId) return { data: null, error: 'Not authenticated' }
 
   const { data, error } = await supabase
     .from('mcp_api_tokens')
     .select('id, name, created_at, last_used_at, expires_at, is_active')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) return { data: null, error: error.message }

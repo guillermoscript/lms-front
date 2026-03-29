@@ -2,19 +2,18 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .single()
@@ -23,7 +22,7 @@ async function verifyAdminAccess() {
     throw new Error('Only school admins can view revenue')
   }
 
-  return { user, tenantId, supabase }
+  return { userId, tenantId, supabase }
 }
 
 export async function getRevenueOverview() {

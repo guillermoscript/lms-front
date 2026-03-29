@@ -20,7 +20,7 @@ const ExerciseBuilder = dynamic(
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -32,15 +32,14 @@ export default async function NewExercisePage({ params }: PageProps) {
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
   const tenantId = await getCurrentTenantId()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return notFound()
+  const userId = await getCurrentUserId()
+  if (!userId) return notFound()
 
   const { data: course } = await supabase
     .from('courses')
     .select('course_id, title')
     .eq('course_id', parseInt(courseId))
-    .eq('author_id', user.id)
+    .eq('author_id', userId)
     .eq('tenant_id', tenantId)
     .single()
 

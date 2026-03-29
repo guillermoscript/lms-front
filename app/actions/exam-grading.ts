@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
@@ -89,13 +90,9 @@ export async function gradeExamWithAI(
   try {
     const supabase = await createClient()
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    // Get authenticated user from middleware header (no extra network call)
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Unauthorized' }
     }
 
@@ -194,7 +191,7 @@ export async function gradeExamWithAI(
       const { error: saveError } = await supabase.rpc('save_exam_feedback', {
         p_submission_id: params.submissionId,
         p_exam_id: params.examId,
-        p_student_id: user.id,
+        p_student_id: userId,
         p_answers: params.answers,
         p_overall_feedback: 'Exam graded successfully.',
         p_score: scorePercentage,
@@ -261,7 +258,7 @@ export async function gradeExamWithAI(
       await supabase.rpc('save_exam_feedback', {
         p_submission_id: params.submissionId,
         p_exam_id: params.examId,
-        p_student_id: user.id,
+        p_student_id: userId,
         p_answers: params.answers,
         p_overall_feedback: 'Multiple choice and true/false questions have been auto-graded. Free-text questions are pending teacher review.',
         p_score: scorePercentage,
@@ -431,7 +428,7 @@ Evaluate these free-text answers now:`
     const { error: saveError } = await supabase.rpc('save_exam_feedback', {
       p_submission_id: params.submissionId,
       p_exam_id: params.examId,
-      p_student_id: user.id,
+      p_student_id: userId,
       p_answers: params.answers,
       p_overall_feedback: aiEvaluation.overall_feedback || 'Exam graded successfully.',
       p_score: scorePercentage,
@@ -477,13 +474,9 @@ export async function updateExamAIConfig(params: {
   try {
     const supabase = await createClient()
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    // Get authenticated user from middleware header (no extra network call)
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return { success: false, error: 'Unauthorized' }
     }
 
@@ -502,10 +495,10 @@ export async function updateExamAIConfig(params: {
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     const isAdmin = roles?.some((r) => r.role === 'admin')
-    const isCourseAuthor = (exam.course as any).author_id === user.id
+    const isCourseAuthor = (exam.course as any).author_id === userId
 
     if (!isAdmin && !isCourseAuthor) {
       return { success: false, error: 'Unauthorized' }

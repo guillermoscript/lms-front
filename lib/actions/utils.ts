@@ -1,10 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import type { User } from '@supabase/supabase-js'
-
 // Re-export ActionResult from its canonical location
 export type { ActionResult } from '@/lib/supabase/admin'
 
@@ -13,7 +11,6 @@ export type { ActionResult } from '@/lib/supabase/admin'
  * Every server action that mutates data should start by calling this.
  */
 export interface AuthContext {
-  user: User
   userId: string
   tenantId: string
   role: 'student' | 'teacher' | 'admin'
@@ -33,9 +30,8 @@ export interface AuthContext {
  */
 export async function authenticateUser(): Promise<AuthContext> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     throw new Error('Not authenticated')
   }
 
@@ -48,7 +44,7 @@ export async function authenticateUser(): Promise<AuthContext> {
     throw new Error('Not authenticated')
   }
 
-  return { user, userId: user.id, tenantId, role, supabase }
+  return { userId, tenantId, role, supabase }
 }
 
 /**

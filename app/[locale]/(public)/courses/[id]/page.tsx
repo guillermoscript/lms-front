@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
+import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 export const dynamic = 'force-dynamic';
 
@@ -37,8 +38,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     const t = await getTranslations('coursePublicDetails');
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-
+    const userId = await getCurrentUserId()
     // Fetch course with lessons and category
     const { data: course, error } = await supabase
         .from("courses")
@@ -82,11 +82,11 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
 
     // Check user's enrollment
     let hasAccess = false;
-    if (user) {
+    if (userId) {
         const { data: enrollment } = await supabase
             .from('enrollments')
             .select('enrollment_id')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('course_id', parseInt(params.id))
             .eq('status', 'active')
             .maybeSingle();
@@ -342,7 +342,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
 
                                     {/* CTA */}
                                     <div className="space-y-3">
-                                        {!user ? (
+                                        {!userId ? (
                                             <Link href={`/auth/login?next=${encodeURIComponent(`/courses/${params.id}`)}`}>
                                                 <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
                                                     {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}

@@ -4,7 +4,7 @@ import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
     params: Promise<{ courseId: string }>
@@ -16,8 +16,8 @@ export default async function ExercisesListPage({ params }: PageProps) {
     const t = await getTranslations('exercises.list')
     const tenantId = await getCurrentTenantId()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/auth/login')
+    const userId = await getCurrentUserId()
+    if (!userId) redirect('/auth/login')
 
     // Fetch course title separately for breadcrumb reliability
     const { data: courseData } = await supabase
@@ -46,8 +46,8 @@ export default async function ExercisesListPage({ params }: PageProps) {
         .eq('course_id', parseInt(courseId))
         .eq('status', 'published')
         .eq('tenant_id', tenantId)
-        .eq('exercise_completions.user_id', user.id)
-        .eq('exercise_messages.user_id', user.id)
+        .eq('exercise_completions.user_id', userId)
+        .eq('exercise_messages.user_id', userId)
 
     if (error) {
         console.error('Error fetching exercises:', error)

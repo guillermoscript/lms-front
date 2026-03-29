@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,11 +20,8 @@ export default async function StudentProgressPage() {
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.progress')
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/auth/login')
   }
 
@@ -42,24 +39,24 @@ export default async function StudentProgressPage() {
         status
       )
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
   // Get all course IDs for enrolled courses
   const courseIds = enrollments?.map((e) => e.course_id) || []
 
-  // Parallelize all 4 queries (all independent once we have courseIds and user.id)
+  // Parallelize all 4 queries (all independent once we have courseIds and userId)
   const [{ data: lessons }, { data: completions }, { data: exams }, { data: examSubmissions }] = await Promise.all([
     courseIds.length > 0
       ? supabase.from('lessons').select('id, course_id, title').in('course_id', courseIds).eq('status', 'published')
       : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[] }),
-    supabase.from('lesson_completions').select('lesson_id, completed_at').eq('user_id', user.id),
+    supabase.from('lesson_completions').select('lesson_id, completed_at').eq('user_id', userId),
     courseIds.length > 0
       ? supabase.from('exams').select('exam_id, course_id, title, passing_score').in('course_id', courseIds)
       : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string; passing_score: number }[] }),
     supabase.from('exam_submissions').select('exam_id, score, submission_date')
-      .eq('student_id', user.id).eq('tenant_id', tenantId),
+      .eq('student_id', userId).eq('tenant_id', tenantId),
   ])
 
   // Build maps

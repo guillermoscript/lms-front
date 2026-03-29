@@ -2,7 +2,7 @@
 
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { nanoid } from 'nanoid'
 
@@ -25,8 +25,8 @@ async function verifyLessonOwnership(lessonId: number) {
   const tenantId = await getCurrentTenantId()
   const role = await getUserRole()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
   const { data: lesson } = await supabase
     .from('lessons')
@@ -38,14 +38,14 @@ async function verifyLessonOwnership(lessonId: number) {
   if (!lesson) throw new Error('Lesson not found')
 
   const course = lesson.courses as any
-  const isOwner = course?.author_id === user.id
+  const isOwner = course?.author_id === userId
   const isAdmin = role === 'admin'
 
   if (!isOwner && !isAdmin) {
     throw new Error('Access denied')
   }
 
-  return { user, tenantId }
+  return { userId, tenantId }
 }
 
 export async function uploadLessonResource(
@@ -53,7 +53,7 @@ export async function uploadLessonResource(
   formData: FormData
 ): Promise<ActionResult<{ id: number; file_name: string; file_size: number; mime_type: string }>> {
   try {
-    const { user, tenantId } = await verifyLessonOwnership(lessonId)
+    const { userId, tenantId } = await verifyLessonOwnership(lessonId)
     const file = formData.get('file') as File | null
 
     if (!file) {
@@ -102,7 +102,7 @@ export async function uploadLessonResource(
         file_path: storagePath,
         file_size: file.size,
         mime_type: file.type,
-        uploaded_by: user.id,
+        uploaded_by: userId,
         display_order: nextOrder,
       })
       .select('id, file_name, file_size, mime_type')
@@ -126,8 +126,8 @@ export async function deleteLessonResource(
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error('Not authenticated')
 
     const adminClient = createAdminClient()
 
@@ -143,7 +143,7 @@ export async function deleteLessonResource(
     }
 
     const course = (resource.lessons as any)?.courses as any
-    const isOwner = course?.author_id === user.id
+    const isOwner = course?.author_id === userId
     const isAdmin = role === 'admin'
 
     if (!isOwner && !isAdmin) {
@@ -207,8 +207,8 @@ export async function getResourceDownloadUrl(
   try {
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error('Not authenticated')
 
     const adminClient = createAdminClient()
 
@@ -225,7 +225,7 @@ export async function getResourceDownloadUrl(
     // Check: is user the author, admin, or enrolled?
     const role = await getUserRole()
     const course = (resource.lessons as any)?.courses as any
-    const isOwner = course?.author_id === user.id
+    const isOwner = course?.author_id === userId
     const isAdmin = role === 'admin'
 
     if (!isOwner && !isAdmin) {
@@ -234,7 +234,7 @@ export async function getResourceDownloadUrl(
       const { data: enrollment } = await supabase
         .from('enrollments')
         .select('enrollment_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('tenant_id', tenantId)
         .eq('status', 'active')
         .limit(1)
@@ -244,7 +244,7 @@ export async function getResourceDownloadUrl(
         .from('product_courses')
         .select('product_id, enrollments!inner(enrollment_id)')
         .eq('course_id', courseId)
-        .eq('enrollments.user_id', user.id)
+        .eq('enrollments.user_id', userId)
         .eq('enrollments.status', 'active')
         .limit(1)
 
@@ -276,8 +276,8 @@ export async function toggleSequentialCompletion(
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error('Not authenticated')
 
     const { data: course } = await supabase
       .from('courses')
@@ -288,7 +288,7 @@ export async function toggleSequentialCompletion(
 
     if (!course) return { success: false, error: 'Course not found' }
 
-    const isOwner = course.author_id === user.id
+    const isOwner = course.author_id === userId
     const isAdmin = role === 'admin'
 
     if (!isOwner && !isAdmin) {

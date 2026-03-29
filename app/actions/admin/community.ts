@@ -1,8 +1,7 @@
 'use server'
 
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -278,14 +277,13 @@ export async function muteUser(
     const adminClient = createAdminClient()
 
     // Get admin user for muted_by field
-    const supabase = await createClient()
-    const { data: { user: adminUser } } = await supabase.auth.getUser()
-    if (!adminUser) {
+    const adminUserId = await getCurrentUserId()
+    if (!adminUserId) {
       return { success: false, error: 'Not authenticated' }
     }
 
     // Cannot mute yourself
-    if (userId === adminUser.id) {
+    if (userId === adminUserId) {
       return { success: false, error: 'You cannot mute yourself' }
     }
 
@@ -313,7 +311,7 @@ export async function muteUser(
         {
           tenant_id: tenantId,
           user_id: userId,
-          muted_by: adminUser.id,
+          muted_by: adminUserId,
           reason: reason || null,
           muted_until: mutedUntil || null,
         },
@@ -389,9 +387,8 @@ export async function reviewFlag(
     }
 
     // Get the admin user ID for reviewed_by
-    const supabaseClient = await createClient()
-    const { data: { user: reviewerUser } } = await supabaseClient.auth.getUser()
-    if (!reviewerUser) {
+    const reviewerUserId = await getCurrentUserId()
+    if (!reviewerUserId) {
       return { success: false, error: 'Not authenticated' }
     }
 
@@ -399,7 +396,7 @@ export async function reviewFlag(
       .from('community_flags')
       .update({
         status,
-        reviewed_by: reviewerUser.id,
+        reviewed_by: reviewerUserId,
       })
       .eq('id', flagId)
       .eq('tenant_id', tenantId)
