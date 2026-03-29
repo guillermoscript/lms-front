@@ -21,7 +21,7 @@ async function getData(userId: string, tenantId: string) {
     supabase
       .from('enrollments')
       .select(`
-        *,
+        enrollment_id,
         course:courses (
           course_id,
           title,
@@ -38,7 +38,7 @@ async function getData(userId: string, tenantId: string) {
 
     supabase
       .from('exam_submissions')
-      .select('*')
+      .select('submission_id, exam_id, score, submission_date')
       .eq('student_id', userId)
       .eq('tenant_id', tenantId)
       .order('submission_date', { ascending: false })
@@ -46,14 +46,14 @@ async function getData(userId: string, tenantId: string) {
 
     supabase
       .from('lesson_completions')
-      .select('*')
+      .select('lesson_id')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId),
 
     supabase
       .from('exams')
       .select(`
-        *,
+        exam_id, title, exam_date,
         course:courses(title)
       `)
       .eq('tenant_id', tenantId)
@@ -96,7 +96,7 @@ async function getData(userId: string, tenantId: string) {
     courses,
     examSubmissions: examSubmissions.data || [],
     lessonCompletions: lessonCompletions.data || [],
-    upcomingExams: upcomingExams.data || [],
+    upcomingExams: (upcomingExams.data || []) as any[],
     hasActiveSubscription: (activeSubscription.data?.length ?? 0) > 0,
     planName: (activeSubscription.data?.[0]?.plan as any)?.plan_name || null,
   }

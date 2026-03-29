@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { PlatformSidebar } from "@/components/platform-sidebar"
@@ -7,6 +8,16 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isSuperAdmin } from "@/lib/supabase/get-user-role"
 import { redirect } from "next/navigation"
+
+async function PlatformSidebarWithCount() {
+  const adminClient = createAdminClient()
+  const { count: pendingCount } = await adminClient
+    .from('platform_payment_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending')
+
+  return <PlatformSidebar pendingBillingCount={pendingCount ?? 0} />
+}
 
 export default async function PlatformLayout({
   children,
@@ -23,16 +34,11 @@ export default async function PlatformLayout({
     redirect(`/${locale}/auth/login`)
   }
 
-  // Get pending billing count for badge
-  const adminClient = createAdminClient()
-  const { count: pendingCount } = await adminClient
-    .from('platform_payment_requests')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending')
-
   return (
     <SidebarProvider>
-      <PlatformSidebar pendingBillingCount={pendingCount ?? 0} />
+      <Suspense fallback={<PlatformSidebar pendingBillingCount={0} />}>
+        <PlatformSidebarWithCount />
+      </Suspense>
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

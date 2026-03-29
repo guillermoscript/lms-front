@@ -47,14 +47,13 @@ export default async function AdminTransactionsPage({
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
-  // Get user profiles for transactions
-  const userIds = transactions?.map((t) => t.user_id) || []
-  const { data: users } = await supabase
-    .from('profiles')
-    .select('id, full_name, email')
-    .in('id', userIds)
+  // Get user profiles for transactions — batch fetch
+  const userIds = [...new Set((transactions || []).map((t) => t.user_id).filter(Boolean))]
+  const { data: users } = userIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name, email').in('id', userIds)
+    : { data: [] }
 
-  const usersMap = new Map(users?.map((u) => [u.id, u]))
+  const usersMap = new Map((users || []).map((u) => [u.id, u]))
 
   // Calculate totals
   const totalRevenue =

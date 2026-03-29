@@ -81,4 +81,14 @@ test.describe('Tenant Isolation', () => {
     await page.goto(`${TENANT_BASE}/en/dashboard/student`)
     await expect(page).toHaveURL(/code-academy\.lvh\.me/)
   })
+
+  test('platform root (lvh.me) loads', async ({ page }) => {
+    await page.goto(`${BASE}/en`)
+    await expect(page).toHaveURL(/lvh\.me:3000\/en/)
+  })
+
+  test('subdomain (code-academy.lvh.me) shows Code Academy Pro', async ({ page }) => {
+    await page.goto(`${TENANT_BASE}/en`)
+    await expect(page.getByText(/Code Academy Pro/i).first()).toBeVisible({ timeout: 15_000 })
+  })
 })

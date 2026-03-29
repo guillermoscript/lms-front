@@ -1,7 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ExerciseBuilder } from '@/components/teacher/exercise-builder'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const ExerciseBuilder = dynamic(
+  () => import('@/components/teacher/exercise-builder').then(m => m.ExerciseBuilder),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    ),
+  }
+)
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'

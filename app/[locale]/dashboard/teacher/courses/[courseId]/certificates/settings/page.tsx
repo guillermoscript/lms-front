@@ -4,7 +4,24 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
-import { CertificateTemplateForm } from '@/components/teacher/certificate-template-form'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const CertificateTemplateForm = dynamic(
+  () => import('@/components/teacher/certificate-template-form').then(m => m.CertificateTemplateForm),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <div className="aspect-[1.414/1] w-full">
+          <Skeleton className="h-full w-full" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+    ),
+  }
+)
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 

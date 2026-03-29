@@ -104,7 +104,7 @@ export function PaymentRequestDialog({
       router.refresh()
       onOpenChange(false)
     } else {
-      toast.error(result.error || t('dialog.toasts.updateError'))
+      toast.error('error' in result ? result.error : t('dialog.toasts.updateError'))
     }
 
     setLoading(false)

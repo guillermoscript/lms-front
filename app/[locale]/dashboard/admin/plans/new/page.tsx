@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { PlanForm } from '@/components/admin/plan-form'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function NewPlanPage() {
   const t = await getTranslations('dashboard.admin.plans.new')
@@ -26,6 +27,16 @@ export default async function NewPlanPage() {
   if (role !== 'admin') {
     redirect('/dashboard/student')
   }
+
+  const tenantId = await getCurrentTenantId()
+
+  // Fetch published courses for the selector
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('course_id, title')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'published')
+    .order('title')
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,7 +71,7 @@ export default async function NewPlanPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PlanForm mode="create" />
+            <PlanForm mode="create" courses={courses || []} />
           </CardContent>
         </Card>
       </main>

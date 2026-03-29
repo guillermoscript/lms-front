@@ -67,10 +67,9 @@ export default async function UserDetailPage({ params }: PageProps) {
 
   const roles = [membership.role]
 
-  // Fetch enrollments with course details (tenant-scoped)
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select(`
+  // Parallelize 3 independent queries (all need userId + tenantId)
+  const [{ data: enrollments }, { data: transactions }, { data: recentActivity }] = await Promise.all([
+    supabase.from('enrollments').select(`
       *,
       course:courses (
         course_id,
@@ -78,23 +77,12 @@ export default async function UserDetailPage({ params }: PageProps) {
         status
       )
     `)
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .order('enrolled_at', { ascending: false })
-
-  // Fetch transactions (tenant-scoped)
-  const { data: transactions } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Fetch recent lesson completions (tenant-scoped)
-  const { data: recentActivity } = await supabase
-    .from('lesson_completions')
-    .select(`
+      .eq('user_id', userId).eq('tenant_id', tenantId)
+      .order('enrolled_at', { ascending: false }),
+    supabase.from('transactions').select('*')
+      .eq('user_id', userId).eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false }).limit(10),
+    supabase.from('lesson_completions').select(`
       completed_at,
       lesson:lessons (
         lesson_id,
@@ -105,10 +93,9 @@ export default async function UserDetailPage({ params }: PageProps) {
         )
       )
     `)
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .order('completed_at', { ascending: false })
-    .limit(10)
+      .eq('user_id', userId).eq('tenant_id', tenantId)
+      .order('completed_at', { ascending: false }).limit(10),
+  ])
 
   const isDeactivated = !!profile.deactivated_at
 

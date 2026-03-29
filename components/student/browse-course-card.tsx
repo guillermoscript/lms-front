@@ -8,6 +8,12 @@ import Link from 'next/link'
 import { IconCheck, IconLock, IconTrophy } from '@tabler/icons-react'
 import { useEnrollment } from '@/lib/hooks/use-enrollment'
 
+export type EnrollmentStatus =
+  | { variant: 'enrolled' }
+  | { variant: 'enrollable'; subscriptionId: number }
+  | { variant: 'not-in-plan' }
+  | { variant: 'no-subscription' }
+
 interface BrowseCourseCardProps {
   course: {
     course_id: number
@@ -16,25 +22,21 @@ interface BrowseCourseCardProps {
     thumbnail_url?: string
     tags?: string | string[]
   }
-  isEnrolled: boolean
-  hasActiveSubscription: boolean
-  subscriptionId?: number
-  isCoveredByPlan?: boolean
+  enrollmentStatus: EnrollmentStatus
 }
 
 export function BrowseCourseCard({
   course,
-  isEnrolled,
-  hasActiveSubscription,
-  subscriptionId,
-  isCoveredByPlan = true,
+  enrollmentStatus,
 }: BrowseCourseCardProps) {
   const { enrollInCourse, loading } = useEnrollment()
   const t = useTranslations('components.browseCourse')
 
+  const isEnrolled = enrollmentStatus.variant === 'enrolled'
+
   const handleEnroll = async () => {
-    if (!subscriptionId) return
-    await enrollInCourse(course.course_id, subscriptionId)
+    if (enrollmentStatus.variant !== 'enrollable') return
+    await enrollInCourse(course.course_id, enrollmentStatus.subscriptionId)
   }
 
   // Parse tags
@@ -42,10 +44,14 @@ export function BrowseCourseCard({
     ? (Array.isArray(course.tags) ? course.tags : course.tags.split(',')).slice(0, 3)
     : []
 
+  const courseLink = isEnrolled
+    ? `/dashboard/student/courses/${course.course_id}`
+    : `/courses/${course.course_id}`
+
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
       {/* Thumbnail */}
-      <Link href={isEnrolled ? `/dashboard/student/courses/${course.course_id}` : `/courses/${course.course_id}`}>
+      <Link href={courseLink}>
         <div className="relative aspect-video w-full overflow-hidden bg-muted">
           {course.thumbnail_url ? (
             <img
@@ -72,7 +78,7 @@ export function BrowseCourseCard({
       </Link>
 
       <CardHeader className="pb-3">
-        <Link href={isEnrolled ? `/dashboard/student/courses/${course.course_id}` : `/courses/${course.course_id}`}>
+        <Link href={courseLink}>
           <h3 className="font-semibold text-lg line-clamp-2 hover:text-primary transition-colors">
             {course.title}
           </h3>
@@ -100,32 +106,63 @@ export function BrowseCourseCard({
       </CardContent>
 
       <CardFooter className="pt-3 border-t">
-        {isEnrolled ? (
-          <Link href={`/dashboard/student/courses/${course.course_id}`} className="w-full">
-            <Button className="w-full">{t('goCourse')}</Button>
-          </Link>
-        ) : hasActiveSubscription && isCoveredByPlan ? (
-          <Button
-            className="w-full"
-            onClick={handleEnroll}
-            disabled={loading}
-          >
-            {loading ? t('enrolling') : t('enrollNow')}
-          </Button>
-        ) : hasActiveSubscription && !isCoveredByPlan ? (
-          <Button variant="outline" className="w-full gap-2" disabled>
-            <IconLock className="w-4 h-4" />
-            {t('notInPlan')}
-          </Button>
-        ) : (
-          <Link href="/pricing" className="w-full">
-            <Button variant="outline" className="w-full gap-2">
-              <IconLock className="w-4 h-4" />
-              {t('subscribeAccess')}
-            </Button>
-          </Link>
-        )}
+        <BrowseCardAction
+          variant={enrollmentStatus.variant}
+          courseId={course.course_id}
+          onEnroll={handleEnroll}
+          loading={loading}
+          t={t}
+        />
       </CardFooter>
     </Card>
   )
+}
+
+function BrowseCardAction({
+  variant,
+  courseId,
+  onEnroll,
+  loading,
+  t,
+}: {
+  variant: EnrollmentStatus['variant']
+  courseId: number
+  onEnroll: () => void
+  loading: boolean
+  t: ReturnType<typeof useTranslations>
+}) {
+  switch (variant) {
+    case 'enrolled':
+      return (
+        <Link href={`/dashboard/student/courses/${courseId}`} className="w-full">
+          <Button className="w-full">{t('goCourse')}</Button>
+        </Link>
+      )
+    case 'enrollable':
+      return (
+        <Button
+          className="w-full"
+          onClick={onEnroll}
+          disabled={loading}
+        >
+          {loading ? t('enrolling') : t('enrollNow')}
+        </Button>
+      )
+    case 'not-in-plan':
+      return (
+        <Button variant="outline" className="w-full gap-2" disabled>
+          <IconLock className="w-4 h-4" />
+          {t('notInPlan')}
+        </Button>
+      )
+    case 'no-subscription':
+      return (
+        <Link href="/pricing" className="w-full">
+          <Button variant="outline" className="w-full gap-2">
+            <IconLock className="w-4 h-4" />
+            {t('subscribeAccess')}
+          </Button>
+        </Link>
+      )
+  }
 }

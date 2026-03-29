@@ -19,6 +19,8 @@ function getStorageKey(tourId: string, userId: string): string {
 
 function isTourCompleted(tourId: string, userId: string): boolean {
   if (typeof window === 'undefined') return true
+  // Global kill-switch: skip all tours (useful for E2E tests and power users)
+  if (localStorage.getItem('tours-disabled') === 'true') return true
   return localStorage.getItem(getStorageKey(tourId, userId)) === 'true'
 }
 

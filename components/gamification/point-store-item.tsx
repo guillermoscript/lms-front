@@ -1,6 +1,7 @@
 "use client";
 
-import { useGamification, StoreItem } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
+import { usePointStore, StoreItem } from "@/lib/hooks/use-point-store";
 import { Button } from "@/components/ui/button";
 import { IconCoin, IconLock, IconCheck, IconBolt } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,8 @@ interface PointStoreItemProps {
 }
 
 export function PointStoreItem({ item }: PointStoreItemProps) {
-    const { summary, purchaseItem } = useGamification();
+    const { summary, refresh: refreshSummary } = useGamificationSummary();
+    const { purchase } = usePointStore({ onPurchase: refreshSummary });
     const [isPurchasing, setIsPurchasing] = useState(false);
     const t = useTranslations('components.gamification');
 
@@ -23,7 +25,7 @@ export function PointStoreItem({ item }: PointStoreItemProps) {
         if (!canAfford || isPurchasing) return;
 
         setIsPurchasing(true);
-        const result = await purchaseItem(item.id);
+        const result = await purchase(item.id);
         setIsPurchasing(false);
 
         if (result.success) {

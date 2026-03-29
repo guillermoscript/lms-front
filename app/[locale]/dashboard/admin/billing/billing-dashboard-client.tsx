@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ProofUpload } from '@/components/shared/proof-upload'
-import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto } from '@tabler/icons-react'
+import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto, IconClock } from '@tabler/icons-react'
 import { uploadPaymentProof, requestManualRenewal } from '@/app/actions/admin/billing'
 
 interface BillingDashboardClientProps {
@@ -176,8 +176,13 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       {pendingRequests.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Pending Upgrade Requests</CardTitle>
-            <CardDescription>Bank transfer requests awaiting confirmation</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <IconClock className="h-5 w-5" />
+              Pending Payment Requests
+            </CardTitle>
+            <CardDescription>
+              Your bank transfer request{pendingRequests.length > 1 ? 's are' : ' is'} in the queue — our team will review and activate your plan once payment is confirmed.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -192,8 +197,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                         {req.platform_plans?.name || 'Unknown Plan'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        ${req.amount}/{req.interval === 'yearly' ? 'year' : 'month'} &middot;{' '}
-                        {new Date(req.created_at).toLocaleDateString()}
+                        ${req.amount}/{req.interval === 'yearly' ? 'year' : 'month'} &middot; Submitted {new Date(req.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -213,16 +217,26 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                           : req.status === 'instructions_sent' ? 'outline'
                             : 'default'
                       }>
-                        {req.status.replace(/_/g, ' ')}
+                        {req.status === 'pending' && 'Awaiting review'}
+                        {req.status === 'instructions_sent' && 'Instructions sent'}
+                        {req.status === 'payment_received' && 'Payment received'}
+                        {!['pending', 'instructions_sent', 'payment_received'].includes(req.status) && req.status.replace(/_/g, ' ')}
                       </Badge>
                     </div>
                   </div>
+
+                  {/* Status hint */}
+                  <p className="text-xs text-muted-foreground">
+                    {req.status === 'pending' && 'We\'ll send bank transfer instructions to your billing email shortly.'}
+                    {req.status === 'instructions_sent' && 'Check your email for bank transfer instructions. Once you\'ve transferred, upload proof below.'}
+                    {req.status === 'payment_received' && 'We\'ve received your payment and are confirming it. Your plan will be activated soon.'}
+                  </p>
 
                   {/* Proof upload for requests without proof */}
                   {!req.proof_url && (
                     <ProofUpload
                       onUpload={(file) => handleProofUpload(req.request_id, file)}
-                      label="Upload payment proof"
+                      label="Upload payment proof (optional — speeds up activation)"
                       disabled={uploadingFor === req.request_id}
                     />
                   )}

@@ -1,13 +1,13 @@
 "use client";
 
-import { useGamification } from "@/lib/hooks/use-gamification";
+import { useGamificationSummary } from "@/lib/hooks/use-gamification-summary";
 import { cn } from "@/lib/utils";
 import { format, subDays, isSameDay, startOfWeek, addDays } from "date-fns";
 import { IconFlame, IconCheck } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 export function StreakCalendar() {
-    const { summary, loading } = useGamification();
+    const { summary, loading } = useGamificationSummary();
     const t = useTranslations('components.gamification');
 
     if (loading || !summary) {

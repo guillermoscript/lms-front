@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -43,12 +43,12 @@ interface LessonCommentsProps {
   lessonId: number
   userId: string
   tenantId: string
+  initialComments?: Comment[]
 }
 
-export function LessonComments({ lessonId, userId, tenantId }: LessonCommentsProps) {
-  const [comments, setComments] = useState<Comment[]>([])
+export function LessonComments({ lessonId, userId, tenantId, initialComments = [] }: LessonCommentsProps) {
+  const [comments, setComments] = useState<Comment[]>(initialComments)
   const [newComment, setNewComment] = useState('')
-  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
 
@@ -57,12 +57,7 @@ export function LessonComments({ lessonId, userId, tenantId }: LessonCommentsPro
   const t = useTranslations('courseDetails.lessonComments')
   const locale = useLocale()
 
-  useEffect(() => {
-    loadComments()
-  }, [lessonId])
-
   async function loadComments() {
-    setLoading(true)
     try {
       const { data: commentsData, error: commentsError } = await supabase
         .from('lesson_comments')
@@ -152,8 +147,6 @@ export function LessonComments({ lessonId, userId, tenantId }: LessonCommentsPro
     } catch (error) {
       console.error('Error loading comments:', error)
       toast.error(t('errorLoading'))
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -249,19 +242,7 @@ export function LessonComments({ lessonId, userId, tenantId }: LessonCommentsPro
 
       <ScrollArea className="flex-1 -mr-4 pr-4">
         <div className="space-y-8 pb-8">
-          {loading ? (
-            <div className="space-y-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex gap-4 animate-pulse">
-                  <div className="h-10 w-10 rounded-full bg-muted shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-1/4 rounded bg-muted" />
-                    <div className="h-16 rounded bg-muted" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : comments.length === 0 ? (
+          {comments.length === 0 ? (
             <div className="text-center py-12 border rounded-lg border-dashed bg-muted/30">
               <IconMessage className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground font-medium">{t('noComments')}</p>

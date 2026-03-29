@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, use, useState, useCallback, type ReactNode } from 'react'
 
 interface AristotleContextValue {
     isOpen: boolean
@@ -19,13 +19,13 @@ interface AristotleContextValue {
 const AristotleContext = createContext<AristotleContextValue | null>(null)
 
 export function useAristotle() {
-    const ctx = useContext(AristotleContext)
+    const ctx = use(AristotleContext)
     if (!ctx) throw new Error('useAristotle must be used within AristotleProvider')
     return ctx
 }
 
 export function useAristotleOptional() {
-    return useContext(AristotleContext)
+    return use(AristotleContext)
 }
 
 interface AristotleProviderProps {

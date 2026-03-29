@@ -38,93 +38,118 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     .order('enrollment_date', { ascending: false })
 
 
-  // Enrich enrollments with related data
+  // Enrich enrollments with related data using batch queries (avoids N+1)
   let enrichedEnrollments: any[] = []
 
   if (enrollments && enrollments.length > 0) {
+    const courseIds = enrollments.map(e => e.course_id)
+    const productIds = enrollments.map(e => e.product_id).filter(Boolean)
+    const subscriptionIds = enrollments.map(e => e.subscription_id).filter(Boolean)
+
+    const [
+      { data: courses },
+      { data: lessons },
+      { data: exams },
+      { data: lessonCompletions },
+      { data: examSubmissions },
+      { data: products },
+      { data: subscriptionsData },
+    ] = await Promise.all([
+      supabase.from('courses').select('course_id, title, description, thumbnail_url, status')
+        .in('course_id', courseIds).eq('tenant_id', tenantId),
+      supabase.from('lessons').select('id, title, sequence, course_id')
+        .in('course_id', courseIds).eq('tenant_id', tenantId),
+      supabase.from('exams').select('exam_id, title, sequence, passing_score, allow_retake, course_id')
+        .in('course_id', courseIds).eq('tenant_id', tenantId),
+      supabase.from('lesson_completions').select('lesson_id, completed_at')
+        .eq('user_id', user.id).eq('tenant_id', tenantId),
+      supabase.from('exam_submissions').select('submission_id, exam_id, submission_date, score')
+        .eq('student_id', user.id).eq('tenant_id', tenantId),
+      productIds.length > 0
+        ? supabase.from('products').select('product_id, name')
+            .in('product_id', productIds).eq('tenant_id', tenantId)
+        : Promise.resolve({ data: [] as { product_id: number; name: string }[] }),
+      subscriptionIds.length > 0
+        ? supabase.from('subscriptions').select('subscription_id, subscription_status, end_date, plan_id')
+            .in('subscription_id', subscriptionIds).eq('tenant_id', tenantId)
+        : Promise.resolve({ data: [] as { subscription_id: number; subscription_status: string; end_date: string; plan_id: number }[] }),
+    ])
+
+    // Fetch plan info for subscriptions that have plan_id
+    const planIds = [...new Set((subscriptionsData || []).map(s => s.plan_id).filter(Boolean))]
+    const { data: plans } = planIds.length > 0
+      ? await supabase.from('plans').select('plan_id, plan_name').in('plan_id', planIds).eq('tenant_id', tenantId)
+      : { data: [] as { plan_id: number; plan_name: string }[] }
+
+    // Build lookup maps
+    const courseMap = new Map((courses || []).map(c => [c.course_id, c]))
+    const lessonsByCourse = new Map<number, typeof lessons>()
+    for (const l of lessons || []) {
+      const arr = lessonsByCourse.get(l.course_id) || []
+      arr.push(l)
+      lessonsByCourse.set(l.course_id, arr)
+    }
+    const examsByCourse = new Map<number, typeof exams>()
+    for (const e of exams || []) {
+      const arr = examsByCourse.get(e.course_id) || []
+      arr.push(e)
+      examsByCourse.set(e.course_id, arr)
+    }
+    const completionSet = new Set((lessonCompletions || []).map(lc => lc.lesson_id))
+    const completionsByLessonId = new Map<number, typeof lessonCompletions>()
+    for (const lc of lessonCompletions || []) {
+      const arr = completionsByLessonId.get(lc.lesson_id) || []
+      arr.push(lc)
+      completionsByLessonId.set(lc.lesson_id, arr)
+    }
+    const submissionsByExamId = new Map<number, typeof examSubmissions>()
+    for (const es of examSubmissions || []) {
+      const arr = submissionsByExamId.get(es.exam_id) || []
+      arr.push(es)
+      submissionsByExamId.set(es.exam_id, arr)
+    }
+    const productMap = new Map((products || []).map(p => [p.product_id, p]))
+    const subscriptionMap = new Map((subscriptionsData || []).map(s => [s.subscription_id, s]))
+    const planMap = new Map((plans || []).map(p => [p.plan_id, p]))
+
+    // Assemble enriched enrollments (same output shape as before)
     for (const enrollment of enrollments) {
-      const { data: course } = await supabase
-        .from('courses')
-        .select('course_id, title, description, thumbnail_url, status')
-        .eq('course_id', enrollment.course_id)
-        .eq('tenant_id', tenantId)
-        .single()
+      const course = courseMap.get(enrollment.course_id)
+      if (!course) continue
 
-      if (course) {
-        const { data: lessons } = await supabase
-          .from('lessons')
-          .select('id, title, sequence')
-          .eq('course_id', course.course_id)
-          .eq('tenant_id', tenantId)
+      const courseLessons = lessonsByCourse.get(course.course_id) || []
+      const courseExams = examsByCourse.get(course.course_id) || []
 
-        const { data: lessonCompletions } = await supabase
-          .from('lesson_completions')
-          .select('lesson_id, completed_at')
-          .eq('user_id', user.id)
-          .eq('tenant_id', tenantId)
-          .in('lesson_id', lessons?.map(l => l.id) || [])
-
-        const { data: exams } = await supabase
-          .from('exams')
-          .select('exam_id, title, sequence, passing_score, allow_retake')
-          .eq('course_id', course.course_id)
-          .eq('tenant_id', tenantId)
-
-        const { data: examSubmissions } = await supabase
-          .from('exam_submissions')
-          .select('submission_id, exam_id, submission_date, score')
-          .eq('student_id', user.id)
-          .eq('tenant_id', tenantId)
-          .in('exam_id', exams?.map(e => e.exam_id) || [])
-
-        let product = null
-        if (enrollment.product_id) {
-          const { data: p } = await supabase
-            .from('products')
-            .select('product_id, name')
-            .eq('product_id', enrollment.product_id)
-            .eq('tenant_id', tenantId)
-            .single()
-          product = p
-        }
-
-        let subscription = null
-        if (enrollment.subscription_id) {
-          const { data: s } = await supabase
-            .from('subscriptions')
-            .select('subscription_id, subscription_status, end_date, plan_id')
-            .eq('subscription_id', enrollment.subscription_id)
-            .eq('tenant_id', tenantId)
-            .single()
-
-          if (s) {
-            const { data: plan } = await supabase
-              .from('plans')
-              .select('plan_id, plan_name')
-              .eq('plan_id', s.plan_id)
-              .eq('tenant_id', tenantId)
-              .single()
-            subscription = { ...s, plan }
-          }
-        }
-
-        enrichedEnrollments.push({
-          ...enrollment,
-          course: {
-            ...course,
-            lessons: lessons?.map(lesson => ({
-              ...lesson,
-              lesson_completions: lessonCompletions?.filter(lc => lc.lesson_id === lesson.id) || []
-            })) || [],
-            exams: exams?.map(exam => ({
-              ...exam,
-              exam_submissions: examSubmissions?.filter(es => es.exam_id === exam.exam_id) || []
-            })) || []
-          },
-          product,
-          subscription
-        })
+      let product = null
+      if (enrollment.product_id) {
+        product = productMap.get(enrollment.product_id) || null
       }
+
+      let subscription = null
+      if (enrollment.subscription_id) {
+        const s = subscriptionMap.get(enrollment.subscription_id)
+        if (s) {
+          const plan = planMap.get(s.plan_id) || null
+          subscription = { ...s, plan }
+        }
+      }
+
+      enrichedEnrollments.push({
+        ...enrollment,
+        course: {
+          ...course,
+          lessons: courseLessons.map(lesson => ({
+            ...lesson,
+            lesson_completions: completionsByLessonId.get(lesson.id)?.filter(lc => lc.lesson_id === lesson.id) || []
+          })),
+          exams: courseExams.map(exam => ({
+            ...exam,
+            exam_submissions: submissionsByExamId.get(exam.exam_id)?.filter(es => es.exam_id === exam.exam_id) || []
+          }))
+        },
+        product,
+        subscription
+      })
     }
   }
 

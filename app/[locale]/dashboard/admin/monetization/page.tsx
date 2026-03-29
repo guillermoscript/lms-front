@@ -34,43 +34,22 @@ export default async function MonetizationPage() {
   const t = await getTranslations('dashboard.admin.monetization')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
 
-  // Fetch tenant Stripe info
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('stripe_account_id')
-    .eq('id', tenantId)
-    .single()
-
-  // Fetch revenue split
-  const { data: split } = await supabase
-    .from('revenue_splits')
-    .select('platform_percentage, school_percentage')
-    .eq('tenant_id', tenantId)
-    .single()
-
-  // Fetch revenue overview
-  const revenue = await getRevenueOverview()
-
-  // Count active products
-  const { count: productCount } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
-
-  // Count active plans
-  const { count: planCount } = await supabase
-    .from('plans')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .is('deleted_at', null)
-
-  // Count active subscriptions
-  const { count: subscriptionCount } = await supabase
-    .from('subscriptions')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .eq('subscription_status', 'active')
+  // Parallelize all 6 independent queries
+  const [
+    { data: tenant },
+    { data: split },
+    revenue,
+    { count: productCount },
+    { count: planCount },
+    { count: subscriptionCount },
+  ] = await Promise.all([
+    supabase.from('tenants').select('stripe_account_id').eq('id', tenantId).single(),
+    supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
+    getRevenueOverview(),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('plans').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).is('deleted_at', null),
+    supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('subscription_status', 'active'),
+  ])
 
   const isStripeConnected = !!tenant?.stripe_account_id
   const platformPercentage = split?.platform_percentage ?? 20

@@ -29,8 +29,9 @@ export default async function EditProductPage({ params }: PageProps) {
 
   const tenantId = await getCurrentTenantId()
 
-  // Fetch product with courses (tenant-scoped)
-  const { data: product, error } = await supabase
+  // Fetch product with courses and published courses in parallel
+  const [{ data: product, error }, { data: courses }] = await Promise.all([
+    supabase
     .from('products')
     .select(`
       *,
@@ -40,7 +41,14 @@ export default async function EditProductPage({ params }: PageProps) {
     `)
     .eq('product_id', parseInt(productId))
     .eq('tenant_id', tenantId)
-    .single()
+    .single(),
+    supabase
+      .from('courses')
+      .select('course_id, title')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .order('title'),
+  ])
 
   if (error || !product) {
     notFound()
@@ -79,7 +87,7 @@ export default async function EditProductPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProductForm mode="edit" initialData={product} />
+            <ProductForm mode="edit" initialData={product} courses={courses || []} />
           </CardContent>
         </Card>
       </main>

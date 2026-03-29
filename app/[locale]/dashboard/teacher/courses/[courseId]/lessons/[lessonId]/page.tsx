@@ -1,6 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import { LessonEditor } from '@/components/teacher/lesson-editor'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const LessonEditor = dynamic(
+  () => import('@/components/teacher/lesson-editor').then(m => m.LessonEditor),
+  {
+    loading: () => (
+      <div className="mx-auto max-w-4xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    ),
+  }
+)
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
 

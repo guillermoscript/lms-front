@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ProductForm } from '@/components/admin/product-form'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function NewProductPage() {
   const t = await getTranslations('dashboard.admin.products.new')
@@ -20,6 +21,16 @@ export default async function NewProductPage() {
   if (!user) {
     redirect('/auth/login')
   }
+
+  const tenantId = await getCurrentTenantId()
+
+  // Fetch published courses for the selector
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('course_id, title')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'published')
+    .order('title')
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,7 +65,7 @@ export default async function NewProductPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProductForm mode="create" />
+            <ProductForm mode="create" courses={courses || []} />
           </CardContent>
         </Card>
       </main>

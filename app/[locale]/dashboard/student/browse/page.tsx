@@ -30,51 +30,6 @@ export default async function BrowseCoursesPage({
     redirect('/auth/login')
   }
 
-  // Check if user has an active subscription
-  const { data: subscriptions } = await supabase
-    .from('subscriptions')
-    .select(`
-      subscription_id,
-      subscription_status,
-      end_date,
-      plan:plans!subscriptions_plan_id_fkey (
-        plan_id,
-        plan_name,
-        price
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-    .eq('subscription_status', 'active')
-    .gte('end_date', new Date().toISOString())
-    .order('end_date', { ascending: false })
-
-  const activeSubscription = subscriptions?.[0]
-
-  // Fetch plan_courses to determine which courses the subscription covers
-  let allowedCourseIds: Set<number> | null = null // null = all courses allowed
-  if (activeSubscription) {
-    const planId = (activeSubscription.plan as any)?.plan_id
-    if (planId) {
-      const { data: planCourses } = await supabase
-        .from('plan_courses')
-        .select('course_id')
-        .eq('plan_id', planId)
-
-      // If plan_courses has entries, restrict to those; if empty, allow all
-      if (planCourses && planCourses.length > 0) {
-        allowedCourseIds = new Set(planCourses.map(pc => pc.course_id))
-      }
-    }
-  }
-
-  // Fetch categories for filter pills
-  const { data: categories } = await supabase
-    .from('course_categories')
-    .select('id, name')
-    .eq('tenant_id', tenantId)
-    .order('name')
-
   // Build course query with filters
   let query = supabase
     .from('courses')
@@ -100,20 +55,51 @@ export default async function BrowseCoursesPage({
     query = query.eq('category_id', category)
   }
 
-  const { data: courses } = await query
+  // Parallelize 4 independent queries
+  const [{ data: subscriptions }, { data: categories }, { data: courses }, { data: enrollments }] = await Promise.all([
+    supabase.from('subscriptions').select(`
+      subscription_id,
+      subscription_status,
+      end_date,
+      plan:plans!subscriptions_plan_id_fkey (
+        plan_id,
+        plan_name,
+        price
+      )
+    `)
+      .eq('user_id', user.id).eq('tenant_id', tenantId)
+      .eq('subscription_status', 'active')
+      .gte('end_date', new Date().toISOString())
+      .order('end_date', { ascending: false }),
+    supabase.from('course_categories').select('id, name')
+      .eq('tenant_id', tenantId).order('name'),
+    query,
+    supabase.from('enrollments').select('course_id')
+      .eq('user_id', user.id).eq('tenant_id', tenantId).eq('status', 'active'),
+  ])
+
+  const activeSubscription = subscriptions?.[0]
+
+  // planCourses is conditional on subscription result -- sequential is correct
+  let allowedCourseIds: Set<number> | null = null
+  if (activeSubscription) {
+    const planId = (activeSubscription.plan as any)?.plan_id
+    if (planId) {
+      const { data: planCourses } = await supabase
+        .from('plan_courses')
+        .select('course_id')
+        .eq('plan_id', planId)
+
+      if (planCourses && planCourses.length > 0) {
+        allowedCourseIds = new Set(planCourses.map(pc => pc.course_id))
+      }
+    }
+  }
 
   // Fetch translations
   const t = await getTranslations('dashboard.student.browse')
   const tCourses = await getTranslations('dashboard.student.courses')
   const tSearch = await getTranslations('courseSearch')
-
-  // Fetch user's enrollments to check which courses they're already enrolled in
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select('course_id')
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
 
   const enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || [])
 
@@ -188,14 +174,20 @@ export default async function BrowseCoursesPage({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => {
               const isCoveredByPlan = allowedCourseIds === null || allowedCourseIds.has(course.course_id)
+
+              const enrollmentStatus = enrolledCourseIds.has(course.course_id)
+                ? { variant: 'enrolled' as const }
+                : activeSubscription && isCoveredByPlan
+                  ? { variant: 'enrollable' as const, subscriptionId: activeSubscription.subscription_id }
+                  : activeSubscription && !isCoveredByPlan
+                    ? { variant: 'not-in-plan' as const }
+                    : { variant: 'no-subscription' as const }
+
               return (
                 <BrowseCourseCard
                   key={course.course_id}
                   course={course}
-                  isEnrolled={enrolledCourseIds.has(course.course_id)}
-                  hasActiveSubscription={!!activeSubscription}
-                  subscriptionId={activeSubscription?.subscription_id}
-                  isCoveredByPlan={isCoveredByPlan}
+                  enrollmentStatus={enrollmentStatus}
                 />
               )
             })}

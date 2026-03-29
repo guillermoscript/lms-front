@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CourseSelector } from './course-selector'
+import { CourseSelector, type CourseOption } from './course-selector'
 import { createPlan, updatePlan } from '@/app/actions/admin/plans'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IconAlertCircle } from '@tabler/icons-react'
@@ -34,9 +34,10 @@ interface Plan {
 interface PlanFormProps {
   mode: 'create' | 'edit'
   initialData?: Plan
+  courses: CourseOption[]
 }
 
-export function PlanForm({ mode, initialData }: PlanFormProps) {
+export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
   const t = useTranslations('dashboard.admin.plans.form')
   const [formData, setFormData] = useState({
     plan_name: initialData?.plan_name || '',
@@ -191,6 +192,7 @@ export function PlanForm({ mode, initialData }: PlanFormProps) {
 
       {/* Course Selector */}
       <CourseSelector
+        courses={courses}
         selectedCourses={formData.courseIds}
         onChange={(courseIds) => setFormData({ ...formData, courseIds })}
       />
