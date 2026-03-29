@@ -78,7 +78,6 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
       setManualSubmitted(true)
     } catch (e: any) {
       toast.error(e.message || t('submitError'))
-      throw e
     }
   }
 
