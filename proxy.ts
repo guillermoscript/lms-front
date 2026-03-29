@@ -215,70 +215,63 @@ export default async function proxy(request: NextRequest) {
     normalizedPath === route || normalizedPath.startsWith(route + '/')
   )
 
-  // Update session — validates token server-side (1 auth API call) and returns the user.
-  // Re-using the user here avoids a second getUser() network call.
-  const { response: supabaseResponse, user } = await updateSession(request)
-
-  // Set tenant + user ID headers on the response for downstream server components.
-  // This lets server components read the user ID from headers instead of calling
-  // getUser() again (which is a network call to Supabase Auth on every invocation).
+  // --- Public routes: skip auth entirely when no cookies ---
   intlResponse.headers.set('x-tenant-id', tenantId)
+  const hasAuthCookies = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+
+  if (isPublicRoute && !hasAuthCookies) {
+    // Fast path: unauthenticated user on public page — zero auth API calls
+    return intlResponse
+  }
+
+  // --- Auth session validation (1 auth API call via getUser()) ---
+  // Only runs when auth cookies exist (skip for bots, crawlers, unauthenticated visitors)
+  const { response: supabaseResponse, user } = await updateSession(request)
   supabaseResponse.headers.set('x-tenant-id', tenantId)
+
+  // Set user ID header so server components can read it without calling getUser() again
   if (user) {
     request.headers.set('x-user-id', user.id)
     intlResponse.headers.set('x-user-id', user.id)
     supabaseResponse.headers.set('x-user-id', user.id)
   }
 
-  // Single Supabase client used for the rest of this middleware run.
-  // getSession() reads from cookie (no network call) — safe because updateSession
-  // already validated the token server-side above.
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          // Propagate any cookie writes (e.g. from refreshSession) to the response
-          const cookieDomain = (() => {
-            const d = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.split(':')[0]
-            if (!d || d === 'localhost' || d === '127.0.0.1') return undefined
-            return `.${d}`
-          })()
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
-              ...options,
-              ...(cookieDomain ? { domain: cookieDomain } : {}),
-            })
-          )
-        },
-      },
-    }
-  )
-
-  let session = null
+  // Read JWT claims from cookie (no network call) — getSession() is a local read
+  let userRole: 'student' | 'teacher' | 'admin' = 'student'
   if (user) {
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      session = sessionData.session
+      // Parse JWT directly from cookie to avoid creating another Supabase client
+      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
+      if (authCookie) {
+        const sessionData = JSON.parse(authCookie.value)
+        const accessToken = sessionData?.access_token || sessionData?.[0]?.access_token
+        if (accessToken) {
+          const payload = JSON.parse(atob(accessToken.split('.')[1]))
+          userRole = payload.tenant_role || payload.user_role || 'student'
+        }
+      }
     } catch {
-      session = null
+      // Fallback: try chunked cookies (sb-*-auth-token.0, .1, etc.)
+      try {
+        const chunks = request.cookies.getAll()
+          .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        if (chunks.length > 0) {
+          const combined = chunks.map(c => c.value).join('')
+          const sessionData = JSON.parse(combined)
+          const accessToken = sessionData?.access_token
+          if (accessToken) {
+            const payload = JSON.parse(atob(accessToken.split('.')[1]))
+            userRole = payload.tenant_role || payload.user_role || 'student'
+          }
+        }
+      } catch {
+        // ignore — default to 'student'
+      }
     }
   }
 
-  let userRole: 'student' | 'teacher' | 'admin' = 'student'
-  if (session?.access_token) {
-    try {
-      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
-      userRole = payload.tenant_role || payload.user_role || 'student'
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // Auth Guards
+  // Auth Guards — public routes
   if (isPublicRoute) {
     if (user && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
       const dashboardUrl = new URL(`/${locale}/dashboard/${userRole}`, request.url)
@@ -299,6 +292,31 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Supabase client for DB queries (tenant_users check) — no auth API calls
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          const cookieDomain = (() => {
+            const d = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.split(':')[0]
+            if (!d || d === 'localhost' || d === '127.0.0.1') return undefined
+            return `.${d}`
+          })()
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              ...(cookieDomain ? { domain: cookieDomain } : {}),
+            })
+          )
+        },
+      },
+    }
+  )
+
   // Check if user is a member of the current tenant and get their tenant role
   if (!normalizedPath.startsWith('/join-school')) {
     const { data: membership } = await supabase
@@ -310,7 +328,6 @@ export default async function proxy(request: NextRequest) {
       .single()
 
     if (!membership) {
-      // User is not a member of this tenant - redirect to join page
       const joinUrl = new URL(`/${locale}/join-school`, request.url)
       return NextResponse.redirect(joinUrl)
     }
@@ -321,30 +338,41 @@ export default async function proxy(request: NextRequest) {
     }
 
     // Sync app_metadata.tenant_id if it doesn't match the current subdomain tenant.
-    // This ensures get_tenant_id() in RLS policies returns the correct tenant.
-    const jwtTenantId = session?.access_token
-      ? (() => { try { return JSON.parse(atob(session.access_token.split('.')[1])).tenant_id } catch { return null } })()
-      : null
+    // Only update app_metadata via admin API (no refreshSession — that burns rate limits).
+    // The JWT will pick up the new tenant_id on the next natural token refresh.
+    try {
+      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
+      const chunks = request.cookies.getAll()
+        .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
+        .sort((a, b) => a.name.localeCompare(b.name))
+      let accessToken: string | null = null
+      if (authCookie) {
+        const sd = JSON.parse(authCookie.value)
+        accessToken = sd?.access_token || sd?.[0]?.access_token
+      } else if (chunks.length > 0) {
+        const sd = JSON.parse(chunks.map(c => c.value).join(''))
+        accessToken = sd?.access_token
+      }
+      const jwtTenantId = accessToken
+        ? JSON.parse(atob(accessToken.split('.')[1])).tenant_id
+        : null
 
-    if (jwtTenantId !== tenantId) {
-      // Update user's app_metadata so the next JWT refresh includes the correct tenant_id
-      try {
-        await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+      if (jwtTenantId !== tenantId) {
+        // Fire-and-forget: update app_metadata so the NEXT token refresh gets correct tenant_id.
+        // Do NOT call refreshSession() — it makes another auth API call and if rate-limited
+        // it creates an infinite retry loop on every request.
+        fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
           method: 'PUT',
           headers: {
             apikey: SUPABASE_SERVICE_ROLE_KEY,
             Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            app_metadata: { tenant_id: tenantId },
-          }),
-        })
-        // Refresh the session so the JWT gets updated claims immediately
-        await supabase.auth.refreshSession()
-      } catch {
-        // Non-blocking — next request will retry
+          body: JSON.stringify({ app_metadata: { tenant_id: tenantId } }),
+        }).catch(() => {}) // Non-blocking
       }
+    } catch {
+      // JWT parsing failed — skip tenant sync
     }
   }
 
