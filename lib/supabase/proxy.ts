@@ -48,10 +48,16 @@ export async function updateSession(request: NextRequest): Promise<{ response: N
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-  // A simple mistake could make it very hard to debug issues with users being randomly logged out.
-  // Returns the user so callers don't need a second getUser() network call.
+  // IMPORTANT: Only call getUser() when auth cookies exist.
+  // Without this check, every unauthenticated request (bots, prefetches, public pages)
+  // makes a wasted network call to Supabase Auth — causing thousands of unnecessary
+  // requests that burn through rate limits.
   let user: User | null = null
+  const hasAuthCookies = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+  if (!hasAuthCookies) {
+    return { response: supabaseResponse, user: null }
+  }
+
   try {
     const { data } = await supabase.auth.getUser()
     user = data.user
