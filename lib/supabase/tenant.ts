@@ -73,6 +73,19 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 /**
+ * Get the current user from the session cookie (NO network call).
+ * Safe to use in server components because the middleware already validated
+ * the token via getUser(). Returns the user object with email, metadata, etc.
+ * Use this instead of supabase.auth.getUser() when you need user properties
+ * beyond just the ID (email, user_metadata, created_at).
+ */
+export async function getSessionUser() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user ?? null
+}
+
+/**
  * Get the default tenant (for single-tenant backward compat).
  */
 export async function getDefaultTenant(): Promise<Tenant | null> {

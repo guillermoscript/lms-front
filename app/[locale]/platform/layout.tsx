@@ -4,9 +4,9 @@ import { Separator } from "@/components/ui/separator"
 import { PlatformSidebar } from "@/components/platform-sidebar"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isSuperAdmin } from "@/lib/supabase/get-user-role"
+import { getSessionUser } from "@/lib/supabase/tenant"
 import { redirect } from "next/navigation"
 
 async function PlatformSidebarWithCount() {
@@ -27,8 +27,7 @@ export default async function PlatformLayout({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
 
   if (!user || !(await isSuperAdmin())) {
     redirect(`/${locale}/auth/login`)

@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { getTranslations } from 'next-intl/server'
 import { WelcomeHero } from '@/components/student/welcome-hero'
 import { StatsCards } from '@/components/student/stats-cards'
@@ -10,7 +10,7 @@ import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 
@@ -105,10 +105,7 @@ async function getData(userId: string, tenantId: string) {
 export default async function StudentDashboard() {
   const tenantId = await getCurrentTenantId()
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')
   }

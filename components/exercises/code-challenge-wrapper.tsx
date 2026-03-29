@@ -70,7 +70,7 @@ export default function CodeChallengeWrapper({
     const handleComplete = async () => {
         setIsCompleted(true);
         // Persist completion in Supabase
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession(); const user = session?.user;
         if (user) {
             await supabase.from('exercise_completions').insert({
                 exercise_id: exerciseId,

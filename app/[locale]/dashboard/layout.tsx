@@ -2,7 +2,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { getUserRole } from "@/lib/supabase/get-user-role"
-import { createClient } from "@/lib/supabase/server"
+import { getSessionUser } from "@/lib/supabase/tenant"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -14,8 +14,7 @@ export default async function DashboardLayout({
     children: React.ReactNode
 }) {
     const role = await getUserRole()
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getSessionUser()
 
     return (
         <SidebarProvider>

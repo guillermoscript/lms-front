@@ -23,7 +23,7 @@ export function useAchievements() {
     const fetchAchievements = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession(); const user = session?.user;
             if (!user) return;
 
             // Fetch all achievements and user's earned achievements

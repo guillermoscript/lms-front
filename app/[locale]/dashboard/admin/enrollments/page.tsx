@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,10 +25,7 @@ export default async function AdminEnrollmentsPage({
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')
   }

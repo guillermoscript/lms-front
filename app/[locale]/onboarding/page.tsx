@@ -1,17 +1,14 @@
+import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import OnboardingWizard from '@/components/onboarding/onboarding-wizard'
 
 export default async function OnboardingPage() {
-  const supabase = await createClient()
   const t = await getTranslations('onboarding')
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const supabase = await createClient()
+  const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')
   }

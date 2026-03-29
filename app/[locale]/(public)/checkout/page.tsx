@@ -6,6 +6,7 @@ import { PackageSearch, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
+import { getSessionUser } from '@/lib/supabase/tenant'
 
 interface SearchParams {
     courseId?: string;
@@ -19,8 +20,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     const t = await getTranslations('checkout');
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
+    const user = await getSessionUser()
     if (!user) {
         const returnUrl = encodeURIComponent(`/checkout?${courseId ? `courseId=${courseId}` : `planId=${planId}`}`);
         redirect(`/auth/login?next=${returnUrl}`);

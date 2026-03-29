@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { PaymentRequestForm } from '@/components/student/payment-request-form'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
 
@@ -18,15 +18,12 @@ export default async function ManualCheckoutPage(props: {
   const { locale } = await props.params
   const { productId, planId } = searchParams
   const t = await getTranslations('checkout.manual')
-
-  const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  // Get authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const supabase = await createClient()
 
+  // Get authenticated user (no network call — reads from cookie)
+  const user = await getSessionUser()
   if (!user) {
     const returnParam = productId ? `productId=${productId}` : `planId=${planId}`
     const returnUrl = encodeURIComponent(`/checkout/manual?${returnParam}`)

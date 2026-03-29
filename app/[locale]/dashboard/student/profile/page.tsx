@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,7 +26,8 @@ import { ProfileGamificationStats } from '@/components/gamification/profile-stat
 import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
+import { createClient } from '@/lib/supabase/server'
 
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = await createClient()
@@ -258,8 +258,7 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
 export default async function ProfilePage() {
     const tenantId = await getCurrentTenantId()
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
+    const user = await getSessionUser()
     if (!user) {
         redirect('/auth/login')
     }
