@@ -15,6 +15,7 @@ interface ManualTransferFormProps {
   interval: string
   onSubmit: (bankReference: string, notes: string) => Promise<void>
   onProofUpload?: (file: File) => Promise<void>
+  onSuccess?: () => void
   onCancel: () => void
 }
 
@@ -24,6 +25,7 @@ export function ManualTransferForm({
   interval,
   onSubmit,
   onProofUpload,
+  onSuccess,
   onCancel,
 }: ManualTransferFormProps) {
   const [bankReference, setBankReference] = useState('')
@@ -55,7 +57,7 @@ export function ManualTransferForm({
               Your upgrade request has been submitted. We&apos;ll send you bank transfer instructions shortly.
             </p>
           </div>
-          <Button variant="outline" onClick={onCancel}>Back to Billing</Button>
+          <Button variant="outline" onClick={onSuccess || onCancel}>Back to Billing</Button>
         </CardContent>
       </Card>
     )

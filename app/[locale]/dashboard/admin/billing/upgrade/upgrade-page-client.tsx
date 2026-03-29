@@ -29,7 +29,6 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
   const locale = useLocale()
   const t = useTranslations('dashboard.admin.billing.upgrade')
   const [loading, setLoading] = useState(false)
-  const [manualSubmitted, setManualSubmitted] = useState(false)
   const [manualTransfer, setManualTransfer] = useState<{
     planId: string
     planName: string
@@ -75,10 +74,13 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
     if (!manualTransfer) return
     try {
       await requestManualPlanUpgrade(manualTransfer.planId, manualTransfer.interval, bankReference, notes)
-      setManualSubmitted(true)
     } catch (e: any) {
       toast.error(e.message || t('submitError'))
     }
+  }
+
+  const navigateToBilling = () => {
+    router.push(`/${locale}/dashboard/admin/billing`)
   }
 
   if (manualTransfer) {
@@ -88,13 +90,8 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
         amount={manualTransfer.amount}
         interval={manualTransfer.interval}
         onSubmit={handleManualSubmit}
-        onCancel={() => {
-          if (manualSubmitted) {
-            router.push(`/${locale}/dashboard/admin/billing`)
-          } else {
-            setManualTransfer(null)
-          }
-        }}
+        onSuccess={navigateToBilling}
+        onCancel={() => setManualTransfer(null)}
       />
     )
   }
