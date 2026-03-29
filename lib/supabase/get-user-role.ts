@@ -1,29 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 /**
  * Get the user's role for the current tenant.
  * First checks tenant_users table (authoritative for multi-tenant),
  * then falls back to JWT claims.
+ *
+ * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
  */
 export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | null> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return null
-  }
+  const userId = await getCurrentUserId()
+  if (!userId) return null
 
   // Check tenant_users for the current tenant (authoritative source)
+  const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .single()
@@ -79,17 +75,18 @@ export async function getUserTenantId(): Promise<string | null> {
 /**
  * Check if current user is a super admin by querying the super_admins table directly.
  * Does NOT trust JWT claims to prevent privilege escalation.
+ *
+ * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
  */
 export async function isSuperAdmin(): Promise<boolean> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
+  const userId = await getCurrentUserId()
+  if (!userId) return false
 
   const adminClient = createAdminClient()
   const { data } = await adminClient
     .from('super_admins')
     .select('user_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle()
 
   return !!data

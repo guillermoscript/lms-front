@@ -219,9 +219,16 @@ export default async function proxy(request: NextRequest) {
   // Re-using the user here avoids a second getUser() network call.
   const { response: supabaseResponse, user } = await updateSession(request)
 
-  // Set tenant ID header on the response for downstream server components
+  // Set tenant + user ID headers on the response for downstream server components.
+  // This lets server components read the user ID from headers instead of calling
+  // getUser() again (which is a network call to Supabase Auth on every invocation).
   intlResponse.headers.set('x-tenant-id', tenantId)
   supabaseResponse.headers.set('x-tenant-id', tenantId)
+  if (user) {
+    request.headers.set('x-user-id', user.id)
+    intlResponse.headers.set('x-user-id', user.id)
+    supabaseResponse.headers.set('x-user-id', user.id)
+  }
 
   // Single Supabase client used for the rest of this middleware run.
   // getSession() reads from cookie (no network call) — safe because updateSession

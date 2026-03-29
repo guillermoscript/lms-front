@@ -62,6 +62,17 @@ export async function getCurrentTenantId(): Promise<string> {
 }
 
 /**
+ * Get the current user ID from headers (set by middleware after getUser() validation).
+ * Returns null for unauthenticated requests.
+ * Use this instead of supabase.auth.getUser() in server components to avoid
+ * redundant network calls to Supabase Auth (prevents rate limiting).
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  const headersList = await headers()
+  return headersList.get('x-user-id') || null
+}
+
+/**
  * Get the default tenant (for single-tenant backward compat).
  */
 export async function getDefaultTenant(): Promise<Tenant | null> {
