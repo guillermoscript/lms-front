@@ -215,14 +215,17 @@ export default async function proxy(request: NextRequest) {
     normalizedPath === route || normalizedPath.startsWith(route + '/')
   )
 
-  // Update session
-  const supabaseResponse = await updateSession(request)
+  // Update session — validates token server-side (1 auth API call) and returns the user.
+  // Re-using the user here avoids a second getUser() network call.
+  const { response: supabaseResponse, user } = await updateSession(request)
 
   // Set tenant ID header on the response for downstream server components
   intlResponse.headers.set('x-tenant-id', tenantId)
   supabaseResponse.headers.set('x-tenant-id', tenantId)
 
-  // Create client to check session — writes refreshed cookies to supabaseResponse
+  // Single Supabase client used for the rest of this middleware run.
+  // getSession() reads from cookie (no network call) — safe because updateSession
+  // already validated the token server-side above.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
@@ -230,8 +233,7 @@ export default async function proxy(request: NextRequest) {
       cookies: {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          // Propagate refreshed JWT cookies to the response so tenant switch
-          // takes effect immediately (fixes stale get_tenant_id() in RLS)
+          // Propagate any cookie writes (e.g. from refreshSession) to the response
           const cookieDomain = (() => {
             const d = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.split(':')[0]
             if (!d || d === 'localhost' || d === '127.0.0.1') return undefined
@@ -249,19 +251,14 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  let user = null
   let session = null
-  try {
-    const { data: userData } = await supabase.auth.getUser()
-    user = userData.user
-    if (user) {
+  if (user) {
+    try {
       const { data: sessionData } = await supabase.auth.getSession()
       session = sessionData.session
+    } catch {
+      session = null
     }
-  } catch {
-    // Invalid/expired JWT — treat as unauthenticated
-    user = null
-    session = null
   }
 
   let userRole: 'student' | 'teacher' | 'admin' = 'student'

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { User } from '@supabase/supabase-js'
 
 // Derive root domain for cross-subdomain cookie sharing
 function getCookieDomain(): string | undefined {
@@ -10,7 +11,7 @@ function getCookieDomain(): string | undefined {
   return `.${domain}`
 }
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest): Promise<{ response: NextResponse; user: User | null }> {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -49,8 +50,11 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
   // A simple mistake could make it very hard to debug issues with users being randomly logged out.
+  // Returns the user so callers don't need a second getUser() network call.
+  let user: User | null = null
   try {
-    await supabase.auth.getUser()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
   } catch (e: any) {
     // If refresh token is invalid/expired, clear auth cookies so we stop retrying
     if (e?.code === 'refresh_token_not_found' || e?.message?.includes('Refresh Token Not Found')) {
@@ -64,5 +68,5 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  return supabaseResponse
+  return { response: supabaseResponse, user }
 }

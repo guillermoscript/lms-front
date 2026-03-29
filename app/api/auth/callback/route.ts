@@ -23,12 +23,11 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      // Get the user to determine the correct dashboard redirect
-      const { data: { user } } = await supabase.auth.getUser()
+      // Get session from cookie (no network call) — exchangeCodeForSession already
+      // validated the token and established the session above.
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (user) {
-        // Get user role from JWT claims for routing
-        const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
         let userRole = 'student'
 
         if (session?.access_token) {
