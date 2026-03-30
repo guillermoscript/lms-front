@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -22,7 +22,7 @@ import { CancelPaymentButton } from '@/components/student/cancel-payment-button'
 import { StudentProofUpload } from './student-proof-upload'
 
 export default async function StudentPaymentsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.payments')
 

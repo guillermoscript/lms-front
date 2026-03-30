@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,7 +19,7 @@ interface PageProps {
 
 export default async function ExamReviewPage({ params }: PageProps) {
   const { courseId, examId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {

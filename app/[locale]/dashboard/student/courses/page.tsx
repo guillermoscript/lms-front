@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { EnrolledCourseCard } from '@/components/student/enrolled-course-card'
@@ -18,7 +18,7 @@ interface PageProps {
 
 export default async function MyCoursesPage({ searchParams }: PageProps) {
   const tenantId = await getCurrentTenantId()
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const params = await searchParams
 
   const userId = await getCurrentUserId()

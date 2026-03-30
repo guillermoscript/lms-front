@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -10,7 +9,7 @@ import { CommunityTour } from '@/components/tours/community-tour'
 
 export default async function TeacherCommunityPage() {
   const t = await getTranslations('community')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const role = await getUserRole()
 

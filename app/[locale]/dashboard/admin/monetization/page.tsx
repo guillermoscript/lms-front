@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getRevenueOverview } from '@/app/actions/admin/revenue'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -29,7 +29,7 @@ export default async function MonetizationPage() {
     redirect('/dashboard/student')
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.admin.monetization')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 export default async function NewProductPage() {
   const t = await getTranslations('dashboard.admin.products.new')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {

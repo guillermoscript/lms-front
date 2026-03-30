@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -16,7 +15,7 @@ import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 export default async function AdminUsersPage() {
   const t = await getTranslations('dashboard.admin.users')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {

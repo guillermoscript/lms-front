@@ -27,10 +27,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 async function getProfileData(userId: string, tenantId: string) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const [profileRes, subscriptionRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
         supabase
@@ -257,7 +257,7 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProfilePage() {
     const tenantId = await getCurrentTenantId()
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const user = await getSessionUser()
     if (!user) {
         redirect('/auth/login')

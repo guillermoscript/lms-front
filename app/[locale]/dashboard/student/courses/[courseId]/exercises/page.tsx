@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExerciseCard from '@/components/exercises/exercise-card'
@@ -12,7 +12,7 @@ interface PageProps {
 
 export default async function ExercisesListPage({ params }: PageProps) {
     const { courseId } = await params
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const t = await getTranslations('exercises.list')
     const tenantId = await getCurrentTenantId()
 

@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -22,7 +21,7 @@ export default async function AdminEnrollmentsPage({
   const t = await getTranslations('dashboard.admin.enrollments')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
 
   const user = await getSessionUser()

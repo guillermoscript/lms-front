@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -25,7 +25,7 @@ import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
 
 export default async function TeacherDashboard() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('dashboard.teacher')
   const tenantId = await getCurrentTenantId()
 

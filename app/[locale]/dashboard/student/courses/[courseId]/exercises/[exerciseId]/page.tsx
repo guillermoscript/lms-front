@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
@@ -55,7 +55,7 @@ interface PageProps {
 
 export default async function ExercisePage({ params }: PageProps) {
     const { courseId, exerciseId } = await params
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const tenantId = await getCurrentTenantId()
 
     const userId = await getCurrentUserId()

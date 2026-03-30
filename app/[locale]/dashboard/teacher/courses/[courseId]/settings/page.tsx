@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
@@ -18,7 +18,7 @@ interface PageProps {
 
 export default async function CourseSettingsPage({ params }: PageProps) {
   const { courseId } = await params
-  const supabase = createAdminClient()
+  const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tForm = await getTranslations('dashboard.teacher.courseForm')
   const tenantId = await getCurrentTenantId()

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import ExamCard from '@/components/exercises/exam-card'
@@ -13,7 +13,7 @@ interface PageProps {
 
 export default async function ExamsPage({ params }: PageProps) {
   const { courseId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('exams.list')
   const tenantId = await getCurrentTenantId()
 

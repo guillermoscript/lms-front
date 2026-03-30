@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { BrowseCourseCard } from '@/components/student/browse-course-card'
@@ -16,7 +16,7 @@ export default async function BrowseCoursesPage({
 }) {
   const { search, category } = await searchParams
   const tenantId = await getCurrentTenantId()
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Sanitize search input — strip special characters used in ilike patterns
   const sanitizedSearch = search?.replace(/[%_\\]/g, '') || ''

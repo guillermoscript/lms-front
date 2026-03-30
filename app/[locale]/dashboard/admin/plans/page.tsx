@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -18,7 +18,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 export default async function AdminPlansPage() {
   const t = await getTranslations('dashboard.admin.plans')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
 
   const userId = await getCurrentUserId()

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
@@ -19,7 +19,7 @@ export default async function RevenuePage() {
     redirect('/dashboard/student')
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher.revenue')
 

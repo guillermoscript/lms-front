@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -16,7 +16,7 @@ import {
 } from '@tabler/icons-react'
 
 export default async function StudentProgressPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.progress')
 

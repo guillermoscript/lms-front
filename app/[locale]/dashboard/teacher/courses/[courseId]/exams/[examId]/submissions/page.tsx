@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -8,7 +8,7 @@ import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-rev
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionsPage({ params }: { params: Promise<{ courseId: string; examId: string }> }) {
-  const supabase = createAdminClient()
+  const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher')
   const userId = await getCurrentUserId()

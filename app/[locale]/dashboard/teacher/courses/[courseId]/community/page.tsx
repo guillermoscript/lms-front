@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect, notFound } from 'next/navigation'
@@ -28,10 +28,10 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
     redirect('/auth/login')
   }
 
-  const adminClient = createAdminClient()
+  const supabase = await createClient()
 
   // Verify teacher owns the course or is admin
-  const { data: course } = await adminClient
+  const { data: course } = await supabase
     .from('courses')
     .select('course_id, title, author_id')
     .eq('course_id', numericCourseId)
@@ -48,7 +48,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
   }
 
   // Check plan features for community access
-  const { data: planFeatures } = await adminClient.rpc('get_plan_features', { _tenant_id: tenantId })
+  const { data: planFeatures } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
 
   if (!planFeatures?.features?.community) {
     return (
@@ -74,7 +74,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
 
   // Fetch course-scoped posts and user reactions in parallel
   const [{ data: posts }, { data: userReactions }] = await Promise.all([
-    adminClient
+    supabase
       .from('community_posts')
       .select(`
         id, author_id, post_type, title, content, media_urls,
@@ -88,7 +88,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20),
-    adminClient
+    supabase
       .from('community_reactions')
       .select('post_id, reaction_type')
       .eq('user_id', userId)
@@ -98,7 +98,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
   // Collect unique author IDs and fetch profiles
   const authorIds = [...new Set((posts ?? []).map((p) => p.author_id).filter(Boolean))]
   const { data: authorProfiles } = authorIds.length > 0
-    ? await adminClient
+    ? await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', authorIds)
@@ -123,11 +123,11 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
 
   if (pollPostIds.length > 0) {
     const [{ data: pollOptions }, { data: pollVotes }] = await Promise.all([
-      adminClient
+      supabase
         .from('community_poll_options')
         .select('id, post_id, option_text, vote_count')
         .in('post_id', pollPostIds),
-      adminClient
+      supabase
         .from('community_poll_votes')
         .select('post_id, option_id')
         .eq('user_id', userId)

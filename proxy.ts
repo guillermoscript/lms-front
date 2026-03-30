@@ -341,9 +341,11 @@ export default async function proxy(request: NextRequest) {
       userRole = membership.role as 'student' | 'teacher' | 'admin'
     }
 
-    // Sync app_metadata.tenant_id if it doesn't match the current subdomain tenant.
-    // Only update app_metadata via admin API (no refreshSession — that burns rate limits).
-    // The JWT will pick up the new tenant_id on the next natural token refresh.
+    // Sync app_metadata.tenant_id so RLS get_tenant_id() returns the correct value.
+    // When JWT tenant_id doesn't match the subdomain, we:
+    //   1. Update app_metadata via admin API (so custom_access_token_hook picks it up)
+    //   2. Refresh the session so the CURRENT response gets a new JWT with the right tenant_id
+    // This costs 2 auth API calls but only runs when there's an actual mismatch.
     try {
       const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
       const chunks = request.cookies.getAll()
@@ -362,10 +364,8 @@ export default async function proxy(request: NextRequest) {
         : null
 
       if (jwtTenantId !== tenantId) {
-        // Fire-and-forget: update app_metadata so the NEXT token refresh gets correct tenant_id.
-        // Do NOT call refreshSession() — it makes another auth API call and if rate-limited
-        // it creates an infinite retry loop on every request.
-        fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+        // Step 1: Update app_metadata so the hook includes the right tenant_id
+        await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
           method: 'PUT',
           headers: {
             apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -373,10 +373,15 @@ export default async function proxy(request: NextRequest) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ app_metadata: { tenant_id: tenantId } }),
-        }).catch(() => {}) // Non-blocking
+        })
+
+        // Step 2: Refresh session so the current response cookies get a JWT
+        // with the updated tenant_id. This makes RLS work on the FIRST page load
+        // after a tenant switch (not just the second).
+        await supabase.auth.refreshSession()
       }
     } catch {
-      // JWT parsing failed — skip tenant sync
+      // JWT parsing failed or refresh failed — page will work on next reload
     }
   }
 

@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonContent } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content'
 import { IconMenu2, IconSparkles, IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
@@ -16,7 +16,7 @@ interface PageProps {
 
 export default async function LessonPreviewPage({ params }: PageProps) {
   const { courseId, lessonId } = await params
-  const supabase = createAdminClient()
+  const supabase = await createClient()
   const t = await getTranslations('components.lessons')
   const tNav = await getTranslations('components.lessonNavigation')
   const tenantId = await getCurrentTenantId()

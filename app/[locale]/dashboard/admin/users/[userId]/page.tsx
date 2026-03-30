@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
@@ -29,7 +29,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   const tu = await getTranslations('dashboard.admin.users.table')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const currentUserId = await getCurrentUserId()
   if (!currentUserId) {

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
 
 export default async function StudentCertificatesPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.certificates')
 

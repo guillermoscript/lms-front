@@ -1,5 +1,5 @@
 import { redirect, notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ export default async function EditPlanPage({ params }: PageProps) {
   const { planId } = await params
   const t = await getTranslations('dashboard.admin.plans.edit')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {

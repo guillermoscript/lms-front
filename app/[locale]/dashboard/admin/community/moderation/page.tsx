@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
@@ -14,7 +14,7 @@ export default async function CommunityModerationPage() {
   const t = await getTranslations('community.moderation')
   const tCommunity = await getTranslations('community')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const role = await getUserRole()
 

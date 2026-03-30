@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { TemplateForm } from '@/components/teacher/template-form'
 import { IconArrowLeft } from '@tabler/icons-react'
@@ -15,7 +15,7 @@ interface EditTemplatePageProps {
 
 export default async function EditTemplatePage({ params }: EditTemplatePageProps) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher.templates')
   const { data: template, error } = await supabase

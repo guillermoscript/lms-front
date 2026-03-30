@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +14,7 @@ export default async function TenantsPage() {
     redirect('/dashboard/admin')
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: tenants } = await supabase
     .from('tenants')
     .select('*, tenant_users(count)')

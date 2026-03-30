@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
@@ -24,7 +24,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
   const { requestId } = await params
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const role = await getUserRole()
   const tenantId = await getCurrentTenantId()
   const superAdmin = await isSuperAdmin()

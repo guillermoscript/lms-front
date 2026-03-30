@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { WelcomeHero } from '@/components/student/welcome-hero'
 import { StatsCards } from '@/components/student/stats-cards'
@@ -15,7 +15,7 @@ import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 
 async function getData(userId: string, tenantId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [enrollments, examSubmissions, lessonCompletions, upcomingExams, activeSubscription] = await Promise.all([
     supabase
@@ -104,7 +104,7 @@ async function getData(userId: string, tenantId: string) {
 
 export default async function StudentDashboard() {
   const tenantId = await getCurrentTenantId()
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ export default async function AnalyticsPage({
   const t = await getTranslations('dashboard.admin.analytics')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {

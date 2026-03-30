@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AristotleProvider } from '@/components/aristotle/aristotle-provider'
 import { AristotleTrigger } from '@/components/aristotle/aristotle-trigger'
@@ -16,7 +16,7 @@ interface LayoutProps {
 
 export default async function StudentCourseLayout({ children, params }: LayoutProps) {
     const { courseId } = await params
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const tenantId = await getCurrentTenantId()
     const numericCourseId = parseInt(courseId)
 

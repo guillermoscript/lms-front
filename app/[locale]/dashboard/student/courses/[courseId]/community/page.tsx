@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -16,7 +15,7 @@ interface PageProps {
 export default async function StudentCourseCommunityPage({ params }: PageProps) {
   const { courseId } = await params
   const t = await getTranslations('community')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const role = await getUserRole()
   const numericCourseId = parseInt(courseId)

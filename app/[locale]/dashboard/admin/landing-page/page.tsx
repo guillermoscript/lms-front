@@ -4,7 +4,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getLandingPages } from '@/app/actions/admin/landing-pages'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { LandingPagesClient } from '@/components/admin/landing-page/landing-pages-client'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { PUCK_TEMPLATES } from '@/lib/puck/templates'
 import { getTranslations } from 'next-intl/server'
 
@@ -17,7 +17,7 @@ export default async function LandingPageAdminPage() {
   const tenantId = await getCurrentTenantId()
 
   // Check plan
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: planResult } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
   const plan = (planResult as any)?.plan ?? 'free'
 

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
@@ -34,7 +34,7 @@ interface PageProps {
 
 export default async function LessonPage({ params }: PageProps) {
   const { courseId, lessonId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('components.lessons')
   const tenantId = await getCurrentTenantId()
 

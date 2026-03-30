@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
@@ -32,7 +31,7 @@ export default async function AdminDashboardPage({
   const t = await getTranslations('dashboard.admin.main')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const dateLocale = locale === 'es' ? es : enUS
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -111,7 +110,7 @@ export default async function AdminDashboardPage({
   }))
 
   // Parallelize post-stats queries
-  const adminClient = await createAdminClient()
+  const adminClient = createAdminClient()
   const [
     { data: successfulTransactions },
     { data: tenant },
