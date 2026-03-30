@@ -179,8 +179,7 @@ export default async function LessonPage({ params }: PageProps) {
     supabase
       .from('lesson_completions')
       .select('lesson_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId),
+      .eq('user_id', userId),
     supabase
       .from('lesson_resources')
       .select('id, file_name, file_size, mime_type')

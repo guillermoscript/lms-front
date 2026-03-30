@@ -38,7 +38,7 @@ export function LessonNavigation({
   requireSequentialCompletion = false,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
-  const tGamification = useTranslations('gamification')
+  const tGamification = useTranslations('components.gamification')
   const [loading, setLoading] = useState(false)
   const [completed, setCompleted] = useState(isCompleted)
   const [certificateCode, setCertificateCode] = useState<string | null>(null)
@@ -59,20 +59,34 @@ export function LessonNavigation({
     }
 
     if (completed) {
-      await supabase
+      const { error } = await supabase
         .from('lesson_completions')
         .delete()
         .eq('lesson_id', lessonId)
         .eq('user_id', user.id)
 
+      if (error) {
+        console.error('Failed to uncomplete lesson:', error)
+        toast.error('Failed to update lesson status')
+        setLoading(false)
+        return
+      }
+
       setCompleted(false)
       setLoading(false)
       startTransition(() => { router.refresh() })
     } else {
-      await supabase.from('lesson_completions').insert({
+      const { error } = await supabase.from('lesson_completions').insert({
         lesson_id: lessonId,
         user_id: user.id,
       })
+
+      if (error) {
+        console.error('Failed to complete lesson:', error)
+        toast.error('Failed to mark lesson as complete')
+        setLoading(false)
+        return
+      }
 
       setCompleted(true)
       setLoading(false)
