@@ -53,6 +53,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
     }
 
     try {
+      await supabase.auth.signOut({ scope: 'local' })
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -78,6 +79,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
     setError(null)
 
     try {
+      await supabase.auth.signOut({ scope: 'local' })
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

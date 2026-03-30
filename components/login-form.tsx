@@ -45,6 +45,12 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
     setError(null)
 
     try {
+      // Clear any stale session before login. When a user lands on /login with
+      // expired cookies, the Supabase client's auto-refresh ticker may already be
+      // retrying with the old refresh token. Signing out locally clears the cached
+      // tokens and stops the loop, giving signInWithPassword a clean slate.
+      await supabase.auth.signOut({ scope: 'local' })
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -87,6 +93,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
     setError(null)
 
     try {
+      await supabase.auth.signOut({ scope: 'local' })
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
