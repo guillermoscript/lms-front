@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -33,7 +33,7 @@ interface PageProps {
 
 export default async function CourseManagementPage({ params }: PageProps) {
   const { courseId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
 
@@ -42,7 +42,8 @@ export default async function CourseManagementPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Get course and verify ownership
+  // Use admin client — RLS get_tenant_id() reads JWT claims which may not match
+  // the actual subdomain tenant. We validate tenant ownership manually.
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select('*')
