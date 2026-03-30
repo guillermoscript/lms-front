@@ -128,11 +128,17 @@ export async function createCourse(courseData: CourseFormData) {
     )
   }
 
-  // Create course
-  const { data: course, error } = await supabase
+  // Use admin client for insert — auth and role are already validated above.
+  // The user's JWT may have stale tenant_role claims that don't match the
+  // RLS policy on courses (requires tenant_role = teacher|admin in JWT).
+  const adminClient = createAdminClient()
+  const { data: course, error } = await adminClient
     .from('courses')
     .insert({
-      ...courseData,
+      title: courseData.title,
+      description: courseData.description || null,
+      thumbnail_url: courseData.thumbnail_url || null,
+      category_id: courseData.category_id || null,
       author_id: user.id,
       tenant_id: tenantId,
       status: courseData.status || 'draft',
@@ -182,10 +188,17 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
     throw new Error('Unauthorized: You can only update your own courses')
   }
 
-  // Update course
-  const { error } = await supabase
+  // Use admin client — auth and ownership validated above, JWT tenant_role may be stale
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from('courses')
-    .update(courseData)
+    .update({
+      title: courseData.title,
+      description: courseData.description || null,
+      thumbnail_url: courseData.thumbnail_url || null,
+      category_id: courseData.category_id || null,
+      status: courseData.status || undefined,
+    })
     .eq('course_id', courseId)
     .eq('tenant_id', tenantId)
 
@@ -239,7 +252,8 @@ export async function archiveCourse(courseId: number) {
   if (!existingCourse) throw new Error('Course not found')
   if (role !== 'admin' && existingCourse.author_id !== user.id) throw new Error('Unauthorized')
 
-  const { error } = await supabase
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
     .from('courses')
     .update({ status: 'archived' })
     .eq('course_id', courseId)
@@ -276,9 +290,10 @@ export async function deleteCourse(courseId: number) {
   if (!course) throw new Error('Course not found')
   if (role !== 'admin' && course.author_id !== user.id) throw new Error('Unauthorized')
 
+  const adminClient = createAdminClient()
+
   // Notify enrolled students before deleting
   try {
-    const adminClient = createAdminClient()
     const { data: enrollments } = await adminClient
       .from('enrollments')
       .select('user_id')
@@ -309,7 +324,8 @@ export async function deleteCourse(courseId: number) {
   }
 
   // Delete the course (cascade will handle lessons, exams, etc.)
-  const { error } = await supabase
+  // adminClient already created above for email notifications
+  const { error } = await adminClient
     .from('courses')
     .delete()
     .eq('course_id', courseId)
