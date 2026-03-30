@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import dynamic from 'next/dynamic'
@@ -29,7 +29,7 @@ interface PageProps {
 
 export default async function EditExercisePage({ params }: PageProps) {
   const { courseId, exerciseId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tEx = await getTranslations('dashboard.teacher.exerciseBuilder')
   const tenantId = await getCurrentTenantId()

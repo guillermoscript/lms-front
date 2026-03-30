@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { SubmissionReview } from '@/components/teacher/submission-review'
@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher')
   const userId = await getCurrentUserId()
@@ -124,7 +124,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     }[]
   }) => {
     'use server'
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const userId = await getCurrentUserId()
     if (!userId) return
 

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -21,7 +21,7 @@ import * as motion from 'motion/react-client'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function ExercisesPage({ params }: { params: Promise<{ courseId: string }> }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
   const userId = await getCurrentUserId()

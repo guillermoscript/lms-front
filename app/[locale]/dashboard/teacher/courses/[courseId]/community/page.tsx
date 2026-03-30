@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -16,7 +15,6 @@ interface PageProps {
 export default async function TeacherCourseCommunityPage({ params }: PageProps) {
   const { courseId } = await params
   const t = await getTranslations('community')
-  const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const role = await getUserRole()
   const numericCourseId = parseInt(courseId)
@@ -50,7 +48,7 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
   }
 
   // Check plan features for community access
-  const { data: planFeatures } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
+  const { data: planFeatures } = await adminClient.rpc('get_plan_features', { _tenant_id: tenantId })
 
   if (!planFeatures?.features?.community) {
     return (

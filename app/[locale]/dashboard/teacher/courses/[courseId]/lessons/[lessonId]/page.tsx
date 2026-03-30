@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,7 +28,7 @@ interface PageProps {
 
 export default async function EditLessonPage({ params }: PageProps) {
   const { courseId, lessonId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
 
   const userId = await getCurrentUserId()
