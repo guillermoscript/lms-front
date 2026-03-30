@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest): Promise<{ response: N
   )
 
   // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
   // IMPORTANT: Only call getUser() when auth cookies exist.
@@ -58,19 +58,25 @@ export async function updateSession(request: NextRequest): Promise<{ response: N
     return { response: supabaseResponse, user: null }
   }
 
-  try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
-  } catch (e: any) {
-    // If refresh token is invalid/expired, clear auth cookies so we stop retrying
-    if (e?.code === 'refresh_token_not_found' || e?.message?.includes('Refresh Token Not Found')) {
-      const cookieNames = request.cookies.getAll()
-        .map(c => c.name)
-        .filter(name => name.startsWith('sb-'))
-      for (const name of cookieNames) {
-        request.cookies.delete(name)
-        supabaseResponse.cookies.delete(name)
-      }
+  const { data, error } = await supabase.auth.getUser()
+  user = data.user
+
+  // When the refresh token is invalid/expired, getUser() returns an error with no user.
+  // The @supabase/ssr setAll callback may have already fired with the failed session,
+  // but we need to explicitly clear all sb-* cookies from the response so the browser
+  // deletes them. Without this, the browser's Supabase client will see stale cookies
+  // and start an infinite refresh_token retry loop (400 → 429 → 400...).
+  if (error && !user) {
+    // Clear cookies from both the request (for downstream server components)
+    // and the response (for the browser via Set-Cookie headers).
+    const sbCookies = request.cookies.getAll().filter(c => c.name.startsWith('sb-'))
+    for (const { name } of sbCookies) {
+      request.cookies.delete(name)
+      supabaseResponse.cookies.set(name, '', {
+        maxAge: 0,
+        path: '/',
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      })
     }
   }
 

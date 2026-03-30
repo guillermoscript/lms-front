@@ -278,9 +278,13 @@ export default async function proxy(request: NextRequest) {
       return NextResponse.redirect(dashboardUrl)
     }
 
-    const supabaseCookies = supabaseResponse.headers.get('set-cookie')
-    if (supabaseCookies) {
-      intlResponse.headers.set('set-cookie', supabaseCookies)
+    // Copy ALL Set-Cookie headers from supabaseResponse to intlResponse.
+    // headers.get('set-cookie') only returns the first header — use getSetCookie()
+    // to get all of them. This is critical when clearing multiple sb-* cookies
+    // (e.g., auth token + chunked tokens) to stop the client-side refresh loop.
+    const setCookieHeaders = supabaseResponse.headers.getSetCookie()
+    for (const cookie of setCookieHeaders) {
+      intlResponse.headers.append('set-cookie', cookie)
     }
     return intlResponse
   }
