@@ -55,3 +55,5 @@ tests/demos/recordings/
 
 mcp-server/node_modules
 mcp-server/build
+# Sentry Config File
+.env.sentry-build-plugin
