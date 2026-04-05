@@ -58,6 +58,9 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
       data: { preferred_tenant_id: tenantId }
     })
 
+    // Refresh session so the JWT picks up the new tenant_id/tenant_role
+    await supabase.auth.refreshSession()
+
     toast.success('School created successfully!')
 
     // Redirect to subdomain

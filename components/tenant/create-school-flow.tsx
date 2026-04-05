@@ -35,6 +35,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
   const [step, setStep] = useState<'account' | 'school'>(user ? 'school' : 'account')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailConfirmationNeeded, setEmailConfirmationNeeded] = useState(false)
   const [signedInEmail, setSignedInEmail] = useState(user?.email || '')
 
   // Account state
@@ -116,7 +117,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
     })
 
     if (signInError) {
-      setError('Account created! Please check your email to confirm, then log in.')
+      setEmailConfirmationNeeded(true)
       setLoading(false)
       return
     }
@@ -153,6 +154,10 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
 
       // Update preferred tenant so the user lands on this school by default
       await supabase.auth.updateUser({ data: { preferred_tenant_id: tenantId } })
+
+      // Refresh session so the JWT picks up the new app_metadata.tenant_id
+      // (set by the create_school RPC) and tenant_role from the hook.
+      await supabase.auth.refreshSession()
 
       toast.success('School created! Setting up your dashboard...')
 
@@ -205,7 +210,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
       )}
 
       {/* Step 1: Account — sign up + sign in */}
-      {step === 'account' && (
+      {step === 'account' && !emailConfirmationNeeded && (
         <Card className="bg-zinc-900 border-zinc-800">
           <CardContent className="pt-6">
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -328,6 +333,45 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
                 </Link>
               </p>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Email confirmation needed */}
+      {step === 'account' && emailConfirmationNeeded && (
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center space-y-4 py-4">
+              <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                <Mail className="w-7 h-7 text-emerald-400" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold text-white">Check your email</h2>
+                <p className="text-sm text-zinc-400">
+                  We sent a confirmation link to{' '}
+                  <span className="text-zinc-200 font-medium">{email}</span>.
+                  <br />
+                  Please verify your email, then log in to continue.
+                </p>
+              </div>
+              <div className="w-full pt-2 space-y-3">
+                <Link href="/auth/login?redirectTo=/create-school">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white">
+                    Go to Log in
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => { setEmailConfirmationNeeded(false); setError(null) }}
+                  className="w-full text-zinc-500 hover:text-zinc-300"
+                >
+                  <ArrowLeft className="mr-2 w-4 h-4" />
+                  Back to sign up
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
