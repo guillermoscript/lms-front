@@ -160,8 +160,12 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder={t('titlePlaceholder')}
+              maxLength={100}
               required
             />
+            {formData.title.length > 80 && (
+              <p className="text-xs text-muted-foreground">{formData.title.length}/100</p>
+            )}
           </div>
 
           <div className="space-y-2">

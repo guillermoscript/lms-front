@@ -42,8 +42,6 @@ export default async function CourseManagementPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Use admin client — RLS get_tenant_id() reads JWT claims which may not match
-  // the actual subdomain tenant. We validate tenant ownership manually.
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select('*')

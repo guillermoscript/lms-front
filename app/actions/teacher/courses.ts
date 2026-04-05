@@ -132,6 +132,17 @@ export async function createCourse(courseData: CourseFormData) {
   // The user's JWT may have stale tenant_role claims that don't match the
   // RLS policy on courses (requires tenant_role = teacher|admin in JWT).
   const adminClient = createAdminClient()
+
+  // Ensure profile exists (FK courses_author_profile_fkey requires it).
+  // The on_auth_user_created trigger should create profiles, but as a safety
+  // net for accounts created before the trigger was added, upsert here.
+  await adminClient
+    .from('profiles')
+    .upsert(
+      { id: user.id, full_name: user.user_metadata?.full_name || null },
+      { onConflict: 'id', ignoreDuplicates: true }
+    )
+
   const { data: course, error } = await adminClient
     .from('courses')
     .insert({
@@ -148,7 +159,7 @@ export async function createCourse(courseData: CourseFormData) {
 
   if (error) {
     console.error('Failed to create course:', error)
-    throw new Error('Failed to create course')
+    throw new Error(`Failed to create course: ${error.message}`)
   }
 
   revalidatePath('/dashboard/teacher/courses')
@@ -204,7 +215,7 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
 
   if (error) {
     console.error('Failed to update course:', error)
-    throw new Error('Failed to update course')
+    throw new Error(`Failed to update course: ${error.message}`)
   }
 
   revalidatePath('/dashboard/teacher/courses')

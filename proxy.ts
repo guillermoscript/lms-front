@@ -394,9 +394,8 @@ export default async function proxy(request: NextRequest) {
     }
     // Allow super admin through — bypass tenant membership checks
     const finalPlatformResponse = intlResponse
-    const supabasePlatformCookies = supabaseResponse.headers.get('set-cookie')
-    if (supabasePlatformCookies) {
-      finalPlatformResponse.headers.set('set-cookie', supabasePlatformCookies)
+    for (const cookie of supabaseResponse.headers.getSetCookie()) {
+      finalPlatformResponse.headers.append('set-cookie', cookie)
     }
     finalPlatformResponse.headers.set('x-tenant-id', tenantId)
     return finalPlatformResponse
@@ -416,11 +415,11 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
   }
 
-  // Allow access
+  // Allow access — copy ALL Set-Cookie headers (not just the first one)
+  // so refreshed JWT tokens from tenant sync are fully propagated.
   const finalResponse = intlResponse
-  const supabaseCookies = supabaseResponse.headers.get('set-cookie')
-  if (supabaseCookies) {
-    finalResponse.headers.set('set-cookie', supabaseCookies)
+  for (const cookie of supabaseResponse.headers.getSetCookie()) {
+    finalResponse.headers.append('set-cookie', cookie)
   }
 
   return finalResponse
