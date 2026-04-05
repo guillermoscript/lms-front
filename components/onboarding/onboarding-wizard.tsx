@@ -38,33 +38,40 @@ interface OnboardingWizardProps {
   redirectTo?: string
 }
 
-const STEPS = ['welcome', 'school', 'branding', 'payment', 'ready'] as const
-type Step = typeof STEPS[number]
+const ALL_STEPS = ['welcome', 'school', 'branding', 'payment', 'ready'] as const
+type Step = typeof ALL_STEPS[number]
 
 export default function OnboardingWizard({ userId, userName, currentSettings, redirectTo = '/dashboard/admin' }: OnboardingWizardProps) {
   const router = useRouter()
   const t = useTranslations('onboarding')
-  const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form state
   const [schoolName, setSchoolName] = useState(currentSettings.site_name?.value || '')
   const [schoolDescription, setSchoolDescription] = useState(currentSettings.site_description?.value || '')
+
+  // Skip the school step if the name was already set during school creation
+  const hasSchoolName = !!currentSettings.site_name?.value
+  const STEPS = hasSchoolName
+    ? ALL_STEPS.filter(s => s !== 'school')
+    : ALL_STEPS
+
+  const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [isConnectingStripe, setIsConnectingStripe] = useState(false)
 
-  const stepIndex = STEPS.indexOf(currentStep)
+  const stepIndex = STEPS.indexOf(currentStep as any)
 
   function goNext() {
     const nextIndex = stepIndex + 1
     if (nextIndex < STEPS.length) {
-      setCurrentStep(STEPS[nextIndex])
+      setCurrentStep(STEPS[nextIndex] as Step)
     }
   }
 
   function goBack() {
     const prevIndex = stepIndex - 1
     if (prevIndex >= 0) {
-      setCurrentStep(STEPS[prevIndex])
+      setCurrentStep(STEPS[prevIndex] as Step)
     }
   }
 
