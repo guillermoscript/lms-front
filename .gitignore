@@ -38,7 +38,11 @@ yarn-error.log*
 .playwright-mcp/
 
 # temporary screenshots
-landing-*.png
+*.png
+
+# playwright reports & test results
+playwright-report/
+test-results/
 
 # vercel
 .vercel

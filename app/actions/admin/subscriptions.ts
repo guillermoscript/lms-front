@@ -167,7 +167,7 @@ export async function getSubscriptionDetails(subscriptionId: number) {
       .select(
         `
         *,
-        profiles!subscriptions_user_id_fkey (
+        profiles!subscriptions_user_profile_fkey (
           full_name,
           email,
           stripe_customer_id

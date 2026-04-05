@@ -70,7 +70,7 @@ export default async function SubscriptionsPage({
       current_period_start,
       current_period_end,
       created,
-      profiles!subscriptions_user_id_fkey (
+      profiles!subscriptions_user_profile_fkey (
         full_name,
         email
       ),

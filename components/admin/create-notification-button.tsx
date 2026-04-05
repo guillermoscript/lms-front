@@ -20,12 +20,12 @@ export default function CreateNotificationButton() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
+      <DialogTrigger render={
         <Button>
           <IconPlus className="mr-2 h-4 w-4" />
           {t('buttons.create')}
         </Button>
-      </DialogTrigger>
+      } />
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('form.dialog.title')}</DialogTitle>

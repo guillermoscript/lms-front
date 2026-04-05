@@ -1751,6 +1751,7 @@
         "description": "Información sobre el rendimiento y el compromiso de la plataforma",
         "export": "Exportar",
         "exportOptions": {
+          "button": "Exportar",
           "all": "Exportar Todos los Datos",
           "summary": "Exportar Resumen",
           "revenue": "Exportar Datos de Ingresos",

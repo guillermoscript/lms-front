@@ -214,7 +214,7 @@ export async function getNotifications(
       .from('notifications')
       .select(`
         *,
-        created_by_user:profiles!notifications_created_by_fkey(full_name),
+        created_by_user:profiles!notifications_created_by_profile_fkey(full_name),
         course:courses(title)
       `)
       .eq('tenant_id', tenantId)

@@ -1755,6 +1755,7 @@
         "description": "Platform performance and engagement insights",
         "export": "Export",
         "exportOptions": {
+          "button": "Export",
           "all": "Export All Data",
           "summary": "Export Summary",
           "revenue": "Export Revenue Data",

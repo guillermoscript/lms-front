@@ -66,6 +66,16 @@
       "sourceType": "github",
       "computedHash": "69cecc4f28fb2f140652669bd45cc492744ad5c3c45083f5e0be5b0a5ef8acd0"
     },
+    "next-best-practices": {
+      "source": "vercel-labs/next-skills",
+      "sourceType": "github",
+      "computedHash": "515ba75178bd44875812d9a560bdf14651f86709f89cf1d4f209638e879807f3"
+    },
+    "nextjs-supabase-auth": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "9e4dc8ea3917b35023d23873ae6d8994d19d3e3f67432d98bbaf9fe6285e5edc"
+    },
     "normalize": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -91,6 +101,21 @@
       "sourceType": "github",
       "computedHash": "139b3e3c9d43b79b4e6ccffaeb874265bc916d7d90662950e9f05581d6e0c06a"
     },
+    "security-review": {
+      "source": "getsentry/skills",
+      "sourceType": "github",
+      "computedHash": "cc631e7761e4bb8f844e931e3019e9abf8a36520137480ee60b897314776b0de"
+    },
+    "sentry-fix-issues": {
+      "source": "getsentry/sentry-agent-skills",
+      "sourceType": "github",
+      "computedHash": "5673b169d2a0eb6e4651a57eba4263d1c04dce10e2955c97902f1e9f80109a52"
+    },
+    "sentry-nextjs-sdk": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "computedHash": "f663f60518aa159aadd4c9ee4b29479a0941a60e88ebf00528e806c987293e6d"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
@@ -100,6 +125,11 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "61855594bf79bc5b2665cfca3580b93840cfe645872c5a2deeaa5ad336570d5a"
+    },
+    "vercel-composition-patterns": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "f98931159fa9c7fed043bcd18a891a46dcf89ababa38df13a4c5b7b30dc0ce07"
     }
   }
 }

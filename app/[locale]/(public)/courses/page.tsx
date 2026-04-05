@@ -44,7 +44,7 @@ export default async function CoursesPage({
                 id,
                 name
             ),
-            author:profiles!courses_author_id_fkey (
+            author:profiles!courses_author_profile_fkey (
                 id,
                 full_name,
                 avatar_url
