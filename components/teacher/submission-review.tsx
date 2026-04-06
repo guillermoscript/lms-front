@@ -71,11 +71,10 @@ export function SubmissionReview({
       const { error: subError } = await supabase
         .from('exam_submissions')
         .update({
-          teacher_feedback: teacherFeedback,
-          status: 'teacher_reviewed',
-          reviewed_at: new Date().toISOString(),
+          feedback: teacherFeedback,
+          review_status: 'teacher_reviewed',
         })
-        .eq('id', submission.id)
+        .eq('submission_id', submission.submission_id)
 
       if (subError) throw subError
 
@@ -84,12 +83,10 @@ export function SubmissionReview({
         const { error: ansError } = await supabase
           .from('exam_answers')
           .update({
-            teacher_score_override: data.is_overridden ? data.points_earned : null,
             is_correct: data.is_correct,
-            teacher_notes: data.teacher_notes,
-            manual_grading_status: 'graded',
+            feedback: data.teacher_notes || null,
           })
-          .eq('submission_id', submission.id)
+          .eq('submission_id', submission.submission_id)
           .eq('question_id', parseInt(questionId))
 
         if (ansError) throw ansError
@@ -99,7 +96,7 @@ export function SubmissionReview({
       const { data: updatedSub } = await supabase
         .from('exam_submissions')
         .select('*')
-        .eq('id', submission.id)
+        .eq('submission_id', submission.submission_id)
         .single()
 
       if (updatedSub) setSubmission(updatedSub)
