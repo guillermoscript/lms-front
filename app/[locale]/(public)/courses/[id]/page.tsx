@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
-import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export const dynamic = 'force-dynamic';
 
@@ -36,11 +37,14 @@ interface Lesson {
 export default async function CourseDetailsPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const t = await getTranslations('coursePublicDetails');
-    const supabase = await createClient();
+    const tenantId = await getCurrentTenantId();
+    // Use admin client for public reads — anon JWT has no tenant_id claim,
+    // so RLS get_tenant_id() defaults to wrong tenant for non-default tenants.
+    const adminClient = createAdminClient();
 
     const userId = await getCurrentUserId()
     // Fetch course with lessons and category
-    const { data: course, error } = await supabase
+    const { data: course, error } = await adminClient
         .from("courses")
         .select(`
             *,
@@ -57,6 +61,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
         `)
         .eq("course_id", parseInt(params.id))
         .eq("status", "published")
+        .eq("tenant_id", tenantId)
         .single();
 
     if (error || !course) {
@@ -66,7 +71,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     // Fetch author separately (profiles is global, no tenant_id)
     let author = null;
     if (course.author_id) {
-        const { data: authorData } = await supabase
+        const { data: authorData } = await adminClient
             .from("profiles")
             .select("id, full_name, avatar_url, bio")
             .eq("id", course.author_id)
@@ -80,9 +85,10 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
     const estimatedMinutes = (totalLessons * 10) % 60;
 
-    // Check user's enrollment
+    // Check user's enrollment (uses RLS client — only works for logged-in users)
     let hasAccess = false;
     if (userId) {
+        const supabase = await createClient();
         const { data: enrollment } = await supabase
             .from('enrollments')
             .select('enrollment_id')
@@ -97,7 +103,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     }
 
     // Fetch product for pricing
-    const { data: productCourses } = await supabase
+    const { data: productCourses } = await adminClient
         .from('product_courses')
         .select('product:products(*)')
         .eq('course_id', parseInt(params.id))

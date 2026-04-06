@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { CourseCard } from "@/components/public/course-card";
 import { CourseSearchBar } from "@/components/shared/course-search-bar";
@@ -15,7 +15,9 @@ export default async function CoursesPage({
     const { search, category } = await searchParams;
     const t = await getTranslations('coursesCatalog');
     const tSearch = await getTranslations('courseSearch');
-    const supabase = await createClient();
+    // Use admin client for public reads — anon JWT has no tenant_id claim,
+    // so RLS get_tenant_id() defaults to wrong tenant for non-default tenants.
+    const supabase = createAdminClient();
     const tenantId = await getCurrentTenantId();
 
     // Sanitize search input — strip special characters used in ilike patterns
