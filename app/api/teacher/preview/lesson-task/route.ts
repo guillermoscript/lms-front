@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     model: AI_MODELS.tutor,
     system: PROMPTS.previewLesson(task_description, system_prompt),
     messages: await convertToModelMessages(messages),
+    experimental_telemetry: { isEnabled: true, functionId: 'preview-lesson-task', metadata: { userId: user.id } },
   })
 
   return result.toUIMessageStreamResponse()

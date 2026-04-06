@@ -60,6 +60,7 @@ export async function POST(req: Request) {
         system: PROMPTS.lessonTutor(lesson, aiTask),
         messages: await convertToModelMessages(messages),
         tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id, tenantId }),
+        experimental_telemetry: { isEnabled: true, functionId: 'lesson-tutor', metadata: { lessonId: String(lessonId), userId: user.id, tenantId } },
         onFinish: async (event) => {
             const messageData: any = {
                 lesson_id: lessonId,

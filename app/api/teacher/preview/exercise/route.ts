@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     model: AI_MODELS.coach,
     system: PROMPTS.previewExercise(instructions, system_prompt),
     messages: await convertToModelMessages(messages),
+    experimental_telemetry: { isEnabled: true, functionId: 'preview-exercise', metadata: { userId: user.id } },
     stopWhen: stepCountIs(AI_CONFIG.maxSteps),
   })
 

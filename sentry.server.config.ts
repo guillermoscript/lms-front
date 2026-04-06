@@ -16,4 +16,8 @@ Sentry.init({
   // Enable sending user PII (Personally Identifiable Information)
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
+
+  // Skip Sentry's OTEL setup — we register our own NodeTracerProvider
+  // with LangfuseSpanProcessor for AI observability.
+  skipOpenTelemetrySetup: true,
 });

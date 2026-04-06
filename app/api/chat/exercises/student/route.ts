@@ -44,6 +44,7 @@ export async function POST(req: Request) {
         system: PROMPTS.exerciseCoach(exercise),
         messages: await convertToModelMessages(messages),
         tools: createAITools(supabase, { exerciseId, userId: user.id, tenantId, exerciseType: (exercise as any).exercise_type }),
+        experimental_telemetry: { isEnabled: true, functionId: 'exercise-coach', metadata: { exerciseId: String(exerciseId), userId: user.id, tenantId } },
         onFinish: async (event) => {
             await supabase.from('exercise_messages').insert({
                 exercise_id: exerciseId,

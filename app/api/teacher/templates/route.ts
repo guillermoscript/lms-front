@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category')
   const search = searchParams.get('search')
 
+  // System templates have no tenant_id; user templates are scoped to tenant
   let query = supabase
     .from('prompt_templates')
     .select('*')
-    .eq('tenant_id', tenantId)
+    .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
     .or(`created_by.eq.${user.id},is_system.eq.true`)
     .order('is_system', { ascending: false })
     .order('created_at', { ascending: false })
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
 // POST /api/teacher/templates
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
+  const tenantId = await getCurrentTenantId()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return new Response('Unauthorized', { status: 401 })
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest) {
     .insert({
       ...body,
       created_by: user.id,
-      is_system: false
+      is_system: false,
+      tenant_id: tenantId,
     })
     .select()
     .single()

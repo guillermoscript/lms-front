@@ -234,6 +234,7 @@ export async function POST(req: Request) {
         model: AI_MODELS.aristotle,
         system: systemPrompt,
         messages: await convertToModelMessages(messages),
+        experimental_telemetry: { isEnabled: true, functionId: 'aristotle-assistant', metadata: { userId: user.id, tenantId, contextPage: contextPage || '' } },
         onFinish: async (event) => {
             if (event.text) {
                 await supabase.from('aristotle_messages').insert({

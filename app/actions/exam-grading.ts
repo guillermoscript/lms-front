@@ -367,6 +367,7 @@ Evaluate these free-text answers now:`
       prompt: aiPrompt,
       temperature: 0.3, // Lower temperature for more consistent grading
       topP: 0.8,
+      experimental_telemetry: { isEnabled: true, functionId: 'exam-grading', metadata: { examId: String(params.examId), submissionId: String(params.submissionId) } },
     })
 
     const text = result.text
