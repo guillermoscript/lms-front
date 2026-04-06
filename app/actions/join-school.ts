@@ -113,6 +113,11 @@ export async function joinCurrentSchool() {
       { onConflict: 'user_id,tenant_id', ignoreDuplicates: true }
     )
 
+  // Set app_metadata.tenant_id so the JWT hook includes it in claims
+  await adminClient.auth.admin.updateUserById(user.id, {
+    app_metadata: { tenant_id: tenantId },
+  })
+
   // Update user's preferred tenant
   await supabase.auth.updateUser({
     data: { preferred_tenant_id: tenantId }
