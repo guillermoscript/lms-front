@@ -37,6 +37,7 @@ interface ExamTakerProps {
   description: string | null
   duration: number | null
   questions: Question[]
+  tenantId: string
 }
 
 export function ExamTaker({
@@ -46,6 +47,7 @@ export function ExamTaker({
   description,
   duration,
   questions,
+  tenantId,
 }: ExamTakerProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
@@ -106,6 +108,7 @@ export function ExamTaker({
         .insert({
           exam_id: examId,
           student_id: user.id,
+          tenant_id: tenantId,
         })
         .select('submission_id')
         .single()
