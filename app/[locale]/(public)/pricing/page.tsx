@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { HelpCircle, PackageSearch, ArrowRight } from "lucide-react";
 import PricingClient from "./pricing-client";
@@ -19,7 +19,7 @@ interface Plan {
 }
 
 export default async function PricingPage() {
-    const supabase = createAdminClient();
+    const supabase = await createClient();
     const tenantId = await getCurrentTenantId();
     const t = await getTranslations('pricing');
 
