@@ -454,6 +454,11 @@ Evaluate these free-text answers now:`
     }
   } catch (error) {
     console.error('Error grading exam:', error)
+    // Report to Sentry for observability
+    try {
+      const Sentry = await import('@sentry/nextjs')
+      Sentry.captureException(error, { extra: { examId: params.examId, submissionId: params.submissionId } })
+    } catch {}
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to grade exam',

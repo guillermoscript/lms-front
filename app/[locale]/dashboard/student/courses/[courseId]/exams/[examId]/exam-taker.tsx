@@ -139,11 +139,14 @@ export function ExamTaker({
       // Trigger AI grading
       try {
         const { gradeExamWithAI } = await import('@/app/actions/exam-grading')
-        await gradeExamWithAI({
+        const gradingResult = await gradeExamWithAI({
           examId,
           submissionId: submission.submission_id,
           answers,
         })
+        if (!gradingResult.success) {
+          console.error('AI grading returned error:', gradingResult.error)
+        }
       } catch (gradingError) {
         console.error('AI grading failed (non-blocking):', gradingError)
         // Continue to results page even if AI grading fails
