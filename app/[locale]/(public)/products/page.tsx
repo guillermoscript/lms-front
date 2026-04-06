@@ -1,16 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default async function ProductsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
+  const tenantId = await getCurrentTenantId()
 
   // Get all active products
   const { data: products } = await supabase
     .from('products')
     .select('*')
     .eq('status', 'active')
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   return (

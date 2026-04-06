@@ -1,17 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ManualPaymentButton } from '@/components/student/manual-payment-button'
-import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export default async function ProductDetailPage({
   params
 }: {
   params: Promise<{ productId: string }>
 }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { productId: productIdStr } = await params
   const productId = parseInt(productIdStr)
+  const tenantId = await getCurrentTenantId()
 
   // Get product details
   const { data: product, error } = await supabase
@@ -19,6 +20,7 @@ export default async function ProductDetailPage({
     .select('*')
     .eq('product_id', productId)
     .eq('status', 'active')
+    .eq('tenant_id', tenantId)
     .single()
 
   if (error || !product) {

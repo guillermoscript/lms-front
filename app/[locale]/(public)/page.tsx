@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
@@ -43,11 +42,11 @@ export default async function LandingPage() {
   // Branch to school landing page on subdomains
   const tenantId = await getCurrentTenantId()
   if (tenantId !== DEFAULT_TENANT_ID) {
-    const [tenant, supabase] = await Promise.all([getCurrentTenant(), createClient()])
+    const tenant = await getCurrentTenant()
     if (tenant) {
+      const adminClient = createAdminClient()
       // Check if tenant has a paid plan with a custom active landing page
       if (PAID_PLANS.includes(tenant.plan)) {
-        const adminClient = createAdminClient()
         const { data: customPage } = await adminClient
           .from('landing_pages')
           .select('puck_data')
@@ -61,7 +60,7 @@ export default async function LandingPage() {
       }
 
       // Fallback: default school landing page
-      const { data: products } = await supabase
+      const { data: products } = await adminClient
         .from('products')
         .select('product_id, name, description, price, currency, image')
         .eq('tenant_id', tenantId)
