@@ -278,7 +278,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                     <CardContent className="p-4 sm:p-6">
                         <div className="prose prose-lg dark:prose-invert max-w-none">
                             <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-medium text-base">
-                                {aiData.summary || "Your performance has been evaluated. Review the detailed feedback per question below."}
+                                {aiData.overall_feedback || aiData.summary || "Your performance has been evaluated. Review the detailed feedback per question below."}
                             </p>
                         </div>
                     </CardContent>

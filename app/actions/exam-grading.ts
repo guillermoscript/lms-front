@@ -104,7 +104,6 @@ export async function gradeExamWithAI(
         exam_id,
         title,
         description,
-        passing_score,
         questions:exam_questions (
           question_id,
           question_text,
@@ -126,6 +125,7 @@ export async function gradeExamWithAI(
       .single()
 
     if (examError || !exam) {
+      console.error('Exam query failed:', examError)
       return { success: false, error: 'Exam not found' }
     }
 
@@ -293,7 +293,7 @@ export async function gradeExamWithAI(
 
         const qPoints = q.points || 10
         let questionContext = `
-**Question ${index + 1}** (${qPoints} points)
+**Question ID: ${q.question_id}** (${qPoints} points)
 Type: Free Text
 Question: ${q.question_text}
 Student Answer: ${studentAnswer}
@@ -326,18 +326,19 @@ ${config.ai_grading_prompt ? `\n**Teacher's Custom Instructions:**\n${config.ai_
 Title: ${exam.title}
 ${exam.description ? `Description: ${exam.description}` : ''}
 Total Free-Text Questions: ${freeTextQuestions.length}
-Passing Score: ${exam.passing_score || 'Not specified'}
+Total Questions: ${exam.questions.length}
 
 **Free-Text Questions and Student Answers:**
 ${questionsContext}
 
 **Your Task:**
-Evaluate each free-text answer carefully and provide detailed feedback. Return your evaluation in the following JSON format:
+Evaluate each free-text answer carefully and provide detailed feedback. Return your evaluation in the following JSON format.
+IMPORTANT: Use the exact "Question ID" number from each question header above (e.g., ${freeTextQuestions.map((q: any) => q.question_id).join(', ')}). Do NOT use sequential numbers like 1, 2, 3.
 
 {
   "questions": [
     {
-      "question_id": <question_id>,
+      "question_id": <exact Question ID number from above>,
       "student_answer": "<student's answer>",
       "is_correct": true/false,
       "points_earned": <points earned (can be partial)>,
