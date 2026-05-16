@@ -155,9 +155,27 @@ New behaviour — operate on **entitlements**:
 
 Replaces the fabricated `$0 product` workaround in `enrollFree`. Upserts `entitlements (source_type='free', source_id=NULL)` + the `enrollments` learning record. Removes the need to create synthetic `products` / `product_courses` rows.
 
-### 3.5 New (optional, recommended): `revenue_split` creation in the transaction trigger
+### 3.5 Revenue split on non-Stripe sales — RESOLVED 2026-05-16
 
-`trigger_manage_transactions` should create `revenue_splits` for **every** successful transaction, not only Stripe webhook ones — so mock and manual/offline sales are also accounted. *Flagged here; can be a separate follow-up ticket if you want to keep this migration tightly scoped.*
+The original note here assumed `revenue_splits` was a per-sale ledger written by
+the Stripe webhook. It is not — `revenue_splits` is a **per-tenant config** row
+(`platform_percentage`, `school_percentage`, `applies_to_providers`, default
+`['stripe']`), with the rate synced from the school's platform plan
+(`app/actions/admin/billing.ts`).
+
+The real gap was in `getRevenueOverview` (`app/actions/admin/revenue.ts`): it
+computed `platformFees = totalRevenue × platform_percentage` over **every**
+successful transaction, ignoring `applies_to_providers`. Stripe Connect collects
+the platform fee via `application_fee_amount`; manual/offline sales settle
+directly to the school, so charging them a platform fee in the dashboard
+overstated fees and understated the school's net revenue.
+
+Fixed: `getRevenueOverview` now derives each transaction's provider
+(`stripe_payment_intent_id IS NOT NULL` → `stripe`, else `manual`) and applies
+the platform fee only to revenue from providers in `applies_to_providers`. Also
+fixed a latent bug in the same function — it selected a non-existent
+`created_at` column (the column is `transaction_date`), which broke the monthly
+trend.
 
 ---
 
@@ -336,6 +354,6 @@ Not an afternoon. Phase 1 alone unblocks the 500 quickly and safely; Phases 2–
 ## 9. Open questions for the owner
 
 1. **Soak period** before Phase 3 — 1 billing cycle, or a fixed calendar window?
-2. **`revenue_splits` for non-Stripe sales** (§3.5) — fold into this migration, or a separate ticket?
+2. ~~`revenue_splits` for non-Stripe sales (§3.5)~~ — resolved 2026-05-16, see §3.5.
 3. **Optional RLS hardening** — add `has_course_access()` to `lessons`/`exam_questions` SELECT policies, or leave content RLS tenant-scoped and keep gating in pages?
 4. When a user holds **both** a product (perpetual) and subscription (expiring) entitlement for a course, the dashboard should show — "Owned" (product wins for display), or both badges? Affects §4.6 only.

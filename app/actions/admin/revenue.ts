@@ -32,7 +32,7 @@ export async function getRevenueOverview() {
   // Get all successful transactions for this tenant
   const { data: transactions } = await adminClient
     .from('transactions')
-    .select('amount, currency, created_at, product_id, plan_id')
+    .select('amount, currency, transaction_date, product_id, plan_id, stripe_payment_intent_id')
     .eq('tenant_id', tenantId)
     .eq('status', 'successful')
 
@@ -48,16 +48,28 @@ export async function getRevenueOverview() {
     }
   }
 
-  // Get current revenue split
+  // Get current revenue split config (rate + which providers it applies to)
   const { data: split } = await adminClient
     .from('revenue_splits')
-    .select('platform_percentage')
+    .select('platform_percentage, applies_to_providers')
     .eq('tenant_id', tenantId)
     .single()
 
-  const platformPercentage = split?.platform_percentage || 20
+  const platformPercentage = Number(split?.platform_percentage ?? 20)
+  const appliesTo: string[] = split?.applies_to_providers ?? ['stripe']
+
   const totalRevenue = transactions.reduce((sum, t) => sum + Number(t.amount), 0)
-  const platformFees = totalRevenue * (platformPercentage / 100)
+
+  // The platform fee is only taken on sales through providers in
+  // `applies_to_providers`. Stripe Connect collects it via
+  // `application_fee_amount`; manual/offline sales settle directly to the
+  // school, so no platform fee is taken on them — counting them would
+  // overstate platform fees and understate the school's net revenue.
+  const feeBearingRevenue = transactions.reduce((sum, t) => {
+    const provider = t.stripe_payment_intent_id ? 'stripe' : 'manual'
+    return appliesTo.includes(provider) ? sum + Number(t.amount) : sum
+  }, 0)
+  const platformFees = feeBearingRevenue * (platformPercentage / 100)
   const netRevenue = totalRevenue - platformFees
 
   // Revenue by product/course
@@ -87,7 +99,7 @@ export async function getRevenueOverview() {
   // Monthly trend (last 12 months)
   const monthlyMap: Record<string, number> = {}
   for (const tx of transactions) {
-    const date = new Date(tx.created_at)
+    const date = new Date(tx.transaction_date)
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     monthlyMap[key] = (monthlyMap[key] || 0) + Number(tx.amount)
   }
