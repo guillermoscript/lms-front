@@ -38,8 +38,6 @@ async function cleanPlanState() {
     .eq('plan_id', PLAN_ID)
 
   for (const s of subs ?? []) {
-    // enrollments.subscription_id → subscriptions (FK): drop the reference first.
-    await admin.from('enrollments').update({ subscription_id: null }).eq('subscription_id', s.subscription_id)
     await admin
       .from('entitlements')
       .delete()

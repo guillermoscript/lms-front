@@ -154,7 +154,7 @@ test.describe('Manual Payment Request Lifecycle', () => {
         .delete()
         .eq('user_id', STUDENT_ID)
         .eq('tenant_id', DEFAULT_TENANT)
-        .eq('product_id', seededProductId!)
+        .eq('course_id', 1001)
 
       // Clean the transaction
       await admin

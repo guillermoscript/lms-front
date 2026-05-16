@@ -294,6 +294,8 @@ After Phase 2 has been stable in production for a chosen soak period (suggest �
 
 **Outcome:** schema clean, single model. Rollback after this point requires a restore — hence the soak period.
 
+> **Status: Phase 3 applied 2026-05-16.** Migration `20260516150000_phase3_drop_legacy_enrollment_columns.sql`. Soak period waived — the app is a pre-launch POC with no real users (owner's call). The RPCs (`enroll_user`, `handle_new_subscription`, `self_enroll_subscription_course`, `handle_subscription_status_change`) no longer write the legacy columns; `enrollments.product_id` / `subscription_id` and their FKs are dropped. `enrollments` is now `enrollment_id, user_id, course_id, enrollment_date, status, tenant_id` — a pure learning record. The `lesson_resources_select` RLS policy (which joined `enrollments.product_id`) was rewritten to use `has_course_access()`. App code that read the columns updated (`student/courses/page.tsx` enrichment, Stripe refund webhook); test specs + `tests/demos/seed-demo-data.sql` migrated to entitlements. `npm run build` green; overlap regression test passes; browser-verified. The `'disabled'` value of the `enrollement_status` enum is now unused but left in place (harmless).
+
 ---
 
 ## 6. Fix the double-enrollment path (folded into Phase 2)

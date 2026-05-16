@@ -211,22 +211,14 @@ export async function POST(req: NextRequest) {
             break
           }
 
-          // Revoke access if product purchase
+          // Revoke access if product purchase — revoke the product entitlements
           if (transaction.product_id) {
-            const refundAdmin = getSupabaseAdmin()
-            // New model: revoke the product entitlements
-            await refundAdmin
+            await getSupabaseAdmin()
               .from('entitlements')
               .update({ status: 'revoked', revoked_at: new Date().toISOString() })
               .eq('user_id', transaction.user_id)
               .eq('source_type', 'product')
               .eq('source_id', transaction.product_id)
-            // Legacy dual-write
-            await refundAdmin
-              .from('enrollments')
-              .update({ status: 'disabled' })
-              .eq('user_id', transaction.user_id)
-              .eq('product_id', transaction.product_id)
 
             console.log(`Revoked access for user ${transaction.user_id} product ${transaction.product_id}`)
           }
