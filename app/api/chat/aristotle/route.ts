@@ -3,6 +3,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 export const maxDuration = 120
 
@@ -22,17 +23,10 @@ export async function POST(req: Request) {
 
     const numericCourseId = parseInt(courseId)
 
-    // Verify enrollment
-    const { data: enrollment } = await supabase
-        .from('enrollments')
-        .select('enrollment_id')
-        .eq('user_id', user.id)
-        .eq('course_id', numericCourseId)
-        .eq('status', 'active')
-        .eq('tenant_id', tenantId)
-        .single()
-
-    if (!enrollment) return new Response('Not enrolled', { status: 403 })
+    // Verify access (entitlements model)
+    if (!(await hasCourseAccess(supabase, user.id, numericCourseId))) {
+        return new Response('Not enrolled', { status: 403 })
+    }
 
     // Fetch tutor config
     const { data: tutorConfig } = await supabase

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 const MEDIA_EXERCISE_TYPES = ['audio_evaluation', 'video_evaluation']
 const STORAGE_BUCKET = 'exercise-media'
@@ -65,18 +66,8 @@ export async function POST(req: Request) {
     return new Response('Exercise does not support media submissions', { status: 400 })
   }
 
-  // 4. Verify the student is enrolled in this course
-  const { data: enrollment } = await adminClient
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', user.id)
-    .eq('course_id', exercise.course_id)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'active')
-    .limit(1)
-    .single()
-
-  if (!enrollment) {
+  // 4. Verify access (entitlements model)
+  if (!(await hasCourseAccess(adminClient, user.id, exercise.course_id))) {
     return new Response('You are not enrolled in this course', { status: 403 })
   }
 

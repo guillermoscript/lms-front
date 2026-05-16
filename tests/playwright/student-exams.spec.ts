@@ -31,7 +31,6 @@ import { TENANT_BASE } from './utils/constants'
  */
 
 const ALICE_ID = 'a1000000-0000-0000-0000-000000000004'
-const CODE_ACADEMY_TENANT = '00000000-0000-0000-0000-000000000002'
 const COURSE_ID = '2001'
 const EXAM_ID = '2001'
 const PRODUCT_ID = 2001
@@ -50,45 +49,30 @@ function getAdmin() {
   return createSupabaseClient(supabaseUrl, serviceRoleKey)
 }
 
-let seededEnrollmentId: number | null = null
-
 /* ------------------------------------------------------------------ */
 /*  Setup & Teardown                                                   */
 /* ------------------------------------------------------------------ */
-test.beforeAll(async () => {
+async function cleanAccess() {
   const admin = getAdmin()
-
-  // Clean any prior test enrollment and exam submissions
   await admin.from('exam_submissions').delete().eq('student_id', ALICE_ID).eq('exam_id', Number(EXAM_ID))
+  await admin.from('entitlements').delete().eq('user_id', ALICE_ID).eq('course_id', Number(COURSE_ID))
   await admin.from('enrollments').delete().eq('user_id', ALICE_ID).eq('course_id', Number(COURSE_ID))
+}
 
-  // Seed enrollment: Alice in course 2001 via product 2001
-  const { data, error } = await admin
-    .from('enrollments')
-    .insert({
-      user_id: ALICE_ID,
-      course_id: Number(COURSE_ID),
-      tenant_id: CODE_ACADEMY_TENANT,
-      product_id: PRODUCT_ID,
-      status: 'active',
-    })
-    .select('enrollment_id')
-    .single()
+test.beforeAll(async () => {
+  await cleanAccess()
 
+  // Seed access: Alice in course 2001 via product 2001. enroll_user creates
+  // the entitlement + enrollment record (entitlements model — gates read it).
+  const { error } = await getAdmin().rpc('enroll_user', {
+    _user_id: ALICE_ID,
+    _product_id: PRODUCT_ID,
+  })
   if (error) throw new Error(`Failed to seed enrollment: ${error.message}`)
-  seededEnrollmentId = data.enrollment_id
 })
 
 test.afterAll(async () => {
-  const admin = getAdmin()
-
-  // Clean exam submissions (in case a test accidentally submitted)
-  await admin.from('exam_submissions').delete().eq('student_id', ALICE_ID).eq('exam_id', Number(EXAM_ID))
-
-  // Clean seeded enrollment
-  if (seededEnrollmentId) {
-    await admin.from('enrollments').delete().eq('enrollment_id', seededEnrollmentId)
-  }
+  await cleanAccess()
 })
 
 /* ================================================================== */

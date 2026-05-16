@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button'
 import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchCourseAccessMap } from '@/lib/services/course-access'
+import type { CourseAccess } from '@/lib/services/enrollment-service'
+
+const NO_ACCESS: CourseAccess = {
+  hasAccess: false,
+  accessType: null,
+  accessTypes: [],
+  isPerpetual: false,
+  isExpired: false,
+}
 
 interface PageProps {
   searchParams: Promise<{
@@ -42,6 +52,10 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     const courseIds = enrollments.map(e => e.course_id)
     const productIds = enrollments.map(e => e.product_id).filter(Boolean)
     const subscriptionIds = enrollments.map(e => e.subscription_id).filter(Boolean)
+
+    // Access is now driven by the entitlements model (a course may have
+    // several sources). See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
+    const accessMap = await fetchCourseAccessMap(supabase, userId, courseIds)
 
     const [
       { data: courses },
@@ -133,6 +147,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
 
       enrichedEnrollments.push({
         ...enrollment,
+        access: accessMap.get(enrollment.course_id) ?? NO_ACCESS,
         course: {
           ...course,
           lessons: courseLessons.map(lesson => ({
@@ -311,6 +326,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
                   key={enrollment.enrollment_id}
                   enrollment={enrollment}
                   userId={userId}
+                  access={enrollment.access}
                 />
               ))}
             </div>

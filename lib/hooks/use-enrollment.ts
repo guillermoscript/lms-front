@@ -2,9 +2,11 @@
 
 /**
  * Enrollment Hook
- * 
- * Client-side hook for handling course enrollment actions.
- * Used by subscription users to enroll in courses on-demand.
+ *
+ * Client-side hook for subscription holders to self-enroll in plan-covered
+ * courses. Delegates to the self_enroll_subscription_course RPC, which creates
+ * a `subscription` entitlement (SECURITY DEFINER, verifies the subscription
+ * covers the course). See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
  */
 
 import { useState } from 'react'
@@ -18,92 +20,25 @@ export function useEnrollment() {
   const router = useRouter()
 
   /**
-   * Enroll user in a course using their active subscription
-   * Creates an enrollment record with subscription_id
-   * 
+   * Self-enroll the current user in a course covered by their subscription.
    * @param courseId - Course to enroll in
-   * @param subscriptionId - User's active subscription ID
    */
-  const enrollInCourse = async (courseId: number, subscriptionId: number) => {
+  const enrollInCourse = async (courseId: number) => {
     setLoading(true)
     setError(null)
 
     try {
       const supabase = createClient()
+      const { error: rpcError } = await supabase.rpc('self_enroll_subscription_course', {
+        _course_id: courseId,
+      })
 
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession(); const user = session?.user
-
-      if (!user) {
-        throw new Error('You must be logged in to enroll')
+      if (rpcError) {
+        throw new Error(rpcError.message)
       }
 
-      // Check if already enrolled
-      const { data: existing } = await supabase
-        .from('enrollments')
-        .select('enrollment_id')
-        .eq('user_id', user.id)
-        .eq('course_id', courseId)
-        .eq('status', 'active')
-        .single()
-
-      if (existing) {
-        toast.info('You are already enrolled in this course')
-        router.refresh()
-        return
-      }
-
-      // Verify course is covered by the subscription's plan
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('plan_id')
-        .eq('subscription_id', subscriptionId)
-        .single()
-
-      if (sub?.plan_id) {
-        const { data: planCourses } = await supabase
-          .from('plan_courses')
-          .select('course_id')
-          .eq('plan_id', sub.plan_id)
-
-        // If plan_courses has entries, check if this course is included
-        if (planCourses && planCourses.length > 0) {
-          const allowed = planCourses.some(pc => pc.course_id === courseId)
-          if (!allowed) {
-            throw new Error('This course is not included in your current plan')
-          }
-        }
-      }
-
-      // Get tenant_id from the subscription (authoritative source)
-      const { data: subTenant } = await supabase
-        .from('subscriptions')
-        .select('tenant_id')
-        .eq('subscription_id', subscriptionId)
-        .single()
-
-      // Create enrollment with subscription_id
-      const { error: enrollError } = await supabase
-        .from('enrollments')
-        .insert({
-          user_id: user.id,
-          course_id: courseId,
-          subscription_id: subscriptionId,
-          status: 'active',
-          enrollment_date: new Date().toISOString(),
-          tenant_id: subTenant?.tenant_id,
-        })
-
-      if (enrollError) {
-        throw new Error(enrollError.message)
-      }
-
-      // Success!
       toast.success('Successfully enrolled in course!')
-      
-      // Refresh to show updated enrollment
       router.refresh()
-
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enroll'
       setError(message)

@@ -2,14 +2,27 @@
 
 /**
  * Course Access Hook
- * 
- * Client-side hook to check if user has access to a specific course.
- * Checks both product-based and subscription-based access.
+ *
+ * Client-side hook to check if the user has access to a specific course.
+ * Reads the `entitlements` table — access is granted by any active,
+ * non-expired entitlement (product / subscription / free / admin_grant).
  */
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { determineAccessStatus, type CourseAccess } from '@/lib/services/enrollment-service'
+import {
+  computeCourseAccess,
+  type CourseAccess,
+  type EntitlementRow,
+} from '@/lib/services/enrollment-service'
+
+const NO_ACCESS: CourseAccess = {
+  hasAccess: false,
+  accessType: null,
+  accessTypes: [],
+  isPerpetual: false,
+  isExpired: false,
+}
 
 export function useCourseAccess(courseId: number) {
   const [access, setAccess] = useState<CourseAccess | null>(null)
@@ -21,57 +34,26 @@ export function useCourseAccess(courseId: number) {
       try {
         const supabase = createClient()
 
-        // Get current user
-        const { data: { session } } = await supabase.auth.getSession(); const user = session?.user
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
 
         if (!user) {
-          setAccess({
-            hasAccess: false,
-            accessType: null,
-            isExpired: false,
-          })
-          setLoading(false)
+          setAccess(NO_ACCESS)
           return
         }
 
-        // Check enrollment with subscription info
-        const { data: enrollment, error: enrollError } = await supabase
-          .from('enrollments')
-          .select(`
-            *,
-            subscription:subscriptions!enrollments_subscription_id_fkey (
-              subscription_id,
-              subscription_status,
-              end_date
-            ),
-            product:products!enrollments_product_id_fkey (
-              product_id,
-              name
-            )
-          `)
+        const { data } = await supabase
+          .from('entitlements')
+          .select('entitlement_id, course_id, source_type, source_id, status, granted_at, expires_at')
           .eq('user_id', user.id)
           .eq('course_id', courseId)
-          .eq('status', 'active')
-          .single()
 
-        if (enrollError || !enrollment) {
-          setAccess({
-            hasAccess: false,
-            accessType: null,
-            isExpired: false,
-          })
-          setLoading(false)
-          return
-        }
-
-        // Determine access status using service function
-        const accessStatus = determineAccessStatus(enrollment)
-        setAccess(accessStatus)
-
+        setAccess(computeCourseAccess((data ?? []) as EntitlementRow[]))
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to check access'
         setError(message)
         console.error('Access check error:', err)
+        setAccess(NO_ACCESS)
       } finally {
         setLoading(false)
       }

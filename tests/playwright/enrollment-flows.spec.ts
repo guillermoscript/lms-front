@@ -141,13 +141,19 @@ test.describe('Manual Payment Request Lifecycle', () => {
 
     // Clean up payment requests
     if (seededPaymentRequestId) {
-      // Clean any enrollment created by the complete flow
+      // Clean any access created by the complete flow (entitlements model)
+      await admin
+        .from('entitlements')
+        .delete()
+        .eq('user_id', STUDENT_ID)
+        .eq('source_type', 'product')
+        .eq('source_id', seededProductId!)
+
       await admin
         .from('enrollments')
         .delete()
         .eq('user_id', STUDENT_ID)
         .eq('tenant_id', DEFAULT_TENANT)
-        .like('enrollment_date', '%')
         .eq('product_id', seededProductId!)
 
       // Clean the transaction

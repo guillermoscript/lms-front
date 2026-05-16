@@ -4,6 +4,7 @@ import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { hasCourseAccess } from '@/lib/services/course-access'
 import { nanoid } from 'nanoid'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -229,26 +230,9 @@ export async function getResourceDownloadUrl(
     const isAdmin = role === 'admin'
 
     if (!isOwner && !isAdmin) {
-      // Check enrollment
+      // Verify course access (entitlements model)
       const courseId = (resource.lessons as any)?.course_id
-      const { data: enrollment } = await supabase
-        .from('enrollments')
-        .select('enrollment_id')
-        .eq('user_id', userId)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active')
-        .limit(1)
-
-      // Also verify course access through product_courses
-      const { data: access } = await adminClient
-        .from('product_courses')
-        .select('product_id, enrollments!inner(enrollment_id)')
-        .eq('course_id', courseId)
-        .eq('enrollments.user_id', userId)
-        .eq('enrollments.status', 'active')
-        .limit(1)
-
-      if (!access?.length) {
+      if (!courseId || !(await hasCourseAccess(adminClient, userId, courseId))) {
         return { success: false, error: 'Access denied' }
       }
     }

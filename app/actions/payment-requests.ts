@@ -247,11 +247,13 @@ export async function completeAndEnroll(requestId: number) {
     throw new Error('Can only complete requests with confirmed payment')
   }
 
-  // Use admin client to bypass RLS — admin is inserting transaction/enrollment
-  // on behalf of the student (uid() != user_id would fail with regular client)
+  // Use admin client to bypass RLS — admin is inserting a transaction on
+  // behalf of the student (uid() != user_id would fail with a regular client).
   const adminClient = await createAdminClient()
 
-  // Create transaction record
+  // Create the transaction. The after_transaction_insert trigger handles
+  // enrollment (entitlements + enrollment record / subscription) — the single
+  // enrollment path shared with the Stripe webhook and mock checkout.
   const { data: transaction, error: transactionError } = await adminClient
     .from('transactions')
     .insert({
@@ -270,28 +272,6 @@ export async function completeAndEnroll(requestId: number) {
   if (transactionError) {
     console.error('Failed to create transaction:', transactionError)
     throw new Error('Failed to create transaction')
-  }
-
-  // Enroll user: call appropriate RPC based on product vs plan
-  if (request.product_id) {
-    const { error: enrollError } = await adminClient.rpc('enroll_user', {
-      _user_id: request.user_id,
-      _product_id: request.product_id,
-    })
-    if (enrollError) {
-      console.error('Failed to enroll user:', enrollError)
-      throw new Error('Failed to enroll user: ' + enrollError.message)
-    }
-  } else if (request.plan_id) {
-    const { error: subError } = await adminClient.rpc('handle_new_subscription', {
-      _user_id: request.user_id,
-      _plan_id: request.plan_id,
-      _transaction_id: transaction.transaction_id,
-    })
-    if (subError) {
-      console.error('Failed to create subscription:', subError)
-      throw new Error('Failed to create subscription: ' + subError.message)
-    }
   }
 
   // Update payment request status

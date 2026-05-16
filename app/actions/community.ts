@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { hasCourseAccess } from '@/lib/services/course-access'
 import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 
@@ -88,17 +89,9 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         return { success: false, error: 'Course not found' }
       }
 
-      // Verify enrollment for students posting to a course feed
+      // Verify access for students posting to a course feed
       if (role === 'student') {
-        const { data: enrollment } = await verifyClient
-          .from('enrollments')
-          .select('enrollment_id')
-          .eq('course_id', parseInt(courseId))
-          .eq('user_id', userId)
-          .eq('tenant_id', tenantId)
-          .eq('status', 'active')
-          .single()
-        if (!enrollment) {
+        if (!(await hasCourseAccess(verifyClient, userId, parseInt(courseId)))) {
           return { success: false, error: 'You must be enrolled in this course to post' }
         }
       }
@@ -324,19 +317,11 @@ export async function createComment(
       return { success: false, error: 'This post has been removed' }
     }
 
-    // For course-scoped posts, verify enrollment (students only)
+    // For course-scoped posts, verify access (students only)
     if (post.course_id) {
       const role = await getUserRole()
       if (role === 'student') {
-        const { data: enrollment } = await adminClient
-          .from('enrollments')
-          .select('enrollment_id')
-          .eq('course_id', post.course_id)
-          .eq('user_id', userId)
-          .eq('tenant_id', tenantId)
-          .eq('status', 'active')
-          .single()
-        if (!enrollment) {
+        if (!(await hasCourseAccess(adminClient, userId, post.course_id))) {
           return { success: false, error: 'You must be enrolled in this course to comment' }
         }
       }

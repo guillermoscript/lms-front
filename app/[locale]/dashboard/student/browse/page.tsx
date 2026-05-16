@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 import { IconAlertCircle, IconSparkles, IconTrophy, IconSearch } from '@tabler/icons-react'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchAccessibleCourseIds } from '@/lib/services/course-access'
 
 export default async function BrowseCoursesPage({
   searchParams,
@@ -53,7 +54,7 @@ export default async function BrowseCoursesPage({
   }
 
   // Parallelize 4 independent queries
-  const [{ data: subscriptions }, { data: categories }, { data: courses }, { data: enrollments }] = await Promise.all([
+  const [{ data: subscriptions }, { data: categories }, { data: courses }, accessibleCourseIds] = await Promise.all([
     supabase.from('subscriptions').select(`
       subscription_id,
       subscription_status,
@@ -71,8 +72,8 @@ export default async function BrowseCoursesPage({
     supabase.from('course_categories').select('id, name')
       .eq('tenant_id', tenantId).order('name'),
     query,
-    supabase.from('enrollments').select('course_id')
-      .eq('user_id', userId).eq('tenant_id', tenantId).eq('status', 'active'),
+    // "Already enrolled" set — entitlements model (any active access source).
+    fetchAccessibleCourseIds(supabase, userId),
   ])
 
   const activeSubscription = subscriptions?.[0]
@@ -98,7 +99,7 @@ export default async function BrowseCoursesPage({
   const tCourses = await getTranslations('dashboard.student.courses')
   const tSearch = await getTranslations('courseSearch')
 
-  const enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || [])
+  const enrolledCourseIds = accessibleCourseIds
 
   const hasActiveFilters = sanitizedSearch || category
 
