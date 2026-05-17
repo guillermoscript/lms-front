@@ -118,7 +118,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
       .order('sequence', { ascending: true }),
     supabase
       .from('enrollments')
-      .select('*, profiles(id, full_name, avatar_url)')
+      .select('enrollment_id, user_id, course_id, enrollment_date, status, tenant_id')
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .eq('status', 'active'),
@@ -139,9 +139,20 @@ export default async function CourseManagementPage({ params }: PageProps) {
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
   const exams = examsRes.data || []
-  const enrollments = enrollmentsRes.data || []
+  const rawEnrollments = enrollmentsRes.data || []
   const certificateTemplate = certificateTemplateRes.data
   const issuedCertificates = issuedCertificatesRes.data || []
+
+  // Fetch profiles for enrolled users (no FK between enrollments and profiles)
+  const enrolledUserIds = rawEnrollments.map((e) => e.user_id)
+  const { data: enrollmentProfiles } = enrolledUserIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', enrolledUserIds)
+    : { data: [] }
+  const profilesMap = new Map((enrollmentProfiles || []).map((p) => [p.id, p]))
+  const enrollments = rawEnrollments.map((e) => ({
+    ...e,
+    profiles: profilesMap.get(e.user_id) || null,
+  }))
 
   return (
     <div className="min-h-screen bg-background pb-20">

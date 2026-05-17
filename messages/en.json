@@ -477,7 +477,9 @@
         "status": {
           "draft": "Draft",
           "published": "Published",
-          "archived": "Archived"
+          "archived": "Archived",
+          "active": "Active",
+          "disabled": "Disabled"
         },
         "difficulty": {
           "easy": "Easy",
