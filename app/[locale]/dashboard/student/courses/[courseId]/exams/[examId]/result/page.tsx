@@ -132,7 +132,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                 const answer = answersByQuestionId[q.question_id]
                 if (answer) {
                     const selectedOpt = findSelectedOption(q.question_options, answer.answer_text)
-                    acc[q.question_id] = !!selectedOpt?.is_correct
+                    if (selectedOpt !== null) {
+                        acc[q.question_id] = !!selectedOpt?.is_correct
+                    }
+                    // If no matching option found, leave undefined — let ?? fall through to qScore
                 }
             }
             return acc
