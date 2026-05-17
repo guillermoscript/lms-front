@@ -66,6 +66,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     let productId: number | undefined = undefined;
     let durationDays: number | undefined = undefined;
     let features: string | null = null;
+    let paymentProvider: string | null = null;
 
     if (courseId) {
         const { data: course } = await supabase
@@ -91,6 +92,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 price = parseFloat(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
                 productId = productCourses[0].product_id;
+                paymentProvider = product.payment_provider ?? null;
                 if (product.description) description = product.description;
 
                 if (product.payment_provider === 'manual') {
@@ -113,6 +115,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             currency = dbPlan.currency?.toUpperCase() || 'USD';
             durationDays = dbPlan.duration_in_days;
             features = dbPlan.features;
+            paymentProvider = dbPlan.payment_provider ?? null;
 
             if (dbPlan.payment_provider === 'manual') {
                 redirect(`/checkout/manual?planId=${planId}`);
@@ -145,6 +148,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     features={features}
                     userName={userName}
                     userEmail={userEmail}
+                    paymentProvider={paymentProvider}
                 />
             </div>
         </div>

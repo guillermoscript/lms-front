@@ -31,6 +31,7 @@ interface CheckoutFormProps {
     features?: string | null;
     userName?: string;
     userEmail?: string;
+    paymentProvider?: string | null;
 }
 
 export function CheckoutForm({
@@ -45,6 +46,7 @@ export function CheckoutForm({
     features,
     userName,
     userEmail,
+    paymentProvider,
 }: CheckoutFormProps) {
     const [loading, setLoading] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
@@ -57,7 +59,8 @@ export function CheckoutForm({
     const router = useRouter();
     const t = useTranslations('checkout');
 
-    const isFree = typeof price === 'number' ? price === 0 : price === t('free');
+    const isFree = typeof price === 'number' ? price === 0 : price === t('free')
+    const showOfflineTab = !paymentProvider || paymentProvider === 'manual';
     const displayPrice = formattedPrice || (typeof price === 'number' ? `$${price}` : price);
 
     // Parse features string into list (features are stored as newline or comma-separated text)
@@ -180,19 +183,89 @@ export function CheckoutForm({
 
             {/* Payment methods */}
             <div className="px-6 py-6 sm:px-8">
-                <Tabs defaultValue="card" onValueChange={(v) => v && setPaymentMethod(v as 'card' | 'offline')}>
-                    <TabsList className="w-full">
-                        <TabsTrigger value="card" className="flex-1 gap-1.5">
-                            <IconCreditCard className="h-3.5 w-3.5" />
-                            {t('payment.card')}
-                        </TabsTrigger>
-                        <TabsTrigger value="offline" className="flex-1 gap-1.5">
-                            <IconBuildingBank className="h-3.5 w-3.5" />
-                            {t('payment.offline')}
-                        </TabsTrigger>
-                    </TabsList>
+                {showOfflineTab ? (
+                    <Tabs defaultValue="card" onValueChange={(v) => v && setPaymentMethod(v as 'card' | 'offline')}>
+                        <TabsList className="w-full">
+                            <TabsTrigger value="card" className="flex-1 gap-1.5">
+                                <IconCreditCard className="h-3.5 w-3.5" />
+                                {t('payment.card')}
+                            </TabsTrigger>
+                            <TabsTrigger value="offline" className="flex-1 gap-1.5">
+                                <IconBuildingBank className="h-3.5 w-3.5" />
+                                {t('payment.offline')}
+                            </TabsTrigger>
+                        </TabsList>
 
-                    <TabsContent value="card" className="mt-5 space-y-4">
+                        <TabsContent value="card" className="mt-5 space-y-4">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
+                                <Input id="cardholder" placeholder="John Doe" disabled={loading} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="cardNumber"
+                                        placeholder="4242 4242 4242 4242"
+                                        className="pl-10"
+                                        disabled={loading}
+                                    />
+                                    <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
+                                    <Input id="expiry" placeholder="MM/YY" disabled={loading} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
+                                    <Input id="cvc" placeholder="123" disabled={loading} />
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="offline" className="mt-5 space-y-4">
+                            <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                                {t('payment.offlineInstructions')}
+                            </p>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="offlineName" className="text-xs font-medium">{t('payment.contactName')}</Label>
+                                <Input
+                                    id="offlineName"
+                                    placeholder="Your Name"
+                                    value={offlineData.name}
+                                    onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="offlineEmail" className="text-xs font-medium">{t('payment.contactEmail')}</Label>
+                                <Input
+                                    id="offlineEmail"
+                                    type="email"
+                                    placeholder="email@example.com"
+                                    value={offlineData.email}
+                                    onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
+                                    disabled={loading}
+                                    readOnly={!!userEmail}
+                                    className={userEmail ? 'bg-muted' : ''}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="offlinePhone" className="text-xs font-medium">{t('payment.contactPhone')}</Label>
+                                <Input
+                                    id="offlinePhone"
+                                    placeholder="+1 234 567 8900"
+                                    value={offlineData.phone}
+                                    onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
+                                    disabled={loading}
+                                />
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+                ) : (
+                    <div className="space-y-4">
                         <div className="space-y-1.5">
                             <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
                             <Input id="cardholder" placeholder="John Doe" disabled={loading} />
@@ -219,47 +292,8 @@ export function CheckoutForm({
                                 <Input id="cvc" placeholder="123" disabled={loading} />
                             </div>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="offline" className="mt-5 space-y-4">
-                        <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                            {t('payment.offlineInstructions')}
-                        </p>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="offlineName" className="text-xs font-medium">{t('payment.contactName')}</Label>
-                            <Input
-                                id="offlineName"
-                                placeholder="Your Name"
-                                value={offlineData.name}
-                                onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
-                                disabled={loading}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="offlineEmail" className="text-xs font-medium">{t('payment.contactEmail')}</Label>
-                            <Input
-                                id="offlineEmail"
-                                type="email"
-                                placeholder="email@example.com"
-                                value={offlineData.email}
-                                onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
-                                disabled={loading}
-                                readOnly={!!userEmail}
-                                className={userEmail ? 'bg-muted' : ''}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="offlinePhone" className="text-xs font-medium">{t('payment.contactPhone')}</Label>
-                            <Input
-                                id="offlinePhone"
-                                placeholder="+1 234 567 8900"
-                                value={offlineData.phone}
-                                onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
-                                disabled={loading}
-                            />
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                )}
             </div>
 
             {/* Submit */}
