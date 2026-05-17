@@ -54,7 +54,7 @@ export function UpgradeNudge({ feature, currentPlan, className, compact }: Upgra
           <h3 className="font-semibold">{featureName}</h3>
           <p className="text-sm text-muted-foreground mt-1">
             This feature requires the <strong className="capitalize">{requiredPlan}</strong> plan
-            {currentPlan && currentPlan !== requiredPlan && ` (you&apos;re on ${currentPlan})`}
+            {currentPlan && currentPlan !== requiredPlan && ` (you're on ${currentPlan})`}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Starting at ${price}/month
