@@ -11,11 +11,12 @@ import { useTranslations } from "next-intl";
 
 interface PointStoreItemProps {
     item: StoreItem;
+    onPurchaseComplete?: () => void;
 }
 
-export function PointStoreItem({ item }: PointStoreItemProps) {
+export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps) {
     const { summary, refresh: refreshSummary } = useGamificationSummary();
-    const { purchase } = usePointStore({ onPurchase: refreshSummary });
+    const { purchase } = usePointStore({ onPurchase: () => { refreshSummary(); onPurchaseComplete?.(); } });
     const [isPurchasing, setIsPurchasing] = useState(false);
     const t = useTranslations('components.gamification');
 

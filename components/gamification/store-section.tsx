@@ -9,8 +9,8 @@ import { IconShoppingBag, IconCoins, IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 export function StoreSection() {
-    const { summary } = useGamificationSummary();
-    const { items: storeItems, loading: storeLoading, fetch: fetchStore } = usePointStore();
+    const { summary, refresh } = useGamificationSummary();
+    const { items: storeItems, loading: storeLoading, fetch: fetchStore } = usePointStore({ onPurchase: refresh });
     const t = useTranslations('components.gamification');
 
     useEffect(() => {
@@ -79,7 +79,7 @@ export function StoreSection() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {storeItems.map((item) => (
-                    <PointStoreItem key={item.id} item={item} />
+                    <PointStoreItem key={item.id} item={item} onPurchaseComplete={refresh} />
                 ))}
 
                 {storeItems.length === 0 && (
