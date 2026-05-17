@@ -115,7 +115,7 @@ export function LessonEditorProvider({
       initialData?.content ??
       (initialData
         ? ''
-        : `# Nuevo tema\n\nEscribe el contenido de la lección aquí...\n\n<Callout type="info">Añade los objetivos de aprendizaje aquí</Callout>`),
+        : t('contentDefault')),
     video_url: initialData?.video_url || '',
     sequence: initialData?.sequence || initialSequence,
     publish_at: initialData?.publish_at || '',
