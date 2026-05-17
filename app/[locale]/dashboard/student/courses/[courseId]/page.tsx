@@ -88,8 +88,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     supabase
       .from('lesson_completions')
       .select('lesson_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId),
+      .eq('user_id', userId),
     supabase
       .from('exams')
       .select('exam_id')
