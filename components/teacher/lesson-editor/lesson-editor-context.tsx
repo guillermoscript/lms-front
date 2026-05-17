@@ -167,6 +167,10 @@ export function LessonEditorProvider({
 
       if (publish) {
         router.push(`/dashboard/teacher/courses/${courseId}`)
+      } else if (!initialData) {
+        // New lesson saved as draft — redirect to edit URL so subsequent saves
+        // call updateLesson instead of createLesson (prevents duplicates)
+        router.push(`/dashboard/teacher/courses/${courseId}/lessons/${result.data.lessonId}`)
       } else {
         setSaveSuccess(true)
         setLoading(false)
