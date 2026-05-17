@@ -61,6 +61,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                 courseId: String(courseId),
             },
         }),
+        onError: () => toast.error(t('toast.error')),
     })
 
     const isLoading = status === 'submitted' || status === 'streaming'

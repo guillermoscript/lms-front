@@ -64,7 +64,8 @@
     "toast": {
       "newSession": "Sesion nueva — la conversacion anterior se guardo",
       "newSessionFailed": "No se pudo iniciar nueva sesion. Intenta de nuevo.",
-      "newSessionError": "Algo salio mal. Revisa tu conexion e intenta de nuevo."
+      "newSessionError": "Algo salio mal. Revisa tu conexion e intenta de nuevo.",
+      "error": "Algo salió mal. Por favor intenta de nuevo."
     },
     "config": {
       "title": "Aristotle Tutor IA",

@@ -64,7 +64,8 @@
     "toast": {
       "newSession": "Fresh session — previous conversation saved",
       "newSessionFailed": "Couldn't start a new session. Try again.",
-      "newSessionError": "Something went wrong. Check your connection and try again."
+      "newSessionError": "Something went wrong. Check your connection and try again.",
+      "error": "Something went wrong. Please try again."
     },
     "config": {
       "title": "Aristotle AI Tutor",

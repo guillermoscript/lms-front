@@ -77,6 +77,7 @@ function InnerAristotlePanel() {
                 contextPage,
             },
         }),
+        onError: () => toast.error(t('toast.error')),
     })
 
     const isLoading = status === 'submitted' || status === 'streaming'
