@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
         // Find transaction by Stripe payment intent ID
         const { data: transaction } = await getSupabaseAdmin()
           .from('transactions')
-          .select('transaction_id, tenant_id, product_id, plan_id, user_id')
+          .select('transaction_id, tenant_id, product_id, plan_id, user_id, status')
           .eq('stripe_payment_intent_id', paymentIntentId)
           .single()
 
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
           await getSupabaseAdmin()
             .from('transactions')
-            .update({ status: newStatus, refunded_amount: charge.amount_refunded / 100 })
+            .update({ status: newStatus })
             .eq('transaction_id', transaction.transaction_id)
             .eq('status', 'successful')
 
