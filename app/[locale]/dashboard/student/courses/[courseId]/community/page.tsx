@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { hasCourseAccess } from '@/lib/services/course-access'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
@@ -27,16 +28,9 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
 
   const adminClient = createAdminClient()
 
-  // Verify enrollment and fetch course in parallel
-  const [{ data: enrollment }, { data: course }] = await Promise.all([
-    adminClient
-      .from('enrollments')
-      .select('enrollment_id')
-      .eq('user_id', userId)
-      .eq('course_id', numericCourseId)
-      .eq('status', 'active')
-      .eq('tenant_id', tenantId)
-      .single(),
+  // Verify access (entitlements model) and fetch course in parallel
+  const [hasAccess, { data: course }] = await Promise.all([
+    hasCourseAccess(adminClient, userId, numericCourseId),
     adminClient
       .from('courses')
       .select('course_id, title')
@@ -45,7 +39,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
       .single(),
   ])
 
-  if (!enrollment) {
+  if (!hasAccess) {
     redirect('/dashboard/student')
   }
 

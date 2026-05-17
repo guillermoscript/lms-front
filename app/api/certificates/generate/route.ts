@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 export async function POST(request: NextRequest) {
   try {
@@ -205,16 +206,8 @@ async function fallbackCertificateGeneration(
   courseId: number,
   tenantId: string
 ) {
-  // Verify enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', userId)
-    .eq('course_id', courseId)
-    .eq('status', 'active')
-    .maybeSingle()
-
-  if (!enrollment) {
+  // Verify access (entitlements model)
+  if (!(await hasCourseAccess(supabase, userId, courseId))) {
     return NextResponse.json({ error: 'Not enrolled in this course' }, { status: 403 })
   }
 

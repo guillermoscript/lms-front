@@ -36,7 +36,7 @@ export function BrowseCourseCard({
 
   const handleEnroll = async () => {
     if (enrollmentStatus.variant !== 'enrollable') return
-    await enrollInCourse(course.course_id, enrollmentStatus.subscriptionId)
+    await enrollInCourse(course.course_id)
   }
 
   // Parse tags

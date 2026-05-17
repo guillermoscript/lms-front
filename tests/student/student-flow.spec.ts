@@ -207,18 +207,24 @@ test.describe.serial('Flow A: Plan Subscription → Browse → Enroll → Lesson
     await expect(page.locator('text=Successfully enrolled')).toBeVisible({ timeout: 10000 })
   })
 
-  test('DB: enrollment created with subscription_id', async () => {
-    const { data: enrollments } = await supabase
-      .from('enrollments')
+  test('DB: subscription entitlement created', async () => {
+    const { data: entitlements } = await supabase
+      .from('entitlements')
       .select('*')
       .eq('user_id', testUserId)
+      .eq('source_type', 'subscription')
       .eq('status', 'active')
 
-    expect(enrollments).toBeTruthy()
-    expect(enrollments!.length).toBeGreaterThanOrEqual(1)
+    expect(entitlements).toBeTruthy()
+    expect(entitlements!.length).toBeGreaterThanOrEqual(1)
 
-    const enrollment = enrollments![0]
-    expect(enrollment.subscription_id).toBeTruthy()
+    // A learning enrollment record also exists
+    const { data: enrollments } = await supabase
+      .from('enrollments')
+      .select('enrollment_id')
+      .eq('user_id', testUserId)
+      .eq('status', 'active')
+    expect(enrollments!.length).toBeGreaterThanOrEqual(1)
   })
 
   // ── Dashboard & course access ─────────────────────────────────────────────
@@ -341,7 +347,7 @@ test.describe.serial('Flow B: Single Course Purchase', () => {
     await page.waitForURL('**/dashboard/student', { timeout: 15000 })
   })
 
-  test('DB: transaction and enrollment created with product_id', async () => {
+  test('DB: transaction created and product entitlement granted', async () => {
     const { data: transactions } = await supabase
       .from('transactions')
       .select('*')
@@ -352,17 +358,27 @@ test.describe.serial('Flow B: Single Course Purchase', () => {
     expect(transactions!.length).toBe(1)
     expect(transactions![0].product_id).toBeTruthy()
 
+    // Access is granted via a product entitlement (entitlements model)
+    const { data: entitlements } = await supabase
+      .from('entitlements')
+      .select('*')
+      .eq('user_id', testUserId)
+      .eq('course_id', courseId)
+      .eq('source_type', 'product')
+      .eq('status', 'active')
+
+    expect(entitlements).toBeTruthy()
+    expect(entitlements!.length).toBe(1)
+
+    // And a learning enrollment record exists
     const { data: enrollments } = await supabase
       .from('enrollments')
-      .select('*')
+      .select('enrollment_id, status')
       .eq('user_id', testUserId)
       .eq('course_id', courseId)
       .eq('status', 'active')
 
-    expect(enrollments).toBeTruthy()
     expect(enrollments!.length).toBe(1)
-    expect(enrollments![0].product_id).toBeTruthy()
-    expect(enrollments![0].subscription_id).toBeNull()
   })
 
   test('Dashboard shows enrolled course', async ({ page }) => {

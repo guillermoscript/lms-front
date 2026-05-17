@@ -69,7 +69,7 @@ export function CheckoutForm({
         setLoading(true);
         try {
             if (isFree) {
-                await enrollFree(courseId, planId);
+                await enrollFree(courseId);
                 toast.success(t('toasts.success'));
                 router.push('/dashboard/student');
                 return;

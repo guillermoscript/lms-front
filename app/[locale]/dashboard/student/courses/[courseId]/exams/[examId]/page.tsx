@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { ExamTaker } from './exam-taker'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -17,17 +18,10 @@ export default async function TakeExamPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', userId)
-    .eq('course_id', parseInt(courseId))
-    .eq('status', 'active')
-    .eq('tenant_id', tenantId)
-    .single()
+  // Verify access (entitlements model)
+  const hasAccess = await hasCourseAccess(supabase, userId, parseInt(courseId))
 
-  if (!enrollment) {
+  if (!hasAccess) {
     redirect('/dashboard/student')
   }
 

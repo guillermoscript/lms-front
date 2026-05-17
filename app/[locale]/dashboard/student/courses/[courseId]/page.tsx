@@ -26,6 +26,7 @@ const AristotleStudySection = dynamic(
 )
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -43,16 +44,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify enrollment + fetch course in parallel
-  const [{ data: enrollment }, { data: course, error }] = await Promise.all([
-    supabase
-      .from('enrollments')
-      .select('enrollment_id')
-      .eq('user_id', userId)
-      .eq('course_id', numericCourseId)
-      .eq('status', 'active')
-      .eq('tenant_id', tenantId)
-      .single(),
+  // Verify access (entitlements model) + fetch course in parallel
+  const [hasAccess, { data: course, error }] = await Promise.all([
+    hasCourseAccess(supabase, userId, numericCourseId),
     supabase
       .from('courses')
       .select('course_id, title, description, thumbnail_url, author_id')
@@ -61,7 +55,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .single(),
   ])
 
-  if (!enrollment) {
+  if (!hasAccess) {
     redirect('/dashboard/student')
   }
 

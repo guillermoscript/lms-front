@@ -1,192 +1,142 @@
 /**
- * Enrollment Service
- * 
- * Centralized business logic for course enrollment and access management.
- * Pure functions with no side effects - no DB calls, no UI dependencies.
- * 
- * Key Concepts:
- * - Product-based enrollment: One-time purchase, lifetime access
- * - Subscription-based enrollment: Access while subscription is active
- * - Users can have both types simultaneously for different courses
+ * Enrollment / Entitlement Service
+ *
+ * Centralized business logic for course access.
+ *
+ * Access model — see docs/ENTITLEMENTS_MIGRATION_PLAN.md.
+ * A user holds zero or more `entitlements` rows per course, one per access
+ * source (product / subscription / free / admin_grant). The user has access
+ * to a course if ANY entitlement is active and not expired. Sources coexist —
+ * e.g. a perpetual product entitlement AND an expiring subscription
+ * entitlement on the same course.
+ *
+ * Pure functions only — no DB calls. DB access lives in
+ * lib/services/course-access.ts.
  */
+
+export type EntitlementSourceType = 'product' | 'subscription' | 'free' | 'admin_grant'
+export type EntitlementStatus = 'active' | 'revoked' | 'expired'
+
+/** Shape of an `entitlements` row, limited to the columns the app reads. */
+export interface EntitlementRow {
+  entitlement_id?: number
+  course_id?: number
+  source_type: EntitlementSourceType
+  source_id: number | null
+  status: EntitlementStatus
+  granted_at?: string
+  expires_at: string | null
+}
 
 export interface CourseAccess {
   hasAccess: boolean
+  /**
+   * Primary source for display / back-compat: 'product' when any perpetual
+   * (product/free/admin_grant) source is active, else 'subscription', else null.
+   */
   accessType: 'product' | 'subscription' | null
-  isExpired: boolean // Only relevant for subscription-based access
+  /** All distinct source types currently granting access. */
+  accessTypes: EntitlementSourceType[]
+  /** True when at least one active source never expires (product/free/admin_grant). */
+  isPerpetual: boolean
+  /** True when the user had access at some point but no source is active now. */
+  isExpired: boolean
   productId?: number
   subscriptionId?: number
   subscriptionEndDate?: Date
 }
 
-export interface EnrollmentData {
-  enrollmentId: number
-  courseId: number
-  accessType: 'product' | 'subscription'
-  isActive: boolean
-  enrolledAt: Date
-  subscription?: {
-    id: number
-    status: string
-    endDate: Date
-    isExpired: boolean
-    planName?: string
-  }
-  product?: {
-    id: number
-    name: string
-  }
+const PERPETUAL_SOURCES: EntitlementSourceType[] = ['product', 'free', 'admin_grant']
+
+function isEntitlementActive(e: EntitlementRow, now: number): boolean {
+  return e.status === 'active'
+    && (e.expires_at == null || new Date(e.expires_at).getTime() > now)
 }
 
 /**
- * Determine access status and type from enrollment data
- * 
- * @param enrollment - Raw enrollment data from database
- * @returns CourseAccess object with access details
+ * Compute course access from a user's entitlement rows for a single course.
+ * This is the single source of truth for "can this user open this course".
  */
-export function determineAccessStatus(enrollment: {
-  product_id?: number | null
-  subscription_id?: number | null
-  status: string
-  subscription?: {
-    subscription_status: string
-    end_date: string
-  } | null
-  product?: {
-    product_id: number
-    name: string
-  } | null
-}): CourseAccess {
-  // Product-based enrollment (lifetime access)
-  if (enrollment.product_id && enrollment.status === 'active') {
+export function computeCourseAccess(entitlements: EntitlementRow[]): CourseAccess {
+  const now = Date.now()
+  const active = entitlements.filter(e => isEntitlementActive(e, now))
+
+  if (active.length === 0) {
     return {
-      hasAccess: true,
-      accessType: 'product',
-      isExpired: false,
-      productId: enrollment.product_id,
+      hasAccess: false,
+      accessType: null,
+      accessTypes: [],
+      isPerpetual: false,
+      // Had an entitlement once, none active now → expired / revoked.
+      isExpired: entitlements.length > 0,
     }
   }
 
-  // Subscription-based enrollment
-  if (enrollment.subscription_id && enrollment.subscription) {
-    const endDate = new Date(enrollment.subscription.end_date)
-    const isExpired = 
-      endDate < new Date() || 
-      enrollment.subscription.subscription_status !== 'active'
+  const accessTypes = [...new Set(active.map(e => e.source_type))]
+  const isPerpetual = active.some(e => PERPETUAL_SOURCES.includes(e.source_type))
+  const productEnt = active.find(e => e.source_type === 'product')
+  const subEnt = active
+    .filter(e => e.source_type === 'subscription')
+    .sort((a, b) =>
+      new Date(b.expires_at ?? 0).getTime() - new Date(a.expires_at ?? 0).getTime())[0]
 
-    return {
-      hasAccess: !isExpired && enrollment.status === 'active',
-      accessType: 'subscription',
-      isExpired,
-      subscriptionId: enrollment.subscription_id,
-      subscriptionEndDate: endDate,
-    }
-  }
-
-  // No valid enrollment found
   return {
-    hasAccess: false,
-    accessType: null,
+    hasAccess: true,
+    accessType: isPerpetual ? 'product' : 'subscription',
+    accessTypes,
+    isPerpetual,
     isExpired: false,
+    productId: productEnt?.source_id ?? undefined,
+    subscriptionId: subEnt?.source_id ?? undefined,
+    subscriptionEndDate: subEnt?.expires_at ? new Date(subEnt.expires_at) : undefined,
   }
 }
 
 /**
- * Check if user should see "Renew Subscription" CTA
- * 
- * @param access - CourseAccess object
- * @returns true if should show renew button
+ * Check if the user should see a "Renew Subscription" CTA — i.e. they had
+ * access but every source has lapsed.
  */
 export function shouldShowRenewCTA(access: CourseAccess): boolean {
-  return access.accessType === 'subscription' && access.isExpired
+  return !access.hasAccess && access.isExpired
 }
 
 /**
- * Get badge configuration for course card display
- * 
- * @param access - CourseAccess object
- * @returns Badge text and variant for UI
+ * Get badge configuration for course card display.
  */
 export function getAccessBadge(access: CourseAccess): {
   text: string
   variant: 'default' | 'secondary' | 'destructive' | 'outline'
 } {
-  if (access.accessType === 'product') {
-    return {
-      text: 'Lifetime Access',
-      variant: 'default', // Blue badge
-    }
+  if (access.hasAccess && access.isPerpetual) {
+    return { text: 'Lifetime Access', variant: 'default' }
   }
 
-  if (access.accessType === 'subscription') {
-    if (access.isExpired) {
-      return {
-        text: 'Subscription Expired',
-        variant: 'destructive', // Red badge
-      }
-    }
-    return {
-      text: 'Subscription',
-      variant: 'secondary', // Gray badge
-    }
+  if (access.hasAccess && access.accessTypes.includes('subscription')) {
+    return { text: 'Subscription', variant: 'secondary' }
   }
 
-  return {
-    text: 'No Access',
-    variant: 'outline',
+  if (access.isExpired) {
+    return { text: 'Subscription Expired', variant: 'destructive' }
   }
+
+  return { text: 'No Access', variant: 'outline' }
 }
 
 /**
- * Format enrollment data for UI display
- * 
- * @param enrollment - Raw enrollment from database
- * @returns Formatted EnrollmentData object
- */
-export function formatEnrollmentData(enrollment: any): EnrollmentData {
-  const accessStatus = determineAccessStatus(enrollment)
-
-  return {
-    enrollmentId: enrollment.enrollment_id,
-    courseId: enrollment.course_id,
-    accessType: accessStatus.accessType || 'product',
-    isActive: accessStatus.hasAccess,
-    enrolledAt: new Date(enrollment.enrollment_date),
-    subscription: enrollment.subscription ? {
-      id: enrollment.subscription_id,
-      status: enrollment.subscription.subscription_status,
-      endDate: new Date(enrollment.subscription.end_date),
-      isExpired: accessStatus.isExpired,
-      planName: enrollment.subscription.plan?.plan_name,
-    } : undefined,
-    product: enrollment.product ? {
-      id: enrollment.product.product_id,
-      name: enrollment.product.name,
-    } : undefined,
-  }
-}
-
-/**
- * Check if user has any active subscription
- * 
- * @param subscriptions - Array of user subscriptions
- * @returns true if at least one active subscription exists
+ * Check if user has any active subscription.
  */
 export function hasActiveSubscription(subscriptions: Array<{
   subscription_status: string
   end_date: string
 }>): boolean {
-  return subscriptions.some(sub => 
-    sub.subscription_status === 'active' && 
+  return subscriptions.some(sub =>
+    sub.subscription_status === 'active' &&
     new Date(sub.end_date) > new Date()
   )
 }
 
 /**
- * Get the primary active subscription for display
- * 
- * @param subscriptions - Array of user subscriptions
- * @returns The most recent active subscription or null
+ * Get the primary active subscription for display (longest-lasting).
  */
 export function getPrimarySubscription(subscriptions: Array<{
   subscription_id: number
@@ -196,15 +146,14 @@ export function getPrimarySubscription(subscriptions: Array<{
     plan_name: string
   }
 }>) {
-  const active = subscriptions.filter(sub => 
-    sub.subscription_status === 'active' && 
+  const active = subscriptions.filter(sub =>
+    sub.subscription_status === 'active' &&
     new Date(sub.end_date) > new Date()
   )
 
   if (active.length === 0) return null
 
-  // Sort by end_date descending to get the longest-lasting one
-  return active.sort((a, b) => 
+  return active.sort((a, b) =>
     new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
   )[0]
 }

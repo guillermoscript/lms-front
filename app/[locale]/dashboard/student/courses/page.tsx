@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button'
 import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchCourseAccessMap } from '@/lib/services/course-access'
+import type { CourseAccess } from '@/lib/services/enrollment-service'
+
+const NO_ACCESS: CourseAccess = {
+  hasAccess: false,
+  accessType: null,
+  accessTypes: [],
+  isPerpetual: false,
+  isExpired: false,
+}
 
 interface PageProps {
   searchParams: Promise<{
@@ -40,8 +50,10 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
 
   if (enrollments && enrollments.length > 0) {
     const courseIds = enrollments.map(e => e.course_id)
-    const productIds = enrollments.map(e => e.product_id).filter(Boolean)
-    const subscriptionIds = enrollments.map(e => e.subscription_id).filter(Boolean)
+
+    // Access is driven by the entitlements model (a course may have several
+    // sources). See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
+    const accessMap = await fetchCourseAccessMap(supabase, userId, courseIds)
 
     const [
       { data: courses },
@@ -49,8 +61,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       { data: exams },
       { data: lessonCompletions },
       { data: examSubmissions },
-      { data: products },
-      { data: subscriptionsData },
     ] = await Promise.all([
       supabase.from('courses').select('course_id, title, description, thumbnail_url, status')
         .in('course_id', courseIds).eq('tenant_id', tenantId),
@@ -62,21 +72,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
         .eq('user_id', userId).eq('tenant_id', tenantId),
       supabase.from('exam_submissions').select('submission_id, exam_id, submission_date, score')
         .eq('student_id', userId).eq('tenant_id', tenantId),
-      productIds.length > 0
-        ? supabase.from('products').select('product_id, name')
-            .in('product_id', productIds).eq('tenant_id', tenantId)
-        : Promise.resolve({ data: [] as { product_id: number; name: string }[] }),
-      subscriptionIds.length > 0
-        ? supabase.from('subscriptions').select('subscription_id, subscription_status, end_date, plan_id')
-            .in('subscription_id', subscriptionIds).eq('tenant_id', tenantId)
-        : Promise.resolve({ data: [] as { subscription_id: number; subscription_status: string; end_date: string; plan_id: number }[] }),
     ])
-
-    // Fetch plan info for subscriptions that have plan_id
-    const planIds = [...new Set((subscriptionsData || []).map(s => s.plan_id).filter(Boolean))]
-    const { data: plans } = planIds.length > 0
-      ? await supabase.from('plans').select('plan_id, plan_name').in('plan_id', planIds).eq('tenant_id', tenantId)
-      : { data: [] as { plan_id: number; plan_name: string }[] }
 
     // Build lookup maps
     const courseMap = new Map((courses || []).map(c => [c.course_id, c]))
@@ -105,11 +101,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       arr.push(es)
       submissionsByExamId.set(es.exam_id, arr)
     }
-    const productMap = new Map((products || []).map(p => [p.product_id, p]))
-    const subscriptionMap = new Map((subscriptionsData || []).map(s => [s.subscription_id, s]))
-    const planMap = new Map((plans || []).map(p => [p.plan_id, p]))
-
-    // Assemble enriched enrollments (same output shape as before)
+    // Assemble enriched enrollments
     for (const enrollment of enrollments) {
       const course = courseMap.get(enrollment.course_id)
       if (!course) continue
@@ -117,22 +109,9 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       const courseLessons = lessonsByCourse.get(course.course_id) || []
       const courseExams = examsByCourse.get(course.course_id) || []
 
-      let product = null
-      if (enrollment.product_id) {
-        product = productMap.get(enrollment.product_id) || null
-      }
-
-      let subscription = null
-      if (enrollment.subscription_id) {
-        const s = subscriptionMap.get(enrollment.subscription_id)
-        if (s) {
-          const plan = planMap.get(s.plan_id) || null
-          subscription = { ...s, plan }
-        }
-      }
-
       enrichedEnrollments.push({
         ...enrollment,
+        access: accessMap.get(enrollment.course_id) ?? NO_ACCESS,
         course: {
           ...course,
           lessons: courseLessons.map(lesson => ({
@@ -144,8 +123,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
             exam_submissions: submissionsByExamId.get(exam.exam_id)?.filter(es => es.exam_id === exam.exam_id) || []
           }))
         },
-        product,
-        subscription
       })
     }
   }
@@ -311,6 +288,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
                   key={enrollment.enrollment_id}
                   enrollment={enrollment}
                   userId={userId}
+                  access={enrollment.access}
                 />
               ))}
             </div>

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { generateText } from 'ai'
 import { AI_MODELS } from '@/lib/ai/config'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 export const maxDuration = 120
 
@@ -50,17 +51,8 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Exercise not found' }, { status: 404 })
   }
 
-  // 5. Verify enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .eq('tenant_id', tenantId)
-    .limit(1)
-    .maybeSingle()
-
-  if (!enrollment) {
+  // 5. Verify access (entitlements model)
+  if (!(await hasCourseAccess(adminClient, user.id, exercise.course_id))) {
     return Response.json({ error: 'Not enrolled in this course' }, { status: 403 })
   }
 

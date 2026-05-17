@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
         // Find transaction by Stripe payment intent ID
         const { data: transaction } = await getSupabaseAdmin()
           .from('transactions')
-          .select('transaction_id, tenant_id, product_id, plan_id, user_id')
+          .select('transaction_id, tenant_id, product_id, plan_id, user_id, status')
           .eq('stripe_payment_intent_id', paymentIntentId)
           .single()
 
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
           await getSupabaseAdmin()
             .from('transactions')
-            .update({ status: newStatus, refunded_amount: charge.amount_refunded / 100 })
+            .update({ status: newStatus })
             .eq('transaction_id', transaction.transaction_id)
             .eq('status', 'successful')
 
@@ -211,15 +211,16 @@ export async function POST(req: NextRequest) {
             break
           }
 
-          // Cancel enrollments if product purchase
+          // Revoke access if product purchase — revoke the product entitlements
           if (transaction.product_id) {
             await getSupabaseAdmin()
-              .from('enrollments')
-              .update({ status: 'disabled' })
+              .from('entitlements')
+              .update({ status: 'revoked', revoked_at: new Date().toISOString() })
               .eq('user_id', transaction.user_id)
-              .eq('product_id', transaction.product_id)
+              .eq('source_type', 'product')
+              .eq('source_id', transaction.product_id)
 
-            console.log(`Disabled enrollments for user ${transaction.user_id} product ${transaction.product_id}`)
+            console.log(`Revoked access for user ${transaction.user_id} product ${transaction.product_id}`)
           }
 
           // Cancel subscription if plan purchase.

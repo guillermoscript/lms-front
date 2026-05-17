@@ -16,16 +16,17 @@ import {
   IconClock,
 } from '@tabler/icons-react'
 import { calculateCourseProgress, type ExamInfo, type ExamAttempt } from '@/lib/services/course-progress-service'
-import { determineAccessStatus, getAccessBadge, shouldShowRenewCTA } from '@/lib/services/enrollment-service'
+import { getAccessBadge, shouldShowRenewCTA, type CourseAccess } from '@/lib/services/enrollment-service'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 interface EnrolledCourseCardProps {
   enrollment: any
   userId: string
+  access: CourseAccess
 }
 
-export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardProps) {
+export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCourseCardProps) {
   const t = useTranslations('components.enrolledCourse')
   const course = enrollment.course as any
 
@@ -61,16 +62,8 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
 
   const progress = calculateCourseProgress(totalLessons, completedLessons, examsWithAttempts)
 
-  const accessStatus = determineAccessStatus({
-    product_id: enrollment.product_id,
-    subscription_id: enrollment.subscription_id,
-    status: enrollment.status,
-    subscription: enrollment.subscription,
-    product: enrollment.product,
-  })
-
-  const accessBadge = getAccessBadge(accessStatus)
-  const showRenew = shouldShowRenewCTA(accessStatus)
+  const accessBadge = getAccessBadge(access)
+  const showRenew = shouldShowRenewCTA(access)
 
   // Find next incomplete lesson
   const nextLesson = lessons
@@ -97,7 +90,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
       <div className={cn(
         "relative flex flex-col sm:flex-row overflow-hidden rounded-2xl border bg-card transition-all duration-200",
         "hover:shadow-lg hover:border-primary/20",
-        !accessStatus.hasAccess && "opacity-75"
+        !access.hasAccess && "opacity-75"
       )}>
         {/* Thumbnail */}
         <div className="relative w-full sm:w-48 md:w-56 shrink-0 aspect-[16/9] sm:aspect-auto overflow-hidden bg-muted">
@@ -197,7 +190,7 @@ export function EnrolledCourseCard({ enrollment, userId }: EnrolledCourseCardPro
             </div>
 
             {/* Next up / Expired / CTA */}
-            {!accessStatus.hasAccess ? (
+            {!access.hasAccess ? (
               <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
                 <IconAlertTriangle size={13} />
                 <span className="font-medium">{t('expired')}</span>

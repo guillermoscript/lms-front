@@ -23,6 +23,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { hasCourseAccess } from '@/lib/services/course-access'
 
 export const dynamic = 'force-dynamic';
 
@@ -80,20 +81,10 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
     const estimatedMinutes = (totalLessons * 10) % 60;
 
-    // Check user's enrollment
+    // Check user's access (entitlements model)
     let hasAccess = false;
     if (userId) {
-        const { data: enrollment } = await supabase
-            .from('enrollments')
-            .select('enrollment_id')
-            .eq('user_id', userId)
-            .eq('course_id', parseInt(params.id))
-            .eq('status', 'active')
-            .maybeSingle();
-
-        if (enrollment) {
-            hasAccess = true;
-        }
+        hasAccess = await hasCourseAccess(supabase, userId, parseInt(params.id));
     }
 
     // Fetch product for pricing
