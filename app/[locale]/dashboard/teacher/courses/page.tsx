@@ -50,9 +50,9 @@ export default async function TeacherCoursesPage() {
         <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-courses-list">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
                         {t('title')}
-                    </h2>
+                    </h1>
                     <p className="text-sm text-muted-foreground mt-0.5">
                         {t('description')}
                     </p>

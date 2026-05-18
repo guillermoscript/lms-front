@@ -122,7 +122,7 @@ export default function PromptTemplatesPage() {
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="templates-page">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t('title')}</h2>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {t('description')}
           </p>

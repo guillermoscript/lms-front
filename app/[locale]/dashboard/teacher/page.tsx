@@ -113,11 +113,11 @@ export default async function TeacherDashboard() {
 
       <div data-tour="teacher-welcome" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
             {t.rich('welcome', {
               userName: profile?.full_name?.split(' ')[0] || t('defaultName')
             })}
-          </h2>
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {t('subtitle')}
           </p>
