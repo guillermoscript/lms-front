@@ -89,6 +89,9 @@ export default async function VerificationPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen bg-[#f7f5f2] dark:bg-[#1a1917]">
+            {!isRevoked && (
+                <style>{`.cert-student-name { color: ${secondaryColor}; } .dark .cert-student-name { color: #d4cfc8; }`}</style>
+            )}
             {/* Ambient background texture */}
             <div
                 className="fixed inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
@@ -118,8 +121,7 @@ export default async function VerificationPage({ params }: PageProps) {
                     )}
 
                     <h1
-                        className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] mb-3"
-                        style={{ color: isRevoked ? undefined : secondaryColor }}
+                        className={`text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] mb-3${isRevoked ? '' : ' cert-student-name'}`}
                     >
                         {studentName}
                     </h1>
