@@ -44,8 +44,8 @@ interface PaymentRequest {
   status: string
   payment_method: string | null
   payment_instructions: string | null
-  payment_amount: number
-  payment_currency: string
+  payment_amount: number | null
+  payment_currency: string | null
   invoice_number: string | null
   admin_notes: string | null
   created_at: string
@@ -150,7 +150,7 @@ export function PaymentRequestDialog({
     setLoading(false)
   }
 
-  const currencySymbol = request.payment_currency === 'usd' ? '$' : '€'
+  const currencySymbol = request.payment_currency === 'eur' ? '€' : '$'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,7 +186,7 @@ export function PaymentRequestDialog({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.amount')}:</span>
                 <span className="font-semibold">
-                  {currencySymbol}{request.payment_amount.toFixed(2)}
+                  {request.payment_amount != null ? `${currencySymbol}${request.payment_amount.toFixed(2)}` : '—'}
                 </span>
               </div>
               <div className="flex justify-between">

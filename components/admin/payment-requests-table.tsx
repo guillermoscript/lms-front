@@ -26,8 +26,8 @@ interface PaymentRequest {
   status: string
   payment_method: string | null
   payment_instructions: string | null
-  payment_amount: number
-  payment_currency: string
+  payment_amount: number | null
+  payment_currency: string | null
   invoice_number: string | null
   admin_notes: string | null
   created_at: string
@@ -116,10 +116,12 @@ export function PaymentRequestsTable({
                 </TableCell>
                 <TableCell>
                   <div className="font-medium tabular-nums">
-                    {new Intl.NumberFormat(locale as string, {
-                      style: 'currency',
-                      currency: request.payment_currency.toUpperCase(),
-                    }).format(request.payment_amount)}
+                    {request.payment_currency
+                      ? new Intl.NumberFormat(locale as string, {
+                          style: 'currency',
+                          currency: request.payment_currency.toUpperCase(),
+                        }).format(request.payment_amount ?? 0)
+                      : '—'}
                   </div>
                 </TableCell>
                 <TableCell>
