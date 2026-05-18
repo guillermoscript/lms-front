@@ -101,7 +101,8 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
     // 4. Link courses to product
     const courseLinks = formData.courseIds.map(courseId => ({
       product_id: product.product_id,
-      course_id: courseId
+      course_id: courseId,
+      tenant_id: tenantId,
     }))
 
     const { error: linkError } = await adminClient
@@ -206,7 +207,6 @@ export async function updateProduct(
             currency: formData.currency,
             image: formData.image || null,
             provider_price_id: newPrice.id,
-            updated_at: new Date().toISOString()
           })
           .eq('product_id', productId)
           .eq('tenant_id', tenantId)
@@ -215,17 +215,17 @@ export async function updateProduct(
 
         if (updateError) throw updateError
 
-        // Update course links
+        // Update course links — delete by product_id only (it's the PK)
         await adminClient
           .from('product_courses')
           .delete()
           .eq('product_id', productId)
-          .eq('tenant_id', tenantId)
 
         if (formData.courseIds.length > 0) {
           const courseLinks = formData.courseIds.map(courseId => ({
             product_id: productId,
-            course_id: courseId
+            course_id: courseId,
+            tenant_id: tenantId,
           }))
 
           await adminClient.from('product_courses').insert(courseLinks)
@@ -245,7 +245,6 @@ export async function updateProduct(
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
         image: formData.image || null,
-        updated_at: new Date().toISOString()
       })
       .eq('product_id', productId)
       .eq('tenant_id', tenantId)
@@ -254,17 +253,17 @@ export async function updateProduct(
 
     if (updateError) throw updateError
 
-    // Update course links
+    // Update course links — delete by product_id only (it's the PK)
     await adminClient
       .from('product_courses')
       .delete()
       .eq('product_id', productId)
-      .eq('tenant_id', tenantId)
 
     if (formData.courseIds.length > 0) {
       const courseLinks = formData.courseIds.map(courseId => ({
         product_id: productId,
-        course_id: courseId
+        course_id: courseId,
+        tenant_id: tenantId,
       }))
 
       await adminClient.from('product_courses').insert(courseLinks)

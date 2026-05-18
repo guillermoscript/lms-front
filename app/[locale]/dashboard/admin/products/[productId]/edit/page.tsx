@@ -51,6 +51,14 @@ export default async function EditProductPage({ params }: PageProps) {
     notFound()
   }
 
+  // PostgREST returns product_courses as a single object (PK=product_id → one-to-one).
+  // Normalise to the array shape the form expects.
+  const raw = (product as any).product_courses
+  const productWithCourses = {
+    ...product,
+    courses: raw == null ? [] : Array.isArray(raw) ? raw : [raw],
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -84,7 +92,7 @@ export default async function EditProductPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProductForm mode="edit" initialData={product} courses={courses || []} />
+            <ProductForm mode="edit" initialData={productWithCourses} courses={courses || []} />
           </CardContent>
         </Card>
       </main>
