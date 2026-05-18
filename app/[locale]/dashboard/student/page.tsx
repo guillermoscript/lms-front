@@ -47,8 +47,7 @@ async function getData(userId: string, tenantId: string) {
     supabase
       .from('lesson_completions')
       .select('lesson_id')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId),
+      .eq('user_id', userId),
 
     supabase
       .from('exams')
