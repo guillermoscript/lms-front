@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { IconCopy, IconCheck, IconFile } from '@tabler/icons-react'
 
@@ -21,6 +22,7 @@ export function CodeBlock({
   highlightLines = [],
   className,
 }: CodeBlockProps) {
+  const t = useTranslations('components.codeBlock')
   const [copied, setCopied] = useState(false)
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
 
@@ -90,24 +92,24 @@ export function CodeBlock({
           ) : language ? (
             <span className="uppercase">{language}</span>
           ) : (
-            <span>Código</span>
+            <span>{t('code')}</span>
           )}
         </div>
         <button
           type="button"
           onClick={handleCopy}
           className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-colors"
-          aria-label={copied ? 'Copiado' : 'Copiar código'}
+          aria-label={copied ? t('copiedAriaLabel') : t('copyAriaLabel')}
         >
           {copied ? (
             <>
               <IconCheck className="size-4 text-green-400" />
-              <span>Copiado</span>
+              <span>{t('copied')}</span>
             </>
           ) : (
             <>
               <IconCopy className="size-4" />
-              <span>Copiar</span>
+              <span>{t('copy')}</span>
             </>
           )}
         </button>

@@ -2965,6 +2965,13 @@
       "finishCourse": "Finalizar Curso",
       "completeFirst": "Completa esta lección primero"
     },
+    "codeBlock": {
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "copyAriaLabel": "Copiar código",
+      "copiedAriaLabel": "Copiado",
+      "code": "Código"
+    },
     "lessonComments": {
       "title": "Comentarios ({count})",
       "placeholder": "Comparte tus pensamientos o haz una pregunta...",
