@@ -4711,5 +4711,17 @@
       "title": "La comunidad es una función premium",
       "description": "Mejora al plan Starter o superior para acceder al feed de comunidad."
     }
+  },
+  "schoolLanding": {
+    "tagline": "Aprende con nosotros. Inscríbete en cursos y desarrolla tus habilidades.",
+    "join": "Únete a {name}",
+    "alreadyMember": "¿Ya eres miembro? Inicia sesión",
+    "availableCourses": "Cursos Disponibles",
+    "coursesComingSoon": "Cursos próximamente",
+    "checkBackLater": "Vuelve pronto para ver nuevo contenido.",
+    "free": "Gratis",
+    "view": "Ver",
+    "ctaTitle": "¿Listo para comenzar a aprender en {name}?",
+    "ctaButton": "Únete a {name} ahora"
   }
 }
