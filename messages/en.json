@@ -4718,5 +4718,17 @@
       "title": "Community is a premium feature",
       "description": "Upgrade to the Starter plan or higher to access the community feed."
     }
+  },
+  "schoolLanding": {
+    "tagline": "Learn with us. Enroll in courses and grow your skills.",
+    "join": "Join {name}",
+    "alreadyMember": "Already a member? Log in",
+    "availableCourses": "Available Courses",
+    "coursesComingSoon": "Courses coming soon",
+    "checkBackLater": "Check back later for new content.",
+    "free": "Free",
+    "view": "View",
+    "ctaTitle": "Ready to start learning at {name}?",
+    "ctaButton": "Join {name} Now"
   }
 }

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, BookOpen, GraduationCap } from "lucide-react"
 import { type Tenant } from "@/lib/supabase/tenant"
+import { getTranslations } from "next-intl/server"
 
 interface Product {
   product_id: string
@@ -17,7 +18,8 @@ interface Props {
   products: Product[]
 }
 
-export function SchoolLandingPage({ tenant, products }: Props) {
+export async function SchoolLandingPage({ tenant, products }: Props) {
+  const t = await getTranslations('schoolLanding')
   const accentColor = tenant.primary_color || '#3B82F6'
 
   return (
@@ -56,7 +58,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
             </h1>
 
             <p className="text-xl text-zinc-400 max-w-xl leading-relaxed font-medium">
-              Learn with us. Enroll in courses and grow your skills.
+              {t('tagline')}
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center pt-2">
@@ -66,7 +68,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                   className="h-14 px-10 text-white font-bold rounded-xl text-lg transition-all duration-200 active:scale-95 border-0"
                   style={{ backgroundColor: accentColor }}
                 >
-                  Join {tenant.name}
+                  {t('join', { name: tenant.name })}
                   <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
                 </Button>
               </Link>
@@ -76,7 +78,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                   variant="outline"
                   className="h-14 px-10 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 rounded-xl text-lg backdrop-blur-sm transition-all duration-200"
                 >
-                  Already a member? Log in
+                  {t('alreadyMember')}
                 </Button>
               </Link>
             </div>
@@ -87,13 +89,13 @@ export function SchoolLandingPage({ tenant, products }: Props) {
       {/* ── Courses Grid ─────────────────────────────────────── */}
       <section className="py-24 relative" aria-label="Available courses">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Available Courses</h2>
+          <h2 className="text-3xl font-bold text-white text-center mb-12">{t('availableCourses')}</h2>
 
           {products.length === 0 ? (
             <div className="text-center py-20">
               <BookOpen className="w-12 h-12 text-zinc-700 mx-auto mb-4" aria-hidden="true" />
-              <p className="text-zinc-500 text-lg">Courses coming soon</p>
-              <p className="text-zinc-600 text-sm mt-2">Check back later for new content.</p>
+              <p className="text-zinc-500 text-lg">{t('coursesComingSoon')}</p>
+              <p className="text-zinc-600 text-sm mt-2">{t('checkBackLater')}</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -129,7 +131,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-800">
                       <span className="text-white font-bold">
                         {product.price === 0 || product.price === null
-                          ? 'Free'
+                          ? t('free')
                           : `${product.currency?.toUpperCase() ?? 'USD'} $${parseFloat(String(product.price)).toFixed(2)}`
                         }
                       </span>
@@ -138,7 +140,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                         className="text-sm font-semibold flex items-center gap-1 transition-colors duration-200"
                         style={{ color: accentColor }}
                       >
-                        View <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                        {t('view')} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                       </Link>
                     </div>
                   </div>
@@ -165,7 +167,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                 className="text-3xl md:text-4xl font-black text-white tracking-tight"
                 style={{ textWrap: "balance" } as React.CSSProperties}
               >
-                Ready to start learning at {tenant.name}?
+                {t('ctaTitle', { name: tenant.name })}
               </h2>
               <Link href="/auth/sign-up?next=/join-school">
                 <Button
@@ -173,7 +175,7 @@ export function SchoolLandingPage({ tenant, products }: Props) {
                   className="h-14 px-10 bg-white font-bold rounded-xl text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
                   style={{ color: accentColor }}
                 >
-                  Join {tenant.name} Now
+                  {t('ctaButton', { name: tenant.name })}
                   <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
                 </Button>
               </Link>
