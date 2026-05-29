@@ -3120,6 +3120,13 @@
       "finishCourse": "Finish Course",
       "completeFirst": "Complete this lesson first"
     },
+    "codeBlock": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyAriaLabel": "Copy code",
+      "copiedAriaLabel": "Copied",
+      "code": "Code"
+    },
     "lessonComments": {
       "title": "Comments ({count})",
       "placeholder": "Share your thoughts or ask a question...",
