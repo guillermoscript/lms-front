@@ -231,7 +231,6 @@ export async function updatePlan(
           .from('plan_courses')
           .delete()
           .eq('plan_id', planId)
-          .eq('tenant_id', tenantId)
 
         if (formData.courseIds && formData.courseIds.length > 0) {
           const courseLinks = formData.courseIds.map(courseId => ({
@@ -270,7 +269,6 @@ export async function updatePlan(
       .from('plan_courses')
       .delete()
       .eq('plan_id', planId)
-      .eq('tenant_id', tenantId)
 
     if (formData.courseIds && formData.courseIds.length > 0) {
       const courseLinks = formData.courseIds.map(courseId => ({

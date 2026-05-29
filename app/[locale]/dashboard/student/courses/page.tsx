@@ -66,7 +66,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
         .in('course_id', courseIds).eq('tenant_id', tenantId),
       supabase.from('lessons').select('id, title, sequence, course_id')
         .in('course_id', courseIds).eq('tenant_id', tenantId),
-      supabase.from('exams').select('exam_id, title, sequence, passing_score, allow_retake, course_id')
+      supabase.from('exams').select('exam_id, title, sequence, course_id')
         .in('course_id', courseIds).eq('tenant_id', tenantId),
       supabase.from('lesson_completions').select('lesson_id, completed_at')
         .eq('user_id', userId),

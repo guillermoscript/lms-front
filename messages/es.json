@@ -1371,7 +1371,10 @@
           "status": {
             "successful": "Exitoso",
             "pending": "Pendiente",
-            "failed": "Fallido"
+            "failed": "Fallido",
+            "archived": "Archivado",
+            "canceled": "Cancelado",
+            "refunded": "Reembolsado"
           }
         },
         "plan": {
@@ -1945,6 +1948,7 @@
         },
         "status": {
           "active": "Activa",
+          "canceled": "Cancelada",
           "cancelled": "Cancelada",
           "expired": "Expirada",
           "past_due": "Vencida",

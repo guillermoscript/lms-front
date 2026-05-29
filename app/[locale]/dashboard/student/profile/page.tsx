@@ -107,7 +107,6 @@ async function getProfileData(userId: string, tenantId: string) {
                 .from('lesson_completions')
                 .select('lesson_id')
                 .eq('user_id', userId)
-                .eq('tenant_id', tenantId)
                 .in('lesson_id', allLessonIds)
             : { data: [] }
 

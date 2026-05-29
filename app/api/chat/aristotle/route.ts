@@ -70,20 +70,18 @@ export async function POST(req: Request) {
             .eq('tenant_id', tenantId),
         supabase
             .from('exams')
-            .select('exam_id, title, passing_score')
+            .select('exam_id, title')
             .eq('course_id', numericCourseId)
             .eq('status', 'published')
             .eq('tenant_id', tenantId),
         supabase
             .from('lesson_completions')
             .select('lesson_id')
-            .eq('user_id', user.id)
-            .eq('tenant_id', tenantId),
+            .eq('user_id', user.id),
         supabase
             .from('exercise_completions')
             .select('exercise_id, score')
-            .eq('user_id', user.id)
-            .eq('tenant_id', tenantId),
+            .eq('user_id', user.id),
         supabase
             .from('exam_submissions')
             .select('exam_id, score')
@@ -169,7 +167,7 @@ export async function POST(req: Request) {
         return {
             exam_id: s.exam_id,
             score: s.score,
-            passed: exam?.passing_score ? (s.score || 0) >= exam.passing_score : false,
+            passed: (s.score || 0) >= 70,
         }
     })
 

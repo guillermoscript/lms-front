@@ -217,7 +217,10 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 ## Known Pitfalls
 
 - **`product_courses` — never `.single()`**: a course can belong to multiple products.
-- **`lesson_completions` uses `user_id`**, not `student_id`.
+- **`lesson_completions` uses `user_id`**, not `student_id`. Has **no `tenant_id`** — never filter by it.
+- **`exercise_completions` has no `tenant_id`** — filter by `user_id` only.
+- **`exams` has no `passing_score` or `allow_retake`** — use 70 as default threshold, assume retakes allowed.
+- **`profiles` has no `email`** — get emails via `createAdminClient().auth.admin.getUserById()` if needed.
 - **`exam_submissions` order column** is `submission_date`, not `submitted_at`.
 - **Transaction status** is `'successful'`, not `'succeeded'`.
 - **Creating test users via SQL** won't fire `handle_new_user()` trigger — manually insert `profiles`, `user_roles`, and `auth.identities`. Use `NULL` for `phone` (unique constraint), `''` for nullable string columns.

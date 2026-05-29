@@ -42,12 +42,12 @@ export default async function AdminTransactionsPage({
     .from('transactions')
     .select('*')
     .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
+    .order('transaction_date', { ascending: false })
 
   // Get user profiles for transactions — batch fetch
   const userIds = [...new Set((transactions || []).map((t) => t.user_id).filter(Boolean))]
   const { data: users } = userIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name, email').in('id', userIds)
+    ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
     : { data: [] }
 
   const usersMap = new Map((users || []).map((u) => [u.id, u]))
@@ -175,12 +175,7 @@ export default async function AdminTransactionsPage({
                             </code>
                           </td>
                           <td className="px-4 py-3">
-                            <div>
-                              <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
-                              <p className="text-[11px] text-muted-foreground/70">
-                                {user?.email}
-                              </p>
-                            </div>
+                            <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
                           </td>
                           <td className="px-4 py-3 font-semibold tabular-nums">
                             {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
@@ -192,7 +187,9 @@ export default async function AdminTransactionsPage({
                                   ? 'default'
                                   : transaction.status === 'pending'
                                     ? 'secondary'
-                                    : 'destructive'
+                                    : transaction.status === 'archived' || transaction.status === 'refunded'
+                                      ? 'secondary'
+                                      : 'destructive'
                               }
                               className={`text-[10px] ${transaction.status === 'successful' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
                             >
@@ -202,7 +199,7 @@ export default async function AdminTransactionsPage({
                               {transaction.status === 'pending' && (
                                 <IconClock className="mr-1 h-3 w-3" />
                               )}
-                              {transaction.status === 'failed' && (
+                              {(transaction.status === 'failed' || transaction.status === 'canceled') && (
                                 <IconX className="mr-1 h-3 w-3" />
                               )}
                               {tm(`recentActivity.status.${transaction.status}`)}
@@ -212,7 +209,7 @@ export default async function AdminTransactionsPage({
                             {transaction.payment_method ? (t(`table.methods.${transaction.payment_method}`) || transaction.payment_method) : t('table.notAvailable')}
                           </td>
                           <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
-                            {format(new Date(transaction.created_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
+                            {format(new Date(transaction.transaction_date), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
                           </td>
                         </tr>
                       )
