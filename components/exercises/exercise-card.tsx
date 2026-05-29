@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronRight, IconMessageCircle, IconListCheck, IconCircleCheck, IconTextSize } from "@tabler/icons-react";
+import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronRight, IconMessageCircle, IconListCheck, IconCircleCheck, IconTextSize, IconMicrophone, IconVideo } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 interface ExerciseCardProps {
@@ -21,6 +21,8 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
         quiz: { icon: IconListCheck, label: "Quiz" },
         multiple_choice: { icon: IconCircleCheck, label: "Multiple Choice" },
         fill_in_the_blank: { icon: IconTextSize, label: "Fill in Blank" },
+        audio_evaluation: { icon: IconMicrophone, label: "Audio" },
+        video_evaluation: { icon: IconVideo, label: "Video" },
     };
 
     const config = typeConfig[exercise.exercise_type] || typeConfig.essay;
