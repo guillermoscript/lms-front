@@ -53,20 +53,22 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
       if (themePreset.fontFamily) darkVars['--font-sans'] = `"${themePreset.fontFamily}", sans-serif`
       css += `  .dark {\n    ${cssVarsToString(darkVars)}\n  }\n`
     }
-  } else {
-    // Legacy fallback: individual color overrides
-    const overrides: string[] = []
-    if (primaryColor) {
-      overrides.push(`--primary: ${primaryColor};`)
-      overrides.push(`--sidebar-primary: ${primaryColor};`)
-      overrides.push(`--accent: ${primaryColor};`)
-    }
-    if (secondaryColor) {
-      overrides.push(`--secondary-brand: ${secondaryColor};`)
-    }
-    if (overrides.length > 0) {
-      css = `:root {\n    ${overrides.join('\n    ')}\n  }\n`
-    }
+  }
+
+  // Brand color overrides — applied AFTER any preset so an explicit brand color
+  // always wins. Appended as the last :root rule so CSS cascade resolves to it.
+  // These vars feed the primary accent surfaces used across the app + Puck blocks.
+  const brandOverrides: string[] = []
+  if (primaryColor) {
+    brandOverrides.push(`--primary: ${primaryColor};`)
+    brandOverrides.push(`--sidebar-primary: ${primaryColor};`)
+    brandOverrides.push(`--ring: ${primaryColor};`)
+  }
+  if (secondaryColor) {
+    brandOverrides.push(`--secondary-brand: ${secondaryColor};`)
+  }
+  if (brandOverrides.length > 0) {
+    css += `:root {\n    ${brandOverrides.join('\n    ')}\n  }\n`
   }
 
   if (!css) return null

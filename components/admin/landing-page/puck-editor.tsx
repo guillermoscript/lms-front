@@ -9,7 +9,15 @@ import { updateLandingPage, publishLandingPage } from '@/app/actions/admin/landi
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { IconArrowLeft, IconDeviceFloppy } from '@tabler/icons-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import BrandingSettingsForm from '@/components/admin/branding-settings-form'
+import { IconArrowLeft, IconDeviceFloppy, IconPalette } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface Props {
@@ -17,6 +25,7 @@ interface Props {
   pageName: string
   pageStatus: 'draft' | 'published'
   initialData: Data
+  brandingSettings: Record<string, any>
   onBack: () => void
 }
 
@@ -74,9 +83,10 @@ function SaveButton({ pageId, saving, onSaveStateChange }: { pageId: string; sav
   )
 }
 
-export function PuckEditor({ pageId, pageName, pageStatus, initialData, onBack }: Props) {
+export function PuckEditor({ pageId, pageName, pageStatus, initialData, brandingSettings, onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(pageStatus)
+  const [brandingOpen, setBrandingOpen] = useState(false)
   const t = useTranslations('puck')
   const config = useMemo(() => createPuckConfig(t), [t])
 
@@ -109,6 +119,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, onBack }
         data={initialData}
         onPublish={handlePublish}
         headerPath={pageName}
+        iframe={{ enabled: false }}
         overrides={{
           headerActions: ({ children }) => (
             <>
@@ -126,6 +137,15 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, onBack }
                   {t(`editor.status.${status}`)}
                 </Badge>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBrandingOpen(true)}
+                className="gap-1.5"
+              >
+                <IconPalette className="w-4 h-4" />
+                {t('editor.branding')}
+              </Button>
               <SaveButton pageId={pageId} saving={saving} onSaveStateChange={setSaving} />
               {children}
             </>
@@ -137,6 +157,21 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, onBack }
           { width: 1280, height: 'auto', label: 'Desktop', icon: 'Monitor' },
         ]}
       />
+
+      <Sheet open={brandingOpen} onOpenChange={setBrandingOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <IconPalette className="w-5 h-5" />
+              {t('editor.branding')}
+            </SheetTitle>
+            <SheetDescription>{t('editor.brandingDescription')}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-6">
+            <BrandingSettingsForm settings={brandingSettings} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

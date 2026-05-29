@@ -4261,6 +4261,8 @@
       "published": "¡Publicado y en línea!",
       "failedSave": "Error al guardar",
       "failedPublish": "Error al publicar",
+      "branding": "Marca",
+      "brandingDescription": "Logo, favicon y colores de marca. Los cambios se aplican a todas las páginas de tu sitio.",
       "status": {
         "draft": "borrador",
         "published": "publicado"
@@ -4316,6 +4318,7 @@
       "Center": "Centro",
       "Right": "Derecha",
       "Color": "Color",
+      "Accent Color": "Color de Acento",
       "Style": "Estilo",
       "Size": "Tamaño",
       "Size (px)": "Tamaño (px)",

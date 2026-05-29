@@ -2,6 +2,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getLandingPages } from '@/app/actions/admin/landing-pages'
+import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { LandingPagesClient } from '@/components/admin/landing-page/landing-pages-client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -24,6 +25,10 @@ export default async function LandingPageAdminPage() {
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
 
+  // Branding settings so the builder can edit logo/colors inline without leaving
+  const settingsResult = await getAllSettingsByCategory()
+  const brandingSettings = settingsResult.success ? (settingsResult.data?.general ?? {}) : {}
+
   return (
     <div className="min-h-screen bg-background">
       <main className="px-4 py-6 sm:px-6 lg:px-8">
@@ -32,6 +37,7 @@ export default async function LandingPageAdminPage() {
           plan={plan}
           tenantId={tenantId}
           templates={PUCK_TEMPLATES}
+          brandingSettings={brandingSettings}
         />
       </main>
     </div>

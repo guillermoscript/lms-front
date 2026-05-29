@@ -4268,6 +4268,8 @@
       "published": "Published & live!",
       "failedSave": "Failed to save",
       "failedPublish": "Failed to publish",
+      "branding": "Branding",
+      "brandingDescription": "Logo, favicon, and brand colors. Changes apply across every page on your site.",
       "status": {
         "draft": "draft",
         "published": "published"
@@ -4323,6 +4325,7 @@
       "Center": "Center",
       "Right": "Right",
       "Color": "Color",
+      "Accent Color": "Accent Color",
       "Style": "Style",
       "Size": "Size",
       "Size (px)": "Size (px)",

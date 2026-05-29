@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type FaqItem = {
   question: string
@@ -10,6 +11,7 @@ export type FaqAccordionProps = {
   title: string
   subtitle: string
   items: FaqItem[]
+  accentColor: string
 } & SectionSpacingProps
 
 export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
@@ -26,6 +28,7 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
       },
       defaultItemProps: { question: 'Question?', answer: 'Answer here.' },
     },
+    accentColor: accentColorField,
     ...sectionSpacingFields,
   },
   defaultProps: {
@@ -36,14 +39,15 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
       { question: 'Do I get a certificate?', answer: 'Yes! Upon completing a course, you receive a verifiable digital certificate that you can share on your resume or LinkedIn.' },
       { question: 'Can I learn at my own pace?', answer: 'Absolutely. All courses are self-paced, so you can learn whenever and wherever works best for you.' },
     ],
+    accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ title, subtitle, items, accentColor, paddingY, paddingX, maxWidth, marginY }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
+      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
         <div className={sectionInnerClass(spacing)}>
           <div className="max-w-3xl mx-auto">
             {title && (
@@ -56,12 +60,12 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
               {items.map((item, i) => (
                 <details
                   key={i}
-                  className="group border border-border rounded-xl overflow-hidden"
+                  className="group border border-border rounded-xl overflow-hidden transition-colors open:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
                 >
-                  <summary className="flex items-center justify-between gap-4 p-4 px-5 font-semibold text-[0.9375rem] text-foreground cursor-pointer list-none hover:bg-muted/50 transition-colors [&::-webkit-details-marker]:hidden">
+                  <summary className="flex items-center justify-between gap-4 p-4 px-5 font-semibold text-[0.9375rem] text-foreground cursor-pointer list-none hover:bg-muted/50 transition-colors group-open:text-[var(--block-accent)] [&::-webkit-details-marker]:hidden">
                     <span className="break-words">{item.question}</span>
                     <svg
-                      className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                      className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 group-open:text-[var(--block-accent)]"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
