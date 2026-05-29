@@ -49,6 +49,19 @@ const ArtifactExercise = dynamic(
   }
 )
 
+const VideoExercise = dynamic(
+  () => import('@/components/exercises/video-exercise'),
+  {
+    loading: () => (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-12 w-32 mx-auto" />
+      </div>
+    ),
+  }
+)
+
 interface PageProps {
     params: Promise<{ courseId: string; exerciseId: string }>
 }
@@ -269,6 +282,16 @@ export default async function ExercisePage({ params }: PageProps) {
                 />
             ) : exercise.exercise_type === 'audio_evaluation' ? (
                 <AudioExercise
+                    exercise={exercise}
+                    isExerciseCompleted={isExerciseCompleted}
+                    submissionHistory={submissionHistory}
+                    passingScore={passingScore}
+                    isExerciseCompletedSection={otherExercisesSection}
+                    dailyAttemptsUsed={dailyAttemptsUsed}
+                    maxDailyAttempts={maxDailyAttempts}
+                />
+            ) : exercise.exercise_type === 'video_evaluation' ? (
+                <VideoExercise
                     exercise={exercise}
                     isExerciseCompleted={isExerciseCompleted}
                     submissionHistory={submissionHistory}

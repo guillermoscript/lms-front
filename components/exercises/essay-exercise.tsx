@@ -31,6 +31,8 @@ const typeLabels: Record<string, string> = {
     multiple_choice: "Multiple Choice",
     fill_in_the_blank: "Fill in the Blank",
     coding_challenge: "Coding Challenge",
+    video_evaluation: "Video",
+    audio_evaluation: "Audio",
 };
 
 export default function EssayExercise({

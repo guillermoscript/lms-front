@@ -54,8 +54,8 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
       examId: exam.exam_id,
       title: exam.title,
       sequence: exam.sequence,
-      passingScore: exam.passing_score,
-      allowRetake: exam.allow_retake,
+      passingScore: 70,
+      allowRetake: true,
       attempts,
     }
   })

@@ -53,8 +53,8 @@ export default async function StudentProgressPage() {
       : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[] }),
     supabase.from('lesson_completions').select('lesson_id, completed_at').eq('user_id', userId),
     courseIds.length > 0
-      ? supabase.from('exams').select('exam_id, course_id, title, passing_score').in('course_id', courseIds)
-      : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string; passing_score: number }[] }),
+      ? supabase.from('exams').select('exam_id, course_id, title').in('course_id', courseIds)
+      : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string }[] }),
     supabase.from('exam_submissions').select('exam_id, score, submission_date')
       .eq('student_id', userId).eq('tenant_id', tenantId),
   ])
@@ -95,7 +95,6 @@ export default async function StudentProgressPage() {
       examScores: courseExams.map((e) => ({
         title: e.title,
         score: examScoreMap.get(e.exam_id),
-        passingScore: e.passing_score,
       })),
     }
   })
@@ -261,7 +260,7 @@ export default async function StudentProgressPage() {
                           key={idx}
                           variant={
                             exam.score !== undefined
-                              ? exam.score >= (exam.passingScore || 70)
+                              ? exam.score >= 70
                                 ? 'default'
                                 : 'destructive'
                               : 'outline'

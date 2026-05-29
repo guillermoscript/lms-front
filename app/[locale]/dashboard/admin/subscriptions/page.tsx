@@ -71,8 +71,7 @@ export default async function SubscriptionsPage({
       current_period_end,
       created,
       profiles!subscriptions_user_profile_fkey (
-        full_name,
-        email
+        full_name
       ),
       plans (
         plan_name,
@@ -92,14 +91,13 @@ export default async function SubscriptionsPage({
 
   const { data: subscriptions, error } = await query
 
-  // Filter by search on client side (for user names/emails)
+  // Filter by search on client side (by name or ID)
   const filteredSubscriptions = subscriptions?.filter((sub) => {
     if (!search) return true
     const profile = sub.profiles as any
     const searchLower = search.toLowerCase()
     return (
       profile?.full_name?.toLowerCase().includes(searchLower) ||
-      profile?.email?.toLowerCase().includes(searchLower) ||
       sub.subscription_id.toString().includes(searchLower)
     )
   })
@@ -108,7 +106,7 @@ export default async function SubscriptionsPage({
   const activeCount =
     subscriptions?.filter((s) => s.subscription_status === 'active').length || 0
   const canceledCount =
-    subscriptions?.filter((s) => s.subscription_status === 'cancelled').length || 0
+    subscriptions?.filter((s) => s.subscription_status === 'canceled').length || 0
   const expiredCount =
     subscriptions?.filter((s) => s.subscription_status === 'expired').length || 0
 
@@ -226,9 +224,9 @@ export default async function SubscriptionsPage({
                     {t('filters.active')}
                   </Button>
                 </Link>
-                <Link href="?status=cancelled">
+                <Link href="?status=canceled">
                   <Button
-                    variant={statusFilter === 'cancelled' ? 'default' : 'outline'}
+                    variant={statusFilter === 'canceled' ? 'default' : 'outline'}
                     size="sm"
                   >
                     {t('filters.cancelled')}
@@ -259,7 +257,7 @@ export default async function SubscriptionsPage({
                   const profile = subscription.profiles as any
                   const plan = subscription.plans as any
                   const isActive = subscription.subscription_status === 'active'
-                  const isCancelled = subscription.subscription_status === 'cancelled'
+                  const isCancelled = subscription.subscription_status === 'canceled'
                   const isExpired = subscription.subscription_status === 'expired'
 
                   return (
@@ -300,9 +298,6 @@ export default async function SubscriptionsPage({
                                   </Badge>
                                 )}
                               </div>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {profile?.email}
-                              </p>
                               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <IconCrown className="h-4 w-4" />

@@ -33,7 +33,6 @@ interface Course {
 interface Author {
   id: string
   full_name: string | null
-  email: string
 }
 
 interface CoursesTableProps {
@@ -132,12 +131,7 @@ export function CoursesTable({
                       </div>
                     </td>
                     <td className="py-4">
-                      <div>
-                        <p className="font-medium">{author?.full_name || t('unknownAuthor')}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {author?.email}
-                        </p>
-                      </div>
+                      <p className="font-medium">{author?.full_name || t('unknownAuthor')}</p>
                     </td>
                     <td className="py-4">
                       <Badge

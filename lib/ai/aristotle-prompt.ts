@@ -21,7 +21,7 @@ interface CourseStructure {
     description: string | null
     lessons: { id: number; title: string; description: string | null; sequence: number }[]
     exercises: { id: number; title: string; type: string; difficulty: string | null }[]
-    exams: { exam_id: number; title: string; passing_score: number | null }[]
+    exams: { exam_id: number; title: string }[]
 }
 
 interface StudentProgress {
@@ -69,7 +69,7 @@ ${config.boundaries ? `Boundaries set by the teacher:\n${config.boundaries}` : '
         .join('\n')
 
     const examList = course.exams
-        .map(e => `  - ${e.title}${e.passing_score ? ` (passing: ${e.passing_score}%)` : ''}`)
+        .map(e => `  - ${e.title}`)
         .join('\n')
 
     sections.push(`## Course: ${course.title}
