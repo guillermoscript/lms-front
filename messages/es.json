@@ -356,6 +356,22 @@
           "uploadFailed": "No se pudo subir el archivo. Inténtalo de nuevo.",
           "uploading": "Subiendo...",
           "uploadProof": "Subir Comprobante"
+        },
+        "detail": {
+          "title": "Detalles de la Solicitud de Pago",
+          "backToPayments": "Volver a pagos",
+          "requestedOn": "Solicitado el",
+          "product": "Producto",
+          "amount": "Monto",
+          "status": "Estado",
+          "paymentMethod": "Método de Pago",
+          "paymentInstructions": "Instrucciones de Pago",
+          "paymentDeadline": "Fecha Límite de Pago",
+          "noInstructionsYet": "Aún no se han enviado instrucciones de pago. Te enviaremos un correo cuando tu solicitud sea revisada.",
+          "proofSection": "Comprobante de Pago",
+          "proofUploaded": "Comprobante subido",
+          "uploadHint": "Sube tu comprobante de transferencia para que podamos verificar tu pago.",
+          "viewProof": "Ver comprobante subido"
         }
       }
     },
