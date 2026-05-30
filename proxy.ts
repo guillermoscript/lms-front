@@ -186,7 +186,31 @@ export default async function proxy(request: NextRequest) {
   // --- Path normalization ---
   const segments = pathname.split('/')
   const locale = segments[1]
-  const cleanPath = locales.includes(locale as any)
+  const hasValidLocale = locales.includes(locale as any)
+
+  // --- Guarantee a locale prefix before any auth / membership logic ---
+  // Server Actions and RSC navigations can reach the middleware on a locale-less
+  // URL — the codebase convention is `redirect('/dashboard/...')` (no locale).
+  // With localePrefix 'always', next-intl REWRITES those (not redirects) to keep
+  // the RSC payload intact, so they fall through to the guards below with
+  // `segments[1]` being a route segment (e.g. "dashboard"), not a locale. That made
+  // the membership guard run on a malformed path and build the join-school URL from
+  // a garbage locale — briefly bouncing valid members to /join-school (#282, #287).
+  // Force the canonical localized URL so every downstream check sees a well-formed
+  // path. /api, /.well-known and /monitoring already returned above, so this only
+  // touches real app routes.
+  if (!hasValidLocale) {
+    // Preserve the visitor's active locale (next-intl's NEXT_LOCALE cookie),
+    // falling back to the default — so a Spanish user isn't flipped to English
+    // after a locale-less server-action redirect.
+    const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
+    const targetLocale = locales.includes(cookieLocale as any) ? cookieLocale : defaultLocale
+    const localizedUrl = new URL(`/${targetLocale}${pathname}`, request.url)
+    localizedUrl.search = request.nextUrl.search
+    return NextResponse.redirect(localizedUrl)
+  }
+
+  const cleanPath = hasValidLocale
     ? `/${segments.slice(2).join('/')}`
     : pathname
   const normalizedPath = cleanPath === '' ? '/' : cleanPath
