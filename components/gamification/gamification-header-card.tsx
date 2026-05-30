@@ -85,7 +85,7 @@ export function GamificationHeaderCard() {
             </div>
 
             {summary.features?.achievements && (
-                <Link href="/dashboard/student/profile#achievements" className="flex items-center justify-center p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0" aria-label={t('achievements')}>
+                <Link href="/dashboard/student/profile#achievements" className="flex items-center justify-center p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0" aria-label={t('achievements.title')}>
                     <IconTrophy className="size-4 md:size-[18px]" />
                 </Link>
             )}

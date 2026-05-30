@@ -33,6 +33,7 @@ export function StudentDashboardTour({ userId }: StudentDashboardTourProps) {
       </div>
       <GuidedTour
         key={restartKey}
+        forceStart={restartKey > 0}
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
