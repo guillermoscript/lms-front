@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
+import { getLandingCourses } from '@/lib/puck/utils/landing-data'
 import type { Metadata } from 'next'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -28,7 +29,7 @@ async function getPageData(slug: string) {
     .maybeSingle()
 
   if (!page?.puck_data || typeof page.puck_data !== 'object') return null
-  return { page, tenant }
+  return { page, tenant, tenantId }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -49,5 +50,6 @@ export default async function CustomPage({ params }: PageProps) {
   const result = await getPageData(slug)
   if (!result) notFound()
 
-  return <PuckPageRenderer data={result.page.puck_data as any} />
+  const courses = await getLandingCourses(result.tenantId)
+  return <PuckPageRenderer data={result.page.puck_data as any} courses={courses} />
 }

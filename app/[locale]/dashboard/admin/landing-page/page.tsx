@@ -6,6 +6,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { LandingPagesClient } from '@/components/admin/landing-page/landing-pages-client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PUCK_TEMPLATES } from '@/lib/puck/templates'
+import { getLandingCourses } from '@/lib/puck/utils/landing-data'
 import { getTranslations } from 'next-intl/server'
 
 export default async function LandingPageAdminPage() {
@@ -23,6 +24,7 @@ export default async function LandingPageAdminPage() {
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
+  const courses = await getLandingCourses(tenantId)
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,6 +34,7 @@ export default async function LandingPageAdminPage() {
           plan={plan}
           tenantId={tenantId}
           templates={PUCK_TEMPLATES}
+          courses={courses}
         />
       </main>
     </div>
