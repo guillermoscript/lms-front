@@ -206,7 +206,11 @@ export default async function AdminTransactionsPage({
                             </Badge>
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
-                            {transaction.payment_method ? (t(`table.methods.${transaction.payment_method}`) || transaction.payment_method) : t('table.notAvailable')}
+                            {transaction.payment_method
+                              ? (t.has(`table.methods.${transaction.payment_method}`)
+                                  ? t(`table.methods.${transaction.payment_method}`)
+                                  : transaction.payment_method)
+                              : t('table.notAvailable')}
                           </td>
                           <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
                             {format(new Date(transaction.transaction_date), 'MMM d, yyyy HH:mm', { locale: dateLocale })}

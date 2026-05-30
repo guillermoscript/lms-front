@@ -1959,6 +1959,9 @@
           "started": "Iniciado:",
           "ended": "Finalizado:",
           "renews": "Renueva:",
+          "perMonth": "mes",
+          "perYear": "año",
+          "perDays": "{count} días",
           "noSubscriptions": "Aún no hay suscripciones",
           "noFilteredSubscriptions": "No se encontraron suscripciones que coincidan con tus filtros"
         },
