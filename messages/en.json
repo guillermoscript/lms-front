@@ -154,6 +154,51 @@
   },
   "dashboard": {
     "student": {
+      "notifications": {
+        "title": "Notifications",
+        "description": "Stay up to date with activity across your school.",
+        "tabs": {
+          "all": "All",
+          "unread": "Unread",
+          "read": "Read"
+        },
+        "empty": {
+          "title": "No notifications",
+          "none": "You don't have any notifications yet.",
+          "caughtUp": "You're all caught up!"
+        },
+        "actions": {
+          "markAllAsRead": "Mark all as read"
+        },
+        "toasts": {
+          "markAsReadSuccess": "Notification marked as read",
+          "markAsReadError": "Couldn't mark notification as read",
+          "markAllAsReadSuccess": "All notifications marked as read",
+          "markAllAsReadError": "Couldn't mark all as read",
+          "dismissSuccess": "Notification dismissed",
+          "dismissError": "Couldn't dismiss notification",
+          "error": "Something went wrong"
+        },
+        "priority": {
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "types": {
+          "info": "Info",
+          "success": "Success",
+          "warning": "Warning",
+          "error": "Error",
+          "alert": "Alert",
+          "certificate_issued": "Certificate",
+          "comment": "Comment",
+          "comment_reply": "Reply",
+          "exam_review": "Exam review",
+          "order_renewal": "Order renewal",
+          "subscription_renewal": "Subscription renewal"
+        }
+      },
       "title": "My Learning",
       "welcome": "Welcome back! Continue where you left off.",
       "enrolledCourses": "Enrolled Courses",

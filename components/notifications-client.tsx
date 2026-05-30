@@ -33,7 +33,7 @@ type UserNotification = {
     id: number
     title: string
     content: string
-    type: string
+    notification_type: string
     priority: string
   }
 }
@@ -207,8 +207,10 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
                       >
                         {t(`priority.${notification.notification.priority}`) || notification.notification.priority}
                       </Badge>
-                      <Badge variant="outline" className={`text-xs ${getTypeColor(notification.notification.type)}`}>
-                        {t(`types.${notification.notification.type}`) || notification.notification.type}
+                      <Badge variant="outline" className={`text-xs ${getTypeColor(notification.notification.notification_type)}`}>
+                        {t.has(`types.${notification.notification.notification_type}`)
+                          ? t(`types.${notification.notification.notification_type}`)
+                          : notification.notification.notification_type}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(notification.created_at), {
