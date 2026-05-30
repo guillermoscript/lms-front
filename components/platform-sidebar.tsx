@@ -11,7 +11,6 @@ import {
   IconLogout,
   IconSchool,
   IconSettings,
-  IconShare,
   IconUsers,
 } from "@tabler/icons-react"
 import {
@@ -48,7 +47,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, ...props }: PlatformS
     { title: "Tenants", href: "/platform/tenants", icon: IconSchool },
     { title: "Billing", href: "/platform/billing", icon: IconCreditCard, badge: pendingBillingCount },
     { title: "Plans", href: "/platform/plans", icon: IconBuildingStore },
-    { title: "Referrals", href: "/platform/referrals", icon: IconShare },
+    // Referrals hidden until the backing schema is built — see issue tracking it.
   ]
 
   // Determine locale prefix from pathname
