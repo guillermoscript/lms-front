@@ -39,6 +39,14 @@ export default async function SubscriptionsPage({
   const dateLocale = locale === 'es' ? es : enUS
   const supabase = createAdminClient()
 
+  // plans stores billing period as duration_in_days (no duration_type column);
+  // map the common cadences to a label and fall back to a day count.
+  const periodLabel = (days?: number | null) => {
+    if (days === 30) return t('table.perMonth')
+    if (days === 365) return t('table.perYear')
+    return days ? t('table.perDays', { count: days }) : ''
+  }
+
   const userId = await getCurrentUserId()
   if (!userId) {
     redirect('/auth/login')
@@ -77,7 +85,7 @@ export default async function SubscriptionsPage({
         plan_name,
         price,
         currency,
-        duration_type
+        duration_in_days
       )
     `
     )
@@ -306,7 +314,7 @@ export default async function SubscriptionsPage({
                                 <span className="flex items-center gap-1">
                                   <IconCurrencyDollar className="h-4 w-4" />
                                   {plan?.currency} {plan?.price?.toFixed(2)}/
-                                  {plan?.duration_type}
+                                  {periodLabel(plan?.duration_in_days)}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <IconCalendar className="h-4 w-4" />
@@ -316,7 +324,7 @@ export default async function SubscriptionsPage({
                                 {subscription.current_period_end && (
                                   <span className="flex items-center gap-1">
                                     <IconCalendar className="h-4 w-4" />
-                                    {isCancelled ? t('table.ended') : t('table.renews')}:{' '}
+                                    {isCancelled ? t('table.ended') : t('table.renews')}{' '}
                                     {format(new Date(subscription.current_period_end), 'MMM d, yyyy', { locale: dateLocale })}
                                   </span>
                                 )}
