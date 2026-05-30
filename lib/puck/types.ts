@@ -33,3 +33,21 @@ export interface CtaProps extends LinkProps {
 }
 
 export type PuckConfig = Config
+
+// A course card resolved server-side and handed to dynamic components
+// (e.g. CourseGrid) through Puck's `metadata`.
+export interface LandingCourse {
+  id: string
+  title: string
+  description: string | null
+  image: string | null
+  price: number | null
+  currency: string | null
+}
+
+// Shared metadata passed to <Puck> / <Render>, readable in a component's
+// render via `puck.metadata`.
+export interface PuckMetadata {
+  courses?: LandingCourse[]
+  tenantId?: string
+}

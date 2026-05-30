@@ -35,6 +35,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
+import { getLandingCourses } from "@/lib/puck/utils/landing-data";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -56,7 +57,8 @@ export default async function LandingPage() {
           .eq('is_published', true)
           .maybeSingle()
         if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
-          return <PuckPageRenderer data={customPage.puck_data as any} />
+          const courses = await getLandingCourses(tenantId)
+          return <PuckPageRenderer data={customPage.puck_data as any} courses={courses} />
         }
       }
 
