@@ -12,8 +12,8 @@ function getSupabaseAdmin() {
  * Cron job: expire subscriptions whose billing period has ended.
  *
  * Run daily via Vercel Cron (configured in vercel.json).
- * The DB trigger `trigger_deactivate_enrollments_on_subscription_end`
- * automatically disables linked enrollments when status → 'expired'.
+ * The DB trigger `on_subscription_status_change` (handle_subscription_status_change)
+ * automatically revokes linked entitlements when status → 'expired' / 'canceled'.
  *
  * Secured by CRON_SECRET env var (set the same value in Vercel dashboard).
  */
