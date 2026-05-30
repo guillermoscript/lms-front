@@ -10,6 +10,11 @@ interface GuidedTourProps {
   userId: string
   steps: DriveStep[]
   autoStart?: boolean
+  // Explicit replay (TourTrigger). Bypasses the `tours-disabled` kill-switch and
+  // the per-tour completion flag — those only gate AUTO-start, not a deliberate
+  // user replay. Without this, clicking "Replay tour" silently does nothing
+  // whenever `tours-disabled` is set.
+  forceStart?: boolean
   onComplete?: () => void
 }
 
@@ -39,6 +44,7 @@ export function GuidedTour({
   userId,
   steps,
   autoStart = true,
+  forceStart = false,
   onComplete,
 }: GuidedTourProps) {
   const driverRef = useRef<Driver | null>(null)
@@ -70,12 +76,14 @@ export function GuidedTour({
 
     driverRef.current = driverInstance
 
-    const shouldAutoStart = autoStart && !isTourCompleted(tourId, userId)
+    // A forced replay always starts; otherwise honour autoStart + the completion
+    // / kill-switch gate. Forced replays start immediately (no 800ms auto delay).
+    const shouldStart = forceStart || (autoStart && !isTourCompleted(tourId, userId))
 
-    if (shouldAutoStart) {
+    if (shouldStart) {
       const timer = setTimeout(() => {
         driverInstance.drive()
-      }, 800)
+      }, forceStart ? 0 : 800)
 
       return () => {
         clearTimeout(timer)
@@ -88,7 +96,7 @@ export function GuidedTour({
       driverInstance.destroy()
       driverRef.current = null
     }
-  }, [tourId, userId, steps, autoStart, onComplete, key])
+  }, [tourId, userId, steps, autoStart, forceStart, onComplete, key])
 
   return null
 }
