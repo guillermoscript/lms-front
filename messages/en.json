@@ -356,6 +356,22 @@
           "uploadFailed": "Could not upload file. Please try again.",
           "uploading": "Uploading...",
           "uploadProof": "Upload Proof"
+        },
+        "detail": {
+          "title": "Payment Request Details",
+          "backToPayments": "Back to payments",
+          "requestedOn": "Requested on",
+          "product": "Product",
+          "amount": "Amount",
+          "status": "Status",
+          "paymentMethod": "Payment Method",
+          "paymentInstructions": "Payment Instructions",
+          "paymentDeadline": "Payment Deadline",
+          "noInstructionsYet": "Payment instructions haven't been sent yet. We'll email you once your request is reviewed.",
+          "proofSection": "Payment Proof",
+          "proofUploaded": "Proof uploaded",
+          "uploadHint": "Upload your transfer receipt so we can verify your payment.",
+          "viewProof": "View uploaded proof"
         }
       }
     },
