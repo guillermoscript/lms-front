@@ -32,7 +32,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['line'], ['github'], ['html', { open: 'never' }]] : [['list'], ['html']],
   use: {
     actionTimeout: 0,
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://lvh.me:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

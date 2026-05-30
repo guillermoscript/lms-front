@@ -105,7 +105,7 @@ To test multi-tenant subdomain routing locally, use `lvh.me` — a free wildcard
 
 ```bash
 # In .env.local, set:
-NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000
+NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me
 ```
 
 Then access:
