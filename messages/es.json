@@ -154,6 +154,51 @@
   },
   "dashboard": {
     "student": {
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Mantente al día con la actividad de tu escuela.",
+        "tabs": {
+          "all": "Todas",
+          "unread": "No leídas",
+          "read": "Leídas"
+        },
+        "empty": {
+          "title": "Sin notificaciones",
+          "none": "Aún no tienes notificaciones.",
+          "caughtUp": "¡Estás al día!"
+        },
+        "actions": {
+          "markAllAsRead": "Marcar todas como leídas"
+        },
+        "toasts": {
+          "markAsReadSuccess": "Notificación marcada como leída",
+          "markAsReadError": "No se pudo marcar como leída",
+          "markAllAsReadSuccess": "Todas las notificaciones marcadas como leídas",
+          "markAllAsReadError": "No se pudieron marcar todas como leídas",
+          "dismissSuccess": "Notificación descartada",
+          "dismissError": "No se pudo descartar la notificación",
+          "error": "Algo salió mal"
+        },
+        "priority": {
+          "low": "Baja",
+          "normal": "Normal",
+          "high": "Alta",
+          "urgent": "Urgente"
+        },
+        "types": {
+          "info": "Información",
+          "success": "Éxito",
+          "warning": "Advertencia",
+          "error": "Error",
+          "alert": "Alerta",
+          "certificate_issued": "Certificado",
+          "comment": "Comentario",
+          "comment_reply": "Respuesta",
+          "exam_review": "Revisión de examen",
+          "order_renewal": "Renovación de pedido",
+          "subscription_renewal": "Renovación de suscripción"
+        }
+      },
       "title": "Mi Aprendizaje",
       "welcome": "¡Bienvenido de nuevo! Continúa donde lo dejaste.",
       "enrolledCourses": "Cursos Inscritos",
