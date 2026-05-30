@@ -5,7 +5,8 @@
 ### Prerequisites
 - Node.js 20+ installed
 - npm or yarn
-- Supabase account (for cloud) or Docker (for local)
+- Docker (required for local Supabase — install from [docker.com](https://www.docker.com/get-started))
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (`npm install -g supabase`)
 - Git
 
 ### 1. Clone & Install
@@ -18,33 +19,23 @@ npm install
 
 ### 2. Environment Setup
 
-Create `.env.local`:
+Copy `.env.example` from the project root and fill in your values:
 
 ```bash
-# Supabase Cloud (Recommended for development)
-NEXT_PUBLIC_SUPABASE_URL=https://tcqqnjfwmbfwcyhafbbt.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your_anon_key_here
-
-# Optional: Service role key for admin operations (DO NOT COMMIT!)
-# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
-
-# Platform domain (required for subdomain routing)
-NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000   # Local dev (use lmsplatform.com in prod)
-
-# Stripe Connect (for student payments to schools)
-# STRIPE_SECRET_KEY=sk_test_...
-# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-# STRIPE_WEBHOOK_SECRET=whsec_...              # Webhook: /api/stripe/webhook
-
-# Stripe Platform Billing (for school plan subscriptions to the platform)
-# STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...     # Webhook: /api/stripe/platform-webhook
+cp .env.example .env.local
 ```
 
-Get your keys from:
+The minimum required vars to run locally:
+- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` — anon/publishable key
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key (bypasses RLS, server-only)
+- `NEXT_PUBLIC_PLATFORM_DOMAIN` — use `lvh.me` for local dev (resolves all subdomains to 127.0.0.1)
+
+See `.env.example` for the full list of variables with Required/Optional tags. Get your Supabase keys from:
 1. Go to [Supabase Dashboard](https://app.supabase.com)
-2. Select "LMS APP" project
+2. Select your project
 3. Settings → API
-4. Copy "URL" and "anon public" key
+4. Copy "Project URL" and "anon public" key
 
 ### 3. Run Development Server
 
@@ -54,13 +45,14 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-### 4. Create Test Account
+### 4. Use Seed Test Accounts
 
-1. Navigate to `/auth/sign-up`
-2. Enter email and password
-3. Check email for confirmation link
-4. Click link to confirm account
-5. You'll be redirected to student dashboard (default role)
+After running `supabase db reset`, the database is seeded with these ready-to-use accounts:
+
+- `student@e2etest.com` / `password123` — student (Default School)
+- `owner@e2etest.com` / `password123` — admin (Default School)
+- `creator@codeacademy.com` / `password123` — teacher (Code Academy, subdomain: `code-academy.lvh.me:3000`)
+- `alice@student.com` / `password123` — student (Code Academy)
 
 ## 🔧 Development Setup Options
 
