@@ -23,11 +23,6 @@ export async function GET(
       .from('payment_requests')
       .select(`
         *,
-        user:profiles!payment_requests_user_id_fkey(
-          id,
-          full_name,
-          email
-        ),
         product:products(
           name,
           description,

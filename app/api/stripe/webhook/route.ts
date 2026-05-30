@@ -224,8 +224,8 @@ export async function POST(req: NextRequest) {
           }
 
           // Cancel subscription if plan purchase.
-          // The DB trigger `trigger_deactivate_enrollments_on_subscription_end`
-          // automatically disables linked enrollments when status → 'canceled'.
+          // The DB trigger `on_subscription_status_change` automatically revokes
+          // linked entitlements when status → 'canceled'.
           if (transaction.plan_id) {
             await getSupabaseAdmin()
               .from('subscriptions')
@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
 
     // Fired when Stripe permanently ends a subscription after failed payment retries
     // or explicit cancellation via Stripe dashboard/API.
-    // The DB trigger deactivates linked enrollments automatically.
+    // The DB trigger `on_subscription_status_change` revokes linked entitlements automatically.
     case 'customer.subscription.deleted': {
       const stripeSub = event.data.object as Stripe.Subscription
       const stripeSubId = stripeSub.id
