@@ -448,9 +448,8 @@ SELECT setval('products_product_id_seq', 10000, false);
 
 -- ---------------------------------------------------------------------------
 -- 13. PRODUCT → COURSE LINKS
--- Note: product_courses PK is on product_id alone — one product per course.
--- "Multiple rows per course" means the same course can appear in multiple
--- products (e.g. same course sold individually AND via a bundle product).
+-- PK is now (product_id, course_id) — see migration fix_product_courses_pk.
+-- One course can appear in multiple products (bundles).
 -- ---------------------------------------------------------------------------
 INSERT INTO product_courses (product_id, course_id, tenant_id)
 VALUES
@@ -458,22 +457,23 @@ VALUES
   (1002, 1002, '00000000-0000-0000-0000-000000000001'),  -- Web Dev Starter → Web Dev Basics
   (2001, 2001, '00000000-0000-0000-0000-000000000002'),  -- Python Bundle → Python for Beginners
   (2002, 2002, '00000000-0000-0000-0000-000000000002')   -- Code Academy Monthly → Data Analysis
-ON CONFLICT (product_id) DO NOTHING;
+ON CONFLICT (product_id, course_id) DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
 -- 14. ENROLLMENTS
 -- student@e2etest.com enrolled in Default School courses
 -- alice@student.com   has NO enrollments — tests plan purchase → self-enroll flow
+-- Note: product_id/subscription_id were dropped in phase3_drop_legacy_enrollment_columns
+-- Access tracking moved to the entitlements table (see section 14b below)
 -- ---------------------------------------------------------------------------
-INSERT INTO enrollments (enrollment_id, user_id, course_id, product_id, status, tenant_id)
+INSERT INTO enrollments (enrollment_id, user_id, course_id, status, tenant_id)
 OVERRIDING SYSTEM VALUE
 VALUES
 (
   1001,
   'a1000000-0000-0000-0000-000000000001',  -- student@e2etest.com
   1001,                                     -- Intro to Testing
-  1001,                                     -- Testing Fundamentals Package
   'active',
   '00000000-0000-0000-0000-000000000001'
 ),
@@ -481,13 +481,35 @@ VALUES
   1002,
   'a1000000-0000-0000-0000-000000000001',
   1002,                                     -- Web Dev Basics
-  1002,                                     -- Web Dev Starter (free)
   'active',
   '00000000-0000-0000-0000-000000000001'
 )
 ON CONFLICT (enrollment_id) DO NOTHING;
 
 SELECT setval('enrollments_enrollment_id_seq', 10000, false);
+
+-- ---------------------------------------------------------------------------
+-- 14b. ENTITLEMENTS (access source records for the enrollments above)
+-- ---------------------------------------------------------------------------
+INSERT INTO entitlements (user_id, course_id, tenant_id, source_type, source_id, status)
+VALUES
+(
+  'a1000000-0000-0000-0000-000000000001',  -- student@e2etest.com
+  1001,                                     -- Intro to Testing
+  '00000000-0000-0000-0000-000000000001',
+  'product',
+  1001,                                     -- Testing Fundamentals Package
+  'active'
+),
+(
+  'a1000000-0000-0000-0000-000000000001',  -- student@e2etest.com
+  1002,                                     -- Web Dev Basics
+  '00000000-0000-0000-0000-000000000001',
+  'product',
+  1002,                                     -- Web Dev Starter
+  'active'
+)
+ON CONFLICT ON CONSTRAINT entitlements_unique_source DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
