@@ -50,13 +50,22 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
       || reviewStatus === 'pending_teacher_review'
       || (submission.ai_confidence_score != null && submission.ai_confidence_score < 0.7)
 
+    // NOTE: field names below must match what ExamSubmissionsReview reads
+    // (profiles.full_name, status, ai_score, final_score). They had drifted
+    // (student_name / review_status / score), which rendered every row as
+    // "Unknown Student" with "undefined%" scores and zeroed every stat card.
     return {
       id: submission.submission_id,
       student_id: submission.student_id,
-      student_name: student?.full_name || t('manageCourse.studentList.unknownStudent'),
+      profiles: {
+        full_name: student?.full_name || null,
+      },
+      status: reviewStatus,
       submitted_at: submission.submission_date,
-      score: submission.score || 0,
-      review_status: reviewStatus as 'pending' | 'pending_teacher_review' | 'ai_reviewed' | 'teacher_reviewed',
+      // DB has a single `score` column; AI grade and final score are the same
+      // until a teacher override updates `score`.
+      ai_score: submission.score ?? null,
+      final_score: submission.score ?? null,
       requires_attention: requiresAttention,
       ai_model_used: submission.ai_model_used || undefined,
       ai_processing_time_ms: submission.ai_processing_time_ms || undefined,
