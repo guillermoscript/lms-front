@@ -9,7 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install
+# Remove the lockfile so npm freshly resolves platform-specific optional
+# native binaries (lightningcss/Tailwind v4) for this Linux image — npm has a
+# long-standing bug that skips optional native deps when a lockfile is present.
+RUN rm -f package-lock.json && npm install --include=optional
 
 # Build
 FROM base AS builder
