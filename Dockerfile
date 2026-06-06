@@ -1,9 +1,12 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Install dependencies
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++ pkgconfig \
-    cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev pixman-dev
+# canvas ships a prebuilt glibc binary on Debian, so only its runtime shared
+# libraries are needed here — no compiler toolchain required.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 libpixman-1-0 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -36,7 +39,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache cairo pango libjpeg-turbo giflib librsvg pixman
+# Runtime shared libraries for canvas/sharp
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 libpixman-1-0 \
+    && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
