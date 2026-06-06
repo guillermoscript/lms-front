@@ -70,7 +70,13 @@ export async function POST() {
       })
 
     // Step 4: Create enrollments
-    const enrollments = [
+    const enrollments: Array<{
+      user_id: string
+      course_id: number
+      product_id?: string | null
+      status: string
+      enrolled_at: string
+    }> = [
       {
         user_id: studentUserId,
         course_id: 1,
