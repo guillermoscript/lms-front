@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { accentColorField, accentVars } from '../../utils/accent-color'
 
 export type HeroBlockProps = {
   title: string
@@ -10,6 +11,7 @@ export type HeroBlockProps = {
   secondaryCtaLabel: string
   secondaryCtaHref: string
   backgroundImage: string
+  backgroundColor: string
   alignment: 'left' | 'center' | 'right'
   overlayOpacity: number
   minHeight: string
@@ -45,6 +47,7 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
     secondaryCtaLabel: { type: 'text', label: 'Secondary Button Label' },
     secondaryCtaHref: { type: 'text', label: 'Secondary Button URL' },
     backgroundImage: { type: 'text', label: 'Background Image URL' },
+    backgroundColor: { ...accentColorField, label: 'Background Color' },
     alignment: {
       type: 'radio',
       label: 'Alignment',
@@ -75,13 +78,14 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
     secondaryCtaLabel: 'Learn More',
     secondaryCtaHref: '#features',
     backgroundImage: '',
+    backgroundColor: '',
     alignment: 'center',
     overlayOpacity: 50,
     minHeight: '500px',
   },
   render: ({
     title, subtitle, primaryCtaLabel, primaryCtaHref,
-    secondaryCtaLabel, secondaryCtaHref, backgroundImage,
+    secondaryCtaLabel, secondaryCtaHref, backgroundImage, backgroundColor,
     alignment, overlayOpacity, minHeight,
   }) => {
     return (
@@ -89,10 +93,14 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
         className={cn(
           'relative flex items-center px-6 py-16',
           minHeightClasses[minHeight] || 'min-h-[500px]',
-          backgroundImage ? 'bg-cover bg-center' : 'bg-primary',
+          backgroundImage ? 'bg-cover bg-center' : 'bg-[var(--block-accent)]',
           'text-primary-foreground'
         )}
-        style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : undefined}
+        style={
+          backgroundImage
+            ? { backgroundImage: `url(${backgroundImage})` }
+            : accentVars(backgroundColor)
+        }
       >
         {backgroundImage && overlayOpacity > 0 && (
           <div

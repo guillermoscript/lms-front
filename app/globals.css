@@ -32,6 +32,7 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-secondary-brand: var(--secondary-brand);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
@@ -54,6 +55,9 @@
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.52 0.105 223.128);
   --primary-foreground: oklch(0.984 0.019 200.873);
+  /* Secondary brand accent — used by Puck landing-page blocks. Falls back to
+     the primary brand color when a tenant has not set a distinct secondary. */
+  --secondary-brand: var(--primary);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);

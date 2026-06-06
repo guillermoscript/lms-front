@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type StatItem = {
   value: string
@@ -12,6 +13,7 @@ type StatItem = {
 export type StatsCounterProps = {
   items: StatItem[]
   alignment: 'left' | 'center'
+  accentColor: string
 } & SectionSpacingProps
 
 export const StatsCounter: ComponentConfig<StatsCounterProps> = {
@@ -36,6 +38,7 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
         { label: 'Center', value: 'center' },
       ],
     },
+    accentColor: accentColorField,
     ...sectionSpacingFields,
   },
   defaultProps: {
@@ -46,14 +49,15 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
       { value: '4.9', label: 'Rating', prefix: '', suffix: '/5' },
     ],
     alignment: 'center',
+    accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ items, alignment, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ items, alignment, accentColor, paddingY, paddingX, maxWidth, marginY }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
+      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
         <div className={sectionInnerClass(spacing)}>
           <dl
             className={cn(
@@ -66,7 +70,7 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
                 <dt className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium truncate">
                   {stat.label}
                 </dt>
-                <dd className="text-4xl font-extrabold leading-none text-foreground">
+                <dd className="text-4xl font-extrabold leading-none text-[var(--block-accent)]">
                   {stat.prefix}{stat.value}{stat.suffix}
                 </dd>
               </div>

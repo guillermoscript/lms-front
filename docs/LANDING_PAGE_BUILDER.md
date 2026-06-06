@@ -12,15 +12,24 @@ Visual drag-and-drop landing page builder powered by **Puck v0.20** (`@measured/
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | UUID | Primary key |
-| `tenant_id` | UUID | Tenant ownership |
-| `name` | VARCHAR | Page display name |
-| `slug` | VARCHAR | URL slug (`home` for homepage) |
-| `puck_data` | JSONB | Puck editor state (component tree, zones, root props) |
-| `is_active` | BOOLEAN | Only one active page per tenant+slug (partial unique index) |
-| `status` | VARCHAR | `draft` or `published` |
+| `page_id` | UUID | Primary key |
+| `tenant_id` | UUID | Tenant ownership (FK → `tenants(id)`, ON DELETE CASCADE) |
+| `title` | TEXT | Page display name |
+| `slug` | TEXT | URL slug (`home` for homepage) — `UNIQUE (tenant_id, slug)` |
+| `is_published` | BOOLEAN | Whether the page is published & served publicly (default `false`) |
+| `puck_data` | JSONB | Puck editor state (component tree, zones, root props) — default `'{}'` |
+| `created_at` | TIMESTAMPTZ | Creation timestamp |
+| `updated_at` | TIMESTAMPTZ | Last-updated timestamp |
 
-RLS policies: tenant members can read; tenant admins can manage; public can read active+published pages.
+> **Code vs DB naming:** the server actions in `app/actions/admin/landing-pages.ts` map the raw
+> columns to a friendlier `LandingPage` interface via `mapRow()`:
+> `page_id → id`, `title → name`, and `is_published → is_active` plus a derived
+> `status` (`'published'` when `is_published`, else `'draft'`). The DB has **no**
+> `name`, `status`, or `is_active` columns — those exist only in the TS interface.
+
+RLS policies: tenant members can read; tenant admins can manage (the `landing_pages` table
+enables RLS, but all CRUD in the server actions goes through `createAdminClient()` which bypasses
+RLS, with an explicit `tenant_id` ownership check on every write).
 
 ### Asset Storage
 
@@ -189,11 +198,11 @@ Both `PuckEditor` and `PuckPageRenderer` call `useTranslations('puck')` and pass
 
 ### List View
 
-- Cards per page variant with status badges (`draft` / `published` / `active`)
-- Create from template picker or blank canvas
-- Actions: Activate, Deactivate, Duplicate, Delete
-- Only one page can be active per slug at a time
-- Cannot delete the active page
+- Row per page with a status badge (`draft` / `published`)
+- Create from template picker or blank canvas (page-type picker → template picker)
+- Actions: Publish/Unpublish, Duplicate, Delete (via the `…` menu)
+- Slug is unique per tenant (`UNIQUE (tenant_id, slug)`)
+- Cannot delete a published page — unpublish it first (`deleteLandingPage` throws otherwise)
 
 ### Editor (Puck)
 
@@ -227,10 +236,13 @@ The public homepage (`app/[locale]/(public)/page.tsx`) renders landing pages as 
 
 1. Detect tenant from subdomain
 2. If tenant plan is `starter` / `pro` / `business` / `enterprise`:
-   - Query `landing_pages` for `is_active = true AND status = 'published'`
+   - Query `landing_pages` for the `home` slug with `is_published = true`
    - If found, render `<PuckPageRenderer data={puck_data} />`
 3. Otherwise, fall back to the default `<SchoolLandingPage>` (product grid)
 4. Default tenant (`00000000-0000-0000-0000-000000000001`) always shows the platform homepage
+
+Additional pages are served by `app/[locale]/(public)/p/[slug]/page.tsx`, which queries
+`landing_pages` by `slug` + `is_published = true` and renders the same `<PuckPageRenderer>`.
 
 ---
 
@@ -247,9 +259,9 @@ The public homepage (`app/[locale]/(public)/page.tsx`) renders landing pages as 
 
 ## Known Behaviors
 
-- Deactivating a page does not unpublish it; it just stops being served publicly
-- Duplicating creates a new draft copy with `(Copy)` appended to the name
+- Publishing flips `is_published = true`; unpublishing flips it back to `false` (a page stops being served publicly once unpublished)
+- Duplicating creates a new unpublished copy; its slug gets a `-copy-<base36 timestamp>` suffix to stay unique
 - Templates are applied client-side with fresh IDs via `deepCloneWithFreshIds()`
-- Slug validation rejects reserved slugs (`api`, `dashboard`, `admin`, `auth`, `login`, `signup`, `register`)
-- Page name max length: 255 characters; slug max length: 100 characters
+- Slug validation rejects reserved slugs (`api`, `dashboard`, `admin`, `auth`, `login`, `signup`, `register`) and sanitizes input to `[a-z0-9-]`
+- Page name (`title`) max length: 255 characters; slug max length: 100 characters
 - Default slug for new pages is `home`

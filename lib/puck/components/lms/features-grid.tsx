@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type FeatureItem = {
   icon: string
@@ -13,6 +14,7 @@ export type FeaturesGridProps = {
   subtitle: string
   items: FeatureItem[]
   columns: '2' | '3' | '4'
+  accentColor: string
 } & SectionSpacingProps
 
 const columnClasses: Record<string, string> = {
@@ -45,6 +47,7 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
         { label: '4', value: '4' },
       ],
     },
+    accentColor: accentColorField,
     ...sectionSpacingFields,
   },
   defaultProps: {
@@ -56,14 +59,15 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
       { icon: '🏆', title: 'Certificates', description: 'Earn verifiable certificates upon course completion.' },
     ],
     columns: '3',
+    accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, columns, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ title, subtitle, items, columns, accentColor, paddingY, paddingX, maxWidth, marginY }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
+      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
         <div className={sectionInnerClass(spacing)}>
           <div className="text-center">
             {title && (
@@ -78,9 +82,11 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
               {items.map((item, i) => (
                 <div
                   key={i}
-                  className="group text-center p-8 rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                  className="group text-center p-8 rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
                 >
-                  <div className="text-4xl mb-4"><span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:scale-110">{item.icon}</span></div>
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] text-3xl transition-colors duration-300 group-hover:bg-[color-mix(in_srgb,var(--block-accent)_16%,transparent)]">
+                    <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:scale-110">{item.icon}</span>
+                  </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2 break-words">{item.title}</h3>
                   <p className="text-muted-foreground leading-relaxed text-[0.9375rem] break-words">{item.description}</p>
                 </div>

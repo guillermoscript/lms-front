@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { createCloudflareSubdomain } from '@/app/actions/cloudflare'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,26 +61,15 @@ export function CreateSchoolForm({ userId }: { userId: string }) {
     // Refresh session so the JWT picks up the new tenant_id/tenant_role
     await supabase.auth.refreshSession()
 
-    // Provision Cloudflare Secure Proxy limit
-    try {
-      await createCloudflareSubdomain(slug.trim())
-    } catch (cfError) {
-      console.error("Cloudflare integration error:", cfError)
-      // We don't block the user, but it might take a few seconds to resolve
-    }
-
     toast.success('School created successfully!')
 
-    // Redirect to subdomain with a slight delay if on production to allow DNS propagation
+    // Subdomains are served by the wildcard DNS record (*.preciopana.com),
+    // so the new school resolves instantly — no per-record provisioning or
+    // propagation delay needed. Redirect straight to the tenant subdomain.
     const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     if (platformDomain && platformDomain !== 'localhost') {
       const protocol = window.location.protocol // Preserves http: or https:
-      
-      // Small visual delay so Cloudflare has time to proxy
-      toast.loading("Setting up secure connection... redirecting in 3s")
-      setTimeout(() => {
-        window.location.href = `${protocol}//${slug}.${platformDomain}/onboarding`
-      }, 3500)
+      window.location.href = `${protocol}//${slug}.${platformDomain}/onboarding`
     } else {
       router.push('/onboarding')
     }

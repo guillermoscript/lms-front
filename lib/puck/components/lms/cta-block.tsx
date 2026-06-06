@@ -2,6 +2,7 @@ import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { accentColorField, accentVars } from '../../utils/accent-color'
 
 export type CtaBlockProps = {
   title: string
@@ -11,11 +12,12 @@ export type CtaBlockProps = {
   secondaryCtaLabel: string
   secondaryCtaHref: string
   style: 'default' | 'gradient' | 'bordered'
+  accentColor: string
 } & SectionSpacingProps
 
 const containerClasses: Record<string, string> = {
   default: 'bg-muted text-foreground',
-  gradient: 'bg-primary text-primary-foreground',
+  gradient: 'bg-[var(--block-accent)] text-primary-foreground',
   bordered: 'border-2 border-border text-foreground',
 }
 
@@ -37,6 +39,7 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
         { label: 'Bordered', value: 'bordered' },
       ],
     },
+    accentColor: accentColorField,
     ...sectionSpacingFields,
   },
   defaultProps: {
@@ -48,13 +51,14 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
     secondaryCtaLabel: '',
     secondaryCtaHref: '',
     style: 'gradient',
+    accentColor: '',
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, primaryCtaLabel, primaryCtaHref, secondaryCtaLabel, secondaryCtaHref, style: ctaStyle }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, primaryCtaLabel, primaryCtaHref, secondaryCtaLabel, secondaryCtaHref, style: ctaStyle, accentColor }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     const isGradient = ctaStyle === 'gradient'
 
     return (
-      <div className={sectionOuterClass(spacing)}>
+      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
         <div className={sectionInnerClass(spacing)}>
           <div
             className={cn(

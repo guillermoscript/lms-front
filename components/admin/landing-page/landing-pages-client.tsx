@@ -77,6 +77,7 @@ interface Props {
   plan: string
   tenantId: string
   templates: PuckTemplate[]
+  brandingSettings: Record<string, any>
   courses: LandingCourse[]
 }
 
@@ -98,7 +99,7 @@ function pageUrl(slug: string): string {
   return slug === 'home' ? '/' : `/p/${slug}`
 }
 
-export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, courses }: Props) {
+export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, brandingSettings, courses }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const [pages, setPages] = useState<LandingPage[]>(initialPages)
@@ -211,6 +212,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         pageName={editingPage.name}
         pageStatus={editingPage.status}
         initialData={editingPage.puck_data || { root: { props: {} }, content: [], zones: {} }}
+        brandingSettings={brandingSettings}
         courses={courses}
         onBack={() => {
           router.refresh()
