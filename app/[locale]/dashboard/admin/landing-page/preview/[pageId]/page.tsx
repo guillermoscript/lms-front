@@ -4,6 +4,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import { PreviewBanner } from '@/components/admin/landing-page/preview-banner'
+import { getLandingCourses } from '@/lib/puck/utils/landing-data'
 
 interface Props {
   params: Promise<{ pageId: string; locale: string }>
@@ -39,10 +40,12 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     redirect('/dashboard/admin/landing-page')
   }
 
+  const courses = await getLandingCourses(tenantId)
+
   return (
     <div className="min-h-screen">
       {!isIframe && <PreviewBanner status={page.is_published ? 'published' : 'draft'} />}
-      <PuckPageRenderer data={puckData} />
+      <PuckPageRenderer data={puckData} courses={courses} />
     </div>
   )
 }

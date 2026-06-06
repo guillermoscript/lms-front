@@ -5,7 +5,6 @@ import {
   IconBuilding,
   IconChartBar,
   IconCreditCard,
-  IconShare,
   IconUsers,
 } from '@tabler/icons-react'
 import Link from 'next/link'
@@ -88,16 +87,7 @@ export default async function PlatformOverviewPage() {
       accent: 'group-hover:ring-amber-200 dark:group-hover:ring-amber-800',
       href: '/platform/billing',
     },
-    {
-      title: 'Referral Redemptions',
-      value: stats.total_referral_redemptions ?? 0,
-      sub: `${stats.total_referral_codes ?? 0} active codes`,
-      icon: IconShare,
-      bg: 'bg-pink-50 dark:bg-pink-950/40',
-      iconColor: 'text-pink-600 dark:text-pink-400',
-      accent: 'group-hover:ring-pink-200 dark:group-hover:ring-pink-800',
-      href: '/platform/referrals',
-    },
+    // Referral Redemptions card hidden until the referral feature is built.
   ]
 
   return (
@@ -108,7 +98,7 @@ export default async function PlatformOverviewPage() {
       </div>
 
       {/* Metric Cards */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid="platform-metrics">
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="platform-metrics">
         {metricCards.map((card) => (
           <Link key={card.title} href={card.href} className="group">
             <Card

@@ -7,6 +7,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { LandingPagesClient } from '@/components/admin/landing-page/landing-pages-client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PUCK_TEMPLATES } from '@/lib/puck/templates'
+import { getLandingCourses } from '@/lib/puck/utils/landing-data'
 import { getTranslations } from 'next-intl/server'
 
 export default async function LandingPageAdminPage() {
@@ -24,6 +25,7 @@ export default async function LandingPageAdminPage() {
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
+  const courses = await getLandingCourses(tenantId)
 
   // Branding settings so the builder can edit logo/colors inline without leaving
   const settingsResult = await getAllSettingsByCategory()
@@ -38,6 +40,7 @@ export default async function LandingPageAdminPage() {
           tenantId={tenantId}
           templates={PUCK_TEMPLATES}
           brandingSettings={brandingSettings}
+          courses={courses}
         />
       </main>
     </div>

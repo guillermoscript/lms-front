@@ -32,6 +32,7 @@ export function CommunityTour({ userId, userRole }: CommunityTourProps) {
       />
       <GuidedTour
         key={restartKey}
+        forceStart={restartKey > 0}
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}

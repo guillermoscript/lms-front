@@ -191,16 +191,47 @@ Feature gating uses `get_plan_features(_tenant_id)` RPC as single source of trut
 
 ## Environment Variables
 
+See `.env.example` for the full list with Required/Optional tags (33 vars across 14 categories). The minimum required vars to run locally:
+
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=         # Bypasses RLS — admin ops only
-STRIPE_SECRET_KEY=
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=             # For Connect webhook (student payments)
-STRIPE_PLATFORM_WEBHOOK_SECRET=    # For Billing webhook (school plan payments)
-NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lmsplatform.com (for subdomain routing)
+NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com in prod
 ```
+
+Categories at a glance:
+- **Supabase** (3 vars): URL, anon key, service role key
+- **Stripe — Student Payments** (3 vars): secret key, publishable key, webhook secret
+- **Stripe — School Billing** (1 var): platform webhook secret
+- **Platform** (3 vars): domain, app URL, app name
+- **AI** (3 vars): OPENAI_API_KEY, NEXT_PUBLIC_OPENAI_API_KEY _(client-side — see Security Notes)_, ASSEMBLYAI_API_KEY
+- **Observability / Langfuse** (3 vars): public key, secret key, base URL
+- **Email / Mailgun** (4 vars): API key, API URL, domain, from address
+- **Certificates** (2 vars): encryption key, issuer name
+- **Infrastructure** (3 vars): Cloudflare zone ID, DNS API token, server IP
+- **Payments — PayPal** (3 vars): client ID, client secret, PAYMENT_PROVIDER
+- **MCP Server** (2 vars): MCP_PROXY_SECRET, MCP_SERVER_URL
+- **Cron** (1 var): CRON_SECRET
+- **Invoicing** (4 vars): company name, address, email, phone
+- **Testing** (3 vars): BASE_URL, E2E_BASE_URL, E2E_TENANT_BASE_URL
+
+## MCP Server
+
+An MCP (Model Context Protocol) sub-server lives in `mcp-server/`. It exposes LMS data to AI agents via the MCP protocol.
+
+**Setup:**
+```bash
+cd mcp-server
+cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MCP_PROXY_SECRET
+npm install
+npm run build
+npm start
+```
+
+The MCP server runs separately from the Next.js app on port 3001 by default (`MCP_SERVER_PORT`). The `mcp:build` npm script builds it from the project root: `npm run mcp:build`.
+
+**Env vars** (see `mcp-server/.env.example`): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `MCP_PROXY_SECRET`, `MCP_SERVER_PORT`, `MCP_SERVER_HOST`.
 
 ## Testing
 
@@ -210,14 +241,21 @@ E2E tests in `tests/playwright/`. Four files by priority:
 - `payment-security.spec.ts` — P0, 7 tests
 - `comprehensive-security-audit.spec.ts` — P1/P2, 26 tests
 
-Test accounts: `student@test.com` / `teacher@test.com` / `admin@test.com` — all `password123`
+Test accounts (from `supabase/seed.sql` — seeded by `supabase db reset`):
+- `student@e2etest.com` / `password123` — student (Default School)
+- `owner@e2etest.com` / `password123` — admin (Default School)
+- `creator@codeacademy.com` / `password123` — teacher (Code Academy, subdomain: `code-academy.lvh.me:3000`)
+- `alice@student.com` / `password123` — student (Code Academy)
 
 Pre-commit checklist: `npm run build` · tenant filter on every query · tested with all relevant roles · loading + error states handled
 
 ## Known Pitfalls
 
 - **`product_courses` — never `.single()`**: a course can belong to multiple products.
-- **`lesson_completions` uses `user_id`**, not `student_id`.
+- **`lesson_completions` uses `user_id`**, not `student_id`. Has **no `tenant_id`** — never filter by it.
+- **`exercise_completions` has no `tenant_id`** — filter by `user_id` only.
+- **`exams` has no `passing_score` or `allow_retake`** — use 70 as default threshold, assume retakes allowed.
+- **`profiles` has no `email`** — get emails via `createAdminClient().auth.admin.getUserById()` if needed.
 - **`exam_submissions` order column** is `submission_date`, not `submitted_at`.
 - **Transaction status** is `'successful'`, not `'succeeded'`.
 - **Creating test users via SQL** won't fire `handle_new_user()` trigger — manually insert `profiles`, `user_roles`, and `auth.identities`. Use `NULL` for `phone` (unique constraint), `''` for nullable string columns.
@@ -231,6 +269,12 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - **API routes get tenant context** via `proxy.ts` — the `x-tenant-id` header is set for all routes including `/api/*`.
 - **`enroll_user()` RPC** loops through ALL courses per product (FOR loop) — a product can have multiple courses via `product_courses`.
 - **Transactions unique constraint** is a partial index on `(user_id, product_id, plan_id) WHERE status IN ('pending', 'successful')` — allows retries after failed payments.
+
+## Security Notes
+
+- **`NEXT_PUBLIC_OPENAI_API_KEY`** is exposed to the browser bundle (used for speech input). Do not use a production key. Server-side proxying is the intended fix (tracked separately).
+- **Sentry DSN** is currently hardcoded in `sentry.server.config.ts`. This is intentional (public DSN) but consider moving to an env var for consistency.
+- **Test account passwords** (`password123`) are for local development only — seeded by `supabase db reset`. Never use these credentials in a deployed environment.
 
 ## Key Documentation
 

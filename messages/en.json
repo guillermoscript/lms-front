@@ -154,6 +154,51 @@
   },
   "dashboard": {
     "student": {
+      "notifications": {
+        "title": "Notifications",
+        "description": "Stay up to date with activity across your school.",
+        "tabs": {
+          "all": "All",
+          "unread": "Unread",
+          "read": "Read"
+        },
+        "empty": {
+          "title": "No notifications",
+          "none": "You don't have any notifications yet.",
+          "caughtUp": "You're all caught up!"
+        },
+        "actions": {
+          "markAllAsRead": "Mark all as read"
+        },
+        "toasts": {
+          "markAsReadSuccess": "Notification marked as read",
+          "markAsReadError": "Couldn't mark notification as read",
+          "markAllAsReadSuccess": "All notifications marked as read",
+          "markAllAsReadError": "Couldn't mark all as read",
+          "dismissSuccess": "Notification dismissed",
+          "dismissError": "Couldn't dismiss notification",
+          "error": "Something went wrong"
+        },
+        "priority": {
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "types": {
+          "info": "Info",
+          "success": "Success",
+          "warning": "Warning",
+          "error": "Error",
+          "alert": "Alert",
+          "certificate_issued": "Certificate",
+          "comment": "Comment",
+          "comment_reply": "Reply",
+          "exam_review": "Exam review",
+          "order_renewal": "Order renewal",
+          "subscription_renewal": "Subscription renewal"
+        }
+      },
       "title": "My Learning",
       "welcome": "Welcome back! Continue where you left off.",
       "enrolledCourses": "Enrolled Courses",
@@ -356,6 +401,22 @@
           "uploadFailed": "Could not upload file. Please try again.",
           "uploading": "Uploading...",
           "uploadProof": "Upload Proof"
+        },
+        "detail": {
+          "title": "Payment Request Details",
+          "backToPayments": "Back to payments",
+          "requestedOn": "Requested on",
+          "product": "Product",
+          "amount": "Amount",
+          "status": "Status",
+          "paymentMethod": "Payment Method",
+          "paymentInstructions": "Payment Instructions",
+          "paymentDeadline": "Payment Deadline",
+          "noInstructionsYet": "Payment instructions haven't been sent yet. We'll email you once your request is reviewed.",
+          "proofSection": "Payment Proof",
+          "proofUploaded": "Proof uploaded",
+          "uploadHint": "Upload your transfer receipt so we can verify your payment.",
+          "viewProof": "View uploaded proof"
         }
       }
     },
@@ -1371,7 +1432,10 @@
           "status": {
             "successful": "Successful",
             "pending": "Pending",
-            "failed": "Failed"
+            "failed": "Failed",
+            "archived": "Archived",
+            "canceled": "Canceled",
+            "refunded": "Refunded"
           }
         },
         "plan": {
@@ -1944,11 +2008,15 @@
           "started": "Started:",
           "ended": "Ended:",
           "renews": "Renews:",
+          "perMonth": "month",
+          "perYear": "year",
+          "perDays": "{count} days",
           "noSubscriptions": "No subscriptions yet",
           "noFilteredSubscriptions": "No subscriptions found matching your filters"
         },
         "status": {
           "active": "Active",
+          "canceled": "Cancelled",
           "cancelled": "Cancelled",
           "expired": "Expired",
           "past_due": "Past Due",
@@ -3116,6 +3184,13 @@
       "finishCourse": "Finish Course",
       "completeFirst": "Complete this lesson first"
     },
+    "codeBlock": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyAriaLabel": "Copy code",
+      "copiedAriaLabel": "Copied",
+      "code": "Code"
+    },
     "lessonComments": {
       "title": "Comments ({count})",
       "placeholder": "Share your thoughts or ask a question...",
@@ -4230,6 +4305,60 @@
       "completedOn": "Completed on {date}",
       "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
     },
+    "video": {
+      "title": "Video Exercise",
+      "instructions": "Instructions",
+      "topicPrompt": "Speaking Topic",
+      "completed": "Completed",
+      "recordYourResponse": "Record Your Response",
+      "record": "Record Video",
+      "upload": "Upload",
+      "stop": "Stop Recording",
+      "keepRecording": "Keep recording ({seconds}s min)",
+      "reRecord": "Re-record",
+      "submitRecording": "Submit Recording",
+      "uploading": "Uploading...",
+      "getReady": "Get ready...",
+      "analyzing": "Analyzing your video...",
+      "analyzingDescription": "Processing video and generating AI feedback. This may take up to 60 seconds.",
+      "aiFeedback": "AI Feedback",
+      "tryAgain": "Try Again",
+      "score": "score",
+      "duration": "Duration",
+      "durationRange": "Duration: {min}–{max}",
+      "uploadLimit": "Upload: max 100 MB (MP4, WebM, MOV)",
+      "strengths": "Strengths",
+      "improvements": "Areas to Improve",
+      "focusNext": "Focus for Next Attempt",
+      "passed": "Exercise Completed!",
+      "passedMessage": "Great job! You reached the passing score. Your exercise has been marked as complete.",
+      "notPassed": "Keep Practicing!",
+      "notPassedMessage": "Review the feedback below and try again to reach the passing score of {score}.",
+      "submissionHistory": "Submission History",
+      "details": "Show Details",
+      "hideDetails": "Hide Details",
+      "attempt": "Attempt {number}",
+      "dailyLimitReached": "Daily attempt limit reached",
+      "dailyLimitMessage": "You've used all {limit} attempts for today. Come back tomorrow to try again!",
+      "moreExercises": "More Exercises",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "cameraDenied": "Camera access denied. Please allow camera and microphone access and try again.",
+      "unsupportedFile": "Unsupported file type. Allowed: MP4, WebM, MOV.",
+      "fileTooLarge": "File too large ({size} MB). Maximum is {max} MB.",
+      "videoTooShort": "Video is too short ({duration}s). Minimum is {min}s.",
+      "videoTooLong": "Video is too long ({duration}s). Maximum is {max}s.",
+      "maxDuration": "max {time}",
+      "attemptsUsedOf": "{used} of {max} attempts used today",
+      "pointsAway": "{points} points away from passing",
+      "recordAgain": "Record Again",
+      "improvementFocus": "What to Focus On",
+      "passingThreshold": "Pass: {score}",
+      "completedScore": "Your Best Score",
+      "completedOn": "Completed on {date}",
+      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+    },
     "list": {
       "title": "Practice Arena",
       "subtitle": "Challenge yourself with interactive activities and coding tasks.",
@@ -4663,5 +4792,17 @@
       "title": "Community is a premium feature",
       "description": "Upgrade to the Starter plan or higher to access the community feed."
     }
+  },
+  "schoolLanding": {
+    "tagline": "Learn with us. Enroll in courses and grow your skills.",
+    "join": "Join {name}",
+    "alreadyMember": "Already a member? Log in",
+    "availableCourses": "Available Courses",
+    "coursesComingSoon": "Courses coming soon",
+    "checkBackLater": "Check back later for new content.",
+    "free": "Free",
+    "view": "View",
+    "ctaTitle": "Ready to start learning at {name}?",
+    "ctaButton": "Join {name} Now"
   }
 }

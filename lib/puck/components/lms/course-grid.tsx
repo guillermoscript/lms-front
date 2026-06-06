@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
+import type { LandingCourse, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
 
 export type CourseGridProps = {
@@ -60,18 +61,45 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     showDescription: true,
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ title, subtitle, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) => {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (maxItems <= 0) return <></>
 
-    const placeholders = Array.from({ length: Math.min(maxItems, 6) }, (_, i) => ({
-      id: `placeholder-${i}`,
-      title: t('course', { number: i + 1 }),
-      description: t('courseDescription'),
-      price: (i + 1) * 29,
-      image: `https://placehold.co/400x225/e2e8f0/64748b?text=Course+${i + 1}`,
-    }))
+    // Real catalog resolved server-side and handed in via metadata. When present
+    // (published pages, preview, editor with data) we render the school's actual
+    // published courses; otherwise we fall back to placeholders so the canvas is
+    // never empty (e.g. a brand-new school with no courses yet).
+    const liveCourses = ((puck?.metadata as PuckMetadata | undefined)?.courses ?? []) as LandingCourse[]
+    const usingLive = liveCourses.length > 0
+
+    const items = usingLive
+      ? liveCourses.slice(0, maxItems).map((c) => ({
+          id: c.id,
+          title: c.title,
+          description: c.description ?? '',
+          price: c.price,
+          currency: c.currency,
+          image: c.image || `https://placehold.co/400x225/e2e8f0/64748b?text=${encodeURIComponent(c.title)}`,
+          href: `/courses/${c.id}`,
+        }))
+      : Array.from({ length: Math.min(maxItems, 6) }, (_, i) => ({
+          id: `placeholder-${i}`,
+          title: t('course', { number: i + 1 }),
+          description: t('courseDescription'),
+          price: (i + 1) * 29,
+          currency: 'USD' as string | null,
+          image: `https://placehold.co/400x225/e2e8f0/64748b?text=Course+${i + 1}`,
+          href: undefined as string | undefined,
+        }))
+
+    const formatPrice = (price: number, currency: string | null) => {
+      try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'USD').toUpperCase() }).format(price)
+      } catch {
+        return `$${price}`
+      }
+    }
 
     return (
       <div className={sectionOuterClass(spacing)}>
@@ -86,33 +114,37 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
               </p>
             )}
             <div className={cn('grid gap-6', columnClasses[columns])}>
-              {placeholders.map((course) => (
-                <div
-                  key={course.id}
-                  className="group rounded-xl overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
-                >
-                  <div className="aspect-video overflow-hidden">
-                    <img
-                      src={course.image}
-                      alt={course.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-semibold text-base text-foreground mb-2 truncate">{course.title}</h3>
-                    {showDescription && (
-                      <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                        {course.description}
-                      </p>
-                    )}
-                    {showPrice && (
-                      <p className="font-bold text-lg text-primary">
-                        ${course.price}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {items.map((course) => {
+                const Card = course.href ? 'a' : 'div'
+                return (
+                  <Card
+                    key={course.id}
+                    {...(course.href ? { href: course.href } : {})}
+                    className="group block rounded-xl overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                  >
+                    <div className="aspect-video overflow-hidden">
+                      <img
+                        src={course.image}
+                        alt={course.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <h3 className="font-semibold text-base text-foreground mb-2 truncate">{course.title}</h3>
+                      {showDescription && course.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed mb-3 line-clamp-2">
+                          {course.description}
+                        </p>
+                      )}
+                      {showPrice && course.price != null && (
+                        <p className="font-bold text-lg text-primary">
+                          {formatPrice(course.price, course.currency)}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           </div>
         </div>

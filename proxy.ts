@@ -73,6 +73,39 @@ function getTenantSlugFromHost(host: string): string | null {
   return null
 }
 
+/**
+ * Build an absolute redirect URL using the PUBLIC host + scheme.
+ *
+ * Behind Cloudflare → Traefik, the Next.js server receives requests on the
+ * internal container port (3000), so `request.url` / `request.nextUrl` carry
+ * `:3000`. Constructing redirects from those leaks `host:3000` into the browser
+ * (e.g. `acme.preciopana.com:3000/auth/login`), which then fails because port
+ * 3000 isn't exposed through Cloudflare. Always derive the host from the `Host`
+ * header (set to the real public host by the proxy) and the scheme from
+ * `x-forwarded-proto`, and never carry a port.
+ */
+function publicRedirectUrl(request: NextRequest, path: string): URL {
+  const url = new URL(path, request.url)
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const hostHeader = request.headers.get('host') || url.host
+
+  if (forwardedProto) {
+    // Behind a proxy (Cloudflare → Traefik): derive the real public host from
+    // the Host header, force the external scheme, and ALWAYS drop the port.
+    // Setting `.host` to a port-less value does not reliably clear a port that
+    // request.url already carries (the WHATWG URL host setter keeps the old
+    // port when the new value has none), so clear `.port` explicitly.
+    url.hostname = hostHeader.split(':')[0]
+    url.port = ''
+    url.protocol = forwardedProto + ':'
+  } else {
+    // Direct connection (local dev, e.g. acme.lvh.me:3000): the Host header's
+    // port IS the real port — keep it as-is.
+    url.host = hostHeader
+  }
+  return url
+}
+
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -156,8 +189,11 @@ export default async function proxy(request: NextRequest) {
       if (pathname.startsWith('/api')) {
         return NextResponse.json({ error: 'Invalid tenant' }, { status: 404 })
       }
-      const platformUrl = new URL('/', request.url)
-      platformUrl.host = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || request.headers.get('host') || 'localhost:3000'
+      // Redirect to the platform ROOT domain (strip the tenant subdomain).
+      // publicRedirectUrl gives us the correct scheme + (dev) port from the
+      // current request; we only swap the hostname to the bare platform domain.
+      const platformUrl = publicRedirectUrl(request, '/')
+      platformUrl.hostname = (process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || request.headers.get('host') || 'localhost:3000').split(':')[0]
       return NextResponse.redirect(platformUrl)
     }
     tenantId = tenant.id
@@ -186,7 +222,31 @@ export default async function proxy(request: NextRequest) {
   // --- Path normalization ---
   const segments = pathname.split('/')
   const locale = segments[1]
-  const cleanPath = locales.includes(locale as any)
+  const hasValidLocale = locales.includes(locale as any)
+
+  // --- Guarantee a locale prefix before any auth / membership logic ---
+  // Server Actions and RSC navigations can reach the middleware on a locale-less
+  // URL — the codebase convention is `redirect('/dashboard/...')` (no locale).
+  // With localePrefix 'always', next-intl REWRITES those (not redirects) to keep
+  // the RSC payload intact, so they fall through to the guards below with
+  // `segments[1]` being a route segment (e.g. "dashboard"), not a locale. That made
+  // the membership guard run on a malformed path and build the join-school URL from
+  // a garbage locale — briefly bouncing valid members to /join-school (#282, #287).
+  // Force the canonical localized URL so every downstream check sees a well-formed
+  // path. /api, /.well-known and /monitoring already returned above, so this only
+  // touches real app routes.
+  if (!hasValidLocale) {
+    // Preserve the visitor's active locale (next-intl's NEXT_LOCALE cookie),
+    // falling back to the default — so a Spanish user isn't flipped to English
+    // after a locale-less server-action redirect.
+    const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
+    const targetLocale = locales.includes(cookieLocale as any) ? cookieLocale : defaultLocale
+    const localizedUrl = publicRedirectUrl(request, `/${targetLocale}${pathname}`)
+    localizedUrl.search = request.nextUrl.search
+    return NextResponse.redirect(localizedUrl)
+  }
+
+  const cleanPath = hasValidLocale
     ? `/${segments.slice(2).join('/')}`
     : pathname
   const normalizedPath = cleanPath === '' ? '/' : cleanPath
@@ -274,7 +334,7 @@ export default async function proxy(request: NextRequest) {
   // Auth Guards — public routes
   if (isPublicRoute) {
     if (user && (normalizedPath.startsWith('/auth/login') || normalizedPath.startsWith('/auth/sign-up'))) {
-      const dashboardUrl = new URL(`/${locale}/dashboard/${userRole}`, request.url)
+      const dashboardUrl = publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`)
       return NextResponse.redirect(dashboardUrl)
     }
 
@@ -291,7 +351,7 @@ export default async function proxy(request: NextRequest) {
 
   // Protected Routes
   if (!user) {
-    const redirectUrl = new URL(`/${locale}/auth/login`, request.url)
+    const redirectUrl = publicRedirectUrl(request, `/${locale}/auth/login`)
     redirectUrl.searchParams.set('redirectTo', normalizedPath)
     return NextResponse.redirect(redirectUrl)
   }
@@ -332,7 +392,7 @@ export default async function proxy(request: NextRequest) {
       .single()
 
     if (!membership) {
-      const joinUrl = new URL(`/${locale}/join-school`, request.url)
+      const joinUrl = publicRedirectUrl(request, `/${locale}/join-school`)
       return NextResponse.redirect(joinUrl)
     }
 
@@ -389,7 +449,7 @@ export default async function proxy(request: NextRequest) {
   if (normalizedPath.startsWith('/platform')) {
     const isSA = await checkSuperAdmin(user.id)
     if (!isSA) {
-      const loginUrl = new URL(`/${locale}/auth/login`, request.url)
+      const loginUrl = publicRedirectUrl(request, `/${locale}/auth/login`)
       return NextResponse.redirect(loginUrl)
     }
     // Allow super admin through — bypass tenant membership checks
@@ -403,16 +463,16 @@ export default async function proxy(request: NextRequest) {
 
   // Role Checks
   if (normalizedPath.startsWith('/dashboard/student') && userRole !== 'student') {
-    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+    return NextResponse.redirect(publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`))
   }
   if (normalizedPath.startsWith('/dashboard/teacher') && userRole !== 'teacher' && userRole !== 'admin') {
-    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+    return NextResponse.redirect(publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`))
   }
   if (normalizedPath.startsWith('/dashboard/admin') && userRole !== 'admin') {
-    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+    return NextResponse.redirect(publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`))
   }
   if (normalizedPath === '/dashboard') {
-    return NextResponse.redirect(new URL(`/${locale}/dashboard/${userRole}`, request.url))
+    return NextResponse.redirect(publicRedirectUrl(request, `/${locale}/dashboard/${userRole}`))
   }
 
   // Allow access — copy ALL Set-Cookie headers (not just the first one)

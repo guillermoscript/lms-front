@@ -1,5 +1,14 @@
 'use server'
 
+/**
+ * Creates a dedicated proxied A record for a school subdomain.
+ *
+ * NOTE: For standard `<slug>.preciopana.com` subdomains this is REDUNDANT —
+ * the wildcard DNS record `*.preciopana.com` already routes every school
+ * instantly. This helper is retained for the custom-domain / vanity-domain
+ * flow (e.g. a school bringing its own apex domain), where a specific record
+ * is genuinely required. The school-creation form no longer calls it.
+ */
 export async function createCloudflareSubdomain(slug: string) {
   const zoneId = process.env.CLOUDFLARE_ZONE_ID;
   const apiToken = process.env.CF_DNS_API_TOKEN;

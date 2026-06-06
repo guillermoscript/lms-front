@@ -51,23 +51,21 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         )
       `)
       .eq('exam_id', parseInt(examId))
-      .eq('tenant_id', tenantId)
+      // exam_questions has no tenant_id column; isolation is enforced by RLS
+      // via the parent exam (already validated above).
       .order('question_id', { ascending: true }),
     supabase
       .from('exam_answers')
       .select('*')
-      .eq('submission_id', parseInt(submissionId))
-      .eq('tenant_id', tenantId),
+      .eq('submission_id', parseInt(submissionId)),
     supabase
       .from('exam_question_scores')
       .select('*')
-      .eq('submission_id', parseInt(submissionId))
-      .eq('tenant_id', tenantId),
+      .eq('submission_id', parseInt(submissionId)),
     supabase
       .from('exam_scores')
       .select('*')
-      .eq('submission_id', parseInt(submissionId))
-      .eq('tenant_id', tenantId),
+      .eq('submission_id', parseInt(submissionId)),
   ])
 
   // Build per-question data combining questions, answers, and AI scores
@@ -98,53 +96,96 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     }
   })
 
+  // Field names here must match what SubmissionReview reads on `submission`
+  // (status, submitted_at, ai_score, final_score, teacher_feedback). They had
+  // drifted (review_status / submission_date / score), so the header showed
+  // "undefined%" scores and "Invalid Date".
+  const aiScore = rawSubmission.score ?? null
+  const finalScore = examScores?.[0]?.score ?? rawSubmission.score ?? null
   const submission = {
     submission_id: rawSubmission.submission_id,
     exam_id: rawSubmission.exam_id,
     student_id: rawSubmission.student_id,
     student_name: student?.full_name || t('manageCourse.studentList.unknownStudent'),
-    submission_date: rawSubmission.submission_date,
-    score: rawSubmission.score,
-    review_status: rawSubmission.review_status || 'pending',
+    status: rawSubmission.review_status || 'pending',
+    submitted_at: rawSubmission.submission_date,
+    ai_score: aiScore,
+    final_score: finalScore,
+    teacher_feedback: examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback || '',
     ai_data: rawSubmission.ai_data,
     ai_model_used: rawSubmission.ai_model_used,
-    overall_feedback: examScores?.[0]?.feedback || (rawSubmission.ai_data as any)?.overall_feedback || '',
-    teacher_notes: examScores?.[0]?.teacher_notes || '',
-    questions: questionData,
   }
 
-  const handleSave = async (overrides: {
-    score: number
-    feedback: string
-    teacher_notes: string
-    question_overrides: {
-      question_id: number
-      points_earned: number
-      is_correct: boolean
-      teacher_notes: string
-    }[]
-  }) => {
+  // SubmissionReview reads `questions` and `answers` as their own props (not
+  // nested under submission). It keys overrides by question id, so `id` must
+  // equal the answer's question_id. exam_questions has no `sequence` column,
+  // so fall back to question_id for ordering.
+  const questionsForReview = questionData.map(q => ({
+    id: q.question_id,
+    sequence: q.question_id,
+    question_type: q.question_type,
+    question_text: q.question_text,
+    points_possible: q.points_possible,
+    answer_text: q.answer_text,
+    options: (q.options || []).map((o: any) => ({
+      id: o.option_id,
+      option_text: o.option_text,
+      is_correct: o.is_correct,
+    })),
+  }))
+
+  const answersForReview = questionData.map(q => ({
+    question_id: q.question_id,
+    points_earned: q.points_earned,
+    is_correct: q.is_correct,
+    teacher_notes: q.teacher_notes,
+    teacher_score_override: q.is_overridden ? q.points_earned : null,
+  }))
+
+  // SubmissionReview calls onSave(overrides) where `overrides` is keyed by
+  // question id — NOT the { score, question_overrides[] } shape this previously
+  // expected, so the override never persisted. Consume the real shape, recompute
+  // the overall score from the per-question points, and persist.
+  const handleSave = async (overrides: Record<number, {
+    points_earned?: number
+    is_correct?: boolean
+    teacher_notes?: string
+    is_overridden?: boolean
+  }>) => {
     'use server'
     const supabase = createAdminClient()
     const userId = await getCurrentUserId()
     if (!userId) return
 
-    // Update individual question scores
-    for (const qo of overrides.question_overrides) {
+    let totalEarned = 0
+    let totalPossible = 0
+
+    // Upsert individual question scores
+    for (const [questionIdStr, data] of Object.entries(overrides)) {
+      const questionId = parseInt(questionIdStr)
+      const pointsPossible = questionData.find(q => q.question_id === questionId)?.points_possible || 10
+      const pointsEarned = data.points_earned ?? 0
+      totalEarned += pointsEarned
+      totalPossible += pointsPossible
+
       await supabase
         .from('exam_question_scores')
         .upsert({
           submission_id: parseInt(submissionId),
-          question_id: qo.question_id,
-          points_earned: qo.points_earned,
-          points_possible: questionData.find(q => q.question_id === qo.question_id)?.points_possible || 10,
-          is_correct: qo.is_correct,
+          question_id: questionId,
+          points_earned: pointsEarned,
+          points_possible: pointsPossible,
+          is_correct: data.is_correct ?? null,
           teacher_id: userId,
-          teacher_notes: qo.teacher_notes,
-          is_overridden: true,
+          teacher_notes: data.teacher_notes || null,
+          is_overridden: data.is_overridden || false,
           reviewed_at: new Date().toISOString(),
         }, { onConflict: 'submission_id,question_id' })
     }
+
+    const newScore = totalPossible > 0
+      ? Math.round((totalEarned / totalPossible) * 100)
+      : (rawSubmission.score ?? 0)
 
     // Update overall exam_scores
     await supabase
@@ -153,10 +194,8 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         submission_id: parseInt(submissionId),
         student_id: rawSubmission.student_id,
         exam_id: rawSubmission.exam_id,
-        score: overrides.score,
-        feedback: overrides.feedback,
+        score: newScore,
         teacher_id: userId,
-        teacher_notes: overrides.teacher_notes,
         is_overridden: true,
         reviewed_at: new Date().toISOString(),
       }, { onConflict: 'submission_id,student_id,exam_id' })
@@ -165,7 +204,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     await supabase
       .from('exam_submissions')
       .update({
-        score: overrides.score,
+        score: newScore,
         review_status: 'teacher_reviewed',
         requires_attention: false,
       })
@@ -190,7 +229,12 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         </div>
       </div>
 
-      <SubmissionReview submission={submission} onSave={handleSave} />
+      <SubmissionReview
+        submission={submission}
+        questions={questionsForReview}
+        answers={answersForReview}
+        onSave={handleSave}
+      />
     </div>
   )
 }

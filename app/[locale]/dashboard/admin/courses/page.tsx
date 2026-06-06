@@ -36,7 +36,7 @@ export default async function AdminCoursesPage() {
   const authorIds = courses?.map((c) => c.author_id) || []
 
   const [{ data: authors }, { data: enrollments }, { data: lessons }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, email')
+    supabase.from('profiles').select('id, full_name')
       .in('id', authorIds.length > 0 ? authorIds : ['none']),
     supabase.from('enrollments').select('course_id').eq('tenant_id', tenantId),
     supabase.from('lessons').select('course_id').eq('tenant_id', tenantId),
