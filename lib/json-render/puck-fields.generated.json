@@ -122,6 +122,14 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "text": "Heading",
+      "level": "h2",
+      "alignment": "left",
+      "color": "",
+      "fontSize": "2rem",
+      "fontWeight": "700"
     }
   },
   "TextBlock": {
@@ -201,6 +209,13 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "content": "Enter your text here...",
+      "alignment": "left",
+      "color": "",
+      "maxWidth": "none",
+      "fontSize": "1rem"
     }
   },
   "Image": {
@@ -274,6 +289,14 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "src": "https://placehold.co/800x400/e2e8f0/64748b?text=Image",
+      "alt": "Image",
+      "width": "100%",
+      "height": "auto",
+      "objectFit": "cover",
+      "borderRadius": "0.5rem"
     }
   },
   "ButtonBlock": {
@@ -345,6 +368,14 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "label": "Click me",
+      "href": "#",
+      "variant": "solid",
+      "size": "md",
+      "color": "",
+      "alignment": "left"
     }
   },
   "Video": {
@@ -398,6 +429,12 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "url": "",
+      "title": "Video",
+      "aspectRatio": "16/9",
+      "borderRadius": "0.5rem"
     }
   },
   "Divider": {
@@ -451,6 +488,11 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "style": "line",
+      "color": "",
+      "thickness": "1px"
     }
   },
   "Spacer": {
@@ -464,6 +506,10 @@
         "type": "number",
         "label": "Mobile Height (px)"
       }
+    },
+    "defaultProps": {
+      "height": 40,
+      "mobileHeight": 20
     }
   },
   "IconBlock": {
@@ -561,6 +607,12 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "icon": "star",
+      "size": 32,
+      "color": "",
+      "alignment": "center"
     }
   },
   "BadgeBlock": {
@@ -592,6 +644,11 @@
         "type": "text",
         "label": "Color"
       }
+    },
+    "defaultProps": {
+      "text": "Badge",
+      "variant": "subtle",
+      "color": ""
     }
   },
   "Section": {
@@ -679,6 +736,15 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "backgroundColor": "",
+      "backgroundImage": "",
+      "backgroundGradient": "",
+      "overlayOpacity": 0,
+      "paddingY": "4rem",
+      "maxWidth": "1280px",
+      "theme": "light"
     }
   },
   "Columns": {
@@ -764,6 +830,12 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "columnCount": "2",
+      "gap": "1.5rem",
+      "verticalAlign": "top",
+      "stackOnMobile": true
     }
   },
   "Container": {
@@ -835,6 +907,11 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "maxWidth": "1280px",
+      "padding": "1.5rem",
+      "alignment": "center"
     }
   },
   "Grid": {
@@ -910,6 +987,11 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "columns": "3",
+      "gap": "1.5rem",
+      "minItemWidth": "auto"
     }
   },
   "Card": {
@@ -985,6 +1067,11 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "shadow": "sm",
+      "padding": "1.5rem",
+      "borderRadius": "0.75rem"
     }
   },
   "HeroBlock": {
@@ -1070,6 +1157,19 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "Welcome to Our Academy",
+      "subtitle": "Start your learning journey today with expert-led courses designed to help you succeed.",
+      "primaryCtaLabel": "Get Started",
+      "primaryCtaHref": "/courses",
+      "secondaryCtaLabel": "Learn More",
+      "secondaryCtaHref": "#features",
+      "backgroundImage": "",
+      "backgroundColor": "",
+      "alignment": "center",
+      "overlayOpacity": 50,
+      "minHeight": "500px"
     }
   },
   "FeaturesGrid": {
@@ -1227,6 +1327,33 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "Why Choose Us",
+      "subtitle": "Everything you need to succeed in your learning journey.",
+      "items": [
+        {
+          "icon": "🎓",
+          "title": "Expert Instructors",
+          "description": "Learn from industry professionals with years of experience."
+        },
+        {
+          "icon": "📚",
+          "title": "Structured Courses",
+          "description": "Well-organized curriculum designed for effective learning."
+        },
+        {
+          "icon": "🏆",
+          "title": "Certificates",
+          "description": "Earn verifiable certificates upon course completion."
+        }
+      ],
+      "columns": "3",
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "CourseGrid": {
@@ -1394,6 +1521,18 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "Our Courses",
+      "subtitle": "Explore our catalog and start learning today.",
+      "maxItems": 6,
+      "columns": "3",
+      "showPrice": true,
+      "showDescription": true,
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "PricingTable": {
@@ -1559,6 +1698,46 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "Simple Pricing",
+      "subtitle": "Choose the plan that fits your needs.",
+      "items": [
+        {
+          "name": "Basic",
+          "price": "$19",
+          "period": "/month",
+          "description": "For individuals",
+          "features": "Access to all courses\nCommunity support\nCertificates",
+          "highlighted": false,
+          "ctaLabel": "Start Free",
+          "ctaHref": "#"
+        },
+        {
+          "name": "Pro",
+          "price": "$49",
+          "period": "/month",
+          "description": "For professionals",
+          "features": "Everything in Basic\nPriority support\n1-on-1 mentoring\nAdvanced courses",
+          "highlighted": true,
+          "ctaLabel": "Get Pro",
+          "ctaHref": "#"
+        },
+        {
+          "name": "Team",
+          "price": "$99",
+          "period": "/month",
+          "description": "For organizations",
+          "features": "Everything in Pro\nTeam management\nCustom integrations\nDedicated support",
+          "highlighted": false,
+          "ctaLabel": "Contact Us",
+          "ctaHref": "#"
+        }
+      ],
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "TestimonialGrid": {
@@ -1698,6 +1877,34 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "What Our Students Say",
+      "subtitle": "",
+      "items": [
+        {
+          "name": "Maria S.",
+          "role": "Web Developer",
+          "quote": "The courses are incredibly well-structured. I went from beginner to professional in just 3 months.",
+          "rating": 5
+        },
+        {
+          "name": "Carlos R.",
+          "role": "Data Analyst",
+          "quote": "Best online learning platform I have used. The AI tutor is a game changer.",
+          "rating": 5
+        },
+        {
+          "name": "Ana L.",
+          "role": "UX Designer",
+          "quote": "The gamification keeps me motivated every day. Already on a 30-day streak!",
+          "rating": 5
+        }
+      ],
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "FaqAccordion": {
@@ -1833,6 +2040,29 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "",
+      "items": [
+        {
+          "question": "How do I get started?",
+          "answer": "Simply create an account and browse our course catalog. You can start learning immediately with our free courses."
+        },
+        {
+          "question": "Do I get a certificate?",
+          "answer": "Yes! Upon completing a course, you receive a verifiable digital certificate that you can share on your resume or LinkedIn."
+        },
+        {
+          "question": "Can I learn at my own pace?",
+          "answer": "Absolutely. All courses are self-paced, so you can learn whenever and wherever works best for you."
+        }
+      ],
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "StatsCounter": {
@@ -1982,6 +2212,40 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "items": [
+        {
+          "value": "10,000",
+          "label": "Students",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "500",
+          "label": "Courses",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "50",
+          "label": "Instructors",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "4.9",
+          "label": "Rating",
+          "prefix": "",
+          "suffix": "/5"
+        }
+      ],
+      "alignment": "center",
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
     }
   },
   "CtaBlock": {
@@ -2137,6 +2401,20 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Ready to Start Learning?",
+      "subtitle": "Join thousands of students and start your journey today.",
+      "primaryCtaLabel": "Get Started",
+      "primaryCtaHref": "/courses",
+      "secondaryCtaLabel": "",
+      "secondaryCtaHref": "",
+      "style": "gradient",
+      "accentColor": ""
     }
   },
   "ContactForm": {
@@ -2286,6 +2564,17 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Contact Us",
+      "subtitle": "Have a question? We would love to hear from you.",
+      "email": "hello@school.com",
+      "showPhone": false,
+      "showMessage": true
     }
   },
   "LogoCloud": {
@@ -2417,6 +2706,40 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Trusted By",
+      "items": [
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+1",
+          "alt": "Brand 1",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+2",
+          "alt": "Brand 2",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+3",
+          "alt": "Brand 3",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+4",
+          "alt": "Brand 4",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+5",
+          "alt": "Brand 5",
+          "url": ""
+        }
+      ]
     }
   },
   "LogoMarquee": {
@@ -2576,6 +2899,57 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Trusted By",
+      "reverse": "false",
+      "pauseOnHover": "true",
+      "items": [
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+1",
+          "alt": "Brand 1",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+2",
+          "alt": "Brand 2",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+3",
+          "alt": "Brand 3",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+4",
+          "alt": "Brand 4",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+5",
+          "alt": "Brand 5",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+6",
+          "alt": "Brand 6",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+7",
+          "alt": "Brand 7",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+8",
+          "alt": "Brand 8",
+          "url": ""
+        }
+      ]
     }
   },
   "StatsBand": {
@@ -2707,6 +3081,28 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Our platform in numbers",
+      "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
+      "items": [
+        {
+          "value": "+1200",
+          "label": "Courses published"
+        },
+        {
+          "value": "22,000",
+          "label": "Active students"
+        },
+        {
+          "value": "+500",
+          "label": "Certificates issued"
+        }
+      ]
     }
   },
   "ShinyEyebrow": {
@@ -2734,6 +3130,10 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "text": "✨ Introducing our new course builder",
+      "align": "center"
     }
   },
   "AnimatedStats": {
@@ -2869,6 +3269,33 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Trusted by learners worldwide",
+      "items": [
+        {
+          "value": 1200,
+          "prefix": "+",
+          "suffix": "",
+          "label": "Courses published"
+        },
+        {
+          "value": 22000,
+          "prefix": "",
+          "suffix": "",
+          "label": "Active students"
+        },
+        {
+          "value": 98,
+          "prefix": "",
+          "suffix": "%",
+          "label": "Completion rate"
+        }
+      ]
     }
   },
   "FaqSplit": {
@@ -2996,6 +3423,27 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "What is the refund policy?",
+          "answer": "We offer a 30-day money back guarantee. If you are not satisfied, request a refund within 30 days of purchase."
+        },
+        {
+          "question": "How do I cancel my subscription?",
+          "answer": "You can cancel at any time from your account settings — your access continues until the end of the current billing period."
+        },
+        {
+          "question": "Can I upgrade my plan?",
+          "answer": "Yes. Upgrade any time from your account; the price difference is prorated and the new plan takes effect immediately."
+        }
+      ]
     }
   },
   "CtaBanner": {
@@ -3129,6 +3577,18 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Start building your course today",
+      "subtitle": "Join thousands of educators publishing on the platform.",
+      "primaryLabel": "Get Started",
+      "primaryHref": "/auth/sign-up",
+      "secondaryLabel": "Book a Demo",
+      "secondaryHref": "/contact"
     }
   },
   "ContentFeature": {
@@ -3276,6 +3736,19 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Everything you need to teach online",
+      "body": "Build courses, track learner progress, run assessments, and issue certificates — all from one platform designed to get out of your way.",
+      "imageUrl": "https://placehold.co/1207x929/e2e8f0/64748b?text=Feature",
+      "imageAlt": "Product feature illustration",
+      "imagePosition": "left",
+      "quote": "Switching to this platform cut our course setup time in half and our completion rates went up.",
+      "quoteAuthor": "Jane Doe, Course Creator"
     }
   },
   "Banner": {
@@ -3419,6 +3892,15 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "sm",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "text": "Welcome! Enrollment is now open for our new courses.",
+      "style": "info",
+      "accentColor": ""
     }
   },
   "TeamGrid": {
@@ -3562,6 +4044,35 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Meet Our Team",
+      "subtitle": "",
+      "accentColor": "",
+      "members": [
+        {
+          "name": "Alex Johnson",
+          "role": "Lead Instructor",
+          "bio": "Full-stack developer with 10+ years of experience.",
+          "avatar": ""
+        },
+        {
+          "name": "Sarah Chen",
+          "role": "Course Designer",
+          "bio": "Expert in curriculum development and instructional design.",
+          "avatar": ""
+        },
+        {
+          "name": "David Kim",
+          "role": "AI Specialist",
+          "bio": "Machine learning researcher and educator.",
+          "avatar": ""
+        }
+      ]
     }
   },
   "ImageGallery": {
@@ -3711,6 +4222,46 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "",
+      "images": [
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+1",
+          "alt": "Photo 1",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+2",
+          "alt": "Photo 2",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+3",
+          "alt": "Photo 3",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+4",
+          "alt": "Photo 4",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+5",
+          "alt": "Photo 5",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+6",
+          "alt": "Photo 6",
+          "caption": ""
+        }
+      ],
+      "columns": "3"
     }
   },
   "SocialProof": {
@@ -3732,6 +4283,12 @@
         "type": "number",
         "label": "Number of Avatars"
       }
+    },
+    "defaultProps": {
+      "text": "Trusted by 10,000+ students worldwide",
+      "rating": 5,
+      "reviewCount": "Based on 2,000+ reviews",
+      "avatarCount": 5
     }
   },
   "Header": {
@@ -3823,6 +4380,30 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "logo": "",
+      "logoText": "Academy",
+      "navLinks": [
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "About",
+          "href": "#about"
+        },
+        {
+          "label": "Contact",
+          "href": "#contact"
+        }
+      ],
+      "ctaLabel": "Enroll Now",
+      "ctaHref": "/courses",
+      "showLogin": true,
+      "showLanguageSwitcher": true,
+      "sticky": true,
+      "transparent": false
     }
   },
   "Footer": {
@@ -3874,6 +4455,52 @@
         "type": "text",
         "label": "Copyright Text"
       }
+    },
+    "defaultProps": {
+      "description": "Your online academy for professional development and personal growth.",
+      "columns": [
+        {
+          "title": "Courses",
+          "links": [
+            {
+              "label": "All Courses",
+              "href": "/courses"
+            },
+            {
+              "label": "Pricing",
+              "href": "/pricing"
+            }
+          ]
+        },
+        {
+          "title": "Company",
+          "links": [
+            {
+              "label": "About",
+              "href": "#about"
+            },
+            {
+              "label": "Contact",
+              "href": "#contact"
+            }
+          ]
+        },
+        {
+          "title": "Legal",
+          "links": [
+            {
+              "label": "Terms",
+              "href": "/terms"
+            },
+            {
+              "label": "Privacy",
+              "href": "/privacy"
+            }
+          ]
+        }
+      ],
+      "socialLinks": [],
+      "copyright": "© 2026 Academy. All rights reserved."
     }
   },
   "Navbar": {
@@ -3925,6 +4552,28 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "links": [
+        {
+          "label": "Home",
+          "href": "/"
+        },
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "About",
+          "href": "#about"
+        },
+        {
+          "label": "Contact",
+          "href": "#contact"
+        }
+      ],
+      "sticky": false,
+      "alignment": "center"
     }
   },
   "BreadcrumbBlock": {
@@ -3966,6 +4615,23 @@
           }
         ]
       }
+    },
+    "defaultProps": {
+      "items": [
+        {
+          "label": "Home",
+          "href": "/"
+        },
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "Current Page",
+          "href": ""
+        }
+      ],
+      "separator": "/"
     }
   }
 }

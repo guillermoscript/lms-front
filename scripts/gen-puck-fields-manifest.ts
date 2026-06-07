@@ -21,6 +21,10 @@ type AnyFields = Record<string, any>
 interface ManifestEntry {
   category: string | null
   fields: AnyFields
+  // Each component's Puck defaultProps (serializable). The bridge merges these under the
+  // AI-supplied props so a generated block always has its required arrays/values even when
+  // the model omits them — preventing render crashes like `items.length` on undefined.
+  defaultProps: AnyFields
 }
 
 // Reverse-map component name → category from the config's categories.
@@ -35,11 +39,16 @@ const manifest: Record<string, ManifestEntry> = {}
 for (const [name, def] of Object.entries(puckConfig.components)) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fields = ((def as any).fields ?? {}) as AnyFields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const defaultProps = ((def as any).defaultProps ?? {}) as AnyFields
   // Strip non-serializable bits (functions like custom field renderers) — keep only the
   // declarative shape the catalog needs: type, label, options, arrayFields.
   manifest[name] = {
     category: categoryOf[name] ?? null,
     fields: pruneFields(fields),
+    // JSON round-trip drops any non-serializable defaults (none expected) and gives us a
+    // clean plain-data copy.
+    defaultProps: JSON.parse(JSON.stringify(defaultProps)),
   }
 }
 

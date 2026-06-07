@@ -63,8 +63,10 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- Default tenant (main platform / default school)
 -- Created by migration 20260216200000 — kept here for completeness
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active')
+-- Seeded on the enterprise plan so all plan-gated features (custom branding, white-label,
+-- analytics, AI, etc.) are unlocked for local development and E2E testing.
+INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'enterprise', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)

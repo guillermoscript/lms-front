@@ -32,6 +32,45 @@ export interface JsonRenderSpec {
 }
 
 /**
+ * One element as the LLM emits it when `elements` is an ARRAY (not a keyed map).
+ *
+ * Why an array: OpenAI's structured-output mode rejects JSON schemas containing
+ * `propertyNames`, which is exactly what `z.record(z.string(), …)` compiles to. So the
+ * model returns `elements` as a list of `{ id, … }` objects and we fold it back into the
+ * keyed-map spec the rest of the pipeline (normalizeSpec, catalog.validate, specToPuckData)
+ * already expects.
+ */
+export interface JsonRenderElementInput {
+  id: string
+  type: string
+  props?: Record<string, unknown>
+  children?: string[]
+}
+
+/** Spec shape as emitted by the model: a root id + a flat array of elements. */
+export interface JsonRenderArraySpec {
+  root: string
+  elements: JsonRenderElementInput[]
+}
+
+/**
+ * Fold the array form (`elements: [{id, …}]`) into the keyed-map spec
+ * (`elements: { [id]: … }`) used everywhere downstream. Duplicate ids: last one wins.
+ */
+export function arraySpecToSpec(spec: JsonRenderArraySpec): JsonRenderSpec {
+  const elements: JsonRenderSpec['elements'] = {}
+  for (const el of spec.elements ?? []) {
+    if (!el?.id) continue
+    elements[el.id] = {
+      type: el.type,
+      props: el.props,
+      children: el.children,
+    }
+  }
+  return { root: spec.root, elements }
+}
+
+/**
  * Fill in the structural fields the json-render schema requires on every element
  * (`children` and `visible`) so a spec from an LLM — which often omits them — passes
  * `catalog.validate()`. Mutates a copy, returns it.
@@ -61,19 +100,45 @@ function cleanProps(props: Record<string, unknown> = {}): Record<string, unknown
 /**
  * Convert a validated json-render spec into Puck `Data`.
  *
- * @param spec   A json-render flat spec (already validated against the catalog).
- * @param idFn   Optional id generator for Puck props.id (defaults to the element key).
+ * @param spec          A json-render flat spec (already validated against the catalog).
+ * @param defaultsByType Each component type's Puck defaultProps, merged UNDER the AI props so
+ *                       a generated block always has its required arrays/values even when the
+ *                       model omits them. Puck's Render does not reliably backfill top-level
+ *                       props, so a missing array would otherwise crash a block at
+ *                       `items.length`. Pass DEFAULT_PROPS_BY_TYPE from the catalog.
+ * @param idFn          Optional id generator for Puck props.id (defaults to the element key).
  */
 export function specToPuckData(
   spec: JsonRenderSpec,
+  defaultsByType: Record<string, Record<string, unknown>> = {},
   idFn: (elementKey: string, index: number) => string = (k) => k
 ): Data {
+  const allKeys = Object.keys(spec.elements)
   const rootEl = spec.elements[spec.root]
-  if (!rootEl) {
-    return { content: [], root: { props: {} } }
-  }
 
-  const childKeys = rootEl.children ?? Object.keys(spec.elements).filter((k) => k !== spec.root)
+  // Determine the ordered list of section keys to render.
+  //
+  // Happy path: a dedicated root container element exists and its `children` lists the
+  // sections in order. But LLMs frequently get this wrong — e.g. naming a `root` id that
+  // has no matching element, or making the first section (HeroBlock) the parent of the rest.
+  // So we fall back to "every element that nobody else claims as a child", in array order.
+  // This keeps a valid-but-misstructured spec from rendering as an empty page.
+  let childKeys: string[]
+  const rootChildren = rootEl?.children?.filter((k) => spec.elements[k])
+
+  if (rootEl && !rootEl.type && rootChildren && rootChildren.length > 0) {
+    // Happy path: a dedicated, typeless root *container* whose `children` order the sections.
+    childKeys = rootChildren
+  } else {
+    // Fallback for the common LLM mistakes:
+    //   (a) `root` names an id with no matching element, or
+    //   (b) the model made a real section (e.g. HeroBlock) the "root" and hung the other
+    //       sections off its `children`.
+    // For a flat landing page every block is a top-level section, so we flatten: take all
+    // elements in their array/insertion order, ignoring the (misused) nesting. This turns a
+    // valid-but-misstructured spec into the full page instead of an empty or 1-block page.
+    childKeys = allKeys
+  }
 
   const content = childKeys
     .map((key, index) => {
@@ -81,9 +146,13 @@ export function specToPuckData(
       if (!el) return null
       // Puck requires a stable props.id per component instance.
       const id = idFn(key, index)
+      // Merge order: component defaults first, then the AI's (cleaned) props override them.
+      // This backfills any prop the model omitted (e.g. an array a block maps over) so the
+      // block never receives `undefined` where it expects an array/value.
+      const defaults = defaultsByType[el.type] ?? {}
       return {
         type: el.type,
-        props: { id, ...cleanProps(el.props) },
+        props: { id, ...defaults, ...cleanProps(el.props) },
       }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)

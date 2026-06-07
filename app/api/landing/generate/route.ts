@@ -20,20 +20,37 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { landingCatalog } from '@/lib/json-render/catalog'
-import { specToPuckData, normalizeSpec, type JsonRenderSpec } from '@/lib/json-render/to-puck'
+import { landingCatalog, DEFAULT_PROPS_BY_TYPE } from '@/lib/json-render/catalog'
+import {
+  specToPuckData,
+  normalizeSpec,
+  arraySpecToSpec,
+  type JsonRenderArraySpec,
+} from '@/lib/json-render/to-puck'
+import { LANDING_AUTHORING_GUIDE } from '@/lib/json-render/authoring-guide'
 
 export const maxDuration = 120
 
 // Permissive structural schema — the catalog enforces the real constraints via validateSpec.
+// `elements` is an ARRAY (not z.record) because OpenAI's structured-output mode rejects the
+// `propertyNames` keyword that z.record(z.string(), …) compiles to. We fold the array back
+// into a keyed map with arraySpecToSpec() before validating. See to-puck.ts.
 const specShape = z.object({
   root: z.string(),
-  elements: z.record(
-    z.string(),
+  elements: z.array(
     z.object({
+      id: z.string(),
       type: z.string(),
-      props: z.record(z.string(), z.unknown()).optional(),
-      children: z.array(z.string()).optional(),
+      // Props as a JSON string: OpenAI structured-output rejects open-ended objects
+      // (z.record → `propertyNames`/`additionalProperties`). The model writes a JSON
+      // object string here; we parse it below. Component-specific shapes are then enforced
+      // by landingCatalog.validate().
+      propsJson: z
+        .string()
+        .describe('A JSON object string of this block\'s props, e.g. {"title":"...","subtitle":"..."}'),
+      children: z
+        .array(z.string())
+        .describe('Child element ids in order; empty array for leaf section blocks.'),
     })
   ),
 })
@@ -53,14 +70,13 @@ export async function POST(req: Request) {
     return new Response('A `prompt` string is required', { status: 400 })
   }
 
-  // The catalog generates the system prompt that constrains the model to our blocks.
-  const systemPrompt =
-    landingCatalog.prompt() +
-    '\n\nReturn a single JSON object with `root` (an element key) and `elements` ' +
-    '(a flat map keyed by element id). The root element should list the section blocks ' +
-    'in order via its `children`. Use only the documented components and props.'
+  // The catalog generates the base system prompt that constrains the model to our blocks
+  // (the AVAILABLE COMPONENTS list with every prop + enum). We append landing-page–specific
+  // authoring guidance so the model produces a rich, well-structured, on-brand page rather
+  // than a thin 4-block stub. See docs/adr/0001-json-render-puck-landing-builder.md.
+  const systemPrompt = landingCatalog.prompt() + '\n\n' + LANDING_AUTHORING_GUIDE
 
-  let object: unknown
+  let object: z.infer<typeof specShape>
   try {
     const result = await generateObject({
       model: AI_CONFIG.defaultModel,
@@ -74,8 +90,23 @@ export async function POST(req: Request) {
     return new Response('Generation failed', { status: 502 })
   }
 
+  // Parse each block's propsJson string into an object, then fold the array into the
+  // keyed-map spec the rest of the pipeline expects.
+  const arraySpec: JsonRenderArraySpec = {
+    root: object.root,
+    elements: object.elements.map((el) => {
+      let props: Record<string, unknown> = {}
+      try {
+        props = el.propsJson ? JSON.parse(el.propsJson) : {}
+      } catch {
+        props = {}
+      }
+      return { id: el.id, type: el.type, props, children: el.children }
+    }),
+  }
+
   // Fill required structural fields the LLM may omit, then validate against the catalog.
-  const spec = normalizeSpec(object as JsonRenderSpec)
+  const spec = normalizeSpec(arraySpecToSpec(arraySpec))
 
   // Anti-hallucination guarantee: the catalog rejects unknown components / bad props.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,6 +123,6 @@ export async function POST(req: Request) {
   }
 
   // Hand back Puck Data ready to load into the editor.
-  const data = specToPuckData(spec)
+  const data = specToPuckData(spec, DEFAULT_PROPS_BY_TYPE)
   return Response.json({ data, spec })
 }

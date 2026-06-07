@@ -109,3 +109,16 @@ export type LandingCatalog = typeof landingCatalog
 
 /** Names the AI may generate (everything in the catalog). Useful for tests/UI hints. */
 export const CATALOG_COMPONENT_NAMES = Object.keys(components)
+
+/**
+ * Each component's Puck `defaultProps`, keyed by component name. The bridge merges these
+ * UNDER the AI-supplied props so a generated block always has its required arrays/values even
+ * when the model omits them — Puck's `Render` does not reliably backfill defaults for
+ * top-level props, so a missing array would otherwise crash a block at `items.length`.
+ * Derived from the same manifest as the catalog, so it stays in sync with lib/puck/config.ts.
+ */
+export const DEFAULT_PROPS_BY_TYPE: Record<string, Record<string, unknown>> = {}
+for (const [name, entry] of Object.entries(manifest)) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  DEFAULT_PROPS_BY_TYPE[name] = ((entry as any).defaultProps ?? {}) as Record<string, unknown>
+}

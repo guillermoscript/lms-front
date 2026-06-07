@@ -57,6 +57,10 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
   },
   render: ({ paddingY, paddingX, maxWidth, marginY, heading, subtitle, items }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
+    // Guard against a missing array: AI-generated specs (and Puck's Render path, which does
+    // not always backfill defaultProps for top-level array props) can deliver `items` as
+    // undefined/null. Default to [] so the block degrades gracefully instead of crashing.
+    const safeItems = items ?? []
 
     return (
       <div className={sectionOuterClass(spacing)}>
@@ -69,14 +73,14 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
               </div>
             )}
 
-            {items.length > 0 && (
+            {safeItems.length > 0 && (
               <div
                 className="grid gap-12 divide-y *:text-center md:gap-2 md:divide-x md:divide-y-0"
                 style={{
-                  gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))`,
+                  gridTemplateColumns: `repeat(${Math.min(safeItems.length, 4)}, minmax(0, 1fr))`,
                 }}
               >
-                {items.map((stat, i) => (
+                {safeItems.map((stat, i) => (
                   <div key={i} className="space-y-4">
                     <div className="text-5xl font-bold">{stat.value}</div>
                     <p className="text-muted-foreground">{stat.label}</p>
