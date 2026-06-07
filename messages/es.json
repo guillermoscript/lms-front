@@ -4406,10 +4406,22 @@
       "replaceWarning": "Esto reemplaza el contenido actual de la página. Tu versión guardada no se ve afectada hasta que guardes.",
       "generate": "Generar",
       "generating": "Generando...",
+      "buildingCount": "Construyendo… {count} secciones hasta ahora",
       "cancel": "Cancelar",
       "generated": "Se generó una página con {count} bloques",
       "empty": "La IA devolvió una página vacía. Prueba con una descripción más detallada.",
-      "failed": "La generación falló. Inténtalo de nuevo."
+      "failed": "La generación falló. Inténtalo de nuevo.",
+      "chatTitle": "Asistente IA",
+      "chatDescription": "Chatea para construir y refinar tu página. Selecciona un bloque para editar solo ese bloque.",
+      "pageContext": "Editando toda la página",
+      "editingContext": "Editando el bloque de {type} seleccionado",
+      "editingBlock": "Actualizando {type}…",
+      "emptyChatTitle": "Describe tu página",
+      "emptyChatHint": "Prueba: «Una página para un curso de español para principiantes.» Luego haz clic en cualquier bloque del lienzo y pídeme que ajuste solo ese.",
+      "composerPage": "Describe o cambia toda la página…",
+      "composerBlock": "Dime cómo cambiar {type}…",
+      "send": "Enviar",
+      "undoHint": "Los cambios se aplican al instante — presiona Cmd/Ctrl+Z para deshacer."
     },
     "categories": {
       "primitives": "Primitivos",

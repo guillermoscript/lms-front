@@ -18,7 +18,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import BrandingSettingsForm from '@/components/admin/branding-settings-form'
-import { GenerateWithAI } from '@/components/admin/landing-page/generate-with-ai'
+import { AiChatPanel } from '@/components/admin/landing-page/ai-chat-panel'
 import { IconArrowLeft, IconDeviceFloppy, IconPalette } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
@@ -151,7 +151,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, branding
                 <IconPalette className="w-4 h-4" />
                 {t('editor.branding')}
               </Button>
-              <GenerateWithAI />
+              <AiChatPanel />
               <SaveButton pageId={pageId} saving={saving} onSaveStateChange={setSaving} />
               {children}
             </>

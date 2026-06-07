@@ -89,7 +89,7 @@ export function normalizeSpec(spec: JsonRenderSpec): JsonRenderSpec {
 }
 
 /** Drop null/undefined props so Puck falls back to each component's defaultProps. */
-function cleanProps(props: Record<string, unknown> = {}): Record<string, unknown> {
+export function cleanProps(props: Record<string, unknown> = {}): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(props)) {
     if (v !== null && v !== undefined) out[k] = v

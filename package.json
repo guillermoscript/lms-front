@@ -16,6 +16,7 @@
     "show-jwt-fix": "tsx scripts/show-jwt-fix.ts",
     "gen:puck-fields": "tsx scripts/gen-puck-fields-manifest.ts",
     "json-render:proof": "tsx scripts/json-render-proof.ts",
+    "json-render:stream-test": "tsx scripts/json-render-stream-test.ts",
     "demo:720": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts",
     "demo:1080": "DEMO_RES=1080 npx playwright test --config tests/demos/playwright.demo.config.ts",
     "demo:single": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts -g",

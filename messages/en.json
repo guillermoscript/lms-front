@@ -4413,10 +4413,22 @@
       "replaceWarning": "This replaces the current page content. Your saved version is unaffected until you save.",
       "generate": "Generate",
       "generating": "Generating...",
+      "buildingCount": "Building… {count} sections so far",
       "cancel": "Cancel",
       "generated": "Generated a page with {count} blocks",
       "empty": "AI returned an empty page. Try a more detailed description.",
-      "failed": "Generation failed. Please try again."
+      "failed": "Generation failed. Please try again.",
+      "chatTitle": "AI Assistant",
+      "chatDescription": "Chat to build and refine your page. Select a block to edit just that block.",
+      "pageContext": "Editing the whole page",
+      "editingContext": "Editing the selected {type} block",
+      "editingBlock": "Updating the {type}…",
+      "emptyChatTitle": "Describe your page",
+      "emptyChatHint": "Try: “A landing page for a beginner Spanish course.” Then click any block on the canvas and ask me to tweak just that one.",
+      "composerPage": "Describe or change the whole page…",
+      "composerBlock": "Tell me how to change the {type}…",
+      "send": "Send",
+      "undoHint": "Changes apply instantly — press Cmd/Ctrl+Z to undo."
     },
     "categories": {
       "primitives": "Primitives",
