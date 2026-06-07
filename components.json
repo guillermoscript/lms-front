@@ -22,6 +22,10 @@
   "menuColor": "default",
   "menuAccent": "bold",
   "registries": {
-    "@supabase": "https://supabase.com/ui/r/{name}.json"
+    "@supabase": "https://supabase.com/ui/r/{name}.json",
+    "@tailark": "https://tailark.com/r/{name}.json",
+    "@magicui": "https://magicui.design/r/{name}.json",
+    "@shadcnblocks": "https://www.shadcnblocks.com/r/{name}.json",
+    "@motion-primitives": "https://motion-primitives.com/c/{name}.json"
   }
 }

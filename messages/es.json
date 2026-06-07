@@ -4397,6 +4397,20 @@
         "published": "publicado"
       }
     },
+    "ai": {
+      "button": "Generar con IA",
+      "title": "Generar página con IA",
+      "description": "Describe tu página de aterrizaje y la IA la construirá con tus bloques. Podrás editar todo después.",
+      "placeholder": "p. ej. Una página para mi curso de español para principiantes con un hero, estadísticas, testimonios y una llamada a la acción para registrarse.",
+      "example": "Ejemplo",
+      "replaceWarning": "Esto reemplaza el contenido actual de la página. Tu versión guardada no se ve afectada hasta que guardes.",
+      "generate": "Generar",
+      "generating": "Generando...",
+      "cancel": "Cancelar",
+      "generated": "Se generó una página con {count} bloques",
+      "empty": "La IA devolvió una página vacía. Prueba con una descripción más detallada.",
+      "failed": "La generación falló. Inténtalo de nuevo."
+    },
     "categories": {
       "primitives": "Primitivos",
       "layout": "Diseño",
@@ -4428,6 +4442,13 @@
       "CtaBlock": "Bloque CTA",
       "ContactForm": "Formulario de Contacto",
       "LogoCloud": "Logos",
+      "LogoMarquee": "Carrusel de Logos",
+      "StatsBand": "Banda de Estadísticas",
+      "ShinyEyebrow": "Etiqueta Brillante",
+      "AnimatedStats": "Estadísticas Animadas",
+      "FaqSplit": "Preguntas Frecuentes",
+      "CtaBanner": "Banner de Llamada a la Acción",
+      "ContentFeature": "Sección de Contenido",
       "Banner": "Banner",
       "TeamGrid": "Equipo",
       "ImageGallery": "Galería de Imágenes",

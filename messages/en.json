@@ -4404,6 +4404,20 @@
         "published": "published"
       }
     },
+    "ai": {
+      "button": "Generate with AI",
+      "title": "Generate page with AI",
+      "description": "Describe your landing page and AI will build it from your blocks. You can edit everything afterwards.",
+      "placeholder": "e.g. A landing page for my beginner Spanish course with a hero, key stats, testimonials, and a sign-up call to action.",
+      "example": "Example",
+      "replaceWarning": "This replaces the current page content. Your saved version is unaffected until you save.",
+      "generate": "Generate",
+      "generating": "Generating...",
+      "cancel": "Cancel",
+      "generated": "Generated a page with {count} blocks",
+      "empty": "AI returned an empty page. Try a more detailed description.",
+      "failed": "Generation failed. Please try again."
+    },
     "categories": {
       "primitives": "Primitives",
       "layout": "Layout",
@@ -4435,6 +4449,13 @@
       "CtaBlock": "CTA Block",
       "ContactForm": "Contact Form",
       "LogoCloud": "Logo Cloud",
+      "LogoMarquee": "Logo Marquee",
+      "StatsBand": "Stats Band",
+      "ShinyEyebrow": "Shiny Eyebrow",
+      "AnimatedStats": "Animated Stats",
+      "FaqSplit": "FAQ Split",
+      "CtaBanner": "CTA Banner",
+      "ContentFeature": "Content Feature",
       "Banner": "Banner",
       "TeamGrid": "Team Grid",
       "ImageGallery": "Image Gallery",
