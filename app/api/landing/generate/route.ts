@@ -24,7 +24,9 @@
  * `done` event.
  */
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { rateLimit } from '@/lib/rate-limit'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { streamObject, generateObject, NoObjectGeneratedError, type ModelMessage } from 'ai'
 import { z } from 'zod'
@@ -41,6 +43,20 @@ import { LANDING_AUTHORING_GUIDE } from '@/lib/json-render/authoring-guide'
 export const maxDuration = 120
 const MAX_MESSAGES = 20
 const MAX_CONTENT_LEN = 4000
+
+// Plans allowed to use the landing-page builder + its AI assistant. Mirrors the UI gate in
+// components/admin/landing-page/landing-pages-client.tsx (PAID_PLANS / canUseBuilder) so the
+// endpoint can't be called directly on the free plan to burn OpenAI tokens.
+const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
+
+// AI generation is expensive (OpenAI tokens + ~10s of compute), so cap how often a single user
+// can trigger it. In-memory per-instance limiter — good enough as a first line of defence; move
+// to a shared store (Redis) if/when this runs multi-instance. See lib/rate-limit.ts.
+const LANDING_AI_RATE_LIMIT = 20 // requests per window, per user
+const landingAiLimiter = rateLimit({
+  interval: 5 * 60 * 1000, // 5 minutes
+  uniqueTokenPerInterval: 500, // track up to 500 users
+})
 
 // ── Schemas ────────────────────────────────────────────────────────────────────────────────
 // `elements` is an ARRAY (not z.record) and props are a JSON string because OpenAI's
@@ -96,6 +112,22 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 })
   if (!tenantId) return new Response('No tenant context', { status: 400 })
+
+  // Rate limit per user — AI generation is expensive, so throttle before doing any work.
+  try {
+    await landingAiLimiter.check(LANDING_AI_RATE_LIMIT, user.id)
+  } catch {
+    return new Response('Too many requests. Please wait a moment and try again.', { status: 429 })
+  }
+
+  // Plan gate — the landing-page AI assistant is a paid feature. Enforce server-side (the UI
+  // already hides it on the free plan) so the endpoint can't be hit directly to spend tokens.
+  const admin = createAdminClient()
+  const { data: planResult } = await admin.rpc('get_plan_features', { _tenant_id: tenantId })
+  const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
+  if (!PAID_PLANS.includes(plan)) {
+    return new Response('The landing-page AI assistant requires a paid plan.', { status: 403 })
+  }
 
   const body = await req.json().catch(() => null)
   const rawMessages = Array.isArray(body?.messages) ? (body.messages as ChatMessage[]) : null

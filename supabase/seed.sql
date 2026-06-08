@@ -63,10 +63,11 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- Default tenant (main platform / default school)
 -- Created by migration 20260216200000 — kept here for completeness
--- Seeded on the enterprise plan so all plan-gated features (custom branding, white-label,
--- analytics, AI, etc.) are unlocked for local development and E2E testing.
+-- Kept on the FREE plan on purpose: it's the baseline tenant for exercising plan-gating in
+-- local dev and E2E (free-plan upgrade nudges, the landing-builder paid gate, etc.). Use a
+-- paid tenant (e.g. Code Academy below, on `pro`) when you need gated features unlocked.
 INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'enterprise', 'active', 'active')
+VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
