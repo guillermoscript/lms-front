@@ -131,6 +131,15 @@ export function AiChatPanel() {
       let buffer = ''
       let replied = false
 
+      // Map a server error status to a localized message (the server's `error` text is
+      // English-only). Unmapped statuses fall back to the generic failure message.
+      const translateError = (status: number): string => {
+        if (status === 403) return t('ai.errorPlan')
+        if (status === 429) return t('ai.errorRateLimit')
+        if (status === 422) return t('ai.errorInvalid')
+        return t('ai.failed')
+      }
+
       const handle = (event: StreamEvent) => {
         if (event.type === 'progress') {
           setStatus(t('ai.buildingCount', { count: event.count }))
@@ -141,14 +150,16 @@ export function AiChatPanel() {
             return
           }
           dispatch({ type: 'setData', data: event.data })
-          appendAssistant(event.reply)
+          // Localize the reply client-side from the structured event (the server's `reply`
+          // string is English-only); the page event carries the block count.
+          appendAssistant(t('ai.builtPage', { count: event.blocks }))
           replied = true
         } else if (event.type === 'block') {
           applyBlockEdit(event.targetId, event.props)
-          appendAssistant(event.reply)
+          appendAssistant(t('ai.updatedBlock', { block: humanize(event.blockType) }))
           replied = true
         } else if (event.type === 'error') {
-          appendAssistant(event.error || t('ai.failed'))
+          appendAssistant(translateError(event.status))
           replied = true
         }
       }

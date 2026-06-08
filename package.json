@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npx playwright test",
+    "test:unit": "node --import tsx --test \"lib/**/*.test.ts\"",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "mcp:build": "cd mcp-server && npm run build",
