@@ -56,10 +56,10 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
                 .single();
 
             if (!existing) {
+                // lesson_completions has NO tenant_id column — sending it fails the insert.
                 const { error: insertError } = await supabase.from('lesson_completions').insert({
                     user_id: context.userId,
                     lesson_id: context.lessonId,
-                    tenant_id: context.tenantId,
                 });
 
                 if (insertError) {

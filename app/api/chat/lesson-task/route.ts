@@ -44,12 +44,12 @@ export async function POST(req: Request) {
             .join(' ') || lastMessage.content || ''
             
         if (messageText) {
+            // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
             await supabase.from('lessons_ai_task_messages').insert({
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'user',
                 message: messageText,
-                tenant_id: tenantId,
             })
         }
     }
@@ -62,12 +62,12 @@ export async function POST(req: Request) {
         tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id, tenantId }),
         experimental_telemetry: { isEnabled: true, functionId: 'lesson-tutor', metadata: { lessonId: String(lessonId), userId: user.id, tenantId } },
         onFinish: async (event) => {
+            // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
             const messageData: any = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
                 message: event.text,
-                tenant_id: tenantId,
             };
             
             // Only add tool_invocations if the column exists (check schema)

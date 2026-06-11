@@ -29,12 +29,12 @@ export async function POST(req: Request) {
     // 2. Save user message
     const lastUserMessage = messages[messages.length - 1]
     if (lastUserMessage?.role === 'user') {
+        // exercise_messages has NO tenant_id column — sending it silently fails the insert.
         await supabase.from('exercise_messages').insert({
             exercise_id: exerciseId,
             user_id: user.id,
             role: 'user',
             message: lastUserMessage.content,
-            tenant_id: tenantId,
         })
     }
 
@@ -51,7 +51,6 @@ export async function POST(req: Request) {
                 user_id: user.id,
                 role: 'assistant',
                 message: event.text,
-                tenant_id: tenantId,
             })
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
