@@ -544,6 +544,38 @@ VALUES
   (2001, 2002)   -- Code Academy Pro Monthly → Data Analysis with Pandas
 ON CONFLICT DO NOTHING;
 
+-- ---------------------------------------------------------------------------
+-- 15b. ALICE'S SUBSCRIPTION (Code Academy Pro Monthly)
+-- Gives alice@student.com an active subscription to plan 2001 so she can
+-- self-enroll into covered courses (2001/2002) via /browse and exercise the
+-- exam-taking + exercise-completion flows.
+--
+-- We only insert the backing transaction: the `after_transaction_insert`
+-- trigger (trigger_manage_transactions) fires handle_new_subscription() on a
+-- successful plan transaction, which creates the 'active' subscription
+-- (end_date = now + plan.duration_in_days = 30d) and grants entitlements for
+-- every plan_courses row (courses 2001 + 2002). Enrollment is NOT auto-created
+-- by design — alice self-enrolls via /browse (which calls
+-- self_enroll_subscription_course()). Do NOT also insert the subscription
+-- here: that collides with subscriptions_user_id_plan_id_key.
+-- ---------------------------------------------------------------------------
+INSERT INTO transactions (transaction_id, user_id, plan_id, amount, status, currency, tenant_id)
+OVERRIDING SYSTEM VALUE
+VALUES
+(
+  2001,
+  'a1000000-0000-0000-0000-000000000004',  -- alice@student.com
+  2001,                                     -- Code Academy Pro Monthly
+  19.00,
+  'successful',
+  'usd',
+  '00000000-0000-0000-0000-000000000002'    -- Code Academy Pro tenant
+)
+ON CONFLICT (transaction_id) DO NOTHING;
+
+SELECT setval('transactions_transaction_id_seq', 10000, false);
+SELECT setval('subscriptions_subscription_id_seq', 10000, false);
+
 
 -- ---------------------------------------------------------------------------
 -- 16. GAMIFICATION LEVELS & ACHIEVEMENTS  (renumbered from 15)
