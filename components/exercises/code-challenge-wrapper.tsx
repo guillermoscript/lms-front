@@ -21,7 +21,6 @@ interface CodeChallengeWrapperProps {
     exerciseId: number;
     isExerciseCompleted: boolean;
     userCode?: string;
-    tenantId: string;
 }
 
 const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
@@ -59,7 +58,6 @@ export default function CodeChallengeWrapper({
     exerciseId,
     isExerciseCompleted: initialCompleted,
     userCode,
-    tenantId,
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const tGamification = useTranslations("components.gamification");
@@ -70,12 +68,13 @@ export default function CodeChallengeWrapper({
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
         if (user) {
+            // exercise_completions has NO tenant_id column — isolation is via
+            // RLS through exercise_id. Sending tenant_id 400s the insert.
             await supabase.from('exercise_completions').insert({
                 exercise_id: exerciseId,
                 user_id: user.id,
                 completed_by: user.id,
                 score: 100,
-                tenant_id: tenantId,
             });
             toast.success(tGamification("xpAwarded.exercise_completion"));
         }

@@ -141,12 +141,12 @@ export async function POST(req: Request) {
 
     // 12. Record exercise completion only if score meets passing threshold
     if (passed) {
+      // exercise_completions has NO tenant_id column — sending it 400s the insert.
       await adminClient.from('exercise_completions').insert({
         exercise_id: submission.exercise_id,
         user_id: user.id,
         completed_by: user.id,
         score: evaluation.score,
-        tenant_id: tenantId,
       }).select('id').single()
       // unique index (exercise_id, user_id) prevents duplicates
     }

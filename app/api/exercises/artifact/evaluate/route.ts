@@ -145,6 +145,7 @@ Evaluate the student's submission based on the evaluation criteria above. Respon
 
     // 11. Record completion if passed
     if (passed) {
+      // exercise_completions has NO tenant_id column — sending it 400s the insert.
       await adminClient
         .from('exercise_completions')
         .insert({
@@ -152,7 +153,6 @@ Evaluate the student's submission based on the evaluation criteria above. Respon
           user_id: user.id,
           completed_by: user.id,
           score: evaluation.score,
-          tenant_id: tenantId,
         })
         .select('id')
         .single()

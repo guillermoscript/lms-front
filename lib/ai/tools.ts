@@ -14,12 +14,12 @@ export const createAITools = (supabase: SupabaseClient, context: { exerciseId?: 
             if (!context.exerciseId) throw new Error('Exercise ID is required');
 
             // Upsert completion (ON CONFLICT do nothing)
+            // exercise_completions has NO tenant_id column — sending it 400s the insert.
             await supabase.from('exercise_completions').insert({
                 exercise_id: context.exerciseId,
                 user_id: context.userId,
                 completed_by: context.userId,
                 score: score,
-                tenant_id: context.tenantId,
             }).select('id').single();
 
             // Insert unified evaluation for text-based exercises
