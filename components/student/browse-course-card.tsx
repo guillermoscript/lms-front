@@ -18,9 +18,9 @@ interface BrowseCourseCardProps {
   course: {
     course_id: number
     title: string
-    description?: string
-    thumbnail_url?: string
-    tags?: string | string[]
+    description?: string | null
+    thumbnail_url?: string | null
+    tags?: string | string[] | null
   }
   enrollmentStatus: EnrollmentStatus
 }

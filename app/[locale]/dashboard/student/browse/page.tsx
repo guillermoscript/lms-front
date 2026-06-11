@@ -9,6 +9,12 @@ import Link from 'next/link'
 import { IconAlertCircle, IconSparkles, IconTrophy, IconSearch } from '@tabler/icons-react'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchAccessibleCourseIds } from '@/lib/services/course-access'
+import {
+  getPublishedCourses,
+  getCourseCategories,
+  getActiveSubscriptions,
+  getPlanCourses,
+} from '@lms/core'
 
 export default async function BrowseCoursesPage({
   searchParams,
@@ -28,50 +34,14 @@ export default async function BrowseCoursesPage({
     redirect('/auth/login')
   }
 
-  // Build course query with filters
-  let query = supabase
-    .from('courses')
-    .select(`
-      course_id,
-      title,
-      description,
-      thumbnail_url,
-      tags,
-      category_id
-    `)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'published')
-    .order('title', { ascending: true })
-
-  // Apply search filter
-  if (sanitizedSearch) {
-    query = query.or(`title.ilike.%${sanitizedSearch}%,description.ilike.%${sanitizedSearch}%`)
-  }
-
-  // Apply category filter
-  if (category) {
-    query = query.eq('category_id', category)
-  }
-
-  // Parallelize 4 independent queries
+  // Parallelize 4 independent queries — shared query logic from @lms/core
   const [{ data: subscriptions }, { data: categories }, { data: courses }, accessibleCourseIds] = await Promise.all([
-    supabase.from('subscriptions').select(`
-      subscription_id,
-      subscription_status,
-      end_date,
-      plan:plans!subscriptions_plan_id_fkey (
-        plan_id,
-        plan_name,
-        price
-      )
-    `)
-      .eq('user_id', userId).eq('tenant_id', tenantId)
-      .eq('subscription_status', 'active')
-      .gte('end_date', new Date().toISOString())
-      .order('end_date', { ascending: false }),
-    supabase.from('course_categories').select('id, name')
-      .eq('tenant_id', tenantId).order('name'),
-    query,
+    getActiveSubscriptions(supabase, userId, tenantId),
+    getCourseCategories(supabase, tenantId),
+    getPublishedCourses(supabase, tenantId, {
+      search: sanitizedSearch || undefined,
+      categoryId: category ? Number(category) : undefined,
+    }),
     // "Already enrolled" set — entitlements model (any active access source).
     fetchAccessibleCourseIds(supabase, userId),
   ])
@@ -83,10 +53,7 @@ export default async function BrowseCoursesPage({
   if (activeSubscription) {
     const planId = (activeSubscription.plan as any)?.plan_id
     if (planId) {
-      const { data: planCourses } = await supabase
-        .from('plan_courses')
-        .select('course_id')
-        .eq('plan_id', planId)
+      const { data: planCourses } = await getPlanCourses(supabase, planId)
 
       if (planCourses && planCourses.length > 0) {
         allowedCourseIds = new Set(planCourses.map(pc => pc.course_id))

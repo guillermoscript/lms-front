@@ -13,6 +13,7 @@ import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
+import { getLessonCompletions } from '@lms/core'
 
 async function getData(userId: string, tenantId: string) {
   const supabase = createAdminClient()
@@ -44,10 +45,7 @@ async function getData(userId: string, tenantId: string) {
       .order('submission_date', { ascending: false })
       .limit(5),
 
-    supabase
-      .from('lesson_completions')
-      .select('lesson_id')
-      .eq('user_id', userId),
+    getLessonCompletions(supabase, userId),
 
     supabase
       .from('exams')
