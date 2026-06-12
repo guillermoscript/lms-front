@@ -371,7 +371,7 @@ export default async function LessonPage({ params }: PageProps) {
 
             {/* Comments Section */}
             <section className="border-t pt-10">
-              <LessonComments lessonId={lesson.id} userId={userId} tenantId={tenantId} initialComments={initialComments} />
+              <LessonComments lessonId={lesson.id} userId={userId} initialComments={initialComments} />
             </section>
           </div>
         </div>

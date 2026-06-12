@@ -42,11 +42,10 @@ interface Comment {
 interface LessonCommentsProps {
   lessonId: number
   userId: string
-  tenantId: string
   initialComments?: Comment[]
 }
 
-export function LessonComments({ lessonId, userId, tenantId, initialComments = [] }: LessonCommentsProps) {
+export function LessonComments({ lessonId, userId, initialComments = [] }: LessonCommentsProps) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [newComment, setNewComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -155,12 +154,13 @@ export function LessonComments({ lessonId, userId, tenantId, initialComments = [
 
     setSubmitting(true)
     try {
+      // lesson_comments has NO tenant_id column — isolation rides on the
+      // lesson FK + RLS (insert policy: auth.uid() = user_id). Never add it.
       const { error } = await supabase.from('lesson_comments').insert({
         lesson_id: lessonId,
         user_id: userId,
         content: content.trim(),
         parent_comment_id: parentId,
-        tenant_id: tenantId,
       })
 
       if (error) throw error

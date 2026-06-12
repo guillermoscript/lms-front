@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -10,11 +9,9 @@ export const maxDuration = 120
 const SESSION_IDLE_MINUTES = 30
 
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const auth = await getApiAuthContext(req)
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
 
     const body = await req.json()
     const { messages, courseId, contextPage } = body

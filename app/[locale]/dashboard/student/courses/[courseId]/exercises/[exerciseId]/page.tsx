@@ -247,7 +247,6 @@ export default async function ExercisePage({ params }: PageProps) {
                         exerciseId={exercise.id}
                         isExerciseCompleted={isExerciseCompleted}
                         userCode={lastSubmission?.submission_code}
-                        tenantId={tenantId}
                     />
 
                     {otherExercises && otherExercises.length > 0 && (

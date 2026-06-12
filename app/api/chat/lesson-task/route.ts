@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createAITools } from '@/lib/ai/tools'
@@ -8,11 +7,9 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 export const maxDuration = 120
 
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const auth = await getApiAuthContext(req)
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
 
     const body = await req.json()
     console.log('Received request body:', JSON.stringify(body, null, 2))
@@ -44,12 +41,12 @@ export async function POST(req: Request) {
             .join(' ') || lastMessage.content || ''
             
         if (messageText) {
+            // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
             await supabase.from('lessons_ai_task_messages').insert({
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'user',
                 message: messageText,
-                tenant_id: tenantId,
             })
         }
     }
@@ -62,12 +59,12 @@ export async function POST(req: Request) {
         tools: createAITools(supabase, { lessonId, userId: user.id, courseId: lesson.course_id, tenantId }),
         experimental_telemetry: { isEnabled: true, functionId: 'lesson-tutor', metadata: { lessonId: String(lessonId), userId: user.id, tenantId } },
         onFinish: async (event) => {
+            // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
             const messageData: any = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
                 message: event.text,
-                tenant_id: tenantId,
             };
             
             // Only add tool_invocations if the column exists (check schema)
