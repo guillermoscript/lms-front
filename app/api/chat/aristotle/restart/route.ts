@@ -1,13 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateSessionSummary } from '@/lib/ai/aristotle-summary'
 
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const auth = await getApiAuthContext(req)
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
 
     const { courseId } = await req.json()
     if (!courseId) return new Response('Course ID is required', { status: 400 })

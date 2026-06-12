@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createAITools } from '@/lib/ai/tools'
@@ -8,11 +7,9 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 export const maxDuration = 120
 
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const auth = await getApiAuthContext(req)
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
 
     const { messages, exerciseId } = await req.json()
     if (!exerciseId) return new Response('Exercise ID is required', { status: 400 })
@@ -29,13 +26,21 @@ export async function POST(req: Request) {
     // 2. Save user message
     const lastUserMessage = messages[messages.length - 1]
     if (lastUserMessage?.role === 'user') {
-        // exercise_messages has NO tenant_id column — sending it silently fails the insert.
-        await supabase.from('exercise_messages').insert({
-            exercise_id: exerciseId,
-            user_id: user.id,
-            role: 'user',
-            message: lastUserMessage.content,
-        })
+        // AI SDK v6 messages carry text in `parts`, not `content`
+        const messageText = lastUserMessage.parts
+            ?.filter((part: any) => part.type === 'text')
+            .map((part: any) => part.text)
+            .join(' ') || lastUserMessage.content || ''
+
+        if (messageText) {
+            // exercise_messages has NO tenant_id column — sending it silently fails the insert.
+            await supabase.from('exercise_messages').insert({
+                exercise_id: exerciseId,
+                user_id: user.id,
+                role: 'user',
+                message: messageText,
+            })
+        }
     }
 
     // 3. Stream Response

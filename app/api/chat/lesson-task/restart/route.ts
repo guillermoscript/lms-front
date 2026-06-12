@@ -1,16 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
     try {
-        const supabase = await createClient()
-        const tenantId = await getCurrentTenantId()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
+        const auth = await getApiAuthContext(req)
+        if (!auth) {
             return new NextResponse('Unauthorized', { status: 401 })
         }
+        const { supabase, user, tenantId } = auth
 
         const { lessonId } = await req.json()
 
