@@ -1481,3 +1481,20 @@ VALUES
 ON CONFLICT (option_id) DO NOTHING;
 
 SELECT setval('question_options_option_id_seq', 10000, false);
+
+-- ============================================================
+-- Aristotle AI tutor for Code Academy's "Python for Beginners"
+-- (course 2001). Required by /api/chat/aristotle — the route
+-- 404s when a course has no enabled course_ai_tutors row.
+-- ============================================================
+INSERT INTO course_ai_tutors (course_id, tenant_id, persona, teaching_approach, boundaries, enabled, model_config)
+VALUES (
+  2001,
+  '00000000-0000-0000-0000-000000000002',
+  'Friendly Python tutor',
+  'Socratic',
+  'Stay on course topics',
+  true,
+  '{}'::jsonb
+)
+ON CONFLICT (course_id) DO NOTHING;

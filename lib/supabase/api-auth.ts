@@ -3,8 +3,6 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-
 export interface ApiAuthContext {
     supabase: SupabaseClient
     user: User
@@ -56,11 +54,15 @@ async function getBearerContext(token: string): Promise<ApiAuthContext | null> {
     if (error || !data?.user) return null
     const user = data.user
 
+    // Resolve tenant from the verified JWT claim, falling back to the user's
+    // single active membership. If neither yields a tenant, the request is
+    // ambiguous/unauthenticated for tenant-scoped routes — return null (→ 401).
     const claimTenantId = decodeJwtPayload(token)?.tenant_id
     const tenantId =
         (typeof claimTenantId === 'string' && claimTenantId) ||
-        (await resolveTenantFromMembership(authClient, user.id)) ||
-        DEFAULT_TENANT_ID
+        (await resolveTenantFromMembership(authClient, user.id))
+
+    if (!tenantId) return null
 
     // Forward x-tenant-id like the web client does, so get_tenant_id()'s
     // header fallback stays consistent for tokens without a tenant_id claim.

@@ -1,5 +1,11 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { fetchTenantExercise } from '@/lib/ai/chat-helpers'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const bodySchema = z.object({
+    exerciseId: z.coerce.number().int().positive(),
+})
 
 export async function POST(req: Request) {
     try {
@@ -9,20 +15,16 @@ export async function POST(req: Request) {
         }
         const { supabase, user, tenantId } = auth
 
-        const { exerciseId } = await req.json()
-
-        if (!exerciseId) {
-            return new NextResponse('Exercise ID is required', { status: 400 })
+        const parsed = bodySchema.safeParse(await req.json().catch(() => null))
+        if (!parsed.success) {
+            return new NextResponse('Invalid request body', { status: 400 })
         }
+        const { exerciseId } = parsed.data
 
         // Validate exercise belongs to tenant
-        const { data: exercise } = await supabase
-            .from('exercises')
-            .select('id, course:courses!inner(tenant_id)')
-            .eq('id', exerciseId)
-            .single()
+        const exercise = await fetchTenantExercise(supabase, exerciseId, tenantId, 'id, course:courses!inner(tenant_id)')
 
-        if (!exercise || (exercise as any).course?.tenant_id !== tenantId) {
+        if (!exercise) {
             return new NextResponse('Exercise not found', { status: 404 })
         }
 
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
 
         if (error) {
             console.error('Error restarting exercise chat:', error)
-            return new NextResponse(error.message, { status: 500 })
+            return new NextResponse('Failed to restart', { status: 500 })
         }
 
         return new NextResponse('Restarted successfully', { status: 200 })
