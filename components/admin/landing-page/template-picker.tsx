@@ -41,6 +41,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   creative: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
   business: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
   'code-school': 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
+  'language-school': 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+  fitness: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  music: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-500/20',
+  design: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
 }
 
 export function TemplatePicker({ open, onClose, templates, onSelect, loading }: Props) {
