@@ -30,6 +30,10 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   // Destructive — admin only. Analytics tools stay allowed for teachers because
   // they are ownership-scoped (a teacher only ever sees their own courses' data).
   "lms_archive_course",
+  // School-wide cross-course aggregate — admin only. A teacher would see only a
+  // partial "school" (their own courses via RLS), which is misleading; the
+  // per-course tools (lms_get_course_stats, lms_get_student_progress) cover them.
+  "lms_get_school_stats",
 ]);
 
 export function isToolAllowedForRole(

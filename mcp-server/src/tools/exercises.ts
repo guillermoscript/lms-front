@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { MCPServer } from "mcp-use/server";
+import { widget, text } from "mcp-use/server";
 import { LmsSession } from "../session.js";
 import {
   ok,
@@ -200,6 +201,93 @@ export function registerExerciseTools(server: MCPServer) {
         }
 
         return ok(output as unknown as Record<string, unknown>, textContent);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // lms_preview_artifact (widget tool)
+  // -------------------------------------------------------------------------
+  server.tool(
+    {
+      name: "lms_preview_artifact",
+      description:
+        "Preview an artifact exercise: renders the interactive HTML in a sandboxed iframe so the author can see and edit it. Returns the server-side evaluation criteria too (the author's answer key — students never receive this). Use after creating or updating an artifact exercise to verify it works.",
+      schema: z.object({
+        exercise_id: z.number().describe("The artifact exercise ID"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      widget: {
+        name: "artifact-sandbox",
+        invoking: "Rendering artifact…",
+        invoked: "Artifact preview ready",
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        const { exercise_id } = input;
+
+        await session.verifyExerciseOwnership(exercise_id);
+        const supabase = session.getClient();
+
+        const { data, error } = await supabase
+          .from("exercises")
+          .select(
+            "id, title, instructions, exercise_type, difficulty_level, exercise_config"
+          )
+          .eq("id", exercise_id)
+          .single();
+
+        if (error || !data)
+          return errorResult(`Exercise ${exercise_id} not found.`);
+        if (data.exercise_type !== "artifact") {
+          return errorResult(
+            `Exercise ${exercise_id} is not an artifact exercise (type: ${data.exercise_type}).`
+          );
+        }
+
+        const config = (data.exercise_config as Record<string, any>) ?? {};
+        const html = (config.artifact_html as string) ?? "";
+
+        const props = {
+          exercise: {
+            id: data.id as number,
+            title: data.title as string,
+            instructions: (data.instructions as string | null) ?? "",
+            difficulty: (data.difficulty_level as string | null) ?? "medium",
+          },
+          artifact: {
+            type: (config.artifact_type as string) ?? "custom",
+            html,
+            evaluation_criteria:
+              (config.evaluation_criteria as string | null) ?? "",
+            system_prompt: (config.system_prompt as string | null) ?? null,
+            passing_score: (config.passing_score as number | null) ?? 70,
+          },
+        };
+
+        return widget({
+          props,
+          output: text(
+            html
+              ? `Previewing artifact "${data.title}" (${props.artifact.type}, ${html.length} chars of HTML). Edit the HTML in the widget and Save to update it.`
+              : `Artifact "${data.title}" has no HTML content yet.`
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }

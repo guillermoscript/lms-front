@@ -290,6 +290,461 @@ export function registerAnalyticsTools(server: MCPServer) {
     }
   );
 
+  // ── lms_get_submission_for_grading (widget tool) ──────────────────────────
+  server.tool(
+    {
+      name: "lms_get_submission_for_grading",
+      description:
+        "Get a full exam submission laid out for grading: every question with the student's answer, the AI-suggested points and feedback, and the current overall score. Renders an interactive grading widget where the teacher can override the score and write feedback. Use this (not lms_get_submission_details) when the teacher wants to review or grade a submission.",
+      schema: z.object({
+        submission_id: z.number().describe("The submission ID to grade"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      widget: {
+        name: "submission-grader",
+        invoking: "Loading submission…",
+        invoked: "Submission ready to grade",
+      },
+    },
+    async ({ submission_id }, ctx) => {
+      try {
+        let session: LmsSession;
+        try {
+          session = LmsSession.fromContext(ctx);
+        } catch (err) {
+          return errorResult(err instanceof Error ? err.message : String(err));
+        }
+
+        const supabase = session.getClient();
+
+        const { data: sub, error: subErr } = await supabase
+          .from("exam_submissions")
+          .select(
+            "submission_id, exam_id, student_id, score, feedback, review_status, submission_date, ai_data"
+          )
+          .eq("submission_id", submission_id)
+          .single();
+
+        if (subErr || !sub)
+          return errorResult(`Submission ${submission_id} not found.`);
+
+        await session.verifyExamOwnership(sub.exam_id as number);
+
+        // Exam title + questions (with options for MC/TF context).
+        const [{ data: exam }, { data: questions }, { data: scores }, { data: answers }, names] =
+          await Promise.all([
+            supabase.from("exams").select("title").eq("exam_id", sub.exam_id).single(),
+            supabase
+              .from("exam_questions")
+              .select(
+                "question_id, question_text, question_type, question_options(option_text, is_correct)"
+              )
+              .eq("exam_id", sub.exam_id)
+              .order("question_id"),
+            supabase
+              .from("exam_question_scores")
+              .select(
+                "question_id, student_answer, points_earned, points_possible, is_correct, ai_feedback, ai_confidence, is_overridden"
+              )
+              .eq("submission_id", submission_id),
+            supabase
+              .from("exam_answers")
+              .select("question_id, answer_text, is_correct, feedback")
+              .eq("submission_id", submission_id),
+            fetchProfileNames(supabase, [sub.student_id as string]),
+          ]);
+
+        const scoreByQ = new Map<number, any>();
+        for (const s of (scores as any[]) ?? []) scoreByQ.set(s.question_id, s);
+        const answerByQ = new Map<number, any>();
+        for (const a of (answers as any[]) ?? []) answerByQ.set(a.question_id, a);
+        const aiFeedback =
+          ((sub.ai_data as any)?.question_feedback as Record<string, any>) ?? {};
+
+        let earned = 0;
+        let possible = 0;
+        let graded = 0;
+
+        const questionRows = ((questions as any[]) ?? []).map((q) => {
+          const s = scoreByQ.get(q.question_id);
+          const a = answerByQ.get(q.question_id);
+          const aif = aiFeedback[String(q.question_id)] ?? {};
+
+          const pointsEarned =
+            s?.points_earned ?? (aif.points_earned as number | undefined) ?? null;
+          const pointsPossible =
+            s?.points_possible ?? (aif.points_possible as number | undefined) ?? null;
+          if (pointsEarned != null) {
+            earned += Number(pointsEarned);
+            graded += 1;
+          }
+          if (pointsPossible != null) possible += Number(pointsPossible);
+
+          return {
+            question_id: q.question_id as number,
+            text: (q.question_text as string) ?? "",
+            type: (q.question_type as string) ?? "free_text",
+            options:
+              ((q.question_options as any[]) ?? []).map((o) => ({
+                text: (o.option_text as string) ?? "",
+                is_correct: !!o.is_correct,
+              })) ?? [],
+            student_answer:
+              s?.student_answer ??
+              a?.answer_text ??
+              (aif.student_answer as string | undefined) ??
+              null,
+            points_earned: pointsEarned,
+            points_possible: pointsPossible,
+            is_correct:
+              s?.is_correct ?? a?.is_correct ?? (aif.is_correct as boolean | undefined) ?? null,
+            ai_feedback:
+              s?.ai_feedback ?? a?.feedback ?? (aif.feedback as string | undefined) ?? null,
+            ai_confidence: s?.ai_confidence ?? (aif.confidence as number | undefined) ?? null,
+            is_overridden: !!s?.is_overridden,
+          };
+        });
+
+        const props = {
+          submission: {
+            id: sub.submission_id as number,
+            exam_id: sub.exam_id as number,
+            exam_title: (exam?.title as string) ?? `Exam ${sub.exam_id}`,
+            student_id: sub.student_id as string,
+            student_name: names.get(sub.student_id as string) ?? null,
+            score: (sub.score as number | null) ?? null,
+            feedback:
+              typeof sub.feedback === "string"
+                ? (sub.feedback as string)
+                : ((sub.ai_data as any)?.overall_feedback as string | undefined) ?? "",
+            review_status: (sub.review_status as string | null) ?? "pending",
+            date: sub.submission_date as string,
+          },
+          questions: questionRows,
+          summary: {
+            question_count: questionRows.length,
+            graded_count: graded,
+            total_points_earned: earned,
+            total_points_possible: possible,
+          },
+        };
+
+        const name = props.submission.student_name ?? props.submission.student_id;
+        return widget({
+          props,
+          output: text(
+            `Submission ${submission_id} by ${name} — ${questionRows.length} question(s), ` +
+              `current score ${props.submission.score ?? "pending"}, status "${props.submission.review_status}". ` +
+              `Override the score and feedback in the widget, then Save.`
+          ),
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // ── lms_grade_submission (mutation) ───────────────────────────────────────
+  server.tool(
+    {
+      name: "lms_grade_submission",
+      description:
+        "Record a teacher's grade for an exam submission: set the overall score (0–100) and/or written feedback and mark it teacher-reviewed. Writes through row-level security (only the exam's owner may grade). Use after reviewing a submission with lms_get_submission_for_grading.",
+      schema: z.object({
+        submission_id: z.number().describe("The submission ID to grade"),
+        score: z
+          .number()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe("Overall score 0–100. Omit to keep the current score."),
+        feedback: z
+          .string()
+          .optional()
+          .describe("Overall written feedback for the student. Omit to keep current."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ submission_id, score, feedback }, ctx) => {
+      try {
+        let session: LmsSession;
+        try {
+          session = LmsSession.fromContext(ctx);
+        } catch (err) {
+          return errorResult(err instanceof Error ? err.message : String(err));
+        }
+
+        if (score === undefined && feedback === undefined) {
+          return errorResult("Provide a score and/or feedback to grade the submission.");
+        }
+
+        const supabase = session.getClient();
+
+        const { data: sub, error: subErr } = await supabase
+          .from("exam_submissions")
+          .select("submission_id, exam_id, student_id, score, feedback")
+          .eq("submission_id", submission_id)
+          .single();
+
+        if (subErr || !sub)
+          return errorResult(`Submission ${submission_id} not found.`);
+
+        await session.verifyExamOwnership(sub.exam_id as number);
+
+        const finalScore = score ?? (sub.score as number | null);
+        const finalFeedback = feedback ?? (sub.feedback as string | null);
+
+        // Primary write: the submission row (RLS: tenant teacher/admin may update).
+        const { error: updErr } = await supabase
+          .from("exam_submissions")
+          .update({
+            score: finalScore,
+            feedback: finalFeedback,
+            review_status: "teacher_reviewed",
+            evaluated_at: new Date().toISOString(),
+          })
+          .eq("submission_id", submission_id);
+
+        if (updErr) return errorResult(`Saving grade: ${updErr.message}`);
+
+        // Keep exam_scores in sync so the score is consistent everywhere and the
+        // certificate trigger (fires on exam_scores) sees the teacher's grade.
+        // Only when we have a numeric score (exam_scores.score is required).
+        if (finalScore != null) {
+          const { error: scoreErr } = await supabase.from("exam_scores").upsert(
+            {
+              submission_id: submission_id,
+              student_id: sub.student_id,
+              exam_id: sub.exam_id,
+              score: finalScore,
+              feedback: finalFeedback,
+            },
+            { onConflict: "submission_id,student_id,exam_id" }
+          );
+          if (scoreErr)
+            return errorResult(
+              `Grade saved to submission, but syncing exam_scores failed: ${scoreErr.message}`
+            );
+        }
+
+        return ok(
+          {
+            submission_id,
+            score: finalScore,
+            review_status: "teacher_reviewed",
+            graded: true,
+          },
+          `Graded submission ${submission_id}: score ${finalScore ?? "unchanged"}, marked teacher-reviewed.`
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // ── lms_get_student_progress (widget tool) ────────────────────────────────
+  server.tool(
+    {
+      name: "lms_get_student_progress",
+      description:
+        "Per-student progress roster for a course: each enrolled student's lesson-completion %, exam average, last activity, and an at-risk flag (active but no lessons completed). Renders an interactive roster widget. Note: lesson-completion visibility requires a teacher/admin role; callers without it see 0% progress.",
+      schema: z.object({
+        ...PaginationSchema,
+        course_id: z.number().describe("The course ID"),
+        status: z
+          .enum(["active", "disabled"])
+          .optional()
+          .describe("Filter by enrollment status"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      widget: {
+        name: "student-progress-roster",
+        invoking: "Loading roster…",
+        invoked: "Roster loaded",
+      },
+    },
+    async ({ course_id, status, limit, offset }, ctx) => {
+      try {
+        let session: LmsSession;
+        try {
+          session = LmsSession.fromContext(ctx);
+        } catch (err) {
+          return errorResult(err instanceof Error ? err.message : String(err));
+        }
+
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
+
+        const { data: course } = await supabase
+          .from("courses")
+          .select("title")
+          .eq("course_id", course_id)
+          .single();
+
+        // Published lessons define the progress denominator.
+        const { data: lessons } = await supabase
+          .from("lessons")
+          .select("id")
+          .eq("course_id", course_id)
+          .eq("status", "published");
+        const lessonIds = (lessons ?? []).map((l) => l.id as number);
+        const publishedLessons = lessonIds.length;
+
+        // Enrolled students (paginated).
+        let enrollQuery = supabase
+          .from("enrollments")
+          .select("status, enrollment_date, user_id", { count: "exact" })
+          .eq("course_id", course_id)
+          .order("enrollment_date", { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (status) enrollQuery = enrollQuery.eq("status", status);
+
+        const { data: enrollments, error: enrollErr, count } = await enrollQuery;
+        if (enrollErr) return errorResult(`Listing roster: ${enrollErr.message}`);
+
+        if (!enrollments || enrollments.length === 0) {
+          return widget({
+            props: {
+              course: { id: course_id, title: course?.title ?? `Course ${course_id}`, published_lessons: publishedLessons },
+              students: [],
+              summary: { total: 0, at_risk: 0, avg_progress: 0 },
+            },
+            output: text("No students enrolled in this course."),
+          });
+        }
+
+        const userIds = enrollments.map((e) => e.user_id as string);
+
+        // Per-user lesson completions (lesson_completions has NO tenant_id).
+        const completedByUser = new Map<string, number>();
+        const lastCompletionByUser = new Map<string, string>();
+        if (publishedLessons > 0) {
+          const { data: completions } = await supabase
+            .from("lesson_completions")
+            .select("user_id, completed_at")
+            .in("lesson_id", lessonIds)
+            .in("user_id", userIds);
+          for (const c of (completions as any[]) ?? []) {
+            completedByUser.set(c.user_id, (completedByUser.get(c.user_id) ?? 0) + 1);
+            const prev = lastCompletionByUser.get(c.user_id);
+            if (!prev || (c.completed_at && c.completed_at > prev))
+              lastCompletionByUser.set(c.user_id, c.completed_at);
+          }
+        }
+
+        // Per-user exam performance across this course's exams.
+        const { data: exams } = await supabase
+          .from("exams")
+          .select("exam_id")
+          .eq("course_id", course_id);
+        const examIds = (exams ?? []).map((e) => e.exam_id as number);
+
+        const examAgg = new Map<string, { sum: number; n: number; last: string | null }>();
+        if (examIds.length > 0) {
+          const { data: subs } = await supabase
+            .from("exam_submissions")
+            .select("student_id, score, submission_date")
+            .in("exam_id", examIds)
+            .in("student_id", userIds);
+          for (const s of (subs as any[]) ?? []) {
+            const a = examAgg.get(s.student_id) ?? { sum: 0, n: 0, last: null };
+            if (s.score != null) {
+              a.sum += Number(s.score);
+              a.n += 1;
+            }
+            if (s.submission_date && (!a.last || s.submission_date > a.last))
+              a.last = s.submission_date;
+            examAgg.set(s.student_id, a);
+          }
+        }
+
+        const names = await fetchProfileNames(supabase, userIds);
+
+        const maxDate = (...ds: (string | null | undefined)[]) =>
+          ds.filter((d): d is string => !!d).sort().pop() ?? null;
+
+        const students = enrollments.map((e) => {
+          const uid = e.user_id as string;
+          const completed = completedByUser.get(uid) ?? 0;
+          const progress =
+            publishedLessons > 0 ? Math.round((completed / publishedLessons) * 100) : null;
+          const ex = examAgg.get(uid);
+          const examAvg = ex && ex.n > 0 ? Math.round(ex.sum / ex.n) : null;
+          const isActive = e.status === "active";
+          const atRisk = isActive && publishedLessons > 0 && completed === 0;
+          return {
+            student_id: uid,
+            student_name: names.get(uid) ?? null,
+            status: e.status as string,
+            enrolled: e.enrollment_date as string,
+            completed_lessons: completed,
+            progress_pct: progress,
+            exam_avg: examAvg,
+            exam_count: ex?.n ?? 0,
+            last_active: maxDate(
+              lastCompletionByUser.get(uid),
+              ex?.last,
+              e.enrollment_date as string
+            ),
+            at_risk: atRisk,
+          };
+        });
+
+        // At-risk first, then lowest progress.
+        students.sort((a, b) => {
+          if (a.at_risk !== b.at_risk) return a.at_risk ? -1 : 1;
+          return (a.progress_pct ?? 0) - (b.progress_pct ?? 0);
+        });
+
+        const atRiskCount = students.filter((s) => s.at_risk).length;
+        const avgProgress =
+          students.length > 0
+            ? Math.round(
+                students.reduce((acc, s) => acc + (s.progress_pct ?? 0), 0) / students.length
+              )
+            : 0;
+
+        const props = {
+          course: {
+            id: course_id,
+            title: course?.title ?? `Course ${course_id}`,
+            published_lessons: publishedLessons,
+          },
+          students,
+          summary: {
+            total: count ?? students.length,
+            at_risk: atRiskCount,
+            avg_progress: avgProgress,
+          },
+        };
+
+        return widget({
+          props,
+          output: text(
+            `${students.length} student(s) in "${props.course.title}" — avg progress ${avgProgress}%, ${atRiskCount} at risk.`
+          ),
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
   // ── lms_get_course_stats ──────────────────────────────────────────────────
   server.tool(
     {
@@ -395,6 +850,245 @@ export function registerAnalyticsTools(server: MCPServer) {
         }`;
 
         return ok(output as unknown as Record<string, unknown>, result);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // ── lms_get_school_stats (widget tool, admin-only) ────────────────────────
+  server.tool(
+    {
+      name: "lms_get_school_stats",
+      description:
+        "School-wide overview across every course in the tenant: course counts by status, total students and active enrollments, overall lesson-completion rate, exam volume and average score, at-risk student count, and a per-course breakdown. Admin only. Renders a dashboard widget.",
+      schema: z.object({}),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+      widget: {
+        name: "school-overview",
+        invoking: "Crunching school stats…",
+        invoked: "School overview ready",
+      },
+    },
+    async (_input, ctx) => {
+      try {
+        let session: LmsSession;
+        try {
+          session = LmsSession.fromContext(ctx);
+        } catch (err) {
+          return errorResult(err instanceof Error ? err.message : String(err));
+        }
+
+        const supabase = session.getClient();
+        const tenantId = session.getTenantId();
+
+        // Tenant name (best-effort) for the header.
+        let schoolName = "Your school";
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("name")
+          .eq("id", tenantId)
+          .maybeSingle();
+        if (tenant?.name) schoolName = tenant.name as string;
+
+        // All courses visible to this admin in the tenant.
+        const { data: courses, error: cErr } = await supabase
+          .from("courses")
+          .select("course_id, title, status")
+          .eq("tenant_id", tenantId);
+        if (cErr) return errorResult(`Loading courses: ${cErr.message}`);
+
+        const courseList = (courses as any[]) ?? [];
+        if (courseList.length === 0) {
+          return widget({
+            props: {
+              school: {
+                name: schoolName,
+                courses_total: 0,
+                courses_published: 0,
+                courses_draft: 0,
+                courses_archived: 0,
+                active_enrollments: 0,
+                students: 0,
+                published_lessons: 0,
+                completion_rate: 0,
+                exam_submissions: 0,
+                avg_exam_score: null,
+                at_risk_students: 0,
+              },
+              courses: [],
+            },
+            output: text("No courses in this school yet."),
+          });
+        }
+
+        const courseIds = courseList.map((c) => c.course_id as number);
+        const byStatus = { published: 0, draft: 0, archived: 0 };
+        for (const c of courseList) {
+          if (c.status in byStatus) (byStatus as any)[c.status] += 1;
+        }
+
+        // Bulk fetch (no N+1): enrollments, published lessons, completions, exams, submissions.
+        const [
+          { data: enrollments },
+          { data: lessons },
+          { data: exams },
+        ] = await Promise.all([
+          supabase
+            .from("enrollments")
+            .select("course_id, user_id, status")
+            .in("course_id", courseIds),
+          supabase
+            .from("lessons")
+            .select("id, course_id")
+            .eq("status", "published")
+            .in("course_id", courseIds),
+          supabase.from("exams").select("exam_id, course_id").in("course_id", courseIds),
+        ]);
+
+        const lessonRows = (lessons as any[]) ?? [];
+        const lessonToCourse = new Map<number, number>();
+        const publishedByCourse = new Map<number, number>();
+        for (const l of lessonRows) {
+          lessonToCourse.set(l.id, l.course_id);
+          publishedByCourse.set(l.course_id, (publishedByCourse.get(l.course_id) ?? 0) + 1);
+        }
+        const lessonIds = lessonRows.map((l) => l.id as number);
+
+        const examRows = (exams as any[]) ?? [];
+        const examToCourse = new Map<number, number>();
+        for (const e of examRows) examToCourse.set(e.exam_id, e.course_id);
+        const examIds = examRows.map((e) => e.exam_id as number);
+
+        // Completions + submissions depend on the id lists above.
+        const [{ data: completions }, { data: submissions }] = await Promise.all([
+          lessonIds.length > 0
+            ? supabase
+                .from("lesson_completions")
+                .select("user_id, lesson_id")
+                .in("lesson_id", lessonIds)
+            : Promise.resolve({ data: [] as any[] }),
+          examIds.length > 0
+            ? supabase
+                .from("exam_submissions")
+                .select("exam_id, score")
+                .in("exam_id", examIds)
+                .not("score", "is", null)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        // Per-course accumulators.
+        const activeEnrollByCourse = new Map<number, number>();
+        const studentSet = new Set<string>();
+        const activeEnrollPairs: { user: string; course: number }[] = [];
+        for (const e of (enrollments as any[]) ?? []) {
+          if (e.status === "active") {
+            activeEnrollByCourse.set(
+              e.course_id,
+              (activeEnrollByCourse.get(e.course_id) ?? 0) + 1
+            );
+            studentSet.add(e.user_id);
+            activeEnrollPairs.push({ user: e.user_id, course: e.course_id });
+          }
+        }
+
+        const completionsByCourse = new Map<number, number>();
+        const completedPair = new Set<string>(); // `${user}|${course}`
+        for (const c of (completions as any[]) ?? []) {
+          const courseId = lessonToCourse.get(c.lesson_id);
+          if (courseId == null) continue;
+          completionsByCourse.set(courseId, (completionsByCourse.get(courseId) ?? 0) + 1);
+          completedPair.add(`${c.user_id}|${courseId}`);
+        }
+
+        const scoreSumByCourse = new Map<number, number>();
+        const scoreCountByCourse = new Map<number, number>();
+        let schoolScoreSum = 0;
+        let schoolScoreCount = 0;
+        for (const s of (submissions as any[]) ?? []) {
+          const courseId = examToCourse.get(s.exam_id);
+          if (courseId == null || s.score == null) continue;
+          scoreSumByCourse.set(courseId, (scoreSumByCourse.get(courseId) ?? 0) + Number(s.score));
+          scoreCountByCourse.set(courseId, (scoreCountByCourse.get(courseId) ?? 0) + 1);
+          schoolScoreSum += Number(s.score);
+          schoolScoreCount += 1;
+        }
+
+        // At-risk: active enrollment, course has published lessons, zero completions.
+        let atRisk = 0;
+        for (const p of activeEnrollPairs) {
+          if ((publishedByCourse.get(p.course) ?? 0) > 0 && !completedPair.has(`${p.user}|${p.course}`))
+            atRisk += 1;
+        }
+
+        // Per-course rows.
+        const courseRows = courseList.map((c) => {
+          const id = c.course_id as number;
+          const active = activeEnrollByCourse.get(id) ?? 0;
+          const published = publishedByCourse.get(id) ?? 0;
+          const totalPossible = published * active;
+          const done = completionsByCourse.get(id) ?? 0;
+          const completion = totalPossible > 0 ? Math.round((done / totalPossible) * 100) : 0;
+          const sc = scoreCountByCourse.get(id) ?? 0;
+          const examAvg = sc > 0 ? Math.round((scoreSumByCourse.get(id) ?? 0) / sc) : null;
+          return {
+            id,
+            title: c.title as string,
+            status: c.status as string,
+            active_enrollments: active,
+            published_lessons: published,
+            completion_rate: completion,
+            exam_avg: examAvg,
+            submission_count: sc,
+          };
+        });
+        courseRows.sort((a, b) => b.active_enrollments - a.active_enrollments);
+
+        // School-wide completion rate.
+        let totalPossible = 0;
+        let totalDone = 0;
+        for (const c of courseList) {
+          const id = c.course_id as number;
+          totalPossible += (publishedByCourse.get(id) ?? 0) * (activeEnrollByCourse.get(id) ?? 0);
+          totalDone += completionsByCourse.get(id) ?? 0;
+        }
+        const schoolCompletion =
+          totalPossible > 0 ? Math.round((totalDone / totalPossible) * 100) : 0;
+
+        const totalActive = [...activeEnrollByCourse.values()].reduce((a, b) => a + b, 0);
+        const totalPublishedLessons = lessonRows.length;
+
+        const props = {
+          school: {
+            name: schoolName,
+            courses_total: courseList.length,
+            courses_published: byStatus.published,
+            courses_draft: byStatus.draft,
+            courses_archived: byStatus.archived,
+            active_enrollments: totalActive,
+            students: studentSet.size,
+            published_lessons: totalPublishedLessons,
+            completion_rate: schoolCompletion,
+            exam_submissions: schoolScoreCount,
+            avg_exam_score: schoolScoreCount > 0 ? Math.round(schoolScoreSum / schoolScoreCount) : null,
+            at_risk_students: atRisk,
+          },
+          courses: courseRows,
+        };
+
+        return widget({
+          props,
+          output: text(
+            `${schoolName}: ${courseList.length} course(s) (${byStatus.published} published), ` +
+              `${studentSet.size} student(s), ${totalActive} active enrollment(s), ` +
+              `${schoolCompletion}% avg completion, ${atRisk} at risk.`
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
