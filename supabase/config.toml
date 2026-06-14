@@ -345,8 +345,8 @@ enabled = false
 [auth.oauth_server]
 # Enable OAuth server functionality
 enabled = true
-# Path for OAuth consent flow UI
-authorization_url_path = "/oauth/consent"
+# Path for OAuth consent flow UI (LMS MCP server hosts it at /auth/consent)
+authorization_url_path = "/auth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = true
 

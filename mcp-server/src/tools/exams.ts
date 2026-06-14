@@ -1,20 +1,7 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { AuthManager } from "../auth.js";
-
-enum ResponseFormat {
-  MARKDOWN = "markdown",
-  JSON = "json",
-}
-
-const PaginationSchema = {
-  limit: z.number().int().min(1).max(100).default(20).describe("Maximum results to return"),
-  offset: z.number().int().min(0).default(0).describe("Number of results to skip for pagination"),
-  response_format: z
-    .nativeEnum(ResponseFormat)
-    .default(ResponseFormat.MARKDOWN)
-    .describe("Output format"),
-};
+import type { MCPServer } from "mcp-use/server";
+import { LmsSession } from "../session.js";
+import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
 
 const questionTypes = ["true_false", "multiple_choice", "free_text"] as const;
 
@@ -31,25 +18,15 @@ const questionSchema = z.object({
   expected_keywords: z.array(z.string()).optional().describe("Expected keywords for free_text questions"),
 });
 
-function errorResult(message: string) {
-  return {
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
-    isError: true,
-  };
-}
-
-export function registerExamTools(server: McpServer, auth: AuthManager) {
-  server.registerTool(
-    "lms_list_exams",
+export function registerExamTools(server: MCPServer) {
+  server.tool(
     {
-      title: "List Exams",
+      name: "lms_list_exams",
       description: "List all exams for a course with basic metadata and question counts.",
-      inputSchema: z
-        .object({
-          ...PaginationSchema,
-          course_id: z.number().describe("The course ID"),
-        })
-        .strict(),
+      schema: z.object({
+        ...PaginationSchema,
+        course_id: z.number().describe("The course ID"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -57,10 +34,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, limit, offset, response_format }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyCourseOwnership(course_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { course_id, limit, offset, response_format } = input;
+      try {
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
 
         const { data, error, count } = await supabase
           .from("exams")
@@ -73,7 +57,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
 
         if (error) return errorResult(`Listing exams: ${error.message}`);
         if (!data || data.length === 0) {
-          return { content: [{ type: "text", text: "No exams found for this course." }] };
+          return okText("No exams found for this course.");
         }
 
         const total = count || 0;
@@ -108,30 +92,24 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           textContent = lines.join("\n");
         }
 
-        return {
-          content: [{ type: "text", text: textContent }],
-          structuredContent: output,
-        };
+        return ok(output as Record<string, unknown>, textContent);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_get_exam",
+  server.tool(
     {
-      title: "Get Exam Details",
+      name: "lms_get_exam",
       description: "Get full exam details including all questions and their options.",
-      inputSchema: z
-        .object({
-          exam_id: z.number().describe("The exam ID"),
-          response_format: z
-            .nativeEnum(ResponseFormat)
-            .default(ResponseFormat.MARKDOWN)
-            .describe("Output format"),
-        })
-        .strict(),
+      schema: z.object({
+        exam_id: z.number().describe("The exam ID"),
+        response_format: z
+          .nativeEnum(ResponseFormat)
+          .default(ResponseFormat.MARKDOWN)
+          .describe("Output format"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -139,10 +117,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ exam_id, response_format }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyExamOwnership(exam_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { exam_id, response_format } = input;
+      try {
+        await session.verifyExamOwnership(exam_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("exams")
@@ -214,32 +199,26 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           textContent = result;
         }
 
-        return {
-          content: [{ type: "text", text: textContent }],
-          structuredContent: output,
-        };
+        return ok(output as Record<string, unknown>, textContent);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_create_exam",
+  server.tool(
     {
-      title: "Create Exam",
+      name: "lms_create_exam",
       description:
         "Create a new exam with optional questions and options in a single call. Recommended for bulk creation.",
-      inputSchema: z
-        .object({
-          course_id: z.number().describe("The course ID"),
-          title: z.string().min(1).describe("Exam title"),
-          description: z.string().optional().describe("Exam description"),
-          exam_date: z.string().optional().describe("Exam date (ISO format)"),
-          duration: z.number().int().min(1).describe("Duration in minutes"),
-          questions: z.array(questionSchema).optional().describe("Array of questions with options"),
-        })
-        .strict(),
+      schema: z.object({
+        course_id: z.number().describe("The course ID"),
+        title: z.string().min(1).describe("Exam title"),
+        description: z.string().optional().describe("Exam description"),
+        exam_date: z.string().optional().describe("Exam date (ISO format)"),
+        duration: z.number().int().min(1).describe("Duration in minutes"),
+        questions: z.array(questionSchema).optional().describe("Array of questions with options"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -247,10 +226,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, title, description, exam_date, duration, questions }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyCourseOwnership(course_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { course_id, title, description, exam_date, duration, questions } = input;
+      try {
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
 
         const { data: exam, error: examError } = await supabase
           .from("exams")
@@ -261,8 +247,8 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
             exam_date: exam_date ?? null,
             duration,
             status: "draft",
-            created_by: auth.getUserId(),
-            tenant_id: auth.getTenantId(),
+            created_by: session.getUserId(),
+            tenant_id: session.getTenantId(),
           })
           .select("exam_id, title, status")
           .single();
@@ -279,15 +265,10 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         };
 
         if (!questions || questions.length === 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Exam created: **${exam.title}** (ID: ${exam.exam_id}) [${exam.status}] — No questions yet.\n\nUse \`lms_add_exam_question\` to add questions.`,
-              },
-            ],
-            structuredContent: output,
-          };
+          return ok(
+            output as Record<string, unknown>,
+            `Exam created: **${exam.title}** (ID: ${exam.exam_id}) [${exam.status}] — No questions yet.\n\nUse \`lms_add_exam_question\` to add questions.`
+          );
         }
 
         const createdQuestions: string[] = [];
@@ -353,31 +334,25 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           result += `\n\nErrors:\n${errors.map((e) => `- ${e}`).join("\n")}`;
         }
 
-        return {
-          content: [{ type: "text", text: result }],
-          structuredContent: output,
-        };
+        return ok(output as Record<string, unknown>, result);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_update_exam",
+  server.tool(
     {
-      title: "Update Exam",
+      name: "lms_update_exam",
       description: "Update exam metadata like title, description, duration, or status.",
-      inputSchema: z
-        .object({
-          exam_id: z.number().describe("The exam ID"),
-          title: z.string().optional().describe("New title"),
-          description: z.string().optional().describe("New description"),
-          duration: z.number().optional().describe("New duration in minutes"),
-          exam_date: z.string().optional().describe("New exam date (ISO format)"),
-          status: z.enum(["draft", "published", "archived"]).optional().describe("New status"),
-        })
-        .strict(),
+      schema: z.object({
+        exam_id: z.number().describe("The exam ID"),
+        title: z.string().optional().describe("New title"),
+        description: z.string().optional().describe("New description"),
+        duration: z.number().optional().describe("New duration in minutes"),
+        exam_date: z.string().optional().describe("New exam date (ISO format)"),
+        status: z.enum(["draft", "published", "archived"]).optional().describe("New status"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -385,10 +360,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ exam_id, title, description, duration, exam_date, status }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyExamOwnership(exam_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { exam_id, title, description, duration, exam_date, status } = input;
+      try {
+        await session.verifyExamOwnership(exam_id);
+        const supabase = session.getClient();
 
         const updateData: Record<string, unknown> = {};
         if (title !== undefined) updateData.title = title;
@@ -398,7 +380,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         if (status !== undefined) updateData.status = status;
 
         if (Object.keys(updateData).length === 0) {
-          return { content: [{ type: "text", text: "No fields to update." }] };
+          return okText("No fields to update.");
         }
 
         const { data, error } = await supabase
@@ -409,40 +391,28 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           .single();
 
         if (error) return errorResult(`Updating exam: ${error.message}`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Exam updated: **${data.title}** (ID: ${data.exam_id}) [${data.status}]`,
-            },
-          ],
-          structuredContent: {
-            id: data.exam_id,
-            title: data.title,
-            status: data.status,
-          },
-        };
+        return ok(
+          { id: data.exam_id, title: data.title, status: data.status },
+          `Exam updated: **${data.title}** (ID: ${data.exam_id}) [${data.status}]`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_add_exam_question",
+  server.tool(
     {
-      title: "Add Exam Question",
+      name: "lms_add_exam_question",
       description: "Add a single question to an existing exam.",
-      inputSchema: z
-        .object({
-          exam_id: z.number().describe("The exam ID"),
-          question_text: z.string().min(1).describe("The question text"),
-          question_type: z.enum(questionTypes).describe("Type of question"),
-          options: z.array(optionSchema).optional().describe("Options for multiple_choice/true_false"),
-          ai_grading_criteria: z.string().optional().describe("AI grading criteria for free_text"),
-          expected_keywords: z.array(z.string()).optional().describe("Expected keywords for free_text"),
-        })
-        .strict(),
+      schema: z.object({
+        exam_id: z.number().describe("The exam ID"),
+        question_text: z.string().min(1).describe("The question text"),
+        question_type: z.enum(questionTypes).describe("Type of question"),
+        options: z.array(optionSchema).optional().describe("Options for multiple_choice/true_false"),
+        ai_grading_criteria: z.string().optional().describe("AI grading criteria for free_text"),
+        expected_keywords: z.array(z.string()).optional().describe("Expected keywords for free_text"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -450,14 +420,21 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ exam_id, question_text, question_type, options, ai_grading_criteria, expected_keywords }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { exam_id, question_text, question_type, options, ai_grading_criteria, expected_keywords } = input;
       try {
         if ((question_type === "multiple_choice" || question_type === "true_false") && (!options || options.length === 0)) {
           return errorResult(`Questions of type '${question_type}' require at least one option.`);
         }
 
-        await auth.verifyExamOwnership(exam_id);
-        const supabase = auth.getClient();
+        await session.verifyExamOwnership(exam_id);
+        const supabase = session.getClient();
 
         const { data: question, error: qError } = await supabase
           .from("exam_questions")
@@ -491,40 +468,32 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           createdOptions = opts || [];
         }
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Question added: "${question.question_text}" (ID: ${question.question_id}) [${question.question_type}]`,
-            },
-          ],
-          structuredContent: {
+        return ok(
+          {
             id: question.question_id,
             text: question.question_text,
             type: question.question_type,
             options: createdOptions,
           },
-        };
+          `Question added: "${question.question_text}" (ID: ${question.question_id}) [${question.question_type}]`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_update_exam_question",
+  server.tool(
     {
-      title: "Update Exam Question",
+      name: "lms_update_exam_question",
       description: "Update an exam question's text, type, or grading criteria.",
-      inputSchema: z
-        .object({
-          question_id: z.number().describe("The question ID"),
-          question_text: z.string().optional().describe("New question text"),
-          question_type: z.enum(questionTypes).optional().describe("New question type"),
-          ai_grading_criteria: z.string().optional().describe("New AI grading criteria"),
-          expected_keywords: z.array(z.string()).optional().describe("New expected keywords"),
-        })
-        .strict(),
+      schema: z.object({
+        question_id: z.number().describe("The question ID"),
+        question_text: z.string().optional().describe("New question text"),
+        question_type: z.enum(questionTypes).optional().describe("New question type"),
+        ai_grading_criteria: z.string().optional().describe("New AI grading criteria"),
+        expected_keywords: z.array(z.string()).optional().describe("New expected keywords"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -532,10 +501,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ question_id, question_text, question_type, ai_grading_criteria, expected_keywords }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyQuestionOwnership(question_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { question_id, question_text, question_type, ai_grading_criteria, expected_keywords } = input;
+      try {
+        await session.verifyQuestionOwnership(question_id);
+        const supabase = session.getClient();
 
         const updateData: Record<string, unknown> = {};
         if (question_text !== undefined) updateData.question_text = question_text;
@@ -544,7 +520,7 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         if (expected_keywords !== undefined) updateData.expected_keywords = expected_keywords;
 
         if (Object.keys(updateData).length === 0) {
-          return { content: [{ type: "text", text: "No fields to update." }] };
+          return okText("No fields to update.");
         }
 
         const { data, error } = await supabase
@@ -555,32 +531,22 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
           .single();
 
         if (error) return errorResult(`Updating question: ${error.message}`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Question updated: "${data.question_text}" (ID: ${data.question_id}) [${data.question_type}]`,
-            },
-          ],
-          structuredContent: {
-            id: data.question_id,
-            text: data.question_text,
-            type: data.question_type,
-          },
-        };
+        return ok(
+          { id: data.question_id, text: data.question_text, type: data.question_type },
+          `Question updated: "${data.question_text}" (ID: ${data.question_id}) [${data.question_type}]`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_delete_exam",
+  server.tool(
     {
-      title: "Delete Exam",
+      name: "lms_delete_exam",
       description:
         "Permanently delete an exam and all its questions, options, and submissions. This action is irreversible. Only use on draft exams or when sure there are no important submissions.",
-      inputSchema: z.object({ exam_id: z.number().describe("The exam ID to delete") }).strict(),
+      schema: z.object({ exam_id: z.number().describe("The exam ID to delete") }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -588,10 +554,17 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ exam_id }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyExamOwnership(exam_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { exam_id } = input;
+      try {
+        await session.verifyExamOwnership(exam_id);
+        const supabase = session.getClient();
 
         const { data: exam } = await supabase
           .from("exams")
@@ -602,22 +575,21 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         const { error } = await supabase.from("exams").delete().eq("exam_id", exam_id);
         if (error) return errorResult(`Deleting exam: ${error.message}`);
 
-        return {
-          content: [{ type: "text", text: `Exam "${exam?.title ?? exam_id}" (ID: ${exam_id}) and all its questions have been deleted.` }],
-          structuredContent: { success: true, deleted_exam_id: exam_id },
-        };
+        return ok(
+          { success: true, deleted_exam_id: exam_id },
+          `Exam "${exam?.title ?? exam_id}" (ID: ${exam_id}) and all its questions have been deleted.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_delete_exam_question",
+  server.tool(
     {
-      title: "Delete Exam Question",
+      name: "lms_delete_exam_question",
       description: "Delete an exam question and all its options.",
-      inputSchema: z.object({ question_id: z.number().describe("The question ID to delete") }).strict(),
+      schema: z.object({ question_id: z.number().describe("The question ID to delete") }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -625,20 +597,27 @@ export function registerExamTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ question_id }) => {
+    async (input, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyQuestionOwnership(question_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      const { question_id } = input;
+      try {
+        await session.verifyQuestionOwnership(question_id);
+        const supabase = session.getClient();
 
         // question_options has ON DELETE CASCADE in most cases, but let's be explicit if needed
         await supabase.from("question_options").delete().eq("question_id", question_id);
         const { error } = await supabase.from("exam_questions").delete().eq("question_id", question_id);
 
         if (error) return errorResult(`Deleting question: ${error.message}`);
-        return {
-          content: [{ type: "text", text: `Question ${question_id} and its options have been deleted.` }],
-          structuredContent: { success: true, deleted_question_id: question_id },
-        };
+        return ok(
+          { success: true, deleted_question_id: question_id },
+          `Question ${question_id} and its options have been deleted.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
