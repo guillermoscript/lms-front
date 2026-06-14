@@ -1,21 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 
 const MEDIA_EXERCISE_TYPES = ['audio_evaluation', 'video_evaluation']
 const STORAGE_BUCKET = 'exercise-media'
-const ALLOWED_EXTENSIONS = new Set(['webm', 'ogg', 'mp3', 'mp4', 'm4a', 'wav', 'aac'])
+// mov/3gp: native mobile camera output (iOS records .mov, some Androids .3gp)
+const ALLOWED_EXTENSIONS = new Set(['webm', 'ogg', 'mp3', 'mp4', 'm4a', 'wav', 'aac', 'mov', '3gp'])
 const MAX_PENDING_SUBMISSIONS = 5 // per user per exercise
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
+  // 1. Auth — cookie session (web) or Bearer token (mobile), server-verified
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new Response('Unauthorized', { status: 401 })
+  const { user, tenantId } = auth
   const adminClient = createAdminClient()
-  const tenantId = await getCurrentTenantId()
-
-  // 1. Auth — server-verified, not JWT
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
 
   // 2. Parse & validate input
   let exerciseId: string, mediaType: string, filename: string

@@ -1,21 +1,29 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type { MCPServer } from "mcp-use/server";
+import { text } from "mcp-use/server";
 
-export function registerPrompts(server: McpServer) {
+export function registerPrompts(server: MCPServer) {
+  // ── create-course-outline ──────────────────────────────────────────────────
   server.prompt(
-    "create-course-outline",
     {
-      topic: z.string().describe("The topic or subject for the course"),
-      difficulty_level: z.enum(["beginner", "intermediate", "advanced"]).optional().describe("Target difficulty level"),
-      duration_weeks: z.number().optional().describe("Intended course duration in weeks"),
+      name: "create-course-outline",
+      description:
+        "Generate a detailed course outline for a given topic and difficulty level, then scaffold it in the LMS using create_course, create_lesson, and create_exam tools.",
+      schema: z.object({
+        topic: z.string().describe("The topic or subject for the course"),
+        difficulty_level: z
+          .enum(["beginner", "intermediate", "advanced"])
+          .optional()
+          .describe("Target difficulty level"),
+        duration_weeks: z
+          .number()
+          .optional()
+          .describe("Intended course duration in weeks"),
+      }),
     },
-    ({ topic, difficulty_level, duration_weeks }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `Create a detailed course outline for the following topic:
+    async ({ topic, difficulty_level, duration_weeks }) =>
+      text(
+        `Create a detailed course outline for the following topic:
 
 **Topic:** ${topic}
 **Difficulty Level:** ${difficulty_level ?? "intermediate"}
@@ -32,27 +40,30 @@ Please provide:
 
 After creating the outline, use the \`create_course\` tool to create the course, then \`create_lesson\` for each lesson, and \`create_exam\` for each exam.
 
-Format the lessons with sequential numbering starting from 1.`,
-          },
-        },
-      ],
-    })
+Format the lessons with sequential numbering starting from 1.`
+      )
   );
 
+  // ── generate-lesson-content ────────────────────────────────────────────────
   server.prompt(
-    "generate-lesson-content",
     {
-      lesson_title: z.string().describe("Title of the lesson"),
-      learning_objectives: z.string().describe("Comma-separated learning objectives"),
-      include_examples: z.boolean().optional().describe("Whether to include code examples"),
+      name: "generate-lesson-content",
+      description:
+        "Generate MDX lesson content with interactive components for the given title and learning objectives, then save it via update_lesson.",
+      schema: z.object({
+        lesson_title: z.string().describe("Title of the lesson"),
+        learning_objectives: z
+          .string()
+          .describe("Comma-separated learning objectives"),
+        include_examples: z
+          .boolean()
+          .optional()
+          .describe("Whether to include code examples"),
+      }),
     },
-    ({ lesson_title, learning_objectives, include_examples }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `Generate MDX content for a lesson with the following details:
+    async ({ lesson_title, learning_objectives, include_examples }) =>
+      text(
+        `Generate MDX content for a lesson with the following details:
 
 **Lesson Title:** ${lesson_title}
 **Learning Objectives:** ${learning_objectives}
@@ -86,27 +97,35 @@ The content should be written in MDX format suitable for an LMS. Include:
 
 Use these components to make lessons interactive and engaging. Components that accept complex data (Glossary, Comparison, Table, FlashcardSet, FillInTheBlank, MatchingPairs, Ordering) use \`JSON.parse('...')\` for their props.
 
-After generating the content, use the \`update_lesson\` tool to save it to the appropriate lesson.`,
-          },
-        },
-      ],
-    })
+After generating the content, use the \`update_lesson\` tool to save it to the appropriate lesson.`
+      )
   );
 
+  // ── create-exam-questions ──────────────────────────────────────────────────
   server.prompt(
-    "create-exam-questions",
     {
-      lesson_content: z.string().describe("The lesson content or topic to create questions for"),
-      num_questions: z.number().optional().describe("Number of questions to generate (default 5)"),
-      question_types: z.string().optional().describe("Comma-separated question types: true_false, multiple_choice, free_text"),
+      name: "create-exam-questions",
+      description:
+        "Generate a set of exam questions (multiple choice, true/false, free text) for the given lesson content or topic, then create the exam via create_exam.",
+      schema: z.object({
+        lesson_content: z
+          .string()
+          .describe("The lesson content or topic to create questions for"),
+        num_questions: z
+          .number()
+          .optional()
+          .describe("Number of questions to generate (default 5)"),
+        question_types: z
+          .string()
+          .optional()
+          .describe(
+            "Comma-separated question types: true_false, multiple_choice, free_text"
+          ),
+      }),
     },
-    ({ lesson_content, num_questions, question_types }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `Generate exam questions based on the following content:
+    async ({ lesson_content, num_questions, question_types }) =>
+      text(
+        `Generate exam questions based on the following content:
 
 **Content/Topic:** ${lesson_content}
 **Number of Questions:** ${num_questions ?? 5}
@@ -120,25 +139,23 @@ For each question, provide:
 - For multiple_choice/true_false: options with option_text and is_correct
 - For free_text: ai_grading_criteria and expected_keywords
 
-After generating the questions, use the \`create_exam\` tool to create an exam with all questions in a single call. The questions array should match the schema expected by create_exam.`,
-          },
-        },
-      ],
-    })
+After generating the questions, use the \`create_exam\` tool to create an exam with all questions in a single call. The questions array should match the schema expected by create_exam.`
+      )
   );
 
+  // ── review-course ──────────────────────────────────────────────────────────
   server.prompt(
-    "review-course",
     {
-      course_id: z.string().describe("The course ID to review"),
+      name: "review-course",
+      description:
+        "Review a course end-to-end for completeness, structure, quality, and publish-readiness by fetching its lessons and exams then providing actionable recommendations.",
+      schema: z.object({
+        course_id: z.string().describe("The course ID to review"),
+      }),
     },
-    ({ course_id }) => ({
-      messages: [
-        {
-          role: "user" as const,
-          content: {
-            type: "text" as const,
-            text: `Please review course ${course_id} for completeness and quality.
+    async ({ course_id }) =>
+      text(
+        `Please review course ${course_id} for completeness and quality.
 
 Steps:
 1. Use \`get_course\` to fetch the course details
@@ -152,10 +169,7 @@ Analyze and report on:
 - **Coverage**: Do exams cover the material from lessons?
 - **Readiness**: Can this course be published? What's missing?
 
-Provide actionable recommendations for improvement.`,
-          },
-        },
-      ],
-    })
+Provide actionable recommendations for improvement.`
+      )
   );
 }

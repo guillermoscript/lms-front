@@ -115,7 +115,7 @@ export function getEnrolledCoursesWithProgress(
         title,
         description,
         thumbnail_url,
-        lessons (id, title, lesson_completions (user_id))
+        lessons (id, title, sequence, lesson_completions (user_id))
       )
     `)
     .eq('user_id', userId)

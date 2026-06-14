@@ -1,6 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
 import { getPipeline } from '@/lib/speech/registry'
 import type { ExerciseContext } from '@/lib/speech/types'
@@ -10,13 +9,11 @@ export const maxDuration = 120
 const STORAGE_BUCKET = 'exercise-media'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
+  // 1. Auth — cookie session (web) or Bearer token (mobile), server-verified
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new Response('Unauthorized', { status: 401 })
+  const { user, tenantId } = auth
   const adminClient = createAdminClient()
-  const tenantId = await getCurrentTenantId()
-
-  // 1. Auth — server-verified
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
 
   // 2. Parse & validate input
   let submissionId: number

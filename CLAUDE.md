@@ -218,20 +218,25 @@ Categories at a glance:
 
 ## MCP Server
 
-An MCP (Model Context Protocol) sub-server lives in `mcp-server/`. It exposes LMS data to AI agents via the MCP protocol.
+An MCP (Model Context Protocol) sub-server lives in `mcp-server/`. It exposes LMS course-management tools, resources, prompts, and **interactive widgets (MCP Apps)** to AI agents. Built on **mcp-use** (`mcp-use/server`) — NOT the raw `@modelcontextprotocol/sdk` (migrated June 2026). **When working on it, read the `mcp-apps-builder` skill first** (bundled at `mcp-server/.claude/skills/`).
 
 **Setup:**
 ```bash
 cd mcp-server
-cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MCP_PROXY_SECRET
+cp .env.example .env   # fill in Supabase OAuth values (see below)
 npm install
-npm run build
-npm start
+npm run dev            # server + inspector at http://localhost:3000/inspector
+npm run build          # mcp-use build (compiles widgets + server → dist/)
+npm start              # production
 ```
 
-The MCP server runs separately from the Next.js app on port 3001 by default (`MCP_SERVER_PORT`). The `mcp:build` npm script builds it from the project root: `npm run mcp:build`.
+Runs separately from the Next.js app on **port 3000** by default. `npm run mcp:build` builds it from the project root.
 
-**Env vars** (see `mcp-server/.env.example`): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `MCP_PROXY_SECRET`, `MCP_SERVER_PORT`, `MCP_SERVER_HOST`.
+**Auth: Supabase OAuth 2.1** (`oauthSupabaseProvider`). Clients authenticate against Supabase; the server verifies the JWT and runs every query with a **request-scoped, RLS-aware** client (the caller's access token), so Postgres RLS enforces tenant isolation — the server holds no service-role data access. Tenant/role come from JWT claims (`tenant_id`, `tenant_role`) injected by `custom_access_token_hook`; only `teacher`/`admin` may use it. Audit logging (`mcp_audit_log`) runs via an `mcp:tools/call` middleware using the service-role key (optional; no-op if unset). The OAuth consent UI is hosted at `/auth/consent` (`src/auth-routes.ts`) — set this as the consent screen URL in Supabase Dashboard → Authentication → OAuth Server.
+
+**Env vars** (see `mcp-server/.env.example`): `MCP_USE_OAUTH_SUPABASE_PROJECT_ID` (or `MCP_USE_OAUTH_SUPABASE_URL` for local/self-hosted), `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (optional, audit only), `MCP_SERVER_URL`, `PORT`. `SUPABASE_URL`/`SUPABASE_ANON_KEY` are accepted as fallbacks.
+
+**Surface:** 47 `lms_*` tools (courses/lessons/exercises/exams/analytics); 8 widgets — `course-dashboard`, `course-detail` (+ live stats), `exam-submissions` (drill-in), `lesson-preview`, `artifact-sandbox` (live iframe preview + edit/save of artifact-exercise HTML, via `lms_preview_artifact`), `submission-grader` (per-question review + score/feedback override, via `lms_get_submission_for_grading` + `lms_grade_submission`), `student-progress-roster` (per-course progress %, exam avg, at-risk flags, via `lms_get_student_progress`), `school-overview` (admin-only cross-course KPI dashboard, via `lms_get_school_stats`); 3 resource templates (`course://`, `lesson://`, `exam://`); 4 prompts. Tool registration lives in `mcp-server/src/tools/*.ts`; widgets in `mcp-server/resources/<name>/widget.tsx`.
 
 ## Testing
 

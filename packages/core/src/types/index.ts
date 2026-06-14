@@ -42,7 +42,12 @@ export interface LessonCompletion {
 export interface EnrolledCourse {
   enrollment_id: number;
   course: (Course & {
-    lessons: { id: number; title: string; lesson_completions: { user_id: string }[] }[];
+    lessons: {
+      id: number;
+      title: string;
+      sequence: number | null;
+      lesson_completions: { user_id: string }[];
+    }[];
   }) | null;
 }
 
