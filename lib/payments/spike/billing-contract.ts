@@ -1,87 +1,49 @@
 /**
- * Payment Provider Types
- * Defines interfaces for multiple payment providers (Stripe, PayPal, Binance, etc.)
+ * SPIKE — Proposed provider-agnostic billing contract.
+ *
+ * This file is NOT wired into any live code path. It is the design target for
+ * issue #280 / the provider-agnostic payments spike (see
+ * docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md).
+ *
+ * Intent: GROW the existing `IPaymentProvider` (lib/payments/types.ts) into this
+ * `IBillingProvider` over time. Everything here is ADDITIVE and capability-gated:
+ *   - products / prices / subscriptions are reused from the existing types
+ *   - new concepts (capabilities, checkout sessions, customers, webhook
+ *     normalization, refunds) are added so providers with very different
+ *     abilities (Stripe vs Lemon Squeezy vs Solana Pay vs cash) all fit one API.
+ *
+ * Nothing imports this yet. The two reference stubs in this folder implement it
+ * to prove the shape compiles and that "add a provider" is a contained change.
  */
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual'
-
-export type Currency = 'usd' | 'eur' | 'btc' | 'eth' | 'usdt'
-
-export type PaymentType = 'one_time' | 'subscription'
-
-export interface PaymentProduct {
-  id: string
-  name: string
-  description: string
-  amount: number
-  currency: Currency
-  metadata?: Record<string, string>
-}
-
-export interface PaymentPrice {
-  id: string
-  productId: string
-  amount: number
-  currency: Currency
-  type: PaymentType
-  interval?: 'month' | 'year'
-  metadata?: Record<string, string>
-}
-
-export interface CreateProductParams {
-  name: string
-  description: string
-  images?: string[]
-  metadata?: Record<string, string>
-}
-
-export interface CreatePriceParams {
-  productId: string
-  amount: number // Amount in smallest currency unit (cents, satoshis, etc.)
-  currency: Currency
-  type: PaymentType
-  interval?: 'month' | 'year'
-  intervalCount?: number
-  metadata?: Record<string, string>
-}
-
-export interface UpdateProductParams {
-  name?: string
-  description?: string
-  images?: string[]
-  active?: boolean
-  metadata?: Record<string, string>
-}
-
-export interface UpdatePriceParams {
-  active?: boolean
-  metadata?: Record<string, string>
-}
-
-export interface CreateSubscriptionParams {
-  providerPriceId: string
-  providerCustomerId: string
-  metadata?: Record<string, string>
-}
-
-export interface ProviderSubscription {
-  id: string
-  status: 'active' | 'canceled' | 'past_due'
-  currentPeriodEnd: Date
-  cancelAtPeriodEnd: boolean
-}
-
-// ---------------------------------------------------------------------------
-// Provider-agnostic billing additions (issue #280 / provider-agnostic spike).
-// All ADDITIVE: new concepts so providers with different abilities (Stripe vs
-// Lemon Squeezy vs Solana Pay vs cash) all fit one API. The app branches on
-// capabilities, NEVER on provider identity. See docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md
-// ---------------------------------------------------------------------------
+import type {
+  CreatePriceParams,
+  CreateProductParams,
+  CreateSubscriptionParams,
+  PaymentPrice,
+  PaymentProduct,
+  ProviderSubscription,
+  UpdatePriceParams,
+  UpdateProductParams,
+} from '../types'
 
 /**
- * Static descriptor of what a provider can do. Lets the app branch on ability,
- * never on provider identity.
+ * Slugs proposed for new adapters. The production union lives in
+ * `lib/payments/types.ts` as `PaymentProvider`; new slugs get added there (and
+ * to the DB `payment_provider` CHECK) when an adapter actually lands.
  */
+export type BillingProviderSlug =
+  | 'stripe'
+  | 'paypal'
+  | 'manual'
+  | 'lemonsqueezy'
+  | 'mercadopago'
+  | 'solana'
+
+// ---------------------------------------------------------------------------
+// 1. Capabilities — lets the app branch on ability, never on provider identity.
+// ---------------------------------------------------------------------------
+
 export interface ProviderCapabilities {
   /** Provider charges on a recurring schedule itself (Stripe/LS/Paddle/MP-card). */
   supportsNativeSubscriptions: boolean
@@ -102,7 +64,10 @@ export interface ProviderCapabilities {
   selfManagedPeriod: boolean
 }
 
-/** Params for starting a payment (the missing "start a payment" abstraction). */
+// ---------------------------------------------------------------------------
+// 2. Checkout session — the missing "start a payment" abstraction.
+// ---------------------------------------------------------------------------
+
 export interface CreateCheckoutParams {
   /** One-time product purchase or a recurring plan subscription. */
   mode: 'one_time' | 'subscription'
@@ -137,7 +102,10 @@ export interface CheckoutSession {
   expiresAt?: Date
 }
 
-/** Params for ensuring a stored customer (card-on-file providers only). */
+// ---------------------------------------------------------------------------
+// 3. Customers (optional — only providers needing card-on-file recurring).
+// ---------------------------------------------------------------------------
+
 export interface EnsureCustomerParams {
   userId: string
   email: string
@@ -145,7 +113,10 @@ export interface EnsureCustomerParams {
   metadata?: Record<string, string>
 }
 
-/** Every provider webhook collapses to ONE internal vocabulary. */
+// ---------------------------------------------------------------------------
+// 4. Webhook normalization — every provider event collapses to ONE vocabulary.
+// ---------------------------------------------------------------------------
+
 export type BillingEventType =
   | 'payment.succeeded'
   | 'payment.failed'
@@ -158,8 +129,6 @@ export type BillingEventType =
 
 export interface NormalizedBillingEvent {
   type: BillingEventType
-  /** Provider's own unique event id — the idempotency key for webhook_events. */
-  providerEventId?: string
   providerSubscriptionId?: string
   providerPaymentId?: string
   /** Our correlation id, recovered from provider metadata. */
@@ -170,73 +139,54 @@ export interface NormalizedBillingEvent {
   raw: unknown
 }
 
+// ---------------------------------------------------------------------------
+// 5. Refunds (optional).
+// ---------------------------------------------------------------------------
+
 export interface RefundParams {
   providerPaymentId: string
   amount?: number // omit for full refund
   reason?: string
 }
 
-export interface PaymentProviderConfig {
-  provider: PaymentProvider
-  apiKey: string
-  webhookSecret?: string
-  environment?: 'test' | 'production'
-  additionalConfig?: Record<string, any>
-}
+// ---------------------------------------------------------------------------
+// The contract every provider implements.
+// ---------------------------------------------------------------------------
 
-/**
- * Base interface that all payment providers must implement
- */
-export interface IPaymentProvider {
-  readonly provider: PaymentProvider
-
-  /**
-   * What this provider can do. The app branches on these flags, never on
-   * `provider` identity. Required so every provider declares its abilities.
-   */
+export interface IBillingProvider {
+  readonly provider: BillingProviderSlug
   readonly capabilities: ProviderCapabilities
 
-  // Product operations
+  // --- Catalog (same as today's IPaymentProvider) ---
   createProduct(params: CreateProductParams): Promise<PaymentProduct>
   updateProduct(productId: string, params: UpdateProductParams): Promise<PaymentProduct>
   getProduct(productId: string): Promise<PaymentProduct>
   archiveProduct(productId: string): Promise<void>
   restoreProduct(productId: string): Promise<void>
 
-  // Price operations
   createPrice(params: CreatePriceParams): Promise<PaymentPrice>
   updatePrice(priceId: string, params: UpdatePriceParams): Promise<PaymentPrice>
   getPrice(priceId: string): Promise<PaymentPrice>
   archivePrice(priceId: string): Promise<void>
 
-  // Subscription operations (optional — providers without recurring billing,
-  // e.g. manual/offline, implement these as no-ops)
+  // --- Checkout (NEW — the creation path that stores provider_subscription_id) ---
+  createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession>
+
+  // --- Subscriptions (optional; no-ops for self-managed providers) ---
   createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
   cancelSubscription?(providerSubId: string, immediate: boolean): Promise<void>
   getSubscription?(providerSubId: string): Promise<ProviderSubscription>
 
-  // Checkout (optional — the creation path that stores provider_subscription_id;
-  // providers wire this in Phase 2). Capability-gated by supportsHostedCheckout
-  // / native subscription support.
-  createCheckoutSession?(params: CreateCheckoutParams): Promise<CheckoutSession>
-
-  // Customers (optional — only providers needing card-on-file recurring).
+  // --- Customers (optional) ---
   ensureCustomer?(params: EnsureCustomerParams): Promise<{ providerCustomerId: string }>
 
-  // Webhooks (optional — per-provider verify + normalize; wired in Phase 3).
-  verifyWebhook?(rawBody: string, headers: Record<string, string>): Promise<boolean>
-  normalizeWebhookEvent?(rawBody: string): Promise<NormalizedBillingEvent | null>
+  // --- Webhooks (NEW — per-provider verify + normalize) ---
+  verifyWebhook(rawBody: string, headers: Record<string, string>): Promise<boolean>
+  normalizeWebhookEvent(rawBody: string): Promise<NormalizedBillingEvent | null>
 
-  // Refunds (optional — capability-gated by supportsRefunds).
+  // --- Refunds (optional) ---
   refund?(params: RefundParams): Promise<void>
 
-  // Utility
+  // --- Utility (same as today) ---
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number
 }
-
-/**
- * Result type for operations
- */
-export type PaymentResult<T = unknown> =
-  | { success: true; data: T }
-  | { success: false; error: string }

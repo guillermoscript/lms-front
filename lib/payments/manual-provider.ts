@@ -14,10 +14,21 @@ import {
   UpdatePriceParams,
   CreateSubscriptionParams,
   ProviderSubscription,
+  ProviderCapabilities,
 } from './types'
 
 export class ManualPaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'manual'
+  // Offline/manual: no external engine. WE own the billing period; an admin
+  // confirms each payment and a cron expires lapsed rows. No webhooks/refunds.
+  readonly capabilities: ProviderCapabilities = {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+  }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {
     // Manual payments use major units (no conversion needed)

@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { sendEmail } from '@/lib/email/send'
 import { enrollmentConfirmedTemplate } from '@/lib/email/templates/enrollment-confirmed'
+import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
 
 // Lazy initialize Supabase admin client
 function getSupabaseAdmin() {
@@ -287,71 +288,56 @@ export async function POST(req: NextRequest) {
       const stripeSub = event.data.object as Stripe.Subscription
       const stripeSubId = stripeSub.id
 
-      // Find our subscription row by matching the provider subscription ID
-      // stored at creation (provider-agnostic column; scoped to Stripe).
-      const { data: sub } = await getSupabaseAdmin()
-        .from('subscriptions')
-        .select('subscription_id, user_id, plan_id, tenant_id')
-        .eq('provider_subscription_id', stripeSubId)
-        .eq('payment_provider', 'stripe')
-        .maybeSingle()
+      // Shared dispatcher: matches by (provider_subscription_id, 'stripe') and
+      // sets status → expired (DB trigger disables linked enrollments).
+      await dispatchBillingEvent(
+        {
+          type: 'subscription.expired',
+          providerEventId: event.id,
+          providerSubscriptionId: stripeSubId,
+          raw: event,
+        },
+        { provider: 'stripe', admin: getSupabaseAdmin() }
+      )
 
-      if (sub) {
+      // Fallback for legacy rows created before provider_subscription_id was
+      // stored: match by tenant + metadata. The status='active' filter means
+      // this is a no-op when the dispatcher already matched the row above.
+      const tenantMeta = stripeSub.metadata?.tenant_id || tenantId
+      const userId = stripeSub.metadata?.user_id
+      if (tenantMeta && userId) {
         await getSupabaseAdmin()
           .from('subscriptions')
           .update({
             subscription_status: 'expired',
             ended_at: new Date().toISOString(),
           })
-          .eq('subscription_id', sub.subscription_id)
-
-        console.log(`Subscription ${sub.subscription_id} expired (Stripe sub ${stripeSubId})`)
-      } else {
-        // Fallback: match by tenant + metadata if stripe_subscription_id not stored
-        const tenantMeta = stripeSub.metadata?.tenant_id || tenantId
-        if (tenantMeta) {
-          const userId = stripeSub.metadata?.user_id
-          if (userId) {
-            await getSupabaseAdmin()
-              .from('subscriptions')
-              .update({
-                subscription_status: 'expired',
-                ended_at: new Date().toISOString(),
-              })
-              .eq('user_id', userId)
-              .eq('tenant_id', tenantMeta)
-              .eq('subscription_status', 'active')
-
-            console.log(`Expired active subscriptions for user ${userId} tenant ${tenantMeta}`)
-          }
-        }
+          .eq('user_id', userId)
+          .eq('tenant_id', tenantMeta)
+          .eq('subscription_status', 'active')
       }
+
+      console.log(`Processed subscription.deleted (Stripe sub ${stripeSubId})`)
       break
     }
 
     // Fired when a recurring payment fails (before subscription is deleted).
-    // Mark subscription as past_due — access continues during Stripe's retry window.
+    // The subscription_status enum has no 'past_due' value, so the shared
+    // dispatcher logs this rather than writing it — access continues during
+    // Stripe's retry window until a customer.subscription.deleted arrives.
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
       const stripeSubId = (invoice as any).subscription as string | null
 
-      if (stripeSubId) {
-        const { data: sub } = await getSupabaseAdmin()
-          .from('subscriptions')
-          .select('subscription_id')
-          .eq('provider_subscription_id', stripeSubId)
-          .eq('payment_provider', 'stripe')
-          .maybeSingle()
-
-        if (sub) {
-          await getSupabaseAdmin()
-            .from('subscriptions')
-            .update({ subscription_status: 'past_due' as any })
-            .eq('subscription_id', sub.subscription_id)
-
-          console.log(`Subscription ${sub.subscription_id} marked past_due`)
-        }
-      }
+      await dispatchBillingEvent(
+        {
+          type: 'subscription.past_due',
+          providerEventId: event.id,
+          providerSubscriptionId: stripeSubId ?? undefined,
+          raw: event,
+        },
+        { provider: 'stripe', admin: getSupabaseAdmin() }
+      )
       break
     }
 

@@ -14,11 +14,24 @@ import {
   UpdatePriceParams,
   CreateSubscriptionParams,
   ProviderSubscription,
+  ProviderCapabilities,
+  NormalizedBillingEvent,
   Currency,
 } from './types'
 
 export class StripePaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'stripe'
+  // Stripe Connect: native recurring billing + renewal webhooks. We use
+  // PaymentIntent/Elements (client_secret), not hosted Checkout, so
+  // supportsHostedCheckout is false. Not a Merchant of Record.
+  readonly capabilities: ProviderCapabilities = {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: false,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+  }
   private stripe: Stripe
 
   constructor(apiKey: string) {
@@ -264,6 +277,111 @@ export class StripePaymentProvider implements IPaymentProvider {
       return this.mapSubscription(stripeSub)
     } catch (error) {
       throw new Error(`Stripe getSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Verify a Stripe webhook signature against STRIPE_WEBHOOK_SECRET (the Connect
+   * student-payments endpoint secret). Used by the unified webhook route.
+   */
+  async verifyWebhook(rawBody: string, headers: Record<string, string>): Promise<boolean> {
+    const secret = process.env.STRIPE_WEBHOOK_SECRET
+    if (!secret) return false
+    const signature = headers['stripe-signature'] ?? headers['Stripe-Signature']
+    if (!signature) return false
+    try {
+      this.stripe.webhooks.constructEvent(rawBody, signature, secret)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Collapse a Stripe event into our internal billing vocabulary. Called AFTER
+   * verifyWebhook, so a plain JSON parse of the (already trusted) body is safe.
+   * Returns null for event types the unified layer does not model.
+   */
+  async normalizeWebhookEvent(rawBody: string): Promise<NormalizedBillingEvent | null> {
+    let event: Stripe.Event
+    try {
+      event = JSON.parse(rawBody) as Stripe.Event
+    } catch {
+      return null
+    }
+
+    const obj = (event.data?.object ?? {}) as any
+    const eventId = event.id
+    const toDate = (unix?: number) => (unix ? new Date(unix * 1000) : undefined)
+
+    switch (event.type) {
+      case 'customer.subscription.deleted':
+        return {
+          type: 'subscription.expired',
+          providerEventId: eventId,
+          providerSubscriptionId: obj.id,
+          periodEnd: toDate(obj.current_period_end),
+          raw: event,
+        }
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        if (obj.status === 'active' || obj.status === 'trialing') {
+          return {
+            type: 'subscription.activated',
+            providerEventId: eventId,
+            providerSubscriptionId: obj.id,
+            periodEnd: toDate(obj.current_period_end),
+            raw: event,
+          }
+        }
+        if (obj.status === 'past_due') {
+          return { type: 'subscription.past_due', providerEventId: eventId, providerSubscriptionId: obj.id, raw: event }
+        }
+        if (obj.status === 'canceled') {
+          return { type: 'subscription.canceled', providerEventId: eventId, providerSubscriptionId: obj.id, raw: event }
+        }
+        return null
+      }
+      case 'invoice.payment_succeeded':
+        return {
+          type: 'subscription.renewed',
+          providerEventId: eventId,
+          providerSubscriptionId: obj.subscription ?? undefined,
+          periodEnd: toDate(obj.lines?.data?.[0]?.period?.end),
+          raw: event,
+        }
+      case 'invoice.payment_failed':
+        return {
+          type: 'subscription.past_due',
+          providerEventId: eventId,
+          providerSubscriptionId: obj.subscription ?? undefined,
+          raw: event,
+        }
+      case 'charge.refunded':
+        return {
+          type: 'refund.succeeded',
+          providerEventId: eventId,
+          providerPaymentId: obj.payment_intent ?? undefined,
+          raw: event,
+        }
+      case 'payment_intent.succeeded':
+        return {
+          type: 'payment.succeeded',
+          providerEventId: eventId,
+          providerPaymentId: obj.id,
+          reference: obj.metadata?.transactionId,
+          raw: event,
+        }
+      case 'payment_intent.payment_failed':
+        return {
+          type: 'payment.failed',
+          providerEventId: eventId,
+          providerPaymentId: obj.id,
+          reference: obj.metadata?.transactionId,
+          raw: event,
+        }
+      default:
+        return null
     }
   }
 
