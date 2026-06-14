@@ -12,6 +12,8 @@ import {
   CreatePriceParams,
   UpdateProductParams,
   UpdatePriceParams,
+  CreateSubscriptionParams,
+  ProviderSubscription,
   Currency,
 } from './types'
 
@@ -214,6 +216,74 @@ export class StripePaymentProvider implements IPaymentProvider {
       await this.stripe.prices.update(priceId, { active: false })
     } catch (error) {
       throw new Error(`Stripe archivePrice failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Create a recurring subscription in Stripe.
+   * The price must already be a recurring price (created via createPrice with
+   * type: 'subscription').
+   */
+  async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
+    try {
+      const stripeSub = await this.stripe.subscriptions.create({
+        customer: params.providerCustomerId,
+        items: [{ price: params.providerPriceId }],
+        metadata: params.metadata || {},
+      })
+
+      return this.mapSubscription(stripeSub)
+    } catch (error) {
+      throw new Error(`Stripe createSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Cancel a Stripe subscription — immediately or at the end of the period.
+   */
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+    try {
+      if (immediate) {
+        await this.stripe.subscriptions.cancel(providerSubId)
+      } else {
+        await this.stripe.subscriptions.update(providerSubId, {
+          cancel_at_period_end: true,
+        })
+      }
+    } catch (error) {
+      throw new Error(`Stripe cancelSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Retrieve a Stripe subscription's current state.
+   */
+  async getSubscription(providerSubId: string): Promise<ProviderSubscription> {
+    try {
+      const stripeSub = await this.stripe.subscriptions.retrieve(providerSubId)
+      return this.mapSubscription(stripeSub)
+    } catch (error) {
+      throw new Error(`Stripe getSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Map a Stripe subscription to our provider-agnostic shape.
+   * Stripe API v2025 types moved current_period_end onto items — cast to read it.
+   */
+  private mapSubscription(stripeSub: Stripe.Subscription): ProviderSubscription {
+    const status: ProviderSubscription['status'] =
+      stripeSub.status === 'active' || stripeSub.status === 'trialing'
+        ? 'active'
+        : stripeSub.status === 'past_due'
+          ? 'past_due'
+          : 'canceled'
+
+    return {
+      id: stripeSub.id,
+      status,
+      currentPeriodEnd: new Date(((stripeSub as any).current_period_end ?? 0) * 1000),
+      cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
     }
   }
 

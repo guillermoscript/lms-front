@@ -2,13 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-02-25.clover',
-})
 
 interface PlanFormData {
   plan_name: string
@@ -18,6 +14,7 @@ interface PlanFormData {
   currency: 'usd' | 'eur'
   features?: string
   courseIds: number[]
+  paymentProvider?: PaymentProvider
 }
 
 interface Plan {
@@ -28,8 +25,9 @@ interface Plan {
   duration_in_days: number
   currency: string
   features?: string
-  stripe_product_id?: string
-  stripe_price_id?: string
+  payment_provider: string
+  provider_product_id?: string
+  provider_price_id?: string
 }
 
 /**
@@ -54,10 +52,13 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
       throw new Error('Duration must be 30 (monthly) or 365 (yearly)')
     }
 
-    // 1. Create Stripe product for subscription
-    const stripeProduct = await stripe.products.create({
+    // Get payment provider (defaults to Stripe)
+    const provider = getPaymentProvider(formData.paymentProvider || 'stripe')
+
+    // 1. Create product in payment provider
+    const paymentProduct = await provider.createProduct({
       name: formData.plan_name.trim(),
-      description: formData.description?.trim() || undefined,
+      description: formData.description?.trim() || '',
       metadata: {
         type: 'subscription',
         duration_days: formData.duration_in_days.toString(),
@@ -66,16 +67,14 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
       }
     })
 
-    // 2. Create Stripe recurring price
+    // 2. Create recurring price in payment provider
     const interval = formData.duration_in_days === 30 ? 'month' : 'year'
-    const stripePrice = await stripe.prices.create({
-      product: stripeProduct.id,
-      unit_amount: Math.round(formData.price * 100), // Convert to cents
+    const paymentPrice = await provider.createPrice({
+      productId: paymentProduct.id,
+      amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
       currency: formData.currency,
-      recurring: {
-        interval: interval,
-        interval_count: 1
-      },
+      type: 'subscription',
+      interval,
       metadata: {
         plan_name: formData.plan_name
       }
@@ -92,8 +91,9 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
         duration_in_days: formData.duration_in_days,
         currency: formData.currency,
         features: formData.features || null,
-        stripe_product_id: stripeProduct.id,
-        stripe_price_id: stripePrice.id,
+        payment_provider: provider.provider,
+        provider_product_id: paymentProduct.id,
+        provider_price_id: paymentPrice.id,
         tenant_id: tenantId
       })
       .select()
@@ -172,38 +172,38 @@ export async function updatePlan(
       throw new Error('Plan not found or access denied')
     }
 
-    // Update Stripe product
-    if (existingPlan.stripe_product_id) {
-      await stripe.products.update(existingPlan.stripe_product_id, {
+    // Get payment provider from the existing plan
+    const providerType = (existingPlan.payment_provider as PaymentProvider) || 'stripe'
+    const provider = getPaymentProvider(providerType)
+
+    // Update product in payment provider
+    if (existingPlan.provider_product_id) {
+      await provider.updateProduct(existingPlan.provider_product_id, {
         name: formData.plan_name.trim(),
-        description: formData.description?.trim() || undefined
+        description: formData.description?.trim() || ''
       })
 
-      // If price or duration changed, create new Stripe price
+      // If price or duration changed, create a new recurring price
       const priceChanged = formData.price !== existingPlan.price
       const durationChanged = formData.duration_in_days !== existingPlan.duration_in_days
       const currencyChanged = formData.currency !== existingPlan.currency
 
       if (priceChanged || durationChanged || currencyChanged) {
         const interval = formData.duration_in_days === 30 ? 'month' : 'year'
-        const newPrice = await stripe.prices.create({
-          product: existingPlan.stripe_product_id,
-          unit_amount: Math.round(formData.price * 100),
+        const newPrice = await provider.createPrice({
+          productId: existingPlan.provider_product_id,
+          amount: provider.convertAmount(formData.price, 'major'),
           currency: formData.currency,
-          recurring: {
-            interval: interval,
-            interval_count: 1
-          },
+          type: 'subscription',
+          interval,
           metadata: {
             plan_name: formData.plan_name
           }
         })
 
         // Archive old price
-        if (existingPlan.stripe_price_id) {
-          await stripe.prices.update(existingPlan.stripe_price_id, {
-            active: false
-          })
+        if (existingPlan.provider_price_id) {
+          await provider.archivePrice(existingPlan.provider_price_id)
         }
 
         // Update plan with new price ID
@@ -216,7 +216,7 @@ export async function updatePlan(
             duration_in_days: formData.duration_in_days,
             currency: formData.currency,
             features: formData.features || null,
-            stripe_price_id: newPrice.id,
+            provider_price_id: newPrice.id,
             updated_at: new Date().toISOString()
           })
           .eq('plan_id', planId)
@@ -312,7 +312,7 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
     // Get plan details and verify tenant ownership
     const { data: plan, error: fetchError } = await adminClient
       .from('plans')
-      .select('stripe_product_id, stripe_price_id, tenant_id')
+      .select('payment_provider, provider_product_id, provider_price_id, tenant_id')
       .eq('plan_id', planId)
       .single()
 
@@ -325,18 +325,17 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
       throw new Error('Plan not found or access denied')
     }
 
-    // Archive Stripe price
-    if (plan.stripe_price_id) {
-      await stripe.prices.update(plan.stripe_price_id, {
-        active: false
-      })
-    }
+    // Archive in payment provider
+    if (plan.provider_price_id || plan.provider_product_id) {
+      const providerType = (plan.payment_provider as PaymentProvider) || 'stripe'
+      const provider = getPaymentProvider(providerType)
 
-    // Archive Stripe product
-    if (plan.stripe_product_id) {
-      await stripe.products.update(plan.stripe_product_id, {
-        active: false
-      })
+      if (plan.provider_price_id) {
+        await provider.archivePrice(plan.provider_price_id)
+      }
+      if (plan.provider_product_id) {
+        await provider.archiveProduct(plan.provider_product_id)
+      }
     }
 
     // Update database (plans don't have status column, so we'll add deleted_at)

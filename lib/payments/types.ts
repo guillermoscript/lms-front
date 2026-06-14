@@ -58,6 +58,19 @@ export interface UpdatePriceParams {
   metadata?: Record<string, string>
 }
 
+export interface CreateSubscriptionParams {
+  providerPriceId: string
+  providerCustomerId: string
+  metadata?: Record<string, string>
+}
+
+export interface ProviderSubscription {
+  id: string
+  status: 'active' | 'canceled' | 'past_due'
+  currentPeriodEnd: Date
+  cancelAtPeriodEnd: boolean
+}
+
 export interface PaymentProviderConfig {
   provider: PaymentProvider
   apiKey: string
@@ -84,6 +97,12 @@ export interface IPaymentProvider {
   updatePrice(priceId: string, params: UpdatePriceParams): Promise<PaymentPrice>
   getPrice(priceId: string): Promise<PaymentPrice>
   archivePrice(priceId: string): Promise<void>
+
+  // Subscription operations (optional — providers without recurring billing,
+  // e.g. manual/offline, implement these as no-ops)
+  createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
+  cancelSubscription?(providerSubId: string, immediate: boolean): Promise<void>
+  getSubscription?(providerSubId: string): Promise<ProviderSubscription>
 
   // Utility
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number
