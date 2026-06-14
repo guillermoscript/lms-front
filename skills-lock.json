@@ -33,6 +33,12 @@
       "skillPath": "skills/caveman/SKILL.md",
       "computedHash": "dfbf85749fd474feeb0bbe60c779795ecd5dbec0083299b56e68916bc3ddd8c9"
     },
+    "chatgpt-app-builder": {
+      "source": "mcp-use/mcp-use",
+      "sourceType": "github",
+      "skillPath": "skills/chatgpt-app-builder/SKILL.md",
+      "computedHash": "88cb5525f005394605143d9b72d1ad8f3e304ac09f10ed2247429a8e0bdb2378"
+    },
     "clarify": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -78,6 +84,12 @@
       "sourceType": "github",
       "skillPath": "skill/SKILL.md",
       "computedHash": "ada9c434d56c794352ccd5c7a6901e5ebb4b7f3b7fe42e8c17c2c4b96c3735c8"
+    },
+    "mcp-apps-builder": {
+      "source": "mcp-use/mcp-use",
+      "sourceType": "github",
+      "skillPath": "skills/mcp-apps-builder/SKILL.md",
+      "computedHash": "5fa5b139ad3ff2b66bb37a1ece1a9178299719afcca273403990953bf709c378"
     },
     "next-best-practices": {
       "source": "vercel-labs/next-skills",
