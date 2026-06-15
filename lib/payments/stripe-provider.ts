@@ -308,7 +308,9 @@ export class StripePaymentProvider implements IPaymentProvider {
           items: [{ price: params.providerPriceId }],
           payment_behavior: 'default_incomplete',
           payment_settings: { save_default_payment_method: 'on_subscription' },
-          expand: ['latest_invoice.payment_intent'],
+          // API 2026-02-25.clover: the first-invoice client secret is exposed via
+          // confirmation_secret (Invoice.payment_intent was removed).
+          expand: ['latest_invoice.confirmation_secret'],
           metadata: { reference: params.reference, ...(params.metadata || {}) },
         }
         if (params.applicationFeePercent && params.applicationFeePercent > 0) {
@@ -320,15 +322,17 @@ export class StripePaymentProvider implements IPaymentProvider {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sub = await this.stripe.subscriptions.create(subParams as any)
-        // latest_invoice / payment_intent are expanded; cast across API-version types.
+        // latest_invoice is expanded; cast across API-version type differences.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const invoice = (sub as any).latest_invoice as Stripe.Invoice | undefined
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const paymentIntent = (invoice as any)?.payment_intent as Stripe.PaymentIntent | undefined
+        const invoice = (sub as any).latest_invoice as any
+        const clientSecret =
+          invoice?.confirmation_secret?.client_secret ??
+          invoice?.payment_intent?.client_secret ?? // fallback for older API versions
+          undefined
 
         return {
           kind: 'client_secret',
-          clientSecret: paymentIntent?.client_secret ?? undefined,
+          clientSecret,
           reference: params.reference,
           providerRef: sub.id,
         }
