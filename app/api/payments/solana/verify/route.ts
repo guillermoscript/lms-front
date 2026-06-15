@@ -157,17 +157,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ confirmed: false })
     }
 
-    // Flip → successful (status-guarded for idempotency). The
+    // Flip → successful (status-guarded for idempotency). We also CONSUME the
+    // on-chain signature via provider_charge_id: the partial-unique index
+    // (transactions_provider_charge_id_unique) guarantees a given signature
+    // backs only one successful transaction, so one payment carrying multiple
+    // reference keys cannot confirm multiple orders (H1). The
     // after_transaction_update trigger creates the subscription + entitlements.
     const { data: flipped, error: flipErr } = await admin
       .from('transactions')
-      .update({ status: 'successful' })
+      .update({ status: 'successful', provider_charge_id: result.signature })
       .eq('transaction_id', tx.transaction_id)
       .eq('status', 'pending')
       .select('transaction_id')
       .maybeSingle()
 
     if (flipErr) {
+      // 23505 = this signature already backs another successful transaction —
+      // a replay of one on-chain payment against a second order. Reject it.
+      if ((flipErr as { code?: string }).code === '23505') {
+        console.warn(`[solana/verify] signature ${result.signature} already consumed by another transaction`)
+        return NextResponse.json(
+          { error: 'This on-chain payment was already used for another order' },
+          { status: 409 },
+        )
+      }
       console.error(`[solana/verify] failed to flip tx ${transactionId}:`, flipErr)
       return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
     }
