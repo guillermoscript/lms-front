@@ -98,11 +98,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Transaction has no Solana reference' }, { status: 400 })
     }
 
-    // Plan terms: duration → periodHours, price → amountBase.
+    // Plan terms: duration → periodHours, price → amountBase. Scope the lookup
+    // to the transaction's tenant (M2) — plan_id is a global PK so it can't
+    // collide across tenants, but the explicit filter keeps the mandatory
+    // tenant-scoping invariant and fails closed on any cross-tenant drift.
     const { data: plan } = await admin
       .from('plans')
       .select('duration_in_days, price')
       .eq('plan_id', tx.plan_id)
+      .eq('tenant_id', tx.tenant_id)
       .maybeSingle()
     if (!plan) {
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
@@ -136,10 +140,14 @@ export async function POST(req: NextRequest) {
     // Capture the subscriber wallet now (the wallet scans the QR off-device, so
     // the web page polling /verify never learns it). /verify reads it back from
     // provider_metadata to confirm the delegation + fire the first charge.
+    // WRITE-ONCE (M4): only set it while provider_metadata is still null, so a
+    // racing caller who knows the reference can't overwrite the subscriber after
+    // the legitimate wallet has been captured.
     await admin
       .from('transactions')
       .update({ provider_metadata: { subscriber: account } })
       .eq('transaction_id', tx.transaction_id)
+      .is('provider_metadata', null)
 
     // 1. Ensure the on-chain plan exists (idempotent; puller = merchant/owner).
     await ensurePlanOnChain({

@@ -53,9 +53,23 @@ export async function dispatchBillingEvent(
         if (!Number.isNaN(txnId)) {
           const { data: tx } = await admin
             .from('transactions')
-            .select('transaction_id, status')
+            .select('transaction_id, status, user_id, tenant_id')
             .eq('transaction_id', txnId)
             .maybeSingle()
+
+          // Bind the flip to the checkout's own metadata (M1): the signed event
+          // proves it came from the provider store, but `reference` is a
+          // sequential id — without this check a signed event could activate
+          // another user's/tenant's pending transaction by guessing its id.
+          const meta = event.metadata ?? {}
+          const ownerMismatch =
+            (meta.userId && tx?.user_id && meta.userId !== tx.user_id) ||
+            (meta.tenantId && tx?.tenant_id && meta.tenantId !== tx.tenant_id)
+          if (ownerMismatch) {
+            throw new Error(
+              `dispatch ${event.type}: metadata owner mismatch for transaction ${txnId} — refusing to activate`,
+            )
+          }
 
           if (tx?.status === 'pending') {
             const { error: flipErr } = await admin

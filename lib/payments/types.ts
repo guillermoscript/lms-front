@@ -246,6 +246,12 @@ export interface NormalizedBillingEvent {
   providerPaymentId?: string
   /** Our correlation id, recovered from provider metadata. */
   reference?: string
+  /**
+   * Provider checkout metadata echoed back on the webhook (e.g. our `userId` /
+   * `tenantId`). Used to bind a confirmation to the originating buyer/tenant so
+   * a signed event can't activate another user's transaction by its id alone.
+   */
+  metadata?: Record<string, string>
   /** New period end for renewal events (push-renewal providers). */
   periodEnd?: Date
   /** Original payload, preserved for the webhook_events audit row. */

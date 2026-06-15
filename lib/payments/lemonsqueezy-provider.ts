@@ -202,7 +202,8 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     }
 
     const eventName: string | undefined = payload.meta?.event_name
-    const reference: string | undefined = payload.meta?.custom_data?.reference
+    const customData = (payload.meta?.custom_data ?? {}) as Record<string, string>
+    const reference: string | undefined = customData.reference
 
     // For subscription lifecycle events, subId is the subscription's own id.
     // For invoice events (subscription_payment_*), the sub id is on attributes.
@@ -228,6 +229,10 @@ export class LemonSqueezyProvider implements IPaymentProvider {
           providerSubscriptionId: subId,
           periodEnd,
           reference,
+          // Echoed checkout metadata (userId/tenantId) — the dispatcher binds
+          // the pending-transaction flip to these so a signed event can't
+          // activate someone else's transaction by id alone.
+          metadata: customData,
           raw: payload,
         }
 

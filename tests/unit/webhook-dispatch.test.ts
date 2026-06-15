@@ -19,7 +19,7 @@ interface Recorder {
  * @param txStatus  what the `transactions` lookup (.maybeSingle()) returns:
  *                  a string → a row with that status; null → no row.
  */
-function makeFakeAdmin(txStatus: string | null = null) {
+function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, unknown> = {}) {
   const calls: Recorder = { from: [], selects: [], updates: [], rpc: [] }
 
   function makeBuilder(table: string) {
@@ -37,7 +37,7 @@ function makeFakeAdmin(txStatus: string | null = null) {
       },
       maybeSingle() {
         return Promise.resolve({
-          data: txStatus === null ? null : { transaction_id: 1, status: txStatus },
+          data: txStatus === null ? null : { transaction_id: 1, status: txStatus, ...txExtra },
           error: null,
         })
       },
@@ -160,6 +160,39 @@ describe('dispatchBillingEvent', () => {
     })
     // Period aligned via the RPC.
     expect(calls.rpc[0]?.fn).toBe('extend_subscription_period')
+  })
+
+  it('activated: metadata owner MATCHES the transaction → flips (M1)', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'u1', tenant_id: 't1' })
+    await dispatchBillingEvent(
+      event('subscription.activated', {
+        providerSubscriptionId: 'sub_1',
+        reference: '42',
+        periodEnd: new Date('2027-03-01T00:00:00.000Z'),
+        metadata: { userId: 'u1', tenantId: 't1' },
+      }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toMatchObject({
+      status: 'successful',
+    })
+  })
+
+  it('activated: metadata owner MISMATCH → refuses to flip another user\'s tx (M1)', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'victim', tenant_id: 't1' })
+    await expect(
+      dispatchBillingEvent(
+        event('subscription.activated', {
+          providerSubscriptionId: 'sub_1',
+          reference: '42',
+          periodEnd: new Date('2027-03-01T00:00:00.000Z'),
+          metadata: { userId: 'attacker', tenantId: 't1' },
+        }),
+        { provider: PROVIDER, admin },
+      ),
+    ).rejects.toThrow(/owner mismatch/i)
+    // No transaction flip happened.
+    expect(calls.updates.find((u) => u.table === 'transactions')).toBeUndefined()
   })
 
   it('activated for an existing row (subId, no reference) → sets subscription active', async () => {
