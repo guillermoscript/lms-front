@@ -12,6 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated / compiled output (not source we own):
+    "**/dist/**",
+    "mcp-server/.mcp-use/**",
+    // mcp-server is a separate workspace with its own lint pipeline:
+    "mcp-server/**",
+    // Vendored skill tooling (untracked, bundled/minified — not app code):
+    ".agents/**",
+    ".claude/**",
   ]),
 ]);
 
