@@ -36,6 +36,16 @@ export interface PullSplitParams {
   priceMajor: number
   /** Platform fee percent (0–100), from revenue_splits.platform_percentage. */
   platformPercent: number
+  /**
+   * Base units already pulled in the CURRENT on-chain period (from
+   * getSubscriptionState.amountPulledInPeriod). RESUMES a period whose first leg
+   * landed but whose second leg failed: a leg already covered by
+   * `alreadyPulledBase` is skipped so a retry never re-pulls it (which would
+   * exceed the on-chain per-period cap and revert). Strictly monotonic — passing
+   * it can only cause FEWER pulls, never more, so it cannot double-charge.
+   * Defaults to 0 (pull both legs).
+   */
+  alreadyPulledBase?: bigint
 }
 
 const USDC_DECIMALS = 6
@@ -51,21 +61,24 @@ export async function pullSplitForSubscription(p: PullSplitParams): Promise<void
   const platformAta = getAssociatedTokenAddressSync(mintPk, new PublicKey(p.platformWallet)).toBase58()
 
   const { schoolBase, platformBase } = computeSplit(p.priceMajor, p.platformPercent, USDC_DECIMALS)
+  const alreadyPulled = p.alreadyPulledBase ?? BigInt(0)
 
-  // School share first.
-  await pullOnce({
-    rpcUrl: p.rpcUrl,
-    pullerSecretKeyBase58: p.pullerSecretKeyBase58,
-    subscriber: p.subscriber,
-    merchant: p.merchant,
-    planId: p.planId,
-    mint: p.mint,
-    receiverAta: schoolAta,
-    amountBase: BigInt(schoolBase),
-  })
+  // School share first — skip if this period already covered it (resume).
+  if (alreadyPulled < BigInt(schoolBase)) {
+    await pullOnce({
+      rpcUrl: p.rpcUrl,
+      pullerSecretKeyBase58: p.pullerSecretKeyBase58,
+      subscriber: p.subscriber,
+      merchant: p.merchant,
+      planId: p.planId,
+      mint: p.mint,
+      receiverAta: schoolAta,
+      amountBase: BigInt(schoolBase),
+    })
+  }
 
-  // Platform fee (only if non-zero).
-  if (platformBase > 0) {
+  // Platform fee (only if non-zero and not already covered this period).
+  if (platformBase > 0 && alreadyPulled < BigInt(schoolBase + platformBase)) {
     await pullOnce({
       rpcUrl: p.rpcUrl,
       pullerSecretKeyBase58: p.pullerSecretKeyBase58,

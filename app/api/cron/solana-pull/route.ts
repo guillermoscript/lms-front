@@ -99,7 +99,21 @@ export async function GET(req: NextRequest) {
       const schoolWalletStr = wallet?.wallet_address
       if (!schoolWalletStr) { errors.push(`sub ${sub.subscription_id}: no school wallet`); continue }
 
-      // Two pulls = the split. Both must be within the per-period cap (sum = price).
+      // Two pulls = the split. Both must be within the per-period cap (sum =
+      // price). Double-charge and unauthorized-charge are already prevented by
+      // the on-chain per-period cap + the period-rolled gate above (an in-period
+      // or over-cap pull reverts). KNOWN RESIDUAL (H2, security review #334),
+      // deferred pending a devnet test plan — do NOT change blind:
+      //   (a) Partial failure: if the school leg lands but the platform leg's RPC
+      //       fails, the platform fee is missed for this period (the period gate
+      //       won't re-trigger until it rolls). pullSplitForSubscription now
+      //       accepts `alreadyPulledBase` to resume only the uncovered leg, but
+      //       wiring `state.amountPulledInPeriod` into it requires confirming the
+      //       program's per-period reset timing on devnet (a stale value would
+      //       skip a legitimate renewal charge).
+      //   (b) Price drift: this charges `plans.price` (mutable) while the on-chain
+      //       plan cap is immutable; an admin price edit makes renewals revert.
+      //       Fix = charge the on-chain plan terms, not the DB price.
       await pullSplitForSubscription({
         rpcUrl,
         pullerSecretKeyBase58: pullerSecret,
