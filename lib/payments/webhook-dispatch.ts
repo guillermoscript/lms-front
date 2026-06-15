@@ -34,8 +34,7 @@ export async function dispatchBillingEvent(
   const subId = event.providerSubscriptionId
 
   switch (event.type) {
-    case 'subscription.activated':
-    case 'subscription.renewed': {
+    case 'subscription.activated': {
       if (!subId) break
       // Set 'active' (not 'renewed') so the enrollment-reactivation branch of
       // handle_subscription_status_change fires on a return from expired.
@@ -46,6 +45,25 @@ export async function dispatchBillingEvent(
         .update(patch)
         .eq('provider_subscription_id', subId)
         .eq('payment_provider', provider)
+      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
+      break
+    }
+
+    case 'subscription.renewed': {
+      if (!subId) break
+      // A renewal must EXTEND the access window — not just touch a status. The
+      // partial unique index transactions_unique_plan blocks fabricating a new
+      // successful transaction, so extend the subscription + its entitlements
+      // atomically via the RPC (end_date, current_period_end, expires_at).
+      if (!event.periodEnd) {
+        console.warn(`[webhook] renewed for ${provider} sub ${subId} without periodEnd — cannot extend access`)
+        break
+      }
+      const { error } = await admin.rpc('extend_subscription_period', {
+        _provider_subscription_id: subId,
+        _provider: provider,
+        _new_period_end: event.periodEnd.toISOString(),
+      })
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
     }

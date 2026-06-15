@@ -113,8 +113,20 @@ export interface CreateCheckoutParams {
   currency: string
   /** Our internal correlation id — must round-trip back on the webhook. */
   reference: string
-  /** Optional stored customer (Stripe/MP card-on-file). */
+  /** Optional stored customer (Stripe/MP card-on-file). Required for native subs. */
   providerCustomerId?: string
+  /**
+   * Marketplace split: route funds to this connected account
+   * (Stripe Connect `transfer_data.destination`). Omit for non-marketplace
+   * providers / Merchant-of-Record.
+   */
+  destinationAccount?: string
+  /**
+   * Platform fee as a percent of each charge (Stripe Connect
+   * `application_fee_percent` for subscriptions; converted to a fixed
+   * `application_fee_amount` for one-time charges). 0–100.
+   */
+  applicationFeePercent?: number
   successUrl?: string
   cancelUrl?: string
   metadata?: Record<string, string>

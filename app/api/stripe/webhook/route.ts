@@ -17,6 +17,23 @@ function getSupabaseAdmin() {
 }
 
 /**
+ * Extract the subscription id + metadata from an Invoice across Stripe API
+ * versions. On 2026-02-25.clover the subscription moved under
+ * `invoice.parent.subscription_details`; older versions used `invoice.subscription`.
+ */
+function getInvoiceSubscription(invoice: Stripe.Invoice): {
+  id: string | null
+  metadata: Record<string, string>
+} {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inv = invoice as any
+  const details = inv.parent?.subscription_details
+  const sub = details?.subscription ?? inv.subscription
+  const id = (typeof sub === 'string' ? sub : sub?.id) ?? null
+  return { id, metadata: details?.metadata ?? {} }
+}
+
+/**
  * Resolve tenant_id from a Stripe Connect account ID.
  * Returns null for direct (non-Connect) events.
  */
@@ -327,7 +344,7 @@ export async function POST(req: NextRequest) {
     // Stripe's retry window until a customer.subscription.deleted arrives.
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
-      const stripeSubId = (invoice as any).subscription as string | null
+      const { id: stripeSubId } = getInvoiceSubscription(invoice)
 
       await dispatchBillingEvent(
         {
@@ -338,6 +355,72 @@ export async function POST(req: NextRequest) {
         },
         { provider: 'stripe', admin: getSupabaseAdmin() }
       )
+      break
+    }
+
+    // Native subscriptions (#280 Phase 2). The first invoice's PaymentIntent is
+    // created by Stripe and carries NO transactionId metadata, so it cannot be
+    // activated via payment_intent.succeeded — this invoice event is the signal.
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const billingReason = (invoice as any).billing_reason as string | undefined
+      const { id: stripeSubId, metadata: subMeta } = getInvoiceSubscription(invoice)
+
+      if (!stripeSubId) break
+
+      if (billingReason === 'subscription_create') {
+        // First payment. Match the pending transaction by the transactionId we
+        // put in the subscription metadata at checkout (robust to the route's
+        // RLS provider_subscription_id write racing this webhook), falling back
+        // to the stored provider_subscription_id. Then flip → successful AND set
+        // provider_subscription_id authoritatively (admin client) in one update,
+        // so handle_new_subscription always reads the real sub id. Status-guarded
+        // for idempotency.
+        const txnIdMeta = subMeta.transactionId ? parseInt(subMeta.transactionId, 10) : null
+
+        let lookup = getSupabaseAdmin()
+          .from('transactions')
+          .select('transaction_id')
+          .eq('status', 'pending')
+        lookup = txnIdMeta
+          ? lookup.eq('transaction_id', txnIdMeta)
+          : lookup.eq('provider_subscription_id', stripeSubId).eq('payment_provider', 'stripe')
+        const { data: tx } = await lookup.maybeSingle()
+
+        if (tx) {
+          await getSupabaseAdmin()
+            .from('transactions')
+            .update({
+              status: 'successful',
+              provider_subscription_id: stripeSubId,
+              payment_provider: 'stripe',
+            })
+            .eq('transaction_id', tx.transaction_id)
+            .eq('status', 'pending')
+          console.log(`Activated subscription transaction ${tx.transaction_id} (Stripe sub ${stripeSubId})`)
+        } else {
+          console.warn(`No pending transaction for subscription_create (Stripe sub ${stripeSubId}, txn meta ${subMeta.transactionId ?? 'none'})`)
+        }
+      } else if (billingReason === 'subscription_cycle') {
+        // Renewal: extend the access window (end_date + entitlements) via the
+        // shared dispatcher → extend_subscription_period RPC. Idempotent: the
+        // period end comes from the invoice, not now().
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const inv = invoice as any
+        const periodEndUnix = inv.lines?.data?.[0]?.period?.end ?? inv.period_end
+        await dispatchBillingEvent(
+          {
+            type: 'subscription.renewed',
+            providerEventId: event.id,
+            providerSubscriptionId: stripeSubId,
+            periodEnd: periodEndUnix ? new Date(periodEndUnix * 1000) : undefined,
+            raw: event,
+          },
+          { provider: 'stripe', admin: getSupabaseAdmin() }
+        )
+        console.log(`Processed subscription renewal for Stripe sub ${stripeSubId}`)
+      }
       break
     }
 
