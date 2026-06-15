@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "npx playwright test",
+    "test:unit": "vitest run",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "mcp:build": "cd mcp-server && npm run build",
@@ -108,6 +110,7 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.6"
   }
 }
