@@ -22,7 +22,11 @@
     "demo:720": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts",
     "demo:1080": "DEMO_RES=1080 npx playwright test --config tests/demos/playwright.demo.config.ts",
     "demo:single": "DEMO_RES=720 npx playwright test --config tests/demos/playwright.demo.config.ts -g",
-    "demo:seed": "npx tsx tests/demos/seed-demo-data.ts"
+    "demo:seed": "npx tsx tests/demos/seed-demo-data.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --fix"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.43",
@@ -108,6 +112,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
