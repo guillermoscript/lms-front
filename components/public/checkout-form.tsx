@@ -81,10 +81,24 @@ export function CheckoutForm({
     const showOfflineTab = !paymentProvider || paymentProvider === 'manual';
     const displayPrice = formattedPrice || (typeof price === 'number' ? `$${price}` : price);
 
-    // Parse features string into list (features are stored as newline or comma-separated text)
-    const featureList = features
-        ? features.split(/[\n,]+/).map(f => f.trim()).filter(Boolean)
-        : [];
+    // Parse features into a list. Plans store features as a JSON array string
+    // (e.g. '["Unlimited course access","Certificate"]'); other sources may use
+    // plain newline/comma-separated text. Try JSON first, fall back to splitting.
+    const featureList: string[] = (() => {
+        if (!features) return [];
+        const trimmed = features.trim();
+        if (trimmed.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(f => String(f).trim()).filter(Boolean);
+                }
+            } catch {
+                /* not valid JSON — fall through to plain-text split */
+            }
+        }
+        return trimmed.split(/[\n,]+/).map(f => f.trim()).filter(Boolean);
+    })();
 
     // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
     // if it handled the flow, false to fall back to the inline/mock path.
