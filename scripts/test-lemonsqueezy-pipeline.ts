@@ -37,14 +37,46 @@ function assert(cond: unknown, msg: string) {
   console.log('  ✓', msg)
 }
 
+// Scoped to THIS test's plan only — a broad `source_type='subscription'` delete
+// would wipe alice's OTHER seeded subscription entitlements (her plan-2001 sub)
+// and silently corrupt shared seed data for later tests / UI sessions.
 async function cleanup(txId?: number) {
-  await admin.from('entitlements').delete().eq('user_id', USER).eq('source_type', 'subscription')
+  const { data: subs } = await admin
+    .from('subscriptions').select('subscription_id')
+    .eq('user_id', USER).eq('plan_id', PLAN)
+  const subIds = (subs ?? []).map(s => s.subscription_id)
+  if (subIds.length) {
+    await admin.from('entitlements').delete()
+      .eq('user_id', USER).eq('source_type', 'subscription').in('source_id', subIds)
+  }
   await admin.from('subscriptions').delete().eq('user_id', USER).eq('plan_id', PLAN)
   if (txId) await admin.from('transactions').delete().eq('transaction_id', txId)
   else await admin.from('transactions').delete().eq('user_id', USER).eq('plan_id', PLAN)
 }
 
+// Dedicated LS test plan for Code Academy (tenant ...002), linked to the same
+// two seeded courses as plan 2001. Self-provisioned so the test is reproducible
+// on a fresh `supabase db reset` (does not depend on a manual insert).
+async function ensureFixture() {
+  await admin.from('plans').upsert({
+    plan_id: PLAN,
+    plan_name: 'LS Test Monthly',
+    price: 19.99,
+    duration_in_days: 30,
+    description: 'Lemon Squeezy pipeline test plan.',
+    features: ['Unlimited course access'],
+    currency: 'usd',
+    payment_provider: 'lemonsqueezy',
+    tenant_id: TENANT,
+  }, { onConflict: 'plan_id' })
+  await admin.from('plan_courses').upsert([
+    { plan_id: PLAN, course_id: 2001 },
+    { plan_id: PLAN, course_id: 2002 },
+  ], { onConflict: 'plan_id,course_id' })
+}
+
 async function main() {
+  await ensureFixture()
   await cleanup()
 
   // 1. Insert a pending LS transaction (status pending → trigger is a no-op).
