@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient, verifyAdminAccess } from '@/lib/supabase/admin'
-import { getStripe } from '@/lib/stripe'
+import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
@@ -24,7 +24,6 @@ export async function cancelSubscription(
     const isSuperAdminUser = await isSuperAdmin()
 
     const supabase = createAdminClient()
-    const stripe = getStripe()
 
     // Get subscription details and verify tenant ownership
     const { data: subscription, error: fetchError } = await supabase
@@ -42,10 +41,21 @@ export async function cancelSubscription(
       return { success: false, error: 'Subscription not found or access denied' }
     }
 
-    // If subscription has a Stripe subscription ID, cancel it in Stripe
-    // (Stripe subscription ID is typically stored in transaction_id or similar field)
-    // For now, we'll just update the database status
-    
+    // If the subscription is managed by an external provider, cancel it there
+    // first (provider-agnostic). Manual subscriptions no-op. We still update our
+    // own row below regardless, so a provider error shouldn't strand the admin —
+    // log and continue.
+    if (subscription.provider_subscription_id) {
+      try {
+        const provider = getPaymentProvider(
+          (subscription.payment_provider as PaymentProvider) || 'stripe'
+        )
+        await provider.cancelSubscription?.(subscription.provider_subscription_id, immediate)
+      } catch (providerError) {
+        console.error('Provider cancelSubscription failed (continuing to update DB):', providerError)
+      }
+    }
+
     const updates: any = {
       // Use 'canceled' (correct enum value) for immediate; keep 'active' for period-end
       subscription_status: immediate ? 'canceled' : 'active',

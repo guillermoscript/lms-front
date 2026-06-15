@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { CourseSelector, type CourseOption } from './course-selector'
 import { createPlan, updatePlan } from '@/app/actions/admin/plans'
+import type { PaymentProvider } from '@/lib/payments'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IconAlertCircle } from '@tabler/icons-react'
 
@@ -28,6 +29,7 @@ interface Plan {
   duration_in_days: number
   currency: string
   features: string | null
+  payment_provider?: string
   courses?: { course_id: number }[]
 }
 
@@ -46,6 +48,7 @@ export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
     duration_in_days: initialData?.duration_in_days || 30,
     currency: (initialData?.currency || 'usd') as 'usd' | 'eur',
     features: initialData?.features || '',
+    paymentProvider: (initialData?.payment_provider || 'stripe') as PaymentProvider,
     courseIds: initialData?.courses?.map(c => c.course_id) || []
   })
 
@@ -115,6 +118,32 @@ export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
           rows={4}
           disabled={loading}
         />
+      </div>
+
+      {/* Payment Provider */}
+      <div className="space-y-2">
+        <Label htmlFor="paymentProvider">
+          {t('method')} <span className="text-destructive">*</span>
+        </Label>
+        <Select
+          value={formData.paymentProvider}
+          onValueChange={(value) => setFormData({ ...formData, paymentProvider: value as PaymentProvider })}
+          disabled={loading || mode === 'edit'}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="manual">{t('methodManual')}</SelectItem>
+            <SelectItem value="stripe">{t('methodStripe')}</SelectItem>
+            <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          {formData.paymentProvider === 'manual'
+            ? t('methodManualHint')
+            : t('methodStripeHint')}
+        </p>
       </div>
 
       {/* Price, Currency, and Duration */}

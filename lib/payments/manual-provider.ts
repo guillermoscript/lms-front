@@ -12,6 +12,8 @@ import {
   CreatePriceParams,
   UpdateProductParams,
   UpdatePriceParams,
+  CreateSubscriptionParams,
+  ProviderSubscription,
 } from './types'
 
 export class ManualPaymentProvider implements IPaymentProvider {
@@ -104,5 +106,30 @@ export class ManualPaymentProvider implements IPaymentProvider {
 
   async archivePrice(priceId: string): Promise<void> {
     // Manual prices archived in database only
+  }
+
+  // Subscription operations are no-ops for manual/offline billing.
+  // There is no external recurring engine: the admin confirms each payment and
+  // the subscription row is managed entirely in our database.
+  async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
+    return {
+      id: `manual_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: 'active',
+      currentPeriodEnd: new Date(),
+      cancelAtPeriodEnd: false,
+    }
+  }
+
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+    // Nothing to cancel externally — the DB row carries the real state.
+  }
+
+  async getSubscription(providerSubId: string): Promise<ProviderSubscription> {
+    return {
+      id: providerSubId,
+      status: 'active',
+      currentPeriodEnd: new Date(),
+      cancelAtPeriodEnd: false,
+    }
   }
 }

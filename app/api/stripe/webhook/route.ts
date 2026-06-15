@@ -287,11 +287,13 @@ export async function POST(req: NextRequest) {
       const stripeSub = event.data.object as Stripe.Subscription
       const stripeSubId = stripeSub.id
 
-      // Find our subscription row by matching the Stripe subscription ID stored at creation
+      // Find our subscription row by matching the provider subscription ID
+      // stored at creation (provider-agnostic column; scoped to Stripe).
       const { data: sub } = await getSupabaseAdmin()
         .from('subscriptions')
         .select('subscription_id, user_id, plan_id, tenant_id')
-        .eq('stripe_subscription_id', stripeSubId)
+        .eq('provider_subscription_id', stripeSubId)
+        .eq('payment_provider', 'stripe')
         .maybeSingle()
 
       if (sub) {
@@ -337,7 +339,8 @@ export async function POST(req: NextRequest) {
         const { data: sub } = await getSupabaseAdmin()
           .from('subscriptions')
           .select('subscription_id')
-          .eq('stripe_subscription_id', stripeSubId)
+          .eq('provider_subscription_id', stripeSubId)
+          .eq('payment_provider', 'stripe')
           .maybeSingle()
 
         if (sub) {
