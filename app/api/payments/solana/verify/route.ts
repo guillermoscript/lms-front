@@ -20,9 +20,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminSupabase } from '@supabase/supabase-js'
+import { Connection, PublicKey } from '@solana/web3.js'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { getPaymentProvider } from '@/lib/payments'
-import { SolanaProvider } from '@/lib/payments/solana-provider'
+import { verifySplitTransfer } from '@/lib/payments/solana-split'
 
 export const runtime = 'nodejs'
 
@@ -77,21 +77,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Transaction has no Solana reference' }, { status: 400 })
     }
 
-    // Confirm on-chain. getPaymentProvider throws if Solana env is unconfigured.
-    let provider: SolanaProvider
-    try {
-      provider = getPaymentProvider('solana') as SolanaProvider
-    } catch (err) {
-      console.error('[solana/verify] provider not configured:', err)
+    const rpcUrl = process.env.SOLANA_RPC_URL
+    const platformWallet = process.env.SOLANA_PLATFORM_WALLET
+    if (!rpcUrl || !platformWallet) {
       return NextResponse.json({ error: 'Solana not configured' }, { status: 503 })
     }
 
+    const admin = getSupabaseAdmin()
+
+    // Resolve the same split inputs the /tx endpoint used: school wallet (per
+    // tenant), platform wallet (env), split percent (revenue_splits).
+    const { data: wallet } = await admin
+      .from('tenant_payment_wallets')
+      .select('wallet_address')
+      .eq('tenant_id', tx.tenant_id)
+      .eq('provider', 'solana')
+      .maybeSingle()
+    if (!wallet?.wallet_address) {
+      return NextResponse.json({ error: 'School has not configured a Solana wallet' }, { status: 400 })
+    }
+    const { data: split } = await admin
+      .from('revenue_splits')
+      .select('platform_percentage')
+      .eq('tenant_id', tx.tenant_id)
+      .maybeSingle()
+    const platformPercent = Number(split?.platform_percentage ?? 20)
+    const usdcMint = process.env.SOLANA_USDC_MINT
+
+    // Confirm BOTH split legs on-chain (custom verification — validateTransfer
+    // only handles a single recipient).
     let result: { confirmed: boolean; signature?: string }
     try {
-      result = await provider.confirmTransfer(referencePubkey, Number(tx.amount))
+      result = await verifySplitTransfer({
+        connection: new Connection(rpcUrl, 'confirmed'),
+        reference: new PublicKey(referencePubkey),
+        schoolWallet: new PublicKey(wallet.wallet_address),
+        platformWallet: new PublicKey(platformWallet),
+        amountMajor: Number(tx.amount),
+        platformPercent,
+        splToken: usdcMint ? new PublicKey(usdcMint) : undefined,
+        decimals: usdcMint ? 6 : 9,
+      })
     } catch (err) {
-      // validateTransfer failed (found but wrong amount/recipient) or RPC error.
-      console.error(`[solana/verify] confirmTransfer failed for tx ${transactionId}:`, err)
+      // Found on-chain but legs don't match (wrong amount/recipient) or RPC error.
+      console.error(`[solana/verify] verifySplitTransfer failed for tx ${transactionId}:`, err)
       return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
     }
 
@@ -100,9 +129,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ confirmed: false })
     }
 
-    // Flip → successful via admin client (status-guarded for idempotency). The
+    // Flip → successful (status-guarded for idempotency). The
     // after_transaction_update trigger creates the subscription + entitlements.
-    const admin = getSupabaseAdmin()
     const { error: flipErr } = await admin
       .from('transactions')
       .update({ status: 'successful' })

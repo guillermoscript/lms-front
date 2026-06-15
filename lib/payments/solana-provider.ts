@@ -1,32 +1,21 @@
 /**
- * Solana Pay Provider Implementation
+ * Solana Pay Provider Implementation (issue #280, Phase 5 + fee split).
  *
- * One-time transfer-request checkout via the Solana Pay spec. Payment
- * confirmation is ON-CHAIN: the checkout produces a `solana:` URL rendered as
- * a QR code; the verify endpoint (or a poller) calls `confirmTransfer()` which
- * polls the chain for a matching, finalised transfer carrying our unique
- * `reference` public key.
+ * One-time crypto checkout with a PLATFORM FEE SPLIT. Because a Solana Pay
+ * transfer request allows only one recipient, checkout uses a Solana Pay
+ * TRANSACTION request: the QR encodes a link to our `/api/payments/solana/tx`
+ * endpoint, which returns a transaction with two transfers (school share +
+ * platform fee). Confirmation is on-chain via `/api/payments/solana/verify`
+ * (custom two-leg verification in `lib/payments/solana-split.ts`).
  *
- * Capability summary:
- *   - No native recurring billing → `supportsNativeSubscriptions: false`
- *   - No signed inbound webhook  → `emitsRenewalWebhooks: false`
- *   - WE manage the billing period (cron expires lapsed rows; a renewal is
- *     just a new one-time payment that extends `current_period_end`)
- *   - No hosted redirect URL     → `supportsHostedCheckout: false`
- *   - On-chain refunds are manual, out-of-band → `supportsRefunds: false`
+ * Capabilities: self-managed period (a daily cron expires lapsed rows; a
+ * "renewal" is a fresh one-time payment), no native recurring billing, no
+ * signed webhook. Refunds are manual/on-chain, out of band.
  *
- * Spec: https://docs.solanapay.com/spec
+ * Spec: https://docs.solanapay.com/spec (transaction request)
  */
 
-import { Connection, Keypair, PublicKey } from '@solana/web3.js'
-import {
-  encodeURL,
-  findReference,
-  validateTransfer,
-  FindReferenceError,
-  ValidateTransferError,
-} from '@solana/pay'
-import BigNumber from 'bignumber.js'
+import { encodeURL } from '@solana/pay'
 
 import {
   IPaymentProvider,
@@ -42,6 +31,7 @@ import {
   CheckoutSession,
   NormalizedBillingEvent,
 } from './types'
+import { generateReference } from './solana-split'
 
 export class SolanaProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'solana'
@@ -62,74 +52,65 @@ export class SolanaProvider implements IPaymentProvider {
     selfManagedPeriod: true,
   }
 
-  private readonly connection: Connection
-  private readonly recipient: PublicKey
-  private readonly splToken: PublicKey | undefined
+  private readonly rpcUrl: string
+  private readonly usdcMint: string | undefined
 
   /**
-   * @param rpcUrl   - Solana RPC endpoint (e.g. `https://api.mainnet-beta.solana.com`).
-   * @param recipient - Base58 public key of the merchant wallet that receives funds.
-   * @param usdcMint  - Optional SPL-token mint address (e.g. USDC). When omitted,
-   *                    payments are denominated in native SOL.
+   * @param rpcUrl   - Solana RPC endpoint (e.g. devnet/mainnet URL).
+   * @param usdcMint - Optional SPL-token mint; omit for native SOL payments.
+   *
+   * Note: the receiving wallet is NOT baked in here — the school wallet is
+   * resolved per tenant in the /tx + /verify routes (tenant_payment_wallets),
+   * and the platform fee wallet from env. This adapter only builds the
+   * transaction-request URL; the split transaction itself lives in those routes.
    */
-  constructor(rpcUrl: string, recipient: string, usdcMint?: string) {
-    this.connection = new Connection(rpcUrl, 'confirmed')
-    this.recipient = new PublicKey(recipient)
-    this.splToken = usdcMint ? new PublicKey(usdcMint) : undefined
+  constructor(rpcUrl: string, usdcMint?: string) {
+    this.rpcUrl = rpcUrl
+    this.usdcMint = usdcMint
   }
 
   /**
    * Solana Pay amounts are decimal token units (e.g. 9.99 USDC), NOT cents.
-   * The checkout route passes the plan/product price directly for solana without
-   * any base-unit conversion, so we return the amount unchanged regardless of
-   * `fromUnit`.
+   * The checkout route passes the plan/product price directly, so return it
+   * unchanged regardless of `fromUnit`.
    */
   convertAmount(amount: number, _fromUnit: 'base' | 'major'): number {
     return amount
   }
 
   // ---------------------------------------------------------------------------
-  // Checkout
+  // Checkout — Solana Pay TRANSACTION request (enables the fee split)
   // ---------------------------------------------------------------------------
 
   /**
-   * Build a Solana Pay transfer-request URL for a one-time payment.
+   * Build a Solana Pay transaction-request URL pointing at our /tx endpoint.
    *
-   * A fresh `reference` keypair is generated for each session — this is the
-   * on-chain correlation key (NOT the recipient). It is stored as
-   * `providerRef` (base58) on the transaction row so the verify endpoint can
-   * later call `confirmTransfer(providerRef, expectedAmount)` to locate and
-   * validate the on-chain transfer.
+   * A fresh on-chain reference is generated and returned as `providerRef`; the
+   * checkout route stores it on the transaction so the /tx endpoint can attach
+   * it (locating the payment later) and /verify can confirm both split legs.
+   * The link carries our internal reference (transaction id) so /tx loads the
+   * right pending transaction.
    *
    * Returns `kind: 'qr'`; the checkout UI renders the URL as a QR code.
-   *
-   * @param params - `params.amount` must already be in decimal token units
-   *   (e.g. 9.99), not cents. The unified checkout route for Solana passes
-   *   the plan/product price directly without cent conversion.
    */
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
     try {
-      // Generate a unique on-chain marker for this payment (NOT the recipient).
-      const reference = Keypair.generate().publicKey
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      if (!appUrl) {
+        throw new Error('NEXT_PUBLIC_APP_URL is required for Solana checkout')
+      }
+      // The on-chain marker the wallet must include so we can find the payment.
+      const reference = generateReference()
 
-      const amount = new BigNumber(params.amount)
-
-      const url = encodeURL({
-        recipient: this.recipient,
-        amount,
-        splToken: this.splToken,
-        reference,
-        label: params.metadata?.label ?? 'LMS',
-        message: params.metadata?.message ?? `Order ${params.reference}`,
-      })
+      const link = new URL(`${appUrl}/api/payments/solana/tx`)
+      link.searchParams.set('reference', params.reference)
+      const url = encodeURL({ link })
 
       return {
         kind: 'qr',
         url: url.toString(),
         reference: params.reference,
-        // Base58 on-chain reference public key. Store this on the transaction
-        // row; the verify endpoint passes it back to confirmTransfer().
-        providerRef: reference.toBase58(),
+        providerRef: reference, // base58 reference pubkey — stored on the tx
       }
     } catch (error) {
       throw new Error(
@@ -139,100 +120,24 @@ export class SolanaProvider implements IPaymentProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // On-chain confirmation (public helper — NOT part of IPaymentProvider)
+  // Webhooks — not applicable to Solana Pay (confirmation is on-chain)
   // ---------------------------------------------------------------------------
 
   /**
-   * Poll the chain for a finalised transfer carrying the given reference key.
-   *
-   * Called by the `/api/payments/verify/solana` endpoint (or a poller) after
-   * the wallet signals it has broadcast the transaction.
-   *
-   * - Returns `{ confirmed: false }` when no signature is found yet
-   *   (`FindReferenceError`) — the caller should keep polling.
-   * - Returns `{ confirmed: true, signature }` when a valid matching transfer
-   *   is found and passes `validateTransfer`.
-   * - Throws on `ValidateTransferError` (payment found but invalid — wrong
-   *   amount, wrong recipient, etc.) or on network/RPC errors.
-   *
-   * @param referenceBase58  - Base58 on-chain reference public key stored as
-   *   `providerRef` on the transaction row at checkout time.
-   * @param expectedAmount   - Decimal token amount expected (e.g. 9.99 USDC).
-   */
-  async confirmTransfer(
-    referenceBase58: string,
-    expectedAmount: number,
-  ): Promise<{ confirmed: boolean; signature?: string }> {
-    const reference = new PublicKey(referenceBase58)
-
-    let sigInfo: Awaited<ReturnType<typeof findReference>>
-    try {
-      sigInfo = await findReference(this.connection, reference, { finality: 'confirmed' })
-    } catch (err) {
-      if (err instanceof FindReferenceError) {
-        // No signature found yet — payment not yet broadcast or not yet confirmed.
-        return { confirmed: false }
-      }
-      // Network / RPC error — rethrow wrapped.
-      throw new Error(
-        `Solana confirmTransfer findReference failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      )
-    }
-
-    try {
-      await validateTransfer(
-        this.connection,
-        sigInfo.signature,
-        {
-          recipient: this.recipient,
-          amount: new BigNumber(expectedAmount),
-          splToken: this.splToken,
-          reference,
-        },
-        { commitment: 'confirmed' },
-      )
-      return { confirmed: true, signature: sigInfo.signature }
-    } catch (err) {
-      if (err instanceof ValidateTransferError) {
-        // Transfer was found on-chain but does not satisfy the payment fields
-        // (wrong amount, wrong recipient, wrong mint, etc.). This is a real
-        // error — the caller must NOT mark the payment as confirmed.
-        throw new Error(
-          `Solana transfer validation failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        )
-      }
-      // Other unexpected errors (RPC, serialisation, etc.)
-      throw new Error(
-        `Solana confirmTransfer validateTransfer failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      )
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Webhooks — not applicable to Solana Pay
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Solana Pay has NO signed inbound webhook. Payment authenticity comes
-   * entirely from the chain: only a real on-chain transfer carrying our unique
-   * `reference` public key can confirm a payment. The generic webhook route
-   * does not apply to this provider; always returns `false` so the router
-   * skips processing.
-   *
-   * Confirmation flows through `confirmTransfer()` (called from the
-   * `/api/payments/verify/solana` endpoint or a polling job).
+   * Solana Pay has NO signed inbound webhook. Payment authenticity comes from
+   * the chain: only a real on-chain transfer carrying our unique reference (and
+   * paying both split legs) confirms a payment. Always returns `false` so the
+   * unified webhook route skips this provider; confirmation flows through
+   * `/api/payments/solana/verify`.
    */
   async verifyWebhook(_rawBody: string, _headers: Record<string, string>): Promise<boolean> {
     return false
   }
 
   /**
-   * Not webhook-driven. Instead, the verify endpoint calls
-   * `confirmTransfer(providerRef, expectedAmount)`; on a matching finalised
-   * transfer it synthesises `{ type: 'payment.succeeded', reference, providerPaymentId: signature }`
-   * and feeds the same internal billing dispatcher.
-   *
-   * Returns `null` here to signal "this provider is not webhook-driven."
+   * Not webhook-driven — see `/api/payments/solana/verify`, which uses
+   * `verifySplitTransfer` to confirm the on-chain split and flip the
+   * transaction. Returns `null` to signal "this provider is not webhook-driven."
    */
   async normalizeWebhookEvent(_rawBody: string): Promise<NormalizedBillingEvent | null> {
     return null
@@ -242,10 +147,6 @@ export class SolanaProvider implements IPaymentProvider {
   // Catalog — no remote catalog; products/prices live only in our DB
   // ---------------------------------------------------------------------------
 
-  /**
-   * No remote product catalog (like the manual provider). Returns a local
-   * placeholder derived from the params — the canonical record is in our DB.
-   */
   async createProduct(params: CreateProductParams): Promise<PaymentProduct> {
     return {
       id: `solana_prod_${params.name.toLowerCase().replace(/\s+/g, '_')}`,
@@ -257,7 +158,6 @@ export class SolanaProvider implements IPaymentProvider {
     }
   }
 
-  /** Returns an updated local placeholder. The canonical record is in our DB. */
   async updateProduct(productId: string, params: UpdateProductParams): Promise<PaymentProduct> {
     return {
       id: productId,
@@ -269,25 +169,18 @@ export class SolanaProvider implements IPaymentProvider {
     }
   }
 
-  /** Returns a local placeholder for the given id. */
   async getProduct(productId: string): Promise<PaymentProduct> {
     return { id: productId, name: 'Solana Product', description: '', amount: 0, currency: 'usdt' }
   }
 
-  /** No-op — archive state is DB-only; there is no remote catalog to update. */
   async archiveProduct(_productId: string): Promise<void> {
     /* DB-only — no remote catalog */
   }
 
-  /** No-op — restore state is DB-only; there is no remote catalog to update. */
   async restoreProduct(_productId: string): Promise<void> {
     /* DB-only — no remote catalog */
   }
 
-  /**
-   * No remote price catalog. Returns a local placeholder; the canonical record
-   * is in our DB.
-   */
   async createPrice(params: CreatePriceParams): Promise<PaymentPrice> {
     return {
       id: `solana_price_${params.productId}`,
@@ -300,7 +193,6 @@ export class SolanaProvider implements IPaymentProvider {
     }
   }
 
-  /** Returns an updated local placeholder. The canonical record is in our DB. */
   async updatePrice(priceId: string, params: UpdatePriceParams): Promise<PaymentPrice> {
     return {
       id: priceId,
@@ -312,12 +204,10 @@ export class SolanaProvider implements IPaymentProvider {
     }
   }
 
-  /** Returns a local placeholder for the given id. */
   async getPrice(priceId: string): Promise<PaymentPrice> {
     return { id: priceId, productId: '', amount: 0, currency: 'usdt', type: 'one_time' }
   }
 
-  /** No-op — archive state is DB-only; there is no remote catalog to update. */
   async archivePrice(_priceId: string): Promise<void> {
     /* DB-only — no remote catalog */
   }

@@ -50,12 +50,13 @@ export function getPaymentProvider(
 
     case 'solana': {
       const rpcUrl = process.env.SOLANA_RPC_URL
-      const recipient = process.env.SOLANA_RECIPIENT
-      if (!rpcUrl || !recipient) {
-        throw new Error('SOLANA_RPC_URL and SOLANA_RECIPIENT are required')
+      if (!rpcUrl) {
+        throw new Error('SOLANA_RPC_URL is required')
       }
+      // Receiving wallets are per-tenant (tenant_payment_wallets) + the platform
+      // fee wallet (SOLANA_PLATFORM_WALLET, read in the /tx + /verify routes).
       // SOLANA_USDC_MINT optional — omit for native SOL payments.
-      return new SolanaProvider(rpcUrl, recipient, process.env.SOLANA_USDC_MINT)
+      return new SolanaProvider(rpcUrl, process.env.SOLANA_USDC_MINT)
     }
 
     case 'manual':
