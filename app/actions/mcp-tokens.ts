@@ -81,13 +81,19 @@ export async function revokeMcpToken(tokenId: number) {
   }
 
   const supabase = await createClient()
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('mcp_api_tokens')
     .update({ is_active: false })
     .eq('id', tokenId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
+  if (!updated) throw new Error('Token not found')
 
   revalidatePath('/dashboard/admin/api-tokens')
   revalidatePath('/dashboard/teacher/api-tokens')
@@ -100,13 +106,19 @@ export async function deleteMcpToken(tokenId: number) {
   }
 
   const supabase = await createClient()
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Not authenticated')
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from('mcp_api_tokens')
     .delete()
     .eq('id', tokenId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
+  if (!deleted) throw new Error('Token not found')
 
   revalidatePath('/dashboard/admin/api-tokens')
   revalidatePath('/dashboard/teacher/api-tokens')

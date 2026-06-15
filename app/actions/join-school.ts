@@ -82,10 +82,14 @@ export async function joinCurrentSchool() {
     if (invitation) {
       assignedRole = invitation.role as 'student' | 'teacher'
       // Mark invitation as accepted
-      await adminClient
+      const { error: invitationError } = await adminClient
         .from('tenant_invitations')
         .update({ status: 'accepted', accepted_at: new Date().toISOString() })
         .eq('id', invitation.id)
+      // Non-blocking: invitation bookkeeping failure shouldn't stop the join.
+      if (invitationError) {
+        console.error('Failed to mark invitation as accepted:', invitationError)
+      }
     }
   }
 
@@ -106,17 +110,28 @@ export async function joinCurrentSchool() {
   }
 
   // Create gamification profile for this tenant (ignore if already exists)
-  await adminClient
+  const { error: gamificationError } = await adminClient
     .from('gamification_profiles')
     .upsert(
       { user_id: user.id, tenant_id: tenantId, total_xp: 0, level: 1 },
       { onConflict: 'user_id,tenant_id', ignoreDuplicates: true }
     )
+  // Non-blocking: a missing gamification profile is recoverable and shouldn't
+  // block the user from joining the school.
+  if (gamificationError) {
+    console.error('Failed to create gamification profile:', gamificationError)
+  }
 
-  // Set app_metadata.tenant_id so the JWT hook includes it in claims
-  await adminClient.auth.admin.updateUserById(user.id, {
+  // Set app_metadata.tenant_id so the JWT hook includes it in claims. This is
+  // critical: if it fails, the user "joins" but their JWT never gets the tenant
+  // claim, breaking tenant resolution on the next request — so fail loudly.
+  const { error: metaError } = await adminClient.auth.admin.updateUserById(user.id, {
     app_metadata: { tenant_id: tenantId },
   })
+  if (metaError) {
+    console.error('Failed to set tenant_id app_metadata:', metaError)
+    return { success: false, error: 'Failed to finalize school membership. Please try again.' }
+  }
 
   // Update user's preferred tenant
   await supabase.auth.updateUser({

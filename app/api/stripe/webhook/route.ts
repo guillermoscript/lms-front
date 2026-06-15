@@ -111,15 +111,24 @@ export async function POST(req: NextRequest) {
           break
         }
 
-        const { error } = await getSupabaseAdmin()
+        const { data: flipped, error } = await getSupabaseAdmin()
           .from('transactions')
           .update({ status: 'successful' })
           .eq('transaction_id', parseInt(transactionId))
           .eq('status', 'pending')
+          .select('transaction_id')
+          .maybeSingle()
 
         if (error) {
           console.error('Failed to update transaction:', error)
           return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
+        }
+
+        if (!flipped) {
+          // Concurrent delivery already flipped this transaction — do not re-send
+          // the enrollment email or re-run side effects. The first delivery owns them.
+          console.log(`Transaction ${transactionId} already flipped by a concurrent delivery — skipping side effects`)
+          break
         }
 
         // Send enrollment confirmation email
