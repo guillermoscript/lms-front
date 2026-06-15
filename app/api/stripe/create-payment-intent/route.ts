@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { toCents } from '@/lib/currency'
+import { getPaymentProvider } from '@/lib/payments'
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,11 +68,13 @@ export async function POST(req: NextRequest) {
     let amount: number
     let itemName: string
     let currency = 'usd'
+    let planProviderPriceId: string | null = null
+    let planPaymentProvider = 'stripe'
 
     if (planId) {
       const { data: plan, error } = await supabase
         .from('plans')
-        .select('price, plan_name, currency')
+        .select('price, plan_name, currency, provider_price_id, payment_provider')
         .eq('plan_id', planId)
         .eq('tenant_id', tenantId)
         .single()
@@ -82,6 +85,8 @@ export async function POST(req: NextRequest) {
       currency = plan.currency || 'usd'
       amount = toCents(Number(plan.price), currency)
       itemName = plan.plan_name
+      planProviderPriceId = plan.provider_price_id
+      planPaymentProvider = plan.payment_provider || 'stripe'
     } else {
       const { data: product, error } = await supabase
         .from('products')
@@ -128,6 +133,57 @@ export async function POST(req: NextRequest) {
     if (txError || !transaction) {
       console.error('Transaction creation error:', txError)
       return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+    }
+
+    // Native subscription path (#280 Phase 2): a Stripe plan with a recurring
+    // price becomes a real Stripe Subscription, so provider_subscription_id is
+    // stored at creation and renewals/cancels are webhook-driven. Legacy/manual
+    // plans (no recurring provider_price_id) fall through to the one-time
+    // PaymentIntent path below, unchanged.
+    if (planId && planPaymentProvider === 'stripe' && planProviderPriceId) {
+      try {
+        const provider = getPaymentProvider('stripe')
+        const session = await provider.createCheckoutSession!({
+          mode: 'subscription',
+          providerPriceId: planProviderPriceId,
+          amount,
+          currency,
+          reference: transaction.transaction_id.toString(),
+          providerCustomerId: stripeCustomerId,
+          destinationAccount: tenant.stripe_account_id,
+          applicationFeePercent: platformPercentage,
+          metadata: {
+            transactionId: transaction.transaction_id.toString(),
+            userId: user.id,
+            tenantId,
+            planId: planId.toString(),
+          },
+        })
+
+        // Persist the Stripe subscription id; the handle_new_subscription trigger
+        // copies it onto the subscriptions row when the first invoice succeeds.
+        await supabase
+          .from('transactions')
+          .update({ provider_subscription_id: session.providerRef })
+          .eq('transaction_id', transaction.transaction_id)
+
+        if (!session.clientSecret) {
+          return NextResponse.json({ error: 'Failed to initialize subscription payment' }, { status: 500 })
+        }
+
+        return NextResponse.json({
+          clientSecret: session.clientSecret,
+          transactionId: transaction.transaction_id,
+        })
+      } catch (subErr) {
+        console.error('Subscription creation error:', subErr)
+        // Roll the pending transaction back so the unique index doesn't block a retry.
+        await supabase
+          .from('transactions')
+          .update({ status: 'failed' })
+          .eq('transaction_id', transaction.transaction_id)
+        return NextResponse.json({ error: 'Failed to create subscription' }, { status: 500 })
+      }
     }
 
     // Create Stripe PaymentIntent with Connect (revenue split)
