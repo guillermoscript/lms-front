@@ -35,8 +35,58 @@ export async function dispatchBillingEvent(
 
   switch (event.type) {
     case 'subscription.activated': {
+      // First activation for hosted-checkout / Merchant-of-Record providers
+      // (Lemon Squeezy): NO subscription row exists yet. Unlike Stripe — whose
+      // first payment is confirmed client-side and activated by the legacy
+      // route's invoice.payment_succeeded — these providers confirm payment via
+      // THIS webhook, carrying our `reference` (the pending transaction id)
+      // round-tripped from checkout custom data. Flip that pending transaction
+      // → successful: the after_transaction_update trigger
+      // (trigger_manage_transactions → handle_new_subscription) CREATES the
+      // subscription row + entitlements, copying payment_provider +
+      // provider_subscription_id off the transaction. Then align the period to
+      // the provider's authoritative period end (LS renews_at). Idempotent:
+      // status='pending' guard means a redelivery (or a later non-create event)
+      // falls through to the existing-row update below.
+      if (event.reference && subId) {
+        const txnId = Number.parseInt(event.reference, 10)
+        if (!Number.isNaN(txnId)) {
+          const { data: tx } = await admin
+            .from('transactions')
+            .select('transaction_id, status')
+            .eq('transaction_id', txnId)
+            .maybeSingle()
+
+          if (tx?.status === 'pending') {
+            const { error: flipErr } = await admin
+              .from('transactions')
+              .update({
+                status: 'successful',
+                provider_subscription_id: subId,
+                payment_provider: provider,
+              })
+              .eq('transaction_id', txnId)
+              .eq('status', 'pending')
+            if (flipErr) throw new Error(`dispatch ${event.type} activation failed: ${flipErr.message}`)
+
+            // handle_new_subscription set end_date from the plan duration; the
+            // provider's schedule is authoritative, so align to renews_at.
+            if (event.periodEnd) {
+              const { error: extErr } = await admin.rpc('extend_subscription_period', {
+                _provider_subscription_id: subId,
+                _provider: provider,
+                _new_period_end: event.periodEnd.toISOString(),
+              })
+              if (extErr) throw new Error(`dispatch ${event.type} period-align failed: ${extErr.message}`)
+            }
+            break
+          }
+        }
+      }
+
       if (!subId) break
-      // Set 'active' (not 'renewed') so the enrollment-reactivation branch of
+      // Existing row (return-from-expired reactivation). Set 'active' (not
+      // 'renewed') so the enrollment-reactivation branch of
       // handle_subscription_status_change fires on a return from expired.
       const patch: Record<string, unknown> = { subscription_status: 'active' }
       if (event.periodEnd) patch.current_period_end = event.periodEnd.toISOString()

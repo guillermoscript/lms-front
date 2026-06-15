@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,6 +60,20 @@ export function CheckoutForm({
     const router = useRouter();
     const t = useTranslations('checkout');
 
+    // Provider-agnostic checkout (#280 Phase 4/5): Lemon Squeezy = hosted
+    // redirect, Solana = QR + on-chain poll. Other providers use the inline flow.
+    const isRedirectProvider = paymentProvider === 'lemonsqueezy';
+    const isQrProvider = paymentProvider === 'solana';
+    const [solanaQr, setSolanaQr] = useState<string | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Clean up the Solana poll on unmount.
+    useEffect(() => {
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, []);
+
     const isFree = typeof price === 'number' ? price === 0 : price === t('free')
     const showOfflineTab = !paymentProvider || paymentProvider === 'manual';
     const displayPrice = formattedPrice || (typeof price === 'number' ? `$${price}` : price);
@@ -67,6 +82,54 @@ export function CheckoutForm({
     const featureList = features
         ? features.split(/[\n,]+/).map(f => f.trim()).filter(Boolean)
         : [];
+
+    // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
+    // if it handled the flow, false to fall back to the inline/mock path.
+    const startProviderCheckout = async (): Promise<boolean> => {
+        if (!isRedirectProvider && !isQrProvider) return false;
+
+        const res = await fetch('/api/payments/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId: planId ? parseInt(planId) : undefined, productId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Checkout failed');
+
+        if (data.kind === 'redirect' && data.url) {
+            // Lemon Squeezy hosted checkout — leave the app.
+            window.location.href = data.url;
+            return true;
+        }
+
+        if (data.kind === 'qr' && data.url) {
+            // Solana Pay — render the transfer-request URL as a QR and poll the
+            // verify endpoint until the on-chain transfer is confirmed.
+            const dataUrl = await QRCode.toDataURL(data.url, { width: 240, margin: 1 });
+            setSolanaQr(dataUrl);
+            const txId = data.transactionId;
+            pollRef.current = setInterval(async () => {
+                try {
+                    const vr = await fetch('/api/payments/solana/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ transactionId: txId }),
+                    });
+                    const vd = await vr.json();
+                    if (vd.confirmed) {
+                        if (pollRef.current) clearInterval(pollRef.current);
+                        toast.success(t('toasts.paymentSuccess'));
+                        router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
+                    }
+                } catch {
+                    /* transient poll error — keep polling */
+                }
+            }, 3000);
+            return true;
+        }
+
+        throw new Error('Unsupported checkout response');
+    };
 
     const handleEnroll = async () => {
         setLoading(true);
@@ -79,6 +142,12 @@ export function CheckoutForm({
             }
 
             if (paymentMethod === 'card') {
+                // Lemon Squeezy / Solana go through the real provider checkout;
+                // everything else uses the existing inline (mock) enrollment.
+                if (isRedirectProvider || isQrProvider) {
+                    const handled = await startProviderCheckout();
+                    if (handled) return; // redirect leaves the page / QR keeps loading
+                }
                 await enrollUser(courseId, planId, 'mock_test');
                 toast.success(t('toasts.paymentSuccess'));
                 router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
@@ -172,6 +241,52 @@ export function CheckoutForm({
                         {loading ? t('enrollment.enrolling') : t('enrollment.button')}
                     </Button>
                 </div>
+            </div>
+        );
+    }
+
+    // ─── Provider checkout (Lemon Squeezy redirect / Solana QR) ───
+    if (isRedirectProvider || isQrProvider) {
+        return (
+            <div className="rounded-xl border border-border bg-card">
+                {orderSummary}
+
+                <div className="px-6 py-6 sm:px-8">
+                    {solanaQr ? (
+                        <div className="flex flex-col items-center gap-3 text-center">
+                            <p className="text-sm font-medium">{t('payment.solanaScan')}</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={solanaQr}
+                                alt="Solana Pay QR"
+                                width={240}
+                                height={240}
+                                className="rounded-lg border border-border"
+                            />
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                                {t('payment.solanaWaiting')}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                            {isQrProvider ? t('payment.solanaInstructions') : t('payment.redirectInstructions')}
+                        </p>
+                    )}
+                </div>
+
+                {!solanaQr && (
+                    <div className="border-t border-border px-6 py-4 sm:px-8">
+                        <Button className="w-full" onClick={handleEnroll} disabled={loading}>
+                            {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {loading ? t('payment.processing') : t('payment.button')}
+                        </Button>
+                        <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                            <IconLock className="h-3 w-3" />
+                            {t('secureCheckout')}
+                        </p>
+                    </div>
+                )}
             </div>
         );
     }

@@ -3,7 +3,7 @@
  * Defines interfaces for multiple payment providers (Stripe, PayPal, Binance, etc.)
  */
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual'
+export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual' | 'lemonsqueezy' | 'solana'
 
 export type Currency = 'usd' | 'eur' | 'btc' | 'eth' | 'usdt'
 
@@ -100,6 +100,64 @@ export interface ProviderCapabilities {
   isMerchantOfRecord: boolean
   /** WE own the billing period (cash, bank transfer, basic crypto/Solana Pay). */
   selfManagedPeriod: boolean
+}
+
+/**
+ * Static capability table, keyed by provider slug. Lets credential-free callers
+ * (e.g. the expiry cron) branch on ability WITHOUT instantiating a provider
+ * (which requires API keys). Must stay in sync with each provider class's
+ * `capabilities`. The unimplemented `binance` slug mirrors a self-managed
+ * default so a stray row is cron-expired rather than left active forever.
+ */
+export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities> = {
+  stripe: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: false,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+  },
+  paypal: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+  },
+  lemonsqueezy: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
+    isMerchantOfRecord: true,
+    selfManagedPeriod: false,
+  },
+  solana: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+  },
+  manual: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+  },
+  binance: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+  },
 }
 
 /** Params for starting a payment (the missing "start a payment" abstraction). */
