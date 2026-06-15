@@ -115,6 +115,20 @@ local Supabase), unrelated to the bump. Remaining `next` audit entry is the
 transitive `postcss` *moderate* only (its npm "fix" is a nonsense next@9
 downgrade). Next-work items B/C/D/E from the handoff still open.
 
+**Handoff item C — lint foundation (2026-06-15, branch `advisor/011-lint-foundation`):**
+Set the baseline, did NOT clean the errors (deferred to operator). Fixed the
+eslint ignore list (`eslint.config.mjs`): added `**/dist/**`,
+`mcp-server/.mcp-use/**`, `mcp-server/**` (separate workspace, own lint),
+`.agents/**`, `.claude/**` (untracked, bundled/minified vendored skill tooling).
+Effect: `npm run lint` dropped **24957 → 1110** errors — the 24957 was dominated
+by 22644 `no-unused-expressions` from minified/generated JS being linted, NOT app
+code. The remaining **1110 are real app-code errors** worth chipping at later:
+414 `no-explicit-any`, 347 `no-unused-vars`, 160 `next/no-html-link-for-pages`,
+46 `next/no-img-element`, then long tail. Only **16 errors + 4 warnings** are
+`--fix`-able (`npm run lint -- --fix`); the rest are manual. CI lint stays
+**non-blocking** until this pile is worked down — flip `.github/workflows/ci.yml`
+lint step off `continue-on-error` once it's green. No source/error fixes applied.
+
 - **008** (SPIKE, report-only) — full write-up at
   `plans/reports/008-solana-vuln-spike.md`. Bottom line: the `bigint-buffer`
   HIGH DoS (`GHSA-3gc7-fjrx-p6mg`) **cannot** be fixed with a contained
