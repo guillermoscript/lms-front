@@ -18,8 +18,9 @@ function getSupabaseAdmin() {
  * Secured by CRON_SECRET env var (set the same value in Vercel dashboard).
  */
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET
+  const provided = req.headers.get('authorization')?.replace('Bearer ', '')
+  if (!cronSecret || provided !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
