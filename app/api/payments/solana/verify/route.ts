@@ -159,15 +159,24 @@ export async function POST(req: NextRequest) {
 
     // Flip → successful (status-guarded for idempotency). The
     // after_transaction_update trigger creates the subscription + entitlements.
-    const { error: flipErr } = await admin
+    const { data: flipped, error: flipErr } = await admin
       .from('transactions')
       .update({ status: 'successful' })
       .eq('transaction_id', tx.transaction_id)
       .eq('status', 'pending')
+      .select('transaction_id')
+      .maybeSingle()
 
     if (flipErr) {
       console.error(`[solana/verify] failed to flip tx ${transactionId}:`, flipErr)
       return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
+    }
+
+    if (!flipped) {
+      // A concurrent/earlier verify already confirmed this transaction (idempotency
+      // guard matched 0 rows). Report success without implying we just did the work.
+      console.log(`[solana/verify] tx ${transactionId} was already confirmed`)
+      return NextResponse.json({ confirmed: true, alreadyProcessed: true })
     }
 
     console.log(`[solana/verify] confirmed tx ${transactionId} (sig ${result.signature})`)
@@ -256,14 +265,22 @@ async function handleSolanaSubsVerify(
   // 4. Flip → successful (status-guarded). The after_transaction_update trigger
   //    creates the subscription row, copying provider_subscription_id +
   //    payment_provider via handle_new_subscription.
-  const { error: flipErr } = await admin
+  const { data: flipped, error: flipErr } = await admin
     .from('transactions')
     .update({ status: 'successful', provider_subscription_id: subscriptionPda })
     .eq('transaction_id', tx.transaction_id)
     .eq('status', 'pending')
+    .select('transaction_id')
+    .maybeSingle()
   if (flipErr) {
     console.error(`[solana/verify] failed to flip solana_subs tx ${tx.transaction_id}:`, flipErr)
     return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
+  }
+  if (!flipped) {
+    // A concurrent/earlier verify already confirmed this transaction. Return before
+    // the on-chain pull below so we never submit a second auto-pull transfer.
+    console.log(`[solana/verify] solana_subs tx ${tx.transaction_id} was already confirmed`)
+    return NextResponse.json({ confirmed: true, alreadyProcessed: true })
   }
 
   // School wallet (per tenant) + revenue split percent.
