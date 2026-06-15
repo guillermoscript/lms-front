@@ -25,7 +25,7 @@ import { getPaymentProvider } from '@/lib/payments'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
-const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana']
+const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs']
 
 export const runtime = 'nodejs'
 
@@ -148,9 +148,10 @@ export async function POST(req: NextRequest) {
       })
 
       // Solana: persist the on-chain reference pubkey so the verify endpoint can
-      // locate the transfer later. (LS creates the subscription server-side; its
-      // id arrives on the webhook, so nothing to store here.)
-      if (providerSlug === 'solana' && session.providerRef) {
+      // locate the transfer/subscribe tx later. (LS creates the subscription
+      // server-side; its id arrives on the webhook, so nothing to store here.)
+      // For solana_subs the reference marks the SUBSCRIBE tx (findReference).
+      if ((providerSlug === 'solana' || providerSlug === 'solana_subs') && session.providerRef) {
         await supabase
           .from('transactions')
           .update({ provider_subscription_id: session.providerRef })

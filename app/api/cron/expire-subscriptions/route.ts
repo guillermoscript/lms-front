@@ -37,7 +37,10 @@ function isCronExpirable(paymentProvider: string | null): boolean {
   if (!paymentProvider) return true
   const caps = PROVIDER_CAPABILITIES[paymentProvider as PaymentProvider]
   if (!caps) return true
-  return !caps.emitsRenewalWebhooks
+  // Skip any provider with an automatic renewal mechanism: push-renewal
+  // webhooks (Stripe/PayPal/LS) OR native auto-pull (solana_subs crank). Only
+  // pure self-managed providers (one-time Solana, manual, mock) are expired here.
+  return !(caps.emitsRenewalWebhooks || caps.supportsNativeSubscriptions)
 }
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('authorization')?.replace('Bearer ', '')

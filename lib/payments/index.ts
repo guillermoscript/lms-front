@@ -9,6 +9,7 @@ import { PayPalPaymentProvider } from './paypal-provider'
 import { ManualPaymentProvider } from './manual-provider'
 import { LemonSqueezyProvider } from './lemonsqueezy-provider'
 import { SolanaProvider } from './solana-provider'
+import { SolanaSubscriptionsProvider } from './solana-subscriptions-provider'
 
 /**
  * Get payment provider instance based on provider type
@@ -59,6 +60,12 @@ export function getPaymentProvider(
       return new SolanaProvider(rpcUrl, process.env.SOLANA_USDC_MINT)
     }
 
+    case 'solana_subs':
+      // Native on-chain auto-pull subscriptions. No required config here:
+      // RPC / puller keypair / wallets are read in the subscribe-tx + verify +
+      // crank-cron routes.
+      return new SolanaSubscriptionsProvider()
+
     case 'manual':
       return new ManualPaymentProvider()
 
@@ -82,3 +89,4 @@ export { PayPalPaymentProvider } from './paypal-provider'
 export { ManualPaymentProvider } from './manual-provider'
 export { LemonSqueezyProvider } from './lemonsqueezy-provider'
 export { SolanaProvider } from './solana-provider'
+export { SolanaSubscriptionsProvider } from './solana-subscriptions-provider'

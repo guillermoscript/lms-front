@@ -3,7 +3,7 @@
  * Defines interfaces for multiple payment providers (Stripe, PayPal, Binance, etc.)
  */
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual' | 'lemonsqueezy' | 'solana'
+export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual' | 'lemonsqueezy' | 'solana' | 'solana_subs'
 
 export type Currency = 'usd' | 'eur' | 'btc' | 'eth' | 'usdt'
 
@@ -141,6 +141,18 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
+  },
+  // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
+  // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
+  // scheduler), so it is NOT cron-EXPIRED — the crank renews it. Hence
+  // supportsNativeSubscriptions:true (auto-charge) with emitsRenewalWebhooks:false.
+  solana_subs: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
   },
   manual: {
     supportsNativeSubscriptions: false,
