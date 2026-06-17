@@ -2523,7 +2523,7 @@
           "back": "Back to Plans",
           "details": {
             "title": "Plan Details",
-            "description": "Subscription plans will be automatically created in Stripe with recurring billing."
+            "description": "Set up a recurring plan. How billing is handled depends on the payment method you choose below."
           }
         },
         "edit": {
@@ -2572,6 +2572,7 @@
           "variantIdPlaceholder": "e.g. 123456",
           "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
           "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
           "methodHint": {
             "manual": "Billing is managed in-app; students arrange recurring payment with you offline. No payment processor credentials required.",
             "stripe": "Stripe manages the recurring subscription and billing automatically.",
@@ -2615,7 +2616,7 @@
           "back": "Back to Products",
           "details": {
             "title": "Product Details",
-            "description": "Products will be automatically created in Stripe. Link courses to create bundles."
+            "description": "Set up a one-time product. How payment is handled depends on the payment method you choose below. Link courses to create bundles."
           }
         },
         "edit": {
@@ -2664,6 +2665,7 @@
           "variantIdPlaceholder": "e.g. 123456",
           "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
           "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
           "methodHint": {
             "manual": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
             "stripe": "Students can pay online instantly",
@@ -3704,6 +3706,21 @@
       "solanaInstructions": "Pay with Solana Pay. Continue to generate a QR code you can scan with your wallet.",
       "solanaScan": "Scan to pay with Solana",
       "solanaWaiting": "Waiting for on-chain confirmation…",
+      "payWithPhantom": "Pay with Phantom",
+      "phantomHint": "Pay directly with your connected Phantom wallet.",
+      "payByQr": "Pay by QR instead",
+      "phantomPreparing": "Preparing checkout…",
+      "phantomConnecting": "Connecting to Phantom…",
+      "phantomRequesting": "Requesting transaction…",
+      "phantomSignInit": "Approve step 1 of 2 in Phantom: initialize your subscription wallet.",
+      "phantomSign": "Approve in Phantom to sign…",
+      "phantomSubmitting": "Submitting to the network…",
+      "phantomInitDone": "Wallet initialized — approve step 2 in Phantom to subscribe…",
+      "phantomConfirming": "Confirming on-chain…",
+      "phantomNotFound": "Phantom wallet not found. Install Phantom and unlock it, then try again.",
+      "phantomRetry": "Try again",
+      "subsDesktopOnly": "To subscribe with crypto, open this page in the Phantom app or install the Phantom desktop extension — a subscription needs two wallet approvals that a QR scan can't do.",
+      "phantomInstall": "Get the Phantom wallet",
       "contactName": "Contact Name",
       "contactEmail": "Email for Instructions",
       "contactPhone": "Phone (Optional)",

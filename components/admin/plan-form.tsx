@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
 import { CourseSelector, type CourseOption } from './course-selector'
 import { createPlan, updatePlan } from '@/app/actions/admin/plans'
 import type { PaymentProvider } from '@/lib/payments'
@@ -184,7 +185,15 @@ export function PlanForm({ mode, initialData, courses, enabledProviders = [] }: 
       {(formData.paymentProvider === 'solana' || formData.paymentProvider === 'solana_subs') && (
         <Alert>
           <IconAlertCircle className="h-4 w-4" />
-          <AlertDescription>{t('solanaWalletHint')}</AlertDescription>
+          <AlertDescription>
+            {t('solanaWalletHint')}{' '}
+            <Link
+              href="/dashboard/admin/settings"
+              className="font-medium underline underline-offset-4"
+            >
+              {t('solanaWalletCta')}
+            </Link>
+          </AlertDescription>
         </Alert>
       )}
 

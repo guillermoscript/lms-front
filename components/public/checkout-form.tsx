@@ -18,7 +18,22 @@ import {
     IconCheck,
     IconLock,
     IconCalendar,
+    IconWallet,
+    IconAlertTriangle,
+    IconQrcode,
 } from '@tabler/icons-react';
+
+// Minimal shape of the injected Phantom provider we rely on (sign-only flow).
+interface PhantomProvider {
+    isPhantom?: boolean;
+    connect: () => Promise<{ publicKey: { toString: () => string } }>;
+    signTransaction: <T>(tx: T) => Promise<T>;
+}
+function getPhantom(): PhantomProvider | null {
+    if (typeof window === 'undefined') return null;
+    const p = (window as unknown as { solana?: PhantomProvider }).solana;
+    return p?.isPhantom ? p : null;
+}
 
 interface CheckoutFormProps {
     courseId?: string;
@@ -67,8 +82,23 @@ export function CheckoutForm({
     // present a Solana Pay QR and poll /verify. The subscriber wallet is captured
     // server-side (subscribe-tx), so the poll body stays { transactionId }.
     const isQrProvider = paymentProvider === 'solana' || paymentProvider === 'solana_subs';
+    const isSolanaSubs = paymentProvider === 'solana_subs';
     const [solanaQr, setSolanaQr] = useState<string | null>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // In-app desktop wallet ("Pay with Phantom"). The QR is for off-device /
+    // mobile wallets; a first-time subscription needs TWO signed txs (init then
+    // subscribe), which a single QR scan can't do — so subscriptions require the
+    // in-app wallet (desktop extension or Phantom's in-app browser).
+    const [phantomAvailable, setPhantomAvailable] = useState(false);
+    const [phantomBusy, setPhantomBusy] = useState(false);
+    const [phantomMsg, setPhantomMsg] = useState<string | null>(null);
+    const [phantomError, setPhantomError] = useState<string | null>(null);
+
+    // Detect Phantom client-side only (avoids SSR/hydration mismatch).
+    useEffect(() => {
+        setPhantomAvailable(!!getPhantom());
+    }, []);
 
     // Clean up the Solana poll on unmount.
     useEffect(() => {
@@ -100,11 +130,37 @@ export function CheckoutForm({
         return trimmed.split(/[\n,]+/).map(f => f.trim()).filter(Boolean);
     })();
 
-    // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
-    // if it handled the flow, false to fall back to the inline/mock path.
-    const startProviderCheckout = async (): Promise<boolean> => {
-        if (!isRedirectProvider && !isQrProvider) return false;
+    const checkoutDone = () => {
+        toast.success(t('toasts.paymentSuccess'));
+        router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
+    };
 
+    // Poll /verify until the on-chain transfer/subscription is confirmed. The
+    // verify endpoint flips the transaction → successful (trigger creates the
+    // subscription + entitlements) and, for solana_subs, fires the first charge.
+    const startVerifyPoll = (txId: number, subscriber?: string) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            try {
+                const vr = await fetch('/api/payments/solana/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transactionId: txId, subscriber }),
+                });
+                const vd = await vr.json();
+                if (vd.confirmed) {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    checkoutDone();
+                }
+            } catch {
+                /* transient poll error — keep polling */
+            }
+        }, 3000);
+    };
+
+    // Create the pending transaction + provider checkout session. Returns the
+    // parsed response so callers can branch on `kind` (redirect / qr).
+    const createCheckoutSession = async () => {
         const res = await fetch('/api/payments/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -112,6 +168,15 @@ export function CheckoutForm({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Checkout failed');
+        return data as { kind: string; url: string | null; transactionId: number };
+    };
+
+    // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
+    // if it handled the flow, false to fall back to the inline/mock path.
+    const startProviderCheckout = async (): Promise<boolean> => {
+        if (!isRedirectProvider && !isQrProvider) return false;
+
+        const data = await createCheckoutSession();
 
         if (data.kind === 'redirect' && data.url) {
             // Lemon Squeezy hosted checkout — leave the app.
@@ -124,28 +189,85 @@ export function CheckoutForm({
             // verify endpoint until the on-chain transfer is confirmed.
             const dataUrl = await QRCode.toDataURL(data.url, { width: 240, margin: 1 });
             setSolanaQr(dataUrl);
-            const txId = data.transactionId;
-            pollRef.current = setInterval(async () => {
-                try {
-                    const vr = await fetch('/api/payments/solana/verify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ transactionId: txId }),
-                    });
-                    const vd = await vr.json();
-                    if (vd.confirmed) {
-                        if (pollRef.current) clearInterval(pollRef.current);
-                        toast.success(t('toasts.paymentSuccess'));
-                        router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
-                    }
-                } catch {
-                    /* transient poll error — keep polling */
-                }
-            }, 3000);
+            startVerifyPoll(data.transactionId);
             return true;
         }
 
         throw new Error('Unsupported checkout response');
+    };
+
+    // In-app desktop wallet checkout: connect Phantom, sign (one tx for one-time,
+    // two for a first-time subscription: init authority → subscribe), submit each
+    // via our server (sign-only; Phantom's own simulate trips on these
+    // instructions), then poll /verify. Mirrors the QR flow but signs locally so
+    // it works on desktop where a QR can't be scanned, and can do the two-step
+    // subscribe a single QR scan can't.
+    const payWithPhantom = async () => {
+        setPhantomError(null);
+        setPhantomBusy(true);
+        setPhantomMsg(t('payment.phantomPreparing'));
+        try {
+            const provider = getPhantom();
+            if (!provider) throw new Error(t('payment.phantomNotFound'));
+
+            const data = await createCheckoutSession();
+            if (data.kind !== 'qr' || !data.url) throw new Error('Unsupported checkout response');
+            const txId = data.transactionId;
+            // The QR `url` is a Solana Pay link (solana:<encoded tx-request URL>).
+            // POST { account } to that decoded endpoint — exactly what a wallet's
+            // QR scanner does — to get the unsigned tx (it carries ?reference=).
+            const endpoint = decodeURIComponent(data.url.replace(/^solana:/, ''));
+
+            setPhantomMsg(t('payment.phantomConnecting'));
+            const conn = await provider.connect();
+            const account = conn.publicKey.toString();
+
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            // One-time → 1 tx. Subscription → up to 2 (init authority, subscribe).
+            const maxSteps = isSolanaSubs ? 2 : 1;
+            for (let i = 0; i < maxSteps; i++) {
+                setPhantomMsg(t('payment.phantomRequesting'));
+                const br = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account }),
+                });
+                const bd = await br.json();
+                if (!br.ok || !bd.transaction) throw new Error(bd.error || 'Failed to build transaction');
+                const step: string | undefined = bd.step; // 'init' | 'subscribe' | undefined (one-time)
+
+                setPhantomMsg(step === 'init' ? t('payment.phantomSignInit') : t('payment.phantomSign'));
+                const bytes = Uint8Array.from(atob(bd.transaction), c => c.charCodeAt(0));
+                const vtx = VersionedTransaction.deserialize(bytes);
+                const signed = await provider.signTransaction(vtx);
+                let binary = '';
+                const serialized = signed.serialize();
+                for (let k = 0; k < serialized.length; k++) binary += String.fromCharCode(serialized[k]);
+
+                setPhantomMsg(t('payment.phantomSubmitting'));
+                const sr = await fetch('/api/payments/solana/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction: btoa(binary) }),
+                });
+                const sd = await sr.json();
+                if (!sr.ok || !sd.signature) throw new Error(sd.error || 'Submit failed');
+
+                // The submit route confirms before returning, so by here the init
+                // tx has landed and the next request will return the subscribe tx.
+                if (step !== 'init') break;
+                setPhantomMsg(t('payment.phantomInitDone'));
+            }
+
+            setPhantomMsg(t('payment.phantomConfirming'));
+            startVerifyPoll(txId, account);
+            // Leave phantomBusy true: the confirming spinner shows until the poll
+            // redirects on success.
+        } catch (error) {
+            setPhantomError(error instanceof Error ? error.message : String(error));
+            setPhantomBusy(false);
+            setPhantomMsg(null);
+        }
     };
 
     const handleEnroll = async () => {
@@ -262,8 +384,12 @@ export function CheckoutForm({
         );
     }
 
-    // ─── Provider checkout (Lemon Squeezy redirect / Solana QR) ───
+    // ─── Provider checkout (Lemon Squeezy redirect / Solana QR + Phantom) ───
     if (isRedirectProvider || isQrProvider) {
+        // Subscriptions require the in-app wallet (two signed txs); a QR can't.
+        const subsNeedsWallet = isSolanaSubs && !phantomAvailable;
+        const showActions = !solanaQr && !phantomBusy;
+
         return (
             <div className="rounded-xl border border-border bg-card">
                 {orderSummary}
@@ -285,19 +411,74 @@ export function CheckoutForm({
                                 {t('payment.solanaWaiting')}
                             </p>
                         </div>
+                    ) : phantomBusy ? (
+                        <div className="flex flex-col items-center gap-3 py-2 text-center">
+                            <IconLoader2 className="h-6 w-6 animate-spin text-primary" />
+                            <p className="text-sm font-medium">{phantomMsg}</p>
+                            <p className="text-xs text-muted-foreground">{t('payment.solanaWaiting')}</p>
+                        </div>
                     ) : (
-                        <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                            {isQrProvider ? t('payment.solanaInstructions') : t('payment.redirectInstructions')}
-                        </p>
+                        <div className="space-y-3">
+                            <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                                {isQrProvider ? t('payment.solanaInstructions') : t('payment.redirectInstructions')}
+                            </p>
+                            {subsNeedsWallet && (
+                                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                                    <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <div className="space-y-1.5">
+                                        <p>{t('payment.subsDesktopOnly')}</p>
+                                        <a
+                                            href="https://phantom.app/download"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
+                                        >
+                                            <IconWallet className="h-3.5 w-3.5" />
+                                            {t('payment.phantomInstall')}
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                            {phantomError && (
+                                <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs leading-relaxed text-destructive">
+                                    <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    {phantomError}
+                                </p>
+                            )}
+                        </div>
                     )}
                 </div>
 
-                {!solanaQr && (
+                {showActions && (
                     <div className="border-t border-border px-6 py-4 sm:px-8">
-                        <Button className="w-full" onClick={handleEnroll} disabled={loading}>
-                            {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? t('payment.processing') : t('payment.button')}
-                        </Button>
+                        {/* Solana with Phantom available → in-app wallet (primary). */}
+                        {isQrProvider && phantomAvailable ? (
+                            <div className="space-y-2">
+                                <Button className="w-full" onClick={payWithPhantom} disabled={loading || phantomBusy}>
+                                    <IconWallet className="mr-2 h-4 w-4" />
+                                    {phantomError ? t('payment.phantomRetry') : t('payment.payWithPhantom')}
+                                </Button>
+                                {/* One-time can fall back to QR; subscriptions can't. */}
+                                {!isSolanaSubs && (
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full"
+                                        onClick={handleEnroll}
+                                        disabled={loading || phantomBusy}
+                                    >
+                                        <IconQrcode className="mr-2 h-4 w-4" />
+                                        {t('payment.payByQr')}
+                                    </Button>
+                                )}
+                                <p className="text-center text-[11px] text-muted-foreground">{t('payment.phantomHint')}</p>
+                            </div>
+                        ) : subsNeedsWallet ? null : (
+                            /* Lemon Squeezy redirect, or one-time Solana via QR. */
+                            <Button className="w-full" onClick={handleEnroll} disabled={loading}>
+                                {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {loading ? t('payment.processing') : t('payment.button')}
+                            </Button>
+                        )}
                         <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
                             <IconLock className="h-3 w-3" />
                             {t('secureCheckout')}

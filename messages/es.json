@@ -2345,7 +2345,7 @@
           "back": "Volver a Planes",
           "details": {
             "title": "Detalles del Plan",
-            "description": "Los planes de suscripción se crearán automáticamente en Stripe con facturación recurrente."
+            "description": "Configura un plan recurrente. La forma de facturación depende del método de pago que elijas a continuación."
           }
         },
         "edit": {
@@ -2394,6 +2394,7 @@
           "variantIdPlaceholder": "ej. 123456",
           "variantIdHint": "Encuéntralo en tu panel de Lemon Squeezy bajo la variante del producto. El checkout falla sin él.",
           "solanaWalletHint": "Configura la wallet de Solana de tu escuela en Ajustes → Pagos para que los estudiantes te paguen. Sin ella, el checkout falla.",
+          "solanaWalletCta": "Configúrala en Ajustes → Pagos",
           "methodHint": {
             "manual": "La facturación se gestiona en la app; los estudiantes coordinan el pago recurrente contigo de forma offline. No requiere credenciales de procesador de pago.",
             "stripe": "Stripe gestiona la suscripción recurrente y la facturación automáticamente.",
@@ -2437,7 +2438,7 @@
           "back": "Volver a Productos",
           "details": {
             "title": "Detalles del Producto",
-            "description": "Los productos se crearán automáticamente en Stripe. Vincula cursos para crear paquetes."
+            "description": "Configura un producto de pago único. La forma de cobro depende del método de pago que elijas. Vincula cursos para crear paquetes."
           }
         },
         "edit": {
@@ -2486,6 +2487,7 @@
           "variantIdPlaceholder": "ej. 123456",
           "variantIdHint": "Encuéntralo en tu panel de Lemon Squeezy bajo la variante del producto. El checkout falla sin él.",
           "solanaWalletHint": "Configura la wallet de Solana de tu escuela en Ajustes → Pagos para que los estudiantes te paguen. Sin ella, el checkout falla.",
+          "solanaWalletCta": "Configúrala en Ajustes → Pagos",
           "methodHint": {
             "manual": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
             "stripe": "Los estudiantes pueden pagar online al instante",
@@ -3697,6 +3699,21 @@
       "solanaInstructions": "Paga con Solana Pay. Continúa para generar un código QR que puedes escanear con tu billetera.",
       "solanaScan": "Escanea para pagar con Solana",
       "solanaWaiting": "Esperando confirmación en la cadena…",
+      "payWithPhantom": "Pagar con Phantom",
+      "phantomHint": "Paga directamente con tu billetera Phantom conectada.",
+      "payByQr": "Pagar con QR en su lugar",
+      "phantomPreparing": "Preparando el pago…",
+      "phantomConnecting": "Conectando con Phantom…",
+      "phantomRequesting": "Solicitando transacción…",
+      "phantomSignInit": "Aprueba el paso 1 de 2 en Phantom: inicializa tu billetera de suscripción.",
+      "phantomSign": "Aprueba en Phantom para firmar…",
+      "phantomSubmitting": "Enviando a la red…",
+      "phantomInitDone": "Billetera inicializada — aprueba el paso 2 en Phantom para suscribirte…",
+      "phantomConfirming": "Confirmando en la cadena…",
+      "phantomNotFound": "No se encontró la billetera Phantom. Instala Phantom y desbloquéala, luego intenta de nuevo.",
+      "phantomRetry": "Intentar de nuevo",
+      "subsDesktopOnly": "Para suscribirte con cripto, abre esta página en la app de Phantom o instala la extensión de escritorio de Phantom — una suscripción requiere dos aprobaciones de billetera que un escaneo QR no puede hacer.",
+      "phantomInstall": "Obtén la billetera Phantom",
       "contactName": "Nombre de Contacto",
       "contactEmail": "Correo para Instrucciones",
       "contactPhone": "Teléfono (Opcional)",
