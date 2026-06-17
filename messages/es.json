@@ -154,6 +154,36 @@
   },
   "dashboard": {
     "student": {
+      "billing": {
+        "title": "Facturación",
+        "subtitle": "Tus compras, suscripción activa y facturas descargables.",
+        "subscription": {
+          "sectionTitle": "Suscripción activa",
+          "unknownPlan": "Plan desconocido",
+          "renewsOn": "Se renueva el",
+          "cancelsOn": "Se cancela el",
+          "cancelAtPeriodEndNotice": "Esta suscripción no se renovará. El acceso termina el {date}.",
+          "cancelNote": "Para cancelar tu suscripción, comunícate con tu institución.",
+          "empty": "No tienes una suscripción activa.",
+          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" }
+        },
+        "purchases": {
+          "sectionTitle": "Historial de compras",
+          "empty": "Aún no tienes compras.",
+          "unknownItem": "Elemento desconocido",
+          "table": { "item": "Artículo", "provider": "Proveedor", "date": "Fecha", "status": "Estado", "amount": "Monto" },
+          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" }
+        },
+        "offline": {
+          "sectionTitle": "Pagos offline / manuales",
+          "table": { "product": "Producto", "date": "Fecha", "status": "Estado", "amount": "Monto", "invoice": "Factura" },
+          "downloadInvoice": "Descargar",
+          "downloadInvoiceLabel": "Descargar factura {number}",
+          "managePaymentsNote": "¿Necesitas subir comprobante o ver detalles?",
+          "managePaymentsLink": "Ir a Pagos"
+        },
+        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+      },
       "notifications": {
         "title": "Notificaciones",
         "description": "Mantente al día con la actividad de tu escuela.",
@@ -1295,6 +1325,45 @@
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
+      "payouts": {
+        "title": "Pagos recibidos",
+        "description": "Desembolsos de Stripe Connect a la cuenta de tu escuela.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "stats": {
+          "totalPaid": "Total recibido",
+          "totalPaidDesc": "Desembolsos exitosos acumulados",
+          "pendingCount": "Pendientes / en proceso",
+          "pendingCountDesc": "Pagos aún no completados"
+        },
+        "status": { "paid": "Pagado", "processing": "Procesando", "pending": "Pendiente", "failed": "Fallido" },
+        "table": {
+          "title": "Historial de pagos",
+          "headers": { "period": "Período", "amount": "Monto", "status": "Estado", "paidAt": "Pagado el", "stripeRef": "Ref. Stripe" }
+        },
+        "empty": {
+          "title": "Sin pagos aún",
+          "description": "Los pagos aparecerán aquí una vez que Stripe Connect transfiera los fondos a tu cuenta bancaria. Asegúrate de que tu cuenta Stripe esté completamente verificada."
+        }
+      },
+      "invoices": {
+        "title": "Facturas",
+        "description": "Documentos de factura para pagos manuales y fuera de línea.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "note": { "text": "Las compras con tarjeta y Solana se registran en", "transactionsLink": "Transacciones" },
+        "status": { "paid": "Pagado", "pending": "Pendiente", "cancelled": "Cancelado" },
+        "table": {
+          "title": "Registro de facturas",
+          "headers": { "invoiceNumber": "Factura #", "item": "Artículo", "amount": "Monto", "status": "Estado", "date": "Fecha", "actions": "Acciones" },
+          "unknownProduct": "Producto desconocido",
+          "viewInvoice": "Ver factura"
+        },
+        "empty": {
+          "title": "No hay facturas",
+          "description": "Los documentos de factura se generan para solicitudes de pago manuales. Aparecerán aquí una vez que se asigne un número de factura a una solicitud."
+        }
+      },
       "breadcrumbs": {
         "admin": "Admin",
         "analytics": "Analíticas",
@@ -2914,7 +2983,10 @@
     "plans": "Planes",
     "subscriptions": "Suscripciones",
     "paymentRequests": "Solicitudes de Pago",
+    "payouts": "Pagos Recibidos",
+    "invoices": "Facturas",
     "myPayments": "Mis Pagos",
+    "myBilling": "Facturación y Recibos",
     "community": "Comunidad"
   },
   "userNav": {
@@ -3673,6 +3745,13 @@
     "issuedBy": "Emitido por LMS Platform"
   },
   "checkout": {
+    "success": {
+      "title": "¡Todo listo!",
+      "subtitle": "Tu compra fue exitosa. Ya tienes acceso completo — disfruta el contenido.",
+      "goToCourses": "Ir a mis cursos",
+      "browseCourses": "Explorar cursos",
+      "viewBilling": "Ver facturación"
+    },
     "title": "Finalizar Compra",
     "description": "Elige tu método de pago para continuar.",
     "item": "Artículo",

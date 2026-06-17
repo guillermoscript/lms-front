@@ -143,7 +143,9 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('products'), href: "/dashboard/admin/products", icon: IconShoppingCart },
                         { title: t('plans'), href: "/dashboard/admin/plans", icon: IconCalendar },
                         { title: t('revenue'), href: "/dashboard/admin/revenue", icon: IconTrendingUp },
+                        { title: t('payouts'), href: "/dashboard/admin/payouts", icon: IconCoins },
                         { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconReceipt },
+                        { title: t('invoices'), href: "/dashboard/admin/invoices", icon: IconFileInvoice },
                         { title: t('subscriptions'), href: "/dashboard/admin/subscriptions", icon: IconCrown },
                         { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests", icon: IconFileInvoice },
                     ],
@@ -191,6 +193,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     label: t('resources'),
                     items: [
+                        { title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt },
                         { title: t('myPayments'), href: "/dashboard/student/payments", icon: IconCreditCard },
                         { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
                         { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar, tourId: 'sidebar-progress' },

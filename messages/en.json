@@ -154,6 +154,36 @@
   },
   "dashboard": {
     "student": {
+      "billing": {
+        "title": "Billing",
+        "subtitle": "Your purchases, active subscription, and downloadable invoices.",
+        "subscription": {
+          "sectionTitle": "Active Subscription",
+          "unknownPlan": "Unknown plan",
+          "renewsOn": "Renews on",
+          "cancelsOn": "Cancels on",
+          "cancelAtPeriodEndNotice": "This subscription will not renew. Access ends on {date}.",
+          "cancelNote": "To cancel your subscription, please contact your school.",
+          "empty": "You don't have an active subscription.",
+          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" }
+        },
+        "purchases": {
+          "sectionTitle": "Purchase History",
+          "empty": "No purchases yet.",
+          "unknownItem": "Unknown item",
+          "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
+          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" }
+        },
+        "offline": {
+          "sectionTitle": "Offline / Manual Payments",
+          "table": { "product": "Product", "date": "Date", "status": "Status", "amount": "Amount", "invoice": "Invoice" },
+          "downloadInvoice": "Download",
+          "downloadInvoiceLabel": "Download invoice {number}",
+          "managePaymentsNote": "Need to upload proof or check details?",
+          "managePaymentsLink": "Go to Payments"
+        },
+        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+      },
       "notifications": {
         "title": "Notifications",
         "description": "Stay up to date with activity across your school.",
@@ -1295,6 +1325,45 @@
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
+      "payouts": {
+        "title": "Payouts",
+        "description": "Stripe Connect disbursements to your school account.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "stats": {
+          "totalPaid": "Total paid out",
+          "totalPaidDesc": "Cumulative successful disbursements",
+          "pendingCount": "Pending / processing",
+          "pendingCountDesc": "Payouts not yet completed"
+        },
+        "status": { "paid": "Paid", "processing": "Processing", "pending": "Pending", "failed": "Failed" },
+        "table": {
+          "title": "Payout history",
+          "headers": { "period": "Period", "amount": "Amount", "status": "Status", "paidAt": "Paid at", "stripeRef": "Stripe ref" }
+        },
+        "empty": {
+          "title": "No payouts yet",
+          "description": "Payouts appear here once Stripe Connect disburses funds to your connected bank account. Make sure your Stripe account is fully verified."
+        }
+      },
+      "invoices": {
+        "title": "Invoices",
+        "description": "Invoice documents for offline and manual payments.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "note": { "text": "Card and Solana purchases are tracked under", "transactionsLink": "Transactions" },
+        "status": { "paid": "Paid", "pending": "Pending", "cancelled": "Cancelled" },
+        "table": {
+          "title": "Invoice registry",
+          "headers": { "invoiceNumber": "Invoice #", "item": "Item", "amount": "Amount", "status": "Status", "date": "Date", "actions": "Actions" },
+          "unknownProduct": "Unknown product",
+          "viewInvoice": "View invoice"
+        },
+        "empty": {
+          "title": "No invoices found",
+          "description": "Invoice documents are generated for offline (manual) payment requests. They will appear here once a payment request has an invoice number assigned."
+        }
+      },
       "breadcrumbs": {
         "admin": "Admin",
         "analytics": "Analytics",
@@ -3069,7 +3138,10 @@
     "plans": "Plans",
     "subscriptions": "Subscriptions",
     "paymentRequests": "Payment Requests",
+    "payouts": "Payouts",
+    "invoices": "Invoices",
     "myPayments": "My Payments",
+    "myBilling": "Billing & Receipts",
     "community": "Community"
   },
   "userNav": {
@@ -3680,6 +3752,13 @@
     "issuedBy": "Issued by LMS Platform"
   },
   "checkout": {
+    "success": {
+      "title": "You're all set!",
+      "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",
+      "goToCourses": "Go to my courses",
+      "browseCourses": "Browse courses",
+      "viewBilling": "View billing"
+    },
     "title": "Checkout",
     "description": "Choose your payment method to continue.",
     "item": "Item",

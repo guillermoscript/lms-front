@@ -132,7 +132,7 @@ export function CheckoutForm({
 
     const checkoutDone = () => {
         toast.success(t('toasts.paymentSuccess'));
-        router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
+        router.push(`/checkout/success?type=${planId ? 'plan' : 'product'}`);
     };
 
     // Poll /verify until the on-chain transfer/subscription is confirmed. The
@@ -276,7 +276,7 @@ export function CheckoutForm({
             if (isFree) {
                 await enrollFree(courseId);
                 toast.success(t('toasts.success'));
-                router.push('/dashboard/student');
+                router.push('/checkout/success?type=product');
                 return;
             }
 
@@ -289,7 +289,7 @@ export function CheckoutForm({
                 }
                 await enrollUser(courseId, planId, 'mock_test');
                 toast.success(t('toasts.paymentSuccess'));
-                router.push(planId ? '/dashboard/student/browse' : '/dashboard/student');
+                router.push(`/checkout/success?type=${planId ? 'plan' : 'product'}`);
             } else {
                 // Offline payment — works for both products and plans
                 if (productId) {
