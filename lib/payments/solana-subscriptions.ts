@@ -578,54 +578,18 @@ export async function buildSubscribeTxUnsignedBase64(p: {
   //   expected_subscription_authority_init_id == authority.init_id
   // (else SUBSCRIPTIONS_ERROR__STALE_SUBSCRIPTION_AUTHORITY = 136).
   //
-  // - If the authority already exists, read its stored init_id.
-  // - If we bundle init + subscribe in this same tx, the init instruction will
-  //   set init_id to the slot in which the tx executes, so the matching value
-  //   is the current slot. Query it from the RPC (constant within a slot).
-  let expectedInitId: bigint;
-
+  // init_id therefore equals the slot in which the init tx EXECUTES, which we
+  // cannot predict at build time. Bundling init + subscribe in one tx is thus
+  // impossible: the build-time slot we'd pass never matches the execution slot,
+  // so subscribe fails with 136. The authority MUST be created in its own,
+  // already-confirmed transaction (buildInitAuthorityTxUnsignedBase64) before
+  // this runs; we then read its stored init_id.
   if (!maybeAuthority.exists) {
-    let ataAddr: string;
-    if (p.userAta) {
-      ataAddr = p.userAta;
-    } else {
-      const spl = await import("@solana/spl-token").catch(() => null);
-      const web3 = await import("@solana/web3.js").catch(() => null);
-      if (spl && web3 && "getAssociatedTokenAddressSync" in spl) {
-        const { getAssociatedTokenAddressSync } =
-          spl as typeof import("@solana/spl-token");
-        const { PublicKey } = web3 as typeof import("@solana/web3.js");
-        ataAddr = getAssociatedTokenAddressSync(
-          new PublicKey(p.mint),
-          new PublicKey(p.subscriber)
-        ).toBase58();
-      } else {
-        throw new Error(
-          "buildSubscribeTxUnsignedBase64: userAta is required when @solana/spl-token v1 is unavailable"
-        );
-      }
-    }
-
-    const SPL_TOKEN_PROGRAM_ADDR =
-      "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-    const initIx = getInitSubscriptionAuthorityInstruction({
-      owner: subscriberSigner,
-      subscriptionAuthority: subAuthorityPda,
-      tokenMint: addr(p.mint) as Address,
-      userAta: addr(ataAddr) as Address,
-      tokenProgram: addr(
-        p.tokenProgram ?? SPL_TOKEN_PROGRAM_ADDR
-      ) as Address,
-    });
-    instructions.push(initIx);
-
-    // init_id will equal Clock::slot at execution → use the current slot.
-    const currentSlot = await rpc.getSlot().send();
-    expectedInitId = BigInt(currentSlot);
-  } else {
-    // Authority already exists — match its stored init_id exactly.
-    expectedInitId = maybeAuthority.data.initId;
+    throw new Error(
+      "buildSubscribeTxUnsignedBase64: SubscriptionAuthority does not exist for this subscriber+mint — initialize it first in a separate, confirmed transaction"
+    );
   }
+  const expectedInitId: bigint = maybeAuthority.data.initId;
 
   const subscribeData: SubscribeDataArgs = {
     planId: p.planId,
@@ -679,6 +643,81 @@ export async function buildSubscribeTxUnsignedBase64(p: {
 
   // Compile to Transaction (signatures map will have null entries — unsigned)
   // getBase64EncodedWireTransaction accepts Transaction (not just FullySignedTransaction)
+  const compiledTx = compileTransaction(msg);
+  return getBase64EncodedWireTransaction(compiledTx) as string;
+}
+
+/**
+ * Builds the unsigned, init-SubscriptionAuthority transaction for a subscriber.
+ *
+ * This MUST be a separate transaction from subscribe (see the 136 note in
+ * buildSubscribeTxUnsignedBase64): the authority's init_id is the execution
+ * slot, so subscribe can only pass a matching init_id once the authority is
+ * already on-chain. The wallet signs + submits this, waits for confirmation,
+ * then requests the subscribe tx.
+ *
+ * Returns `null` if the authority already exists (nothing to do).
+ */
+export async function buildInitAuthorityTxUnsignedBase64(p: {
+  rpcUrl: string;
+  /** Subscriber's base58 public key — NOT a secret key. */
+  subscriber: string;
+  mint: string;
+  tokenProgram?: string;
+  /** Optional: subscriber's ATA for the mint. */
+  userAta?: string;
+}): Promise<string | null> {
+  const rpc = makeRpc(p.rpcUrl);
+  const subscriberAddr = addr(p.subscriber) as Address;
+  const subscriberSigner = createNoopSigner(subscriberAddr);
+
+  const maybeAuthority = await fetchMaybeSubscriptionAuthorityFromSeeds(rpc, {
+    user: subscriberAddr,
+    tokenMint: addr(p.mint) as Address,
+  });
+  if (maybeAuthority.exists) return null; // already initialized — skip
+
+  const [subAuthorityPda] = await findSubscriptionAuthorityPda({
+    user: subscriberAddr,
+    tokenMint: addr(p.mint) as Address,
+  });
+
+  let ataAddr: string;
+  if (p.userAta) {
+    ataAddr = p.userAta;
+  } else {
+    const spl = await import("@solana/spl-token").catch(() => null);
+    const web3 = await import("@solana/web3.js").catch(() => null);
+    if (spl && web3 && "getAssociatedTokenAddressSync" in spl) {
+      const { getAssociatedTokenAddressSync } =
+        spl as typeof import("@solana/spl-token");
+      const { PublicKey } = web3 as typeof import("@solana/web3.js");
+      ataAddr = getAssociatedTokenAddressSync(
+        new PublicKey(p.mint),
+        new PublicKey(p.subscriber)
+      ).toBase58();
+    } else {
+      throw new Error(
+        "buildInitAuthorityTxUnsignedBase64: userAta is required when @solana/spl-token v1 is unavailable"
+      );
+    }
+  }
+
+  const SPL_TOKEN_PROGRAM_ADDR = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+  const initIx = getInitSubscriptionAuthorityInstruction({
+    owner: subscriberSigner,
+    subscriptionAuthority: subAuthorityPda,
+    tokenMint: addr(p.mint) as Address,
+    userAta: addr(ataAddr) as Address,
+    tokenProgram: addr(p.tokenProgram ?? SPL_TOKEN_PROGRAM_ADDR) as Address,
+  });
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let msg: any = createTransactionMessage({ version: 0 });
+  msg = setTransactionMessageFeePayer(subscriberAddr, msg);
+  msg = setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, msg);
+  msg = appendTransactionMessageInstruction(initIx as never, msg);
   const compiledTx = compileTransaction(msg);
   return getBase64EncodedWireTransaction(compiledTx) as string;
 }

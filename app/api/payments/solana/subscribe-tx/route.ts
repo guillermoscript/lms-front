@@ -29,6 +29,7 @@ import { getBase58Encoder } from '@solana/kit'
 import {
   ensurePlanOnChain,
   buildSubscribeTxUnsignedBase64,
+  buildInitAuthorityTxUnsignedBase64,
 } from '@/lib/payments/solana-subscriptions'
 
 export const runtime = 'nodejs'
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
     // Validate the subscriber pubkey.
     try {
-      // eslint-disable-next-line no-new
+       
       new PublicKey(account)
     } catch {
       return NextResponse.json({ error: 'Invalid account' }, { status: 400 })
@@ -149,7 +150,30 @@ export async function POST(req: NextRequest) {
       .eq('transaction_id', tx.transaction_id)
       .is('provider_metadata', null)
 
-    // 1. Ensure the on-chain plan exists (idempotent; puller = merchant/owner).
+    const appName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS'
+
+    // STEP 1 (first-time subscribers only): the SubscriptionAuthority must be
+    // created in its OWN confirmed transaction before subscribe — a bundled
+    // init+subscribe always fails with STALE_SUBSCRIPTION_AUTHORITY (136),
+    // because the authority's init_id is the execution slot and subscribe can't
+    // pass a matching value at build time. If the authority is missing, return
+    // the init tx; the wallet signs + confirms it, then calls again for subscribe.
+    const initTx = await buildInitAuthorityTxUnsignedBase64({
+      rpcUrl,
+      subscriber: account,
+      mint,
+    })
+    if (initTx) {
+      return NextResponse.json({
+        transaction: initTx,
+        step: 'init',
+        message: `${appName} — initialize subscription wallet`,
+      })
+    }
+
+    // STEP 2: authority exists. Ensure the on-chain plan exists (idempotent;
+    // puller = merchant/owner), then build the unsigned SUBSCRIBE tx carrying
+    // our reference pubkey so findReference can locate it.
     await ensurePlanOnChain({
       rpcUrl,
       pullerSecretKeyBase58: pullerSecret,
@@ -161,8 +185,6 @@ export async function POST(req: NextRequest) {
       pullers: [merchant],
     })
 
-    // 2. Build the unsigned SUBSCRIBE tx (init authority + subscribe), with our
-    //    reference pubkey attached so findReference can locate it.
     const transaction = await buildSubscribeTxUnsignedBase64({
       rpcUrl,
       subscriber: account,
@@ -172,9 +194,9 @@ export async function POST(req: NextRequest) {
       reference: referencePubkey,
     })
 
-    const appName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS'
     return NextResponse.json({
       transaction,
+      step: 'subscribe',
       message: `${appName} — subscribe ${tx.transaction_id}`,
     })
   } catch (error) {
