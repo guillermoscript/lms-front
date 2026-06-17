@@ -3,7 +3,7 @@
  * Defines interfaces for multiple payment providers (Stripe, PayPal, Binance, etc.)
  */
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual'
+export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual' | 'lemonsqueezy' | 'solana' | 'solana_subs'
 
 export type Currency = 'usd' | 'eur' | 'btc' | 'eth' | 'usdt'
 
@@ -100,6 +100,93 @@ export interface ProviderCapabilities {
   isMerchantOfRecord: boolean
   /** WE own the billing period (cash, bank transfer, basic crypto/Solana Pay). */
   selfManagedPeriod: boolean
+  /**
+   * Provider exposes an API to create products/prices in its OWN catalog, so we
+   * auto-generate provider_product_id / provider_price_id at create time
+   * (Stripe/PayPal). If false, there is no API catalog to create against:
+   *  - Merchant-of-Record (Lemon Squeezy) → catalog lives in their dashboard;
+   *    the admin pastes the variant id into provider_price_id.
+   *  - Catalog-less (Solana/manual/binance) → no provider ids at all.
+   * The create/update actions branch on THIS, never on provider identity.
+   */
+  createsCatalog: boolean
+}
+
+/**
+ * Static capability table, keyed by provider slug. Lets credential-free callers
+ * (e.g. the expiry cron) branch on ability WITHOUT instantiating a provider
+ * (which requires API keys). Must stay in sync with each provider class's
+ * `capabilities`. The unimplemented `binance` slug mirrors a self-managed
+ * default so a stray row is cron-expired rather than left active forever.
+ */
+export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities> = {
+  stripe: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: false,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+    createsCatalog: true,
+  },
+  paypal: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+    createsCatalog: true,
+  },
+  lemonsqueezy: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
+    isMerchantOfRecord: true,
+    selfManagedPeriod: false,
+    createsCatalog: false,
+  },
+  solana: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+    createsCatalog: false,
+  },
+  // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
+  // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
+  // scheduler), so it is NOT cron-EXPIRED — the crank renews it. Hence
+  // supportsNativeSubscriptions:true (auto-charge) with emitsRenewalWebhooks:false.
+  solana_subs: {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+    createsCatalog: false,
+  },
+  manual: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+    createsCatalog: false,
+  },
+  binance: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+    createsCatalog: false,
+  },
 }
 
 /** Params for starting a payment (the missing "start a payment" abstraction). */
@@ -176,6 +263,12 @@ export interface NormalizedBillingEvent {
   providerPaymentId?: string
   /** Our correlation id, recovered from provider metadata. */
   reference?: string
+  /**
+   * Provider checkout metadata echoed back on the webhook (e.g. our `userId` /
+   * `tenantId`). Used to bind a confirmation to the originating buyer/tenant so
+   * a signed event can't activate another user's transaction by its id alone.
+   */
+  metadata?: Record<string, string>
   /** New period end for renewal events (push-renewal providers). */
   periodEnd?: Date
   /** Original payload, preserved for the webhook_events audit row. */

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
+import { getPaymentProvider, PaymentProvider, PROVIDER_CAPABILITIES } from '@/lib/payments'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 
@@ -15,6 +15,8 @@ interface PlanFormData {
   features?: string
   courseIds: number[]
   paymentProvider?: PaymentProvider
+  /** Lemon Squeezy variant id, pasted by the admin (→ provider_price_id). LS only. */
+  providerPriceId?: string
 }
 
 interface Plan {
@@ -52,36 +54,70 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
       throw new Error('Duration must be 30 (monthly) or 365 (yearly)')
     }
 
-    // Get payment provider (defaults to Stripe)
-    const provider = getPaymentProvider(formData.paymentProvider || 'stripe')
+    // Resolve provider by capability from the static map. Do NOT instantiate the
+    // provider yet — provider constructors (e.g. Lemon Squeezy) throw on missing
+    // env, and only the createsCatalog branch actually needs a live client.
+    const providerType = formData.paymentProvider || 'stripe'
+    const caps = PROVIDER_CAPABILITIES[providerType]
+    const adminClient = createAdminClient()
 
-    // 1. Create product in payment provider
-    const paymentProduct = await provider.createProduct({
-      name: formData.plan_name.trim(),
-      description: formData.description?.trim() || '',
-      metadata: {
+    // Resolve provider catalog ids by CAPABILITY, never by provider name:
+    //  - createsCatalog (Stripe/PayPal) → auto-create product + recurring price.
+    //  - isMerchantOfRecord (Lemon Squeezy) → catalog lives in their dashboard;
+    //    the admin pastes the variant id; provider_product_id stays null.
+    //  - else (Solana/manual) → no catalog ids; Solana needs a configured wallet.
+    let providerProductId: string | null = null
+    let providerPriceId: string | null = null
+
+    if (caps.createsCatalog) {
+      // Only providers with their own catalog API need a live client.
+      const provider = getPaymentProvider(providerType)
+      const paymentProduct = await provider.createProduct({
+        name: formData.plan_name.trim(),
+        description: formData.description?.trim() || '',
+        metadata: {
+          type: 'subscription',
+          duration_days: formData.duration_in_days.toString(),
+          created_by: 'admin',
+          created_at: new Date().toISOString()
+        }
+      })
+
+      const interval = formData.duration_in_days === 30 ? 'month' : 'year'
+      const paymentPrice = await provider.createPrice({
+        productId: paymentProduct.id,
+        amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
+        currency: formData.currency,
         type: 'subscription',
-        duration_days: formData.duration_in_days.toString(),
-        created_by: 'admin',
-        created_at: new Date().toISOString()
-      }
-    })
+        interval,
+        metadata: {
+          plan_name: formData.plan_name
+        }
+      })
 
-    // 2. Create recurring price in payment provider
-    const interval = formData.duration_in_days === 30 ? 'month' : 'year'
-    const paymentPrice = await provider.createPrice({
-      productId: paymentProduct.id,
-      amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
-      currency: formData.currency,
-      type: 'subscription',
-      interval,
-      metadata: {
-        plan_name: formData.plan_name
+      providerProductId = paymentProduct.id
+      providerPriceId = paymentPrice.id
+    } else if (caps.isMerchantOfRecord) {
+      // Lemon Squeezy — admin must paste the variant id (checkout 400s without it).
+      const variantId = formData.providerPriceId?.trim()
+      if (!variantId) {
+        throw new Error('Lemon Squeezy requires a variant id. Copy it from your Lemon Squeezy dashboard.')
       }
-    })
+      providerPriceId = variantId
+    } else if (providerType === 'solana' || providerType === 'solana_subs') {
+      // No catalog — but the school must have a receiving wallet, else checkout 400s.
+      const { data: wallet } = await adminClient
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', providerType)
+        .maybeSingle()
+      if (!wallet?.wallet_address) {
+        throw new Error('Configure your Solana wallet in Settings → Payment before creating a Solana plan.')
+      }
+    }
 
     // 3. Insert plan into database
-    const adminClient = createAdminClient()
     const { data: plan, error: insertError } = await adminClient
       .from('plans')
       .insert({
@@ -91,9 +127,9 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
         duration_in_days: formData.duration_in_days,
         currency: formData.currency,
         features: formData.features || null,
-        payment_provider: provider.provider,
-        provider_product_id: paymentProduct.id,
-        provider_price_id: paymentPrice.id,
+        payment_provider: providerType,
+        provider_product_id: providerProductId,
+        provider_price_id: providerPriceId,
         tenant_id: tenantId
       })
       .select()
@@ -172,12 +208,17 @@ export async function updatePlan(
       throw new Error('Plan not found or access denied')
     }
 
-    // Get payment provider from the existing plan
+    // Get payment provider from the existing plan (provider is immutable post-create)
     const providerType = (existingPlan.payment_provider as PaymentProvider) || 'stripe'
-    const provider = getPaymentProvider(providerType)
+    const caps = PROVIDER_CAPABILITIES[providerType]
 
-    // Update product in payment provider
-    if (existingPlan.provider_product_id) {
+    // Catalog-syncing providers (Stripe/PayPal) only: update the provider product
+    // and recreate the recurring price on change. LS/Solana/manual skip this — they
+    // have no provider catalog to mutate; their price lives in the plan columns
+    // (and the LS variant id is edited via the form below). Instantiate the provider
+    // only here — its constructor (e.g. Lemon Squeezy) throws on missing env.
+    if (caps.createsCatalog && existingPlan.provider_product_id) {
+      const provider = getPaymentProvider(providerType)
       await provider.updateProduct(existingPlan.provider_product_id, {
         name: formData.plan_name.trim(),
         description: formData.description?.trim() || ''
@@ -248,15 +289,28 @@ export async function updatePlan(
       }
     }
 
-    // Update plan without price change
+    // Fallthrough update: Stripe/PayPal with no price change keep their
+    // provider-managed price columns untouched (only name/description/features).
+    // Non-catalog providers (LS/Solana/manual) own their price columns directly,
+    // so write price/currency/duration here; LS may also re-paste its variant id.
+    const fallthroughUpdate: Record<string, unknown> = {
+      plan_name: formData.plan_name.trim(),
+      description: formData.description?.trim() || null,
+      features: formData.features || null,
+      updated_at: new Date().toISOString()
+    }
+    if (!caps.createsCatalog) {
+      fallthroughUpdate.price = formData.price
+      fallthroughUpdate.duration_in_days = formData.duration_in_days
+      fallthroughUpdate.currency = formData.currency
+      if (caps.isMerchantOfRecord && formData.providerPriceId !== undefined) {
+        fallthroughUpdate.provider_price_id = formData.providerPriceId.trim() || null
+      }
+    }
+
     const { data: plan, error: updateError } = await adminClient
       .from('plans')
-      .update({
-        plan_name: formData.plan_name.trim(),
-        description: formData.description?.trim() || null,
-        features: formData.features || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(fallthroughUpdate)
       .eq('plan_id', planId)
       .eq('tenant_id', tenantId)
       .select()
@@ -325,9 +379,12 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
       throw new Error('Plan not found or access denied')
     }
 
-    // Archive in payment provider
-    if (plan.provider_price_id || plan.provider_product_id) {
-      const providerType = (plan.payment_provider as PaymentProvider) || 'stripe'
+    // Archive in payment provider — ONLY for providers that own their catalog
+    // (Stripe/PayPal). For Lemon Squeezy the stored id is a variant in THEIR
+    // dashboard (not ours to archive), and its provider constructor throws on
+    // missing env; Solana/manual have no catalog. So gate on the capability.
+    const providerType = (plan.payment_provider as PaymentProvider) || 'stripe'
+    if (PROVIDER_CAPABILITIES[providerType]?.createsCatalog && (plan.provider_price_id || plan.provider_product_id)) {
       const provider = getPaymentProvider(providerType)
 
       if (plan.provider_price_id) {

@@ -9,6 +9,7 @@ import {
   IconCreditCard,
   IconExternalLink,
   IconLogout,
+  IconReportMoney,
   IconSchool,
   IconSettings,
   IconUsers,
@@ -45,6 +46,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, ...props }: PlatformS
   const navItems = [
     { title: "Overview", href: "/platform", icon: IconChartBar },
     { title: "Tenants", href: "/platform/tenants", icon: IconSchool },
+    { title: "Revenue", href: "/platform/revenue", icon: IconReportMoney },
     { title: "Billing", href: "/platform/billing", icon: IconCreditCard, badge: pendingBillingCount },
     { title: "Plans", href: "/platform/plans", icon: IconBuildingStore },
     // Referrals hidden until the backing schema is built — see issue tracking it.

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { getSessionUser } from '@/lib/supabase/tenant'
+import { getSolanaSettlementOptions } from "@/app/actions/admin/settings";
 
 interface SearchParams {
     courseId?: string;
@@ -127,6 +128,18 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
         ? new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 2 }).format(price)
         : null;
 
+    // For one-time Solana, which settlement tokens this school offers (USDC is
+    // always available when configured; native SOL is opt-in per school).
+    const solanaOptions = paymentProvider === 'solana'
+        ? await getSolanaSettlementOptions()
+        : null;
+    const solanaCurrencies = solanaOptions
+        ? ([
+            ...(solanaOptions.usdc ? ['usdc'] : []),
+            ...(solanaOptions.sol ? ['sol'] : []),
+          ] as ('usdc' | 'sol')[])
+        : undefined;
+
     return (
         <div className="min-h-screen bg-background">
             <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
@@ -149,6 +162,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     userName={userName}
                     userEmail={userEmail}
                     paymentProvider={paymentProvider}
+                    solanaCurrencies={solanaCurrencies}
                 />
             </div>
         </div>
