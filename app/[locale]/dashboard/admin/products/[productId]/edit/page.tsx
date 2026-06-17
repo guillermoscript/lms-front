@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ProductForm } from '@/components/admin/product-form'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -59,6 +60,8 @@ export default async function EditProductPage({ params }: PageProps) {
     courses: raw == null ? [] : Array.isArray(raw) ? raw : [raw],
   }
 
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -92,7 +95,7 @@ export default async function EditProductPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProductForm mode="edit" initialData={productWithCourses} courses={courses || []} />
+            <ProductForm mode="edit" initialData={productWithCourses} courses={courses || []} enabledProviders={enabledProviders} />
           </CardContent>
         </Card>
       </main>

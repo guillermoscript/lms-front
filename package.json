@@ -55,7 +55,7 @@
     "@solana/kit-plugin-signer": "^0.10.0",
     "@solana/pay": "^0.2.6",
     "@solana/spl-token": "^0.4.14",
-    "@solana/subscriptions": "^0.3.0",
+    "@solana/subscriptions": "^0.4.0-rc.1",
     "@solana/web3.js": "^1.98.4",
     "@streamdown/cjk": "^1.0.2",
     "@streamdown/code": "^1.1.0",

@@ -100,6 +100,16 @@ export interface ProviderCapabilities {
   isMerchantOfRecord: boolean
   /** WE own the billing period (cash, bank transfer, basic crypto/Solana Pay). */
   selfManagedPeriod: boolean
+  /**
+   * Provider exposes an API to create products/prices in its OWN catalog, so we
+   * auto-generate provider_product_id / provider_price_id at create time
+   * (Stripe/PayPal). If false, there is no API catalog to create against:
+   *  - Merchant-of-Record (Lemon Squeezy) → catalog lives in their dashboard;
+   *    the admin pastes the variant id into provider_price_id.
+   *  - Catalog-less (Solana/manual/binance) → no provider ids at all.
+   * The create/update actions branch on THIS, never on provider identity.
+   */
+  createsCatalog: boolean
 }
 
 /**
@@ -117,6 +127,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: true,
   },
   paypal: {
     supportsNativeSubscriptions: true,
@@ -125,6 +136,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: true,
   },
   lemonsqueezy: {
     supportsNativeSubscriptions: true,
@@ -133,6 +145,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: true,
     isMerchantOfRecord: true,
     selfManagedPeriod: false,
+    createsCatalog: false,
   },
   solana: {
     supportsNativeSubscriptions: false,
@@ -141,6 +154,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
+    createsCatalog: false,
   },
   // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
   // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
@@ -153,6 +167,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: false,
   },
   manual: {
     supportsNativeSubscriptions: false,
@@ -161,6 +176,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
+    createsCatalog: false,
   },
   binance: {
     supportsNativeSubscriptions: false,
@@ -169,6 +185,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
+    createsCatalog: false,
   },
 }
 

@@ -51,6 +51,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: false,
   }
 
   /**

@@ -2150,6 +2150,10 @@
           "branding": {
             "title": "Branding Settings",
             "description": "Customize your platform's visual identity — logo, colors, and favicon"
+          },
+          "solanaWallet": {
+            "title": "Solana Wallet",
+            "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
           }
         },
         "form": {
@@ -2199,6 +2203,10 @@
             "stripeHint": "Enable Stripe payment processing",
             "paypal": "PayPal",
             "paypalHint": "Enable PayPal payment processing",
+            "lemonsqueezy": "Lemon Squeezy",
+            "lemonsqueezyHint": "Accept payments via Lemon Squeezy (merchant of record). Paste a variant ID on each plan or product.",
+            "solana": "Solana (crypto)",
+            "solanaHint": "Accept Solana crypto payments. Set your receiving wallet below. Covers one-time and subscription.",
             "currency": "Default Currency",
             "currencyPlaceholder": "Select currency",
             "currencyHint": "Default currency for all transactions",
@@ -2237,6 +2245,15 @@
             "expirationHint": "Number of days until enrollment expires (0 = never expires)",
             "capacity": "Enable Course Capacity",
             "capacityHint": "Allow setting maximum student limits for courses"
+          },
+          "solanaWallet": {
+            "label": "Receiving wallet address",
+            "placeholder": "Your Solana wallet (base58)",
+            "hint": "Funds from Solana payments are sent here. This one address backs both one-time and subscription crypto payments.",
+            "save": "Save Wallet",
+            "saving": "Saving...",
+            "success": "Solana wallet saved",
+            "error": "Failed to save Solana wallet"
           }
         }
       },
@@ -2547,6 +2564,21 @@
           "toasts": {
             "createSuccess": "Plan created successfully",
             "updateSuccess": "Plan updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "methodHint": {
+            "manual": "Billing is managed in-app; students arrange recurring payment with you offline. No payment processor credentials required.",
+            "stripe": "Stripe manages the recurring subscription and billing automatically.",
+            "paypal": "PayPal manages the recurring subscription automatically.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first.",
+            "solana_subs": "On-chain recurring subscription auto-charged from the student wallet. Set your Solana wallet in Settings → Payment first."
           }
         }
       },
@@ -2624,6 +2656,20 @@
           "toasts": {
             "createSuccess": "Product created successfully",
             "updateSuccess": "Product updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "methodHint": {
+            "manual": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
+            "stripe": "Students can pay online instantly",
+            "paypal": "Students can pay online with PayPal.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first."
           }
         },
         "actions": {

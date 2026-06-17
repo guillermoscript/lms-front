@@ -49,6 +49,8 @@ import {
   type TransferDataArgs,
 } from "@solana/subscriptions";
 
+import { getTransferSolInstruction } from "@solana-program/system";
+
 // ─── Re-export program address as string ────────────────────────────────────
 
 export const SUBS_PROGRAM_ADDRESS: string = SUBSCRIPTIONS_PROGRAM_ADDRESS;
@@ -395,7 +397,42 @@ export async function pullOnce(p: {
     transferData,
   });
 
-  return buildAndSignTx(p.rpcUrl, pullerSigner, [ix]);
+  const signedBase64 = await buildAndSignTx(p.rpcUrl, pullerSigner, [ix]);
+
+  // Submit AND confirm. (The previous version returned the signed base64 without
+  // ever sending it, so pulls never moved tokens — the subscription looked
+  // active but no funds were collected.) Send, then poll the signature status so
+  // a failed pull surfaces as an error instead of a silent no-op.
+  const rpcWithSend = createSolanaRpc(p.rpcUrl);
+  const signature = await rpcWithSend
+    .sendTransaction(
+      signedBase64 as Parameters<typeof rpcWithSend.sendTransaction>[0],
+      { encoding: "base64" }
+    )
+    .send();
+
+  for (let i = 0; i < 20; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const { value } = await rpcWithSend
+      .getSignatureStatuses([signature])
+      .send();
+    const status = value?.[0];
+    if (
+      status &&
+      (status.confirmationStatus === "confirmed" ||
+        status.confirmationStatus === "finalized")
+    ) {
+      if (status.err) {
+        throw new Error(
+          `pullOnce: transfer ${signature} failed on-chain: ${JSON.stringify(status.err)}`
+        );
+      }
+      return signature as string;
+    }
+  }
+  throw new Error(
+    `pullOnce: transfer ${signature} was submitted but not confirmed within the timeout`
+  );
 }
 
 /**
@@ -600,8 +637,7 @@ export async function buildSubscribeTxUnsignedBase64(p: {
     expectedSubscriptionAuthorityInitId: expectedInitId,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let subscribeIx: any = getSubscribeInstruction({
+  const subscribeIx = getSubscribeInstruction({
     subscriber: subscriberSigner,
     merchant: addr(p.merchant) as Address,
     planPda: planPdaAddr,
@@ -609,20 +645,28 @@ export async function buildSubscribeTxUnsignedBase64(p: {
     subscriptionAuthorityPda: subAuthorityPda,
     subscribeData,
   });
-
-  // Attach optional reference as READONLY non-signer account
-  if (p.reference) {
-    const refAccount = {
-      address: addr(p.reference) as Address,
-      role: AccountRole.READONLY,
-    };
-    subscribeIx = {
-      ...subscribeIx,
-      accounts: [...(subscribeIx.accounts ?? []), refAccount],
-    };
-  }
-
   instructions.push(subscribeIx);
+
+  // Carry the Solana Pay reference on a SEPARATE 0-lamport self-transfer — NOT
+  // appended to the subscribe ix. The on-chain Subscriptions program rejects a
+  // trailing extra account on `subscribe` (it breaks the program's event-CPI
+  // account positioning → custom error 0x64 NOT_SIGNER). `findReference` scans
+  // every instruction's account keys, so a harmless self-transfer that lists the
+  // reference is enough for /verify to locate the SUBSCRIBE tx on-chain.
+  if (p.reference) {
+    const refCarrier = getTransferSolInstruction({
+      source: subscriberSigner,
+      destination: subscriberAddr,
+      amount: 0,
+    });
+    instructions.push({
+      ...refCarrier,
+      accounts: [
+        ...refCarrier.accounts,
+        { address: addr(p.reference) as Address, role: AccountRole.READONLY },
+      ],
+    });
+  }
 
   // Build message
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -719,5 +763,22 @@ export async function ensurePlanOnChain(p: {
     })
     .send();
 
-  return { created: true, planPda, merchant };
+  // The createPlan tx is now in flight. Callers (e.g. the subscribe-tx route)
+  // immediately fetchPlanFromSeeds, which throws "Account not found" if we
+  // return before the Plan PDA is readable on-chain. Poll until it exists so a
+  // freshly-created plan does not fail the very first subscribe. (~16s max;
+  // devnet usually confirms in 1–2s. Only runs on first creation — idempotent.)
+  for (let i = 0; i < 20; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const confirmed = await fetchMaybePlanFromSeeds(rpc, {
+      owner: merchantSigner.address,
+      planId: p.planId,
+    });
+    if (confirmed.exists) {
+      return { created: true, planPda, merchant };
+    }
+  }
+  throw new Error(
+    `ensurePlanOnChain: createPlan for plan ${planPda} was submitted but not confirmed on-chain within the timeout`
+  );
 }

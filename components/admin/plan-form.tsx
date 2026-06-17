@@ -30,6 +30,7 @@ interface Plan {
   currency: string
   features: string | null
   payment_provider?: string
+  provider_price_id?: string | null
   courses?: { course_id: number }[]
 }
 
@@ -37,10 +38,24 @@ interface PlanFormProps {
   mode: 'create' | 'edit'
   initialData?: Plan
   courses: CourseOption[]
+  /** Providers the admin enabled in Settings → Payment. `manual` is always available. */
+  enabledProviders?: string[]
 }
 
-export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
+export function PlanForm({ mode, initialData, courses, enabledProviders = [] }: PlanFormProps) {
   const t = useTranslations('dashboard.admin.plans.form')
+
+  // Which providers to show: the enabled ones + manual (always) + the plan's
+  // current provider in edit mode (so an existing pick never disappears even if
+  // its toggle was later turned off).
+  const visibleProviders = new Set<string>([
+    'manual',
+    ...enabledProviders,
+    ...(initialData?.payment_provider ? [initialData.payment_provider] : []),
+  ])
+  const defaultProvider = (initialData?.payment_provider
+    || (enabledProviders.includes('stripe') ? 'stripe' : 'manual')) as PaymentProvider
+
   const [formData, setFormData] = useState({
     plan_name: initialData?.plan_name || '',
     description: initialData?.description || '',
@@ -48,7 +63,8 @@ export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
     duration_in_days: initialData?.duration_in_days || 30,
     currency: (initialData?.currency || 'usd') as 'usd' | 'eur',
     features: initialData?.features || '',
-    paymentProvider: (initialData?.payment_provider || 'stripe') as PaymentProvider,
+    paymentProvider: defaultProvider,
+    providerPriceId: initialData?.provider_price_id || '',
     courseIds: initialData?.courses?.map(c => c.course_id) || []
   })
 
@@ -135,16 +151,42 @@ export function PlanForm({ mode, initialData, courses }: PlanFormProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="manual">{t('methodManual')}</SelectItem>
-            <SelectItem value="stripe">{t('methodStripe')}</SelectItem>
-            <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>
+            {visibleProviders.has('stripe') && <SelectItem value="stripe">{t('methodStripe')}</SelectItem>}
+            {visibleProviders.has('paypal') && <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>}
+            {visibleProviders.has('lemonsqueezy') && <SelectItem value="lemonsqueezy">{t('methodLemonsqueezy')}</SelectItem>}
+            {visibleProviders.has('solana') && <SelectItem value="solana">{t('methodSolana')}</SelectItem>}
+            {visibleProviders.has('solana_subs') && <SelectItem value="solana_subs">{t('methodSolanaSubs')}</SelectItem>}
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
-          {formData.paymentProvider === 'manual'
-            ? t('methodManualHint')
-            : t('methodStripeHint')}
+          {t(`methodHint.${formData.paymentProvider}`)}
         </p>
       </div>
+
+      {/* Lemon Squeezy variant id (→ provider_price_id). Required for LS checkout. */}
+      {formData.paymentProvider === 'lemonsqueezy' && (
+        <div className="space-y-2">
+          <Label htmlFor="providerPriceId">
+            {t('variantIdLabel')} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="providerPriceId"
+            value={formData.providerPriceId}
+            onChange={(e) => setFormData({ ...formData, providerPriceId: e.target.value })}
+            placeholder={t('variantIdPlaceholder')}
+            disabled={loading}
+          />
+          <p className="text-sm text-muted-foreground">{t('variantIdHint')}</p>
+        </div>
+      )}
+
+      {/* Solana providers need a wallet configured in Settings → Payment. */}
+      {(formData.paymentProvider === 'solana' || formData.paymentProvider === 'solana_subs') && (
+        <Alert>
+          <IconAlertCircle className="h-4 w-4" />
+          <AlertDescription>{t('solanaWalletHint')}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Price, Currency, and Duration */}
       <div className="grid gap-4 sm:grid-cols-3">

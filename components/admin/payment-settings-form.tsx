@@ -28,6 +28,8 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
   // Extract current values
   const stripeEnabled = settings.stripe_enabled?.value?.enabled ?? true
   const paypalEnabled = settings.paypal_enabled?.value?.enabled ?? false
+  const lemonsqueezyEnabled = settings.lemonsqueezy_enabled?.value?.enabled ?? false
+  const solanaEnabled = settings.solana_enabled?.value?.enabled ?? false
   const currency = settings.currency?.value?.value || 'USD'
   const taxRate = settings.tax_rate?.value?.value || 0
   const invoicePrefix = settings.invoice_prefix?.value?.value || 'INV'
@@ -40,6 +42,8 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
       const updatedSettings = {
         stripe_enabled: { enabled: formData.get('stripe_enabled') === 'on' },
         paypal_enabled: { enabled: formData.get('paypal_enabled') === 'on' },
+        lemonsqueezy_enabled: { enabled: formData.get('lemonsqueezy_enabled') === 'on' },
+        solana_enabled: { enabled: formData.get('solana_enabled') === 'on' },
         currency: { value: formData.get('currency') as string },
         tax_rate: { value: parseFloat(formData.get('tax_rate') as string) },
         invoice_prefix: { value: formData.get('invoice_prefix') as string },
@@ -93,6 +97,36 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             id="paypal_enabled"
             name="paypal_enabled"
             defaultChecked={paypalEnabled}
+          />
+        </div>
+
+        {/* Lemon Squeezy */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="lemonsqueezy_enabled">{t('payment.lemonsqueezy')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.lemonsqueezyHint')}
+            </p>
+          </div>
+          <Switch
+            id="lemonsqueezy_enabled"
+            name="lemonsqueezy_enabled"
+            defaultChecked={lemonsqueezyEnabled}
+          />
+        </div>
+
+        {/* Solana (one address backs both one-time and subscription crypto) */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="solana_enabled">{t('payment.solana')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.solanaHint')}
+            </p>
+          </div>
+          <Switch
+            id="solana_enabled"
+            name="solana_enabled"
+            defaultChecked={solanaEnabled}
           />
         </div>
       </div>

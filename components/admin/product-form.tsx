@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent, useEffect } from 'react'
+import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,8 @@ interface Product {
   price: number
   currency: string
   image: string | null
+  payment_provider?: string
+  provider_price_id?: string | null
   courses?: { course_id: number }[]
 }
 
@@ -35,10 +37,21 @@ interface ProductFormProps {
   mode: 'create' | 'edit'
   initialData?: Product
   courses: CourseOption[]
+  /** Providers the admin enabled in Settings → Payment. `manual` is always available. */
+  enabledProviders?: string[]
 }
 
-export function ProductForm({ mode, initialData, courses }: ProductFormProps) {
+export function ProductForm({ mode, initialData, courses, enabledProviders = [] }: ProductFormProps) {
   const t = useTranslations('dashboard.admin.products.form')
+
+  // Show enabled providers + manual (always) + the product's current provider in
+  // edit mode (so an existing pick never disappears if its toggle was turned off).
+  const visibleProviders = new Set<string>([
+    'manual',
+    ...enabledProviders,
+    ...(initialData?.payment_provider ? [initialData.payment_provider] : []),
+  ])
+
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -46,7 +59,8 @@ export function ProductForm({ mode, initialData, courses }: ProductFormProps) {
     currency: (initialData?.currency || 'usd') as 'usd' | 'eur',
     image: initialData?.image || '',
     courseIds: initialData?.courses?.map(c => c.course_id) || [],
-    paymentProvider: 'manual' as PaymentProvider
+    paymentProvider: (initialData?.payment_provider || 'manual') as PaymentProvider,
+    providerPriceId: initialData?.provider_price_id || ''
   })
 
   const [loading, setLoading] = useState(false)
@@ -131,23 +145,48 @@ export function ProductForm({ mode, initialData, courses }: ProductFormProps) {
         <Select
           value={formData.paymentProvider}
           onValueChange={(value) => setFormData({ ...formData, paymentProvider: value as PaymentProvider })}
-          disabled={loading}
+          disabled={loading || mode === 'edit'}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="manual">{t('methodManual')}</SelectItem>
-            <SelectItem value="stripe">{t('methodStripe')}</SelectItem>
-            <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>
+            {visibleProviders.has('stripe') && <SelectItem value="stripe">{t('methodStripe')}</SelectItem>}
+            {visibleProviders.has('paypal') && <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>}
+            {visibleProviders.has('lemonsqueezy') && <SelectItem value="lemonsqueezy">{t('methodLemonsqueezy')}</SelectItem>}
+            {visibleProviders.has('solana') && <SelectItem value="solana">{t('methodSolana')}</SelectItem>}
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
-          {formData.paymentProvider === 'manual'
-            ? t('methodManualHint')
-            : t('methodStripeHint')}
+          {t(`methodHint.${formData.paymentProvider}`)}
         </p>
       </div>
+
+      {/* Lemon Squeezy variant id (→ provider_price_id). Required for LS checkout. */}
+      {formData.paymentProvider === 'lemonsqueezy' && (
+        <div className="space-y-2">
+          <Label htmlFor="providerPriceId">
+            {t('variantIdLabel')} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="providerPriceId"
+            value={formData.providerPriceId}
+            onChange={(e) => setFormData({ ...formData, providerPriceId: e.target.value })}
+            placeholder={t('variantIdPlaceholder')}
+            disabled={loading}
+          />
+          <p className="text-sm text-muted-foreground">{t('variantIdHint')}</p>
+        </div>
+      )}
+
+      {/* Solana needs a wallet configured in Settings → Payment. */}
+      {formData.paymentProvider === 'solana' && (
+        <Alert>
+          <IconAlertCircle className="h-4 w-4" />
+          <AlertDescription>{t('solanaWalletHint')}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Price and Currency */}
       <div className="grid gap-4 sm:grid-cols-2">

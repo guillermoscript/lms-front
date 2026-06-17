@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { ProductForm } from '@/components/admin/product-form'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewProductPage() {
@@ -28,6 +29,8 @@ export default async function NewProductPage() {
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('title')
+
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,7 +65,7 @@ export default async function NewProductPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProductForm mode="create" courses={courses || []} />
+            <ProductForm mode="create" courses={courses || []} enabledProviders={enabledProviders} />
           </CardContent>
         </Card>
       </main>
