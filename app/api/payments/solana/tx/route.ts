@@ -53,10 +53,11 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdmin()
 
-    // Load the pending transaction: amount, tenant, on-chain reference pubkey.
+    // Load the pending transaction: amount, tenant, on-chain reference pubkey,
+    // and the settlement LOCKED at checkout (currency/base/mint).
     const { data: tx } = await admin
       .from('transactions')
-      .select('transaction_id, status, amount, tenant_id, payment_provider, provider_subscription_id')
+      .select('transaction_id, status, amount, tenant_id, payment_provider, provider_subscription_id, settlement_currency, settlement_base, settlement_mint')
       .eq('transaction_id', reference)
       .maybeSingle()
 
@@ -97,18 +98,33 @@ export async function POST(req: NextRequest) {
     if (!rpcUrl) {
       return NextResponse.json({ error: 'Solana RPC not configured' }, { status: 503 })
     }
-    const usdcMint = process.env.SOLANA_USDC_MINT
-    const decimals = usdcMint ? 6 : 9
+
+    // Use the settlement LOCKED at checkout (amount + token). Never re-quote: a
+    // native-SOL amount was converted from the USD price at checkout-time rate,
+    // which has since moved. Legacy rows without a lock fall back to env+price.
+    let totalBase: number | undefined
+    let splTokenStr: string | null
+    let decimals: number
+    if (tx.settlement_base != null && tx.settlement_currency) {
+      totalBase = Number(tx.settlement_base)
+      splTokenStr = tx.settlement_mint
+      decimals = tx.settlement_currency === 'usdc' ? 6 : 9
+    } else {
+      const usdcMint = process.env.SOLANA_USDC_MINT
+      splTokenStr = usdcMint || null
+      decimals = usdcMint ? 6 : 9
+    }
 
     const base64 = await buildSplitTransaction({
       connection: new Connection(rpcUrl, 'confirmed'),
       payer,
       schoolWallet: new PublicKey(wallet.wallet_address),
       platformWallet: new PublicKey(platformWalletStr),
-      amountMajor: Number(tx.amount),
+      amountMajor: totalBase == null ? Number(tx.amount) : undefined,
+      totalBase,
       platformPercent,
       reference: new PublicKey(referencePubkey),
-      splToken: usdcMint ? new PublicKey(usdcMint) : undefined,
+      splToken: splTokenStr ? new PublicKey(splTokenStr) : undefined,
       decimals,
     })
 

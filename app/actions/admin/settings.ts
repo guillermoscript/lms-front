@@ -195,6 +195,7 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       paypal_enabled: { enabled: false },
       lemonsqueezy_enabled: { enabled: false },
       solana_enabled: { enabled: false },
+      solana_accept_sol: { enabled: false },
       currency: { value: 'USD' },
       tax_rate: { value: 0 },
       invoice_prefix: { value: 'INV' },
@@ -357,6 +358,35 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
 }
 
 /**
+ * Which Solana settlement tokens the current tenant offers at checkout.
+ *
+ * USDC is available whenever the platform has a USDC mint configured
+ * (SOLANA_USDC_MINT) — it is a 1:1 USD stablecoin, so it always reflects the
+ * USD price. Native SOL is OPT-IN per school via the `solana_accept_sol`
+ * toggle (default off), because SOL is volatile: it is converted from the USD
+ * price at the live rate at checkout. No role gate — students call this at
+ * checkout. Returns only booleans.
+ */
+export async function getSolanaSettlementOptions(): Promise<{ usdc: boolean; sol: boolean }> {
+  try {
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'solana_accept_sol')
+      .maybeSingle()
+    const sol = (data?.setting_value as { enabled?: boolean } | null)?.enabled === true
+    const usdc = !!process.env.SOLANA_USDC_MINT
+    return { usdc, sol }
+  } catch (error) {
+    console.error('Error resolving Solana settlement options:', error)
+    return { usdc: !!process.env.SOLANA_USDC_MINT, sol: false }
+  }
+}
+
+/**
  * Get all settings grouped by category (for the settings page)
  */
 export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
@@ -385,7 +415,7 @@ export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
       smtp_host: 'email', smtp_port: 'email', smtp_username: 'email', smtp_password: 'email',
       smtp_from_email: 'email', smtp_from_name: 'email', email_notifications: 'email',
       stripe_enabled: 'payment', paypal_enabled: 'payment',
-      lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', currency: 'payment',
+      lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', currency: 'payment',
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',

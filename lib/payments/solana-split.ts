@@ -51,7 +51,19 @@ export function computeSplit(
   decimals: number,
 ): SplitAmounts {
   const factor = Math.pow(10, decimals)
-  const totalBase = Math.round(amountMajor * factor)
+  return computeSplitFromBase(Math.round(amountMajor * factor), platformPercent)
+}
+
+/**
+ * Split an already-computed integer base total (lamports or token base units).
+ * Used when the amount was LOCKED at checkout (e.g. native SOL converted from a
+ * USD price at the live rate) and must NOT be recomputed — the rate has since
+ * moved, so re-deriving from the major amount would mismatch what was paid.
+ */
+export function computeSplitFromBase(
+  totalBase: number,
+  platformPercent: number,
+): SplitAmounts {
   const platformBase = Math.floor((totalBase * platformPercent) / 100)
   const schoolBase = totalBase - platformBase
   return { totalBase, platformBase, schoolBase }
@@ -67,7 +79,10 @@ export interface BuildSplitParams {
   payer: PublicKey
   schoolWallet: PublicKey
   platformWallet: PublicKey
-  amountMajor: number
+  /** USD major amount (legacy path; converted via `decimals`). Ignored if `totalBase` set. */
+  amountMajor?: number
+  /** Pre-locked integer base total (lamports / token base units). Takes precedence. */
+  totalBase?: number
   platformPercent: number
   reference: PublicKey
   /** SPL mint; omit for native SOL. */
@@ -82,8 +97,10 @@ export interface BuildSplitParams {
  * The wallet overrides feePayer + blockhash, so the payer covers the network fee.
  */
 export async function buildSplitTransaction(params: BuildSplitParams): Promise<string> {
-  const { connection, payer, schoolWallet, platformWallet, amountMajor, platformPercent, reference, splToken, decimals } = params
-  const { platformBase, schoolBase } = computeSplit(amountMajor, platformPercent, decimals)
+  const { connection, payer, schoolWallet, platformWallet, amountMajor, totalBase, platformPercent, reference, splToken, decimals } = params
+  const { platformBase, schoolBase } = totalBase != null
+    ? computeSplitFromBase(totalBase, platformPercent)
+    : computeSplit(amountMajor!, platformPercent, decimals)
 
   const tx = new Transaction()
 
@@ -126,7 +143,10 @@ export interface VerifySplitParams {
   payer?: PublicKey
   schoolWallet: PublicKey
   platformWallet: PublicKey
-  amountMajor: number
+  /** USD major amount (legacy path). Ignored if `totalBase` set. */
+  amountMajor?: number
+  /** Pre-locked integer base total (lamports / token base units). Takes precedence. */
+  totalBase?: number
   platformPercent: number
   splToken?: PublicKey
   decimals: number
@@ -142,8 +162,10 @@ export interface VerifySplitParams {
 export async function verifySplitTransfer(
   params: VerifySplitParams,
 ): Promise<{ confirmed: boolean; signature?: string }> {
-  const { connection, reference, schoolWallet, platformWallet, amountMajor, platformPercent, splToken, decimals } = params
-  const { platformBase, schoolBase } = computeSplit(amountMajor, platformPercent, decimals)
+  const { connection, reference, schoolWallet, platformWallet, amountMajor, totalBase, platformPercent, splToken, decimals } = params
+  const { platformBase, schoolBase } = totalBase != null
+    ? computeSplitFromBase(totalBase, platformPercent)
+    : computeSplit(amountMajor!, platformPercent, decimals)
 
   let signature: string
   try {

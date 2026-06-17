@@ -23,6 +23,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getPaymentProvider } from '@/lib/payments'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
+import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
+import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
 const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs']
@@ -31,7 +33,7 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    const { planId, productId } = await req.json()
+    const { planId, productId, solanaCurrency } = await req.json()
     if (!planId && !productId) {
       return NextResponse.json({ error: 'Missing plan or product ID' }, { status: 400 })
     }
@@ -99,6 +101,46 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // One-time Solana: the student chooses the settlement token (SOL or USDC),
+    // both honoring the USD price. USDC is a 1:1 USD stablecoin; native SOL is
+    // converted from the USD price at the LIVE rate NOW and LOCKED — the rate
+    // moves before on-chain confirmation, so /tx and /verify must use this
+    // stored amount, never re-quote. (solana_subs is USDC-only, unchanged.)
+    let settlement:
+      | { currency: 'sol' | 'usdc'; base: number; mint: string | null; solUsd: number | null }
+      | null = null
+    if (providerSlug === 'solana') {
+      // USDC is always offered when a mint is configured (USD-stable); native
+      // SOL only when the school opted in (volatile, converted at live rate).
+      const opts = await getSolanaSettlementOptions()
+      const choice = (solanaCurrency as string) || (opts.usdc ? 'usdc' : 'sol')
+      if (choice === 'usdc') {
+        if (!opts.usdc) {
+          return NextResponse.json({ error: 'USDC payments are not available' }, { status: 400 })
+        }
+        settlement = {
+          currency: 'usdc',
+          base: Math.round(amountMajor * 1e6),
+          mint: process.env.SOLANA_USDC_MINT as string,
+          solUsd: null,
+        }
+      } else if (choice === 'sol') {
+        if (!opts.sol) {
+          return NextResponse.json({ error: 'This school does not accept native SOL' }, { status: 400 })
+        }
+        let rate: number
+        try {
+          rate = await getSolUsdPrice()
+        } catch (err) {
+          console.error('[payments/checkout] SOL/USD price unavailable:', err)
+          return NextResponse.json({ error: 'Could not price SOL right now — try again' }, { status: 503 })
+        }
+        settlement = { currency: 'sol', base: usdToLamports(amountMajor, rate), mint: null, solUsd: rate }
+      } else {
+        return NextResponse.json({ error: 'Invalid Solana currency' }, { status: 400 })
+      }
+    }
+
     // 1. Pending transaction — our correlation id (transaction_id) round-trips
     //    back on the webhook (LS) or the verify endpoint (Solana).
     const { data: transaction, error: txError } = await supabase
@@ -112,6 +154,14 @@ export async function POST(req: NextRequest) {
         currency,
         status: 'pending',
         payment_provider: providerSlug,
+        ...(settlement
+          ? {
+              settlement_currency: settlement.currency,
+              settlement_base: settlement.base,
+              settlement_mint: settlement.mint,
+              settlement_sol_usd: settlement.solUsd,
+            }
+          : {}),
       })
       .select('transaction_id')
       .single()

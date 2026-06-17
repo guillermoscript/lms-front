@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     // Load the transaction, scoped to the caller + tenant.
     const { data: tx, error: txError } = await supabase
       .from('transactions')
-      .select('transaction_id, status, amount, payment_provider, provider_subscription_id, user_id, tenant_id, plan_id, provider_metadata')
+      .select('transaction_id, status, amount, payment_provider, provider_subscription_id, user_id, tenant_id, plan_id, provider_metadata, settlement_currency, settlement_base, settlement_mint')
       .eq('transaction_id', transactionId)
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
@@ -130,7 +130,22 @@ export async function POST(req: NextRequest) {
       .eq('tenant_id', tx.tenant_id)
       .maybeSingle()
     const platformPercent = Number(split?.platform_percentage ?? 20)
-    const usdcMint = process.env.SOLANA_USDC_MINT
+
+    // Verify against the settlement LOCKED at checkout (amount + token), so a
+    // native-SOL payment is checked against the exact lamports quoted then — the
+    // SOL/USD rate has moved since. Legacy rows fall back to env + USD amount.
+    let vTotalBase: number | undefined
+    let vSplTokenStr: string | null
+    let vDecimals: number
+    if (tx.settlement_base != null && tx.settlement_currency) {
+      vTotalBase = Number(tx.settlement_base)
+      vSplTokenStr = tx.settlement_mint
+      vDecimals = tx.settlement_currency === 'usdc' ? 6 : 9
+    } else {
+      const usdcMint = process.env.SOLANA_USDC_MINT
+      vSplTokenStr = usdcMint || null
+      vDecimals = usdcMint ? 6 : 9
+    }
 
     // Confirm BOTH split legs on-chain (custom verification — validateTransfer
     // only handles a single recipient).
@@ -141,10 +156,11 @@ export async function POST(req: NextRequest) {
         reference: new PublicKey(referencePubkey),
         schoolWallet: new PublicKey(wallet.wallet_address),
         platformWallet: new PublicKey(platformWallet),
-        amountMajor: Number(tx.amount),
+        amountMajor: vTotalBase == null ? Number(tx.amount) : undefined,
+        totalBase: vTotalBase,
         platformPercent,
-        splToken: usdcMint ? new PublicKey(usdcMint) : undefined,
-        decimals: usdcMint ? 6 : 9,
+        splToken: vSplTokenStr ? new PublicKey(vSplTokenStr) : undefined,
+        decimals: vDecimals,
       })
     } catch (err) {
       // Found on-chain but legs don't match (wrong amount/recipient) or RPC error.

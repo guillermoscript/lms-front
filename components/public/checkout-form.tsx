@@ -48,6 +48,8 @@ interface CheckoutFormProps {
     userName?: string;
     userEmail?: string;
     paymentProvider?: string | null;
+    /** One-time Solana settlement tokens this school offers (USDC and/or SOL). */
+    solanaCurrencies?: ('usdc' | 'sol')[];
 }
 
 export function CheckoutForm({
@@ -63,6 +65,7 @@ export function CheckoutForm({
     userName,
     userEmail,
     paymentProvider,
+    solanaCurrencies,
 }: CheckoutFormProps) {
     const [loading, setLoading] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
@@ -83,6 +86,13 @@ export function CheckoutForm({
     // server-side (subscribe-tx), so the poll body stays { transactionId }.
     const isQrProvider = paymentProvider === 'solana' || paymentProvider === 'solana_subs';
     const isSolanaSubs = paymentProvider === 'solana_subs';
+    // One-time Solana settlement token choice (USDC default; SOL if the school
+    // opted in). Both honor the USD price — USDC 1:1, SOL converted at the live
+    // rate at checkout. solana_subs is always USDC, so no choice there.
+    const solCurrencyOpts = paymentProvider === 'solana' ? (solanaCurrencies ?? ['usdc']) : [];
+    const [solanaCurrency, setSolanaCurrency] = useState<'usdc' | 'sol'>(
+        solCurrencyOpts[0] ?? 'usdc',
+    );
     const [solanaQr, setSolanaQr] = useState<string | null>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -164,7 +174,11 @@ export function CheckoutForm({
         const res = await fetch('/api/payments/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planId: planId ? parseInt(planId) : undefined, productId }),
+            body: JSON.stringify({
+                planId: planId ? parseInt(planId) : undefined,
+                productId,
+                ...(paymentProvider === 'solana' ? { solanaCurrency } : {}),
+            }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Checkout failed');
@@ -422,6 +436,32 @@ export function CheckoutForm({
                             <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                                 {isQrProvider ? t('payment.solanaInstructions') : t('payment.redirectInstructions')}
                             </p>
+                            {/* One-time Solana: choose settlement token when the school offers both. */}
+                            {paymentProvider === 'solana' && solCurrencyOpts.length > 1 && (
+                                <div className="space-y-1.5">
+                                    <p className="text-xs font-medium">{t('payment.payInLabel')}</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {solCurrencyOpts.map((c) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                onClick={() => setSolanaCurrency(c)}
+                                                aria-pressed={solanaCurrency === c}
+                                                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                                                    solanaCurrency === c
+                                                        ? 'border-primary bg-primary/10 text-foreground'
+                                                        : 'border-border text-muted-foreground hover:bg-muted/50'
+                                                }`}
+                                            >
+                                                {c === 'usdc' ? t('payment.payInUsdc') : t('payment.payInSol')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        {solanaCurrency === 'sol' ? t('payment.solConversionNote') : t('payment.usdcNote')}
+                                    </p>
+                                </div>
+                            )}
                             {subsNeedsWallet && (
                                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                                     <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
