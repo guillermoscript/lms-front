@@ -211,6 +211,8 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     const isInvoiceEvent =
       eventName === 'subscription_payment_success' || eventName === 'subscription_payment_failed'
 
+    // For order events (one-time purchases) data.id is the ORDER id; we reuse
+    // `subId` as the generic provider object id for the synthesised event key.
     const subId: string = isInvoiceEvent
       ? String(payload.data?.attributes?.subscription_id ?? '')
       : String(payload.data?.id ?? '')
@@ -273,6 +275,36 @@ export class LemonSqueezyProvider implements IPaymentProvider {
           type: 'subscription.expired',
           providerEventId,
           providerSubscriptionId: subId,
+          reference,
+          raw: payload,
+        }
+
+      // One-time purchase. LS fires `order_created` for EVERY order — including
+      // the first charge of a subscription — so this maps to the generic
+      // `payment.succeeded`. The shared dispatcher decides what to do: it acts
+      // only when the matched transaction is a one-time product (plan_id NULL)
+      // and skips subscription orders (owned by `subscription_created`). The
+      // echoed checkout metadata (userId/tenantId) binds the activation to the
+      // originating buyer so a signed event can't complete someone else's
+      // transaction by id alone.
+      case 'order_created':
+        return {
+          type: 'payment.succeeded',
+          providerEventId, // order_created:<orderId>:<updatedAt> — orderId is unique
+          providerPaymentId: subId, // LS order id
+          reference,
+          metadata: customData,
+          raw: payload,
+        }
+
+      // One-time order refund. Maps to `refund.succeeded`; the shared dispatcher
+      // flips the transaction → refunded and revokes the product entitlements
+      // (subscription refunds are handled by subscription_cancelled/expired).
+      case 'order_refunded':
+        return {
+          type: 'refund.succeeded',
+          providerEventId, // order_refunded:<orderId>:<updatedAt>
+          providerPaymentId: subId,
           reference,
           raw: payload,
         }

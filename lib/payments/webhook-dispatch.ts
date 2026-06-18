@@ -151,14 +151,101 @@ export async function dispatchBillingEvent(
       console.log(`[webhook] past_due for ${provider} sub ${subId ?? 'unknown'} — no status change`)
       break
 
-    case 'payment.succeeded':
+    case 'payment.succeeded': {
+      // One-time purchase confirmation for hosted-checkout / Merchant-of-Record
+      // providers (Lemon Squeezy `order_created`). Carries our `reference` (the
+      // pending transaction id) round-tripped from checkout custom data.
+      //
+      // LS fires `order_created` for the first charge of a SUBSCRIPTION too —
+      // those are owned by `subscription.activated`, so we skip any matched
+      // transaction that has a plan_id and act only on one-time products. The
+      // flip → successful fires `after_transaction_update` →
+      // `trigger_manage_transactions`, whose product branch runs
+      // `enroll_user(user, product_id)`. Status-guarded for idempotency.
+      //
+      // NOTE: Stripe one-time payments do NOT route here (the Connect route
+      // flips the transaction directly), so this branch only affects the
+      // unified webhook route.
+      if (!event.reference) break
+      const txnId = Number.parseInt(event.reference, 10)
+      if (Number.isNaN(txnId)) break
+
+      const { data: tx } = await admin
+        .from('transactions')
+        .select('transaction_id, status, user_id, tenant_id, plan_id, product_id')
+        .eq('transaction_id', txnId)
+        .maybeSingle()
+
+      // No row, or a subscription order (owned by subscription.activated).
+      if (!tx || tx.plan_id) break
+
+      // Owner-binding guard (M1): the signed event proves it came from the
+      // provider store, but `reference` is a sequential id — without this a
+      // signed event could complete another user's/tenant's transaction.
+      const meta = event.metadata ?? {}
+      const ownerMismatch =
+        (meta.userId && tx.user_id && meta.userId !== tx.user_id) ||
+        (meta.tenantId && tx.tenant_id && meta.tenantId !== tx.tenant_id)
+      if (ownerMismatch) {
+        throw new Error(
+          `dispatch ${event.type}: metadata owner mismatch for transaction ${txnId} — refusing to activate`,
+        )
+      }
+
+      if (tx.status === 'pending') {
+        const { error } = await admin
+          .from('transactions')
+          .update({ status: 'successful', payment_provider: provider })
+          .eq('transaction_id', txnId)
+          .eq('status', 'pending')
+        if (error) throw new Error(`dispatch ${event.type} activation failed: ${error.message}`)
+        // after_transaction_update trigger → enroll_user(user, product_id).
+      }
+      break
+    }
+
+    case 'refund.succeeded': {
+      // One-time order refund (Lemon Squeezy `order_refunded`). Mirrors the
+      // Stripe Connect route's charge.refunded product path: flip → refunded and
+      // EXPLICITLY revoke the product entitlements — no trigger does this for
+      // products (trigger_manage_transactions only acts on successful/failed).
+      // Subscription refunds are owned by subscription.canceled/expired, so skip
+      // when plan_id is set. Status-guarded for idempotency.
+      if (!event.reference) break
+      const txnId = Number.parseInt(event.reference, 10)
+      if (Number.isNaN(txnId)) break
+
+      const { data: tx } = await admin
+        .from('transactions')
+        .select('transaction_id, status, user_id, plan_id, product_id')
+        .eq('transaction_id', txnId)
+        .maybeSingle()
+
+      // Only act on a completed one-time product purchase.
+      if (!tx || tx.plan_id || !tx.product_id || tx.status !== 'successful') break
+
+      const { error: refErr } = await admin
+        .from('transactions')
+        .update({ status: 'refunded' })
+        .eq('transaction_id', txnId)
+        .eq('status', 'successful')
+      if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
+
+      const { error: entErr } = await admin
+        .from('entitlements')
+        .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+        .eq('user_id', tx.user_id)
+        .eq('source_type', 'product')
+        .eq('source_id', tx.product_id)
+      if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
+      break
+    }
+
     case 'payment.failed':
-    case 'refund.succeeded':
-      // Transaction-level events stay with provider-specific routes (e.g. the
-      // Stripe Connect route's payment_intent / charge.refunded handlers, which
-      // own the transactions state machine, emails and entitlement revocation).
-      // Logged here so the unified path is explicit about what it does NOT own.
-      console.log(`[webhook] ${event.type} for ${provider} — no-op in shared dispatcher`)
+      // No transaction state change — the pending row is rolled back by the
+      // checkout route on creation failure, and LS does not deliver a one-time
+      // payment-failed webhook for hosted checkout. Logged for completeness.
+      console.log(`[webhook] payment.failed for ${provider} — no-op in shared dispatcher`)
       break
   }
 }
