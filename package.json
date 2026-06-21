@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "devnet:renew": "tsx scripts/devnet-renew.ts",
     "test": "npx playwright test",
     "test:unit": "vitest run",
     "db:reset": "supabase db reset",
