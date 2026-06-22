@@ -2,9 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getPaymentProvider, type Currency, type PaymentProvider } from '@/lib/payments'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
+import type {
+  ProductCreationWizardInput,
+  ProductCreationWizardResult,
+  ProductPostRegistrationStepInput,
+} from '@/lib/admin/product-creation/types'
 
 interface ProductFormData {
   name: string
@@ -27,6 +34,36 @@ interface Product {
   payment_provider: string
   provider_product_id?: string
   provider_price_id?: string
+}
+
+type UntypedSupabaseClient = {
+  from: (table: string) => {
+    delete: () => {
+      eq: (column: string, value: unknown) => {
+        eq: (column: string, value: unknown) => Promise<{ error: unknown }>
+      }
+    }
+    insert: (rows: unknown[]) => Promise<{ error: unknown }>
+  }
+}
+
+function normalizePostRegistrationSteps(
+  tenantId: string,
+  productId: number,
+  steps: ProductPostRegistrationStepInput[]
+) {
+  return steps
+    .filter((step) => step.isActive)
+    .map((step, index) => ({
+      tenant_id: tenantId,
+      product_id: productId,
+      type: step.type,
+      title: step.title.trim(),
+      description: step.description?.trim() || null,
+      url: step.type === 'text' ? null : step.url?.trim() || null,
+      sort_order: index,
+      is_active: true,
+    }))
 }
 
 /**
@@ -279,6 +316,336 @@ export async function updateProduct(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update product'
+    }
+  }
+}
+
+/**
+ * Saves the guided admin offering flow.
+ * Free offerings persist only a course. Paid offerings persist course + product + product_courses + post-registration steps.
+ */
+export async function saveProductCreationWizard(
+  input: ProductCreationWizardInput
+): Promise<ActionResult<ProductCreationWizardResult>> {
+  try {
+    await verifyAdminAccess()
+
+    const readiness = getProductCreationReadiness(input)
+    if (input.intent === 'publish' && !readiness.canPublish) {
+      throw new Error(readiness.issues[0]?.message || 'Offering is not ready to publish')
+    }
+    if (input.intent === 'draft' && !readiness.canSaveDraft) {
+      throw new Error(readiness.issues[0]?.message || 'Offering is not ready to save')
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const adminClient = createAdminClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+      throw new Error('Not authenticated')
+    }
+
+    let courseId = input.course.existingCourseId ?? null
+    const coursePayload = {
+      title: input.course.title.trim(),
+      description: input.course.description?.trim() || null,
+      thumbnail_url: input.course.thumbnailUrl?.trim() || null,
+      category_id: input.course.categoryId || null,
+      status: input.intent === 'publish' ? 'published' : 'draft',
+    }
+
+    if (input.course.sourceMode === 'existing') {
+      const { data: existingCourse, error: courseError } = await adminClient
+        .from('courses')
+        .select('course_id, tenant_id')
+        .eq('course_id', input.course.existingCourseId!)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (courseError || !existingCourse) {
+        throw new Error('Course not found or access denied')
+      }
+
+      const { error: updateCourseError } = await adminClient
+        .from('courses')
+        .update(coursePayload)
+        .eq('course_id', courseId!)
+        .eq('tenant_id', tenantId)
+
+      if (updateCourseError) throw updateCourseError
+    } else {
+      const limitCheck = await checkCourseLimit()
+      if (!limitCheck.canCreate) {
+        throw new Error(
+          `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. You currently have ${limitCheck.currentCount} courses.`
+        )
+      }
+
+      await adminClient
+        .from('profiles')
+        .upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true })
+
+      const { data: course, error: createCourseError } = await adminClient
+        .from('courses')
+        .insert({
+          ...coursePayload,
+          tenant_id: tenantId,
+          author_id: userId,
+        })
+        .select('course_id')
+        .single()
+
+      if (createCourseError) throw createCourseError
+      courseId = course.course_id
+    }
+
+    let productId = input.productId ?? null
+
+    if (input.pricing.mode === 'free') {
+      if (productId) {
+        const { data: productToArchive } = await adminClient
+          .from('products')
+          .select('payment_provider, provider_product_id, provider_price_id')
+          .eq('product_id', productId)
+          .eq('tenant_id', tenantId)
+          .single()
+
+        if (productToArchive?.provider_product_id && productToArchive.provider_price_id) {
+          const archiveProvider = getPaymentProvider(
+            (productToArchive.payment_provider as PaymentProvider) || 'manual'
+          )
+
+          await archiveProvider.archivePrice(productToArchive.provider_price_id)
+          await archiveProvider.archiveProduct(productToArchive.provider_product_id)
+        }
+
+        const { error: archiveError } = await adminClient
+          .from('products')
+          .update({ status: 'inactive' })
+          .eq('product_id', productId)
+          .eq('tenant_id', tenantId)
+
+        if (archiveError) throw archiveError
+      }
+
+      revalidatePath('/dashboard/admin/products')
+      revalidatePath('/dashboard/admin/monetization')
+      revalidatePath('/dashboard/teacher/courses')
+      revalidatePath('/courses')
+      revalidatePath('/products')
+      revalidatePath('/dashboard/student')
+
+      return {
+        success: true,
+        data: {
+          courseId: courseId!,
+          productId: null,
+          pricingMode: 'free',
+          published: input.intent === 'publish',
+        },
+      }
+    }
+
+    const provider = getPaymentProvider(input.pricing.paymentProvider || 'manual')
+    const nextPrice = input.pricing.price!
+    const nextCurrency = input.pricing.currency! as Currency
+    const postRegistrationClient = adminClient as unknown as UntypedSupabaseClient
+
+    if (productId) {
+      const { data: existingProduct, error: productFetchError } = await adminClient
+        .from('products')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (productFetchError || !existingProduct) {
+        throw new Error('Product not found or access denied')
+      }
+
+      const existingProviderType =
+        (existingProduct.payment_provider as PaymentProvider | null) || 'manual'
+      const providerChanged = existingProviderType !== provider.provider
+      let providerProductId = existingProduct.provider_product_id as string | null
+      let providerPriceId = existingProduct.provider_price_id as string | null
+
+      if (!providerProductId || providerChanged) {
+        if (providerProductId && providerPriceId) {
+          const existingProvider = getPaymentProvider(existingProviderType)
+          await existingProvider.archivePrice(providerPriceId)
+          await existingProvider.archiveProduct(providerProductId)
+        }
+
+        const paymentProduct = await provider.createProduct({
+          name: input.course.title.trim(),
+          description: input.course.description?.trim() || '',
+          images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+          metadata: {
+            created_by: 'admin_product_creation_wizard',
+            recreated_at: new Date().toISOString(),
+          },
+        })
+
+        const paymentPrice = await provider.createPrice({
+          productId: paymentProduct.id,
+          amount: provider.convertAmount(nextPrice, 'major'),
+          currency: nextCurrency,
+          type: 'one_time',
+          metadata: {
+            product_name: input.course.title.trim(),
+          },
+        })
+
+        providerProductId = paymentProduct.id
+        providerPriceId = paymentPrice.id
+      } else {
+        await provider.updateProduct(providerProductId, {
+          name: input.course.title.trim(),
+          description: input.course.description?.trim() || '',
+          images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+        })
+
+        const priceChanged =
+          nextPrice !== existingProduct.price || nextCurrency !== existingProduct.currency
+
+        if (!providerPriceId || priceChanged) {
+          const paymentPrice = await provider.createPrice({
+            productId: providerProductId,
+            amount: provider.convertAmount(nextPrice, 'major'),
+            currency: nextCurrency,
+            type: 'one_time',
+            metadata: {
+              product_name: input.course.title.trim(),
+            },
+          })
+
+          if (providerPriceId) {
+            await provider.archivePrice(providerPriceId)
+          }
+
+          providerPriceId = paymentPrice.id
+        }
+      }
+
+      const { error: updateProductError } = await adminClient
+        .from('products')
+        .update({
+          name: input.course.title.trim(),
+          description: input.course.description?.trim() || null,
+          price: nextPrice,
+          currency: nextCurrency,
+          image: input.course.thumbnailUrl?.trim() || null,
+          payment_provider: provider.provider,
+          provider_product_id: providerProductId,
+          provider_price_id: providerPriceId,
+          status: input.intent === 'publish' ? 'active' : 'inactive',
+        })
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+
+      if (updateProductError) throw updateProductError
+    } else {
+      const paymentProduct = await provider.createProduct({
+        name: input.course.title.trim(),
+        description: input.course.description?.trim() || '',
+        images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+        metadata: {
+          created_by: 'admin_product_creation_wizard',
+          created_at: new Date().toISOString(),
+        },
+      })
+
+      const paymentPrice = await provider.createPrice({
+        productId: paymentProduct.id,
+        amount: provider.convertAmount(nextPrice, 'major'),
+        currency: nextCurrency,
+        type: 'one_time',
+        metadata: {
+          product_name: input.course.title.trim(),
+        },
+      })
+
+      const { data: product, error: createProductError } = await adminClient
+        .from('products')
+        .insert({
+          tenant_id: tenantId,
+          name: input.course.title.trim(),
+          description: input.course.description?.trim() || null,
+          price: nextPrice,
+          currency: nextCurrency,
+          image: input.course.thumbnailUrl?.trim() || null,
+          payment_provider: provider.provider,
+          provider_product_id: paymentProduct.id,
+          provider_price_id: paymentPrice.id,
+          status: input.intent === 'publish' ? 'active' : 'inactive',
+        })
+        .select('product_id')
+        .single()
+
+      if (createProductError) throw createProductError
+      productId = product.product_id
+    }
+
+    await adminClient
+      .from('product_courses')
+      .delete()
+      .eq('product_id', productId!)
+      .eq('tenant_id', tenantId)
+
+    const { error: linkError } = await adminClient
+      .from('product_courses')
+      .insert({
+        tenant_id: tenantId,
+        product_id: productId!,
+        course_id: courseId!,
+      })
+
+    if (linkError) throw linkError
+
+    const { error: deleteStepsError } = await postRegistrationClient
+      .from('product_post_registration_steps')
+      .delete()
+      .eq('product_id', productId!)
+      .eq('tenant_id', tenantId)
+
+    if (deleteStepsError) throw deleteStepsError
+
+    const stepRows = normalizePostRegistrationSteps(
+      tenantId,
+      productId!,
+      input.postRegistrationSteps
+    )
+
+    if (stepRows.length > 0) {
+      const { error: stepsError } = await postRegistrationClient
+        .from('product_post_registration_steps')
+        .insert(stepRows)
+
+      if (stepsError) throw stepsError
+    }
+
+    revalidatePath('/dashboard/admin/products')
+    revalidatePath('/dashboard/admin/monetization')
+    revalidatePath('/dashboard/teacher/courses')
+    revalidatePath('/courses')
+    revalidatePath('/products')
+    revalidatePath('/dashboard/student')
+
+    return {
+      success: true,
+      data: {
+        courseId: courseId!,
+        productId,
+        pricingMode: 'paid',
+        published: input.intent === 'publish',
+      },
+    }
+  } catch (error) {
+    console.error('Save product creation wizard failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save offering',
     }
   }
 }

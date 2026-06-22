@@ -1,13 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getUserRole } from '@/lib/supabase/get-user-role'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { IconArrowLeft } from '@tabler/icons-react'
-import { ProductForm } from '@/components/admin/product-form'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewProductPage() {
   const t = await getTranslations('dashboard.admin.products.new')
@@ -21,19 +17,24 @@ export default async function NewProductPage() {
 
   const tenantId = await getCurrentTenantId()
 
-  // Fetch published courses for the selector
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('course_id, title')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'published')
-    .order('title')
+  const [{ data: courses }, { data: categories }] = await Promise.all([
+    supabase
+      .from('courses')
+      .select('course_id, title, description, thumbnail_url, category_id, status')
+      .eq('tenant_id', tenantId)
+      .order('title'),
+    supabase
+      .from('course_categories')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .order('name'),
+  ])
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -53,18 +54,12 @@ export default async function NewProductPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('details.title')}</CardTitle>
-            <CardDescription>
-              {t('details.description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProductForm mode="create" courses={courses || []} />
-          </CardContent>
-        </Card>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <ProductCreationWizard
+          mode="create"
+          categories={categories || []}
+          courses={courses || []}
+        />
       </main>
     </div>
   )
