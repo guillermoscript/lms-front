@@ -21,22 +21,26 @@ function isValidHttpUrl(value: string | null | undefined) {
 }
 
 export function validatePostRegistrationStep(
-  step: ProductPostRegistrationStepInput
+  step: ProductPostRegistrationStepInput,
+  index?: number
 ): ProductCreationValidationIssue[] {
   const issues: ProductCreationValidationIssue[] = []
 
   if (!step.isActive) return issues
 
+  const prefix =
+    index == null ? 'postRegistrationSteps' : `postRegistrationSteps.${index}`
+
   if (isBlank(step.title)) {
     issues.push({
-      field: 'postRegistrationSteps.title',
+      field: `${prefix}.title`,
       message: 'Enter a step title.',
     })
   }
 
   if (step.type !== 'text' && !isValidHttpUrl(step.url)) {
     issues.push({
-      field: 'postRegistrationSteps.url',
+      field: `${prefix}.url`,
       message: 'Enter a valid URL.',
     })
   }
@@ -86,9 +90,9 @@ export function getProductCreationReadiness(
     }
   }
 
-  for (const step of input.postRegistrationSteps) {
-    issues.push(...validatePostRegistrationStep(step))
-  }
+  input.postRegistrationSteps.forEach((step, index) => {
+    issues.push(...validatePostRegistrationStep(step, index))
+  })
 
   const draftBlockingFields = new Set(['course.title', 'course.existingCourseId'])
   const draftIssues = issues.filter((issue) => draftBlockingFields.has(issue.field))
@@ -98,4 +102,31 @@ export function getProductCreationReadiness(
     canPublish: issues.length === 0,
     issues,
   }
+}
+
+/**
+ * Which validation fields belong to each wizard step, so the UI can gate
+ * forward navigation and surface blockers on the step that created them.
+ * `review` (the last step) intentionally owns nothing — it shows the full list.
+ */
+export const wizardStepFieldPrefixes: Record<string, string[]> = {
+  source: ['course.existingCourseId'],
+  basics: ['course.title'],
+  pricing: ['pricing.'],
+  'post-registration': ['postRegistrationSteps'],
+  review: [],
+}
+
+/**
+ * Blocking issues for a single wizard step (by its field prefixes).
+ */
+export function getStepIssues(
+  issues: ProductCreationValidationIssue[],
+  stepId: string
+): ProductCreationValidationIssue[] {
+  const prefixes = wizardStepFieldPrefixes[stepId] ?? []
+  if (prefixes.length === 0) return []
+  return issues.filter((issue) =>
+    prefixes.some((prefix) => issue.field === prefix || issue.field.startsWith(prefix))
+  )
 }

@@ -41,6 +41,35 @@ const urlStepTypes = new Set<PostRegistrationStepType>([
   'link',
 ])
 
+const stepTypeHints: Record<
+  PostRegistrationStepType,
+  { titlePlaceholder: string; urlPlaceholder?: string; urlHelper?: string }
+> = {
+  whatsapp: {
+    titlePlaceholder: 'Join our WhatsApp group',
+    urlPlaceholder: 'https://chat.whatsapp.com/…',
+    urlHelper: 'A WhatsApp group invite or wa.me link.',
+  },
+  telegram: {
+    titlePlaceholder: 'Join the Telegram channel',
+    urlPlaceholder: 'https://t.me/…',
+    urlHelper: 'A Telegram channel or group invite link.',
+  },
+  discord: {
+    titlePlaceholder: 'Join the Discord server',
+    urlPlaceholder: 'https://discord.gg/…',
+    urlHelper: 'A Discord server invite link.',
+  },
+  link: {
+    titlePlaceholder: 'Open the resource',
+    urlPlaceholder: 'https://…',
+    urlHelper: 'Any https link students should open.',
+  },
+  text: {
+    titlePlaceholder: 'What students should do next',
+  },
+}
+
 interface ProductPostRegistrationEditorProps {
   disabled?: boolean
   issues?: ProductCreationValidationIssue[]
@@ -82,7 +111,7 @@ export function ProductPostRegistrationEditor({
         ...steps,
         {
           type,
-          title: stepTypeLabels[type],
+          title: '',
           description: '',
           url: urlStepTypes.has(type) ? '' : null,
           sortOrder: steps.length,
@@ -159,7 +188,7 @@ export function ProductPostRegistrationEditor({
             return (
               <div
                 key={`${step.id || 'new'}-${step.sortOrder}-${index}`}
-                className="rounded-lg border bg-card p-4"
+                className="rounded-lg border bg-muted/30 p-4"
               >
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Select
@@ -246,6 +275,7 @@ export function ProductPostRegistrationEditor({
                         value={step.title}
                         disabled={disabled}
                         aria-invalid={Boolean(titleError)}
+                        placeholder={stepTypeHints[step.type].titlePlaceholder}
                         onChange={(event) =>
                           updateStep(index, { title: event.target.value })
                         }
@@ -263,13 +293,18 @@ export function ProductPostRegistrationEditor({
                           data-testid="post-registration-step-url"
                           type="url"
                           value={step.url || ''}
-                          placeholder="https://"
+                          placeholder={stepTypeHints[step.type].urlPlaceholder || 'https://'}
                           disabled={disabled}
                           aria-invalid={Boolean(urlError)}
                           onChange={(event) =>
                             updateStep(index, { url: event.target.value })
                           }
                         />
+                        {stepTypeHints[step.type].urlHelper && !urlError && (
+                          <FieldDescription>
+                            {stepTypeHints[step.type].urlHelper}
+                          </FieldDescription>
+                        )}
                         <FieldError>{urlError}</FieldError>
                       </Field>
                     )}

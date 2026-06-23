@@ -40,7 +40,10 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
+import {
+  getProductCreationReadiness,
+  getStepIssues,
+} from '@/lib/admin/product-creation/validation'
 import type {
   CourseSourceMode,
   PricingMode,
@@ -164,6 +167,10 @@ export function ProductCreationWizard({
   const [currentStep, setCurrentStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  // Steps the user has tried to leave (or submit from). Inline errors only show
+  // once a step is "attempted", so blank required fields aren't flagged before
+  // the user has had a chance to fill them.
+  const [attempted, setAttempted] = useState<Set<number>>(() => new Set())
   const [input, setInput] = useState<ProductCreationWizardInput>(() => mergeInput(initialInput))
 
   const readiness = useMemo(() => getProductCreationReadiness(input), [input])
@@ -171,6 +178,45 @@ export function ProductCreationWizard({
   const selectedCourse = courses.find(
     (course) => course.course_id === input.course.existingCourseId
   )
+
+  function stepHasIssues(index: number) {
+    return getStepIssues(readiness.issues, wizardSteps[index].id).length > 0
+  }
+
+  function markAttempted(...indexes: number[]) {
+    setAttempted((prev) => {
+      const next = new Set(prev)
+      indexes.forEach((index) => next.add(index))
+      return next
+    })
+  }
+
+  // Free backward navigation; forward navigation is gated on every prior step
+  // being valid, landing the user on the first one that still has blockers.
+  function goToStep(target: number) {
+    setSubmitError(null)
+    if (target <= currentStep) {
+      setCurrentStep(target)
+      return
+    }
+
+    for (let index = 0; index < target; index += 1) {
+      if (stepHasIssues(index)) {
+        markAttempted(...Array.from({ length: index + 1 }, (_, i) => i))
+        setCurrentStep(index)
+        return
+      }
+    }
+
+    setCurrentStep(target)
+  }
+
+  // Returns a field's error only once its step has been attempted, so required
+  // fields don't show errors before the user interacts with them.
+  function fieldError(field: string, stepIndex: number) {
+    if (!attempted.has(stepIndex)) return undefined
+    return getFieldIssue(readiness.issues, field)
+  }
 
   function setSourceMode(sourceMode: CourseSourceMode) {
     setInput((current) => ({
@@ -248,14 +294,18 @@ export function ProductCreationWizard({
     const localReadiness = getProductCreationReadiness(payload)
 
     if (intent === 'draft' && !localReadiness.canSaveDraft) {
+      markAttempted(0, 1, 2, 3, 4)
       setSubmitError(localReadiness.issues[0]?.message || 'Add a title before saving.')
       setCurrentStep(0)
       return
     }
 
     if (intent === 'publish' && !localReadiness.canPublish) {
+      markAttempted(0, 1, 2, 3, 4)
+      // Land on the first step that still has blockers.
+      const firstInvalid = wizardSteps.findIndex((_, index) => stepHasIssues(index))
       setSubmitError(localReadiness.issues[0]?.message || 'Complete required setup first.')
-      setCurrentStep(4)
+      setCurrentStep(firstInvalid === -1 ? 4 : firstInvalid)
       return
     }
 
@@ -311,31 +361,29 @@ export function ProductCreationWizard({
               <li key={step.id}>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(index)}
+                  onClick={() => goToStep(index)}
+                  aria-current={isCurrent ? 'step' : undefined}
                   className={cn(
                     'flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     isCurrent
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                   )}
                 >
                   <span
                     className={cn(
-                      'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
-                      isCurrent && 'border-primary-foreground',
-                      isComplete && !isCurrent && 'border-primary text-primary'
+                      'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-medium transition-colors',
+                      isComplete && 'border-primary bg-primary text-primary-foreground',
+                      isCurrent && !isComplete && 'border-primary text-primary',
+                      !isCurrent && !isComplete && 'border-border'
                     )}
                   >
-                    {isComplete ? <IconCheck /> : <span className="text-[10px]">{index + 1}</span>}
+                    {isComplete ? <IconCheck /> : index + 1}
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs font-medium">{step.title}</span>
-                    <span
-                      className={cn(
-                        'mt-0.5 block text-xs/relaxed',
-                        isCurrent ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                      )}
-                    >
+                    <span className="mt-0.5 block text-xs/relaxed text-muted-foreground">
                       {step.description}
                     </span>
                   </span>
@@ -393,7 +441,7 @@ export function ProductCreationWizard({
             </RadioGroup>
 
             {input.course.sourceMode === 'existing' && (
-              <Field data-invalid={Boolean(getFieldIssue(readiness.issues, 'course.existingCourseId'))}>
+              <Field data-invalid={Boolean(fieldError('course.existingCourseId', 0))}>
                 <FieldLabel htmlFor="existing-course">Course</FieldLabel>
                 <Select
                   value={input.course.existingCourseId?.toString()}
@@ -420,9 +468,7 @@ export function ProductCreationWizard({
                 {selectedCourse?.status && (
                   <FieldDescription>Selected course status: {selectedCourse.status}</FieldDescription>
                 )}
-                <FieldError>
-                  {getFieldIssue(readiness.issues, 'course.existingCourseId')}
-                </FieldError>
+                <FieldError>{fieldError('course.existingCourseId', 0)}</FieldError>
               </Field>
             )}
           </FieldSet>
@@ -430,18 +476,18 @@ export function ProductCreationWizard({
 
         {currentStep === 1 && (
           <FieldGroup>
-            <Field data-invalid={Boolean(getFieldIssue(readiness.issues, 'course.title'))}>
-              <FieldLabel htmlFor="offering-title">Course/product title</FieldLabel>
+            <Field data-invalid={Boolean(fieldError('course.title', 1))}>
+              <FieldLabel htmlFor="offering-title">Title</FieldLabel>
               <Input
                 id="offering-title"
                 data-testid="product-creation-title"
                 value={input.course.title}
                 disabled={isSaving}
-                aria-invalid={Boolean(getFieldIssue(readiness.issues, 'course.title'))}
+                aria-invalid={Boolean(fieldError('course.title', 1))}
                 placeholder="e.g., Product Strategy Intensive"
                 onChange={(event) => updateCourse({ title: event.target.value })}
               />
-              <FieldError>{getFieldIssue(readiness.issues, 'course.title')}</FieldError>
+              <FieldError>{fieldError('course.title', 1)}</FieldError>
             </Field>
 
             <Field>
@@ -531,7 +577,7 @@ export function ProductCreationWizard({
 
             {input.pricing.mode === 'paid' && (
               <div className="grid gap-4 sm:grid-cols-3">
-                <Field data-invalid={Boolean(getFieldIssue(readiness.issues, 'pricing.price'))}>
+                <Field data-invalid={Boolean(fieldError('pricing.price', 2))}>
                   <FieldLabel htmlFor="offering-price">{tProductForm('price')}</FieldLabel>
                   <Input
                     id="offering-price"
@@ -541,15 +587,15 @@ export function ProductCreationWizard({
                     step="0.01"
                     value={input.pricing.price || ''}
                     disabled={isSaving}
-                    aria-invalid={Boolean(getFieldIssue(readiness.issues, 'pricing.price'))}
+                    aria-invalid={Boolean(fieldError('pricing.price', 2))}
                     onChange={(event) =>
                       updatePaidPricing({ price: Number(event.target.value) })
                     }
                   />
-                  <FieldError>{getFieldIssue(readiness.issues, 'pricing.price')}</FieldError>
+                  <FieldError>{fieldError('pricing.price', 2)}</FieldError>
                 </Field>
 
-                <Field data-invalid={Boolean(getFieldIssue(readiness.issues, 'pricing.currency'))}>
+                <Field data-invalid={Boolean(fieldError('pricing.currency', 2))}>
                   <FieldLabel htmlFor="offering-currency">{tProductForm('currency')}</FieldLabel>
                   <Select
                     value={input.pricing.currency || 'usd'}
@@ -572,12 +618,10 @@ export function ProductCreationWizard({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldError>{getFieldIssue(readiness.issues, 'pricing.currency')}</FieldError>
+                  <FieldError>{fieldError('pricing.currency', 2)}</FieldError>
                 </Field>
 
-                <Field
-                  data-invalid={Boolean(getFieldIssue(readiness.issues, 'pricing.paymentProvider'))}
-                >
+                <Field data-invalid={Boolean(fieldError('pricing.paymentProvider', 2))}>
                   <FieldLabel htmlFor="offering-payment-provider">
                     {tProductForm('method')}
                   </FieldLabel>
@@ -605,9 +649,7 @@ export function ProductCreationWizard({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldError>
-                    {getFieldIssue(readiness.issues, 'pricing.paymentProvider')}
-                  </FieldError>
+                  <FieldError>{fieldError('pricing.paymentProvider', 2)}</FieldError>
                 </Field>
               </div>
             )}
@@ -628,7 +670,7 @@ export function ProductCreationWizard({
               <ProductPostRegistrationEditor
                 disabled={isSaving}
                 steps={input.postRegistrationSteps}
-                issues={readiness.issues}
+                issues={attempted.has(3) ? readiness.issues : []}
                 onChange={(postRegistrationSteps: ProductPostRegistrationStepInput[]) =>
                   setInput((current) => ({ ...current, postRegistrationSteps }))
                 }
@@ -639,49 +681,49 @@ export function ProductCreationWizard({
 
         {currentStep === 4 && (
           <div className="flex flex-col gap-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border p-3">
-                <div className="text-xs text-muted-foreground">Course</div>
-                <div className="mt-1 truncate text-sm font-medium">
+            <dl className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3">
+              <div className="bg-card p-3">
+                <dt className="text-xs text-muted-foreground">Course</dt>
+                <dd className="mt-1 truncate text-sm font-medium">
                   {input.course.title || 'Untitled course'}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
+                </dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
                   {input.course.sourceMode === 'new' ? 'New course' : 'Existing course'}
-                </div>
+                </dd>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-xs text-muted-foreground">Pricing</div>
-                <div className="mt-1 text-sm font-medium">{formatPrice(input)}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
+              <div className="bg-card p-3">
+                <dt className="text-xs text-muted-foreground">Pricing</dt>
+                <dd className="mt-1 text-sm font-medium">{formatPrice(input)}</dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
                   {input.pricing.mode === 'paid'
                     ? input.pricing.paymentProvider || 'No provider'
                     : 'No product created'}
-                </div>
+                </dd>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-xs text-muted-foreground">After purchase</div>
-                <div className="mt-1 text-sm font-medium">
+              <div className="bg-card p-3">
+                <dt className="text-xs text-muted-foreground">After purchase</dt>
+                <dd className="mt-1 text-sm font-medium">
                   {input.pricing.mode === 'paid'
                     ? `${input.postRegistrationSteps.length} step${
                         input.postRegistrationSteps.length === 1 ? '' : 's'
                       }`
                     : 'Not applicable'}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
+                </dd>
+                <dd className="mt-1 text-xs text-muted-foreground">
                   {input.pricing.mode === 'paid' ? 'Optional instructions' : 'Free course'}
-                </div>
+                </dd>
               </div>
-            </div>
+            </dl>
 
-            <div className="flex flex-col gap-2">
+            <div className="divide-y overflow-hidden rounded-lg border">
               <ReadinessRow checked={readiness.canSaveDraft} label="Draft can be saved" />
               <ReadinessRow checked={readiness.canPublish} label="Ready to publish" />
               {readiness.issues.map((issue, index) => (
                 <div
                   key={`${issue.field}-${index}`}
-                  className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs/relaxed text-destructive"
+                  className="flex items-start gap-2 px-3 py-2 text-xs/relaxed text-destructive"
                 >
-                  <IconCircle className="mt-0.5" />
+                  <IconCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{issue.message}</span>
                 </div>
               ))}
@@ -712,7 +754,7 @@ export function ProductCreationWizard({
               variant="outline"
               data-testid="product-creation-next"
               disabled={currentStep === wizardSteps.length - 1 || isSaving}
-              onClick={() => setCurrentStep((step) => Math.min(step + 1, wizardSteps.length - 1))}
+              onClick={() => goToStep(currentStep + 1)}
             >
               Next
               <IconChevronRight data-icon="inline-end" />
@@ -746,16 +788,18 @@ export function ProductCreationWizard({
 
 function ReadinessRow({ checked, label }: { checked: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs/relaxed">
+    <div className="flex items-center gap-2 px-3 py-2 text-xs/relaxed">
       <span
         className={cn(
           'flex size-5 shrink-0 items-center justify-center rounded-full border',
-          checked ? 'border-primary text-primary' : 'text-muted-foreground'
+          checked
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'border-border text-muted-foreground'
         )}
       >
-        {checked ? <IconCheck /> : <IconCircle />}
+        {checked ? <IconCheck className="size-3" /> : <IconCircle className="size-3" />}
       </span>
-      <span>{label}</span>
+      <span className={cn(!checked && 'text-muted-foreground')}>{label}</span>
     </div>
   )
 }
