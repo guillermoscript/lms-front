@@ -22,6 +22,7 @@ cover the four buckets the maintainer selected: **security top tier**,
 | 006  | Payment-logic unit tests (fee split, webhook sig, dispatcher) | P2 | L | 002 (003 preferred first) | DONE |
 | 007  | Dependency hygiene (Zod alignment + safe audit fixes) | P2 | M | — | DONE (zod aligned; audit-fix no-op — see notes) |
 | 008  | SPIKE: Solana dependency vulnerability remediation | P3 | L | — | DONE (report only; no safe pin exists — recommend @solana/kit migration plan) |
+| 012  | LARGE: Migrate Solana payment rails web3.js/@solana/pay → @solana/kit | P2 | XL | #334 merged + user buy-in | TODO (scoped 2026-06-16; the durable fix 008 recommended; absorbs the H2 on-chain residual) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
@@ -141,6 +142,20 @@ lint step off `continue-on-error` once it's green. No source/error fixes applied
   **`@solana/kit`** migration (kit is already a dep) as its **own large plan**
   gated on user buy-in — the only durable fix; also clears the sibling
   `web3.js`/`jayson`/`uuid` advisories. No dependency change applied (STOP hit).
+
+**Plan 012 — Solana `@solana/kit` migration scoped (2026-06-16):** Spike 008's
+recommended option (c) turned into a full self-contained plan
+(`plans/012-solana-kit-migration.md`) after operator buy-in. 5 phases (Pay-compat
+shim → `solana-split.ts` core → routes/providers/pull + 3 dynamic sites →
+drop legacy deps → H2 on-chain residual), each devnet-gated for money-movement
+changes. Recon at `7fd6ae16` found the real surface is **8 files** (not the 5 the
+008 report estimated): `solana-subscriptions.ts` — nominally "on kit" — still
+**dynamic-imports** legacy `@solana/spl-token` + `@solana/web3.js` at lines
+264/359/555, so the legacy deps can't be dropped until those migrate too; and the
+kit program clients `@solana-program/{system,token}` are **not installed yet**.
+`@solana/pay` (`encodeURL`/`findReference`/`FindReferenceError`) has no kit port —
+Phase 1 reimplements it on the kit RPC. **Gated on #334 merging first.** Absorbs
+the H2 deferral from the #334 security review (Phase 5). NOT executed — TODO.
 
 ## Findings considered and rejected (so nobody re-audits them)
 

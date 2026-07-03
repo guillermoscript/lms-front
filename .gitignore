@@ -62,5 +62,5 @@ mcp-server/build
 # Sentry Config File
 .env.sentry-build-plugin
 
-# Devnet test keypairs (private keys — never commit)
+# Devnet test keypairs / local Solana devnet wallet keypairs (private keys — never commit)
 scripts/.devnet-*.json

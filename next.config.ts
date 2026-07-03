@@ -6,6 +6,10 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Allow the local multi-tenant subdomains (e.g. default.lvh.me) to load dev
+  // assets; without this Next 16 dev treats them as untrusted cross-origin and
+  // the client runtime fails to hydrate.
+  allowedDevOrigins: ['lvh.me', '*.lvh.me'],
   transpilePackages: ['@lms/core'],
   // Local multi-tenant dev is served on subdomains (e.g. code-academy.lvh.me),
   // which differ from the dev server origin (localhost). Next.js 16 blocks
