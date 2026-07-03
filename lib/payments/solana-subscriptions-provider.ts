@@ -87,9 +87,12 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
    */
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      // Prefer the tenant origin the checkout route derived from the request
+      // (correct per-subdomain host); fall back to the global env var for
+      // script/CLI contexts that call this with no HTTP request in play.
+      const appUrl = params.baseUrl || process.env.NEXT_PUBLIC_APP_URL
       if (!appUrl) {
-        throw new Error('NEXT_PUBLIC_APP_URL is required for Solana subscriptions checkout')
+        throw new Error('baseUrl or NEXT_PUBLIC_APP_URL is required for Solana subscriptions checkout')
       }
       // The on-chain marker the subscribe tx must include so we can find it.
       // It is ALSO the lookup key the QR carries: a random 32-byte pubkey (vs the

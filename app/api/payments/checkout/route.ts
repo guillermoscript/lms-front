@@ -172,7 +172,17 @@ export async function POST(req: NextRequest) {
     }
 
     const reference = transaction.transaction_id.toString()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    // Derive the tenant's own origin from the request rather than the single
+    // global NEXT_PUBLIC_APP_URL — this route is hit on the school's subdomain,
+    // and Solana Pay tx-request links must round-trip back to that same host
+    // (a QR built with the wrong tenant's origin fails for every other tenant).
+    const forwardedHost = req.headers.get('x-forwarded-host')
+    const appUrl =
+      process.env.NODE_ENV === 'development'
+        ? req.nextUrl.origin
+        : forwardedHost
+          ? `https://${forwardedHost}`
+          : req.nextUrl.origin
 
     try {
       const provider = getPaymentProvider(providerSlug as PaymentProvider)
@@ -185,8 +195,9 @@ export async function POST(req: NextRequest) {
         amount,
         currency,
         reference,
-        successUrl: appUrl ? `${appUrl}/dashboard/student?checkout=success` : undefined,
-        cancelUrl: appUrl ? `${appUrl}/dashboard/student?checkout=cancelled` : undefined,
+        successUrl: `${appUrl}/dashboard/student?checkout=success`,
+        cancelUrl: `${appUrl}/dashboard/student?checkout=cancelled`,
+        baseUrl: appUrl,
         metadata: {
           transactionId: reference,
           userId: user.id,

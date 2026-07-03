@@ -216,6 +216,14 @@ export interface CreateCheckoutParams {
   applicationFeePercent?: number
   successUrl?: string
   cancelUrl?: string
+  /**
+   * The tenant's own origin (protocol + host), derived from the incoming
+   * request rather than the single global `NEXT_PUBLIC_APP_URL` env var —
+   * multi-tenant Solana Pay tx-request links must point back at the school's
+   * subdomain, not whichever host that env var happens to be pinned to.
+   * Falls back to `NEXT_PUBLIC_APP_URL` in contexts with no request (scripts).
+   */
+  baseUrl?: string
   metadata?: Record<string, string>
 }
 
