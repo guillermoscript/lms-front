@@ -1,0 +1,60 @@
+{
+  "name": "lms-front",
+  // Debian bookworm base with Node 24 (matches the production Dockerfile).
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-24-bookworm",
+
+  "features": {
+    // Required: `supabase start` / `npm run db:reset` spin up Postgres, Studio,
+    // Kong, Realtime, Storage, etc. as Docker containers.
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Ports exposed by the Next.js app and the local Supabase stack (see supabase/config.toml).
+  "forwardPorts": [3000, 54321, 54322, 54323, 54324, 54327],
+  "portsAttributes": {
+    "3000": { "label": "Next.js app", "onAutoForward": "notify" },
+    "54321": { "label": "Supabase API", "onAutoForward": "silent" },
+    "54322": { "label": "Supabase DB", "onAutoForward": "silent" },
+    "54323": { "label": "Supabase Studio", "onAutoForward": "openPreview" },
+    "54324": { "label": "Inbucket (mail)", "onAutoForward": "silent" },
+    "54327": { "label": "Supabase Analytics", "onAutoForward": "silent" }
+  },
+
+  // One-time provisioning: system libs, Supabase CLI, deps, .env.local scaffold.
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "remoteEnv": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "Supabase.vscode-supabase-extension",
+        "ms-playwright.playwright",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[typescript]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+        "[typescriptreact]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  },
+
+  // Local Supabase runs a dozen containers — give the machine room to breathe.
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
+}
