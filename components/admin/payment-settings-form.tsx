@@ -28,6 +28,10 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
   // Extract current values
   const stripeEnabled = settings.stripe_enabled?.value?.enabled ?? true
   const paypalEnabled = settings.paypal_enabled?.value?.enabled ?? false
+  const lemonsqueezyEnabled = settings.lemonsqueezy_enabled?.value?.enabled ?? false
+  const solanaEnabled = settings.solana_enabled?.value?.enabled ?? false
+  const solanaAcceptSol = settings.solana_accept_sol?.value?.enabled ?? false
+  const [solanaOn, setSolanaOn] = useState(solanaEnabled)
   const currency = settings.currency?.value?.value || 'USD'
   const taxRate = settings.tax_rate?.value?.value || 0
   const invoicePrefix = settings.invoice_prefix?.value?.value || 'INV'
@@ -40,6 +44,9 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
       const updatedSettings = {
         stripe_enabled: { enabled: formData.get('stripe_enabled') === 'on' },
         paypal_enabled: { enabled: formData.get('paypal_enabled') === 'on' },
+        lemonsqueezy_enabled: { enabled: formData.get('lemonsqueezy_enabled') === 'on' },
+        solana_enabled: { enabled: formData.get('solana_enabled') === 'on' },
+        solana_accept_sol: { enabled: formData.get('solana_accept_sol') === 'on' },
         currency: { value: formData.get('currency') as string },
         tax_rate: { value: parseFloat(formData.get('tax_rate') as string) },
         invoice_prefix: { value: formData.get('invoice_prefix') as string },
@@ -95,6 +102,55 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             defaultChecked={paypalEnabled}
           />
         </div>
+
+        {/* Lemon Squeezy */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="lemonsqueezy_enabled">{t('payment.lemonsqueezy')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.lemonsqueezyHint')}
+            </p>
+          </div>
+          <Switch
+            id="lemonsqueezy_enabled"
+            name="lemonsqueezy_enabled"
+            defaultChecked={lemonsqueezyEnabled}
+          />
+        </div>
+
+        {/* Solana (one address backs both one-time and subscription crypto) */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="solana_enabled">{t('payment.solana')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.solanaHint')}
+            </p>
+          </div>
+          <Switch
+            id="solana_enabled"
+            name="solana_enabled"
+            checked={solanaOn}
+            onCheckedChange={setSolanaOn}
+          />
+        </div>
+
+        {/* Native SOL is opt-in (volatile; converted from the USD price at the
+            live rate). USDC is always used otherwise — it tracks the dollar. */}
+        {solanaOn && (
+          <div className="flex items-center justify-between rounded-lg border border-dashed bg-muted/30 px-4 py-3 ml-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="solana_accept_sol">{t('payment.solanaAcceptSol')}</Label>
+              <p className="text-sm text-muted-foreground">
+                {t('payment.solanaAcceptSolHint')}
+              </p>
+            </div>
+            <Switch
+              id="solana_accept_sol"
+              name="solana_accept_sol"
+              defaultChecked={solanaAcceptSol}
+            />
+          </div>
+        )}
       </div>
 
       {/* Currency Settings */}

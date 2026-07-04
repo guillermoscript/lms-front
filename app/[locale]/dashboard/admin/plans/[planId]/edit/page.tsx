@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { PlanForm } from '@/components/admin/plan-form'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -52,6 +53,8 @@ export default async function EditPlanPage({ params }: PageProps) {
     notFound()
   }
 
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -85,7 +88,7 @@ export default async function EditPlanPage({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PlanForm mode="edit" initialData={plan} courses={courses || []} />
+            <PlanForm mode="edit" initialData={plan} courses={courses || []} enabledProviders={enabledProviders} />
           </CardContent>
         </Card>
       </main>

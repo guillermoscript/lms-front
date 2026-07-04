@@ -33,6 +33,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: true,
   }
   private stripe: Stripe
 

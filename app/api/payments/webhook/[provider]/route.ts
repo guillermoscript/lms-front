@@ -21,9 +21,10 @@ export const runtime = 'nodejs'
 
 // Providers exposed on this endpoint. getPaymentProvider() still gates on
 // configured credentials; providers without verify/normalize return 501.
-// `manual` is intentionally excluded: it has no signed webhooks, so exposing a
-// route for it would be an unauthenticated mutation surface.
-const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal']
+// `manual` and `solana` are intentionally excluded: neither has a signed
+// webhook (Solana confirms on-chain via /api/payments/solana/verify), so
+// exposing a route for them would be an unauthenticated mutation surface.
+const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy']
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
