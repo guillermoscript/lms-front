@@ -212,6 +212,30 @@ export async function updatePlan(
     const providerType = (existingPlan.payment_provider as PaymentProvider) || 'stripe'
     const caps = PROVIDER_CAPABILITIES[providerType]
 
+    // Solana native subscriptions (solana_subs) mirror price/duration onto an
+    // IMMUTABLE on-chain plan (per-period cap set once at creation). If price or
+    // duration changes here while subscribers exist, every future crank pull
+    // charges an amount that no longer matches the on-chain cap and reverts —
+    // renewals silently fail (issue #343). Block the edit instead.
+    if (providerType === 'solana_subs') {
+      const priceOrDurationChanged =
+        formData.price !== existingPlan.price || formData.duration_in_days !== existingPlan.duration_in_days
+      if (priceOrDurationChanged) {
+        const { count, error: countError } = await adminClient
+          .from('subscriptions')
+          .select('subscription_id', { count: 'exact', head: true })
+          .eq('plan_id', planId)
+          .eq('payment_provider', 'solana_subs')
+          .eq('subscription_status', 'active')
+        if (countError) throw countError
+        if ((count ?? 0) > 0) {
+          throw new Error(
+            'This Solana plan has active subscribers — price and duration are locked on-chain and cannot be changed. Archive this plan and create a new one instead.',
+          )
+        }
+      }
+    }
+
     // Catalog-syncing providers (Stripe/PayPal) only: update the provider product
     // and recreate the recurring price on change. LS/Solana/manual skip this — they
     // have no provider catalog to mutate; their price lives in the plan columns

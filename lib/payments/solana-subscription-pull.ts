@@ -51,6 +51,29 @@ export interface PullSplitParams {
 const USDC_DECIMALS = 6
 
 /**
+ * Retries a transient RPC failure a few times within THIS invocation, before
+ * the caller ever sees an error. This is what actually closes the H2
+ * partial-failure gap (issue #343): if the platform leg fails only because of
+ * a momentary RPC blip, the crank's period-rolled gate won't re-trigger this
+ * pull until the NEXT period, so a failure that survives past this call is a
+ * fee permanently missed. Safe to retry blindly — a transfer_subscription
+ * pull is idempotent-by-cap (a duplicate/over-cap pull reverts on-chain), so
+ * retrying can only reduce missed pulls, never double-charge.
+ */
+async function withRetries<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+  throw lastErr
+}
+
+/**
  * Execute the two split pulls (school then platform, if the platform share > 0)
  * for one billing period. Each `pullOnce` builds + signs the puller's
  * transfer_subscription instruction.
@@ -65,29 +88,33 @@ export async function pullSplitForSubscription(p: PullSplitParams): Promise<void
 
   // School share first — skip if this period already covered it (resume).
   if (alreadyPulled < BigInt(schoolBase)) {
-    await pullOnce({
-      rpcUrl: p.rpcUrl,
-      pullerSecretKeyBase58: p.pullerSecretKeyBase58,
-      subscriber: p.subscriber,
-      merchant: p.merchant,
-      planId: p.planId,
-      mint: p.mint,
-      receiverAta: schoolAta,
-      amountBase: BigInt(schoolBase),
-    })
+    await withRetries(() =>
+      pullOnce({
+        rpcUrl: p.rpcUrl,
+        pullerSecretKeyBase58: p.pullerSecretKeyBase58,
+        subscriber: p.subscriber,
+        merchant: p.merchant,
+        planId: p.planId,
+        mint: p.mint,
+        receiverAta: schoolAta,
+        amountBase: BigInt(schoolBase),
+      }),
+    )
   }
 
   // Platform fee (only if non-zero and not already covered this period).
   if (platformBase > 0 && alreadyPulled < BigInt(schoolBase + platformBase)) {
-    await pullOnce({
-      rpcUrl: p.rpcUrl,
-      pullerSecretKeyBase58: p.pullerSecretKeyBase58,
-      subscriber: p.subscriber,
-      merchant: p.merchant,
-      planId: p.planId,
-      mint: p.mint,
-      receiverAta: platformAta,
-      amountBase: BigInt(platformBase),
-    })
+    await withRetries(() =>
+      pullOnce({
+        rpcUrl: p.rpcUrl,
+        pullerSecretKeyBase58: p.pullerSecretKeyBase58,
+        subscriber: p.subscriber,
+        merchant: p.merchant,
+        planId: p.planId,
+        mint: p.mint,
+        receiverAta: platformAta,
+        amountBase: BigInt(platformBase),
+      }),
+    )
   }
 }

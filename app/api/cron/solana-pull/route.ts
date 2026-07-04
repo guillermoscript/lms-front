@@ -109,18 +109,22 @@ export async function GET(req: NextRequest) {
       // Two pulls = the split. Both must be within the per-period cap (sum =
       // price). Double-charge and unauthorized-charge are already prevented by
       // the on-chain per-period cap + the period-rolled gate above (an in-period
-      // or over-cap pull reverts). KNOWN RESIDUAL (H2, security review #334),
-      // deferred pending a devnet test plan — do NOT change blind:
+      // or over-cap pull reverts). H2 (security review #334 / issue #343):
       //   (a) Partial failure: if the school leg lands but the platform leg's RPC
-      //       fails, the platform fee is missed for this period (the period gate
-      //       won't re-trigger until it rolls). pullSplitForSubscription now
-      //       accepts `alreadyPulledBase` to resume only the uncovered leg, but
-      //       wiring `state.amountPulledInPeriod` into it requires confirming the
-      //       program's per-period reset timing on devnet (a stale value would
-      //       skip a legitimate renewal charge).
-      //   (b) Price drift: this charges `plans.price` (mutable) while the on-chain
-      //       plan cap is immutable; an admin price edit makes renewals revert.
-      //       Fix = charge the on-chain plan terms, not the DB price.
+      //       fails, the platform fee would be missed for this period (the period
+      //       gate won't re-trigger until it rolls). pullSplitForSubscription now
+      //       retries each leg a few times WITHIN this same invocation before
+      //       giving up, so a transient RPC blip can no longer survive past this
+      //       call. `alreadyPulledBase` (cross-period resume from
+      //       `state.amountPulledInPeriod`) is still NOT wired — that requires
+      //       confirming the on-chain program's per-period reset timing on
+      //       devnet (a stale value there would skip a legitimate renewal
+      //       charge) — so a failure that outlasts the retries is still missed
+      //       until the next period.
+      //   (b) Price drift: fixed — updatePlan (app/actions/admin/plans.ts) now
+      //       blocks price/duration edits on a solana_subs plan while it has
+      //       active subscribers, so `plans.price` can no longer drift out of
+      //       sync with the immutable on-chain cap.
       await pullSplitForSubscription({
         rpcUrl,
         pullerSecretKeyBase58: pullerSecret,

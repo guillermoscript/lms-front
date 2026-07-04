@@ -144,10 +144,15 @@ describe('dispatchBillingEvent', () => {
   })
 
   it('activated with pending transaction reference → flips tx to successful + aligns period', async () => {
-    const { admin, calls } = makeFakeAdmin('pending')
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'u1', tenant_id: 't1' })
     const periodEnd = new Date('2027-03-01T00:00:00.000Z')
     await dispatchBillingEvent(
-      event('subscription.activated', { providerSubscriptionId: 'sub_1', reference: '42', periodEnd }),
+      event('subscription.activated', {
+        providerSubscriptionId: 'sub_1',
+        reference: '42',
+        periodEnd,
+        metadata: { userId: 'u1', tenantId: 't1' },
+      }),
       { provider: PROVIDER, admin },
     )
     // Looked up the transaction, then flipped it.
@@ -195,6 +200,21 @@ describe('dispatchBillingEvent', () => {
     expect(calls.updates.find((u) => u.table === 'transactions')).toBeUndefined()
   })
 
+  it('activated: metadata MISSING entirely → fails closed, does not flip (#347)', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'u1', tenant_id: 't1' })
+    await expect(
+      dispatchBillingEvent(
+        event('subscription.activated', {
+          providerSubscriptionId: 'sub_1',
+          reference: '42',
+          periodEnd: new Date('2027-03-01T00:00:00.000Z'),
+        }),
+        { provider: PROVIDER, admin },
+      ),
+    ).rejects.toThrow(/owner mismatch/i)
+    expect(calls.updates.find((u) => u.table === 'transactions')).toBeUndefined()
+  })
+
   it('activated for an existing row (subId, no reference) → sets subscription active', async () => {
     const { admin, calls } = makeFakeAdmin()
     await dispatchBillingEvent(event('subscription.activated', { providerSubscriptionId: 'sub_1' }), {
@@ -213,6 +233,30 @@ describe('dispatchBillingEvent', () => {
     })
     expect(calls.updates).toHaveLength(0)
     expect(calls.rpc).toHaveLength(0)
+  })
+
+  it('payment.succeeded: matched one-time tx with matching metadata → flips to successful', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'u1', tenant_id: 't1', plan_id: null, product_id: 99 })
+    await dispatchBillingEvent(
+      event('payment.succeeded', {
+        providerPaymentId: 'pi_1',
+        reference: '42',
+        metadata: { userId: 'u1', tenantId: 't1' },
+      }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toMatchObject({ status: 'successful' })
+  })
+
+  it('payment.succeeded: matched one-time tx but metadata MISSING → fails closed (#347)', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', { user_id: 'u1', tenant_id: 't1', plan_id: null, product_id: 99 })
+    await expect(
+      dispatchBillingEvent(
+        event('payment.succeeded', { providerPaymentId: 'pi_1', reference: '42' }),
+        { provider: PROVIDER, admin },
+      ),
+    ).rejects.toThrow(/owner mismatch/i)
+    expect(calls.updates.find((u) => u.table === 'transactions')).toBeUndefined()
   })
 
   it('refund.succeeded → no writes', async () => {

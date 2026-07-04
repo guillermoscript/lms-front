@@ -61,10 +61,14 @@ export async function dispatchBillingEvent(
           // proves it came from the provider store, but `reference` is a
           // sequential id — without this check a signed event could activate
           // another user's/tenant's pending transaction by guessing its id.
+          // Fail CLOSED if the provider ever drops userId/tenantId from the
+          // round-tripped custom data — missing metadata must not be treated as
+          // "no mismatch" (that would silently re-open the same guessable-id gap).
           const meta = event.metadata ?? {}
           const ownerMismatch =
-            (meta.userId && tx?.user_id && meta.userId !== tx.user_id) ||
-            (meta.tenantId && tx?.tenant_id && meta.tenantId !== tx.tenant_id)
+            !meta.userId || !meta.tenantId ||
+            (tx?.user_id != null && meta.userId !== tx.user_id) ||
+            (tx?.tenant_id != null && meta.tenantId !== tx.tenant_id)
           if (ownerMismatch) {
             throw new Error(
               `dispatch ${event.type}: metadata owner mismatch for transaction ${txnId} — refusing to activate`,
@@ -181,11 +185,14 @@ export async function dispatchBillingEvent(
 
       // Owner-binding guard (M1): the signed event proves it came from the
       // provider store, but `reference` is a sequential id — without this a
-      // signed event could complete another user's/tenant's transaction.
+      // signed event could complete another user's/tenant's transaction. Fail
+      // CLOSED if userId/tenantId are missing rather than treating a dropped
+      // custom-data field as "no mismatch."
       const meta = event.metadata ?? {}
       const ownerMismatch =
-        (meta.userId && tx.user_id && meta.userId !== tx.user_id) ||
-        (meta.tenantId && tx.tenant_id && meta.tenantId !== tx.tenant_id)
+        !meta.userId || !meta.tenantId ||
+        (tx.user_id != null && meta.userId !== tx.user_id) ||
+        (tx.tenant_id != null && meta.tenantId !== tx.tenant_id)
       if (ownerMismatch) {
         throw new Error(
           `dispatch ${event.type}: metadata owner mismatch for transaction ${txnId} — refusing to activate`,
