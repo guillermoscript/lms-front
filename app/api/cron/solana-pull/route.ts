@@ -16,10 +16,17 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 import { getSubscriptionState } from '@/lib/payments/solana-subscriptions'
 import { pullSplitForSubscription } from '@/lib/payments/solana-subscription-pull'
 
 export const runtime = 'nodejs'
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB)
+}
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -38,7 +45,7 @@ interface SolanaSubMeta {
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const provided = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (!cronSecret || provided !== cronSecret) {
+  if (!cronSecret || !provided || !safeEqual(provided, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

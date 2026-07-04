@@ -11,18 +11,38 @@
  * CONFIRMED before it can request the subscribe tx.
  *
  * The transaction is already signed by the wallet owner, so submitting it is
- * self-authorizing; this route only relays it. We still require an authenticated
- * session (so it is not an anonymous RPC relay) and bound the payload size.
+ * self-authorizing for FUND MOVEMENT — but being wallet-signed does not mean
+ * the instructions are ours. Without a check, this route is a generic signed-tx
+ * relay: any authenticated user could get an unrelated program's instructions
+ * signed by their own wallet and broadcast through our RPC, burning our RPC
+ * quota/cost for activity with no connection to a payment on this platform. We
+ * require an authenticated session AND restrict every instruction's program id
+ * to the small set our own checkout flows ever build (System, SPL Token,
+ * Associated Token Account, and the Subscriptions program), so this can only
+ * ever relay transactions produced by /solana/tx or /solana/subscribe-tx.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Connection } from '@solana/web3.js'
+import { Connection, VersionedTransaction, SystemProgram, ComputeBudgetProgram } from '@solana/web3.js'
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { createClient } from '@/lib/supabase/server'
+import { SUBS_PROGRAM_ADDRESS } from '@/lib/payments/solana-subscriptions'
 
 export const runtime = 'nodejs'
 
 // A Solana transaction can be at most 1232 bytes on the wire.
 const MAX_TX_BYTES = 1232
+
+// The only programs any of our checkout flows ever build instructions for
+// (solana-split.ts, solana-subscriptions.ts). Anything else means this isn't
+// one of our transactions.
+const ALLOWED_PROGRAM_IDS = new Set([
+  SystemProgram.programId.toBase58(),
+  TOKEN_PROGRAM_ID.toBase58(),
+  ASSOCIATED_TOKEN_PROGRAM_ID.toBase58(),
+  ComputeBudgetProgram.programId.toBase58(),
+  SUBS_PROGRAM_ADDRESS,
+])
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,6 +65,21 @@ export async function POST(req: NextRequest) {
     }
     if (raw.length < 64 || raw.length > MAX_TX_BYTES) {
       return NextResponse.json({ error: 'Invalid transaction' }, { status: 400 })
+    }
+
+    let vtx: VersionedTransaction
+    try {
+      vtx = VersionedTransaction.deserialize(raw)
+    } catch {
+      return NextResponse.json({ error: 'Invalid transaction' }, { status: 400 })
+    }
+    // A program id must always live in staticAccountKeys — Solana does not
+    // allow resolving a program id via an address lookup table — so this
+    // covers every instruction regardless of transaction version.
+    const { staticAccountKeys, compiledInstructions } = vtx.message
+    const programIds = compiledInstructions.map((ix) => staticAccountKeys[ix.programIdIndex]?.toBase58())
+    if (programIds.length === 0 || programIds.some((id) => !id || !ALLOWED_PROGRAM_IDS.has(id))) {
+      return NextResponse.json({ error: 'Unsupported transaction' }, { status: 400 })
     }
 
     const rpcUrl = process.env.SOLANA_RPC_URL
