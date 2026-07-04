@@ -89,8 +89,10 @@ export class SolanaProvider implements IPaymentProvider {
    * A fresh on-chain reference is generated and returned as `providerRef`; the
    * checkout route stores it on the transaction so the /tx endpoint can attach
    * it (locating the payment later) and /verify can confirm both split legs.
-   * The link carries our internal reference (transaction id) so /tx loads the
-   * right pending transaction.
+   * The link ALSO carries this same random reference (NOT the sequential
+   * transaction_id) — `/tx` is hit anonymously by the wallet app with no way to
+   * authenticate, so a guessable id would let anyone enumerate other tenants'
+   * pending order amounts and wallet addresses. Mirrors the `solana_subs` flow.
    *
    * Returns `kind: 'qr'`; the checkout UI renders the URL as a QR code.
    */
@@ -103,11 +105,12 @@ export class SolanaProvider implements IPaymentProvider {
       if (!appUrl) {
         throw new Error('baseUrl or NEXT_PUBLIC_APP_URL is required for Solana checkout')
       }
-      // The on-chain marker the wallet must include so we can find the payment.
+      // The on-chain marker the wallet must include so we can find the payment —
+      // also the unguessable lookup key /tx uses to load the pending transaction.
       const reference = generateReference()
 
       const link = new URL(`${appUrl}/api/payments/solana/tx`)
-      link.searchParams.set('reference', params.reference)
+      link.searchParams.set('reference', reference)
       const url = encodeURL({ link })
 
       return {

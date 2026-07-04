@@ -27,6 +27,7 @@ import { Connection, VersionedTransaction, SystemProgram, ComputeBudgetProgram }
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { createClient } from '@/lib/supabase/server'
 import { SUBS_PROGRAM_ADDRESS } from '@/lib/payments/solana-subscriptions'
+import { paymentAuthLimiter } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+      await paymentAuthLimiter.check(10, user.id)
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const { transaction } = await req.json()

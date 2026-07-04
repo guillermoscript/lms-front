@@ -25,6 +25,7 @@ import { getPaymentProvider } from '@/lib/payments'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
+import { paymentAuthLimiter } from '@/lib/rate-limit'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
 const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs']
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+      await paymentAuthLimiter.check(10, user.id)
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     // Resolve price + provider from the plan / product (tenant-scoped).

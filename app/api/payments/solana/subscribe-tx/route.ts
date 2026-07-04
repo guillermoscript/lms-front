@@ -31,6 +31,7 @@ import {
   buildSubscribeTxUnsignedBase64,
   buildInitAuthorityTxUnsignedBase64,
 } from '@/lib/payments/solana-subscriptions'
+import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -56,6 +57,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    // No session (hit directly by wallet apps) — rate limit by IP.
+    try {
+      await paymentAnonLimiter.check(30, getClientIp(req))
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     // The random on-chain reference pubkey (NOT the sequential transaction_id) —
     // unguessable, so the tx lookup below cannot be hijacked by id enumeration.
     const reference = req.nextUrl.searchParams.get('reference')

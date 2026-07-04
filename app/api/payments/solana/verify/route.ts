@@ -30,6 +30,7 @@ import {
   getSubscriptionState,
 } from '@/lib/payments/solana-subscriptions'
 import { pullSplitForSubscription } from '@/lib/payments/solana-subscription-pull'
+import { paymentPollLimiter } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -58,6 +59,12 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+      await paymentPollLimiter.check(60, user.id)
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     // Load the transaction, scoped to the caller + tenant.
@@ -241,7 +248,7 @@ async function handleSolanaSubsVerify(
     return NextResponse.json({ error: 'Missing subscriber' }, { status: 400 })
   }
   try {
-    // eslint-disable-next-line no-new
+     
     new PublicKey(subscriber)
   } catch {
     return NextResponse.json({ error: 'Invalid subscriber' }, { status: 400 })

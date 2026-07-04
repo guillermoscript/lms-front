@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { buildSplitTransaction } from '@/lib/payments/solana-split'
+import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -35,7 +36,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const reference = req.nextUrl.searchParams.get('reference') // our transaction_id
+    // No session (hit directly by wallet apps) — rate limit by IP.
+    try {
+      await paymentAnonLimiter.check(30, getClientIp(req))
+    } catch {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
+    // The random on-chain reference pubkey (NOT the sequential transaction_id) —
+    // unguessable, so the tx lookup below cannot be hijacked by id enumeration.
+    const reference = req.nextUrl.searchParams.get('reference')
     if (!reference) {
       return NextResponse.json({ error: 'Missing reference' }, { status: 400 })
     }
@@ -53,12 +63,12 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdmin()
 
-    // Load the pending transaction: amount, tenant, on-chain reference pubkey,
-    // and the settlement LOCKED at checkout (currency/base/mint).
+    // Load the pending transaction by its random reference pubkey (stored as
+    // provider_subscription_id at checkout) — unguessable, unlike transaction_id.
     const { data: tx } = await admin
       .from('transactions')
       .select('transaction_id, status, amount, tenant_id, payment_provider, provider_subscription_id, settlement_currency, settlement_base, settlement_mint')
-      .eq('transaction_id', reference)
+      .eq('provider_subscription_id', reference)
       .maybeSingle()
 
     if (!tx || tx.payment_provider !== 'solana') {
@@ -130,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       transaction: base64,
-      message: `${process.env.NEXT_PUBLIC_APP_NAME || 'LMS'} — order ${reference}`,
+      message: `${process.env.NEXT_PUBLIC_APP_NAME || 'LMS'} — order ${tx.transaction_id}`,
     })
   } catch (error) {
     console.error('[solana/tx] error:', error)
