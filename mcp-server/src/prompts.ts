@@ -198,11 +198,13 @@ Provide actionable recommendations for improvement.`
         `Tutor me Socratically${topic ? ` on: ${topic}` : ""}${lesson_id ? ` (lesson ${lesson_id}${course_id ? `, course ${course_id}` : ""})` : course_id ? ` (course ${course_id})` : ""}.
 
 Steps:
-1. ${lesson_id ? `Fetch the lesson with \`lms_view_lesson\` (lesson_id ${lesson_id})` : course_id ? `Get my progress with \`lms_my_learning\` and pick where I am in course ${course_id}` : "Ask me briefly what I'm working on if the topic above isn't enough"}.
-2. ${course_id ? `Call \`lms_get_tutor_config\` (course_id ${course_id}) and follow its persona, approach, and boundaries.` : "If a course is involved, call `lms_get_tutor_config` for it and follow its boundaries."}
-3. Teach by asking: probe what I already understand, build on it with one guided question at a time, and let me do the thinking. Correct misconceptions by leading me to spot them.
-4. When I seem to get it, verify with a short \`lms_practice_quiz\` (3-5 questions on exactly what we covered).
-5. If I miss questions, reteach those points and quiz again — don't move on until I pass.
+1. ${course_id ? `Call \`lms_get_tutor_history\` (course_id ${course_id}) to see recent tutoring sessions on this course and pick up where we left off.` : "If a course is involved, call `lms_get_tutor_history` for it to check for prior sessions."}
+2. ${lesson_id ? `Fetch the lesson with \`lms_view_lesson\` (lesson_id ${lesson_id})` : course_id ? `Get my progress with \`lms_my_learning\` and pick where I am in course ${course_id}` : "Ask me briefly what I'm working on if the topic above isn't enough"}.
+3. ${course_id ? `Call \`lms_get_tutor_config\` (course_id ${course_id}) and follow its persona, approach, and boundaries.` : "If a course is involved, call `lms_get_tutor_config` for it and follow its boundaries."}
+4. Teach by asking: probe what I already understand, build on it with one guided question at a time, and let me do the thinking. Correct misconceptions by leading me to spot them.
+5. When I seem to get it, verify with a short \`lms_practice_quiz\` (3-5 questions on exactly what we covered).
+6. If I miss questions, reteach those points and quiz again — don't move on until I pass.
+7. ${course_id ? `At a natural end of the session, call \`lms_record_tutor_session\` (course_id ${course_id}) with a summary of what we covered, the topics discussed, and any key struggles.` : "If a course was involved and it's a natural end of the session, call `lms_record_tutor_session` to record a summary."}
 
 ${TUTOR_GUARDRAILS}`
       )
@@ -278,11 +280,13 @@ ${TUTOR_GUARDRAILS}`
         `Run an exam-prep session for course ${course_id}.
 
 Steps:
-1. \`lms_get_my_weak_spots\` (course_id ${course_id}) + \`lms_my_exam_results\` for how I've scored so far. Call \`lms_get_tutor_config\` (course_id ${course_id}) and honor it.
-2. Build a prioritized plan for THIS session: 2-4 weak areas, worst-evidence first. Tell me the plan in two sentences — no long preamble.
-3. Per area: quick diagnostic question → reteach what the diagnostic exposes → \`lms_practice_quiz\` (3-5 questions) → only move on when I pass.
-4. Finish with a mixed \`lms_practice_quiz\` across everything we covered (5-8 questions).
-5. Close with an honest readiness verdict per area and what to drill tomorrow.
+1. \`lms_get_tutor_history\` (course_id ${course_id}) to see recent tutoring sessions on this course and pick up any open threads.
+2. \`lms_get_my_weak_spots\` (course_id ${course_id}) + \`lms_my_exam_results\` for how I've scored so far. Call \`lms_get_tutor_config\` (course_id ${course_id}) and honor it.
+3. Build a prioritized plan for THIS session: 2-4 weak areas, worst-evidence first. Tell me the plan in two sentences — no long preamble.
+4. Per area: quick diagnostic question → reteach what the diagnostic exposes → \`lms_practice_quiz\` (3-5 questions) → only move on when I pass.
+5. Finish with a mixed \`lms_practice_quiz\` across everything we covered (5-8 questions).
+6. Close with an honest readiness verdict per area and what to drill tomorrow.
+7. Call \`lms_record_tutor_session\` (course_id ${course_id}) with a summary of the areas covered, the topics discussed, and key struggles from today's session.
 
 Practice quizzes are drills — my real exam scores are never touched.
 
@@ -308,6 +312,82 @@ Steps:
 3. For each: one recall question first (make me retrieve it, don't reshow it), then a one-paragraph refresher only where I struggle.
 4. End with one mixed \`lms_practice_quiz\` (4-6 questions across today's items) — the attempt records automatically and keeps my XP streak going.
 5. Sign off with one line on tomorrow's focus.
+
+${TUTOR_GUARDRAILS}`
+      )
+  );
+
+  // ── conversation-practice ──────────────────────────────────────────────────
+  server.prompt(
+    {
+      name: "conversation-practice",
+      description:
+        "Run a live voice/chat conversation practice round in the exercise's target language/topic: correct gently mid-flow, evaluate after a few turns, then ask consent and record via lms_complete_exercise.",
+      schema: z.object({
+        exercise_id: z
+          .string()
+          .describe("The real_time_conversation exercise to practice"),
+        turns: z
+          .string()
+          .optional()
+          .describe("How many conversational turns to run before evaluating (default 6-8)"),
+      }),
+    },
+    async ({ exercise_id, turns }) =>
+      text(
+        `Run a live conversation practice round for exercise ${exercise_id}.
+
+Steps:
+1. \`lms_get_exercise_for_student\` (exercise_id ${exercise_id}) — read the instructions, topic_prompt, and my attempt history. Call \`lms_get_tutor_config\` for its course and honor the boundaries.
+2. Open the conversation in the exercise's target language and topic (use the topic_prompt if present). Keep your turns SHORT and voice-friendly: one or two sentences, no markdown walls, no bullet lists — this may be spoken aloud.
+3. Converse naturally for about ${turns ?? "6-8"} turns. Stay in character/topic; don't quiz me directly, let the conversation flow.
+4. Correct gently and briefly mid-flow when I make a clear mistake — a quick recast in your next line, not a grammar lecture. Don't break the conversational flow to do it.
+5. After ${turns ?? "6-8"} turns, step out of the conversation and evaluate my performance against the exercise's instructions: fluency, accuracy, task completion.
+6. Tell me honestly whether this passes (typical threshold 70) and why, with 1-2 concrete strengths and 1-2 concrete improvements.
+7. Ask my consent before recording ("Want me to record this attempt?"). Only after I agree, call \`lms_complete_exercise\` with score, passed, feedback, strengths, improvements, conversation_summary (a few sentences on what we discussed and how it went), and turns_count.
+8. If I decline, or the attempt doesn't pass, offer to keep practicing with a fresh round on the same topic.
+
+${TUTOR_GUARDRAILS}`
+      )
+  );
+
+  // ── mock-exam ──────────────────────────────────────────────────────────────
+  server.prompt(
+    {
+      name: "mock-exam",
+      description:
+        "Build a mock exam from the student's own missed/weak questions on an already-submitted exam (or course), run it, grade it, and compare the result against their original score.",
+      schema: z.object({
+        exam_id: z
+          .string()
+          .optional()
+          .describe("A specific submitted exam to build the mock exam from"),
+        course_id: z
+          .string()
+          .optional()
+          .describe(
+            "Build from all of the student's submitted exams in this course, if exam_id isn't given"
+          ),
+        question_count: z
+          .string()
+          .optional()
+          .describe("How many questions the mock exam should have (default: up to 8)"),
+      }),
+    },
+    async ({ exam_id, course_id, question_count }) =>
+      text(
+        `Build and run a mock exam${exam_id ? ` from exam ${exam_id}` : course_id ? ` from my submitted exams in course ${course_id}` : " from my weakest submitted exam results"}${question_count ? `, ${question_count} questions` : ""}.
+
+Steps:
+1. Call \`lms_get_mock_exam_source\`${exam_id ? ` (exam_id ${exam_id})` : course_id ? ` (course_id ${course_id})` : ""} — this ONLY returns questions from exams I've actually submitted. If it comes back with zero source exams or zero weak questions, tell me plainly (I have nothing missed there, or I never submitted that exam) and suggest \`lms_get_my_weak_spots\` or \`lms_my_exam_results\` instead — do not invent questions.
+2. From the weak/missed questions returned, author ${question_count ?? "up to 8"} FRESH variation questions — same underlying concept and difficulty as each source question, but never reuse its exact wording verbatim. Use each question's \`grading_rubric\`, \`ai_grading_criteria\`, and \`expected_keywords\` to keep variations testing the same thing; for multiple_choice, write new distractors around the same correct concept.
+3. Render the closed-type variations (multiple_choice, true_false, fill_blank, match, order) as one \`lms_practice_quiz\`; deliver any free_text variations in chat and grade them yourself afterward against the source question's rubric/criteria/keywords.
+4. Wait for my answers. Closed types grade themselves in the widget; grade free_text answers yourself.
+5. Record every attempt with \`lms_record_practice_attempt\`, setting \`topic: 'mock-exam:<exam_id>'\` for the relevant source exam(s) so this drill links back to the real exam it mocks.
+6. Compute my overall mock-exam score and compare it to the original score(s) from \`lms_get_mock_exam_source\` (the \`score\` field per source exam). Tell me plainly: which previously-missed concepts I've now fixed, which are still shaky, and whether I look ready to retake the real thing.
+7. If concepts are still shaky, offer to continue with \`explain-my-mistake\` or \`drill-coach\` on those specific gaps.
+
+This is practice — my real exam score and submission are never touched, only \`practice_attempts\`.
 
 ${TUTOR_GUARDRAILS}`
       )

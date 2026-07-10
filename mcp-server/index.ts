@@ -10,6 +10,10 @@ import { registerExamTools } from "./src/tools/exams.js";
 import { registerAnalyticsTools } from "./src/tools/analytics.js";
 import { registerStudentTools } from "./src/tools/student.js";
 import { registerPracticeTools } from "./src/tools/practice.js";
+import { registerIngestTools } from "./src/tools/ingest.js";
+import { registerMockExamTools } from "./src/tools/mock-exam.js";
+import { registerAristotleTools } from "./src/tools/aristotle.js";
+import { registerEnrollTools } from "./src/tools/enroll.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -66,6 +70,10 @@ registerExamTools(server);
 registerAnalyticsTools(server);
 registerStudentTools(server);
 registerPracticeTools(server);
+registerIngestTools(server);
+registerMockExamTools(server);
+registerAristotleTools(server);
+registerEnrollTools(server);
 registerResources(server);
 registerPrompts(server);
 

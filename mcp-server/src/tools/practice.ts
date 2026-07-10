@@ -32,10 +32,38 @@ const TEXT_ENGINE_TYPES = new Set([
 /** Keys inside exercise_config that can carry grading answers. */
 const CONFIG_SECRET_KEYS = ["evaluation_criteria", "rubric"];
 
+// Conversation-style exercise types (Epic #348 Phase 2, issue #362). Their
+// exercise_config shape is newer/less predictable than the text types above,
+// so instead of a blocklist they get an ALLOWLIST — only the fields we know
+// are student-safe (currently just topic_prompt) are ever returned; any
+// teacher-authored grading context stays server-side by default.
+const CONVERSATION_CONFIG_TYPES = new Set(["real_time_conversation", "discussion"]);
+const CONVERSATION_SAFE_CONFIG_KEYS = ["topic_prompt"];
+
+/** exercise_type → engine_type for exercise_evaluations, mirroring the app's
+ *  lib/exercises/engine.ts. Only text and real-time-conversation types are
+ *  gradable via MCP — audio/video/artifact/coding need the app's media or
+ *  code-execution pipeline (engine_type 'audio' | 'video' | 'simulation' for
+ *  artifact | 'code' respectively).
+ */
+function engineTypeFor(exerciseType: string): "text" | "simulation" | null {
+  if (TEXT_ENGINE_TYPES.has(exerciseType)) return "text";
+  if (exerciseType === "real_time_conversation") return "simulation";
+  return null;
+}
+
 function sanitizeExerciseConfig(
-  config: Record<string, unknown> | null
+  config: Record<string, unknown> | null,
+  exerciseType: string
 ): Record<string, unknown> {
   if (!config || typeof config !== "object") return {};
+  if (CONVERSATION_CONFIG_TYPES.has(exerciseType)) {
+    const safe: Record<string, unknown> = {};
+    for (const key of CONVERSATION_SAFE_CONFIG_KEYS) {
+      if (key in config) safe[key] = config[key];
+    }
+    return safe;
+  }
   const clean: Record<string, unknown> = { ...config };
   for (const key of CONFIG_SECRET_KEYS) delete clean[key];
   return clean;
@@ -223,7 +251,8 @@ export function registerPracticeTools(server: MCPServer) {
           created_at: a.created_at,
         }));
         const completed = (completionRes.data ?? []).length > 0;
-        const gradable = TEXT_ENGINE_TYPES.has(exercise.exercise_type as string);
+        const gradable =
+          engineTypeFor(exercise.exercise_type as string) !== null;
 
         return ok(
           {
@@ -238,7 +267,8 @@ export function registerPracticeTools(server: MCPServer) {
               course_id: exercise.course_id,
               lesson_id: exercise.lesson_id,
               exercise_config: sanitizeExerciseConfig(
-                exercise.exercise_config as Record<string, unknown> | null
+                exercise.exercise_config as Record<string, unknown> | null,
+                exercise.exercise_type as string
               ),
             },
             gradable_via_mcp: gradable,
@@ -258,7 +288,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_complete_exercise",
       description:
-        "Record the caller's graded attempt on a REAL teacher exercise after you (the host) evaluated their work against its instructions. Every call appends an evaluation to the attempt history; a passing attempt also marks the exercise completed (XP is awarded automatically by the platform). Text-engine exercises only (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank).",
+        "Record the caller's graded attempt on a REAL teacher exercise after you (the host) evaluated their work against its instructions. Every call appends an evaluation to the attempt history; a passing attempt also marks the exercise completed (XP is awarded automatically by the platform). Text-engine exercises (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank) plus real_time_conversation (voice/chat conversation practice you ran and graded live — recorded as engine_type 'simulation', matching the app's convention; requires conversation_summary and turns_count).",
       schema: z.object({
         exercise_id: z.number().describe("The exercise being attempted"),
         score: z
@@ -283,6 +313,21 @@ export function registerPracticeTools(server: MCPServer) {
           .array(z.string())
           .optional()
           .describe("What the student should improve"),
+        conversation_summary: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "real_time_conversation only (REQUIRED for that type): a few sentences on what was discussed and how the student performed"
+          ),
+        turns_count: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(
+            "real_time_conversation only (REQUIRED for that type): how many conversational turns took place"
+          ),
       }),
       annotations: {
         readOnlyHint: false,
@@ -316,10 +361,23 @@ export function registerPracticeTools(server: MCPServer) {
         if (session.getRole() === "student" && exercise.status !== "published") {
           return errorResult(`Exercise ${input.exercise_id} is not published`);
         }
-        if (!TEXT_ENGINE_TYPES.has(exercise.exercise_type as string)) {
+        const engineType = engineTypeFor(exercise.exercise_type as string);
+        if (!engineType) {
           return errorResult(
             `Exercise "${exercise.title}" is a ${exercise.exercise_type} exercise — its evaluation needs the app's media/code pipeline. Ask the student to complete it in the LMS app; you can still coach them here.`
           );
+        }
+        if (engineType === "simulation") {
+          if (!input.conversation_summary?.trim()) {
+            return errorResult(
+              "real_time_conversation exercises require conversation_summary (a few sentences on what was discussed and how the student performed)"
+            );
+          }
+          if (input.turns_count === undefined) {
+            return errorResult(
+              "real_time_conversation exercises require turns_count (how many conversational turns took place)"
+            );
+          }
         }
 
         await session.verifyCourseAccess(exercise.course_id);
@@ -363,21 +421,27 @@ export function registerPracticeTools(server: MCPServer) {
 
         // Evaluation row records the attempt regardless of pass/fail —
         // attempt_number is auto-assigned by a DB trigger.
+        const aiResult: Record<string, unknown> = {
+          feedback: input.feedback,
+          strengths: input.strengths ?? [],
+          improvements: input.improvements ?? [],
+          source: "mcp-tutor",
+        };
+        if (engineType === "simulation") {
+          aiResult.conversation_summary = input.conversation_summary;
+          aiResult.turns_count = input.turns_count;
+        }
+
         const { data: evaluation, error: evalError } = await supabase
           .from("exercise_evaluations")
           .insert({
             exercise_id: exercise.id,
             user_id: userId,
             tenant_id: session.getTenantId(),
-            engine_type: "text",
+            engine_type: engineType,
             score: input.score,
             passed: input.passed,
-            ai_result: {
-              feedback: input.feedback,
-              strengths: input.strengths ?? [],
-              improvements: input.improvements ?? [],
-              source: "mcp-tutor",
-            },
+            ai_result: aiResult,
           })
           .select("attempt_number")
           .single();

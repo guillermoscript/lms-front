@@ -16,20 +16,27 @@ implementation.
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
   the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
-  tools; `student` gets only the 6 self-scoped learning tools (list hiding in
-  `src/tool-policy.ts`, call-time gating in `src/register.ts`).
+  tools; `student` gets only the 18 self-scoped learning/practice tools (list
+  hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
 ## What it exposes
 
-- **59 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **65 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
-  `lms_browse_catalog`), and AI-tutor practice (`lms_get_exercise_for_student`
-  with attempt history, `lms_complete_exercise` for host-graded text
-  exercises, `lms_practice_quiz`, `lms_record_practice_attempt`,
-  `lms_get_my_weak_spots`, `lms_get_tutor_config`).
+  `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
+  with attempt history, `lms_complete_exercise` for host-graded text +
+  real_time_conversation exercises, `lms_practice_quiz`,
+  `lms_record_practice_attempt`, `lms_get_my_weak_spots`,
+  `lms_get_tutor_config`), course ingest (`lms_get_course_content` paginated
+  bulk pull, `lms_search_content` snippet search over entitled courses),
+  mock exams (`lms_get_mock_exam_source` — missed questions + rubrics from
+  the caller's own submitted exams only), shared tutor memory
+  (`lms_get_tutor_history`, `lms_record_tutor_session` — same
+  `aristotle_sessions` table the in-app tutor uses), and self-enrollment
+  (`lms_enroll_in_course` via the `self_enroll_subscription_course` RPC).
 - **14 widgets** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
@@ -44,9 +51,10 @@ implementation.
   answers in-widget, grades closed types locally, records via
   `lms_record_practice_attempt`, free-text answers go back to the host).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
-- **9 prompts:** create-course-outline, generate-lesson-content,
+- **11 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, socratic-tutor, drill-coach,
-  explain-my-mistake, exam-prep-session, daily-review.
+  explain-my-mistake, exam-prep-session, daily-review,
+  conversation-practice, mock-exam.
 
 ## Develop
 

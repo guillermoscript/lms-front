@@ -48,6 +48,13 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_record_practice_attempt",
   "lms_get_my_weak_spots",
   "lms_get_tutor_config",
+  // Phase 2 (Epic #348) — ingest, mock exams, shared tutor memory, self-enroll.
+  "lms_get_course_content",
+  "lms_search_content",
+  "lms_get_mock_exam_source",
+  "lms_get_tutor_history",
+  "lms_record_tutor_session",
+  "lms_enroll_in_course",
 ]);
 
 const TEACHER_DENY_TOOLS = new Set<string>([
