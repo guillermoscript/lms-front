@@ -77,6 +77,10 @@ begin
 end;
 $$;
 
+-- Trigger-only function — not meant to be a PostgREST RPC (advisor:
+-- anon_security_definer_function_executable; matches fix_advisor_security_findings).
+revoke execute on function public.handle_practice_attempt_xp() from public, anon, authenticated;
+
 create trigger trg_practice_attempt_xp
   after insert on public.practice_attempts
   for each row execute function public.handle_practice_attempt_xp();
