@@ -15,17 +15,28 @@ implementation.
   carrying the caller's access token, so **Postgres RLS enforces tenant
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
-  the LMS `custom_access_token_hook`. Only `teacher`/`admin` may use the server.
+  the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
+  tools; `student` gets only the 6 self-scoped learning tools (list hiding in
+  `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
 ## What it exposes
 
-- **39 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics.
-- **4 widgets** (MCP Apps): `course-dashboard` (← `lms_list_courses`),
-  `course-detail` (← `lms_get_course`, with a live "Load stats" action),
-  `exam-submissions` (← `lms_list_exam_submissions`, drill into a submission),
-  `lesson-preview` (← `lms_get_lesson`).
+- **53 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+  and student learning (`lms_my_learning`, `lms_view_lesson`,
+  `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
+  `lms_browse_catalog`).
+- **13 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
+  "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
+  drill into a submission), `lesson-preview` (← `lms_get_lesson`),
+  `artifact-sandbox`, `submission-grader`, `student-progress-roster`,
+  `school-overview`; student: `my-learning` (← `lms_my_learning`),
+  `lesson-viewer` (← `lms_view_lesson`, mark-complete button calls
+  `lms_complete_lesson`), `my-exam-results` (← `lms_my_exam_results`),
+  `gamification-profile` (← `lms_my_gamification`), `course-catalog`
+  (← `lms_browse_catalog`).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
 - **4 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course.

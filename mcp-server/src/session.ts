@@ -43,7 +43,7 @@ function resolveAuth(ctx: McpHandlerContext): McpAuth | undefined {
   return undefined;
 }
 
-const ALLOWED_ROLES = ["teacher", "admin"];
+const ALLOWED_ROLES = ["student", "teacher", "admin"];
 
 /**
  * Per-request session for the LMS MCP server.
@@ -63,8 +63,9 @@ export class LmsSession {
 
   /**
    * Build a session from a handler context. Throws if the caller is
-   * unauthenticated or is not a teacher/admin (the only roles allowed to use
-   * this server). Callers should wrap in try/catch and return `errorResult`.
+   * unauthenticated or has no recognized tenant role (student/teacher/admin).
+   * Which tools a role may call is enforced by the tool policy + per-tool
+   * guards, not here. Callers should wrap in try/catch and return `errorResult`.
    */
   static fromContext(ctx: McpHandlerContext): LmsSession {
     const auth = resolveAuth(ctx);
@@ -89,7 +90,7 @@ export class LmsSession {
 
     if (!ALLOWED_ROLES.includes(tenantRole)) {
       throw new Error(
-        `Access denied: role '${tenantRole}'. Only teachers and admins can use the LMS MCP server.`
+        `Access denied: role '${tenantRole}'. Only students, teachers, and admins can use the LMS MCP server.`
       );
     }
 
@@ -119,6 +120,37 @@ export class LmsSession {
 
   getTenantId(): string {
     return this.tenantId;
+  }
+
+  // --- Student access guard --------------------------------------------------
+
+  /**
+   * Verify the caller may access a course as a learner, via the same
+   * `has_course_access` SECURITY DEFINER RPC the app uses (entitlements-aware).
+   * Teachers/admins short-circuit through course visibility instead: if RLS
+   * lets them read the course, they may view it.
+   */
+  async verifyCourseAccess(courseId: number): Promise<void> {
+    if (this.tenantRole !== "student") {
+      const { data, error } = await this.client
+        .from("courses")
+        .select("course_id")
+        .eq("course_id", courseId)
+        .eq("tenant_id", this.tenantId)
+        .maybeSingle();
+      if (error || !data) throw new Error(`Course ${courseId} not found`);
+      return;
+    }
+    const { data, error } = await this.client.rpc("has_course_access", {
+      _user_id: this.userId,
+      _course_id: courseId,
+    });
+    if (error) throw new Error(`Checking course access: ${error.message}`);
+    if (data !== true) {
+      throw new Error(
+        `Access denied: you are not enrolled in course ${courseId}. Browse the catalog with lms_browse_catalog.`
+      );
+    }
   }
 
   // --- Ownership guards (defense in depth on top of RLS) -------------------

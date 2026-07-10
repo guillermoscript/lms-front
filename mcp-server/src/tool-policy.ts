@@ -7,7 +7,9 @@ import type { MCPServer, MiddlewareContext, McpMiddlewareFn } from "mcp-use/serv
  *   teacher → create/edit/browse own content + analytics for THEIR OWN courses
  *             (RLS + ownership checks already scope analytics to owned courses),
  *             BUT NOT destructive ops (delete/archive).
- *   other   → no tools (LmsSession already rejects non-teacher/admin callers).
+ *   student → only the self-scoped `lms_my_*` / learning tools below; every
+ *             query runs against their own data (RLS + explicit user filters).
+ *   other   → no tools.
  *
  * Deletes are matched by prefix so future `lms_delete_*` tools are covered
  * automatically.
@@ -26,6 +28,21 @@ import type { MCPServer, MiddlewareContext, McpMiddlewareFn } from "mcp-use/serv
  */
 const TEACHER_DENY_PREFIXES = ["lms_delete_"];
 
+/**
+ * Student-usable tools. All are self-scoped: they read (or, for
+ * lms_complete_lesson, write) only the caller's own rows, with RLS plus
+ * explicit user-id filters. Teachers and admins may call them too — "my"
+ * simply resolves to the caller.
+ */
+const STUDENT_TOOLS = new Set<string>([
+  "lms_my_learning",
+  "lms_view_lesson",
+  "lms_complete_lesson",
+  "lms_my_exam_results",
+  "lms_my_gamification",
+  "lms_browse_catalog",
+]);
+
 const TEACHER_DENY_TOOLS = new Set<string>([
   // Destructive — admin only. Analytics tools stay allowed for teachers because
   // they are ownership-scoped (a teacher only ever sees their own courses' data).
@@ -41,6 +58,7 @@ export function isToolAllowedForRole(
   toolName: string
 ): boolean {
   if (role === "admin") return true;
+  if (role === "student") return STUDENT_TOOLS.has(toolName);
   if (role !== "teacher") return false;
   if (TEACHER_DENY_PREFIXES.some((p) => toolName.startsWith(p))) return false;
   return !TEACHER_DENY_TOOLS.has(toolName);

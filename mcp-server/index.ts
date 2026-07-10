@@ -8,6 +8,7 @@ import { registerLessonTools } from "./src/tools/lessons.js";
 import { registerExerciseTools } from "./src/tools/exercises.js";
 import { registerExamTools } from "./src/tools/exams.js";
 import { registerAnalyticsTools } from "./src/tools/analytics.js";
+import { registerStudentTools } from "./src/tools/student.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -24,9 +25,9 @@ const server = new MCPServer({
   title: "LMS Course Management",
   version: "2.0.0",
   description:
-    "Manage courses, lessons, exercises, exams, and analytics for the LMS. Teachers and admins only.",
+    "Manage courses, lessons, exercises, exams, and analytics for the LMS. Teachers and admins get management tools; students get self-scoped learning tools.",
   instructions:
-    "Use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. All actions are scoped to the caller's tenant and enforced by row-level security.",
+    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. All actions are scoped to the caller's tenant and enforced by row-level security.",
   baseUrl:
     process.env.MCP_SERVER_URL || process.env.MCP_URL || "http://localhost:3000",
   favicon: "favicon.ico",
@@ -62,6 +63,7 @@ registerLessonTools(server);
 registerExerciseTools(server);
 registerExamTools(server);
 registerAnalyticsTools(server);
+registerStudentTools(server);
 registerResources(server);
 registerPrompts(server);
 
