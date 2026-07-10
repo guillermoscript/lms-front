@@ -41,6 +41,13 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_my_exam_results",
   "lms_my_gamification",
   "lms_browse_catalog",
+  // AI-tutor practice tools (Epic #348) — all self-scoped.
+  "lms_get_exercise_for_student",
+  "lms_complete_exercise",
+  "lms_practice_quiz",
+  "lms_record_practice_attempt",
+  "lms_get_my_weak_spots",
+  "lms_get_tutor_config",
 ]);
 
 const TEACHER_DENY_TOOLS = new Set<string>([

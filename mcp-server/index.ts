@@ -9,6 +9,7 @@ import { registerExerciseTools } from "./src/tools/exercises.js";
 import { registerExamTools } from "./src/tools/exams.js";
 import { registerAnalyticsTools } from "./src/tools/analytics.js";
 import { registerStudentTools } from "./src/tools/student.js";
+import { registerPracticeTools } from "./src/tools/practice.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -64,6 +65,7 @@ registerExerciseTools(server);
 registerExamTools(server);
 registerAnalyticsTools(server);
 registerStudentTools(server);
+registerPracticeTools(server);
 registerResources(server);
 registerPrompts(server);
 

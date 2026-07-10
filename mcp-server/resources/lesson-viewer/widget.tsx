@@ -46,7 +46,7 @@ type Props = z.infer<typeof propsSchema>;
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function LessonViewer() {
-  const { props, isPending } = useWidget<Props>();
+  const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const {
     callTool: completeLesson,
@@ -56,6 +56,8 @@ export default function LessonViewer() {
   } = useCallTool("lms_complete_lesson");
   // Optimistic local flag so the button flips immediately on success.
   const [justCompleted, setJustCompleted] = useState(false);
+  // Tutor entry point (#353): one-shot — swaps to a confirmation after sending.
+  const [askedTutor, setAskedTutor] = useState(false);
 
   const dark = theme === "dark";
   const colors = {
@@ -341,8 +343,37 @@ export default function LessonViewer() {
               </div>
             )}
 
-            {/* Mark complete */}
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            {/* Mark complete + tutor entry */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={() => {
+                  if (askedTutor) return;
+                  setAskedTutor(true);
+                  sendFollowUpMessage(
+                    `I'm reading lesson ${lesson.sequence} "${lesson.title}" of "${course_title}" (lesson_id ${lesson.id}) and I don't fully understand it. Tutor me on it Socratically: use the socratic-tutor approach, don't just give answers, and quiz me at the end with lms_practice_quiz.`
+                  );
+                }}
+                disabled={askedTutor}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 10,
+                  fontSize: 13.5,
+                  fontWeight: 650,
+                  cursor: askedTutor ? "default" : "pointer",
+                  backgroundColor: "transparent",
+                  color: askedTutor ? colors.done : colors.accent,
+                  border: `1.5px solid ${askedTutor ? colors.done : colors.accent}`,
+                }}
+              >
+                {askedTutor ? "Asked the tutor ✓" : "I don't understand this 🙋"}
+              </button>
               {completed ? (
                 <span
                   style={{

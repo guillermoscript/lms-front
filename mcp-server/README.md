@@ -23,23 +23,30 @@ implementation.
 
 ## What it exposes
 
-- **53 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
-  and student learning (`lms_my_learning`, `lms_view_lesson`,
+- **59 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+  student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
-  `lms_browse_catalog`).
-- **13 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  `lms_browse_catalog`), and AI-tutor practice (`lms_get_exercise_for_student`
+  with attempt history, `lms_complete_exercise` for host-graded text
+  exercises, `lms_practice_quiz`, `lms_record_practice_attempt`,
+  `lms_get_my_weak_spots`, `lms_get_tutor_config`).
+- **14 widgets** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
   drill into a submission), `lesson-preview` (← `lms_get_lesson`),
   `artifact-sandbox`, `submission-grader`, `student-progress-roster`,
   `school-overview`; student: `my-learning` (← `lms_my_learning`),
   `lesson-viewer` (← `lms_view_lesson`, mark-complete button calls
-  `lms_complete_lesson`), `my-exam-results` (← `lms_my_exam_results`),
+  `lms_complete_lesson`, "I don't understand" button hands off to the tutor),
+  `my-exam-results` (← `lms_my_exam_results`),
   `gamification-profile` (← `lms_my_gamification`), `course-catalog`
-  (← `lms_browse_catalog`).
+  (← `lms_browse_catalog`), `practice-player` (← `lms_practice_quiz`:
+  answers in-widget, grades closed types locally, records via
+  `lms_record_practice_attempt`, free-text answers go back to the host).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
-- **4 prompts:** create-course-outline, generate-lesson-content,
-  create-exam-questions, review-course.
+- **9 prompts:** create-course-outline, generate-lesson-content,
+  create-exam-questions, review-course, socratic-tutor, drill-coach,
+  explain-my-mistake, exam-prep-session, daily-review.
 
 ## Develop
 
