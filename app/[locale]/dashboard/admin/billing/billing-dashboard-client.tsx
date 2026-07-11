@@ -28,6 +28,12 @@ interface BillingDashboardClientProps {
       currentPeriodEnd: string | null
       gracePeriodEnd: string | null
     } | null
+    upcomingPayment: {
+      amount: number
+      currency: string
+      dueDate: string
+      paymentMethod: string | null
+    } | null
     usage: {
       courses: { current: number; limit: number }
       students: { current: number; limit: number }
@@ -131,6 +137,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         billingStatus={status.billingStatus}
         billingPeriodEnd={status.billingPeriodEnd}
         subscription={status.subscription}
+        upcomingPayment={status.upcomingPayment}
         usage={status.usage}
         transactionFeePercent={status.transactionFeePercent}
         onManageClick={status.hasStripeCustomer ? handleManageBilling : undefined}

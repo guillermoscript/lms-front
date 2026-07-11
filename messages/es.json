@@ -1580,7 +1580,11 @@
           "students": "Estudiantes",
           "usagePercent": "{percent}% usado",
           "limitReached": "Límite alcanzado",
-          "unlimitedPlan": "Plan ilimitado"
+          "unlimitedPlan": "Plan ilimitado",
+          "upcomingPayment": "Próximo pago",
+          "dueOn": "Vence el {date}",
+          "bankTransfer": "Transferencia bancaria",
+          "cardPayment": "Pago con tarjeta"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",

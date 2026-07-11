@@ -1580,7 +1580,11 @@
           "students": "Students",
           "usagePercent": "{percent}% used",
           "limitReached": "Limit reached",
-          "unlimitedPlan": "Unlimited plan"
+          "unlimitedPlan": "Unlimited plan",
+          "upcomingPayment": "Upcoming payment",
+          "dueOn": "Due {date}",
+          "bankTransfer": "Bank transfer",
+          "cardPayment": "Card payment"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",

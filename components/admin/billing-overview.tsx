@@ -22,6 +22,12 @@ interface BillingOverviewProps {
     currentPeriodEnd: string | null
     gracePeriodEnd: string | null
   } | null
+  upcomingPayment: {
+    amount: number
+    currency: string
+    dueDate: string
+    paymentMethod: string | null
+  } | null
   usage: {
     courses: { current: number; limit: number }
     students: { current: number; limit: number }
@@ -36,6 +42,7 @@ export function BillingOverview({
   billingStatus,
   billingPeriodEnd,
   subscription,
+  upcomingPayment,
   usage,
   transactionFeePercent,
   onManageClick,
@@ -51,6 +58,9 @@ export function BillingOverview({
   const isPastDue = billingStatus === 'past_due'
   const showRenewalWarning = isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
   const daysInGracePeriod = gracePeriodEnd ? Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+  const formattedUpcomingAmount = upcomingPayment
+    ? new Intl.NumberFormat(undefined, { style: 'currency', currency: upcomingPayment.currency }).format(upcomingPayment.amount)
+    : null
 
   return (
     <div className="space-y-6">
@@ -114,6 +124,26 @@ export function BillingOverview({
                   </div>
                 </div>
               )}
+            </section>
+          )}
+
+          {upcomingPayment && formattedUpcomingAmount && !subscription?.cancelAtPeriodEnd && (
+            <section aria-label={t('upcomingPayment')} className="flex flex-col gap-3 rounded-lg border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium">{t('upcomingPayment')}</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {t('dueOn', { date: new Date(upcomingPayment.dueDate).toLocaleDateString() })}
+                  </p>
+                </div>
+              </div>
+              <div className="text-left sm:text-right">
+                <p className="font-semibold tabular-nums">{formattedUpcomingAmount}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {upcomingPayment.paymentMethod === 'manual_transfer' ? t('bankTransfer') : t('cardPayment')}
+                </p>
+              </div>
             </section>
           )}
 
