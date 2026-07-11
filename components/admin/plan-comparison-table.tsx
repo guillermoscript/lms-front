@@ -1,12 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { IconCheck, IconX } from '@tabler/icons-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { IconCheck, IconMinus, IconSparkles } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
 interface PlanData {
@@ -47,148 +45,179 @@ const FEATURE_LABELS: Record<string, string> = {
   priority_support: 'Priority Support',
 }
 
-const DISPLAY_FEATURES = [
-  'leaderboard', 'achievements', 'store', 'certificates', 'analytics',
-  'ai_grading', 'custom_branding', 'custom_domain', 'api_access',
-  'white_label', 'priority_support',
-]
+const FEATURE_KEYS = Object.keys(FEATURE_LABELS)
+
+function isIncluded(value: boolean | string | undefined) {
+  return value === true || (typeof value === 'string' && value !== 'false')
+}
+
+function formatLimit(value: number) {
+  return value === -1 ? 'Unlimited' : value.toLocaleString()
+}
+
+function FeatureValue({ value }: { value: boolean | string | undefined }) {
+  if (!isIncluded(value)) {
+    return <IconMinus aria-label="Not included" className="mx-auto size-4 text-muted-foreground/50" />
+  }
+
+  if (typeof value === 'string' && value !== 'true') {
+    return <span className="text-xs font-medium">{value}</span>
+  }
+
+  return <IconCheck aria-label="Included" className="mx-auto size-4 text-primary" strokeWidth={2.5} />
+}
 
 export function PlanComparisonTable({
   plans,
   currentPlan = 'free',
   onSelectPlan,
   onManualTransfer,
-  loading,
+  loading = false,
   showActions = true,
 }: PlanComparisonTableProps) {
-  const [yearly, setYearly] = useState(false)
+  const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly')
+  const yearly = interval === 'yearly'
+  const featureKeys = useMemo(
+    () => FEATURE_KEYS.filter((key) => plans.some((plan) => plan.features[key] !== undefined)),
+    [plans],
+  )
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Billing toggle */}
-      <div className="flex items-center justify-center gap-3">
-        <Label htmlFor="billing-toggle" className={cn(!yearly && 'font-semibold')}>Monthly</Label>
-        <Switch id="billing-toggle" checked={yearly} onCheckedChange={setYearly} />
-        <Label htmlFor="billing-toggle" className={cn(yearly && 'font-semibold')}>
-          Yearly <Badge variant="secondary" className="ml-1">Save ~17%</Badge>
-        </Label>
+    <div className="space-y-10">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div
+          role="group"
+          aria-label="Billing interval"
+          className="inline-flex rounded-lg border bg-muted/45 p-1"
+        >
+          <button
+            type="button"
+            aria-pressed={!yearly}
+            onClick={() => setInterval('monthly')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              !yearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            aria-pressed={yearly}
+            onClick={() => setInterval('yearly')}
+            className={cn(
+              'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              yearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            Yearly
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-semibold text-primary">
+              Save ~17%
+            </Badge>
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {yearly ? 'Billed once per year. Cancel at the end of your billing period.' : 'Billed monthly. Change plans when your school needs more room.'}
+        </p>
       </div>
 
-      {/* Plan cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 py-4">
+      <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = plan.slug === currentPlan
           const isPopular = plan.slug === 'pro'
           const price = yearly ? plan.price_yearly : plan.price_monthly
-          const interval = yearly ? 'yearly' : 'monthly'
+          const monthlyEquivalent = yearly ? Math.round(plan.price_yearly / 12) : plan.price_monthly
+          const includedFeatures = featureKeys.filter((key) => isIncluded(plan.features[key]))
+          const visibleFeatures = includedFeatures.slice(0, 4)
+          const remainingFeatureCount = includedFeatures.length - visibleFeatures.length
 
           return (
-            <Card key={plan.plan_id} className={cn(
-              'relative flex flex-col',
-              isPopular && 'border-primary shadow-md',
-              isCurrent && 'bg-muted/50'
-            )}>
-              {isPopular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge>Most Popular</Badge>
-                </div>
+            <Card
+              key={plan.plan_id}
+              className={cn(
+                'relative flex flex-col overflow-visible',
+                isPopular && 'border-primary shadow-lg shadow-primary/10',
+                isCurrent && 'bg-muted/30',
               )}
-              <CardHeader className="text-center">
-                <CardTitle>{plan.name}</CardTitle>
-                <CardDescription className="min-h-[2.5rem]">{plan.description}</CardDescription>
-                <div className="pt-2">
+            >
+              {isPopular && (
+                <Badge className="absolute -top-3 left-5 gap-1.5 shadow-sm">
+                  <IconSparkles className="size-3" />
+                  Most popular
+                </Badge>
+              )}
+              <CardHeader className="gap-5 pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <p className="min-h-10 text-sm leading-5 text-muted-foreground">{plan.description}</p>
+                  </div>
+                  {isCurrent && <Badge variant="secondary">Current plan</Badge>}
+                </div>
+
+                <div>
                   {plan.slug === 'free' ? (
-                    <span className="text-3xl font-bold">$0</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-semibold tracking-tight">$0</span>
+                      <span className="text-sm text-muted-foreground">forever</span>
+                    </div>
                   ) : (
                     <>
-                      <span className="text-3xl font-bold">${yearly ? Math.round(plan.price_yearly / 12) : plan.price_monthly}</span>
-                      <span className="text-muted-foreground">/mo</span>
-                      {yearly && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          ${plan.price_yearly}/year billed annually
-                        </div>
-                      )}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-semibold tracking-tight">${monthlyEquivalent}</span>
+                        <span className="text-sm text-muted-foreground">/ month</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {yearly ? `$${price} billed yearly` : 'Billed monthly'}
+                      </p>
                     </>
                   )}
                 </div>
+
+                <dl className="grid grid-cols-3 divide-x rounded-lg border bg-muted/25 text-center">
+                  <div className="px-2 py-2.5">
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Courses</dt>
+                    <dd className="mt-1 text-sm font-semibold tabular-nums">{formatLimit(plan.limits.max_courses)}</dd>
+                  </div>
+                  <div className="px-2 py-2.5">
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Students</dt>
+                    <dd className="mt-1 text-sm font-semibold tabular-nums">{formatLimit(plan.limits.max_students)}</dd>
+                  </div>
+                  <div className="px-2 py-2.5">
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Platform fee</dt>
+                    <dd className="mt-1 text-sm font-semibold tabular-nums">{plan.transaction_fee_percent}%</dd>
+                  </div>
+                </dl>
               </CardHeader>
-              <CardContent className="flex-1 space-y-3">
-                {/* Limits */}
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Courses</span>
-                    <span className="font-medium">
-                      {plan.limits.max_courses === -1 ? 'Unlimited' : plan.limits.max_courses}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Students</span>
-                    <span className="font-medium">
-                      {plan.limits.max_students === -1 ? 'Unlimited' : plan.limits.max_students}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Transaction fee</span>
-                    <span className="font-medium">
-                      {plan.transaction_fee_percent === 0 ? '0%' : `${plan.transaction_fee_percent}%`}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="border-t pt-3" />
-
-                {/* Features */}
-                <div className="space-y-2 text-sm">
-                  {DISPLAY_FEATURES.map((featureKey) => {
-                    const value = plan.features[featureKey]
-                    const hasFeature = value === true || (typeof value === 'string' && value !== 'false')
-
-                    return (
-                      <div key={featureKey} className="flex items-center gap-2">
-                        {hasFeature ? (
-                          <IconCheck className="h-4 w-4 text-green-600 shrink-0" />
-                        ) : (
-                          <IconX className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                        )}
-                        <span className={cn(!hasFeature && 'text-muted-foreground/60')}>
-                          {FEATURE_LABELS[featureKey] || featureKey}
-                          {typeof value === 'string' && value !== 'true' && value !== 'false' && (
-                            <span className="text-xs text-muted-foreground ml-1">({value})</span>
-                          )}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
+              <CardContent className="flex-1 pt-2">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Highlights</p>
+                <ul className="space-y-2.5">
+                  {visibleFeatures.map((key) => (
+                    <li key={key} className="flex items-start gap-2 text-sm">
+                      <IconCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2.5} />
+                      <span>{FEATURE_LABELS[key]}</span>
+                    </li>
+                  ))}
+                  {remainingFeatureCount > 0 && (
+                    <li className="pl-6 text-sm text-muted-foreground">+ {remainingFeatureCount} more in full comparison</li>
+                  )}
+                </ul>
               </CardContent>
 
               {showActions && (
-                <CardFooter className="flex flex-col gap-2">
+                <CardFooter className="flex flex-col gap-2 pt-2">
                   {isCurrent ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
-                    </Button>
+                    <Button variant="outline" className="w-full" disabled>Current plan</Button>
                   ) : plan.slug === 'free' ? (
-                    <Button variant="ghost" className="w-full" disabled>
-                      Free
-                    </Button>
+                    <Button variant="ghost" className="w-full" disabled>Free plan</Button>
                   ) : (
                     <>
-                      <Button
-                        className="w-full"
-                        onClick={() => onSelectPlan?.(plan.plan_id, interval)}
-                        disabled={loading}
-                      >
-                        {loading ? 'Loading...' : 'Subscribe'}
+                      <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
+                        {loading ? 'Opening checkout...' : 'Choose plan'}
                       </Button>
                       {onManualTransfer && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={() => onManualTransfer(plan.plan_id, interval)}
-                          disabled={loading}
-                        >
+                        <Button variant="ghost" size="sm" className="w-full" onClick={() => onManualTransfer(plan.plan_id, interval)} disabled={loading}>
                           Pay via bank transfer
                         </Button>
                       )}
@@ -200,6 +229,35 @@ export function PlanComparisonTable({
           )
         })}
       </div>
+
+      {featureKeys.length > 0 && (
+        <section aria-labelledby="plan-comparison-heading" className="overflow-hidden rounded-xl border">
+          <div className="border-b bg-muted/30 px-5 py-4">
+            <h2 id="plan-comparison-heading" className="font-semibold">Compare every feature</h2>
+            <p className="mt-1 text-sm text-muted-foreground">See exactly what your school gets at each level.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-[720px] w-full text-sm">
+              <thead className="bg-muted/20">
+                <tr className="border-b">
+                  <th scope="col" className="w-48 px-5 py-3 text-left text-xs font-medium text-muted-foreground">Feature</th>
+                  {plans.map((plan) => <th key={plan.plan_id} scope="col" className="px-4 py-3 text-center text-xs font-semibold">{plan.name}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {featureKeys.map((key) => (
+                  <tr key={key} className="hover:bg-muted/20">
+                    <th scope="row" className="px-5 py-3 text-left font-medium">{FEATURE_LABELS[key]}</th>
+                    {plans.map((plan) => (
+                      <td key={plan.plan_id} className="px-4 py-3 text-center"><FeatureValue value={plan.features[key]} /></td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

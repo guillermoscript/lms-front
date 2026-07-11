@@ -22,6 +22,12 @@ interface BillingOverviewProps {
     currentPeriodEnd: string | null
     gracePeriodEnd: string | null
   } | null
+  upcomingPayment: {
+    amount: number
+    currency: string
+    dueDate: string
+    paymentMethod: string | null
+  } | null
   usage: {
     courses: { current: number; limit: number }
     students: { current: number; limit: number }
@@ -36,6 +42,7 @@ export function BillingOverview({
   billingStatus,
   billingPeriodEnd,
   subscription,
+  upcomingPayment,
   usage,
   transactionFeePercent,
   onManageClick,
@@ -51,15 +58,17 @@ export function BillingOverview({
   const isPastDue = billingStatus === 'past_due'
   const showRenewalWarning = isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
   const daysInGracePeriod = gracePeriodEnd ? Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+  const formattedUpcomingAmount = upcomingPayment
+    ? new Intl.NumberFormat(undefined, { style: 'currency', currency: upcomingPayment.currency }).format(upcomingPayment.amount)
+    : null
 
   return (
     <div className="space-y-6">
-      {/* Current Plan Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+        <CardHeader className="gap-5 border-b bg-muted/15">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-1.5">
+              <CardTitle className="flex flex-wrap items-center gap-2">
                 {t('currentPlan')}
                 <Badge variant={isFree ? 'secondary' : 'default'}>{planName}</Badge>
                 {isPastDue && <Badge variant="destructive">{t('pastDue')}</Badge>}
@@ -71,7 +80,7 @@ export function BillingOverview({
                 }
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
               {!isFree && onManageClick && (
                 <Button variant="outline" size="sm" onClick={onManageClick}>
                   <IconCreditCard className="mr-2 h-4 w-4" />
@@ -86,40 +95,56 @@ export function BillingOverview({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Billing period */}
-          {!isFree && (periodStart || periodEnd) && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                {periodStart && periodEnd && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <IconCalendar className="h-4 w-4" />
-                    <span>
-                      {t('period', { start: periodStart.toLocaleDateString(), end: periodEnd.toLocaleDateString() })}
-                    </span>
+        <CardContent className="space-y-6 pt-6">
+          {!isFree && (periodStart || periodEnd || subscription) && (
+            <section aria-label={t('currentPlan')} className="grid gap-3 sm:grid-cols-2">
+              {periodStart && periodEnd && (
+                <div className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3.5">
+                  <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 text-sm">
+                    <p className="font-medium">{t('period', { start: periodStart.toLocaleDateString(), end: periodEnd.toLocaleDateString() })}</p>
+                    {daysUntilEnd !== null && daysUntilEnd > 0 && !isPastDue && (
+                      <p className="mt-1 text-muted-foreground">{t('daysUntilPayment', { count: daysUntilEnd })}</p>
+                    )}
                   </div>
-                )}
-
-                {daysUntilEnd !== null && daysUntilEnd > 0 && !isPastDue && (
-                  <div className="flex items-center gap-2 font-medium text-primary">
-                    <IconCalendar className="h-4 w-4" />
-                    <span>{t('daysUntilPayment', { count: daysUntilEnd })}</span>
-                  </div>
-                )}
-
-                {subscription && (
-                  <Badge variant="outline">
-                    {subscription.interval === 'yearly' ? t('annualBilling') : t('monthlyBilling')}
-                  </Badge>
-                )}
-              </div>
-
-              {subscription?.cancelAtPeriodEnd && periodEnd && (
-                <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">
-                  {t('cancelOnDate', { date: periodEnd.toLocaleDateString() })}
-                </p>
+                </div>
               )}
-            </div>
+              {subscription && (
+                <div className="flex items-start gap-3 rounded-lg border bg-card p-3.5">
+                  <IconCreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="space-y-1 text-sm">
+                    <Badge variant="outline">
+                      {subscription.interval === 'yearly' ? t('annualBilling') : t('monthlyBilling')}
+                    </Badge>
+                    {subscription?.cancelAtPeriodEnd && periodEnd && (
+                      <p className="font-medium text-amber-700 dark:text-amber-400">
+                        {t('cancelOnDate', { date: periodEnd.toLocaleDateString() })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {upcomingPayment && formattedUpcomingAmount && !subscription?.cancelAtPeriodEnd && (
+            <section aria-label={t('upcomingPayment')} className="flex flex-col gap-3 rounded-lg border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium">{t('upcomingPayment')}</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {t('dueOn', { date: new Date(upcomingPayment.dueDate).toLocaleDateString() })}
+                  </p>
+                </div>
+              </div>
+              <div className="text-left sm:text-right">
+                <p className="font-semibold tabular-nums">{formattedUpcomingAmount}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {upcomingPayment.paymentMethod === 'manual_transfer' ? t('bankTransfer') : t('cardPayment')}
+                </p>
+              </div>
+            </section>
           )}
 
           {isPastDue && (
@@ -162,8 +187,8 @@ export function BillingOverview({
             </div>
           )}
 
-          {/* Usage Meters */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <section aria-label={`${t('currentPlan')} usage`} className="border-t pt-5">
+            <div className="grid gap-5 md:grid-cols-2">
             <UsageMeter
               label={t('courses')}
               current={usage.courses.current}
@@ -174,7 +199,8 @@ export function BillingOverview({
               current={usage.students.current}
               limit={usage.students.limit}
             />
-          </div>
+            </div>
+          </section>
         </CardContent>
       </Card>
     </div>

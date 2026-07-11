@@ -1578,7 +1578,14 @@
           "renewalRequired": "Renewal Required Soon",
           "renewalDescription": "Your subscription period ends in {count, plural, one {# day} other {# days}}. Renew now to ensure uninterrupted service for your students.",
           "courses": "Courses",
-          "students": "Students"
+          "students": "Students",
+          "usagePercent": "{percent}% used",
+          "limitReached": "Limit reached",
+          "unlimitedPlan": "Unlimited plan",
+          "upcomingPayment": "Upcoming payment",
+          "dueOn": "Due {date}",
+          "bankTransfer": "Bank transfer",
+          "cardPayment": "Card payment"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",

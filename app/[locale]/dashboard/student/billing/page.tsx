@@ -325,8 +325,8 @@ export default async function StudentBillingPage() {
           ) : (
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+                <table className="min-w-[620px] w-full text-sm">
+                  <thead className="bg-muted/20">
                     <tr className="border-b">
                       <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {t('purchases.table.item')}
@@ -354,10 +354,13 @@ export default async function StudentBillingPage() {
                       const statusMeta = getTransactionStatusMeta(tx.status)
                       return (
                         <tr key={tx.transaction_id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-medium max-w-[160px] truncate" title={itemName}>
-                            {itemName}
+                          <td className="max-w-[160px] px-4 py-3 align-top font-medium" title={itemName}>
+                            <span className="block truncate">{itemName}</span>
+                            <p className="mt-1 text-xs font-normal text-muted-foreground sm:hidden">
+                              {formatDate(tx.transaction_date)}
+                            </p>
                           </td>
-                          <td className="px-4 py-3 hidden sm:table-cell">
+                          <td className="hidden px-4 py-3 align-top sm:table-cell">
                             <span className="flex items-center gap-1 text-muted-foreground text-xs">
                               <ProviderIcon provider={tx.payment_provider} />
                               {tx.payment_provider
@@ -365,10 +368,10 @@ export default async function StudentBillingPage() {
                                 : '—'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell tabular-nums">
+                          <td className="hidden px-4 py-3 align-top tabular-nums text-muted-foreground sm:table-cell">
                             {formatDate(tx.transaction_date)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 align-top">
                             <Badge
                               variant="outline"
                               className={`gap-1 text-xs ${statusMeta.className}`}
@@ -377,7 +380,7 @@ export default async function StudentBillingPage() {
                               {t(`purchases.status.${tx.status}` as any)}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium">
+                          <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
                             {formatCurrency(Number(tx.amount), tx.currency ?? 'USD')}
                           </td>
                         </tr>
@@ -400,8 +403,8 @@ export default async function StudentBillingPage() {
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+                <table className="min-w-[620px] w-full text-sm">
+                  <thead className="bg-muted/20">
                     <tr className="border-b">
                       <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {t('offline.table.product')}
@@ -425,33 +428,37 @@ export default async function StudentBillingPage() {
                       const productName = req.product_id ? (productMap.get(req.product_id) ?? t('purchases.unknownItem')) : t('purchases.unknownItem')
                       return (
                         <tr key={req.request_id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-medium max-w-[160px] truncate" title={productName}>
-                            {productName}
+                          <td className="max-w-[160px] px-4 py-3 align-top font-medium" title={productName}>
+                            <span className="block truncate">{productName}</span>
+                            <p className="mt-1 text-xs font-normal text-muted-foreground sm:hidden">
+                              {formatDate(req.created_at)}
+                            </p>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell tabular-nums">
+                          <td className="hidden px-4 py-3 align-top tabular-nums text-muted-foreground sm:table-cell">
                             {formatDate(req.created_at)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 align-top">
                             <Badge variant="secondary" className="text-xs">
                               {req.status}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium">
+                          <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
                             {req.payment_amount != null
                               ? formatCurrency(Number(req.payment_amount), req.payment_currency ?? 'USD')
                               : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3 text-right align-top">
                             {req.invoice_number ? (
                               <Link
                                 href={`/api/invoices/${req.invoice_number}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline focus-visible:underline outline-none"
+                                className="inline-flex items-center gap-1 rounded-sm text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 aria-label={t('offline.downloadInvoiceLabel', { number: req.invoice_number })}
                               >
                                 <IconDownload className="w-3.5 h-3.5" />
-                                {t('offline.downloadInvoice')}
+                                <span className="hidden sm:inline">{t('offline.downloadInvoice')}</span>
+                                <span className="sr-only sm:hidden">{t('offline.downloadInvoice')}</span>
                               </Link>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>

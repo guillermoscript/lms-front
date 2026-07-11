@@ -144,15 +144,19 @@ export default async function AdminInvoicesPage({
           </p>
         </div>
 
-        {/* Invoices table */}
         <Card>
-          <CardHeader>
-            <CardTitle>{t('table.title')}</CardTitle>
+          <CardHeader className="border-b bg-muted/15">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>{t('table.title')}</CardTitle>
+              {rows.length > 0 && (
+                <span className="text-sm tabular-nums text-muted-foreground">{rows.length}</span>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b">
+              <table className="min-w-[640px] w-full text-sm">
+                <thead className="border-b bg-muted/20">
                   <tr>
                     <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.invoiceNumber')}
@@ -166,10 +170,10 @@ export default async function AdminInvoicesPage({
                     <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.status')}
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <th className="hidden px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                       {t('table.headers.date')}
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.actions')}
                     </th>
                   </tr>
@@ -181,22 +185,27 @@ export default async function AdminInvoicesPage({
                         key={req.request_id}
                         className="border-b last:border-0 transition-colors hover:bg-muted/40"
                       >
-                        <td className="px-4 py-3">
-                          <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+                        <td className="px-4 py-3 align-top">
+                          <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono tabular-nums">
                             {req.invoice_number}
                           </code>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 align-top">
                           <p className="font-medium">
                             {req.product_id
                               ? (productsMap.get(req.product_id) ?? t('table.unknownProduct'))
                               : t('table.unknownProduct')}
                           </p>
+                          {req.created_at && (
+                            <p className="mt-1 text-xs text-muted-foreground md:hidden">
+                              {format(new Date(req.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                            </p>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                        <td className="px-4 py-3 text-right align-top font-semibold tabular-nums">
                           {fmt(req.payment_amount, req.payment_currency)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 align-top">
                           {statusBadge(req.status || '')}
                           {req.payment_confirmed_at && (
                             <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -204,19 +213,20 @@ export default async function AdminInvoicesPage({
                             </p>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                        <td className="hidden px-4 py-3 align-top text-xs tabular-nums text-muted-foreground md:table-cell">
                           {req.created_at
                             ? format(new Date(req.created_at), 'MMM d, yyyy', { locale: dateLocale })
                             : '—'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right align-top">
                           <Link
                             href={`/api/invoices/${req.invoice_number}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            {t('table.viewInvoice')}
+                            <span className="hidden sm:inline">{t('table.viewInvoice')}</span>
+                            <span className="sr-only sm:hidden">{t('table.viewInvoice')}</span>
                             <IconExternalLink className="h-3 w-3" strokeWidth={2} />
                           </Link>
                         </td>

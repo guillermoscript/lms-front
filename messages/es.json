@@ -1578,7 +1578,14 @@
           "renewalRequired": "Renovación Necesaria Pronto",
           "renewalDescription": "Tu período de suscripción termina en {count, plural, one {# día} other {# días}}. Renueva ahora para asegurar un servicio ininterrumpido para tus estudiantes.",
           "courses": "Cursos",
-          "students": "Estudiantes"
+          "students": "Estudiantes",
+          "usagePercent": "{percent}% usado",
+          "limitReached": "Límite alcanzado",
+          "unlimitedPlan": "Plan ilimitado",
+          "upcomingPayment": "Próximo pago",
+          "dueOn": "Vence el {date}",
+          "bankTransfer": "Transferencia bancaria",
+          "cardPayment": "Pago con tarjeta"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",

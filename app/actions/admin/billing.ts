@@ -69,6 +69,10 @@ export async function getSubscriptionStatus() {
     .single()
 
   const limits = planDetails?.limits as { max_courses: number; max_students: number } || { max_courses: 5, max_students: 50 }
+  const nextPaymentDate = subscription?.current_period_end || tenant?.billing_period_end || null
+  const nextPaymentAmount = subscription && planDetails
+    ? subscription.interval === 'yearly' ? planDetails.price_yearly : planDetails.price_monthly
+    : null
 
   return {
     plan: planSlug,
@@ -85,6 +89,12 @@ export async function getSubscriptionStatus() {
       currentPeriodStart: subscription.current_period_start,
       currentPeriodEnd: subscription.current_period_end,
       gracePeriodEnd: subscription.grace_period_end,
+    } : null,
+    upcomingPayment: nextPaymentDate && nextPaymentAmount !== null && planSlug !== 'free' ? {
+      amount: nextPaymentAmount,
+      currency: 'USD',
+      dueDate: nextPaymentDate,
+      paymentMethod: subscription?.payment_method || null,
     } : null,
     usage: {
       courses: {
