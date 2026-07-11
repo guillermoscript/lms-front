@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **68 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **75 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -41,8 +41,14 @@ implementation.
   readiness score from the caller's own history), and the teacher coaching
   loop (`lms_get_confusion_hotspots` — where students collectively struggle,
   ranked by severity; `lms_duplicate_exercise` — copy an exercise as a draft
-  variation for remediation).
-- **15 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  variation for remediation), flashcards with SM-2 spaced repetition
+  (`lms_create_review_cards`, `lms_get_due_reviews`, `lms_grade_review` —
+  scheduling math runs server-side), weekly study plans (`lms_set_study_plan`
+  replace-per-week, `lms_get_study_plan` with next-lesson + due-card context,
+  `lms_complete_study_goal`), and consented teacher escalation
+  (`lms_ask_teacher` — notifies the course's teacher via a SECURITY DEFINER
+  RPC, enrollment-validated and rate-limited to 3/day/course).
+- **17 widgets** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
   drill into a submission), `lesson-preview` (← `lms_get_lesson`),
@@ -56,7 +62,12 @@ implementation.
   answers in-widget, grades closed types locally, records via
   `lms_record_practice_attempt`, free-text answers go back to the host),
   `exam-readiness` (← `lms_get_exam_readiness`: readiness dial, component
-  breakdown, per-topic mastery bars with "Practice this" launch buttons).
+  breakdown, per-topic mastery bars with "Practice this" launch buttons),
+  `flashcards` (← `lms_get_due_reviews`: flip-card review session,
+  Again/Hard/Good/Easy self-rating → `lms_grade_review`, end-of-session
+  summary with a drill-my-misses action), `study-plan`
+  (← `lms_get_study_plan`: weekly progress ring, kind-grouped goal checklist
+  with check-off → `lms_complete_study_goal`, plan-next-week action).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
 - **12 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, generate-remediation-exercises,
