@@ -42,8 +42,9 @@ export default async function OAuthConsentPage({
 
   // All roles may connect — the MCP server's tool policy scopes what each
   // role can do (students get only self-scoped learning tools; RLS enforces
-  // tenant isolation on every query).
-  const userRole = roleData?.role || "student"
+  // tenant isolation on every query). Global role is only a fallback for the
+  // headline — the role that matters is the one in the connected tenant.
+  const globalRole = roleData?.role || "student"
 
   // The tenant_id claim in the minted token decides which school's data the
   // connected client sees. Load the user's active memberships so multi-school
@@ -132,7 +133,7 @@ export default async function OAuthConsentPage({
 
         <div className="mb-4 rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
           <p className="text-xs text-yellow-700 dark:text-yellow-300">
-            Signed in as <strong>{user.email}</strong> ({userRole})
+            Signed in as <strong>{user.email}</strong> ({currentTenant?.role ?? globalRole})
             {currentTenant && memberships.length === 1 && (
               <> — connecting to <strong>{currentTenant.name}</strong></>
             )}.
