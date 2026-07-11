@@ -1391,7 +1391,8 @@
         "tenants": "Tenants",
         "apiTokens": "API Tokens",
         "monetization": "Monetization",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "website": "Website"
       },
       "appearance": {
         "title": "Appearance",
@@ -3146,6 +3147,9 @@
     "analytics": "Analytics",
     "monetization": "Monetization",
     "monetizationOverview": "Overview",
+    "courses": "Courses",
+    "people": "People",
+    "website": "Website",
     "products": "Products",
     "plans": "Plans",
     "subscriptions": "Subscriptions",
