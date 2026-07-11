@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { authorization_id, decision } = body
+  const { authorization_id, decision, tenant_id } = body
 
   if (!authorization_id || !decision) {
     return NextResponse.json(
@@ -31,6 +32,43 @@ export async function POST(request: Request) {
 
   // All roles may connect — the MCP server's tool policy scopes what each
   // role can do; RLS enforces tenant isolation on every query.
+
+  // Pin the tenant BEFORE approving: the token minted at the code exchange
+  // carries app_metadata.tenant_id as its tenant claim, which decides which
+  // school's rows RLS exposes to the connected client. Only accept tenants
+  // the user is an active member of (same pattern as join-school.ts).
+  if (decision === "approve" && tenant_id) {
+    const adminClient = createAdminClient()
+
+    const { data: membership } = await adminClient
+      .from("tenant_users")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .eq("tenant_id", tenant_id)
+      .eq("status", "active")
+      .maybeSingle()
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: "You are not an active member of the selected school." },
+        { status: 403 }
+      )
+    }
+
+    if (user.app_metadata?.tenant_id !== tenant_id) {
+      const { error: metaError } = await adminClient.auth.admin.updateUserById(user.id, {
+        app_metadata: { tenant_id },
+      })
+      if (metaError) {
+        return NextResponse.json(
+          { error: "Failed to set the school for this connection. Please try again." },
+          { status: 500 }
+        )
+      }
+      // Keep the app's preferred-tenant in sync (mirrors join-school.ts).
+      await supabase.auth.updateUser({ data: { preferred_tenant_id: tenant_id } })
+    }
+  }
 
   try {
     const oauthAuth = supabase.auth.oauth

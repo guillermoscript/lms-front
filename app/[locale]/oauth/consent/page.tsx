@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
-import { ConsentForm } from "./consent-form"
+import { ConsentForm, type TenantMembership } from "./consent-form"
 
 export default async function OAuthConsentPage({
   searchParams,
@@ -43,6 +44,30 @@ export default async function OAuthConsentPage({
   // role can do (students get only self-scoped learning tools; RLS enforces
   // tenant isolation on every query).
   const userRole = roleData?.role || "student"
+
+  // The tenant_id claim in the minted token decides which school's data the
+  // connected client sees. Load the user's active memberships so multi-school
+  // users can pick which school this connection is for. Admin client: tenant
+  // names must resolve regardless of the caller's current tenant claim.
+  const adminClient = createAdminClient()
+  const { data: membershipRows } = await adminClient
+    .from("tenant_users")
+    .select("tenant_id, role, tenants(name)")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+
+  const memberships: TenantMembership[] = (membershipRows ?? []).map((row) => ({
+    tenantId: row.tenant_id as string,
+    role: (row.role as string) ?? "student",
+    name:
+      ((row.tenants as { name?: string } | null)?.name as string) ??
+      "Unknown school",
+  }))
+
+  const currentTenantId =
+    (user.app_metadata?.tenant_id as string | undefined) ??
+    memberships[0]?.tenantId
+  const currentTenant = memberships.find((m) => m.tenantId === currentTenantId)
 
   // Get authorization details from Supabase OAuth server
   const { data: authDetails, error } = await supabase.auth.oauth.getAuthorizationDetails(
@@ -107,13 +132,20 @@ export default async function OAuthConsentPage({
 
         <div className="mb-4 rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
           <p className="text-xs text-yellow-700 dark:text-yellow-300">
-            Signed in as <strong>{user.email}</strong> ({userRole}).
+            Signed in as <strong>{user.email}</strong> ({userRole})
+            {currentTenant && memberships.length === 1 && (
+              <> — connecting to <strong>{currentTenant.name}</strong></>
+            )}.
             This will let the application access your LMS data — teachers and
             admins get course management, students get their own learning tools.
           </p>
         </div>
 
-        <ConsentForm authorizationId={authorization_id} />
+        <ConsentForm
+          authorizationId={authorization_id}
+          memberships={memberships}
+          defaultTenantId={currentTenantId}
+        />
       </div>
     </div>
   )
