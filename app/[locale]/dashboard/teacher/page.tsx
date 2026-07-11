@@ -24,6 +24,12 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
 
+interface EnrollmentActivity {
+  enrollment_date: string
+  profiles: { id: string; full_name: string | null; avatar_url: string | null } | null
+  courses: { title: string | null } | null
+}
+
 export default async function TeacherDashboard() {
   const supabase = createAdminClient()
   const t = await getTranslations('dashboard.teacher')
@@ -95,7 +101,8 @@ export default async function TeacherDashboard() {
       .single()
   ])
 
-  const recentEnrollments = enrollmentsRes.data || []
+  // PostgREST returns objects for these to-one embeds; the untyped client infers arrays
+  const recentEnrollments = (enrollmentsRes.data || []) as unknown as EnrollmentActivity[]
   const totalEnrollmentsList = allEnrollmentsRes.data || []
   const allSubmissions = submissionsRes.data || []
   const profile = profileRes.data
@@ -129,7 +136,7 @@ export default async function TeacherDashboard() {
               {t('promptTemplates')}
             </Button>
           </Link>
-          <Link href="/dashboard/teacher/courses/new">
+          <Link href="/dashboard/teacher/courses/new" data-tour="sidebar-create-course">
             <Button size="sm" className="gap-2">
               <IconPlus className="h-3.5 w-3.5" />
               {t('createCourse')}
@@ -360,7 +367,7 @@ export default async function TeacherDashboard() {
           <CardContent>
             <div className="space-y-5">
               {recentEnrollments.length > 0 ? (
-                recentEnrollments.map((activity: any, idx) => (
+                recentEnrollments.map((activity, idx) => (
                   <div key={idx} className="flex items-start gap-3">
                     <div className="relative">
                       <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden text-xs font-semibold text-primary">

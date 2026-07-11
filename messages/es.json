@@ -1391,7 +1391,8 @@
         "tenants": "Inquilinos",
         "apiTokens": "Tokens de API",
         "monetization": "Monetización",
-        "appearance": "Apariencia"
+        "appearance": "Apariencia",
+        "website": "Sitio Web"
       },
       "appearance": {
         "title": "Apariencia",
@@ -2981,6 +2982,9 @@
     "analytics": "Analíticas",
     "monetization": "Monetización",
     "monetizationOverview": "Resumen",
+    "courses": "Cursos",
+    "people": "Personas",
+    "website": "Sitio Web",
     "products": "Productos",
     "plans": "Planes",
     "subscriptions": "Suscripciones",
