@@ -114,39 +114,24 @@ export default async function proxy(request: NextRequest) {
   }
 
   // --- OAuth well-known metadata (RFC 9728) ---
-  // Claude Desktop fetches /.well-known/oauth-protected-resource/api/mcp
+  // MCP clients (claude.ai custom connectors, Claude Desktop) fetch
+  // /.well-known/oauth-protected-resource/api/mcp to discover the auth server.
+  // Supabase's OAuth 2.1 server IS the authorization server (it hosts
+  // /authorize, /token, /register and DCR) — we only advertise it here.
   // Must return JSON before intl middleware adds locale prefix.
   if (pathname.startsWith('/.well-known/')) {
-    if (pathname.startsWith('/.well-known/oauth-protected-resource') ||
-        pathname.startsWith('/.well-known/oauth-authorization-server')) {
+    if (pathname.startsWith('/.well-known/oauth-protected-resource')) {
       const proto = request.headers.get('x-forwarded-proto') || 'https'
       const reqHost = request.headers.get('host') || 'localhost:3000'
-      const origin = `${proto}://${reqHost}`
-      const mcpBase = `${origin}/api/mcp`
+      const supabaseIssuer = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`
 
-      const isResource = pathname.startsWith('/.well-known/oauth-protected-resource')
-      const body = isResource
-        ? {
-            resource: mcpBase,
-            authorization_servers: [mcpBase],
-            scopes_supported: ['mcp:tools'],
-            bearer_methods_supported: ['header'],
-            resource_name: 'LMS MCP Server',
-          }
-        : {
-            issuer: mcpBase,
-            authorization_endpoint: `${mcpBase}/auth/authorize`,
-            token_endpoint: `${mcpBase}/auth/token`,
-            registration_endpoint: `${mcpBase}/auth/register`,
-            response_types_supported: ['code'],
-            grant_types_supported: ['authorization_code', 'refresh_token'],
-            token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
-            code_challenge_methods_supported: ['S256'],
-            scopes_supported: ['mcp:tools'],
-            revocation_endpoint: `${mcpBase}/auth/revoke`,
-          }
-
-      return new NextResponse(JSON.stringify(body), {
+      return new NextResponse(JSON.stringify({
+        resource: `${proto}://${reqHost}/api/mcp`,
+        authorization_servers: [supabaseIssuer],
+        scopes_supported: ['openid', 'profile', 'email'],
+        bearer_methods_supported: ['header'],
+        resource_name: 'LMS MCP Server',
+      }), {
         status: 200,
         headers: {
           'content-type': 'application/json',
@@ -154,6 +139,33 @@ export default async function proxy(request: NextRequest) {
           'access-control-allow-origin': '*',
         },
       })
+    }
+    if (pathname.startsWith('/.well-known/oauth-authorization-server') ||
+        pathname.startsWith('/.well-known/openid-configuration')) {
+      // Legacy-client fallback (pre-RFC 9728 discovery): serve the REAL
+      // authorization-server metadata from Supabase, verbatim.
+      const supabaseIssuer = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`
+      try {
+        const upstream = await fetch(
+          `${supabaseIssuer}/.well-known/oauth-authorization-server`,
+          { next: { revalidate: 3600 } }
+        )
+        if (!upstream.ok) throw new Error(`upstream ${upstream.status}`)
+        const body = await upstream.text()
+        return new NextResponse(body, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': 'public, max-age=3600',
+            'access-control-allow-origin': '*',
+          },
+        })
+      } catch {
+        return NextResponse.json(
+          { error: 'server_error', error_description: 'Failed to fetch authorization server metadata' },
+          { status: 502 }
+        )
+      }
     }
     // Other .well-known paths — pass through without intl
     return NextResponse.next()
@@ -222,7 +234,7 @@ export default async function proxy(request: NextRequest) {
   // --- Path normalization ---
   const segments = pathname.split('/')
   const locale = segments[1]
-  const hasValidLocale = locales.includes(locale as any)
+  const hasValidLocale = (locales as readonly string[]).includes(locale)
 
   // --- Guarantee a locale prefix before any auth / membership logic ---
   // Server Actions and RSC navigations can reach the middleware on a locale-less
@@ -240,7 +252,7 @@ export default async function proxy(request: NextRequest) {
     // falling back to the default — so a Spanish user isn't flipped to English
     // after a locale-less server-action redirect.
     const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
-    const targetLocale = locales.includes(cookieLocale as any) ? cookieLocale : defaultLocale
+    const targetLocale = cookieLocale && (locales as readonly string[]).includes(cookieLocale) ? cookieLocale : defaultLocale
     const localizedUrl = publicRedirectUrl(request, `/${targetLocale}${pathname}`)
     localizedUrl.search = request.nextUrl.search
     return NextResponse.redirect(localizedUrl)
@@ -269,6 +281,10 @@ export default async function proxy(request: NextRequest) {
     '/pricing',
     '/verify',
     '/courses',
+    // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
+    // Must be public: the page handles its own login redirect and preserves the
+    // authorization_id — the middleware's redirectTo drops query strings.
+    '/oauth/consent',
   ]
 
   const isPublicRoute = publicRoutes.some(route =>

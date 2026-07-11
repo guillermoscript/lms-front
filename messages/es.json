@@ -2325,16 +2325,26 @@
         }
       },
       "apiTokens": {
-        "title": "Tokens de API",
-        "description": "Genera tokens para conectar Claude Desktop u otros clientes MCP al LMS.",
+        "title": "Conectar Asistentes de IA",
+        "description": "Conecta Claude u otros clientes MCP a tu LMS.",
         "createToken": "Crear Token",
+        "connectClaude": {
+          "title": "Conectar Claude",
+          "description": "Agrega el LMS como conector personalizado — sin tokens, inicias sesión con tu cuenta del LMS.",
+          "urlLabel": "URL del conector",
+          "step1": "Copia la URL del conector de arriba.",
+          "step2": "En Claude (claude.ai o la app de escritorio), abre Configuración → Conectores → Agregar conector personalizado.",
+          "step3": "Pega la URL y haz clic en Agregar.",
+          "step4": "Cuando Claude pida autorización, inicia sesión con tu cuenta del LMS y aprueba — las herramientas del LMS aparecerán en tus chats.",
+          "copied": "URL del conector copiada"
+        },
         "howToConnect": {
-          "title": "Cómo Conectar",
-          "description": "Configura Claude Desktop u otros clientes MCP para acceder a los datos del LMS.",
-          "step1": "Crea un token arriba y copia el fragmento de configuración de Claude Desktop.",
-          "step2": "Abre la configuración de Claude Desktop y busca el archivo de configuración de servidores MCP.",
+          "title": "Avanzado: tokens de API (CLI y otros clientes MCP)",
+          "description": "Usa un token para clientes que no soportan inicio de sesión OAuth.",
+          "step1": "Crea un token arriba y copia el fragmento de configuración.",
+          "step2": "Abre el archivo de configuración de tu cliente MCP.",
           "step3": "Pega el fragmento de configuración y guarda.",
-          "step4": "Reinicia Claude Desktop — deberías ver las herramientas del LMS disponibles."
+          "step4": "Reinicia el cliente — deberías ver las herramientas del LMS disponibles."
         },
         "yourTokens": {
           "title": "Tus Tokens",

@@ -29,39 +29,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  // Verify user role
-  const { data: roleData } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .limit(1)
-    .single()
-
-  const userRole = roleData?.role || "student"
-
-  if (userRole !== "teacher" && userRole !== "admin") {
-    return NextResponse.json(
-      { error: "Only teachers and admins can authorize MCP access" },
-      { status: 403 }
-    )
-  }
+  // All roles may connect — the MCP server's tool policy scopes what each
+  // role can do; RLS enforces tenant isolation on every query.
 
   try {
-    const oauthAuth = (supabase.auth as any).oauth
+    const oauthAuth = supabase.auth.oauth
+    // skipBrowserRedirect: there is no browser on the server — the SDK returns
+    // redirect_url and the consent form performs the navigation client-side.
+    const { data, error } =
+      decision === "approve"
+        ? await oauthAuth.approveAuthorization(authorization_id, { skipBrowserRedirect: true })
+        : await oauthAuth.denyAuthorization(authorization_id, { skipBrowserRedirect: true })
 
-    if (decision === "approve") {
-      const { data, error } = await oauthAuth.approveAuthorization(authorization_id)
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 })
-      }
-      return NextResponse.json({ redirect_to: data.redirect_to })
-    } else {
-      const { data, error } = await oauthAuth.denyAuthorization(authorization_id)
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 })
-      }
-      return NextResponse.json({ redirect_to: data.redirect_to })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
+    return NextResponse.json({ redirect_to: data.redirect_url })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })

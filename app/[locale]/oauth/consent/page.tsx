@@ -28,7 +28,7 @@ export default async function OAuthConsentPage({
 
   if (!user) {
     const returnUrl = `/oauth/consent?authorization_id=${encodeURIComponent(authorization_id)}`
-    redirect(`/auth/sign-in?redirect=${encodeURIComponent(returnUrl)}`)
+    redirect(`/auth/login?redirectTo=${encodeURIComponent(returnUrl)}`)
   }
 
   // Get user role
@@ -39,25 +39,13 @@ export default async function OAuthConsentPage({
     .limit(1)
     .single()
 
+  // All roles may connect — the MCP server's tool policy scopes what each
+  // role can do (students get only self-scoped learning tools; RLS enforces
+  // tenant isolation on every query).
   const userRole = roleData?.role || "student"
 
-  if (userRole !== "teacher" && userRole !== "admin") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="mx-auto max-w-md rounded-lg border bg-card p-8 text-center shadow-sm">
-          <div className="mb-4 text-4xl">🚫</div>
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="mt-2 text-muted-foreground">
-            Only teachers and admins can authorize MCP server access.
-            Your current role is <strong>{userRole}</strong>.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   // Get authorization details from Supabase OAuth server
-  const { data: authDetails, error } = await (supabase.auth as any).oauth.getAuthorizationDetails(
+  const { data: authDetails, error } = await supabase.auth.oauth.getAuthorizationDetails(
     authorization_id
   )
 
@@ -74,6 +62,12 @@ export default async function OAuthConsentPage({
     )
   }
 
+  // Supabase short-circuits when the user already consented — go straight back
+  // to the OAuth client with the authorization code.
+  if ("redirect_url" in authDetails) {
+    redirect(authDetails.redirect_url)
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="mx-auto w-full max-w-md rounded-lg border bg-card p-8 shadow-sm">
@@ -88,7 +82,7 @@ export default async function OAuthConsentPage({
         <div className="mb-6 space-y-3 rounded-md border bg-muted/50 p-4">
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">Application</p>
-            <p className="font-medium">{authDetails.client_name || "Unknown Application"}</p>
+            <p className="font-medium">{authDetails.client?.name || "Unknown Application"}</p>
           </div>
           {authDetails.redirect_uri && (
             <div>
@@ -114,7 +108,8 @@ export default async function OAuthConsentPage({
         <div className="mb-4 rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
           <p className="text-xs text-yellow-700 dark:text-yellow-300">
             Signed in as <strong>{user.email}</strong> ({userRole}).
-            This will grant access to manage your LMS courses and content.
+            This will let the application access your LMS data — teachers and
+            admins get course management, students get their own learning tools.
           </p>
         </div>
 
