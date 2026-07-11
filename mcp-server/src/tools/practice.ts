@@ -973,4 +973,313 @@ export function registerPracticeTools(server: MCPServer) {
       }
     }
   );
+
+  // ── lms_get_exam_readiness ─────────────────────────────────────────────────
+  // Epic #348 Phase 3 (#358). "Am I ready for the exam?" — per-topic mastery
+  // + an overall readiness score, rendered as the exam-readiness widget.
+  //
+  // Readiness formula (documented in the output): weighted average of
+  //   exam-question history 50% · practice attempts 30% · lesson coverage 20%,
+  // with weights renormalized over the components that have data.
+  server.tool(
+    {
+      name: "lms_get_exam_readiness",
+      description:
+        "How ready is the caller for a course's exam? Per-topic mastery (0-100) from their own exam-question history, practice attempts, and lesson coverage, plus an overall readiness score with a documented formula. Renders a heatmap widget with practice launch buttons.",
+      schema: z.object({
+        course_id: z.number().describe("The course to assess readiness for"),
+        exam_id: z
+          .number()
+          .optional()
+          .describe(
+            "Focus on one exam — exam-history mastery then only counts this exam (practice and lesson coverage stay course-wide)"
+          ),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      widget: {
+        name: "exam-readiness",
+        invoking: "Checking your exam readiness...",
+        invoked: "Readiness report ready",
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        await session.verifyCourseAccess(input.course_id);
+        const supabase = session.getClient();
+        const userId = session.getUserId();
+        const tenantId = session.getTenantId();
+        const MISS_RATIO = 0.7;
+        const EVIDENCE_CAP = 3;
+
+        // Course title (course existence already verified by the access check).
+        const courseRes = await supabase
+          .from("courses")
+          .select("title")
+          .eq("course_id", input.course_id)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        const courseTitle = courseRes.data?.title ?? `Course ${input.course_id}`;
+
+        // 1. Published exams for the course (students only see published).
+        let examsQuery = supabase
+          .from("exams")
+          .select("exam_id, title, exam_date")
+          .eq("course_id", input.course_id)
+          .eq("tenant_id", tenantId)
+          .eq("status", "published")
+          .order("exam_date", { ascending: true });
+        if (input.exam_id !== undefined)
+          examsQuery = examsQuery.eq("exam_id", input.exam_id);
+        const examsRes = await examsQuery;
+        if (examsRes.error)
+          return errorResult(`Loading exams: ${examsRes.error.message}`);
+        const exams = (examsRes.data ?? []) as Array<{
+          exam_id: number;
+          title: string;
+          exam_date: string | null;
+        }>;
+        if (input.exam_id !== undefined && exams.length === 0)
+          return errorResult(
+            `Exam ${input.exam_id} not found in course ${input.course_id} (or not published).`
+          );
+
+        // 2. Own submissions with per-question scores. Child tables have NO
+        //    tenant_id — scoped via the caller's own tenant-scoped submissions.
+        type SubRow = {
+          submission_id: number;
+          exam_id: number;
+          score: number | null;
+          submission_date: string | null;
+          exam_question_scores: Array<{
+            is_correct: boolean | null;
+            points_earned: number | null;
+            points_possible: number | null;
+            exam_questions: { question_text: string } | null;
+          }>;
+        };
+        let subs: SubRow[] = [];
+        if (exams.length > 0) {
+          const subsRes = await supabase
+            .from("exam_submissions")
+            .select(
+              "submission_id, exam_id, score, submission_date, exam_question_scores(is_correct, points_earned, points_possible, exam_questions(question_text))"
+            )
+            .eq("student_id", userId)
+            .eq("tenant_id", tenantId)
+            .in("exam_id", exams.map((e) => e.exam_id))
+            .order("submission_date", { ascending: false })
+            .limit(25);
+          if (subsRes.error)
+            return errorResult(`Loading exam history: ${subsRes.error.message}`);
+          subs = (subsRes.data ?? []) as unknown as SubRow[];
+        }
+
+        // 3. Lesson coverage: published lessons vs own completions.
+        //    lesson_completions has NO tenant_id — filter by user_id only.
+        const lessonsRes = await supabase
+          .from("lessons")
+          .select("id")
+          .eq("course_id", input.course_id)
+          .eq("tenant_id", tenantId)
+          .eq("status", "published");
+        if (lessonsRes.error)
+          return errorResult(`Loading lessons: ${lessonsRes.error.message}`);
+        const lessonIds = (lessonsRes.data ?? []).map((l) => l.id as number);
+        let completedLessons = 0;
+        if (lessonIds.length > 0) {
+          const doneRes = await supabase
+            .from("lesson_completions")
+            .select("lesson_id")
+            .eq("user_id", userId)
+            .in("lesson_id", lessonIds);
+          if (!doneRes.error)
+            completedLessons = new Set(
+              (doneRes.data ?? []).map((d) => d.lesson_id as number)
+            ).size;
+        }
+
+        // 4. Recent practice attempts for the course (degrade gracefully if
+        //    the table isn't migrated in this environment).
+        let practiceRows: Array<{ topic: string; score: number; created_at: string }> = [];
+        const practiceRes = await supabase
+          .from("practice_attempts")
+          .select("topic, score, created_at")
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
+          .eq("course_id", input.course_id)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (!practiceRes.error)
+          practiceRows = (practiceRes.data ?? []) as typeof practiceRows;
+
+        // ── Per-topic mastery ────────────────────────────────────────────────
+        type Topic = {
+          label: string;
+          mastery: number;
+          source: "exam" | "practice";
+          evidence: string;
+        };
+        const topics: Topic[] = [];
+
+        // Exam topics: latest submission per exam, mastery = points ratio.
+        const latestByExam = new Map<number, SubRow>();
+        for (const sub of subs) {
+          if (!latestByExam.has(sub.exam_id)) latestByExam.set(sub.exam_id, sub);
+        }
+        const examMasteries: number[] = [];
+        for (const exam of exams) {
+          const sub = latestByExam.get(exam.exam_id);
+          if (!sub) continue;
+          const scores = sub.exam_question_scores ?? [];
+          let mastery: number | null = null;
+          let missedTexts: string[] = [];
+          if (scores.length > 0) {
+            let earned = 0;
+            let possible = 0;
+            for (const s of scores) {
+              earned += Number(s.points_earned ?? 0);
+              possible += Number(s.points_possible ?? 0);
+            }
+            if (possible > 0) mastery = Math.round((earned / possible) * 100);
+            missedTexts = scores
+              .filter(
+                (s) =>
+                  s.is_correct === false ||
+                  (s.points_possible !== null &&
+                    Number(s.points_possible) > 0 &&
+                    Number(s.points_earned ?? 0) / Number(s.points_possible) <
+                      MISS_RATIO)
+              )
+              .slice(0, EVIDENCE_CAP)
+              .map((s) => s.exam_questions?.question_text ?? "question");
+          }
+          if (mastery === null && sub.score !== null)
+            mastery = Math.round(Number(sub.score));
+          if (mastery === null) continue;
+          examMasteries.push(mastery);
+          topics.push({
+            label: exam.title,
+            mastery,
+            source: "exam",
+            evidence:
+              missedTexts.length > 0
+                ? `Latest submission ${mastery}%; missed: ${missedTexts.map((t) => `"${t.slice(0, 80)}"`).join("; ")}`
+                : `Latest submission ${mastery}% — no per-question misses on record`,
+          });
+        }
+
+        // Practice topics: average score per topic.
+        const byTopic = new Map<string, number[]>();
+        for (const row of practiceRows) {
+          const bucket = byTopic.get(row.topic) ?? [];
+          bucket.push(Number(row.score));
+          byTopic.set(row.topic, bucket);
+        }
+        const practiceMasteries: number[] = [];
+        for (const [topic, scores] of byTopic) {
+          const avg = Math.round(
+            scores.reduce((s, v) => s + v, 0) / scores.length
+          );
+          practiceMasteries.push(avg);
+          topics.push({
+            label: topic,
+            mastery: avg,
+            source: "practice",
+            evidence: `${scores.length} practice attempt(s), average ${avg}`,
+          });
+        }
+        topics.sort((a, b) => a.mastery - b.mastery);
+
+        // ── Components + weighted readiness ─────────────────────────────────
+        const avgOf = (xs: number[]) =>
+          xs.length > 0
+            ? Math.round(xs.reduce((s, v) => s + v, 0) / xs.length)
+            : null;
+        const examComponent = avgOf(examMasteries);
+        const practiceComponent = avgOf(practiceMasteries);
+        const coverageComponent =
+          lessonIds.length > 0
+            ? Math.round((completedLessons / lessonIds.length) * 100)
+            : null;
+
+        const BASE_WEIGHTS = { exam_history: 0.5, practice: 0.3, lesson_coverage: 0.2 };
+        const present: Array<[keyof typeof BASE_WEIGHTS, number]> = [];
+        if (examComponent !== null) present.push(["exam_history", examComponent]);
+        if (practiceComponent !== null) present.push(["practice", practiceComponent]);
+        if (coverageComponent !== null)
+          present.push(["lesson_coverage", coverageComponent]);
+        const weightSum = present.reduce((s, [k]) => s + BASE_WEIGHTS[k], 0);
+        const effectiveWeights = { exam_history: 0, practice: 0, lesson_coverage: 0 };
+        let readiness: number | null = null;
+        if (present.length > 0 && weightSum > 0) {
+          let acc = 0;
+          for (const [k, v] of present) {
+            const w = BASE_WEIGHTS[k] / weightSum;
+            effectiveWeights[k] = Math.round(w * 100) / 100;
+            acc += v * w;
+          }
+          readiness = Math.round(acc);
+        }
+        const formula =
+          "readiness = 50% exam-question history + 30% practice attempts + 20% lesson coverage, weights renormalized over the components that have data.";
+
+        // Target exam: the requested one, else next upcoming, else null.
+        const nowIso = new Date().toISOString();
+        const targetExam =
+          input.exam_id !== undefined
+            ? exams[0]
+            : exams.find((e) => e.exam_date !== null && e.exam_date >= nowIso) ?? null;
+
+        const props = {
+          course_id: input.course_id,
+          course_title: courseTitle,
+          exam: targetExam
+            ? {
+                exam_id: targetExam.exam_id,
+                title: targetExam.title,
+                exam_date: targetExam.exam_date,
+              }
+            : null,
+          readiness,
+          components: {
+            exam_history: examComponent,
+            practice: practiceComponent,
+            lesson_coverage: coverageComponent,
+            weights: effectiveWeights,
+          },
+          formula,
+          topics,
+          lessons: { completed: completedLessons, total: lessonIds.length },
+        };
+
+        return widget({
+          props,
+          output: text(
+            readiness === null
+              ? `No signal yet for "${courseTitle}" — no submitted exams, practice attempts, or completed lessons. Run a diagnostic lms_practice_quiz to calibrate.`
+              : `Readiness for "${courseTitle}"${targetExam ? ` (${targetExam.title})` : ""}: ${readiness}/100 (${formula}) — exam history ${examComponent ?? "n/a"}, practice ${practiceComponent ?? "n/a"}, lesson coverage ${coverageComponent ?? "n/a"}. Weakest topics: ${
+                  topics
+                    .slice(0, 3)
+                    .map((t) => `${t.label} (${t.mastery})`)
+                    .join("; ") || "none on record"
+                }.`
+          ),
+        });
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
 }

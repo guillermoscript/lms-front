@@ -1094,4 +1094,310 @@ export function registerAnalyticsTools(server: MCPServer) {
       }
     }
   );
+
+  // ── lms_get_confusion_hotspots ───────────────────────────────────────────
+  // Epic #348 Phase 3 (#360). Teacher/admin only (not in STUDENT_TOOLS).
+  // Aggregates three struggle signals for one course: practice-quiz topics,
+  // failed exercise evaluations, and exam-question miss rates.
+  //
+  // Tenant scoping: practice_attempts and exercise_evaluations HAVE tenant_id
+  // (teacher-tenant SELECT policies exist on both). exam_question_scores /
+  // exam_questions have NO tenant_id — they are reached ONLY through the
+  // course's tenant-scoped exams → submissions chain, never queried at large.
+  server.tool(
+    {
+      name: "lms_get_confusion_hotspots",
+      description:
+        "Where students collectively struggle in a course: practice topics with low scores, exercises students are stuck on, and exam questions with high miss rates. Ranked by severity. Use it to decide what to reteach or which remediation exercises to draft.",
+      schema: z.object({
+        course_id: z.number().describe("The course to analyze"),
+        days: z
+          .number()
+          .int()
+          .min(1)
+          .max(365)
+          .optional()
+          .describe("Look-back window in days (default 30)"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        await session.verifyCourseOwnership(input.course_id);
+        const supabase = session.getClient();
+        const tenantId = session.getTenantId();
+        const days = input.days ?? 30;
+        const cutoffIso = new Date(Date.now() - days * 86400000).toISOString();
+        const MISS_RATIO = 0.7; // same threshold as lms_get_mock_exam_source
+        const EVIDENCE_CAP = 3;
+
+        type Hotspot = {
+          scope: "lesson" | "exercise" | "exam_question";
+          ref: number | string | null;
+          label: string;
+          students_affected: number;
+          severity: number; // 0-100, see severity_formula in the output
+          evidence: string;
+        };
+        const hotspots: Hotspot[] = [];
+        // severity = round(intensity * 60 + min(students_affected, 10) * 4)
+        // where intensity ∈ [0,1] is how badly the group fails the item.
+        const severityOf = (intensity: number, students: number) =>
+          Math.min(100, Math.round(intensity * 60 + Math.min(students, 10) * 4));
+
+        // 1. Practice topics (HAS tenant_id; teacher-tenant RLS SELECT).
+        //    Degrade gracefully if the table isn't migrated in this env.
+        let practiceCount = 0;
+        const practiceRes = await supabase
+          .from("practice_attempts")
+          .select("topic, lesson_id, score, user_id, created_at")
+          .eq("tenant_id", tenantId)
+          .eq("course_id", input.course_id)
+          .gte("created_at", cutoffIso)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        if (!practiceRes.error) {
+          const rows = (practiceRes.data ?? []) as Array<{
+            topic: string;
+            lesson_id: number | null;
+            score: number;
+            user_id: string;
+          }>;
+          practiceCount = rows.length;
+          const byTopic = new Map<
+            string,
+            { scores: number[]; users: Set<string>; below70: Set<string>; lesson_id: number | null }
+          >();
+          for (const r of rows) {
+            const b = byTopic.get(r.topic) ?? {
+              scores: [],
+              users: new Set<string>(),
+              below70: new Set<string>(),
+              lesson_id: r.lesson_id,
+            };
+            b.scores.push(Number(r.score));
+            b.users.add(r.user_id);
+            if (Number(r.score) < 70) b.below70.add(r.user_id);
+            byTopic.set(r.topic, b);
+          }
+          for (const [topic, b] of byTopic) {
+            if (b.below70.size === 0) continue;
+            const avg = b.scores.reduce((s, v) => s + v, 0) / b.scores.length;
+            hotspots.push({
+              scope: "lesson",
+              ref: b.lesson_id,
+              label: `Practice: ${topic}`,
+              students_affected: b.below70.size,
+              severity: severityOf(1 - avg / 100, b.below70.size),
+              evidence: `${b.scores.length} attempt(s) by ${b.users.size} student(s), avg score ${Math.round(avg)}; ${b.below70.size} student(s) below 70`,
+            });
+          }
+        }
+
+        // 2. Exercise evaluations (HAS tenant_id): who is stuck, per exercise.
+        //    !inner so the embedded course filter restricts parent rows.
+        const evalsRes = await supabase
+          .from("exercise_evaluations")
+          .select(
+            "exercise_id, user_id, attempt_number, passed, score, created_at, exercises!inner(title, course_id)"
+          )
+          .eq("tenant_id", tenantId)
+          .eq("exercises.course_id", input.course_id)
+          .gte("created_at", cutoffIso)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        if (evalsRes.error)
+          return errorResult(`Loading exercise evaluations: ${evalsRes.error.message}`);
+        {
+          type EvalRow = {
+            exercise_id: number;
+            user_id: string;
+            attempt_number: number;
+            passed: boolean;
+            exercises: { title: string } | null;
+          };
+          const rows = (evalsRes.data ?? []) as unknown as EvalRow[];
+          // Rows are newest-first: first row per (exercise, user) = latest attempt.
+          const latest = new Map<string, EvalRow>();
+          const maxAttempts = new Map<string, number>();
+          for (const r of rows) {
+            const key = `${r.exercise_id}:${r.user_id}`;
+            if (!latest.has(key)) latest.set(key, r);
+            maxAttempts.set(
+              key,
+              Math.max(maxAttempts.get(key) ?? 0, Number(r.attempt_number))
+            );
+          }
+          const byExercise = new Map<
+            number,
+            { title: string; stuck: Set<string>; total: Set<string>; attempts: number[] }
+          >();
+          for (const [key, r] of latest) {
+            const b = byExercise.get(r.exercise_id) ?? {
+              title: r.exercises?.title ?? `Exercise ${r.exercise_id}`,
+              stuck: new Set<string>(),
+              total: new Set<string>(),
+              attempts: [],
+            };
+            b.total.add(r.user_id);
+            b.attempts.push(maxAttempts.get(key) ?? 1);
+            if (!r.passed) b.stuck.add(r.user_id);
+            byExercise.set(r.exercise_id, b);
+          }
+          for (const [exerciseId, b] of byExercise) {
+            if (b.stuck.size === 0) continue;
+            const avgAttempts =
+              b.attempts.reduce((s, v) => s + v, 0) / b.attempts.length;
+            hotspots.push({
+              scope: "exercise",
+              ref: exerciseId,
+              label: `Exercise: ${b.title}`,
+              students_affected: b.stuck.size,
+              severity: severityOf(b.stuck.size / b.total.size, b.stuck.size),
+              evidence: `${b.stuck.size} of ${b.total.size} student(s) not passing on their latest attempt; avg ${avgAttempts.toFixed(1)} attempt(s) per student`,
+            });
+          }
+        }
+
+        // 3. Exam-question miss rates. Chain: course exams (tenant-scoped) →
+        //    submissions (tenant-scoped) → per-question scores (no tenant_id;
+        //    scoped only via .in(submission_id) from the chain above).
+        const examsRes = await supabase
+          .from("exams")
+          .select("exam_id, title")
+          .eq("course_id", input.course_id)
+          .eq("tenant_id", tenantId);
+        if (examsRes.error)
+          return errorResult(`Loading exams: ${examsRes.error.message}`);
+        const examTitles = new Map<number, string>(
+          (examsRes.data ?? []).map((e) => [e.exam_id as number, e.title as string])
+        );
+        let submissionCount = 0;
+        if (examTitles.size > 0) {
+          const subsRes = await supabase
+            .from("exam_submissions")
+            .select("submission_id, student_id, exam_id, submission_date")
+            .eq("tenant_id", tenantId)
+            .in("exam_id", [...examTitles.keys()])
+            .gte("submission_date", cutoffIso)
+            .order("submission_date", { ascending: false })
+            .limit(300);
+          if (subsRes.error)
+            return errorResult(`Loading submissions: ${subsRes.error.message}`);
+          // Latest submission per (student, exam) — newest-first order.
+          const latestSubs = new Map<
+            string,
+            { submission_id: number; student_id: string; exam_id: number }
+          >();
+          for (const s of subsRes.data ?? []) {
+            const key = `${s.student_id}:${s.exam_id}`;
+            if (!latestSubs.has(key))
+              latestSubs.set(key, {
+                submission_id: s.submission_id as number,
+                student_id: s.student_id as string,
+                exam_id: s.exam_id as number,
+              });
+          }
+          submissionCount = latestSubs.size;
+          const subMeta = new Map(
+            [...latestSubs.values()].map((s) => [s.submission_id, s])
+          );
+          if (subMeta.size > 0) {
+            const scoresRes = await supabase
+              .from("exam_question_scores")
+              .select(
+                "submission_id, question_id, is_correct, points_earned, points_possible, exam_questions(question_text, exam_id)"
+              )
+              .in("submission_id", [...subMeta.keys()]);
+            if (scoresRes.error)
+              return errorResult(
+                `Loading question scores: ${scoresRes.error.message}`
+              );
+            const byQuestion = new Map<
+              number,
+              { text: string; exam_id: number | null; attempts: number; missers: Set<string> }
+            >();
+            for (const row of (scoresRes.data ?? []) as unknown as Array<{
+              submission_id: number;
+              question_id: number;
+              is_correct: boolean | null;
+              points_earned: number | null;
+              points_possible: number | null;
+              exam_questions: { question_text: string; exam_id: number } | null;
+            }>) {
+              const meta = subMeta.get(row.submission_id);
+              if (!meta) continue;
+              const b = byQuestion.get(row.question_id) ?? {
+                text: row.exam_questions?.question_text ?? `Question ${row.question_id}`,
+                exam_id: row.exam_questions?.exam_id ?? null,
+                attempts: 0,
+                missers: new Set<string>(),
+              };
+              b.attempts += 1;
+              const missed =
+                row.is_correct === false ||
+                (row.points_possible !== null &&
+                  Number(row.points_possible) > 0 &&
+                  Number(row.points_earned ?? 0) / Number(row.points_possible) <
+                    MISS_RATIO);
+              if (missed) b.missers.add(meta.student_id);
+              byQuestion.set(row.question_id, b);
+            }
+            for (const [questionId, b] of byQuestion) {
+              if (b.missers.size === 0) continue;
+              const missRate = b.missers.size / b.attempts;
+              const examTitle = b.exam_id !== null ? examTitles.get(b.exam_id) : null;
+              hotspots.push({
+                scope: "exam_question",
+                ref: questionId,
+                label: `${examTitle ? `${examTitle}: ` : ""}"${b.text.slice(0, 120)}"`,
+                students_affected: b.missers.size,
+                severity: severityOf(missRate, b.missers.size),
+                evidence: `${b.missers.size} of ${b.attempts} student(s) missed it on their latest submission (${Math.round(missRate * 100)}% miss rate)`,
+              });
+            }
+          }
+        }
+
+        hotspots.sort((a, b) => b.severity - a.severity);
+        const top = hotspots.slice(0, 20);
+
+        return ok(
+          {
+            course_id: input.course_id,
+            window_days: days,
+            hotspots: top,
+            truncated: hotspots.length > top.length,
+            sources: {
+              practice_attempts: practiceCount,
+              exercise_evaluations: (evalsRes.data ?? []).length,
+              exam_submissions: submissionCount,
+            },
+            severity_formula:
+              "severity = round(intensity * 60 + min(students_affected, 10) * 4), capped at 100. intensity: practice = 1 - avg_score/100; exercise = share of attempting students whose latest attempt failed; exam_question = miss rate across latest submissions (miss = incorrect or < 70% of points).",
+          },
+          top.length === 0
+            ? `No confusion hotspots in the last ${days} day(s) — no low practice scores, stuck students, or missed exam questions on record for this course.`
+            : `${top.length} hotspot(s) (last ${days} days), worst first: ${top
+                .slice(0, EVIDENCE_CAP)
+                .map((h) => `${h.label} (${h.students_affected} student(s), severity ${h.severity})`)
+                .join("; ")}${top.length > EVIDENCE_CAP ? "; …" : ""}. Consider drafting remediation with the generate-remediation-exercises prompt.`
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
 }

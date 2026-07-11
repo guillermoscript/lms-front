@@ -173,6 +173,53 @@ Provide actionable recommendations for improvement.`
       )
   );
 
+  // ── generate-remediation-exercises (Epic #348 Phase 3, #365) ──────────────
+  // Teacher-facing: struggle data → AI-drafted exercise variations as drafts.
+  server.prompt(
+    {
+      name: "generate-remediation-exercises",
+      description:
+        "Teacher workflow: turn confusion hotspots (or one specific exercise) into AI-drafted remediation exercise variations, created as drafts for review — never auto-published.",
+      schema: z.object({
+        course_id: z
+          .string()
+          .optional()
+          .describe("Course to analyze for hotspots (required unless exercise_id is given)"),
+        exercise_id: z
+          .string()
+          .optional()
+          .describe("A specific exercise to build variations of (skips hotspot analysis)"),
+        count: z
+          .string()
+          .optional()
+          .describe("How many variations to draft (default 3)"),
+        difficulty: z
+          .string()
+          .optional()
+          .describe("Target difficulty: easy, medium, or hard (default: one notch easier than the source)"),
+      }),
+    },
+    async ({ course_id, exercise_id, count, difficulty }) =>
+      text(
+        `Draft ${count ?? "3"} remediation exercise variation(s)${exercise_id ? ` of exercise ${exercise_id}` : course_id ? ` for the worst confusion hotspots in course ${course_id}` : ""} as drafts for my review.
+
+Steps:
+1. ${
+          exercise_id
+            ? `Call \`lms_get_exercise\` (exercise_id ${exercise_id}) to read the source exercise: instructions, type, difficulty, lesson, and config.`
+            : `Call \`lms_get_confusion_hotspots\`${course_id ? ` (course_id ${course_id})` : " for the course"} and pick the 1-2 worst hotspots. For exercise-scope hotspots, fetch the source with \`lms_get_exercise\`; for lesson/exam-question hotspots, target the underlying concept.`
+        }
+2. Author ${count ?? "3"} FRESH variations of the same skill — never reuse the source wording verbatim:
+   - Keep the same exercise_type, course_id, and lesson_id as the source.
+   - Set difficulty_level to ${difficulty ?? "one notch easier than the source (students are stuck — build the on-ramp), unless I say otherwise"}.
+   - Write clear, self-contained instructions a student can attempt without extra context.
+   - Put grading guidance in exercise_config: evaluation_criteria (what a passing answer must show) and passing_score (default 70).
+3. Create each variation with \`lms_create_exercise\` — do NOT set any status; they land as drafts automatically. \`lms_duplicate_exercise\` (exercise_id, overrides) is a shortcut when a variation stays close to the source.
+4. Summarize what you created: each new exercise ID, title, difficulty, and which hotspot or source exercise it remediates.
+5. Remind me the drafts are invisible to students until I review and publish them in the app — do not publish anything yourself.`
+      )
+  );
+
   // ═══ AI-tutor prompts (Epic #348) — the HOST LLM is the tutor and grader ═══
   // Shared guardrails every tutor prompt embeds:
   const TUTOR_GUARDRAILS = `**Tutor guardrails (always):**
