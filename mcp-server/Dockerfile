@@ -1,4 +1,5 @@
-FROM node:20-alpine AS builder
+# Node >=22 required: supabase-js Realtime needs native WebSocket at runtime
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -13,7 +14,7 @@ COPY public ./public
 # during widget/type-registry generation). A dummy value is fine for the build.
 RUN SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=build npm run build
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
