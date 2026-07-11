@@ -71,6 +71,7 @@ import {
 
 import {
   ensurePlanOnChain,
+  buildInitAuthorityTxUnsignedBase64,
   buildSubscribeTxUnsignedBase64,
 } from "../lib/payments/solana-subscriptions";
 
@@ -856,6 +857,48 @@ async function main() {
       programAddress: addr(MINT_PROGRAM) as Address,
       executable: false,
     });
+  }
+
+  // STEP 1 (production parity): a fresh subscriber has no SubscriptionAuthority
+  // yet, so — exactly like app/api/payments/solana/subscribe-tx/route.ts — the
+  // authority must be created in its OWN confirmed transaction before subscribe.
+  // buildSubscribeTxUnsignedBase64 guards on this and throws otherwise. Build the
+  // init tx, sign it with the fresh subscriber, and submit so the authority exists.
+  try {
+    const initBase64 = await buildInitAuthorityTxUnsignedBase64({
+      rpcUrl: svmRpcUrl,
+      subscriber: freshSubscriberKp.publicKey.toBase58(),
+      mint: mint.toBase58(),
+      userAta: freshSubscriberAta.toBase58(),
+    });
+    assert(
+      typeof initBase64 === "string" && initBase64.length > 100,
+      "buildInitAuthorityTxUnsignedBase64: returns an init tx for a fresh subscriber"
+    );
+    const initDecoded = getTransactionDecoder().decode(
+      new Uint8Array(Buffer.from(initBase64 as string, "base64"))
+    );
+    const freshCryptoKpForInit = await createKeyPairFromBytes(
+      freshSubscriberKp.secretKey,
+      true /* extractable */
+    );
+    const signedInit = await partiallySignTransaction([freshCryptoKpForInit], initDecoded);
+    assertTxOk(svm.sendTransaction(signedInit), "init-authority tx submitted to LiteSVM");
+
+    const [freshAuthPdaCheck] = await findSubscriptionAuthorityPda({
+      user: freshSubscriberSigner.address,
+      tokenMint: mintAddr,
+    });
+    const authAfterInit = svm.getAccount(freshAuthPdaCheck);
+    assert(
+      authAfterInit !== null && authAfterInit.exists,
+      "SubscriptionAuthority created for fresh subscriber after init"
+    );
+  } catch (e) {
+    console.error(`  init-authority setup threw: ${(e as Error).message}`);
+    failed++;
+    printResults();
+    return;
   }
 
   // Build the unsigned tx (merchant = merchantKp, planId = PLAN_ID = 1 from Step 4)
