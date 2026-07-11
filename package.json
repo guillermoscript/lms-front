@@ -96,6 +96,7 @@
     "react": "19.2.4",
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.4",
+    "react-is": "^19.2.4",
     "react-markdown": "^10.1.0",
     "recharts": "^3.8.0",
     "rehype-autolink-headings": "^7.1.0",
