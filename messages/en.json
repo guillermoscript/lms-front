@@ -2759,16 +2759,26 @@
         }
       },
       "apiTokens": {
-        "title": "API Tokens",
-        "description": "Generate tokens to connect Claude Desktop or other MCP clients to the LMS.",
+        "title": "Connect AI Assistants",
+        "description": "Connect Claude or other MCP clients to your LMS.",
         "createToken": "Create Token",
+        "connectClaude": {
+          "title": "Connect Claude",
+          "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
+          "urlLabel": "Connector URL",
+          "step1": "Copy the connector URL above.",
+          "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
+          "step3": "Paste the URL and click Add.",
+          "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
+          "copied": "Connector URL copied"
+        },
         "howToConnect": {
-          "title": "How to Connect",
-          "description": "Set up Claude Desktop or other MCP clients to access your LMS data.",
-          "step1": "Create a token above and copy the Claude Desktop config snippet.",
-          "step2": "Open Claude Desktop settings and find the MCP servers configuration file.",
+          "title": "Advanced: API tokens (CLI and other MCP clients)",
+          "description": "Use a token for clients that don't support OAuth sign-in.",
+          "step1": "Create a token above and copy the config snippet.",
+          "step2": "Open your MCP client's configuration file.",
           "step3": "Paste the config snippet and save.",
-          "step4": "Restart Claude Desktop — you should see the LMS tools available."
+          "step4": "Restart the client — you should see the LMS tools available."
         },
         "yourTokens": {
           "title": "Your Tokens",

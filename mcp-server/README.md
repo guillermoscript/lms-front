@@ -100,12 +100,30 @@ docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-
 
 ## Supabase OAuth setup (one-time, in the dashboard)
 
-1. **Authentication → OAuth Server** — enable the OAuth 2.1 server.
-2. Set the **consent screen URL** to `<MCP_SERVER_URL>/auth/consent` (this
-   server hosts that route — see `src/auth-routes.ts`).
+1. **Authentication → OAuth Server** — enable the OAuth 2.1 server and
+   **Allow Dynamic OAuth Apps** (so MCP clients like Claude can self-register).
+2. Set the **consent screen URL**:
+   - Standalone/local: `<MCP_SERVER_URL>/auth/consent` (this server hosts that
+     route — see `src/auth-routes.ts`).
+   - Production behind the Next.js proxy: `https://<platform-domain>/oauth/consent`
+     (the Next.js app's consent page — real login UI + existing session reuse).
 3. **Authentication → Sign In / Providers** — enable at least one method
    (email/password, magic link, or anonymous for demos).
 4. Copy the **publishable key** into `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`.
+
+## Connect from Claude (custom connector)
+
+Claude (claude.ai or desktop) → **Settings → Connectors → Add custom connector**
+and paste the MCP URL — OAuth discovery, sign-in, and consent are automatic:
+
+- Standalone/local: `http://localhost:3000/mcp` (desktop app)
+- Production: `https://<tenant>.<platform-domain>/api/mcp` (the Next.js proxy
+  forwards to this server; `/.well-known/oauth-protected-resource` advertises
+  Supabase as the authorization server)
+
+Teachers/admins get management tools, students get self-scoped learning tools
+(`src/tool-policy.ts`). The in-app connection instructions live at
+Dashboard → API Tokens (`components/dashboard/api-tokens-page.tsx`).
 
 See [docs](https://docs.mcp-use.com/typescript/server) and the
 `mcp-apps-builder` skill (bundled under `.claude/skills/`) for details.

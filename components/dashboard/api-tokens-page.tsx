@@ -39,7 +39,18 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
   const [isPending, startTransition] = useTransition()
   const [copied, setCopied] = useState(false)
   const [copiedConfig, setCopiedConfig] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
+
+  // OAuth custom-connector URL — same endpoint without the /cli token path.
+  const connectorUrl = mcpUrl.replace(/\/cli$/, '')
+
+  const copyConnectorUrl = async () => {
+    await navigator.clipboard.writeText(connectorUrl)
+    setCopiedUrl(true)
+    toast.success(t('connectClaude.copied'))
+    setTimeout(() => setCopiedUrl(false), 2000)
+  }
 
   const handleCreate = () => {
     if (!tokenName.trim()) {
@@ -228,7 +239,32 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
         </Dialog>
       </div>
 
-      {/* Connection Instructions */}
+      {/* Connect Claude (OAuth custom connector) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t('connectClaude.title')}</CardTitle>
+          <CardDescription>{t('connectClaude.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm space-y-4">
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">{t('connectClaude.urlLabel')}</Label>
+            <div className="flex items-center gap-2">
+              <Input readOnly value={connectorUrl} className="font-mono text-xs" />
+              <Button variant="outline" size="icon" onClick={copyConnectorUrl}>
+                {copiedUrl ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
+              </Button>
+            </div>
+          </div>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>{t('connectClaude.step1')}</li>
+            <li>{t('connectClaude.step2')}</li>
+            <li>{t('connectClaude.step3')}</li>
+            <li>{t('connectClaude.step4')}</li>
+          </ol>
+        </CardContent>
+      </Card>
+
+      {/* Advanced: API token instructions */}
       <Card>
         <CardHeader
           className="cursor-pointer"
