@@ -57,6 +57,14 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_enroll_in_course",
   // Phase 3 (Epic #348) — exam readiness heatmap.
   "lms_get_exam_readiness",
+  // Phase 4 (Epic #348) — flashcards/SM-2, weekly study plan, teacher escalation.
+  "lms_create_review_cards",
+  "lms_get_due_reviews",
+  "lms_grade_review",
+  "lms_set_study_plan",
+  "lms_get_study_plan",
+  "lms_complete_study_goal",
+  "lms_ask_teacher",
 ]);
 
 const TEACHER_DENY_TOOLS = new Set<string>([

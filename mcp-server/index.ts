@@ -14,6 +14,9 @@ import { registerIngestTools } from "./src/tools/ingest.js";
 import { registerMockExamTools } from "./src/tools/mock-exam.js";
 import { registerAristotleTools } from "./src/tools/aristotle.js";
 import { registerEnrollTools } from "./src/tools/enroll.js";
+import { registerFlashcardTools } from "./src/tools/flashcards.js";
+import { registerStudyPlanTools } from "./src/tools/study-plan.js";
+import { registerAskTeacherTools } from "./src/tools/ask-teacher.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -74,6 +77,9 @@ registerIngestTools(server);
 registerMockExamTools(server);
 registerAristotleTools(server);
 registerEnrollTools(server);
+registerFlashcardTools(server);
+registerStudyPlanTools(server);
+registerAskTeacherTools(server);
 registerResources(server);
 registerPrompts(server);
 
