@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **65 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **68 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -35,9 +35,14 @@ implementation.
   mock exams (`lms_get_mock_exam_source` — missed questions + rubrics from
   the caller's own submitted exams only), shared tutor memory
   (`lms_get_tutor_history`, `lms_record_tutor_session` — same
-  `aristotle_sessions` table the in-app tutor uses), and self-enrollment
-  (`lms_enroll_in_course` via the `self_enroll_subscription_course` RPC).
-- **14 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  `aristotle_sessions` table the in-app tutor uses), self-enrollment
+  (`lms_enroll_in_course` via the `self_enroll_subscription_course` RPC),
+  exam readiness (`lms_get_exam_readiness` — per-topic mastery + weighted
+  readiness score from the caller's own history), and the teacher coaching
+  loop (`lms_get_confusion_hotspots` — where students collectively struggle,
+  ranked by severity; `lms_duplicate_exercise` — copy an exercise as a draft
+  variation for remediation).
+- **15 widgets** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
   drill into a submission), `lesson-preview` (← `lms_get_lesson`),
@@ -49,12 +54,14 @@ implementation.
   `gamification-profile` (← `lms_my_gamification`), `course-catalog`
   (← `lms_browse_catalog`), `practice-player` (← `lms_practice_quiz`:
   answers in-widget, grades closed types locally, records via
-  `lms_record_practice_attempt`, free-text answers go back to the host).
+  `lms_record_practice_attempt`, free-text answers go back to the host),
+  `exam-readiness` (← `lms_get_exam_readiness`: readiness dial, component
+  breakdown, per-topic mastery bars with "Practice this" launch buttons).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
-- **11 prompts:** create-course-outline, generate-lesson-content,
-  create-exam-questions, review-course, socratic-tutor, drill-coach,
-  explain-my-mistake, exam-prep-session, daily-review,
-  conversation-practice, mock-exam.
+- **12 prompts:** create-course-outline, generate-lesson-content,
+  create-exam-questions, review-course, generate-remediation-exercises,
+  socratic-tutor, drill-coach, explain-my-mistake, exam-prep-session,
+  daily-review, conversation-practice, mock-exam.
 
 ## Develop
 

@@ -404,6 +404,12 @@ export function registerExerciseTools(server: MCPServer) {
           .record(z.string(), z.any())
           .optional()
           .describe("Variables for the template"),
+        exercise_config: z
+          .record(z.string(), z.any())
+          .optional()
+          .describe(
+            "Exercise config JSON (e.g. evaluation_criteria, rubric, passing_score, topic_prompt). Grading fields here stay server-side — student tools never return them."
+          ),
       }),
       annotations: {
         readOnlyHint: false,
@@ -432,6 +438,7 @@ export function registerExerciseTools(server: MCPServer) {
           time_limit,
           template_id,
           template_variables,
+          exercise_config,
         } = input;
 
         await session.verifyCourseOwnership(course_id);
@@ -485,6 +492,7 @@ export function registerExerciseTools(server: MCPServer) {
             tenant_id: session.getTenantId(),
             template_id: template_id ?? null,
             template_variables: template_variables ?? null,
+            exercise_config: exercise_config ?? {},
           })
           .select("id, title, exercise_type, difficulty_level")
           .single();
@@ -834,6 +842,12 @@ export function registerExerciseTools(server: MCPServer) {
           .optional()
           .describe("New time limit in minutes"),
         lesson_id: z.number().optional().describe("New lesson ID"),
+        exercise_config: z
+          .record(z.string(), z.any())
+          .optional()
+          .describe(
+            "New exercise config JSON — replaces the whole config (e.g. evaluation_criteria, rubric, passing_score)"
+          ),
       }),
       annotations: {
         readOnlyHint: false,
@@ -860,6 +874,7 @@ export function registerExerciseTools(server: MCPServer) {
           system_prompt,
           time_limit,
           lesson_id,
+          exercise_config,
         } = input;
 
         await session.verifyExerciseOwnership(exercise_id);
@@ -874,6 +889,8 @@ export function registerExerciseTools(server: MCPServer) {
         if (system_prompt !== undefined) updateData.system_prompt = system_prompt;
         if (time_limit !== undefined) updateData.time_limit = time_limit;
         if (lesson_id !== undefined) updateData.lesson_id = lesson_id;
+        if (exercise_config !== undefined)
+          updateData.exercise_config = exercise_config;
 
         if (Object.keys(updateData).length === 0) {
           return okText("No fields to update.");
@@ -896,6 +913,119 @@ export function registerExerciseTools(server: MCPServer) {
             difficulty: data.difficulty_level,
           },
           `Exercise updated: **${data.title}** (ID: ${data.id})`
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // -------------------------------------------------------------------------
+  // lms_duplicate_exercise (Epic #348 Phase 3, #365)
+  // Copy an existing exercise as a DRAFT with optional overrides — the
+  // remediation workflow: variations of an exercise students are stuck on.
+  // -------------------------------------------------------------------------
+  server.tool(
+    {
+      name: "lms_duplicate_exercise",
+      description:
+        "Duplicate an exercise as a new draft in the same course, optionally overriding title, instructions, difficulty, lesson, or config. Built for remediation: turn one exercise into easier/harder variations for review before publishing.",
+      schema: z.object({
+        exercise_id: z.number().describe("The exercise to duplicate"),
+        title: z
+          .string()
+          .optional()
+          .describe("Title for the copy (default: 'Copy of <original title>')"),
+        instructions: z
+          .string()
+          .optional()
+          .describe("Replacement instructions (default: copied from source)"),
+        difficulty_level: z
+          .enum(difficultyLevels)
+          .optional()
+          .describe("Difficulty for the copy (default: same as source)"),
+        lesson_id: z
+          .number()
+          .optional()
+          .describe("Lesson to attach the copy to (default: same as source)"),
+        system_prompt: z
+          .string()
+          .optional()
+          .describe("Replacement AI system prompt (default: copied)"),
+        time_limit: z
+          .number()
+          .int()
+          .optional()
+          .describe("Time limit in minutes (default: copied)"),
+        exercise_config: z
+          .record(z.string(), z.any())
+          .optional()
+          .describe("Replacement exercise config JSON (default: copied)"),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        await session.verifyExerciseOwnership(input.exercise_id);
+        const supabase = session.getClient();
+
+        const { data: source, error: srcError } = await supabase
+          .from("exercises")
+          .select(
+            "course_id, lesson_id, title, instructions, exercise_type, difficulty_level, system_prompt, time_limit, exercise_config, template_id, template_variables"
+          )
+          .eq("id", input.exercise_id)
+          .single();
+        if (srcError || !source)
+          return errorResult(
+            `Loading exercise ${input.exercise_id}: ${srcError?.message ?? "not found"}`
+          );
+
+        // status is intentionally not set — the DB default 'draft' applies,
+        // so copies are never student-visible until the teacher publishes.
+        const { data, error } = await supabase
+          .from("exercises")
+          .insert({
+            course_id: source.course_id,
+            lesson_id: input.lesson_id ?? source.lesson_id,
+            title: input.title ?? `Copy of ${source.title}`,
+            instructions: input.instructions ?? source.instructions,
+            exercise_type: source.exercise_type,
+            difficulty_level: input.difficulty_level ?? source.difficulty_level,
+            system_prompt: input.system_prompt ?? source.system_prompt,
+            time_limit: input.time_limit ?? source.time_limit,
+            exercise_config: input.exercise_config ?? source.exercise_config ?? {},
+            template_id: source.template_id,
+            template_variables: source.template_variables,
+            created_by: session.getUserId(),
+            tenant_id: session.getTenantId(),
+          })
+          .select("id, title, exercise_type, difficulty_level, status")
+          .single();
+        if (error) return errorResult(`Duplicating exercise: ${error.message}`);
+
+        return ok(
+          {
+            id: data.id,
+            source_exercise_id: input.exercise_id,
+            title: data.title,
+            type: data.exercise_type,
+            difficulty: data.difficulty_level,
+            status: data.status,
+          },
+          `Draft created: **${data.title}** (ID: ${data.id}) [${data.exercise_type}] [${data.difficulty_level}] — duplicated from exercise ${input.exercise_id}. Review and publish it in the app.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
