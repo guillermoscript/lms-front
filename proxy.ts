@@ -80,28 +80,30 @@ function getTenantSlugFromHost(host: string): string | null {
  * internal container port (3000), so `request.url` / `request.nextUrl` carry
  * `:3000`. Constructing redirects from those leaks `host:3000` into the browser
  * (e.g. `acme.preciopana.com:3000/auth/login`), which then fails because port
- * 3000 isn't exposed through Cloudflare. Always derive the host from the `Host`
- * header (set to the real public host by the proxy) and the scheme from
- * `x-forwarded-proto`, and never carry a port.
+ * 3000 isn't exposed through Cloudflare. Always derive host AND port from the
+ * `Host` header (the authority the browser actually used: port-less in
+ * production, `:3005`-style in local dev) and the scheme from
+ * `x-forwarded-proto`.
  */
 function publicRedirectUrl(request: NextRequest, path: string): URL {
   const url = new URL(path, request.url)
   const forwardedProto = request.headers.get('x-forwarded-proto')
   const hostHeader = request.headers.get('host') || url.host
 
+  // The Host header is the exact authority the browser dialed, so it is the
+  // only host:port a redirect can safely send it back to. Behind
+  // Cloudflare → Traefik it is port-less (the public domain); in local dev it
+  // carries the real port (e.g. acme.lvh.me:3005). Trust it verbatim.
+  // `x-forwarded-proto` cannot distinguish the two — Next dev sets it on every
+  // request — so it is only used for the scheme, never to decide on the port.
+  // Set hostname/port separately: the WHATWG URL host setter keeps the old
+  // port when the new value has none, so a port-less Host header would
+  // otherwise leak request.url's internal container port into the redirect.
+  const [hostname, port = ''] = hostHeader.split(':')
+  url.hostname = hostname
+  url.port = port
   if (forwardedProto) {
-    // Behind a proxy (Cloudflare → Traefik): derive the real public host from
-    // the Host header, force the external scheme, and ALWAYS drop the port.
-    // Setting `.host` to a port-less value does not reliably clear a port that
-    // request.url already carries (the WHATWG URL host setter keeps the old
-    // port when the new value has none), so clear `.port` explicitly.
-    url.hostname = hostHeader.split(':')[0]
-    url.port = ''
     url.protocol = forwardedProto + ':'
-  } else {
-    // Direct connection (local dev, e.g. acme.lvh.me:3000): the Host header's
-    // port IS the real port — keep it as-is.
-    url.host = hostHeader
   }
   return url
 }
