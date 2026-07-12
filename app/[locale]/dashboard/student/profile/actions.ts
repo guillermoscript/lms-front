@@ -27,5 +27,6 @@ export async function updateProfile(formData: FormData) {
     if (error) throw new Error(error.message);
 
     revalidatePath("/dashboard/student/profile");
+    revalidatePath("/dashboard/settings");
     return { success: true };
 }
