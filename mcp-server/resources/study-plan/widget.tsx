@@ -63,43 +63,18 @@ export default function StudyPlan() {
   const { callTool } = useCallTool("lms_complete_study_goal");
   const theme = useWidgetTheme();
   const dark = theme === "dark";
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    pass: dark ? "#4ade80" : "#16a34a",
-  };
 
   // Optimistic check-off: goal ids marked done locally while the tool runs.
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [saveError, setSaveError] = useState(false);
 
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            padding: 40,
-            display: "flex",
-            justifyContent: "center",
-            backgroundColor: colors.bg,
-          }}
-        >
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              border: `3px solid ${colors.border}`,
-              borderTopColor: colors.accent,
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div className={dark ? "dark" : ""}>
+          <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
+            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -120,7 +95,21 @@ export default function StudyPlan() {
   const check = (g: Goal) => {
     if (isDone(g)) return;
     setChecked((s) => new Set(s).add(g.id));
-    callTool({ goal_id: g.id });
+    callTool(
+      { goal_id: g.id },
+      {
+        onSuccess: () => setSaveError(false),
+        // Revert the optimistic check so the UI never lies about a failed save.
+        onError: () => {
+          setChecked((s) => {
+            const next = new Set(s);
+            next.delete(g.id);
+            return next;
+          });
+          setSaveError(true);
+        },
+      }
+    );
   };
 
   // Progress ring geometry (SVG circle, r=26).
@@ -129,231 +118,160 @@ export default function StudyPlan() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 640,
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            marginBottom: 16,
-          }}
-        >
-          <svg width={64} height={64} viewBox="0 0 64 64" style={{ flexShrink: 0 }}>
-            <circle
-              cx={32}
-              cy={32}
-              r={R}
-              fill="none"
-              stroke={dark ? "#27272a" : "#f3f4f6"}
-              strokeWidth={6}
-            />
-            <circle
-              cx={32}
-              cy={32}
-              r={R}
-              fill="none"
-              stroke={allDone ? colors.pass : colors.accent}
-              strokeWidth={6}
-              strokeLinecap="round"
-              strokeDasharray={CIRC}
-              strokeDashoffset={CIRC * (1 - progress / 100)}
-              transform="rotate(-90 32 32)"
-            />
-            <text
-              x={32}
-              y={37}
-              textAnchor="middle"
-              style={{ fontSize: 14, fontWeight: 800, fill: colors.text }}
-            >
-              {progress}%
-            </text>
-          </svg>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: colors.text }}>
-              Week of {weekLabel}
-            </h2>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>
-              {goals.length === 0
-                ? "No goals yet this week"
-                : `${doneCount} of ${goals.length} goals done`}
-              {context.due_reviews > 0 ? ` · ${context.due_reviews} flashcards due` : ""}
-            </p>
-          </div>
-        </div>
-
-        {allDone && (
-          <div
-            style={{
-              backgroundColor: dark ? "#14532d" : "#dcfce7",
-              border: `1px solid ${colors.pass}`,
-              borderRadius: 12,
-              padding: "14px 18px",
-              marginBottom: 16,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>🎉</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: colors.pass }}>
-              Week complete — every goal done!
-            </span>
-          </div>
-        )}
-
-        {goals.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 32,
-              textAlign: "center",
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ fontSize: 30, marginBottom: 8 }}>🗓️</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              Nothing planned yet
-            </p>
-            {context.next_lessons.length > 0 && (
-              <p style={{ margin: "8px 0 0", fontSize: 13, color: colors.textSecondary }}>
-                Up next:{" "}
-                {context.next_lessons
-                  .slice(0, 3)
-                  .map((l) => `"${l.lesson_title}" (${l.course_title})`)
-                  .join(" · ")}
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[640px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          <div className="mb-4 flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <svg width={64} height={64} viewBox="0 0 64 64" className="shrink-0">
+              <circle
+                cx={32}
+                cy={32}
+                r={R}
+                fill="none"
+                strokeWidth={6}
+                className="stroke-zinc-100 dark:stroke-zinc-800"
+              />
+              <circle
+                cx={32}
+                cy={32}
+                r={R}
+                fill="none"
+                strokeWidth={6}
+                strokeLinecap="round"
+                strokeDasharray={CIRC}
+                strokeDashoffset={CIRC * (1 - progress / 100)}
+                transform="rotate(-90 32 32)"
+                className={
+                  allDone
+                    ? "stroke-green-600 dark:stroke-green-400"
+                    : "stroke-violet-600 dark:stroke-violet-400"
+                }
+              />
+              <text
+                x={32}
+                y={37}
+                textAnchor="middle"
+                className="fill-zinc-900 text-sm font-extrabold dark:fill-zinc-100"
+              >
+                {progress}%
+              </text>
+            </svg>
+            <div className="min-w-0 flex-1">
+              <h2 className="m-0 text-[17px] font-bold text-zinc-900 dark:text-zinc-100">
+                Week of {weekLabel}
+              </h2>
+              <p className="mt-1 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+                {goals.length === 0
+                  ? "No goals yet this week"
+                  : `${doneCount} of ${goals.length} goals done`}
+                {context.due_reviews > 0 ? ` · ${context.due_reviews} flashcards due` : ""}
               </p>
-            )}
+            </div>
+          </div>
+
+          {allDone && (
+            <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-green-600 bg-green-100 px-4.5 py-3.5 dark:border-green-400 dark:bg-green-900">
+              <span className="text-[22px]">🎉</span>
+              <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                Week complete — every goal done!
+              </span>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="mb-3 rounded-[10px] bg-red-50 px-[13px] py-[9px] text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400">
+              Could not save that goal — it has been unchecked. Try again.
+            </div>
+          )}
+
+          {goals.length === 0 ? (
+            <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-3xl">🗓️</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                Nothing planned yet
+              </p>
+              {context.next_lessons.length > 0 && (
+                <p className="mt-2 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+                  Up next:{" "}
+                  {context.next_lessons
+                    .slice(0, 3)
+                    .map((l) => `"${l.lesson_title}" (${l.course_title})`)
+                    .join(" · ")}
+                </p>
+              )}
+              <button
+                onClick={() =>
+                  sendFollowUpMessage(
+                    "Help me plan this week: propose study goals from my next lessons, weak spots, and due flashcards, then save them with lms_set_study_plan."
+                  )
+                }
+                className="mt-4 cursor-pointer rounded-lg border-none bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white dark:bg-violet-400"
+              >
+                Plan my week
+              </button>
+            </div>
+          ) : (
+            <div className="mb-4 flex flex-col gap-3.5">
+              {KIND_ORDER.filter((k) => goals.some((g) => g.kind === k)).map((kind) => (
+                <div key={kind}>
+                  <p className="m-0 mb-1.5 text-[11px] font-bold tracking-[1px] text-zinc-400 uppercase dark:text-zinc-500">
+                    {KIND_META[kind].icon} {KIND_META[kind].label}
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {goals
+                      .filter((g) => g.kind === kind)
+                      .map((g) => {
+                        const done = isDone(g);
+                        return (
+                          <button
+                            key={g.id}
+                            onClick={() => check(g)}
+                            disabled={done}
+                            className={`flex w-full items-center gap-2.5 rounded-[10px] border bg-white px-3.5 py-2.5 text-left dark:bg-zinc-900 ${
+                              done
+                                ? "cursor-default border-green-600 dark:border-green-400"
+                                : "cursor-pointer border-zinc-200 dark:border-zinc-800"
+                            }`}
+                          >
+                            <span
+                              className={`flex size-4.5 shrink-0 items-center justify-center rounded-[5px] text-xs font-extrabold text-white ${
+                                done
+                                  ? "border-none bg-green-600 dark:bg-green-400"
+                                  : "border-2 border-zinc-400 bg-transparent dark:border-zinc-500"
+                              }`}
+                            >
+                              {done ? "✓" : ""}
+                            </span>
+                            <span
+                              className={`text-sm ${
+                                done
+                                  ? "text-zinc-400 line-through dark:text-zinc-500"
+                                  : "text-zinc-900 dark:text-zinc-100"
+                              }`}
+                            >
+                              {g.title}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {goals.length > 0 && (
             <button
               onClick={() =>
                 sendFollowUpMessage(
-                  "Help me plan this week: propose study goals from my next lessons, weak spots, and due flashcards, then save them with lms_set_study_plan."
+                  "Let's plan next week: look at what I finished and missed this week, my next lessons, and due flashcards, then propose next week's goals and save them with lms_set_study_plan."
                 )
               }
-              style={{
-                marginTop: 16,
-                padding: "8px 16px",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#ffffff",
-                backgroundColor: colors.accent,
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
+              className="cursor-pointer rounded-lg border border-violet-600 bg-transparent px-4 py-2 text-[13px] font-semibold text-violet-600 dark:border-violet-400 dark:text-violet-400"
             >
-              Plan my week
+              Plan next week with me
             </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 16 }}>
-            {KIND_ORDER.filter((k) => goals.some((g) => g.kind === k)).map((kind) => (
-              <div key={kind}>
-                <p
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                    color: colors.textMuted,
-                  }}
-                >
-                  {KIND_META[kind].icon} {KIND_META[kind].label}
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {goals
-                    .filter((g) => g.kind === kind)
-                    .map((g) => {
-                      const done = isDone(g);
-                      return (
-                        <button
-                          key={g.id}
-                          onClick={() => check(g)}
-                          disabled={done}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            width: "100%",
-                            textAlign: "left",
-                            backgroundColor: colors.surface,
-                            border: `1px solid ${done ? colors.pass : colors.border}`,
-                            borderRadius: 10,
-                            padding: "10px 14px",
-                            cursor: done ? "default" : "pointer",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 5,
-                              flexShrink: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              fontWeight: 800,
-                              color: "#ffffff",
-                              backgroundColor: done ? colors.pass : "transparent",
-                              border: done ? "none" : `2px solid ${colors.textMuted}`,
-                            }}
-                          >
-                            {done ? "✓" : ""}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 14,
-                              color: done ? colors.textMuted : colors.text,
-                              textDecoration: done ? "line-through" : "none",
-                            }}
-                          >
-                            {g.title}
-                          </span>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {goals.length > 0 && (
-          <button
-            onClick={() =>
-              sendFollowUpMessage(
-                "Let's plan next week: look at what I finished and missed this week, my next lessons, and due flashcards, then propose next week's goals and save them with lms_set_study_plan."
-              )
-            }
-            style={{
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 600,
-              color: colors.accent,
-              backgroundColor: "transparent",
-              border: `1px solid ${colors.accent}`,
-              borderRadius: 8,
-              cursor: "pointer",
-            }}
-          >
-            Plan next week with me
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

@@ -50,22 +50,19 @@ type Props = z.infer<typeof propsSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function tierColor(
-  tier: string | null,
-  dark: boolean
-): { bg: string; text: string } {
+function tierClass(tier: string | null): string {
   switch ((tier ?? "").toLowerCase()) {
     case "gold":
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
     case "silver":
-      return { bg: dark ? "#334155" : "#f1f5f9", text: dark ? "#cbd5e1" : "#475569" };
+      return "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300";
     case "bronze":
-      return { bg: dark ? "#431407" : "#ffedd5", text: dark ? "#fdba74" : "#9a3412" };
+      return "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300";
     case "platinum":
     case "diamond":
-      return { bg: dark ? "#164e63" : "#cffafe", text: dark ? "#67e8f9" : "#155e75" };
+      return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300";
     default:
-      return { bg: dark ? "#2e1065" : "#f5f3ff", text: dark ? "#a78bfa" : "#7c3aed" };
+      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
   }
 }
 
@@ -82,43 +79,14 @@ export default function GamificationProfile() {
   const theme = useWidgetTheme();
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    track: dark ? "#27272a" : "#f4f4f5",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading your progress…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading your progress…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -127,31 +95,17 @@ export default function GamificationProfile() {
   if (!props.has_profile) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            fontFamily: "system-ui, sans-serif",
-            backgroundColor: colors.bg,
-            padding: 24,
-            maxWidth: 680,
-            margin: "0 auto",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 40,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              No XP yet
-            </p>
-            <p style={{ margin: "6px 0 0", color: colors.textMuted, fontSize: 13 }}>
-              Complete a lesson to start earning XP and unlocking achievements.
-            </p>
+        <div className={dark ? "dark" : ""}>
+          <div className="mx-auto max-w-[680px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+            <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-[32px]">⚡</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                No XP yet
+              </p>
+              <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                Complete a lesson to start earning XP and unlocking achievements.
+              </p>
+            </div>
           </div>
         </div>
       </McpUseProvider>
@@ -180,263 +134,114 @@ export default function GamificationProfile() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 680,
-          margin: "0 auto",
-        }}
-      >
-        {/* Level hero */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 14,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              marginBottom: 14,
-            }}
-          >
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                backgroundColor: colors.accentBg,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 26,
-                flexShrink: 0,
-              }}
-            >
-              {props.level_icon ?? "⭐"}
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[680px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Level hero */}
+          <div className="mb-3.5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-3.5 flex items-center gap-3.5">
+              <div className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] bg-violet-50 text-[26px] dark:bg-violet-950">
+                {props.level_icon ?? "⭐"}
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  Level {props.level}
+                  {props.level_title ? ` · ${props.level_title}` : ""}
+                </div>
+                <div className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">
+                  {props.total_xp.toLocaleString()} XP total
+                </div>
+              </div>
             </div>
-            <div style={{ minWidth: 0 }}>
+
+            {/* XP progress to next level */}
+            <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
               <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 750,
-                  color: colors.text,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Level {props.level}
-                {props.level_title ? ` · ${props.level_title}` : ""}
-              </div>
-              <div style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
-                {props.total_xp.toLocaleString()} XP total
-              </div>
+                className="h-full rounded-full bg-violet-600 transition-[width] duration-400 ease-out dark:bg-violet-400"
+                style={{ width: `${levelPct}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex justify-between text-xs text-zinc-400 dark:text-zinc-500">
+              {props.next_level && props.xp_needed !== null ? (
+                <>
+                  <span>
+                    {props.xp_needed.toLocaleString()} XP to level{" "}
+                    {props.next_level.level}
+                  </span>
+                  <span className="tabular-nums">{levelPct}%</span>
+                </>
+              ) : (
+                <span>Max level reached 🎉</span>
+              )}
             </div>
           </div>
 
-          {/* XP progress to next level */}
-          <div
-            style={{
-              height: 10,
-              borderRadius: 999,
-              backgroundColor: colors.track,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${levelPct}%`,
-                borderRadius: 999,
-                backgroundColor: colors.accent,
-                transition: "width 0.4s ease",
-              }}
-            />
+          {/* Stat tiles */}
+          <div className="mb-3.5 grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-2.5">
+            {stats.map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl border border-zinc-200 bg-white px-3.5 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="text-lg">{s.icon}</div>
+                <div className="mt-1 text-base font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
+                  {s.value}
+                </div>
+                <div className="mt-px text-[11.5px] text-zinc-400 dark:text-zinc-500">
+                  {s.label}
+                </div>
+              </div>
+            ))}
           </div>
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 12,
-              color: colors.textMuted,
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            {props.next_level && props.xp_needed !== null ? (
-              <>
-                <span>
-                  {props.xp_needed.toLocaleString()} XP to level{" "}
-                  {props.next_level.level}
-                </span>
-                <span style={{ fontVariantNumeric: "tabular-nums" }}>{levelPct}%</span>
-              </>
+
+          {/* Achievements */}
+          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+              <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                Achievements ({props.achievements.length})
+              </span>
+            </div>
+
+            {props.achievements.length === 0 ? (
+              <div className="p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
+                No achievements earned yet — keep learning!
+              </div>
             ) : (
-              <span>Max level reached 🎉</span>
-            )}
-          </div>
-        </div>
-
-        {/* Stat tiles */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              style={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}
-            >
-              <div style={{ fontSize: 18 }}>{s.icon}</div>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 750,
-                  color: colors.text,
-                  marginTop: 4,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {s.value}
-              </div>
-              <div style={{ fontSize: 11.5, color: colors.textMuted, marginTop: 1 }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Achievements */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderBottom: `1px solid ${colors.border}`,
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>
-              Achievements ({props.achievements.length})
-            </span>
-          </div>
-
-          {props.achievements.length === 0 ? (
-            <div
-              style={{
-                padding: 24,
-                textAlign: "center",
-                color: colors.textMuted,
-                fontSize: 13,
-              }}
-            >
-              No achievements earned yet — keep learning!
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-                gap: 10,
-                padding: 14,
-              }}
-            >
-              {props.achievements.map((a) => {
-                const tier = tierColor(a.tier, dark);
-                return (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2.5 p-3.5">
+                {props.achievements.map((a) => (
                   <div
                     key={a.slug + a.earned_at}
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 10,
-                      padding: 12,
-                    }}
+                    className="rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-800"
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span style={{ fontSize: 20 }}>{a.icon ?? "🏅"}</span>
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 650,
-                          color: colors.text,
-                          lineHeight: 1.25,
-                        }}
-                      >
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className="text-xl">{a.icon ?? "🏅"}</span>
+                      <span className="text-[13px] leading-tight font-semibold text-zinc-900 dark:text-zinc-100">
                         {a.title}
                       </span>
                     </div>
                     {a.description && (
-                      <div
-                        style={{
-                          fontSize: 11.5,
-                          color: colors.textMuted,
-                          lineHeight: 1.45,
-                          marginBottom: 8,
-                        }}
-                      >
+                      <div className="mb-2 text-[11.5px] leading-[1.45] text-zinc-400 dark:text-zinc-500">
                         {a.description}
                       </div>
                     )}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 6,
-                      }}
-                    >
+                    <div className="flex items-center justify-between gap-1.5">
                       {a.tier ? (
                         <span
-                          style={{
-                            padding: "2px 8px",
-                            borderRadius: 8,
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                            textTransform: "capitalize",
-                            backgroundColor: tier.bg,
-                            color: tier.text,
-                          }}
+                          className={`rounded-lg px-2 py-0.5 text-[10.5px] font-bold capitalize ${tierClass(a.tier)}`}
                         >
                           {a.tier}
                         </span>
                       ) : (
                         <span />
                       )}
-                      <span style={{ fontSize: 11, color: colors.textMuted }}>
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                         {formatDate(a.earned_at)}
                       </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </McpUseProvider>

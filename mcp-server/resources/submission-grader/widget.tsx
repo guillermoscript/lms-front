@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
+import { Markdown } from "../shared/markdown";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -65,30 +66,25 @@ type Props = z.infer<typeof propsSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusPill(
-  status: string,
-  theme: "light" | "dark"
-): { bg: string; text: string; label: string } {
-  const dark = theme === "dark";
-  const map: Record<string, { bg: string; text: string; label: string }> = {
+function statusPill(status: string): { classes: string; label: string } {
+  const map: Record<string, { classes: string; label: string }> = {
     teacher_reviewed: {
-      bg: dark ? "#14532d" : "#dcfce7",
-      text: dark ? "#86efac" : "#166534",
+      classes:
+        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400",
       label: "Teacher reviewed",
     },
     ai_reviewed: {
-      bg: dark ? "#1e1b4b" : "#ede9fe",
-      text: dark ? "#a5b4fc" : "#4338ca",
+      classes:
+        "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400",
       label: "AI reviewed",
     },
     pending_teacher_review: {
-      bg: dark ? "#422006" : "#fef3c7",
-      text: dark ? "#fcd34d" : "#92400e",
+      classes:
+        "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
       label: "Awaiting review",
     },
     pending: {
-      bg: dark ? "#3f3f46" : "#f4f4f5",
-      text: dark ? "#a1a1aa" : "#52525b",
+      classes: "bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400",
       label: "Pending",
     },
   };
@@ -129,50 +125,14 @@ export default function SubmissionGrader() {
     "lms_grade_submission"
   );
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    sectionBg: dark ? "#141414" : "#f9fafb",
-    answerBg: dark ? "#11203a" : "#eff6ff",
-    answerBorder: dark ? "#1e3a5f" : "#bfdbfe",
-    codeBg: dark ? "#0a0a0a" : "#f6f8fa",
-    okBg: dark ? "#14532d" : "#dcfce7",
-    okText: dark ? "#86efac" : "#166534",
-    errBg: dark ? "#7f1d1d" : "#fee2e2",
-    errText: dark ? "#fca5a5" : "#991b1b",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading submission…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading submission…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -180,7 +140,7 @@ export default function SubmissionGrader() {
 
   const { submission, questions, summary } = props;
   const status = localStatus ?? submission.review_status;
-  const pill = statusPill(status, theme);
+  const pill = statusPill(status);
 
   const scoreVal = score ?? (submission.score != null ? String(submission.score) : "");
   const feedbackVal = feedback ?? submission.feedback ?? "";
@@ -202,321 +162,195 @@ export default function SubmissionGrader() {
   };
 
   const studentName = submission.student_name ?? submission.student_id.slice(0, 8);
+  const saveDisabled = saving || (!dirty && status === "teacher_reviewed");
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 12,
-            marginBottom: 4,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 19,
-                fontWeight: 700,
-                color: colors.text,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {studentName}
-            </h2>
-            <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
-              {submission.exam_title} · submitted {formatDate(submission.date)}
+      <div className={dark ? "dark" : ""}>
+        <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-1 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-[19px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                {studentName}
+              </h2>
+              <div className="mt-0.5 text-[13px] text-zinc-400 dark:text-zinc-500">
+                {submission.exam_title} · submitted {formatDate(submission.date)}
+              </div>
             </div>
+            <span
+              className={`shrink-0 rounded-[10px] px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${pill.classes}`}
+            >
+              {pill.label}
+            </span>
           </div>
-          <span
-            style={{
-              padding: "3px 10px",
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: 600,
-              backgroundColor: pill.bg,
-              color: pill.text,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {pill.label}
-          </span>
-        </div>
 
-        {/* Grade panel */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 18,
-            margin: "16px 0",
-          }}
-        >
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <label style={{ display: "block" }}>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: colors.textSecondary,
-                  marginBottom: 6,
-                }}
-              >
-                Score (0–100)
+          {/* Grade panel */}
+          <div className="my-4 rounded-xl border border-zinc-200 bg-white p-[18px] dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-wrap items-end gap-[18px]">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  Score (0–100)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={scoreVal}
+                  placeholder="—"
+                  onChange={(e) => setScore(e.target.value)}
+                  className="w-[90px] rounded-lg border border-zinc-200 bg-zinc-100 px-2.5 py-2 text-lg font-bold text-zinc-900 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+              </label>
+
+              <div className="pb-2 text-[13px] text-zinc-400 dark:text-zinc-500">
+                AI points:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-100">
+                  {summary.total_points_earned}
+                  {summary.total_points_possible ? ` / ${summary.total_points_possible}` : ""}
+                </strong>{" "}
+                · {summary.graded_count}/{summary.question_count} graded
+              </div>
+            </div>
+
+            <label className="mt-3.5 block">
+              <span className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Feedback to student
               </span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={scoreVal}
-                placeholder="—"
-                onChange={(e) => setScore(e.target.value)}
-                style={{
-                  width: 90,
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: `1px solid ${colors.border}`,
-                  backgroundColor: colors.codeBg,
-                  color: colors.text,
-                  fontSize: 18,
-                  fontWeight: 700,
-                }}
+              <textarea
+                value={feedbackVal}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Write overall feedback…"
+                className="box-border h-[90px] w-full resize-y rounded-lg border border-zinc-200 bg-zinc-100 p-2.5 text-[13.5px] leading-normal text-zinc-900 [font-family:inherit] dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
               />
             </label>
 
-            <div style={{ fontSize: 13, color: colors.textMuted, paddingBottom: 8 }}>
-              AI points: <strong style={{ color: colors.text }}>
-                {summary.total_points_earned}
-                {summary.total_points_possible ? ` / ${summary.total_points_possible}` : ""}
-              </strong>{" "}
-              · {summary.graded_count}/{summary.question_count} graded
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saveDisabled}
+                className={`rounded-lg border-none px-5 py-2 text-[13px] font-semibold transition-all ${
+                  saveDisabled
+                    ? "bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                    : "bg-violet-600 text-white dark:bg-violet-400"
+                } ${saving ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+              >
+                {saving
+                  ? "Saving…"
+                  : status === "teacher_reviewed" && !dirty
+                    ? "Saved ✓"
+                    : "Save grade"}
+              </button>
+              {saveFailed && (
+                <span className="text-[13px] text-red-600 dark:text-red-400">
+                  {saveError instanceof Error ? saveError.message : "Save failed"}
+                </span>
+              )}
             </div>
           </div>
 
-          <label style={{ display: "block", marginTop: 14 }}>
-            <span
-              style={{
-                display: "block",
-                fontSize: 12,
-                fontWeight: 600,
-                color: colors.textSecondary,
-                marginBottom: 6,
-              }}
-            >
-              Feedback to student
-            </span>
-            <textarea
-              value={feedbackVal}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Write overall feedback…"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                height: 90,
-                padding: 10,
-                borderRadius: 8,
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.codeBg,
-                color: colors.text,
-                fontSize: 13.5,
-                lineHeight: 1.5,
-                resize: "vertical",
-                fontFamily: "inherit",
-              }}
-            />
-          </label>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
-            <button
-              onClick={handleSave}
-              disabled={saving || (!dirty && status === "teacher_reviewed")}
-              style={{
-                padding: "8px 20px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor:
-                  saving || (!dirty && status === "teacher_reviewed")
-                    ? colors.border
-                    : colors.accent,
-                color:
-                  saving || (!dirty && status === "teacher_reviewed")
-                    ? colors.textMuted
-                    : "#ffffff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.7 : 1,
-                transition: "all 0.15s",
-              }}
-            >
-              {saving
-                ? "Saving…"
-                : status === "teacher_reviewed" && !dirty
-                  ? "Saved ✓"
-                  : "Save grade"}
-            </button>
-            {saveFailed && (
-              <span style={{ fontSize: 13, color: colors.errText }}>
-                {saveError instanceof Error ? saveError.message : "Save failed"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Questions */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {questions.map((q, i) => {
-            const correct = q.is_correct;
-            const badge =
-              correct === true
-                ? { bg: colors.okBg, text: colors.okText, label: "Correct" }
-                : correct === false
-                  ? { bg: colors.errBg, text: colors.errText, label: "Incorrect" }
-                  : null;
-            return (
-              <div
-                key={q.question_id}
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: 16,
-                }}
-              >
+          {/* Questions */}
+          <div className="flex flex-col gap-3">
+            {questions.map((q, i) => {
+              const correct = q.is_correct;
+              const badge =
+                correct === true
+                  ? {
+                      classes:
+                        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400",
+                      label: "Correct",
+                    }
+                  : correct === false
+                    ? {
+                        classes:
+                          "bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400",
+                        label: "Incorrect",
+                      }
+                    : null;
+              return (
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    marginBottom: 8,
-                  }}
+                  key={q.question_id}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: colors.accent,
-                      }}
-                    >
-                      Q{i + 1}
-                    </span>
-                    <span style={{ fontSize: 11, color: colors.textMuted }}>
-                      {q.type.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    {q.points_possible != null && (
-                      <span style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>
-                        {q.points_earned ?? 0}/{q.points_possible} pts
+                  <div className="mb-2 flex items-start justify-between gap-2.5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
+                        Q{i + 1}
                       </span>
-                    )}
-                    {badge && (
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: 8,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          backgroundColor: badge.bg,
-                          color: badge.text,
-                        }}
-                      >
-                        {badge.label}
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {q.type.replace(/_/g, " ")}
                       </span>
-                    )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {q.points_possible != null && (
+                        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                          {q.points_earned ?? 0}/{q.points_possible} pts
+                        </span>
+                      )}
+                      {badge && (
+                        <span
+                          className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${badge.classes}`}
+                        >
+                          {badge.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <p
-                  style={{
-                    margin: "0 0 10px",
-                    fontSize: 14,
-                    color: colors.text,
-                    lineHeight: 1.5,
-                    fontWeight: 500,
-                  }}
-                >
-                  {q.text}
-                </p>
-
-                {/* Options for MC/TF, highlighting the correct one */}
-                {q.options.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
-                    {q.options.map((o, oi) => (
-                      <div
-                        key={oi}
-                        style={{
-                          fontSize: 12.5,
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          color: o.is_correct ? colors.okText : colors.textSecondary,
-                          backgroundColor: o.is_correct ? colors.okBg : "transparent",
-                          fontWeight: o.is_correct ? 600 : 400,
-                        }}
-                      >
-                        {o.is_correct ? "✓ " : "○ "}
-                        {o.text}
-                      </div>
-                    ))}
+                  <div className="mb-2.5 font-medium">
+                    <Markdown content={q.text} dark={dark} fontSize={14} />
                   </div>
-                )}
 
-                {/* Student answer */}
-                <div
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    backgroundColor: colors.answerBg,
-                    border: `1px solid ${colors.answerBorder}`,
-                    marginBottom: q.ai_feedback ? 8 : 0,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: colors.textMuted, marginBottom: 2 }}>
-                    Student answer
-                  </div>
+                  {/* Options for MC/TF, highlighting the correct one */}
+                  {q.options.length > 0 && (
+                    <div className="mb-2.5 flex flex-col gap-1">
+                      {q.options.map((o, oi) => (
+                        <div
+                          key={oi}
+                          className={`rounded-md px-2 py-1 text-[12.5px] ${
+                            o.is_correct
+                              ? "bg-green-100 font-semibold text-green-600 dark:bg-green-900 dark:text-green-400"
+                              : "bg-transparent font-normal text-zinc-500 dark:text-zinc-400"
+                          }`}
+                        >
+                          {o.is_correct ? "✓ " : "○ "}
+                          {o.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Student answer */}
                   <div
-                    style={{
-                      fontSize: 13.5,
-                      color: colors.text,
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
+                    className={`rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-950 ${
+                      q.ai_feedback ? "mb-2" : "mb-0"
+                    }`}
                   >
-                    {q.student_answer ?? <em style={{ color: colors.textMuted }}>(no answer)</em>}
+                    <div className="mb-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                      Student answer
+                    </div>
+                    <div className="text-[13.5px] break-words whitespace-pre-wrap text-zinc-900 dark:text-zinc-100">
+                      {q.student_answer ?? (
+                        <em className="text-zinc-400 dark:text-zinc-500">(no answer)</em>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* AI feedback + confidence */}
-                {q.ai_feedback && (
-                  <div style={{ fontSize: 12.5, color: colors.textSecondary, lineHeight: 1.5 }}>
-                    <span style={{ fontWeight: 600 }}>AI feedback: </span>
-                    {q.ai_feedback}
-                    {q.ai_confidence != null && (
-                      <span style={{ color: colors.textMuted }}>
-                        {" "}
-                        ({Math.round(q.ai_confidence * 100)}% confidence)
+                  {/* AI feedback + confidence */}
+                  {q.ai_feedback && (
+                    <div className="text-[12.5px] leading-normal text-zinc-500 dark:text-zinc-400">
+                      <span className="font-semibold">
+                        AI feedback
+                        {q.ai_confidence != null &&
+                          ` (${Math.round(q.ai_confidence * 100)}% confidence)`}
                       </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      <Markdown content={q.ai_feedback} dark={dark} fontSize={12.5} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </McpUseProvider>

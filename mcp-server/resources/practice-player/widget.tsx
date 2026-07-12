@@ -136,6 +136,26 @@ function shuffled<T>(items: T[]): T[] {
   return out;
 }
 
+// ── Shared class helpers ─────────────────────────────────────────────────────
+
+const containerClass =
+  "mx-auto max-w-[680px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950";
+
+/** Choice/option button. `layout` lets true/false + match variants override
+ *  the default block/full-width/left-aligned shape without class conflicts. */
+const choiceClass = (selected: boolean, layout = "block w-full text-left") =>
+  `mb-2 cursor-pointer rounded-[10px] border-[1.5px] px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 ${layout} ${
+    selected
+      ? "border-violet-600 bg-violet-50 font-semibold dark:border-violet-400 dark:bg-violet-950"
+      : "border-zinc-200 bg-white font-normal dark:border-zinc-800 dark:bg-zinc-900"
+  }`;
+
+const primaryBtnClass =
+  "cursor-pointer rounded-[10px] border-none bg-violet-600 px-4.5 py-[9px] text-[13.5px] font-semibold text-white dark:bg-violet-400";
+
+const inputClass =
+  "box-border w-full rounded-[10px] border-[1.5px] border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100";
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function PracticePlayer() {
@@ -153,21 +173,6 @@ export default function PracticePlayer() {
   const [pendingLeft, setPendingLeft] = useState<string | null>(null);
 
   const dark = theme === "dark";
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    done: dark ? "#4ade80" : "#16a34a",
-    doneBg: dark ? "#14532d" : "#dcfce7",
-    wrong: dark ? "#fca5a5" : "#b91c1c",
-    wrongBg: dark ? "#450a0a" : "#fef2f2",
-    inputBg: dark ? "#141414" : "#ffffff",
-  };
 
   const shuffledRights = useMemo(
     () =>
@@ -191,22 +196,30 @@ export default function PracticePlayer() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          Setting up practice…
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            Setting up practice…
+          </div>
         </div>
       </McpUseProvider>
     );
   }
 
   const { topic, questions } = props;
+
+  if (questions.length === 0) {
+    return (
+      <McpUseProvider autoSize>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-sm text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            No practice questions could be generated for “{topic}”. Ask the
+            tutor to try a different topic or lesson.
+          </div>
+        </div>
+      </McpUseProvider>
+    );
+  }
+
   const q = questions[index];
   const answer = answers[q?.id];
   const hasFreeText = questions.some((x) => x.type === "free_text");
@@ -266,7 +279,9 @@ export default function PracticePlayer() {
     const correctCount = closed.filter((x) =>
       isCorrect(x, effectiveAnswer(x))
     ).length;
-    const score = Math.round((correctCount / closed.length) * 100);
+    const score = closed.length
+      ? Math.round((correctCount / closed.length) * 100)
+      : 0;
     const missed = results.filter((r) => r.correct === false);
 
     recordAttempt(
@@ -297,32 +312,6 @@ export default function PracticePlayer() {
     );
   };
 
-  // ── Shared small styles ────────────────────────────────────────────────────
-  const choiceStyle = (selected: boolean): React.CSSProperties => ({
-    display: "block",
-    width: "100%",
-    textAlign: "left",
-    padding: "10px 14px",
-    marginBottom: 8,
-    borderRadius: 10,
-    fontSize: 14,
-    cursor: "pointer",
-    border: `1.5px solid ${selected ? colors.accent : colors.border}`,
-    backgroundColor: selected ? colors.accentBg : colors.surface,
-    color: colors.text,
-    fontWeight: selected ? 650 : 400,
-  });
-  const primaryBtn: React.CSSProperties = {
-    padding: "9px 18px",
-    borderRadius: 10,
-    fontSize: 13.5,
-    fontWeight: 650,
-    border: "none",
-    cursor: "pointer",
-    backgroundColor: colors.accent,
-    color: "#ffffff",
-  };
-
   // ── Results screen ─────────────────────────────────────────────────────────
   if (phase === "results") {
     const results = questions.map((x) => ({
@@ -334,55 +323,43 @@ export default function PracticePlayer() {
 
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            backgroundColor: colors.bg,
-            padding: 24,
-            maxWidth: 680,
-            margin: "0 auto",
-          }}
-        >
-          <h2 style={{ margin: "0 0 4px", fontSize: 20, color: colors.text }}>
-            {hasFreeText ? "Answers sent" : `${correctCount}/${closedTotal} correct`}
-          </h2>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: colors.textSecondary }}>
-            {topic}
-            {hasFreeText
-              ? " — your free-text answers went to the tutor for grading."
-              : isRecording
-                ? " — recording your attempt…"
-                : " — attempt recorded. The tutor will pick it up from here."}
-          </p>
-          {results.map(({ q: rq, correct }) => (
-            <div
-              key={rq.id}
-              style={{
-                backgroundColor:
+        <div className={dark ? "dark" : ""}>
+          <div className={containerClass}>
+            <h2 className="m-0 mb-1 text-xl text-zinc-900 dark:text-zinc-100">
+              {hasFreeText ? "Answers sent" : `${correctCount}/${closedTotal} correct`}
+            </h2>
+            <p className="m-0 mb-4 text-[13px] text-zinc-500 dark:text-zinc-400">
+              {topic}
+              {hasFreeText
+                ? " — your free-text answers went to the tutor for grading."
+                : isRecording
+                  ? " — recording your attempt…"
+                  : " — attempt recorded. The tutor will pick it up from here."}
+            </p>
+            {results.map(({ q: rq, correct }) => (
+              <div
+                key={rq.id}
+                className={`mb-2 rounded-[10px] border border-zinc-200 px-3.5 py-2.5 text-[13.5px] dark:border-zinc-800 ${
                   correct === null
-                    ? colors.surface
+                    ? "bg-white dark:bg-zinc-900"
                     : correct
-                      ? colors.doneBg
-                      : colors.wrongBg,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 10,
-                padding: "10px 14px",
-                marginBottom: 8,
-                fontSize: 13.5,
-              }}
-            >
-              <div style={{ fontWeight: 650, color: colors.text, marginBottom: 4 }}>
-                {correct === null ? "✍️" : correct ? "✓" : "✗"} {rq.prompt}
+                      ? "bg-green-100 dark:bg-green-900"
+                      : "bg-red-50 dark:bg-red-950"
+                }`}
+              >
+                <div className="mb-1 font-semibold text-zinc-900 dark:text-zinc-100">
+                  {correct === null ? "✍️" : correct ? "✓" : "✗"} {rq.prompt}
+                </div>
+                <div className="text-zinc-500 dark:text-zinc-400">
+                  Your answer: {answerText(rq, effectiveAnswer(rq))}
+                  {correct === false && (
+                    <> · Correct: {expectedAnswerText(rq)}</>
+                  )}
+                  {correct === null && <> · Awaiting tutor grading</>}
+                </div>
               </div>
-              <div style={{ color: colors.textSecondary }}>
-                Your answer: {answerText(rq, effectiveAnswer(rq))}
-                {correct === false && (
-                  <> · Correct: {expectedAnswerText(rq)}</>
-                )}
-                {correct === null && <> · Awaiting tutor grading</>}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -391,292 +368,198 @@ export default function PracticePlayer() {
   // ── Question screen ────────────────────────────────────────────────────────
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 680,
-          margin: "0 auto",
-        }}
-      >
-        {/* Header + progress dots */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-          <span
-            style={{
-              padding: "2px 8px",
-              borderRadius: 8,
-              fontSize: 11,
-              fontWeight: 700,
-              backgroundColor: colors.accentBg,
-              color: colors.accent,
-            }}
-          >
-            Practice · {topic}
-          </span>
-          <div style={{ display: "flex", gap: 5 }} aria-label={`Question ${index + 1} of ${questions.length}`}>
-            {questions.map((dot, i) => (
-              <span
-                key={dot.id}
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor:
+      <div className={dark ? "dark" : ""}>
+        <div className={containerClass}>
+          {/* Header + progress dots */}
+          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
+            <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+              Practice · {topic}
+            </span>
+            <div
+              className="flex gap-[5px]"
+              aria-label={`Question ${index + 1} of ${questions.length}`}
+            >
+              {questions.map((dot, i) => (
+                <span
+                  key={dot.id}
+                  className={`size-2 rounded-full ${
                     i === index
-                      ? colors.accent
+                      ? "bg-violet-600 dark:bg-violet-400"
                       : answers[dot.id] !== undefined
-                        ? colors.done
-                        : colors.border,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <h2
-          style={{
-            margin: "0 0 14px",
-            fontSize: 17,
-            fontWeight: 650,
-            color: colors.text,
-            lineHeight: 1.4,
-          }}
-        >
-          {index + 1}. {q.prompt}
-        </h2>
-
-        {/* Per-type input */}
-        {q.type === "multiple_choice" &&
-          (q.options ?? []).map((opt, i) => (
-            <button key={i} onClick={() => setAnswer(i)} style={choiceStyle(answer === i)}>
-              {opt}
-            </button>
-          ))}
-
-        {q.type === "true_false" && (
-          <div style={{ display: "flex", gap: 10 }}>
-            {[true, false].map((v) => (
-              <button
-                key={String(v)}
-                onClick={() => setAnswer(v)}
-                style={{ ...choiceStyle(answer === v), width: "auto", flex: 1, textAlign: "center" }}
-              >
-                {v ? "True" : "False"}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {(q.type === "fill_blank" || q.type === "free_text") && (
-          q.type === "free_text" ? (
-            <textarea
-              value={(answer as string) ?? ""}
-              onChange={(e) => setAnswer(e.target.value)}
-              rows={5}
-              placeholder="Write your answer — the tutor will grade it"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1.5px solid ${colors.border}`,
-                backgroundColor: colors.inputBg,
-                color: colors.text,
-                fontSize: 14,
-                fontFamily: "inherit",
-                resize: "vertical",
-              }}
-            />
-          ) : (
-            <input
-              type="text"
-              value={(answer as string) ?? ""}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Type your answer"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1.5px solid ${colors.border}`,
-                backgroundColor: colors.inputBg,
-                color: colors.text,
-                fontSize: 14,
-              }}
-            />
-          )
-        )}
-
-        {q.type === "match" && (
-          <div>
-            <p style={{ margin: "0 0 8px", fontSize: 12, color: colors.textMuted }}>
-              Tap an item on the left, then its match on the right.
-            </p>
-            <div style={{ display: "flex", gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                {(q.pairs ?? []).map((p) => {
-                  const matched = ((answer as Record<string, string>) ?? {})[p.left];
-                  return (
-                    <button
-                      key={p.left}
-                      onClick={() => setPendingLeft(p.left)}
-                      style={{
-                        ...choiceStyle(pendingLeft === p.left),
-                        borderColor:
-                          pendingLeft === p.left
-                            ? colors.accent
-                            : matched
-                              ? colors.done
-                              : colors.border,
-                      }}
-                    >
-                      {p.left}
-                      {matched && (
-                        <span style={{ color: colors.textMuted, fontWeight: 400 }}>
-                          {" "}→ {matched}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ flex: 1 }}>
-                {(shuffledRights[q.id] ?? []).map((right) => (
-                  <button
-                    key={right}
-                    onClick={() => {
-                      if (!pendingLeft) return;
-                      setAnswer({
-                        ...(((answer as Record<string, string>) ?? {})),
-                        [pendingLeft]: right,
-                      });
-                      setPendingLeft(null);
-                    }}
-                    disabled={!pendingLeft}
-                    style={{
-                      ...choiceStyle(false),
-                      opacity: pendingLeft ? 1 : 0.6,
-                      cursor: pendingLeft ? "pointer" : "default",
-                    }}
-                  >
-                    {right}
-                  </button>
-                ))}
-              </div>
+                        ? "bg-green-600 dark:bg-green-400"
+                        : "bg-zinc-200 dark:bg-zinc-800"
+                  }`}
+                />
+              ))}
             </div>
           </div>
-        )}
 
-        {q.type === "order" && (
-          <div>
-            <p style={{ margin: "0 0 8px", fontSize: 12, color: colors.textMuted }}>
-              Arrange with the ↑ / ↓ buttons.
-            </p>
-            {(((answer as string[]) ?? initialOrders[q.id]) ?? []).map(
-              (item, i, arr) => (
-                <div
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 12px",
-                    marginBottom: 6,
-                    borderRadius: 10,
-                    border: `1.5px solid ${colors.border}`,
-                    backgroundColor: colors.surface,
-                    color: colors.text,
-                    fontSize: 14,
-                  }}
+          <h2 className="m-0 mb-3.5 text-[17px] leading-[1.4] font-semibold text-zinc-900 dark:text-zinc-100">
+            {index + 1}. {q.prompt}
+          </h2>
+
+          {/* Per-type input */}
+          {q.type === "multiple_choice" &&
+            (q.options ?? []).map((opt, i) => (
+              <button key={i} onClick={() => setAnswer(i)} className={choiceClass(answer === i)}>
+                {opt}
+              </button>
+            ))}
+
+          {q.type === "true_false" && (
+            <div className="flex gap-2.5">
+              {[true, false].map((v) => (
+                <button
+                  key={String(v)}
+                  onClick={() => setAnswer(v)}
+                  className={choiceClass(answer === v, "flex-1 text-center")}
                 >
-                  <span style={{ flex: 1 }}>{item}</span>
-                  <button
-                    aria-label={`Move "${item}" up`}
-                    disabled={i === 0}
-                    onClick={() => {
-                      const next = [...arr];
-                      [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                      setAnswer(next);
-                    }}
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 8,
-                      backgroundColor: colors.bg,
-                      color: colors.text,
-                      cursor: i === 0 ? "default" : "pointer",
-                      opacity: i === 0 ? 0.4 : 1,
-                      padding: "4px 9px",
-                    }}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    aria-label={`Move "${item}" down`}
-                    disabled={i === arr.length - 1}
-                    onClick={() => {
-                      const next = [...arr];
-                      [next[i], next[i + 1]] = [next[i + 1], next[i]];
-                      setAnswer(next);
-                    }}
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 8,
-                      backgroundColor: colors.bg,
-                      color: colors.text,
-                      cursor: i === arr.length - 1 ? "default" : "pointer",
-                      opacity: i === arr.length - 1 ? 0.4 : 1,
-                      padding: "4px 9px",
-                    }}
-                  >
-                    ↓
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-        )}
+                  {v ? "True" : "False"}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Nav */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginTop: 18,
-          }}
-        >
-          <button
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={index === 0}
-            style={{
-              ...primaryBtn,
-              backgroundColor: "transparent",
-              color: colors.textSecondary,
-              border: `1px solid ${colors.border}`,
-              opacity: index === 0 ? 0.4 : 1,
-              cursor: index === 0 ? "default" : "pointer",
-            }}
-          >
-            Back
-          </button>
-          <button
-            onClick={() => {
-              // order questions default to the presented arrangement
-              if (q.type === "order" && answers[q.id] === undefined) {
-                setAnswer(initialOrders[q.id] ?? []);
-              }
-              if (isLast) finish();
-              else setIndex((i) => i + 1);
-            }}
-            disabled={!answeredCurrent}
-            style={{
-              ...primaryBtn,
-              opacity: answeredCurrent ? 1 : 0.5,
-              cursor: answeredCurrent ? "pointer" : "default",
-            }}
-          >
-            {isLast ? "Finish" : "Next"}
-          </button>
+          {(q.type === "fill_blank" || q.type === "free_text") && (
+            q.type === "free_text" ? (
+              <textarea
+                value={(answer as string) ?? ""}
+                onChange={(e) => setAnswer(e.target.value)}
+                rows={5}
+                placeholder="Write your answer — the tutor will grade it"
+                className={`${inputClass} resize-y [font-family:inherit]`}
+              />
+            ) : (
+              <input
+                type="text"
+                value={(answer as string) ?? ""}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Type your answer"
+                className={inputClass}
+              />
+            )
+          )}
+
+          {q.type === "match" && (
+            <div>
+              <p className="m-0 mb-2 text-xs text-zinc-400 dark:text-zinc-500">
+                Tap an item on the left, then its match on the right.
+              </p>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  {(q.pairs ?? []).map((p) => {
+                    const matched = ((answer as Record<string, string>) ?? {})[p.left];
+                    const border =
+                      pendingLeft === p.left
+                        ? "border-violet-600 bg-violet-50 font-semibold dark:border-violet-400 dark:bg-violet-950"
+                        : matched
+                          ? "border-green-600 bg-white font-normal dark:border-green-400 dark:bg-zinc-900"
+                          : "border-zinc-200 bg-white font-normal dark:border-zinc-800 dark:bg-zinc-900";
+                    return (
+                      <button
+                        key={p.left}
+                        onClick={() => setPendingLeft(p.left)}
+                        className={`mb-2 block w-full cursor-pointer rounded-[10px] border-[1.5px] px-3.5 py-2.5 text-left text-sm text-zinc-900 dark:text-zinc-100 ${border}`}
+                      >
+                        {p.left}
+                        {matched && (
+                          <span className="font-normal text-zinc-400 dark:text-zinc-500">
+                            {" "}→ {matched}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex-1">
+                  {(shuffledRights[q.id] ?? []).map((right) => (
+                    <button
+                      key={right}
+                      onClick={() => {
+                        if (!pendingLeft) return;
+                        setAnswer({
+                          ...(((answer as Record<string, string>) ?? {})),
+                          [pendingLeft]: right,
+                        });
+                        setPendingLeft(null);
+                      }}
+                      disabled={!pendingLeft}
+                      className={`${choiceClass(false)} disabled:cursor-default disabled:opacity-60`}
+                    >
+                      {right}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {q.type === "order" && (
+            <div>
+              <p className="m-0 mb-2 text-xs text-zinc-400 dark:text-zinc-500">
+                Arrange with the ↑ / ↓ buttons.
+              </p>
+              {(((answer as string[]) ?? initialOrders[q.id]) ?? []).map(
+                (item, i, arr) => (
+                  <div
+                    key={item}
+                    className="mb-1.5 flex items-center gap-2 rounded-[10px] border-[1.5px] border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                  >
+                    <span className="flex-1">{item}</span>
+                    <button
+                      aria-label={`Move "${item}" up`}
+                      disabled={i === 0}
+                      onClick={() => {
+                        const next = [...arr];
+                        [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                        setAnswer(next);
+                      }}
+                      className="cursor-pointer rounded-lg border border-zinc-200 bg-zinc-50 px-[9px] py-1 text-zinc-900 disabled:cursor-default disabled:opacity-40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      aria-label={`Move "${item}" down`}
+                      disabled={i === arr.length - 1}
+                      onClick={() => {
+                        const next = [...arr];
+                        [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                        setAnswer(next);
+                      }}
+                      className="cursor-pointer rounded-lg border border-zinc-200 bg-zinc-50 px-[9px] py-1 text-zinc-900 disabled:cursor-default disabled:opacity-40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
+          {/* Nav */}
+          <div className="mt-4.5 flex justify-between">
+            <button
+              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+              disabled={index === 0}
+              className="cursor-pointer rounded-[10px] border border-zinc-200 bg-transparent px-4.5 py-[9px] text-[13.5px] font-semibold text-zinc-500 disabled:cursor-default disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400"
+            >
+              Back
+            </button>
+            <button
+              onClick={() => {
+                // order questions default to the presented arrangement
+                if (q.type === "order" && answers[q.id] === undefined) {
+                  setAnswer(initialOrders[q.id] ?? []);
+                }
+                if (isLast) finish();
+                else setIndex((i) => i + 1);
+              }}
+              disabled={!answeredCurrent}
+              className={`${primaryBtnClass} disabled:cursor-default disabled:opacity-50`}
+            >
+              {isLast ? "Finish" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </McpUseProvider>
