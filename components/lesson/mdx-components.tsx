@@ -23,6 +23,7 @@ import {
   CodeCompare,
   BeforeAfter,
   Audio,
+  Video,
   Embed,
   FileDownload,
   Comparison,
@@ -114,6 +115,7 @@ export const lessonMdxComponents: MDXComponents = {
 
   // Rich media
   Audio,
+  Video,
   Embed,
   FileDownload,
 
