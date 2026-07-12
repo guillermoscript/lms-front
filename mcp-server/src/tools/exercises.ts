@@ -18,6 +18,9 @@ const exerciseTypes = [
   "true_false",
   "fill_in_the_blank",
   "discussion",
+  "audio_evaluation",
+  "video_evaluation",
+  "real_time_conversation",
   "artifact",
 ] as const;
 

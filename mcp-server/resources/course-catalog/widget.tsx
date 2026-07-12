@@ -18,6 +18,7 @@ const courseSchema = z.object({
   tags: z.union([z.array(z.string()), z.string(), z.null()]),
   lesson_count: z.number(),
   enrolled: z.boolean(),
+  has_access: z.boolean(),
   covered_by_plan: z.boolean(),
 });
 
@@ -204,6 +205,10 @@ export default function CourseCatalog() {
                           >
                             {pendingIds.has(course.id) ? "Enrolling…" : "Enroll"}
                           </button>
+                        ) : course.has_access ? (
+                          <span className="rounded-full bg-violet-100 px-[9px] py-[3px] text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                            Access
+                          </span>
                         ) : (
                           <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                             Not in plan

@@ -583,7 +583,7 @@ export function registerStudentTools(server: MCPServer) {
     {
       name: "lms_browse_catalog",
       description:
-        "Browse the school's published course catalog. Shows which courses the caller already has access to and which are covered by their subscription plan. Read-only — enrollment/purchase happens in the app.",
+        "Browse the school's published course catalog. Each course reports `enrolled` (explicitly enrolled — appears in lms_my_learning), `has_access` (entitled to view content), and `covered_by_plan` (an active subscription covers it — use lms_enroll_in_course to enroll). Purchases happen in the app.",
       schema: z.object({
         limit: PaginationSchema.limit,
         offset: PaginationSchema.offset,
@@ -639,13 +639,20 @@ export function registerStudentTools(server: MCPServer) {
           }
         }
 
-        const [coursesRes, entitlementsRes, subsRes] = await Promise.all([
+        const [coursesRes, entitlementsRes, enrollmentsRes, subsRes] = await Promise.all([
           coursesQuery,
           // entitlements is the access source of truth (course-access.ts).
           supabase
             .from("entitlements")
             .select("course_id, expires_at")
             .eq("user_id", userId)
+            .eq("status", "active"),
+          // enrollments is what lms_my_learning lists — access ≠ enrolled (#366).
+          supabase
+            .from("enrollments")
+            .select("course_id")
+            .eq("user_id", userId)
+            .eq("tenant_id", tenantId)
             .eq("status", "active"),
           supabase
             .from("subscriptions")
@@ -663,6 +670,10 @@ export function registerStudentTools(server: MCPServer) {
           (entitlementsRes.data ?? [])
             .filter((e) => !e.expires_at || e.expires_at > nowIso)
             .map((e) => e.course_id as number)
+        );
+
+        const enrolledSet = new Set(
+          (enrollmentsRes.data ?? []).map((e) => e.course_id as number)
         );
 
         const planIds = (subsRes.data ?? []).map((s) => s.plan_id as number);
@@ -684,7 +695,8 @@ export function registerStudentTools(server: MCPServer) {
           thumbnail_url: c.thumbnail_url,
           tags: c.tags,
           lesson_count: (c.lessons as unknown as Array<{ count: number }>)?.[0]?.count ?? 0,
-          enrolled: accessible.has(c.course_id),
+          enrolled: enrolledSet.has(c.course_id),
+          has_access: accessible.has(c.course_id) || enrolledSet.has(c.course_id),
           covered_by_plan: planCovered.has(c.course_id),
         }));
 
@@ -697,7 +709,7 @@ export function registerStudentTools(server: MCPServer) {
           output: text(
             courses.length === 0
               ? "No published courses found."
-              : `Found ${coursesRes.count ?? courses.length} course(s); you have access to ${courses.filter((c) => c.enrolled).length} of the ones shown.`
+              : `Found ${coursesRes.count ?? courses.length} course(s); of the ones shown you are enrolled in ${courses.filter((c) => c.enrolled).length} and have access to ${courses.filter((c) => c.has_access).length}.`
           ),
         });
       } catch (err) {
