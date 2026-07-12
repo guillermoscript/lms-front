@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next-nprogress-bar'
 import Link from 'next/link'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +27,8 @@ interface LessonNavigationProps {
   nextLessonId?: number
   tenantId: string
   requireSequentialCompletion?: boolean
+  completedCount?: number
+  totalLessons?: number
 }
 
 export function LessonNavigation({
@@ -36,6 +39,8 @@ export function LessonNavigation({
   nextLessonId,
   tenantId,
   requireSequentialCompletion = false,
+  completedCount = 0,
+  totalLessons = 0,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
   const tGamification = useTranslations('components.gamification')
@@ -46,6 +51,20 @@ export function LessonNavigation({
   const router = useRouter()
   const supabase = createClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
+
+  const nextBlocked = requireSequentialCompletion && !completed
+
+  useHotkey('ArrowLeft', () => {
+    if (prevLessonId) {
+      router.push(`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`)
+    }
+  }, { enabled: !!prevLessonId })
+
+  useHotkey('ArrowRight', () => {
+    if (nextLessonId && !nextBlocked) {
+      router.push(`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`)
+    }
+  }, { enabled: !!nextLessonId && !nextBlocked })
 
   async function handleComplete() {
     setLoading(true)
@@ -59,6 +78,9 @@ export function LessonNavigation({
     }
 
     if (completed) {
+      // Optimistic: flip immediately, revert on error
+      setCompleted(false)
+
       const { error } = await supabase
         .from('lesson_completions')
         .delete()
@@ -68,32 +90,42 @@ export function LessonNavigation({
       if (error) {
         console.error('Failed to uncomplete lesson:', error)
         toast.error('Failed to update lesson status')
+        setCompleted(true)
         setLoading(false)
         return
       }
 
-      setCompleted(false)
       setLoading(false)
       startTransition(() => { router.refresh() })
     } else {
-      const { error } = await supabase.from('lesson_completions').insert({
-        lesson_id: lessonId,
-        user_id: user.id,
-      })
-
-      if (error) {
-        console.error('Failed to complete lesson:', error)
-        toast.error('Failed to mark lesson as complete')
-        setLoading(false)
-        return
-      }
-
+      // Optimistic: celebrate immediately, revert on error
       setCompleted(true)
-      setLoading(false)
+      const isCourseNowComplete = totalLessons > 0 && completedCount + 1 >= totalLessons
+
       toast.success(tGamification('xpAwarded.lesson_completion'))
 
-      // Celebrate completion with a subtle confetti burst from the button
-      if (buttonRef.current) {
+      if (isCourseNowComplete) {
+        toast.success(t('courseComplete'), {
+          description: t('courseCompleteDescription'),
+          duration: 8000,
+        })
+        // Full-width celebration for finishing the whole course
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { x: 0.2, y: 0.8 },
+          angle: 60,
+          disableForReducedMotion: true,
+        })
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { x: 0.8, y: 0.8 },
+          angle: 120,
+          disableForReducedMotion: true,
+        })
+      } else if (buttonRef.current) {
+        // Subtle confetti burst from the button
         const rect = buttonRef.current.getBoundingClientRect()
         const x = (rect.left + rect.width / 2) / window.innerWidth
         const y = (rect.top + rect.height / 2) / window.innerHeight
@@ -108,6 +140,21 @@ export function LessonNavigation({
           disableForReducedMotion: true,
         })
       }
+
+      const { error } = await supabase.from('lesson_completions').insert({
+        lesson_id: lessonId,
+        user_id: user.id,
+      })
+
+      if (error) {
+        console.error('Failed to complete lesson:', error)
+        toast.error('Failed to mark lesson as complete')
+        setCompleted(false)
+        setLoading(false)
+        return
+      }
+
+      setLoading(false)
 
       // Check if a certificate was auto-issued after this lesson completion
       const { data: cert } = await supabase
@@ -163,7 +210,7 @@ export function LessonNavigation({
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" title={`${t('previous')} (←)`} className="gap-1.5 text-muted-foreground hover:text-foreground">
                 <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('previous')}</span>
               </Button>
@@ -212,7 +259,7 @@ export function LessonNavigation({
               </Button>
             ) : (
               <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
-                <Button size="sm" className="gap-1.5">
+                <Button size="sm" title={`${t('next')} (→)`} className="gap-1.5">
                   <span className="hidden sm:inline">{t('next')}</span>
                   <IconArrowRight className="h-4 w-4" />
                 </Button>

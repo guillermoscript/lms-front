@@ -3147,7 +3147,8 @@
       "resources": "Recursos",
       "downloadFile": "Descargar",
       "lessonLocked": "Lección bloqueada",
-      "completePreviousFirst": "Completa la lección anterior para desbloquear esta."
+      "completePreviousFirst": "Completa la lección anterior para desbloquear esta.",
+      "courseProgress": "Progreso del curso: {completed} de {total} lecciones completadas ({percent}%)"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -3202,7 +3203,9 @@
       "complete": "Completar",
       "next": "Siguiente",
       "finishCourse": "Finalizar Curso",
-      "completeFirst": "Completa esta lección primero"
+      "completeFirst": "Completa esta lección primero",
+      "courseComplete": "¡Curso completado! 🎉",
+      "courseCompleteDescription": "Terminaste todas las lecciones de este curso. ¡Excelente trabajo!"
     },
     "codeBlock": {
       "copy": "Copiar",

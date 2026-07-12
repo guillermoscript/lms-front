@@ -24,6 +24,8 @@ const LessonAIChat = dynamic(
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
+import { LessonProgressLine } from '@/components/student/lesson-progress-line'
+import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -80,7 +82,13 @@ export default async function LessonPage({ params }: PageProps) {
     : lessonData.lessons_ai_tasks;
 
   const dbMessages = lessonData.lessons_ai_task_messages || [];
-  const initialMessages = dbMessages.map((msg: any) => {
+  const initialMessages = dbMessages.map((msg: {
+    id: number
+    message: string | null
+    sender: string
+    created_at: string
+    tool_invocations?: unknown
+  }) => {
     const parts = [];
 
     if (msg.message) {
@@ -95,7 +103,7 @@ export default async function LessonPage({ params }: PageProps) {
         ? msg.tool_invocations
         : [msg.tool_invocations];
 
-      invocations.forEach((invocation: any) => {
+      invocations.forEach((invocation: unknown) => {
         parts.push({
           type: 'tool-invocation',
           toolInvocation: invocation
@@ -128,7 +136,18 @@ export default async function LessonPage({ params }: PageProps) {
       comment_reactions: { comment_id: number; user_id: string; reaction_type: string }[]
     }
 
-    const allComments = (rawComments as RawComment[]).map((c) => ({
+    type CommentNode = {
+      id: number
+      content: string
+      created_at: string
+      user_id: string
+      parent_comment_id: number | null
+      user: { id: string; full_name: string | null; username: string | null; avatar_url: string | null }
+      reactions: { user_id: string; reaction_type: 'like' | 'dislike' | 'boring' | 'funny' }[]
+      replies: CommentNode[]
+    }
+
+    const allComments: CommentNode[] = (rawComments as RawComment[]).map((c) => ({
       id: c.id,
       content: c.content,
       created_at: c.created_at,
@@ -141,7 +160,7 @@ export default async function LessonPage({ params }: PageProps) {
         user_id: r.user_id,
         reaction_type: r.reaction_type as 'like' | 'dislike' | 'boring' | 'funny',
       })),
-      replies: [] as any[],
+      replies: [],
     }))
 
     // Build tree structure
@@ -214,6 +233,13 @@ export default async function LessonPage({ params }: PageProps) {
       isCompleted: completedLessonIds.has(l.id),
     })) || []
 
+  const completedCount = sidebarLessons.filter((l) => l.isCompleted).length
+  const progressLabel = t('courseProgress', {
+    completed: completedCount,
+    total: sidebarLessons.length,
+    percent: sidebarLessons.length > 0 ? Math.round((completedCount / sidebarLessons.length) * 100) : 0,
+  })
+
   const currentIndex = allLessons?.findIndex((l) => l.id === lesson.id) ?? -1
   const prevLesson = currentIndex > 0 ? allLessons?.[currentIndex - 1] : null
   const nextLesson =
@@ -224,6 +250,11 @@ export default async function LessonPage({ params }: PageProps) {
     return (
       <div className="flex h-screen bg-background overflow-hidden">
         <main className="flex flex-1 flex-col overflow-hidden w-full">
+          <LessonProgressLine
+            completed={completedCount}
+            total={sidebarLessons.length}
+            label={progressLabel}
+          />
           <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
             <div className="flex items-center justify-between max-w-4xl mx-auto">
               <div className="min-w-0 flex-1">
@@ -268,6 +299,13 @@ export default async function LessonPage({ params }: PageProps) {
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
+        {/* Course progress line */}
+        <LessonProgressLine
+          completed={completedCount}
+          total={sidebarLessons.length}
+          label={progressLabel}
+        />
+
         {/* Lesson header */}
         <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
@@ -309,8 +347,8 @@ export default async function LessonPage({ params }: PageProps) {
           </div>
         </header>
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable content area with reading progress */}
+        <LessonScrollArea>
           <div className="mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-10 space-y-8 sm:space-y-10">
             <LessonContent
               content={lesson.content}
@@ -374,7 +412,7 @@ export default async function LessonPage({ params }: PageProps) {
               <LessonComments lessonId={lesson.id} userId={userId} initialComments={initialComments} />
             </section>
           </div>
-        </div>
+        </LessonScrollArea>
 
         {/* Navigation footer */}
         <LessonNavigation
@@ -385,6 +423,8 @@ export default async function LessonPage({ params }: PageProps) {
           nextLessonId={nextLesson?.id}
           tenantId={tenantId}
           requireSequentialCompletion={requireSequential}
+          completedCount={completedCount}
+          totalLessons={sidebarLessons.length}
         />
       </main>
 

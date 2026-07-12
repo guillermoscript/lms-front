@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEventListener } from 'usehooks-ts'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -56,29 +57,18 @@ export function ExamTaker({
   const router = useRouter()
   const supabase = createClient()
 
-  // Timer effect
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) return
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(timer)
-          handleSubmit() // Auto-submit when time runs out
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [timeLeft])
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
+
+  // Warn before leaving (refresh/close tab) with unsubmitted answers
+  useEventListener('beforeunload', (e) => {
+    if (Object.keys(answers).length === 0 || submitting) return
+    e.preventDefault()
+    e.returnValue = ''
+  })
 
   const currentQuestion = questions[currentQuestionIndex]
   const isFirstQuestion = currentQuestionIndex === 0
@@ -160,13 +150,31 @@ export function ExamTaker({
     }
   }
 
+  // Timer effect (declared after handleSubmit so the auto-submit reference is valid)
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timer)
+          handleSubmit() // Auto-submit when time runs out
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [timeLeft])
+
   if (questions.length === 0) {
     return (
       <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
         <div className="bg-card border rounded-3xl p-12 shadow-soft">
           <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
           <h2 className="text-2xl font-bold mb-2">No Questions Found</h2>
-          <p className="text-muted-foreground mb-8 text-lg">This exam doesn't have any questions yet. Please check back later.</p>
+          <p className="text-muted-foreground mb-8 text-lg">This exam doesn&apos;t have any questions yet. Please check back later.</p>
           <Link href={`/dashboard/student/courses/${courseId}/exams`}>
             <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
               <IconChevronLeft className="mr-2 h-5 w-5" />
