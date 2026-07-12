@@ -2,9 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getPaymentProvider, PaymentProvider, PROVIDER_CAPABILITIES } from '@/lib/payments'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getPaymentProvider, PROVIDER_CAPABILITIES, type Currency, type PaymentProvider } from '@/lib/payments'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
+import type {
+  ProductCreationWizardInput,
+  ProductCreationWizardResult,
+  ProductPostRegistrationStepInput,
+} from '@/lib/admin/product-creation/types'
 
 interface ProductFormData {
   name: string
@@ -29,6 +36,52 @@ interface Product {
   payment_provider: string
   provider_product_id?: string
   provider_price_id?: string
+}
+
+/**
+ * Shapes the active post-registration steps into the JSONB rows the
+ * `save_product_creation_wizard` RPC consumes. tenant_id / product_id are
+ * supplied by the RPC, so they are intentionally omitted here.
+ */
+function buildPostRegistrationStepRows(steps: ProductPostRegistrationStepInput[]) {
+  return steps
+    .filter((step) => step.isActive)
+    .map((step, index) => ({
+      type: step.type,
+      title: step.title.trim(),
+      description: step.description?.trim() || null,
+      url: step.type === 'text' ? null : step.url?.trim() || null,
+      sort_order: index,
+      is_active: true,
+    }))
+}
+
+function revalidateOfferingPaths() {
+  revalidatePath('/dashboard/admin/products')
+  revalidatePath('/dashboard/admin/monetization')
+  revalidatePath('/dashboard/teacher/courses')
+  revalidatePath('/courses')
+  revalidatePath('/products')
+  revalidatePath('/dashboard/student')
+}
+
+/**
+ * Best-effort rollback of provider objects created during a save that then
+ * failed to commit to the database. Archives are no-ops for the manual provider.
+ */
+async function compensateProviderObjects(
+  provider: ReturnType<typeof getPaymentProvider>,
+  objects: Array<{ productId?: string; priceId?: string }>
+) {
+  // Archive prices before their products (reverse of creation order).
+  for (const object of [...objects].reverse()) {
+    try {
+      if (object.priceId) await provider.archivePrice(object.priceId)
+      if (object.productId) await provider.archiveProduct(object.productId)
+    } catch (cleanupError) {
+      console.error('Failed to roll back provider object after save error:', cleanupError)
+    }
+  }
 }
 
 /**
@@ -332,6 +385,314 @@ export async function updateProduct(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update product'
+    }
+  }
+}
+
+/**
+ * Saves the guided admin offering flow.
+ * Free offerings persist only a course. Paid offerings persist course + product + product_courses + post-registration steps.
+ */
+export async function saveProductCreationWizard(
+  input: ProductCreationWizardInput
+): Promise<ActionResult<ProductCreationWizardResult>> {
+  try {
+    await verifyAdminAccess()
+
+    const readiness = getProductCreationReadiness(input)
+    if (input.intent === 'publish' && !readiness.canPublish) {
+      throw new Error(readiness.issues[0]?.message || 'Offering is not ready to publish')
+    }
+    if (input.intent === 'draft' && !readiness.canSaveDraft) {
+      throw new Error(readiness.issues[0]?.message || 'Offering is not ready to save')
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const adminClient = createAdminClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+      throw new Error('Not authenticated')
+    }
+
+    // Course-limit gate only applies to brand-new courses (needs plan features,
+    // so it stays in the action rather than the SQL transaction).
+    if (input.course.sourceMode === 'new') {
+      const limitCheck = await checkCourseLimit()
+      if (!limitCheck.canCreate) {
+        throw new Error(
+          `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. You currently have ${limitCheck.currentCount} courses.`
+        )
+      }
+
+      // The course FK requires the author's profile to exist.
+      await adminClient
+        .from('profiles')
+        .upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true })
+    }
+
+    const coursePayload = {
+      title: input.course.title.trim(),
+      description: input.course.description?.trim() || null,
+      thumbnail_url: input.course.thumbnailUrl?.trim() || null,
+      category_id: input.course.categoryId ?? null,
+    }
+
+    const productId = input.productId ?? null
+
+    // ---- FREE: no payment provider work, single-tx RPC handles cleanup ------
+    if (input.pricing.mode === 'free') {
+      // The RPC soft-archives the product row but cannot touch the external
+      // provider, so archive its objects here first (no-op for manual).
+      if (productId) {
+        const { data: productToArchive } = await adminClient
+          .from('products')
+          .select('payment_provider, provider_product_id, provider_price_id')
+          .eq('product_id', productId)
+          .eq('tenant_id', tenantId)
+          .single()
+
+        const archiveProviderType =
+          (productToArchive?.payment_provider as PaymentProvider) || 'manual'
+        if (
+          productToArchive?.provider_product_id &&
+          productToArchive.provider_price_id &&
+          PROVIDER_CAPABILITIES[archiveProviderType]?.createsCatalog
+        ) {
+          const archiveProvider = getPaymentProvider(archiveProviderType)
+          await archiveProvider.archivePrice(productToArchive.provider_price_id)
+          await archiveProvider.archiveProduct(productToArchive.provider_product_id)
+        }
+      }
+
+      const { data: rpcResult, error: rpcError } = await adminClient.rpc(
+        'save_product_creation_wizard',
+        {
+          _tenant_id: tenantId,
+          _author_id: userId,
+          _intent: input.intent,
+          _source_mode: input.course.sourceMode,
+          _existing_course_id: input.course.existingCourseId ?? null,
+          _course: coursePayload,
+          _pricing_mode: 'free',
+          _product_id: productId,
+          _product: null,
+          _steps: null,
+        }
+      )
+
+      if (rpcError) throw new Error(rpcError.message)
+
+      revalidateOfferingPaths()
+
+      return {
+        success: true,
+        data: {
+          courseId: (rpcResult as { course_id: number }).course_id,
+          productId: null,
+          pricingMode: 'free',
+          published: input.intent === 'publish',
+        },
+      }
+    }
+
+    // ---- PAID: resolve provider objects, then commit everything in one tx ----
+    // Branch on static capabilities, never provider identity: catalog-less
+    // providers (manual) keep NULL provider ids and need no live client, whose
+    // constructor may require env credentials.
+    const providerType: PaymentProvider = input.pricing.paymentProvider || 'manual'
+    const caps = PROVIDER_CAPABILITIES[providerType]
+    const nextPrice = input.pricing.price!
+    const nextCurrency = input.pricing.currency! as Currency
+
+    // Objects newly created in THIS call — archived as compensation if the DB
+    // transaction below fails, so a failed save never leaks live Stripe objects.
+    const createdProviderObjects: Array<{ productId?: string; priceId?: string }> = []
+    // Objects superseded by this call — archived only AFTER the DB commit.
+    const staleProviderObjects: Array<{
+      provider: PaymentProvider
+      productId?: string
+      priceId?: string
+    }> = []
+
+    let providerProductId: string | null = null
+    let providerPriceId: string | null = null
+    let provider: ReturnType<typeof getPaymentProvider> | null = null
+
+    if (productId) {
+      const { data: existingProduct, error: productFetchError } = await adminClient
+        .from('products')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (productFetchError || !existingProduct) {
+        throw new Error('Product not found or access denied')
+      }
+
+      const existingProviderType =
+        (existingProduct.payment_provider as PaymentProvider | null) || 'manual'
+      const providerChanged = existingProviderType !== providerType
+      providerProductId = existingProduct.provider_product_id as string | null
+      providerPriceId = existingProduct.provider_price_id as string | null
+
+      // Switching providers: the old catalog objects (if any) are superseded —
+      // archive them only after the DB commit succeeds.
+      if (providerChanged) {
+        if (
+          providerProductId &&
+          PROVIDER_CAPABILITIES[existingProviderType]?.createsCatalog
+        ) {
+          staleProviderObjects.push({
+            provider: existingProviderType,
+            productId: providerProductId,
+            priceId: providerPriceId || undefined,
+          })
+        }
+        providerProductId = null
+        providerPriceId = null
+      }
+
+      if (caps.createsCatalog) {
+        provider = getPaymentProvider(providerType)
+
+        if (!providerProductId) {
+          const paymentProduct = await provider.createProduct({
+            name: input.course.title.trim(),
+            description: input.course.description?.trim() || '',
+            images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+            metadata: {
+              created_by: 'admin_product_creation_wizard',
+              recreated_at: new Date().toISOString(),
+            },
+          })
+          createdProviderObjects.push({ productId: paymentProduct.id })
+
+          const paymentPrice = await provider.createPrice({
+            productId: paymentProduct.id,
+            amount: provider.convertAmount(nextPrice, 'major'),
+            currency: nextCurrency,
+            type: 'one_time',
+            metadata: { product_name: input.course.title.trim() },
+          })
+          createdProviderObjects.push({ priceId: paymentPrice.id })
+
+          providerProductId = paymentProduct.id
+          providerPriceId = paymentPrice.id
+        } else {
+          await provider.updateProduct(providerProductId, {
+            name: input.course.title.trim(),
+            description: input.course.description?.trim() || '',
+            images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+          })
+
+          const priceChanged =
+            nextPrice !== existingProduct.price || nextCurrency !== existingProduct.currency
+
+          if (!providerPriceId || priceChanged) {
+            const paymentPrice = await provider.createPrice({
+              productId: providerProductId,
+              amount: provider.convertAmount(nextPrice, 'major'),
+              currency: nextCurrency,
+              type: 'one_time',
+              metadata: { product_name: input.course.title.trim() },
+            })
+            createdProviderObjects.push({ priceId: paymentPrice.id })
+
+            if (providerPriceId) {
+              staleProviderObjects.push({ provider: providerType, priceId: providerPriceId })
+            }
+            providerPriceId = paymentPrice.id
+          }
+        }
+      }
+    } else if (caps.createsCatalog) {
+      provider = getPaymentProvider(providerType)
+
+      const paymentProduct = await provider.createProduct({
+        name: input.course.title.trim(),
+        description: input.course.description?.trim() || '',
+        images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+        metadata: {
+          created_by: 'admin_product_creation_wizard',
+          created_at: new Date().toISOString(),
+        },
+      })
+      createdProviderObjects.push({ productId: paymentProduct.id })
+
+      const paymentPrice = await provider.createPrice({
+        productId: paymentProduct.id,
+        amount: provider.convertAmount(nextPrice, 'major'),
+        currency: nextCurrency,
+        type: 'one_time',
+        metadata: { product_name: input.course.title.trim() },
+      })
+      createdProviderObjects.push({ priceId: paymentPrice.id })
+
+      providerProductId = paymentProduct.id
+      providerPriceId = paymentPrice.id
+    }
+
+    // Single transaction: course + product + link + steps commit together.
+    const { data: rpcResult, error: rpcError } = await adminClient.rpc(
+      'save_product_creation_wizard',
+      {
+        _tenant_id: tenantId,
+        _author_id: userId,
+        _intent: input.intent,
+        _source_mode: input.course.sourceMode,
+        _existing_course_id: input.course.existingCourseId ?? null,
+        _course: coursePayload,
+        _pricing_mode: 'paid',
+        _product_id: productId,
+        _product: {
+          price: nextPrice,
+          currency: nextCurrency,
+          payment_provider: providerType,
+          provider_product_id: providerProductId,
+          provider_price_id: providerPriceId,
+        },
+        _steps: buildPostRegistrationStepRows(input.postRegistrationSteps),
+      }
+    )
+
+    if (rpcError) {
+      // Compensate: roll back the external provider objects we just created so a
+      // failed DB transaction doesn't leak orphaned Stripe/PayPal objects.
+      if (provider && createdProviderObjects.length > 0) {
+        await compensateProviderObjects(provider, createdProviderObjects)
+      }
+      throw new Error(rpcError.message)
+    }
+
+    // Commit succeeded — safe to archive the superseded provider objects.
+    for (const stale of staleProviderObjects) {
+      try {
+        const staleProvider = getPaymentProvider(stale.provider)
+        if (stale.priceId) await staleProvider.archivePrice(stale.priceId)
+        if (stale.productId) await staleProvider.archiveProduct(stale.productId)
+      } catch (cleanupError) {
+        console.error('Failed to archive superseded provider object:', cleanupError)
+      }
+    }
+
+    revalidateOfferingPaths()
+
+    return {
+      success: true,
+      data: {
+        courseId: (rpcResult as { course_id: number }).course_id,
+        productId: (rpcResult as { product_id: number }).product_id,
+        pricingMode: 'paid',
+        published: input.intent === 'publish',
+      },
+    }
+  } catch (error) {
+    console.error('Save product creation wizard failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to save offering',
     }
   }
 }
