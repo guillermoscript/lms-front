@@ -204,20 +204,20 @@ export function LessonNavigation({
         </div>
       </div>
     )}
-    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-6">
+    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3 md:px-6">
       <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
         {/* Previous */}
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`}>
-              <Button variant="ghost" size="sm" title={`${t('previous')} (←)`} className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" title={`${t('previous')} (←)`} className="gap-1.5 text-muted-foreground hover:text-foreground max-sm:h-10 max-sm:min-w-10">
                 <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('previous')}</span>
               </Button>
             </Link>
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground max-sm:h-10 max-sm:min-w-10">
                 <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('backToCourse')}</span>
               </Button>
@@ -234,7 +234,7 @@ export function LessonNavigation({
           variant={completed ? 'secondary' : 'default'}
           size="sm"
           className={cn(
-            'gap-2 px-5 font-semibold transition-all duration-300',
+            'gap-2 px-5 font-semibold transition-all duration-300 max-sm:h-10',
             completed && 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20'
           )}
         >
@@ -253,13 +253,13 @@ export function LessonNavigation({
         <div className="flex-1 flex justify-end">
           {nextLessonId ? (
             requireSequentialCompletion && !completed ? (
-              <Button size="sm" className="gap-1.5" disabled title={t('completeFirst')}>
+              <Button size="sm" className="gap-1.5 max-sm:h-10 max-sm:min-w-10" disabled title={t('completeFirst')}>
                 <span className="hidden sm:inline">{t('next')}</span>
                 <IconArrowRight className="h-4 w-4" />
               </Button>
             ) : (
               <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
-                <Button size="sm" title={`${t('next')} (→)`} className="gap-1.5">
+                <Button size="sm" title={`${t('next')} (→)`} className="gap-1.5 max-sm:h-10 max-sm:min-w-10">
                   <span className="hidden sm:inline">{t('next')}</span>
                   <IconArrowRight className="h-4 w-4" />
                 </Button>
@@ -267,7 +267,7 @@ export function LessonNavigation({
             )
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button size="sm" className="gap-1.5">
+              <Button size="sm" className="gap-1.5 max-sm:h-10 max-sm:min-w-10">
                 <span className="hidden sm:inline">{t('finishCourse')}</span>
                 <IconCheck className="h-4 w-4" />
               </Button>

@@ -3342,6 +3342,18 @@
       },
       "tooltips": {
         "restart": "Restart Conversation"
+      },
+      "mobile": {
+        "title": "AI Tutor",
+        "start": "Start with the AI Tutor",
+        "continue": "Continue with the AI Tutor",
+        "review": "Review conversation",
+        "close": "Close chat",
+        "messagesCount": "{count, plural, one {# message} other {# messages}}"
+      },
+      "contextual": {
+        "chip": "I don't understand — ask the tutor",
+        "prompt": "I don't understand this lesson. Can you explain it in a different way?"
       }
     },
     "lessonSidebar": {

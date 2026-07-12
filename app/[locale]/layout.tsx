@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -30,6 +30,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "LMS V2",
   description: "The ultimate learning platform powered by Next.js 16 and Supabase.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Keyboard shrinks the layout viewport so dvh-sized chat surfaces and
+  // docked composers stay visible (Chrome Android; iOS handled via
+  // visualViewport in lesson-ai-chat).
+  interactiveWidget: "resizes-content",
+  // Enables env(safe-area-inset-*) on notched devices.
+  viewportFit: "cover",
 };
 
 export function generateStaticParams() {

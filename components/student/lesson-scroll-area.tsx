@@ -28,7 +28,7 @@ export function LessonScrollArea({ children }: { children: React.ReactNode }) {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div ref={scrollRef} className="h-full overflow-y-auto">
+      <div ref={scrollRef} className="h-full overflow-y-auto overscroll-y-contain">
         {children}
       </div>
     </div>

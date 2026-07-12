@@ -8,6 +8,7 @@ import { IconMenu2, IconSparkles, IconLock } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
 import dynamic from 'next/dynamic'
+import type { UIMessage } from 'ai'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const LessonAIChat = dynamic(
@@ -24,6 +25,7 @@ const LessonAIChat = dynamic(
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
+import { AskTutorChip } from '@/components/student/ask-tutor-chip'
 import { LessonProgressLine } from '@/components/student/lesson-progress-line'
 import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
@@ -113,11 +115,12 @@ export default async function LessonPage({ params }: PageProps) {
 
     return {
       id: msg.id.toString(),
-      role: msg.sender,
+      role: msg.sender as 'user' | 'assistant',
       parts: parts,
       createdAt: msg.created_at
     };
-  });
+    // DB rows use a legacy part shape; the chat renders them via ToolInvocationPart
+  }) as unknown as UIMessage[];
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
@@ -248,7 +251,7 @@ export default async function LessonPage({ params }: PageProps) {
   // Locked lesson — show locked state
   if (isLocked && prevLessonForUnlock) {
     return (
-      <div className="flex h-screen bg-background overflow-hidden">
+      <div className="flex h-dvh bg-background overflow-hidden">
         <main className="flex flex-1 flex-col overflow-hidden w-full">
           <LessonProgressLine
             completed={completedCount}
@@ -296,7 +299,7 @@ export default async function LessonPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-dvh bg-background overflow-hidden">
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Course progress line */}
@@ -355,6 +358,9 @@ export default async function LessonPage({ params }: PageProps) {
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
             />
+
+            {/* Contextual tutor entry point (opens the AI chat pre-seeded) */}
+            {aiTask && !isCurrentLessonCompleted && <AskTutorChip />}
 
             {/* Lesson Resources */}
             {lessonResources && lessonResources.length > 0 && (

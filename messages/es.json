@@ -3187,6 +3187,18 @@
       },
       "tooltips": {
         "restart": "Reiniciar Conversación"
+      },
+      "mobile": {
+        "title": "Tutor IA",
+        "start": "Comenzar con el tutor IA",
+        "continue": "Continuar con el tutor IA",
+        "review": "Revisar conversación",
+        "close": "Cerrar chat",
+        "messagesCount": "{count, plural, one {# mensaje} other {# mensajes}}"
+      },
+      "contextual": {
+        "chip": "No entiendo — preguntar al tutor",
+        "prompt": "No entiendo esta lección. ¿Puedes explicármela de otra manera?"
       }
     },
     "lessonSidebar": {
