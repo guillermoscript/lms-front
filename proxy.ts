@@ -213,8 +213,10 @@ export default async function proxy(request: NextRequest) {
     tenantId = tenant.id
   }
 
-  // For API routes: set tenant header and pass through (no intl/auth guards)
-  if (pathname.startsWith('/api')) {
+  // For API routes and root SEO files (robots/sitemap live outside the locale
+  // tree and must not be locale-redirected): set tenant header and pass through
+  // (no intl/auth guards)
+  if (pathname.startsWith('/api') || pathname === '/robots.txt' || pathname === '/sitemap.xml') {
     request.headers.set('x-tenant-id', tenantId)
     const response = NextResponse.next({ request })
     response.headers.set('x-tenant-id', tenantId)

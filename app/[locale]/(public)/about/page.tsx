@@ -3,6 +3,14 @@ import { getTranslations } from 'next-intl/server';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Rocket, Shield, Zap, Users, Gem, GraduationCap, ArrowRight } from "lucide-react";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    return buildPageMetadata({ title: t('about.title'), description: t('about.description'), path: '/about', locale });
+}
 
 export default async function AboutPage() {
     const t = await getTranslations('about');

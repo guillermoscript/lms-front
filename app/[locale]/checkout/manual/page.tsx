@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { PaymentRequestForm } from '@/components/student/payment-request-form'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 interface SearchParams {
   productId?: string

@@ -4,8 +4,16 @@ import { CourseCard } from "@/components/public/course-card";
 import { CourseSearchBar } from "@/components/shared/course-search-bar";
 import { Search } from "lucide-react";
 import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    return buildPageMetadata({ title: t('courses.title'), description: t('courses.description'), path: '/courses', locale });
+}
 
 export default async function CoursesPage({
     searchParams,
