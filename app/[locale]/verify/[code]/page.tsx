@@ -10,9 +10,81 @@ import {
     IconX,
 } from '@tabler/icons-react'
 import Link from 'next/link'
+import type { Metadata } from 'next'
+import { getSeoContext, ogImageUrl } from '@/lib/seo'
 
 interface PageProps {
-    params: Promise<{ code: string }>
+    params: Promise<{ code: string; locale: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { code, locale } = await params
+    const supabase = createAdminClient()
+    const t = await getTranslations({ locale, namespace: 'seo' })
+
+    const { data: certificate } = await supabase
+        .from('certificates')
+        .select(`
+      issued_at,
+      revoked_at,
+      credential_json,
+      profiles!certificates_user_id_fkey(full_name),
+      courses(title),
+      certificate_templates(issuer_name)
+    `)
+        .eq('verification_code', code)
+        .single()
+
+    if (!certificate || certificate.revoked_at) {
+        return { title: t('verify.notFoundTitle'), robots: { index: false, follow: false } }
+    }
+
+    const { siteName } = await getSeoContext()
+    const credentialJson = certificate.credential_json as
+        | { credentialSubject?: { achievement?: { name?: string } } }
+        | null
+    const student =
+        (certificate.profiles as { full_name?: string } | null)?.full_name || 'Student'
+    const course =
+        (certificate.courses as { title?: string } | null)?.title ||
+        credentialJson?.credentialSubject?.achievement?.name ||
+        'Course'
+    const issuer =
+        (certificate.certificate_templates as { issuer_name?: string } | null)?.issuer_name ||
+        siteName
+
+    const title = t('verify.title', { student, course })
+    const description = t('verify.description', { student, course, issuer })
+    const image = ogImageUrl({
+        type: 'certificate',
+        student,
+        course,
+        issuer,
+        site: siteName,
+        eyebrow: t('verify.eyebrow'),
+        verifiedLabel: t('verify.verifiedLabel'),
+    })
+
+    return {
+        title,
+        description,
+        alternates: {
+            canonical: `/${locale}/verify/${code}`,
+            languages: { en: `/en/verify/${code}`, es: `/es/verify/${code}` },
+        },
+        openGraph: {
+            title,
+            description,
+            type: 'profile',
+            images: [{ url: image, width: 1200, height: 630 }],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [image],
+        },
+    }
 }
 
 export default async function VerificationPage({ params }: PageProps) {

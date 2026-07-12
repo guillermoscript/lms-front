@@ -17,6 +17,14 @@ import {
     X,
     Minus
 } from "lucide-react";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    return buildPageMetadata({ title: t('creators.title'), description: t('creators.description'), path: '/creators', locale });
+}
 
 export default async function CreatorsPage() {
     const t = await getTranslations('creators');
