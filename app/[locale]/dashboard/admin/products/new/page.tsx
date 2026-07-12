@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewProductPage() {
@@ -29,6 +30,8 @@ export default async function NewProductPage() {
       .eq('tenant_id', tenantId)
       .order('name'),
   ])
+
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,7 +62,9 @@ export default async function NewProductPage() {
           mode="create"
           categories={categories || []}
           courses={courses || []}
+          enabledProviders={enabledProviders}
         />
+
       </main>
     </div>
   )

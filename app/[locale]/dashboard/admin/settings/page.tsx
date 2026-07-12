@@ -2,13 +2,14 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { getAllSettingsByCategory } from '@/app/actions/admin/settings'
+import { getAllSettingsByCategory, getSolanaWallet } from '@/app/actions/admin/settings'
 import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
+import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 
@@ -40,6 +41,10 @@ export default async function SettingsPage() {
   }
 
   const settings = result.data
+
+  // Fetch the tenant's Solana receiving wallet (non-blocking — empty if unset)
+  const solanaWallet = await getSolanaWallet().catch(() => null)
+  const solanaWalletAddress = solanaWallet?.data?.wallet_address || ''
 
   // Fetch referral code (non-blocking — silently skip if it fails)
   const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
@@ -115,6 +120,20 @@ export default async function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <PaymentSettingsForm settings={settings.payment || {}} />
+                </CardContent>
+              </Card>
+
+              {/* Solana receiving wallet — one address backs both the one-time
+                  `solana` and auto-pull `solana_subs` providers. */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>{t('sections.solanaWallet.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.solanaWallet.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SolanaWalletForm initialAddress={solanaWalletAddress} />
                 </CardContent>
               </Card>
             </TabsContent>

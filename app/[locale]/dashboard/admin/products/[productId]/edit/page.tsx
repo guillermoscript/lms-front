@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import type {
   ProductCreationPaymentProvider,
@@ -146,6 +147,8 @@ export default async function EditProductPage({ params }: PageProps) {
     })),
   }
 
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -176,7 +179,9 @@ export default async function EditProductPage({ params }: PageProps) {
           categories={categories || []}
           courses={courses || []}
           initialInput={initialInput}
+          enabledProviders={enabledProviders}
         />
+
       </main>
     </div>
   )

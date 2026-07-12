@@ -31,7 +31,7 @@ export default async function AppearancePage() {
             <AdminBreadcrumb
               items={[
                 { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
-                { label: tBreadcrumbs('settings'), href: '/dashboard/admin/settings' },
+                { label: tBreadcrumbs('website'), href: '/dashboard/admin/landing-page' },
                 { label: tBreadcrumbs('appearance') },
               ]}
             />

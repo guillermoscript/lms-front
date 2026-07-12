@@ -154,6 +154,36 @@
   },
   "dashboard": {
     "student": {
+      "billing": {
+        "title": "Billing",
+        "subtitle": "Your purchases, active subscription, and downloadable invoices.",
+        "subscription": {
+          "sectionTitle": "Active Subscription",
+          "unknownPlan": "Unknown plan",
+          "renewsOn": "Renews on",
+          "cancelsOn": "Cancels on",
+          "cancelAtPeriodEndNotice": "This subscription will not renew. Access ends on {date}.",
+          "cancelNote": "To cancel your subscription, please contact your school.",
+          "empty": "You don't have an active subscription.",
+          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" }
+        },
+        "purchases": {
+          "sectionTitle": "Purchase History",
+          "empty": "No purchases yet.",
+          "unknownItem": "Unknown item",
+          "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
+          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" }
+        },
+        "offline": {
+          "sectionTitle": "Offline / Manual Payments",
+          "table": { "product": "Product", "date": "Date", "status": "Status", "amount": "Amount", "invoice": "Invoice" },
+          "downloadInvoice": "Download",
+          "downloadInvoiceLabel": "Download invoice {number}",
+          "managePaymentsNote": "Need to upload proof or check details?",
+          "managePaymentsLink": "Go to Payments"
+        },
+        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+      },
       "notifications": {
         "title": "Notifications",
         "description": "Stay up to date with activity across your school.",
@@ -1295,6 +1325,45 @@
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
+      "payouts": {
+        "title": "Payouts",
+        "description": "Stripe Connect disbursements to your school account.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "stats": {
+          "totalPaid": "Total paid out",
+          "totalPaidDesc": "Cumulative successful disbursements",
+          "pendingCount": "Pending / processing",
+          "pendingCountDesc": "Payouts not yet completed"
+        },
+        "status": { "paid": "Paid", "processing": "Processing", "pending": "Pending", "failed": "Failed" },
+        "table": {
+          "title": "Payout history",
+          "headers": { "period": "Period", "amount": "Amount", "status": "Status", "paidAt": "Paid at", "stripeRef": "Stripe ref" }
+        },
+        "empty": {
+          "title": "No payouts yet",
+          "description": "Payouts appear here once Stripe Connect disburses funds to your connected bank account. Make sure your Stripe account is fully verified."
+        }
+      },
+      "invoices": {
+        "title": "Invoices",
+        "description": "Invoice documents for offline and manual payments.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "note": { "text": "Card and Solana purchases are tracked under", "transactionsLink": "Transactions" },
+        "status": { "paid": "Paid", "pending": "Pending", "cancelled": "Cancelled" },
+        "table": {
+          "title": "Invoice registry",
+          "headers": { "invoiceNumber": "Invoice #", "item": "Item", "amount": "Amount", "status": "Status", "date": "Date", "actions": "Actions" },
+          "unknownProduct": "Unknown product",
+          "viewInvoice": "View invoice"
+        },
+        "empty": {
+          "title": "No invoices found",
+          "description": "Invoice documents are generated for offline (manual) payment requests. They will appear here once a payment request has an invoice number assigned."
+        }
+      },
       "breadcrumbs": {
         "admin": "Admin",
         "analytics": "Analytics",
@@ -1322,7 +1391,8 @@
         "tenants": "Tenants",
         "apiTokens": "API Tokens",
         "monetization": "Monetization",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "website": "Website"
       },
       "appearance": {
         "title": "Appearance",
@@ -1508,7 +1578,14 @@
           "renewalRequired": "Renewal Required Soon",
           "renewalDescription": "Your subscription period ends in {count, plural, one {# day} other {# days}}. Renew now to ensure uninterrupted service for your students.",
           "courses": "Courses",
-          "students": "Students"
+          "students": "Students",
+          "usagePercent": "{percent}% used",
+          "limitReached": "Limit reached",
+          "unlimitedPlan": "Unlimited plan",
+          "upcomingPayment": "Upcoming payment",
+          "dueOn": "Due {date}",
+          "bankTransfer": "Bank transfer",
+          "cardPayment": "Card payment"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
@@ -2150,6 +2227,10 @@
           "branding": {
             "title": "Branding Settings",
             "description": "Customize your platform's visual identity — logo, colors, and favicon"
+          },
+          "solanaWallet": {
+            "title": "Solana Wallet",
+            "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
           }
         },
         "form": {
@@ -2199,6 +2280,12 @@
             "stripeHint": "Enable Stripe payment processing",
             "paypal": "PayPal",
             "paypalHint": "Enable PayPal payment processing",
+            "lemonsqueezy": "Lemon Squeezy",
+            "lemonsqueezyHint": "Accept payments via Lemon Squeezy (merchant of record). Paste a variant ID on each plan or product.",
+            "solana": "Solana (crypto)",
+            "solanaHint": "Accept Solana crypto payments. Set your receiving wallet below. Covers one-time and subscription.",
+            "solanaAcceptSol": "Also accept native SOL",
+            "solanaAcceptSolHint": "By default you receive USDC (a 1:1 US-dollar stablecoin). Turn this on to also let students pay in SOL — the USD price is converted to SOL at the live rate at checkout. You then hold SOL, whose value can move after payment.",
             "currency": "Default Currency",
             "currencyPlaceholder": "Select currency",
             "currencyHint": "Default currency for all transactions",
@@ -2237,6 +2324,15 @@
             "expirationHint": "Number of days until enrollment expires (0 = never expires)",
             "capacity": "Enable Course Capacity",
             "capacityHint": "Allow setting maximum student limits for courses"
+          },
+          "solanaWallet": {
+            "label": "Receiving wallet address",
+            "placeholder": "Your Solana wallet (base58)",
+            "hint": "Funds from Solana payments are sent here. This one address backs both one-time and subscription crypto payments.",
+            "save": "Save Wallet",
+            "saving": "Saving...",
+            "success": "Solana wallet saved",
+            "error": "Failed to save Solana wallet"
           }
         }
       },
@@ -2506,7 +2602,7 @@
           "back": "Back to Plans",
           "details": {
             "title": "Plan Details",
-            "description": "Subscription plans will be automatically created in Stripe with recurring billing."
+            "description": "Set up a recurring plan. How billing is handled depends on the payment method you choose below."
           }
         },
         "edit": {
@@ -2547,6 +2643,22 @@
           "toasts": {
             "createSuccess": "Plan created successfully",
             "updateSuccess": "Plan updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
+          "methodHint": {
+            "manual": "Billing is managed in-app; students arrange recurring payment with you offline. No payment processor credentials required.",
+            "stripe": "Stripe manages the recurring subscription and billing automatically.",
+            "paypal": "PayPal manages the recurring subscription automatically.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first.",
+            "solana_subs": "On-chain recurring subscription auto-charged from the student wallet. Set your Solana wallet in Settings → Payment first."
           }
         }
       },
@@ -2583,7 +2695,7 @@
           "back": "Back to Products",
           "details": {
             "title": "Product Details",
-            "description": "Products will be automatically created in Stripe. Link courses to create bundles."
+            "description": "Set up a one-time product. How payment is handled depends on the payment method you choose below. Link courses to create bundles."
           }
         },
         "edit": {
@@ -2624,6 +2736,21 @@
           "toasts": {
             "createSuccess": "Product created successfully",
             "updateSuccess": "Product updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
+          "methodHint": {
+            "manual": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
+            "stripe": "Students can pay online instantly",
+            "paypal": "Students can pay online with PayPal.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first."
           }
         },
         "actions": {
@@ -2640,16 +2767,26 @@
         }
       },
       "apiTokens": {
-        "title": "API Tokens",
-        "description": "Generate tokens to connect Claude Desktop or other MCP clients to the LMS.",
+        "title": "Connect AI Assistants",
+        "description": "Connect Claude or other MCP clients to your LMS.",
         "createToken": "Create Token",
+        "connectClaude": {
+          "title": "Connect Claude",
+          "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
+          "urlLabel": "Connector URL",
+          "step1": "Copy the connector URL above.",
+          "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
+          "step3": "Paste the URL and click Add.",
+          "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
+          "copied": "Connector URL copied"
+        },
         "howToConnect": {
-          "title": "How to Connect",
-          "description": "Set up Claude Desktop or other MCP clients to access your LMS data.",
-          "step1": "Create a token above and copy the Claude Desktop config snippet.",
-          "step2": "Open Claude Desktop settings and find the MCP servers configuration file.",
+          "title": "Advanced: API tokens (CLI and other MCP clients)",
+          "description": "Use a token for clients that don't support OAuth sign-in.",
+          "step1": "Create a token above and copy the config snippet.",
+          "step2": "Open your MCP client's configuration file.",
           "step3": "Paste the config snippet and save.",
-          "step4": "Restart Claude Desktop — you should see the LMS tools available."
+          "step4": "Restart the client — you should see the LMS tools available."
         },
         "yourTokens": {
           "title": "Your Tokens",
@@ -3017,11 +3154,17 @@
     "analytics": "Analytics",
     "monetization": "Monetization",
     "monetizationOverview": "Overview",
+    "courses": "Courses",
+    "people": "People",
+    "website": "Website",
     "products": "Products",
     "plans": "Plans",
     "subscriptions": "Subscriptions",
     "paymentRequests": "Payment Requests",
+    "payouts": "Payouts",
+    "invoices": "Invoices",
     "myPayments": "My Payments",
+    "myBilling": "Billing & Receipts",
     "community": "Community"
   },
   "userNav": {
@@ -3632,6 +3775,13 @@
     "issuedBy": "Issued by LMS Platform"
   },
   "checkout": {
+    "success": {
+      "title": "You're all set!",
+      "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",
+      "goToCourses": "Go to my courses",
+      "browseCourses": "Browse courses",
+      "viewBilling": "View billing"
+    },
     "title": "Checkout",
     "description": "Choose your payment method to continue.",
     "item": "Item",
@@ -3654,6 +3804,30 @@
       "expiry": "Expiry",
       "cvc": "CVC",
       "offlineInstructions": "Request payment instructions. We'll send you details for bank transfer or other offline methods.",
+      "redirectInstructions": "You'll be redirected to a secure checkout page to complete your payment.",
+      "solanaInstructions": "Pay with Solana Pay. Continue to generate a QR code you can scan with your wallet.",
+      "solanaScan": "Scan to pay with Solana",
+      "solanaWaiting": "Waiting for on-chain confirmation…",
+      "payWithPhantom": "Pay with Phantom",
+      "phantomHint": "Pay directly with your connected Phantom wallet.",
+      "payByQr": "Pay by QR instead",
+      "payInLabel": "Pay with",
+      "payInUsdc": "USDC",
+      "payInSol": "SOL",
+      "usdcNote": "USDC is a 1:1 US-dollar stablecoin — you pay exactly the listed price.",
+      "solConversionNote": "Priced in USD; you pay the equivalent in SOL at the live exchange rate, locked when you start checkout.",
+      "phantomPreparing": "Preparing checkout…",
+      "phantomConnecting": "Connecting to Phantom…",
+      "phantomRequesting": "Requesting transaction…",
+      "phantomSignInit": "Approve step 1 of 2 in Phantom: initialize your subscription wallet.",
+      "phantomSign": "Approve in Phantom to sign…",
+      "phantomSubmitting": "Submitting to the network…",
+      "phantomInitDone": "Wallet initialized — approve step 2 in Phantom to subscribe…",
+      "phantomConfirming": "Confirming on-chain…",
+      "phantomNotFound": "Phantom wallet not found. Install Phantom and unlock it, then try again.",
+      "phantomRetry": "Try again",
+      "subsDesktopOnly": "To subscribe with crypto, open this page in the Phantom app or install the Phantom desktop extension — a subscription needs two wallet approvals that a QR scan can't do.",
+      "phantomInstall": "Get the Phantom wallet",
       "contactName": "Contact Name",
       "contactEmail": "Email for Instructions",
       "contactPhone": "Phone (Optional)",

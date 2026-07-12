@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getPaymentProvider, type Currency, type PaymentProvider } from '@/lib/payments'
+import { getPaymentProvider, PROVIDER_CAPABILITIES, type Currency, type PaymentProvider } from '@/lib/payments'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
@@ -21,6 +21,8 @@ interface ProductFormData {
   image?: string
   courseIds: number[]
   paymentProvider?: PaymentProvider
+  /** Lemon Squeezy variant id, pasted by the admin (→ provider_price_id). LS only. */
+  providerPriceId?: string
 }
 
 interface Product {
@@ -105,33 +107,67 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
       throw new Error('At least one course must be selected')
     }
 
-    // Get payment provider (defaults to Stripe)
-    const provider = getPaymentProvider(formData.paymentProvider || 'stripe')
+    // Resolve provider by capability from the static map. Do NOT instantiate the
+    // provider yet — provider constructors (e.g. Lemon Squeezy) throw on missing
+    // env, and only the createsCatalog branch actually needs a live client.
+    const providerType = formData.paymentProvider || 'stripe'
+    const caps = PROVIDER_CAPABILITIES[providerType]
+    const adminClient = createAdminClient()
 
-    // 1. Create product in payment provider
-    const paymentProduct = await provider.createProduct({
-      name: formData.name.trim(),
-      description: formData.description?.trim() || '',
-      images: formData.image ? [formData.image] : [],
-      metadata: {
-        created_by: 'admin',
-        created_at: new Date().toISOString()
-      }
-    })
+    // Resolve provider catalog ids by CAPABILITY, never by provider name:
+    //  - createsCatalog (Stripe/PayPal) → auto-create product + one-time price.
+    //  - isMerchantOfRecord (Lemon Squeezy) → catalog lives in their dashboard;
+    //    the admin pastes the variant id; provider_product_id stays null.
+    //  - else (Solana/manual) → no catalog ids; Solana needs a configured wallet.
+    let providerProductId: string | null = null
+    let providerPriceId: string | null = null
 
-    // 2. Create price in payment provider
-    const paymentPrice = await provider.createPrice({
-      productId: paymentProduct.id,
-      amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
-      currency: formData.currency,
-      type: 'one_time',
-      metadata: {
-        product_name: formData.name
+    if (caps.createsCatalog) {
+      // Only providers with their own catalog API need a live client.
+      const provider = getPaymentProvider(providerType)
+      const paymentProduct = await provider.createProduct({
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        images: formData.image ? [formData.image] : [],
+        metadata: {
+          created_by: 'admin',
+          created_at: new Date().toISOString()
+        }
+      })
+
+      const paymentPrice = await provider.createPrice({
+        productId: paymentProduct.id,
+        amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
+        currency: formData.currency,
+        type: 'one_time',
+        metadata: {
+          product_name: formData.name
+        }
+      })
+
+      providerProductId = paymentProduct.id
+      providerPriceId = paymentPrice.id
+    } else if (caps.isMerchantOfRecord) {
+      // Lemon Squeezy — admin must paste the variant id (checkout 400s without it).
+      const variantId = formData.providerPriceId?.trim()
+      if (!variantId) {
+        throw new Error('Lemon Squeezy requires a variant id. Copy it from your Lemon Squeezy dashboard.')
       }
-    })
+      providerPriceId = variantId
+    } else if (providerType === 'solana' || providerType === 'solana_subs') {
+      // No catalog — but the school must have a receiving wallet, else checkout 400s.
+      const { data: wallet } = await adminClient
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', providerType)
+        .maybeSingle()
+      if (!wallet?.wallet_address) {
+        throw new Error('Configure your Solana wallet in Settings → Payment before creating a Solana product.')
+      }
+    }
 
     // 3. Insert product into database
-    const adminClient = createAdminClient()
     const { data: product, error: insertError } = await adminClient
       .from('products')
       .insert({
@@ -140,9 +176,9 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
         price: formData.price,
         currency: formData.currency,
         image: formData.image || null,
-        payment_provider: provider.provider,
-        provider_product_id: paymentProduct.id,
-        provider_price_id: paymentPrice.id,
+        payment_provider: providerType,
+        provider_product_id: providerProductId,
+        provider_price_id: providerPriceId,
         status: 'active',
         tenant_id: tenantId
       })
@@ -221,12 +257,17 @@ export async function updateProduct(
       throw new Error('Product not found or access denied')
     }
 
-    // Get payment provider
+    // Get payment provider (provider is immutable post-create)
     const providerType = existingProduct.payment_provider as PaymentProvider || 'stripe'
-    const provider = getPaymentProvider(providerType)
+    const caps = PROVIDER_CAPABILITIES[providerType]
 
-    // Update product in payment provider
-    if (existingProduct.provider_product_id) {
+    // Catalog-syncing providers (Stripe/PayPal) only: update the provider product
+    // and recreate the price on change. LS/Solana/manual skip this — they have no
+    // provider catalog to mutate; their price lives in the product columns (and the
+    // LS variant id is edited via the form below). Instantiate the provider only
+    // here — its constructor (e.g. Lemon Squeezy) throws on missing env.
+    if (caps.createsCatalog && existingProduct.provider_product_id) {
+      const provider = getPaymentProvider(providerType)
       await provider.updateProduct(existingProduct.provider_product_id, {
         name: formData.name.trim(),
         description: formData.description?.trim() || '',
@@ -291,14 +332,26 @@ export async function updateProduct(
       }
     }
 
-    // Update product without price change
+    // Fallthrough update: Stripe/PayPal with no price change keep their
+    // provider-managed price columns untouched (only name/description/image).
+    // Non-catalog providers (LS/Solana/manual) own their price columns directly,
+    // so write price/currency here; LS may also re-paste its variant id.
+    const fallthroughUpdate: Record<string, unknown> = {
+      name: formData.name.trim(),
+      description: formData.description?.trim() || null,
+      image: formData.image || null,
+    }
+    if (!caps.createsCatalog) {
+      fallthroughUpdate.price = formData.price
+      fallthroughUpdate.currency = formData.currency
+      if (caps.isMerchantOfRecord && formData.providerPriceId !== undefined) {
+        fallthroughUpdate.provider_price_id = formData.providerPriceId.trim() || null
+      }
+    }
+
     const { data: product, error: updateError } = await adminClient
       .from('products')
-      .update({
-        name: formData.name.trim(),
-        description: formData.description?.trim() || null,
-        image: formData.image || null,
-      })
+      .update(fallthroughUpdate)
       .eq('product_id', productId)
       .eq('tenant_id', tenantId)
       .select()
@@ -399,10 +452,14 @@ export async function saveProductCreationWizard(
           .eq('tenant_id', tenantId)
           .single()
 
-        if (productToArchive?.provider_product_id && productToArchive.provider_price_id) {
-          const archiveProvider = getPaymentProvider(
-            (productToArchive.payment_provider as PaymentProvider) || 'manual'
-          )
+        const archiveProviderType =
+          (productToArchive?.payment_provider as PaymentProvider) || 'manual'
+        if (
+          productToArchive?.provider_product_id &&
+          productToArchive.provider_price_id &&
+          PROVIDER_CAPABILITIES[archiveProviderType]?.createsCatalog
+        ) {
+          const archiveProvider = getPaymentProvider(archiveProviderType)
           await archiveProvider.archivePrice(productToArchive.provider_price_id)
           await archiveProvider.archiveProduct(productToArchive.provider_product_id)
         }
@@ -440,7 +497,11 @@ export async function saveProductCreationWizard(
     }
 
     // ---- PAID: resolve provider objects, then commit everything in one tx ----
-    const provider = getPaymentProvider(input.pricing.paymentProvider || 'manual')
+    // Branch on static capabilities, never provider identity: catalog-less
+    // providers (manual) keep NULL provider ids and need no live client, whose
+    // constructor may require env credentials.
+    const providerType: PaymentProvider = input.pricing.paymentProvider || 'manual'
+    const caps = PROVIDER_CAPABILITIES[providerType]
     const nextPrice = input.pricing.price!
     const nextCurrency = input.pricing.currency! as Currency
 
@@ -456,6 +517,7 @@ export async function saveProductCreationWizard(
 
     let providerProductId: string | null = null
     let providerPriceId: string | null = null
+    let provider: ReturnType<typeof getPaymentProvider> | null = null
 
     if (productId) {
       const { data: existingProduct, error: productFetchError } = await adminClient
@@ -471,55 +533,44 @@ export async function saveProductCreationWizard(
 
       const existingProviderType =
         (existingProduct.payment_provider as PaymentProvider | null) || 'manual'
-      const providerChanged = existingProviderType !== provider.provider
+      const providerChanged = existingProviderType !== providerType
       providerProductId = existingProduct.provider_product_id as string | null
       providerPriceId = existingProduct.provider_price_id as string | null
 
-      if (!providerProductId || providerChanged) {
-        // Defer archiving the old objects until the DB commit succeeds.
-        if (providerProductId && providerPriceId) {
+      // Switching providers: the old catalog objects (if any) are superseded —
+      // archive them only after the DB commit succeeds.
+      if (providerChanged) {
+        if (
+          providerProductId &&
+          PROVIDER_CAPABILITIES[existingProviderType]?.createsCatalog
+        ) {
           staleProviderObjects.push({
             provider: existingProviderType,
             productId: providerProductId,
-            priceId: providerPriceId,
+            priceId: providerPriceId || undefined,
           })
         }
+        providerProductId = null
+        providerPriceId = null
+      }
 
-        const paymentProduct = await provider.createProduct({
-          name: input.course.title.trim(),
-          description: input.course.description?.trim() || '',
-          images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
-          metadata: {
-            created_by: 'admin_product_creation_wizard',
-            recreated_at: new Date().toISOString(),
-          },
-        })
-        createdProviderObjects.push({ productId: paymentProduct.id })
+      if (caps.createsCatalog) {
+        provider = getPaymentProvider(providerType)
 
-        const paymentPrice = await provider.createPrice({
-          productId: paymentProduct.id,
-          amount: provider.convertAmount(nextPrice, 'major'),
-          currency: nextCurrency,
-          type: 'one_time',
-          metadata: { product_name: input.course.title.trim() },
-        })
-        createdProviderObjects.push({ priceId: paymentPrice.id })
+        if (!providerProductId) {
+          const paymentProduct = await provider.createProduct({
+            name: input.course.title.trim(),
+            description: input.course.description?.trim() || '',
+            images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+            metadata: {
+              created_by: 'admin_product_creation_wizard',
+              recreated_at: new Date().toISOString(),
+            },
+          })
+          createdProviderObjects.push({ productId: paymentProduct.id })
 
-        providerProductId = paymentProduct.id
-        providerPriceId = paymentPrice.id
-      } else {
-        await provider.updateProduct(providerProductId, {
-          name: input.course.title.trim(),
-          description: input.course.description?.trim() || '',
-          images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
-        })
-
-        const priceChanged =
-          nextPrice !== existingProduct.price || nextCurrency !== existingProduct.currency
-
-        if (!providerPriceId || priceChanged) {
           const paymentPrice = await provider.createPrice({
-            productId: providerProductId,
+            productId: paymentProduct.id,
             amount: provider.convertAmount(nextPrice, 'major'),
             currency: nextCurrency,
             type: 'one_time',
@@ -527,13 +578,38 @@ export async function saveProductCreationWizard(
           })
           createdProviderObjects.push({ priceId: paymentPrice.id })
 
-          if (providerPriceId) {
-            staleProviderObjects.push({ provider: provider.provider, priceId: providerPriceId })
-          }
+          providerProductId = paymentProduct.id
           providerPriceId = paymentPrice.id
+        } else {
+          await provider.updateProduct(providerProductId, {
+            name: input.course.title.trim(),
+            description: input.course.description?.trim() || '',
+            images: input.course.thumbnailUrl ? [input.course.thumbnailUrl] : [],
+          })
+
+          const priceChanged =
+            nextPrice !== existingProduct.price || nextCurrency !== existingProduct.currency
+
+          if (!providerPriceId || priceChanged) {
+            const paymentPrice = await provider.createPrice({
+              productId: providerProductId,
+              amount: provider.convertAmount(nextPrice, 'major'),
+              currency: nextCurrency,
+              type: 'one_time',
+              metadata: { product_name: input.course.title.trim() },
+            })
+            createdProviderObjects.push({ priceId: paymentPrice.id })
+
+            if (providerPriceId) {
+              staleProviderObjects.push({ provider: providerType, priceId: providerPriceId })
+            }
+            providerPriceId = paymentPrice.id
+          }
         }
       }
-    } else {
+    } else if (caps.createsCatalog) {
+      provider = getPaymentProvider(providerType)
+
       const paymentProduct = await provider.createProduct({
         name: input.course.title.trim(),
         description: input.course.description?.trim() || '',
@@ -573,7 +649,7 @@ export async function saveProductCreationWizard(
         _product: {
           price: nextPrice,
           currency: nextCurrency,
-          payment_provider: provider.provider,
+          payment_provider: providerType,
           provider_product_id: providerProductId,
           provider_price_id: providerPriceId,
         },
@@ -584,7 +660,9 @@ export async function saveProductCreationWizard(
     if (rpcError) {
       // Compensate: roll back the external provider objects we just created so a
       // failed DB transaction doesn't leak orphaned Stripe/PayPal objects.
-      await compensateProviderObjects(provider, createdProviderObjects)
+      if (provider && createdProviderObjects.length > 0) {
+        await compensateProviderObjects(provider, createdProviderObjects)
+      }
       throw new Error(rpcError.message)
     }
 
@@ -651,10 +729,12 @@ export async function archiveProduct(productId: number): Promise<ActionResult> {
       throw new Error('Product not found or access denied')
     }
 
-    // Archive in payment provider
-    if (product.provider_product_id && product.provider_price_id) {
-      const providerType = product.payment_provider as PaymentProvider || 'stripe'
-      const provider = getPaymentProvider(providerType)
+    // Archive in payment provider — ONLY for providers that own their catalog
+    // (Stripe/PayPal). LS stores a variant id from THEIR dashboard and its provider
+    // constructor throws on missing env; Solana/manual have no catalog. Gate on it.
+    const archiveProviderType = product.payment_provider as PaymentProvider || 'stripe'
+    if (PROVIDER_CAPABILITIES[archiveProviderType]?.createsCatalog && product.provider_product_id && product.provider_price_id) {
+      const provider = getPaymentProvider(archiveProviderType)
 
       await provider.archivePrice(product.provider_price_id)
       await provider.archiveProduct(product.provider_product_id)
@@ -715,10 +795,12 @@ export async function restoreProduct(productId: number): Promise<ActionResult> {
       throw new Error('Product not found or access denied')
     }
 
-    // Restore in payment provider
-    if (product.provider_product_id) {
-      const providerType = product.payment_provider as PaymentProvider || 'stripe'
-      const provider = getPaymentProvider(providerType)
+    // Restore in payment provider — ONLY for catalog-owning providers (Stripe/
+    // PayPal). LS/Solana/manual have no catalog product to restore, and the LS
+    // provider constructor throws on missing env.
+    const restoreProviderType = product.payment_provider as PaymentProvider || 'stripe'
+    if (PROVIDER_CAPABILITIES[restoreProviderType]?.createsCatalog && product.provider_product_id) {
+      const provider = getPaymentProvider(restoreProviderType)
 
       await provider.restoreProduct(product.provider_product_id)
     }

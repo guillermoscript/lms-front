@@ -16,7 +16,7 @@ import { errorResult } from "./format.js";
  *     1. Role-based call gating — reject a disallowed tool for the caller's
  *        role (defense in depth on top of `tools/list` hiding, which is not
  *        security). Destructive ops (`lms_delete_*`, `lms_archive_course`) are
- *        admin-only; non-teacher/admin callers get nothing.
+ *        admin-only; students get only the self-scoped learning tools.
  *     2. Audit logging — record the call (real tool name + sanitized args +
  *        success + duration) to `mcp_audit_log`.
  *
@@ -41,9 +41,9 @@ export function installToolGuards(server: MCPServer): void {
       // 1. Call gating — name is known here (unlike in middleware).
       if (!isToolAllowedForRole(role, name)) {
         const msg =
-          role === "teacher"
-            ? `Tool '${name}' is not available for your role. Contact an admin.`
-            : "Access denied: only teachers and admins can use the LMS MCP server.";
+          role === "teacher" || role === "student"
+            ? `Tool '${name}' is not available for your role.${role === "student" ? " Students can use the lms_my_* learning tools." : " Contact an admin."}`
+            : "Access denied: only students, teachers, and admins can use the LMS MCP server.";
         recordToolAudit({
           auth,
           toolName: name,

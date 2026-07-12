@@ -5,6 +5,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
+import { Markdown } from "../shared/markdown";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -44,18 +45,14 @@ type Props = z.infer<typeof propsSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusPill(
-  status: string,
-  theme: "light" | "dark"
-): { bg: string; text: string } {
-  const dark = theme === "dark";
+function statusPill(status: string): string {
   switch (status.toLowerCase()) {
     case "published":
-      return { bg: dark ? "#14532d" : "#dcfce7", text: dark ? "#86efac" : "#166534" };
+      return "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400";
     case "draft":
-      return { bg: dark ? "#3f3f46" : "#f4f4f5", text: dark ? "#a1a1aa" : "#52525b" };
+      return "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
     default:
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
   }
 }
 
@@ -127,336 +124,128 @@ export default function LessonPreview() {
 
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    codeBg: dark ? "#141414" : "#f8f7ff",
-    codeBorder: dark ? "#2a2a2a" : "#ede9fe",
-    contentText: dark ? "#d4d4d8" : "#1f2937",
-    videoBg: dark ? "#18181b" : "#f0f9ff",
-    videoBorder: dark ? "#1e3a5f" : "#bae6fd",
-    videoText: dark ? "#38bdf8" : "#0369a1",
-    resBg: dark ? "#141414" : "#fafafa",
-    resHover: dark ? "#222" : "#f3f4f6",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading lesson…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading lesson…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
   }
 
   const { lesson, resources } = props;
-  const pill = statusPill(lesson.status, theme);
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        {/* Lesson header */}
-        <div style={{ marginBottom: 20 }}>
-          {/* Breadcrumb-ish sequence + status */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-            }}
-          >
-            <span
-              style={{
-                padding: "2px 8px",
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 700,
-                backgroundColor: colors.accentBg,
-                color: colors.accent,
-              }}
-            >
-              Lesson {lesson.sequence}
-            </span>
-            <span
-              style={{
-                padding: "2px 8px",
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 600,
-                backgroundColor: pill.bg,
-                color: pill.text,
-              }}
-            >
-              {lesson.status}
-            </span>
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[760px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Lesson header */}
+          <div className="mb-5">
+            {/* Breadcrumb-ish sequence + status */}
+            <div className="mb-2.5 flex items-center gap-2">
+              <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                Lesson {lesson.sequence}
+              </span>
+              <span
+                className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${statusPill(
+                  lesson.status
+                )}`}
+              >
+                {lesson.status}
+              </span>
+            </div>
+
+            <h1 className="m-0 text-2xl leading-tight font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {lesson.title}
+            </h1>
+
+            {lesson.description && (
+              <p className="mt-2.5 mb-0 text-[15px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {lesson.description}
+              </p>
+            )}
           </div>
 
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 24,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.25,
-            }}
-          >
-            {lesson.title}
-          </h1>
-
-          {lesson.description && (
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 15,
-                color: colors.textSecondary,
-                lineHeight: 1.6,
-              }}
-            >
-              {lesson.description}
-            </p>
-          )}
-        </div>
-
-        {/* Video link */}
-        {lesson.video_url && (
-          <div
-            style={{
-              marginBottom: 20,
-              padding: "12px 16px",
-              borderRadius: 10,
-              backgroundColor: colors.videoBg,
-              border: `1px solid ${colors.videoBorder}`,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 20 }}>▶️</span>
-            <div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: colors.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 2,
-                }}
-              >
-                Video lesson
+          {/* Video link */}
+          {lesson.video_url && (
+            <div className="mb-5 flex items-center gap-2.5 rounded-[10px] border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900 dark:bg-sky-950">
+              <span className="text-xl">▶️</span>
+              <div>
+                <div className="mb-0.5 text-xs font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+                  Video lesson
+                </div>
+                <a
+                  href={lesson.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[13px] font-medium break-all text-sky-700 no-underline dark:text-sky-400"
+                >
+                  {lesson.video_url}
+                </a>
               </div>
-              <a
-                href={lesson.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: 13,
-                  color: colors.videoText,
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  wordBreak: "break-all",
-                }}
-              >
-                {lesson.video_url}
-              </a>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Content reading pane */}
-        {lesson.content ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 20,
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: colors.textMuted,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 12,
-              }}
-            >
-              Content (preview)
-            </div>
-            <pre
-              style={{
-                margin: 0,
-                padding: 16,
-                borderRadius: 8,
-                backgroundColor: colors.codeBg,
-                border: `1px solid ${colors.codeBorder}`,
-                fontSize: 13.5,
-                lineHeight: 1.7,
-                color: colors.contentText,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                fontFamily:
-                  '"Noto Sans", "Georgia", ui-serif, serif',
-                overflowX: "auto",
-              }}
-            >
-              {lesson.content}
-            </pre>
-          </div>
-        ) : (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 32,
-              textAlign: "center",
-              color: colors.textMuted,
-              marginBottom: 20,
-              fontSize: 13,
-            }}
-          >
-            No written content for this lesson.
-          </div>
-        )}
-
-        {/* Attached resources */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderBottom: `1px solid ${colors.border}`,
-              backgroundColor: colors.resBg,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: colors.text,
-              }}
-            >
-              Attached resources ({resources.length})
-            </span>
-          </div>
-
-          {resources.length === 0 ? (
-            <div
-              style={{
-                padding: 24,
-                textAlign: "center",
-                color: colors.textMuted,
-                fontSize: 13,
-              }}
-            >
-              No files attached to this lesson.
+          {/* Content reading pane */}
+          {lesson.content ? (
+            <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-3 text-[11px] font-bold tracking-[0.06em] text-zinc-400 uppercase dark:text-zinc-500">
+                Content (preview)
+              </div>
+              <Markdown content={lesson.content} dark={dark} fontSize={14} />
             </div>
           ) : (
-            <div>
-              {resources.map((res, idx) => (
-                <div
-                  key={res.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "11px 16px",
-                    borderBottom:
-                      idx === resources.length - 1
-                        ? "none"
-                        : `1px solid ${colors.border}`,
-                    transition: "background-color 0.1s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      colors.resHover;
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      "transparent";
-                  }}
-                >
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>
-                    {fileIcon(res.mime_type)}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: colors.text,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {res.file_name}
-                    </div>
-                    <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 1 }}>
-                      {humanMime(res.mime_type)}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: colors.textMuted,
-                      flexShrink: 0,
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {humanFileSize(res.file_size)}
-                  </span>
-                </div>
-              ))}
+            <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-8 text-center text-[13px] text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500">
+              No written content for this lesson.
             </div>
           )}
+
+          {/* Attached resources */}
+          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                Attached resources ({resources.length})
+              </span>
+            </div>
+
+            {resources.length === 0 ? (
+              <div className="p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
+                No files attached to this lesson.
+              </div>
+            ) : (
+              <div>
+                {resources.map((res, idx) => (
+                  <div
+                    key={res.id}
+                    className={`flex items-center gap-3 px-4 py-[11px] transition-colors duration-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                      idx === resources.length - 1
+                        ? ""
+                        : "border-b border-zinc-200 dark:border-zinc-800"
+                    }`}
+                  >
+                    <span className="shrink-0 text-xl">
+                      {fileIcon(res.mime_type)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                        {res.file_name}
+                      </div>
+                      <div className="mt-px text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {humanMime(res.mime_type)}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs text-zinc-400 tabular-nums dark:text-zinc-500">
+                      {humanFileSize(res.file_size)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </McpUseProvider>

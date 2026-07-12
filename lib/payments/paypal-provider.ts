@@ -29,6 +29,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
+    createsCatalog: true,
   }
   private clientId: string
   private clientSecret: string

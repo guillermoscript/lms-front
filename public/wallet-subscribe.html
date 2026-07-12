@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solana Subs — sign with wallet</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; background:#0b0b0f; color:#e8e8ea; }
+    h1 { font-size: 20px; }
+    button { background:#7c5cff; color:#fff; border:0; padding:10px 18px; border-radius:8px; font-size:15px; cursor:pointer; margin-right:8px; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .row { margin:14px 0; }
+    code { background:#1b1b22; padding:2px 6px; border-radius:4px; word-break:break-all; }
+    #log { white-space:pre-wrap; background:#14141b; border:1px solid #2a2a35; border-radius:8px; padding:12px; margin-top:18px; font-size:13px; line-height:1.5; min-height:120px; }
+    .ok{color:#5cff9d}.err{color:#ff6b6b}.muted{color:#9a9aa6}
+  </style>
+</head>
+<body>
+  <h1>Solana subscription — sign with your wallet</h1>
+  <p class="muted">First-time subscribers approve <b>two</b> Phantom prompts: (1) initialize your subscription authority, (2) subscribe. Set Phantom to <b>Devnet</b>.</p>
+
+  <div class="row">Reference: <code id="ref">?</code></div>
+  <div class="row">
+    <button id="connect">1. Connect Phantom</button>
+    <button id="go" disabled>2. Sign &amp; subscribe</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    (function () {
+      var logEl = document.getElementById('log')
+      function log(msg, cls) {
+        var line = document.createElement('div')
+        if (cls) line.className = cls
+        line.textContent = msg
+        logEl.appendChild(line)
+        logEl.scrollTop = logEl.scrollHeight
+      }
+      window.addEventListener('error', function (e) { log('JS error: ' + (e.message || e.error), 'err') })
+      window.addEventListener('unhandledrejection', function (e) { log('Promise error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), 'err') })
+
+      var RPC = 'https://api.devnet.solana.com'
+      var params = new URLSearchParams(location.search)
+      var reference = params.get('reference')
+      document.getElementById('ref').textContent = reference || '(missing — Claude must give you a link with ?reference=)'
+      log('Page ready. Phantom detected: ' + (!!(window.solana && window.solana.isPhantom)) + ' · secure origin: ' + window.isSecureContext, 'muted')
+
+      var pubkey = null
+      var VersionedTransaction = null
+
+      function rpc(method, params) {
+        return fetch(RPC, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params }),
+        }).then(function (r) { return r.json() })
+      }
+
+      // Sign (only) with Phantom, then submit the raw tx ourselves (skip preflight
+      // — Phantom's own simulate trips on these instructions). Returns signature.
+      async function signAndSubmit(b64) {
+        var bytes = Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0) })
+        var tx = VersionedTransaction.deserialize(bytes)
+        var signed = await window.solana.signTransaction(tx)
+        var raw = signed.serialize()
+        var out = ''
+        for (var k = 0; k < raw.length; k++) out += String.fromCharCode(raw[k])
+        var res = await rpc('sendTransaction', [btoa(out), { encoding: 'base64', skipPreflight: true, preflightCommitment: 'confirmed' }])
+        if (res.error) throw new Error('send failed: ' + JSON.stringify(res.error))
+        return res.result
+      }
+
+      async function waitConfirmed(sig) {
+        for (var i = 0; i < 25; i++) {
+          await new Promise(function (r) { setTimeout(r, 1500) })
+          var res = await rpc('getSignatureStatuses', [[sig], { searchTransactionHistory: true }])
+          var st = res.result && res.result.value && res.result.value[0]
+          if (st && (st.confirmationStatus === 'confirmed' || st.confirmationStatus === 'finalized')) {
+            if (st.err) throw new Error('tx failed on-chain: ' + JSON.stringify(st.err))
+            return true
+          }
+        }
+        throw new Error('timed out waiting for confirmation of ' + sig)
+      }
+
+      function buildTx() {
+        return fetch('/api/payments/solana/subscribe-tx?reference=' + reference, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: pubkey }),
+        }).then(function (r) { return r.json() })
+      }
+
+      document.getElementById('connect').onclick = async function () {
+        log('Connect clicked — calling Phantom…', 'muted')
+        try {
+          var provider = window.solana
+          if (!provider || !provider.isPhantom) { log('Phantom not found here. Installed + unlocked?', 'err'); return }
+          var res = await provider.connect()
+          pubkey = res.publicKey.toString()
+          log('Connected: ' + pubkey, 'ok')
+          document.getElementById('go').disabled = false
+        } catch (e) { log('Connect failed: ' + (e.message || e), 'err') }
+      }
+
+      document.getElementById('go').onclick = async function () {
+        log('Sign clicked…', 'muted')
+        var btn = document.getElementById('go')
+        btn.disabled = true
+        try {
+          if (!pubkey) { log('Connect Phantom first.', 'err'); btn.disabled = false; return }
+          if (!reference) { log('No reference in the URL.', 'err'); btn.disabled = false; return }
+
+          if (!VersionedTransaction) {
+            log('Loading web3.js …')
+            var web3 = await import('https://esm.sh/@solana/web3.js@1.95.3')
+            VersionedTransaction = web3.VersionedTransaction
+          }
+
+          // Up to 2 server round-trips: init (first-time) then subscribe.
+          for (var step = 0; step < 2; step++) {
+            log('Requesting transaction from server …')
+            var st = await buildTx()
+            if (!st.transaction) throw new Error('subscribe-tx: ' + JSON.stringify(st))
+            log('Sign in Phantom: ' + (st.step === 'init' ? 'initialize authority' : 'subscribe') + ' …', 'muted')
+            var sig = await signAndSubmit(st.transaction)
+            log((st.step === 'init' ? 'Init' : 'Subscribe') + ' sent: ' + sig, 'muted')
+            await waitConfirmed(sig)
+            if (st.step === 'subscribe') {
+              log('SUBSCRIBED ✓ — signature: ' + sig, 'ok')
+              log('explorer: https://explorer.solana.com/tx/' + sig + '?cluster=devnet', 'muted')
+              log('Done. Tell Claude you signed — they will confirm + fire the first pull.', 'ok')
+              return
+            }
+            log('Authority initialized ✓ — now subscribing (approve the second prompt)…', 'ok')
+          }
+          log('Unexpected: still not subscribed after init. Tell Claude.', 'err')
+        } catch (e) {
+          log('Failed: ' + (e.message || e), 'err')
+        } finally {
+          btn.disabled = false
+        }
+      }
+    })()
+  </script>
+</body>
+</html>

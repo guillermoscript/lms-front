@@ -75,6 +75,8 @@ interface ProductCreationWizardProps {
   categories?: CategoryOption[]
   courses: CourseOption[]
   initialInput?: ProductCreationWizardInput
+  /** Provider slugs the tenant has enabled in Settings → Payments. Manual is always available. */
+  enabledProviders?: string[]
   className?: string
 }
 
@@ -160,6 +162,7 @@ export function ProductCreationWizard({
   categories = [],
   courses,
   initialInput,
+  enabledProviders = [],
   className,
 }: ProductCreationWizardProps) {
   const router = useRouter()
@@ -174,6 +177,21 @@ export function ProductCreationWizard({
   const [input, setInput] = useState<ProductCreationWizardInput>(() => mergeInput(initialInput))
 
   const readiness = useMemo(() => getProductCreationReadiness(input), [input])
+  // Manual is always sellable; Stripe/PayPal only when the tenant enabled them
+  // in Settings → Payments. Keep the current value visible in edit mode even if
+  // its provider has since been disabled, so the admin can see (and change) it.
+  const availableProviders = useMemo(() => {
+    const providers: ProductCreationPaymentProvider[] = ['manual']
+    for (const candidate of ['stripe', 'paypal'] as const) {
+      if (
+        enabledProviders.includes(candidate) ||
+        input.pricing.paymentProvider === candidate
+      ) {
+        providers.push(candidate)
+      }
+    }
+    return providers
+  }, [enabledProviders, input.pricing.paymentProvider])
   const stepProgress = ((currentStep + 1) / wizardSteps.length) * 100
   const selectedCourse = courses.find(
     (course) => course.course_id === input.course.existingCourseId
@@ -643,9 +661,15 @@ export function ProductCreationWizard({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="manual">{tProductForm('methodManual')}</SelectItem>
-                        <SelectItem value="stripe">{tProductForm('methodStripe')}</SelectItem>
-                        <SelectItem value="paypal">{tProductForm('methodPaypal')}</SelectItem>
+                        {availableProviders.includes('manual') && (
+                          <SelectItem value="manual">{tProductForm('methodManual')}</SelectItem>
+                        )}
+                        {availableProviders.includes('stripe') && (
+                          <SelectItem value="stripe">{tProductForm('methodStripe')}</SelectItem>
+                        )}
+                        {availableProviders.includes('paypal') && (
+                          <SelectItem value="paypal">{tProductForm('methodPaypal')}</SelectItem>
+                        )}
                       </SelectGroup>
                     </SelectContent>
                   </Select>

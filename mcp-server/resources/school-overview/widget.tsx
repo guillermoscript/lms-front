@@ -53,25 +53,24 @@ type Course = z.infer<typeof courseSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusPill(status: string, theme: "light" | "dark") {
-  const dark = theme === "dark";
+function statusPill(status: string): string {
   switch (status.toLowerCase()) {
     case "published":
-      return { bg: dark ? "#14532d" : "#dcfce7", text: dark ? "#86efac" : "#166534" };
+      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
     case "draft":
-      return { bg: dark ? "#3f3f46" : "#f4f4f5", text: dark ? "#a1a1aa" : "#52525b" };
+      return "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400";
     case "archived":
-      return { bg: dark ? "#1e1b4b" : "#ede9fe", text: dark ? "#a5b4fc" : "#4338ca" };
+      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300";
     default:
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
   }
 }
 
-function completionColor(pct: number, dark: boolean): string {
-  if (pct >= 80) return dark ? "#22c55e" : "#16a34a";
-  if (pct >= 40) return dark ? "#a78bfa" : "#7c3aed";
-  if (pct > 0) return dark ? "#f59e0b" : "#d97706";
-  return dark ? "#52525b" : "#d4d4d8";
+function completionColor(pct: number): string {
+  if (pct >= 80) return "bg-green-600 dark:bg-green-400";
+  if (pct >= 40) return "bg-violet-600 dark:bg-violet-400";
+  if (pct > 0) return "bg-amber-600 dark:bg-amber-400";
+  return "bg-zinc-300 dark:bg-zinc-600";
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -81,44 +80,14 @@ export default function SchoolOverview() {
   const theme = useWidgetTheme();
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    track: dark ? "#27272a" : "#f1f5f9",
-    riskText: dark ? "#fca5a5" : "#dc2626",
-    sectionBg: dark ? "#141414" : "#f9fafb",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Crunching school stats…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Crunching school stats…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -130,191 +99,142 @@ export default function SchoolOverview() {
     label: string,
     value: string,
     sub?: string,
-    accent?: string
+    accentClass?: string
   ) => (
-    <div
-      style={{
-        backgroundColor: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderRadius: 12,
-        padding: "14px 16px",
-        minWidth: 0,
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 700, color: accent ?? colors.text, lineHeight: 1.1 }}>
+    <div className="min-w-0 rounded-xl border border-zinc-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div
+        className={`text-2xl leading-[1.1] font-bold ${
+          accentClass ?? "text-zinc-900 dark:text-zinc-100"
+        }`}
+      >
         {value}
       </div>
-      <div style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4, fontWeight: 500 }}>
+      <div className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         {label}
       </div>
-      {sub && <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>{sub}</div>}
+      {sub && (
+        <div className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+          {sub}
+        </div>
+      )}
     </div>
   );
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: 16 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 20,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {school.name}
-          </h2>
-          <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
-            School overview
+      <div className={dark ? "dark" : ""}>
+        <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-4">
+            <h2 className="m-0 text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {school.name}
+            </h2>
+            <div className="mt-0.5 text-[13px] text-zinc-400 dark:text-zinc-500">
+              School overview
+            </div>
           </div>
-        </div>
 
-        {/* KPI grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-            gap: 12,
-            marginBottom: 22,
-          }}
-        >
-          {kpi(
-            "Courses",
-            String(school.courses_total),
-            `${school.courses_published} published · ${school.courses_draft} draft`
-          )}
-          {kpi("Students", String(school.students), `${school.active_enrollments} active enrollments`)}
-          {kpi("Published lessons", String(school.published_lessons))}
-          {kpi("Avg completion", `${school.completion_rate}%`, undefined, colors.accent)}
-          {kpi(
-            "Avg exam score",
-            school.avg_exam_score == null ? "—" : `${school.avg_exam_score}%`,
-            `${school.exam_submissions} submissions`
-          )}
-          {kpi(
-            "At-risk students",
-            String(school.at_risk_students),
-            "active · 0 lessons done",
-            school.at_risk_students > 0 ? colors.riskText : colors.text
-          )}
-        </div>
+          {/* KPI grid */}
+          <div className="mb-[22px] grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+            {kpi(
+              "Courses",
+              String(school.courses_total),
+              `${school.courses_published} published · ${school.courses_draft} draft`
+            )}
+            {kpi(
+              "Students",
+              String(school.students),
+              `${school.active_enrollments} active enrollments`
+            )}
+            {kpi("Published lessons", String(school.published_lessons))}
+            {kpi(
+              "Avg completion",
+              `${school.completion_rate}%`,
+              undefined,
+              "text-violet-600 dark:text-violet-400"
+            )}
+            {kpi(
+              "Avg exam score",
+              school.avg_exam_score == null ? "—" : `${school.avg_exam_score}%`,
+              `${school.exam_submissions} submissions`
+            )}
+            {kpi(
+              "At-risk students",
+              String(school.at_risk_students),
+              "active · 0 lessons done",
+              school.at_risk_students > 0
+                ? "text-red-600 dark:text-red-400"
+                : undefined
+            )}
+          </div>
 
-        {/* Per-course breakdown */}
-        <h3
-          style={{
-            margin: "0 0 12px",
-            fontSize: 14,
-            fontWeight: 600,
-            color: colors.text,
-          }}
-        >
-          Courses ({courses.length})
-        </h3>
+          {/* Per-course breakdown */}
+          <h3 className="mt-0 mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Courses ({courses.length})
+          </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {courses.map((c: Course) => {
-            const pill = statusPill(c.status, theme);
-            return (
+          <div className="flex flex-col gap-2">
+            {courses.map((c: Course) => (
               <div
                 key={c.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                }}
+                className="flex items-center gap-3.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-3 dark:border-zinc-800 dark:bg-zinc-900"
               >
                 {/* Title + status + completion bar */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: colors.text,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                       {c.title}
                     </span>
                     <span
-                      style={{
-                        padding: "1px 7px",
-                        borderRadius: 7,
-                        fontSize: 10.5,
-                        fontWeight: 600,
-                        backgroundColor: pill.bg,
-                        color: pill.text,
-                        flexShrink: 0,
-                      }}
+                      className={`shrink-0 rounded-[7px] px-[7px] py-px text-[10.5px] font-semibold ${statusPill(c.status)}`}
                     >
                       {c.status}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: colors.track,
-                      overflow: "hidden",
-                    }}
-                  >
+                  <div className="h-1.5 overflow-hidden rounded-[3px] bg-zinc-100 dark:bg-zinc-800">
                     <div
-                      style={{
-                        height: "100%",
-                        width: `${c.completion_rate}%`,
-                        backgroundColor: completionColor(c.completion_rate, dark),
-                        borderRadius: 3,
-                      }}
+                      className={`h-full rounded-[3px] ${completionColor(c.completion_rate)}`}
+                      style={{ width: `${c.completion_rate}%` }}
                     />
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 64 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: colors.text }}>
+                <div className="min-w-16 shrink-0 text-right">
+                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                     {c.active_enrollments}
                   </div>
-                  <div style={{ fontSize: 11, color: colors.textMuted }}>enrolled</div>
+                  <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                    enrolled
+                  </div>
                 </div>
 
-                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 56 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: colors.text }}>
+                <div className="min-w-14 shrink-0 text-right">
+                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                     {c.completion_rate}%
                   </div>
-                  <div style={{ fontSize: 11, color: colors.textMuted }}>
-                    {c.published_lessons} lesson{c.published_lessons === 1 ? "" : "s"}
+                  <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                    {c.published_lessons} lesson
+                    {c.published_lessons === 1 ? "" : "s"}
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 56 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: colors.text }}>
+                <div className="min-w-14 shrink-0 text-right">
+                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                     {c.exam_avg == null ? "—" : `${c.exam_avg}%`}
                   </div>
-                  <div style={{ fontSize: 11, color: colors.textMuted }}>exam avg</div>
+                  <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                    exam avg
+                  </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
 
-          {courses.length === 0 && (
-            <p style={{ margin: 0, padding: 24, textAlign: "center", fontSize: 13, color: colors.textMuted }}>
-              No courses yet.
-            </p>
-          )}
+            {courses.length === 0 && (
+              <p className="m-0 p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
+                No courses yet.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </McpUseProvider>
