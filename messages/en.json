@@ -405,6 +405,11 @@
         "viewProof": "View Proof",
         "unknownProduct": "Unknown Product",
         "instructionsAvailable": "Payment instructions available",
+        "nextSteps": {
+          "title": "Next steps for your purchase",
+          "description": "Your payment for {product} was confirmed. Follow these steps to get started:",
+          "open": "Open link"
+        },
         "empty": {
           "title": "No Payment Requests",
           "description": "Your payment requests will appear here once you request access to a course.",

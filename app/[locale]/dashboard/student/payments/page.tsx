@@ -19,6 +19,10 @@ import {
   IconInfoCircle,
 } from '@tabler/icons-react'
 import { CancelPaymentButton } from '@/components/student/cancel-payment-button'
+import {
+  PostRegistrationSteps,
+  type PostRegistrationStep,
+} from '@/components/student/post-registration-steps'
 import { StudentProofUpload } from './student-proof-upload'
 
 export default async function StudentPaymentsPage() {
@@ -57,6 +61,48 @@ export default async function StudentPaymentsPage() {
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
+
+  // Post-purchase instructions for completed purchases: the buyer should see
+  // the steps the admin configured (WhatsApp/Telegram/Discord/link/text).
+  const completedProductIds = Array.from(
+    new Set(
+      (paymentRequests || [])
+        .filter((request) => request.status === 'completed')
+        .map((request) => (request.product as { product_id?: number } | null)?.product_id)
+        .filter((id): id is number => typeof id === 'number')
+    )
+  )
+
+  const { data: postRegistrationRows } = completedProductIds.length
+    ? await supabase
+        .from('product_post_registration_steps')
+        .select('id, product_id, type, title, description, url, sort_order')
+        .in('product_id', completedProductIds)
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('sort_order')
+    : { data: [] }
+
+  const stepsByProduct = new Map<number, PostRegistrationStep[]>()
+  for (const row of (postRegistrationRows || []) as Array<
+    PostRegistrationStep & { product_id: number }
+  >) {
+    const list = stepsByProduct.get(row.product_id) || []
+    list.push(row)
+    stepsByProduct.set(row.product_id, list)
+  }
+
+  const completedWithSteps = (paymentRequests || [])
+    .filter((request) => request.status === 'completed')
+    .map((request) => {
+      const product = request.product as { product_id?: number; name?: string } | null
+      return {
+        requestId: request.request_id,
+        productName: product?.name || t('unknownProduct'),
+        steps: product?.product_id ? stepsByProduct.get(product.product_id) || [] : [],
+      }
+    })
+    .filter((entry) => entry.steps.length > 0)
 
   // Get status badge variant
   const getStatusBadge = (status: string) => {
@@ -157,6 +203,17 @@ export default async function StudentPaymentsPage() {
             <AlertDescription>{t('infoMessage')}</AlertDescription>
           </Alert>
 
+          {/* Post-purchase next steps for completed purchases */}
+          {completedWithSteps.map((entry) => (
+            <PostRegistrationSteps
+              key={entry.requestId}
+              steps={entry.steps}
+              title={t('nextSteps.title')}
+              description={t('nextSteps.description', { product: entry.productName })}
+              openLabel={t('nextSteps.open')}
+            />
+          ))}
+
           {/* Desktop View: Table */}
           <Card className="hidden md:block">
             <CardHeader>
@@ -179,7 +236,7 @@ export default async function StudentPaymentsPage() {
                 <TableBody>
                   {paymentRequests.map((request) => {
                     const statusBadge = getStatusBadge(request.status)
-                    const product = request.product as any
+                    const product = request.product as { product_id?: number; name?: string } | null
 
                     return (
                       <TableRow key={request.request_id}>
@@ -231,7 +288,7 @@ export default async function StudentPaymentsPage() {
           <div className="md:hidden space-y-4">
             {paymentRequests.map((request) => {
               const statusBadge = getStatusBadge(request.status)
-              const product = request.product as any
+              const product = request.product as { product_id?: number; name?: string } | null
 
               return (
                 <Card key={request.request_id}>

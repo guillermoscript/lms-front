@@ -404,6 +404,11 @@
         "viewDetails": "Ver Detalles",
         "viewProof": "Ver Comprobante",
         "unknownProduct": "Producto Desconocido",
+        "nextSteps": {
+          "title": "Próximos pasos de tu compra",
+          "description": "Tu pago de {product} fue confirmado. Sigue estos pasos para comenzar:",
+          "open": "Abrir enlace"
+        },
         "instructionsAvailable": "Instrucciones de pago disponibles",
         "empty": {
           "title": "Sin Solicitudes de Pago",
