@@ -27,6 +27,7 @@ export { Compare, CodeCompare, BeforeAfter } from './compare'
 
 // Rich media components
 export { Audio } from './audio'
+export { Video } from './video'
 export { Embed } from './embed'
 export { FileDownload } from './file-download'
 
