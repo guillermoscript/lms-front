@@ -57,49 +57,40 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// Fixed score buckets → Tailwind class strings (pass ≥80, warn ≥60, fail <60)
+const bandText = (v: number) =>
+  v >= 80
+    ? "text-green-600 dark:text-green-400"
+    : v >= 60
+      ? "text-amber-600 dark:text-amber-400"
+      : "text-red-600 dark:text-red-400";
+
+const bandFill = (v: number) =>
+  v >= 80
+    ? "bg-green-600 dark:bg-green-400"
+    : v >= 60
+      ? "bg-amber-600 dark:bg-amber-400"
+      : "bg-red-600 dark:bg-red-400";
+
+const bandDial = (v: number) =>
+  v >= 80
+    ? "border-green-600 bg-green-100 dark:border-green-400 dark:bg-green-900"
+    : v >= 60
+      ? "border-amber-600 bg-amber-100 dark:border-amber-400 dark:bg-amber-950"
+      : "border-red-600 bg-red-100 dark:border-red-400 dark:bg-red-950";
+
 export default function ExamReadiness() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    pass: dark ? "#4ade80" : "#16a34a",
-    passBg: dark ? "#14532d" : "#dcfce7",
-    warn: dark ? "#fbbf24" : "#d97706",
-    warnBg: dark ? "#451a03" : "#fef3c7",
-    fail: dark ? "#f87171" : "#dc2626",
-    failBg: dark ? "#450a0a" : "#fee2e2",
-  };
 
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            padding: 40,
-            display: "flex",
-            justifyContent: "center",
-            backgroundColor: colors.bg,
-          }}
-        >
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              border: `3px solid ${colors.border}`,
-              borderTopColor: colors.accent,
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div className={dark ? "dark" : ""}>
+          <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
+            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -107,11 +98,6 @@ export default function ExamReadiness() {
 
   const { course_title, exam, readiness, components, formula, topics, lessons } =
     props;
-
-  const bandColor = (v: number) =>
-    v >= 80 ? colors.pass : v >= 60 ? colors.warn : colors.fail;
-  const bandBg = (v: number) =>
-    v >= 80 ? colors.passBg : v >= 60 ? colors.warnBg : colors.failBg;
 
   const examDate = exam?.exam_date
     ? new Date(exam.exam_date).toLocaleDateString(undefined, {
@@ -133,223 +119,123 @@ export default function ExamReadiness() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 720,
-          margin: "0 auto",
-        }}
-      >
-        <div style={{ marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text }}>
-            Exam readiness — {course_title}
-          </h2>
-          {exam && (
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: colors.textSecondary }}>
-              {exam.title}
-              {examDate ? ` · ${examDate}` : ""}
-            </p>
-          )}
-        </div>
-
-        {readiness === null ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 40,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🧭</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              No signal yet
-            </p>
-            <p style={{ margin: "6px 0 0", color: colors.textMuted, fontSize: 13 }}>
-              Take a practice quiz to calibrate your readiness.
-            </p>
-            <button
-              onClick={() =>
-                sendFollowUpMessage(
-                  `Generate a diagnostic practice quiz for "${course_title}" with lms_practice_quiz so we can calibrate my exam readiness.`
-                )
-              }
-              style={{
-                marginTop: 16,
-                padding: "8px 16px",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#ffffff",
-                backgroundColor: colors.accent,
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
-            >
-              Start a diagnostic quiz
-            </button>
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[720px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          <div className="mb-4">
+            <h2 className="m-0 text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Exam readiness — {course_title}
+            </h2>
+            {exam && (
+              <p className="mt-1 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+                {exam.title}
+                {examDate ? ` · ${examDate}` : ""}
+              </p>
+            )}
           </div>
-        ) : (
-          <>
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                padding: 20,
-                display: "flex",
-                alignItems: "center",
-                gap: 20,
-                marginBottom: 16,
-                flexWrap: "wrap",
-              }}
-            >
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: "50%",
-                  border: `6px solid ${bandColor(readiness)}`,
-                  backgroundColor: bandBg(readiness),
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
+
+          {readiness === null ? (
+            <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-3xl">🧭</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                No signal yet
+              </p>
+              <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                Take a practice quiz to calibrate your readiness.
+              </p>
+              <button
+                onClick={() =>
+                  sendFollowUpMessage(
+                    `Generate a diagnostic practice quiz for "${course_title}" with lms_practice_quiz so we can calibrate my exam readiness.`
+                  )
+                }
+                className="mt-4 cursor-pointer rounded-lg border-none bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white dark:bg-violet-400"
               >
-                <span style={{ fontSize: 26, fontWeight: 800, color: bandColor(readiness) }}>
-                  {readiness}
-                </span>
+                Start a diagnostic quiz
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 flex flex-wrap items-center gap-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div
+                  className={`flex size-[88px] shrink-0 items-center justify-center rounded-full border-[6px] ${bandDial(readiness)}`}
+                >
+                  <span className={`text-[26px] font-extrabold ${bandText(readiness)}`}>
+                    {readiness}
+                  </span>
+                </div>
+                <div className="min-w-[220px] flex-1">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {componentChips.map((c) => (
+                      <span
+                        key={c.label}
+                        className={`rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs dark:border-zinc-800 dark:bg-zinc-950 ${
+                          c.value === null
+                            ? "text-zinc-400 dark:text-zinc-500"
+                            : "text-zinc-900 dark:text-zinc-100"
+                        }`}
+                      >
+                        {c.label}: {c.value === null ? "n/a" : c.value}
+                        {c.value !== null && c.weight > 0
+                          ? ` (${Math.round(c.weight * 100)}%)`
+                          : ""}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="m-0 text-xs text-zinc-400 dark:text-zinc-500">{formula}</p>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                  {componentChips.map((c) => (
-                    <span
-                      key={c.label}
-                      style={{
-                        fontSize: 12,
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        border: `1px solid ${colors.border}`,
-                        color: c.value === null ? colors.textMuted : colors.text,
-                        backgroundColor: colors.bg,
-                      }}
+
+              {topics.length === 0 ? (
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
+                  <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                    No per-topic history yet — practice quizzes and exam attempts will
+                    show up here.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {topics.map((t, i) => (
+                    <div
+                      key={`${t.label}-${i}`}
+                      className="rounded-[10px] border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                      {c.label}: {c.value === null ? "n/a" : c.value}
-                      {c.value !== null && c.weight > 0
-                        ? ` (${Math.round(c.weight * 100)}%)`
-                        : ""}
-                    </span>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <span className="overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap text-zinc-900 dark:text-zinc-100">
+                          {t.source === "exam" ? "📄 " : "✏️ "}
+                          {t.label}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-2.5">
+                          <span className={`text-[13px] font-bold ${bandText(t.mastery)}`}>
+                            {t.mastery}
+                          </span>
+                          <button
+                            onClick={() =>
+                              sendFollowUpMessage(
+                                `Generate a practice quiz on "${t.label}" with lms_practice_quiz — focus on my misses. (Course: ${course_title})`
+                              )
+                            }
+                            className="cursor-pointer rounded-md border border-violet-600 bg-transparent px-2.5 py-1 text-xs font-semibold text-violet-600 dark:border-violet-400 dark:text-violet-400"
+                          >
+                            Practice this
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mb-1.5 h-1.5 overflow-hidden rounded-[3px] bg-zinc-100 dark:bg-zinc-800">
+                        <div
+                          className={`h-full rounded-[3px] ${bandFill(t.mastery)}`}
+                          style={{ width: `${Math.max(0, Math.min(100, t.mastery))}%` }}
+                        />
+                      </div>
+                      <p className="m-0 text-xs text-zinc-400 dark:text-zinc-500">
+                        {t.evidence}
+                      </p>
+                    </div>
                   ))}
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: colors.textMuted }}>{formula}</p>
-              </div>
-            </div>
-
-            {topics.length === 0 ? (
-              <div
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: 24,
-                  textAlign: "center",
-                }}
-              >
-                <p style={{ margin: 0, color: colors.textMuted, fontSize: 13 }}>
-                  No per-topic history yet — practice quizzes and exam attempts will
-                  show up here.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {topics.map((t, i) => (
-                  <div
-                    key={`${t.label}-${i}`}
-                    style={{
-                      backgroundColor: colors.surface,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 10,
-                      padding: "12px 16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: colors.text,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {t.source === "exam" ? "📄 " : "✏️ "}
-                        {t.label}
-                      </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: bandColor(t.mastery) }}>
-                          {t.mastery}
-                        </span>
-                        <button
-                          onClick={() =>
-                            sendFollowUpMessage(
-                              `Generate a practice quiz on "${t.label}" with lms_practice_quiz — focus on my misses. (Course: ${course_title})`
-                            )
-                          }
-                          style={{
-                            padding: "4px 10px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: colors.accent,
-                            backgroundColor: "transparent",
-                            border: `1px solid ${colors.accent}`,
-                            borderRadius: 6,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Practice this
-                        </button>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: dark ? "#27272a" : "#f3f4f6",
-                        overflow: "hidden",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${Math.max(0, Math.min(100, t.mastery))}%`,
-                          height: "100%",
-                          borderRadius: 3,
-                          backgroundColor: bandColor(t.mastery),
-                        }}
-                      />
-                    </div>
-                    <p style={{ margin: 0, fontSize: 12, color: colors.textMuted }}>
-                      {t.evidence}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

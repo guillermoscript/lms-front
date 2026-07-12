@@ -68,48 +68,17 @@ export default function CourseCatalog() {
   // every card, so which card is pending/enrolled must be tracked separately.
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
   const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
+  const [enrollError, setEnrollError] = useState<string | null>(null);
   const dark = theme === "dark";
-
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    enrolled: dark ? "#4ade80" : "#16a34a",
-    enrolledBg: dark ? "#14532d" : "#dcfce7",
-    tagBg: dark ? "#27272a" : "#f4f4f5",
-    thumbBg: dark ? "#27272a" : "#f4f4f5",
-  };
 
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Browsing catalog…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Browsing catalog…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -119,6 +88,7 @@ export default function CourseCatalog() {
 
   const handleEnroll = (courseId: number, title: string) => {
     setPendingIds((prev) => new Set(prev).add(courseId));
+    setEnrollError(null);
     enrollInCourse(
       { course_id: courseId },
       {
@@ -128,6 +98,8 @@ export default function CourseCatalog() {
             `I just enrolled in ${title} — what should I start with?`
           );
         },
+        onError: () =>
+          setEnrollError(`Could not enroll in "${title}". Please try again.`),
         onSettled: () => {
           setPendingIds((prev) => {
             const next = new Set(prev);
@@ -141,214 +113,110 @@ export default function CourseCatalog() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 820,
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            marginBottom: 18,
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 22,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Course Catalog
-          </h1>
-          <span style={{ fontSize: 13, color: colors.textSecondary }}>
-            {total} published course{total === 1 ? "" : "s"}
-            {has_subscription ? " · subscription active" : ""}
-          </span>
-        </div>
-
-        {courses.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 40,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              No published courses found
-            </p>
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[820px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          <div className="mb-4.5 flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="m-0 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Course Catalog
+            </h1>
+            <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              {total} published course{total === 1 ? "" : "s"}
+              {has_subscription ? " · subscription active" : ""}
+            </span>
           </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
-              gap: 14,
-            }}
-          >
-            {courses.map((course) => {
-              const tags = normalizeTags(course.tags).slice(0, 3);
-              return (
-                <div
-                  key={course.id}
-                  style={{
-                    backgroundColor: colors.surface,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  {/* Thumbnail */}
-                  <div
-                    style={{
-                      height: 96,
-                      backgroundColor: colors.thumbBg,
-                      backgroundImage: course.thumbnail_url
-                        ? `url(${course.thumbnail_url})`
-                        : undefined,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 28,
-                    }}
-                  >
-                    {!course.thumbnail_url && "📖"}
-                  </div>
 
+          {enrollError && (
+            <div
+              className="mb-3 rounded-[10px] bg-red-50 px-[13px] py-[9px] text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400"
+              role="alert"
+            >
+              {enrollError}
+            </div>
+          )}
+
+          {courses.length === 0 ? (
+            <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-[32px]">📚</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                No published courses found
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3.5">
+              {courses.map((course) => {
+                const tags = normalizeTags(course.tags).slice(0, 3);
+                return (
                   <div
-                    style={{
-                      padding: 14,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                      flex: 1,
-                    }}
+                    key={course.id}
+                    className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 14.5,
-                          fontWeight: 650,
-                          color: colors.text,
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {course.title}
+                    {/* Thumbnail */}
+                    <div
+                      className="flex h-24 items-center justify-center bg-zinc-100 bg-cover bg-center text-[28px] dark:bg-zinc-800"
+                      style={
+                        course.thumbnail_url
+                          ? { backgroundImage: `url(${course.thumbnail_url})` }
+                          : undefined
+                      }
+                    >
+                      {!course.thumbnail_url && "📖"}
+                    </div>
+
+                    <div className="flex flex-1 flex-col gap-2 p-3.5">
+                      <div>
+                        <div className="text-[14.5px] leading-[1.3] font-semibold text-zinc-900 dark:text-zinc-100">
+                          {course.title}
+                        </div>
+                        {course.description && (
+                          <div className="mt-1 line-clamp-2 text-xs leading-[1.45] text-zinc-400 dark:text-zinc-500">
+                            {course.description}
+                          </div>
+                        )}
                       </div>
-                      {course.description && (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: colors.textMuted,
-                            marginTop: 4,
-                            lineHeight: 1.45,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {course.description}
+
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-[5px]">
+                          {tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-lg bg-zinc-100 px-2 py-0.5 text-[10.5px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                            >
+                              {tag}
+                            </span>
+                          ))}
                         </div>
                       )}
-                    </div>
 
-                    {tags.length > 0 && (
-                      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {tags.map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              padding: "2px 8px",
-                              borderRadius: 8,
-                              fontSize: 10.5,
-                              fontWeight: 600,
-                              backgroundColor: colors.tagBg,
-                              color: colors.textSecondary,
-                            }}
-                          >
-                            {tag}
+                      <div className="mt-auto flex items-center justify-between gap-2">
+                        <span className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
+                          {course.lesson_count} lesson
+                          {course.lesson_count === 1 ? "" : "s"}
+                        </span>
+                        {course.enrolled || enrolledIds.has(course.id) ? (
+                          <span className="rounded-full bg-green-100 px-[9px] py-[3px] text-[11px] font-bold text-green-600 dark:bg-green-900 dark:text-green-400">
+                            ✓ Enrolled
                           </span>
-                        ))}
+                        ) : course.covered_by_plan ? (
+                          <button
+                            onClick={() => handleEnroll(course.id, course.title)}
+                            disabled={pendingIds.has(course.id)}
+                            className="cursor-pointer rounded-full border-none bg-violet-600 px-2.5 py-[3px] text-[11px] font-bold text-white disabled:cursor-default disabled:opacity-60 dark:bg-violet-400"
+                          >
+                            {pendingIds.has(course.id) ? "Enrolling…" : "Enroll"}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                            Not in plan
+                          </span>
+                        )}
                       </div>
-                    )}
-
-                    <div
-                      style={{
-                        marginTop: "auto",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 8,
-                      }}
-                    >
-                      <span style={{ fontSize: 11.5, color: colors.textMuted }}>
-                        {course.lesson_count} lesson
-                        {course.lesson_count === 1 ? "" : "s"}
-                      </span>
-                      {course.enrolled || enrolledIds.has(course.id) ? (
-                        <span
-                          style={{
-                            padding: "3px 9px",
-                            borderRadius: 999,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            backgroundColor: colors.enrolledBg,
-                            color: colors.enrolled,
-                          }}
-                        >
-                          ✓ Enrolled
-                        </span>
-                      ) : course.covered_by_plan ? (
-                        <button
-                          onClick={() => handleEnroll(course.id, course.title)}
-                          disabled={pendingIds.has(course.id)}
-                          style={{
-                            padding: "3px 10px",
-                            borderRadius: 999,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            border: "none",
-                            backgroundColor: colors.accent,
-                            color: "#ffffff",
-                            cursor: pendingIds.has(course.id)
-                              ? "default"
-                              : "pointer",
-                            opacity: pendingIds.has(course.id) ? 0.6 : 1,
-                          }}
-                        >
-                          {pendingIds.has(course.id) ? "Enrolling…" : "Enroll"}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: 11, color: colors.textMuted }}>
-                          Not in plan
-                        </span>
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

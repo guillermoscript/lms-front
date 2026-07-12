@@ -6,6 +6,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
+import { Markdown } from "../shared/markdown";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -61,48 +62,15 @@ export default function MyExamResults() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   const dark = theme === "dark";
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    pass: dark ? "#4ade80" : "#16a34a",
-    passBg: dark ? "#14532d" : "#dcfce7",
-    fail: dark ? "#f87171" : "#dc2626",
-    failBg: dark ? "#450a0a" : "#fee2e2",
-    pendingBg: dark ? "#3f3f46" : "#f4f4f5",
-    pendingText: dark ? "#a1a1aa" : "#52525b",
-    feedbackBg: dark ? "#141414" : "#f8f7ff",
-  };
 
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading your exam results…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading your exam results…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -121,181 +89,102 @@ export default function MyExamResults() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            marginBottom: 18,
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 22,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            My Exam Results
-          </h1>
-          <span style={{ fontSize: 13, color: colors.textSecondary }}>
-            {total} submission{total === 1 ? "" : "s"}
-            {average_score !== null ? ` · ${average_score} avg score` : ""}
-          </span>
-        </div>
-
-        {results.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 40,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📝</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              No exam submissions yet
-            </p>
-            <p style={{ margin: "6px 0 0", color: colors.textMuted, fontSize: 13 }}>
-              Your scores and feedback will appear here after you take an exam.
-            </p>
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[760px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          <div className="mb-[18px] flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="m-0 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              My Exam Results
+            </h1>
+            <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              {total} submission{total === 1 ? "" : "s"}
+              {average_score !== null
+                ? ` · ${Math.round(average_score)} avg score`
+                : ""}
+            </span>
           </div>
-        ) : (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
-            {results.map((r, idx) => {
-              const graded = r.score !== null;
-              const passed = graded && (r.score ?? 0) >= PASS_THRESHOLD;
-              const isOpen = expanded.has(r.submission_id);
-              return (
-                <div
-                  key={r.submission_id}
-                  style={{
-                    borderBottom:
-                      idx === results.length - 1
-                        ? "none"
-                        : `1px solid ${colors.border}`,
-                  }}
-                >
+
+          {results.length === 0 ? (
+            <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-3xl">📝</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                No exam submissions yet
+              </p>
+              <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                Your scores and feedback will appear here after you take an exam.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              {results.map((r, idx) => {
+                const graded = r.score !== null;
+                const passed = graded && (r.score ?? 0) >= PASS_THRESHOLD;
+                const isOpen = expanded.has(r.submission_id);
+                return (
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "13px 16px",
-                      cursor: r.feedback ? "pointer" : "default",
-                    }}
-                    onClick={() => r.feedback && toggle(r.submission_id)}
+                    key={r.submission_id}
+                    className={
+                      idx === results.length - 1
+                        ? ""
+                        : "border-b border-zinc-200 dark:border-zinc-800"
+                    }
                   >
-                    {/* Score badge */}
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        minWidth: 46,
-                        textAlign: "center",
-                        padding: "5px 8px",
-                        borderRadius: 10,
-                        fontSize: 14,
-                        fontWeight: 750,
-                        fontVariantNumeric: "tabular-nums",
-                        backgroundColor: graded
-                          ? passed
-                            ? colors.passBg
-                            : colors.failBg
-                          : colors.pendingBg,
-                        color: graded
-                          ? passed
-                            ? colors.pass
-                            : colors.fail
-                          : colors.pendingText,
+                    <div
+                      role={r.feedback ? "button" : undefined}
+                      tabIndex={r.feedback ? 0 : undefined}
+                      aria-expanded={r.feedback ? isOpen : undefined}
+                      className={`flex items-center gap-3 px-4 py-[13px] ${
+                        r.feedback ? "cursor-pointer" : "cursor-default"
+                      }`}
+                      onClick={() => r.feedback && toggle(r.submission_id)}
+                      onKeyDown={(e) => {
+                        if (r.feedback && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          toggle(r.submission_id);
+                        }
                       }}
                     >
-                      {graded ? Math.round(r.score ?? 0) : "—"}
-                    </span>
+                      {/* Score badge */}
+                      <span
+                        className={`min-w-[46px] shrink-0 rounded-[10px] px-2 py-[5px] text-center text-sm font-bold tabular-nums ${
+                          graded
+                            ? passed
+                              ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
+                              : "bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400"
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+                        }`}
+                      >
+                        {graded ? Math.round(r.score ?? 0) : "—"}
+                      </span>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: colors.text,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {r.exam_title}
+                      <div className="min-w-0 flex-1">
+                        <div className="overflow-hidden text-sm font-semibold text-ellipsis whitespace-nowrap text-zinc-900 dark:text-zinc-100">
+                          {r.exam_title}
+                        </div>
+                        <div className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+                          {r.course_title ? `${r.course_title} · ` : ""}
+                          {formatDate(r.submitted_at)}
+                          {r.review_status ? ` · ${r.review_status}` : ""}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: colors.textMuted,
-                          marginTop: 2,
-                        }}
-                      >
-                        {r.course_title ? `${r.course_title} · ` : ""}
-                        {formatDate(r.submitted_at)}
-                        {r.review_status ? ` · ${r.review_status}` : ""}
-                      </div>
+
+                      {r.feedback && (
+                        <span className="shrink-0 text-xs font-semibold text-violet-600 dark:text-violet-400">
+                          {isOpen ? "Hide feedback ▲" : "Feedback ▼"}
+                        </span>
+                      )}
                     </div>
 
-                    {r.feedback && (
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          fontSize: 12,
-                          color: colors.accent,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {isOpen ? "Hide feedback ▲" : "Feedback ▼"}
-                      </span>
+                    {isOpen && r.feedback && (
+                      <div className="mr-4 mb-[13px] ml-[74px] rounded-[10px] border border-zinc-200 bg-violet-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-zinc-500 dark:border-zinc-800 dark:bg-violet-950 dark:text-zinc-400">
+                        <Markdown content={r.feedback} dark={dark} fontSize={13} />
+                      </div>
                     )}
                   </div>
-
-                  {isOpen && r.feedback && (
-                    <div
-                      style={{
-                        margin: "0 16px 13px 74px",
-                        padding: "10px 14px",
-                        borderRadius: 10,
-                        backgroundColor: colors.feedbackBg,
-                        border: `1px solid ${colors.border}`,
-                        fontSize: 13,
-                        lineHeight: 1.6,
-                        color: colors.textSecondary,
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {r.feedback}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

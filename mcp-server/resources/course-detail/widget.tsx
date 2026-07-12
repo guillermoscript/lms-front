@@ -56,20 +56,16 @@ type Props = z.infer<typeof propsSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusPill(
-  status: string,
-  theme: "light" | "dark"
-): { bg: string; text: string } {
-  const dark = theme === "dark";
+function statusPill(status: string): string {
   switch (status.toLowerCase()) {
     case "published":
-      return { bg: dark ? "#14532d" : "#dcfce7", text: dark ? "#86efac" : "#166534" };
+      return "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400";
     case "draft":
-      return { bg: dark ? "#3f3f46" : "#f4f4f5", text: dark ? "#a1a1aa" : "#52525b" };
+      return "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
     case "archived":
-      return { bg: dark ? "#1e1b4b" : "#ede9fe", text: dark ? "#a5b4fc" : "#4338ca" };
+      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
     default:
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
   }
 }
 
@@ -116,52 +112,20 @@ export default function CourseDetail() {
 
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    sectionBg: dark ? "#141414" : "#f9fafb",
-    statsBg: dark ? "#1c1c1c" : "#f0fdf4",
-    statsBorder: dark ? "#166534" : "#bbf7d0",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading course…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading course…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
   }
 
   const { course, lessons, exams } = props;
-  const pill = statusPill(course.status, theme);
   const stats = parseCourseStats(statsData?.structuredContent);
 
   const handleLoadStats = () => {
@@ -171,328 +135,171 @@ export default function CourseDetail() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-        }}
-      >
-        {/* Course header */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: 12,
-              marginBottom: 8,
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 700,
-                color: colors.text,
-                letterSpacing: "-0.01em",
-                lineHeight: 1.3,
-              }}
-            >
-              {course.title}
-            </h2>
-            <span
-              style={{
-                padding: "3px 10px",
-                borderRadius: 10,
-                fontSize: 12,
-                fontWeight: 600,
-                backgroundColor: pill.bg,
-                color: pill.text,
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              {course.status}
-            </span>
-          </div>
+      <div className={dark ? "dark" : ""}>
+        <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Course header */}
+          <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <h2 className="m-0 text-xl leading-[1.3] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                {course.title}
+              </h2>
+              <span
+                className={`shrink-0 rounded-[10px] px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${statusPill(
+                  course.status
+                )}`}
+              >
+                {course.status}
+              </span>
+            </div>
 
-          {course.description && (
-            <p
-              style={{
-                margin: "0 0 12px",
-                fontSize: 14,
-                color: colors.textSecondary,
-                lineHeight: 1.6,
-              }}
-            >
-              {course.description}
-            </p>
-          )}
+            {course.description && (
+              <p className="mt-0 mb-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {course.description}
+              </p>
+            )}
 
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
-            <span style={{ fontSize: 13, color: colors.textMuted }}>
-              👥 {course.enrollment_count} enrolled
-            </span>
-            <span style={{ fontSize: 13, color: colors.textMuted }}>
-              📅 Created {formatDate(course.created_at)}
-            </span>
-            {course.require_sequential_completion && (
-              <span style={{ fontSize: 13, color: colors.textMuted }}>🔒 Sequential</span>
+            <div className="mb-3.5 flex flex-wrap gap-4">
+              <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
+                👥 {course.enrollment_count} enrolled
+              </span>
+              <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
+                📅 Created {formatDate(course.created_at)}
+              </span>
+              {course.require_sequential_completion && (
+                <span className="text-[13px] text-zinc-400 dark:text-zinc-500">🔒 Sequential</span>
+              )}
+            </div>
+
+            {/* Load stats button */}
+            <button
+              onClick={handleLoadStats}
+              disabled={statsLoading}
+              className={`cursor-pointer rounded-lg border border-violet-600 px-4 py-[7px] text-[13px] font-medium text-violet-600 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-70 dark:border-violet-400 dark:text-violet-400 ${
+                statsVisible
+                  ? "bg-violet-50 dark:bg-violet-950"
+                  : "bg-transparent"
+              }`}
+            >
+              {statsLoading ? "Loading stats…" : "Load stats"}
+            </button>
+
+            {/* Stats row */}
+            {statsVisible && stats && (
+              <div className="mt-3.5 grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3 rounded-[10px] border border-green-200 bg-green-50 p-3.5 dark:border-green-900 dark:bg-green-950">
+                {[
+                  { label: "Active enrollments", value: stats.active_enrollments },
+                  { label: "Published lessons", value: stats.published_lessons },
+                  {
+                    label: "Completion rate",
+                    value:
+                      stats.lesson_completion_rate != null
+                        ? `${Math.round(stats.lesson_completion_rate)}%`
+                        : undefined,
+                  },
+                  { label: "Exams", value: stats.exam_count },
+                  { label: "Submissions", value: stats.submission_count },
+                  {
+                    label: "Avg score",
+                    value:
+                      stats.average_score != null
+                        ? `${Math.round(stats.average_score)}%`
+                        : undefined,
+                  },
+                ]
+                  .filter((s) => s.value !== undefined)
+                  .map(({ label, value }) => (
+                    <div key={label} className="text-center">
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {value}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {label}
+                      </div>
+                    </div>
+                  ))}
+              </div>
             )}
           </div>
 
-          {/* Load stats button */}
-          <button
-            onClick={handleLoadStats}
-            disabled={statsLoading}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 8,
-              border: `1px solid ${colors.accent}`,
-              backgroundColor: statsVisible ? colors.accentBg : "transparent",
-              color: colors.accent,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: statsLoading ? "not-allowed" : "pointer",
-              opacity: statsLoading ? 0.7 : 1,
-              transition: "all 0.15s",
-            }}
-          >
-            {statsLoading ? "Loading stats…" : "Load stats"}
-          </button>
+          {/* Lessons */}
+          <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-[18px] dark:border-zinc-800 dark:bg-zinc-900">
+            <h3 className="mt-0 mb-3.5 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+              Lessons ({lessons.length})
+            </h3>
 
-          {/* Stats row */}
-          {statsVisible && stats && (
-            <div
-              style={{
-                marginTop: 14,
-                padding: 14,
-                borderRadius: 10,
-                backgroundColor: colors.statsBg,
-                border: `1px solid ${colors.statsBorder}`,
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                gap: 12,
-              }}
-            >
-              {[
-                { label: "Active enrollments", value: stats.active_enrollments },
-                { label: "Published lessons", value: stats.published_lessons },
-                {
-                  label: "Completion rate",
-                  value:
-                    stats.lesson_completion_rate != null
-                      ? `${Math.round(stats.lesson_completion_rate)}%`
-                      : undefined,
-                },
-                { label: "Exams", value: stats.exam_count },
-                { label: "Submissions", value: stats.submission_count },
-                {
-                  label: "Avg score",
-                  value:
-                    stats.average_score != null
-                      ? `${Math.round(stats.average_score)}%`
-                      : undefined,
-                },
-              ]
-                .filter((s) => s.value !== undefined)
-                .map(({ label, value }) => (
-                  <div key={label} style={{ textAlign: "center" }}>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: dark ? "#86efac" : "#15803d",
-                      }}
-                    >
-                      {value}
-                    </div>
-                    <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                      {label}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-
-        {/* Lessons */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 18,
-            marginBottom: 16,
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 14px",
-              fontSize: 15,
-              fontWeight: 600,
-              color: colors.text,
-            }}
-          >
-            Lessons ({lessons.length})
-          </h3>
-
-          {lessons.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>
-              No lessons yet.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {lessons
-                .slice()
-                .sort((a, b) => a.sequence - b.sequence)
-                .map((lesson) => {
-                  const lp = statusPill(lesson.status, theme);
-                  return (
+            {lessons.length === 0 ? (
+              <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                No lessons yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {lessons
+                  .slice()
+                  .sort((a, b) => a.sequence - b.sequence)
+                  .map((lesson) => (
                     <div
                       key={lesson.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "8px 10px",
-                        borderRadius: 8,
-                        backgroundColor: colors.sectionBg,
-                      }}
+                      className="flex items-center gap-2.5 rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800"
                     >
-                      <span
-                        style={{
-                          minWidth: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          backgroundColor: colors.accentBg,
-                          color: colors.accent,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
+                      <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
                         {lesson.sequence}
                       </span>
-                      <span
-                        style={{
-                          flex: 1,
-                          fontSize: 13,
-                          color: colors.text,
-                          fontWeight: 500,
-                        }}
-                      >
+                      <span className="flex-1 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                         {lesson.title}
                       </span>
                       <span
-                        style={{
-                          padding: "2px 7px",
-                          borderRadius: 8,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          backgroundColor: lp.bg,
-                          color: lp.text,
-                          flexShrink: 0,
-                        }}
+                        className={`shrink-0 rounded-lg px-[7px] py-0.5 text-[11px] font-semibold ${statusPill(
+                          lesson.status
+                        )}`}
                       >
                         {lesson.status}
                       </span>
                     </div>
-                  );
-                })}
-            </div>
-          )}
-        </div>
+                  ))}
+              </div>
+            )}
+          </div>
 
-        {/* Exams */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: 18,
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 14px",
-              fontSize: 15,
-              fontWeight: 600,
-              color: colors.text,
-            }}
-          >
-            Exams ({exams.length})
-          </h3>
+          {/* Exams */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-[18px] dark:border-zinc-800 dark:bg-zinc-900">
+            <h3 className="mt-0 mb-3.5 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+              Exams ({exams.length})
+            </h3>
 
-          {exams.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>
-              No exams yet.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {exams.map((exam) => {
-                const ep = statusPill(exam.status, theme);
-                return (
+            {exams.length === 0 ? (
+              <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                No exams yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {exams.map((exam) => (
                   <div
                     key={exam.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      backgroundColor: colors.sectionBg,
-                      flexWrap: "wrap",
-                    }}
+                    className="flex flex-wrap items-center gap-2.5 rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800"
                   >
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: 13,
-                        color: colors.text,
-                        fontWeight: 500,
-                        minWidth: 100,
-                      }}
-                    >
+                    <span className="min-w-[100px] flex-1 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                       {exam.title}
                     </span>
-                    <span style={{ fontSize: 12, color: colors.textMuted }}>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
                       ⏱ {exam.duration} min
                     </span>
                     {exam.date && (
-                      <span style={{ fontSize: 12, color: colors.textMuted }}>
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500">
                         📅 {formatDate(exam.date)}
                       </span>
                     )}
                     <span
-                      style={{
-                        padding: "2px 7px",
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        backgroundColor: ep.bg,
-                        color: ep.text,
-                      }}
+                      className={`rounded-lg px-[7px] py-0.5 text-[11px] font-semibold ${statusPill(
+                        exam.status
+                      )}`}
                     >
                       {exam.status}
                     </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </McpUseProvider>

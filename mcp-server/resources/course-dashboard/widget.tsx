@@ -53,32 +53,16 @@ function normalizeTags(tags: string[] | string | null): string[] {
   return tags.split(",").map((t) => t.trim()).filter(Boolean);
 }
 
-function statusColor(
-  status: string,
-  theme: "light" | "dark"
-): { bg: string; text: string } {
-  const dark = theme === "dark";
+function statusColor(status: string): string {
   switch (status.toLowerCase()) {
     case "published":
-      return {
-        bg: dark ? "#14532d" : "#dcfce7",
-        text: dark ? "#86efac" : "#166534",
-      };
+      return "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400";
     case "draft":
-      return {
-        bg: dark ? "#3f3f46" : "#f4f4f5",
-        text: dark ? "#a1a1aa" : "#52525b",
-      };
+      return "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
     case "archived":
-      return {
-        bg: dark ? "#1e1b4b" : "#ede9fe",
-        text: dark ? "#a5b4fc" : "#4338ca",
-      };
+      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
     default:
-      return {
-        bg: dark ? "#422006" : "#fef3c7",
-        text: dark ? "#fcd34d" : "#92400e",
-      };
+      return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
   }
 }
 
@@ -91,45 +75,14 @@ export default function CourseDashboard() {
 
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    hover: dark ? "#27272a" : "#f9fafb",
-    tagBg: dark ? "#27272a" : "#f3f4f6",
-    tagText: dark ? "#d4d4d8" : "#374151",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading courses…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading courses…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -146,228 +99,110 @@ export default function CourseDashboard() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          minHeight: 0,
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 20,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 600,
-                color: colors.text,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {labelForFilter} Courses
-            </h2>
-            <p
-              style={{
-                margin: "2px 0 0",
-                fontSize: 13,
-                color: colors.textSecondary,
-              }}
-            >
-              {props.total} course{props.total !== 1 ? "s" : ""} total
-            </p>
+      <div className={dark ? "dark" : ""}>
+        <div className="min-h-0 bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                {labelForFilter} Courses
+              </h2>
+              <p className="mt-0.5 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+                {props.total} course{props.total !== 1 ? "s" : ""} total
+              </p>
+            </div>
+
+            {/* Status filter tabs */}
+            <div className="flex flex-wrap gap-1.5">
+              {allStatuses.map((s) => {
+                const active = s === activeFilter;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setActiveFilter(s)}
+                    className={`cursor-pointer rounded-full border px-3 py-[5px] text-xs transition-all duration-150 ${
+                      active
+                        ? "border-violet-600 bg-violet-50 font-semibold text-violet-600 dark:border-violet-400 dark:bg-violet-950 dark:text-violet-400"
+                        : "border-zinc-200 bg-transparent font-normal text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Status filter tabs */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {allStatuses.map((s) => {
-              const active = s === activeFilter;
+          {/* Empty state */}
+          {filtered.length === 0 && (
+            <div className="p-12 text-center text-zinc-400 dark:text-zinc-500">
+              <div className="mb-3 text-4xl">📚</div>
+              <p className="m-0 text-sm">No courses match this filter</p>
+            </div>
+          )}
+
+          {/* Card grid */}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+            {filtered.map((course) => {
+              const tags = normalizeTags(course.tags);
               return (
-                <button
-                  key={s}
-                  onClick={() => setActiveFilter(s)}
-                  style={{
-                    padding: "5px 12px",
-                    borderRadius: 20,
-                    border: active
-                      ? `1px solid ${colors.accent}`
-                      : `1px solid ${colors.border}`,
-                    backgroundColor: active ? colors.accentBg : "transparent",
-                    color: active ? colors.accent : colors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: active ? 600 : 400,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
+                <div
+                  key={course.id}
+                  className="flex flex-col gap-2.5 rounded-xl border border-zinc-200 bg-white p-[18px] transition-shadow duration-150 dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
+                  {/* Title + status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="m-0 line-clamp-2 flex-1 text-[15px] leading-[1.3] font-semibold text-zinc-900 dark:text-zinc-100">
+                      {course.title}
+                    </h3>
+                    <span
+                      className={`shrink-0 rounded-[10px] px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${statusColor(
+                        course.status
+                      )}`}
+                    >
+                      {course.status}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  {course.description && (
+                    <p className="m-0 line-clamp-2 text-[13px] leading-normal text-zinc-500 dark:text-zinc-400">
+                      {course.description}
+                    </p>
+                  )}
+
+                  {/* Tags */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-md bg-zinc-100 px-[7px] py-0.5 text-[11px] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {tags.length > 4 && (
+                        <span className="rounded-md bg-zinc-100 px-[7px] py-0.5 text-[11px] text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+                          +{tags.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="mt-auto flex gap-3.5 border-t border-zinc-200 pt-2 dark:border-zinc-800">
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                      📖 {course.lesson_count} lesson{course.lesson_count !== 1 ? "s" : ""}
+                    </span>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                      👥 {course.enrollment_count} enrolled
+                    </span>
+                  </div>
+                </div>
               );
             })}
           </div>
-        </div>
-
-        {/* Empty state */}
-        {filtered.length === 0 && (
-          <div
-            style={{
-              padding: 48,
-              textAlign: "center",
-              color: colors.textMuted,
-            }}
-          >
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📚</div>
-            <p style={{ margin: 0, fontSize: 14 }}>No courses match this filter</p>
-          </div>
-        )}
-
-        {/* Card grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {filtered.map((course) => {
-            const pill = statusColor(course.status, theme);
-            const tags = normalizeTags(course.tags);
-            return (
-              <div
-                key={course.id}
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: 18,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  transition: "box-shadow 0.15s",
-                }}
-              >
-                {/* Title + status */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: 8,
-                  }}
-                >
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      color: colors.text,
-                      lineHeight: 1.3,
-                      flex: 1,
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    {course.title}
-                  </h3>
-                  <span
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 10,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      backgroundColor: pill.bg,
-                      color: pill.text,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {course.status}
-                  </span>
-                </div>
-
-                {/* Description */}
-                {course.description && (
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13,
-                      color: colors.textSecondary,
-                      lineHeight: 1.5,
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    {course.description}
-                  </p>
-                )}
-
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {tags.slice(0, 4).map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: "2px 7px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          backgroundColor: colors.tagBg,
-                          color: colors.tagText,
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {tags.length > 4 && (
-                      <span
-                        style={{
-                          padding: "2px 7px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          backgroundColor: colors.tagBg,
-                          color: colors.textMuted,
-                        }}
-                      >
-                        +{tags.length - 4}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Stats */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 14,
-                    paddingTop: 8,
-                    borderTop: `1px solid ${colors.border}`,
-                    marginTop: "auto",
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: colors.textMuted }}>
-                    📖 {course.lesson_count} lesson{course.lesson_count !== 1 ? "s" : ""}
-                  </span>
-                  <span style={{ fontSize: 12, color: colors.textMuted }}>
-                    👥 {course.enrollment_count} enrolled
-                  </span>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </McpUseProvider>

@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
+import { Markdown } from "../shared/markdown";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -60,54 +61,15 @@ export default function LessonViewer() {
   const [askedTutor, setAskedTutor] = useState(false);
 
   const dark = theme === "dark";
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    codeBg: dark ? "#141414" : "#f8f7ff",
-    codeBorder: dark ? "#2a2a2a" : "#ede9fe",
-    contentText: dark ? "#d4d4d8" : "#1f2937",
-    videoBg: dark ? "#18181b" : "#f0f9ff",
-    videoBorder: dark ? "#1e3a5f" : "#bae6fd",
-    videoText: dark ? "#38bdf8" : "#0369a1",
-    done: dark ? "#4ade80" : "#16a34a",
-    doneBg: dark ? "#14532d" : "#dcfce7",
-    lockBg: dark ? "#422006" : "#fef3c7",
-    lockText: dark ? "#fcd34d" : "#92400e",
-    errBg: dark ? "#450a0a" : "#fef2f2",
-    errText: dark ? "#fca5a5" : "#b91c1c",
-  };
 
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Opening lesson…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Opening lesson…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -125,290 +87,125 @@ export default function LessonViewer() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: 18 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                padding: "2px 8px",
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 700,
-                backgroundColor: colors.accentBg,
-                color: colors.accent,
-              }}
-            >
-              Lesson {lesson.sequence}
-            </span>
-            <span style={{ fontSize: 12, color: colors.textMuted }}>
-              {course_title}
-            </span>
-            {completed && (
-              <span
-                style={{
-                  padding: "2px 8px",
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  backgroundColor: colors.doneBg,
-                  color: colors.done,
-                }}
-              >
-                ✓ Completed
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-[760px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-[18px]">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+              <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                Lesson {lesson.sequence}
               </span>
-            )}
-          </div>
-
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 24,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.25,
-            }}
-          >
-            {lesson.title}
-          </h1>
-
-          {lesson.description && (
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 15,
-                color: colors.textSecondary,
-                lineHeight: 1.6,
-              }}
-            >
-              {lesson.description}
-            </p>
-          )}
-        </div>
-
-        {locked ? (
-          <div
-            style={{
-              backgroundColor: colors.lockBg,
-              borderRadius: 12,
-              padding: 28,
-              textAlign: "center",
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 8 }}>🔒</div>
-            <p
-              style={{
-                margin: 0,
-                fontWeight: 650,
-                fontSize: 14,
-                color: colors.lockText,
-              }}
-            >
-              This lesson is locked
-            </p>
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: colors.lockText }}>
-              Complete{locked_by ? ` "${locked_by.title}"` : " the previous lesson"}{" "}
-              first — this course requires sequential completion.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Video link */}
-            {lesson.video_url && (
-              <div
-                style={{
-                  marginBottom: 20,
-                  padding: "12px 16px",
-                  borderRadius: 10,
-                  backgroundColor: colors.videoBg,
-                  border: `1px solid ${colors.videoBorder}`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <span style={{ fontSize: 20 }}>▶️</span>
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: colors.textMuted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      marginBottom: 2,
-                    }}
-                  >
-                    Video lesson
-                  </div>
-                  <a
-                    href={lesson.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: 13,
-                      color: colors.videoText,
-                      fontWeight: 500,
-                      textDecoration: "none",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {lesson.video_url}
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* Content */}
-            {lesson.content ? (
-              <div
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: 20,
-                  marginBottom: 20,
-                }}
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: 16,
-                    borderRadius: 8,
-                    backgroundColor: colors.codeBg,
-                    border: `1px solid ${colors.codeBorder}`,
-                    fontSize: 13.5,
-                    lineHeight: 1.7,
-                    color: colors.contentText,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontFamily: '"Noto Sans", "Georgia", ui-serif, serif',
-                    overflowX: "auto",
-                  }}
-                >
-                  {lesson.content}
-                </pre>
-              </div>
-            ) : (
-              <div
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: 12,
-                  padding: 32,
-                  textAlign: "center",
-                  color: colors.textMuted,
-                  marginBottom: 20,
-                  fontSize: 13,
-                }}
-              >
-                No written content for this lesson
-                {lesson.video_url ? " — watch the video above." : "."}
-              </div>
-            )}
-
-            {/* Error from mark-complete */}
-            {isError && (
-              <div
-                style={{
-                  backgroundColor: colors.errBg,
-                  color: colors.errText,
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  marginBottom: 14,
-                }}
-              >
-                {error instanceof Error
-                  ? error.message
-                  : "Could not mark the lesson complete."}
-              </div>
-            )}
-
-            {/* Mark complete + tutor entry */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                onClick={() => {
-                  if (askedTutor) return;
-                  setAskedTutor(true);
-                  sendFollowUpMessage(
-                    `I'm reading lesson ${lesson.sequence} "${lesson.title}" of "${course_title}" (lesson_id ${lesson.id}) and I don't fully understand it. Tutor me on it Socratically: use the socratic-tutor approach, don't just give answers, and quiz me at the end with lms_practice_quiz.`
-                  );
-                }}
-                disabled={askedTutor}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: 10,
-                  fontSize: 13.5,
-                  fontWeight: 650,
-                  cursor: askedTutor ? "default" : "pointer",
-                  backgroundColor: "transparent",
-                  color: askedTutor ? colors.done : colors.accent,
-                  border: `1.5px solid ${askedTutor ? colors.done : colors.accent}`,
-                }}
-              >
-                {askedTutor ? "Asked the tutor ✓" : "I don't understand this 🙋"}
-              </button>
-              {completed ? (
-                <span
-                  style={{
-                    padding: "9px 18px",
-                    borderRadius: 10,
-                    fontSize: 13.5,
-                    fontWeight: 650,
-                    backgroundColor: colors.doneBg,
-                    color: colors.done,
-                  }}
-                >
-                  ✓ Lesson completed
+              <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                {course_title}
+              </span>
+              {completed && (
+                <span className="rounded-lg bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-600 dark:bg-green-900 dark:text-green-400">
+                  ✓ Completed
                 </span>
-              ) : (
-                <button
-                  onClick={handleComplete}
-                  disabled={isCompleting}
-                  style={{
-                    padding: "9px 18px",
-                    borderRadius: 10,
-                    fontSize: 13.5,
-                    fontWeight: 650,
-                    border: "none",
-                    cursor: isCompleting ? "wait" : "pointer",
-                    backgroundColor: colors.accent,
-                    color: "#ffffff",
-                    opacity: isCompleting ? 0.7 : 1,
-                  }}
-                >
-                  {isCompleting ? "Marking…" : "Mark lesson complete"}
-                </button>
               )}
             </div>
-          </>
-        )}
+
+            <h1 className="m-0 text-2xl leading-tight font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {lesson.title}
+            </h1>
+
+            {lesson.description && (
+              <p className="mt-2.5 mb-0 text-[15px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {lesson.description}
+              </p>
+            )}
+          </div>
+
+          {locked ? (
+            <div className="mb-5 rounded-xl bg-amber-100 p-7 text-center dark:bg-amber-950">
+              <div className="mb-2 text-[28px]">🔒</div>
+              <p className="m-0 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                This lesson is locked
+              </p>
+              <p className="mt-1.5 mb-0 text-[13px] text-amber-800 dark:text-amber-300">
+                Complete{locked_by ? ` "${locked_by.title}"` : " the previous lesson"}{" "}
+                first — this course requires sequential completion.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Video link */}
+              {lesson.video_url && (
+                <div className="mb-5 flex items-center gap-2.5 rounded-[10px] border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900 dark:bg-sky-950">
+                  <span className="text-xl">▶️</span>
+                  <div className="min-w-0">
+                    <div className="mb-0.5 text-xs font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+                      Video lesson
+                    </div>
+                    <a
+                      href={lesson.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[13px] font-medium break-all text-sky-700 no-underline dark:text-sky-400"
+                    >
+                      {lesson.video_url}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Content */}
+              {lesson.content ? (
+                <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                  <Markdown content={lesson.content} dark={dark} fontSize={14} />
+                </div>
+              ) : (
+                <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-8 text-center text-[13px] text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500">
+                  No written content for this lesson
+                  {lesson.video_url ? " — watch the video above." : "."}
+                </div>
+              )}
+
+              {/* Error from mark-complete */}
+              {isError && (
+                <div className="mb-3.5 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400">
+                  {error instanceof Error
+                    ? error.message
+                    : "Could not mark the lesson complete."}
+                </div>
+              )}
+
+              {/* Mark complete + tutor entry */}
+              <div className="flex flex-wrap justify-end gap-2.5">
+                <button
+                  onClick={() => {
+                    if (askedTutor) return;
+                    setAskedTutor(true);
+                    sendFollowUpMessage(
+                      `I'm reading lesson ${lesson.sequence} "${lesson.title}" of "${course_title}" (lesson_id ${lesson.id}) and I don't fully understand it. Tutor me on it Socratically: use the socratic-tutor approach, don't just give answers, and quiz me at the end with lms_practice_quiz.`
+                    );
+                  }}
+                  disabled={askedTutor}
+                  className={`cursor-pointer rounded-[10px] border-[1.5px] bg-transparent px-[18px] py-[9px] text-[13.5px] font-semibold disabled:cursor-default ${
+                    askedTutor
+                      ? "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400"
+                      : "border-violet-600 text-violet-600 dark:border-violet-400 dark:text-violet-400"
+                  }`}
+                >
+                  {askedTutor ? "Asked the tutor ✓" : "I don't understand this 🙋"}
+                </button>
+                {completed ? (
+                  <span className="rounded-[10px] bg-green-100 px-[18px] py-[9px] text-[13.5px] font-semibold text-green-600 dark:bg-green-900 dark:text-green-400">
+                    ✓ Lesson completed
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleComplete}
+                    disabled={isCompleting}
+                    className="cursor-pointer rounded-[10px] border-none bg-violet-600 px-[18px] py-[9px] text-[13.5px] font-semibold text-white disabled:cursor-wait disabled:opacity-70 dark:bg-violet-400"
+                  >
+                    {isCompleting ? "Marking…" : "Mark lesson complete"}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

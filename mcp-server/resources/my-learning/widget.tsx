@@ -52,45 +52,14 @@ export default function MyLearning() {
   const theme = useWidgetTheme();
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    track: dark ? "#27272a" : "#f4f4f5",
-    done: dark ? "#4ade80" : "#16a34a",
-    doneBg: dark ? "#14532d" : "#dcfce7",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading your courses…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading your courses…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -100,191 +69,94 @@ export default function MyLearning() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            marginBottom: 18,
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 22,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            My Learning
-          </h1>
-          <span style={{ fontSize: 13, color: colors.textSecondary }}>
-            {total} course{total === 1 ? "" : "s"} · {average_progress}% average
-            progress
-          </span>
-        </div>
-
-        {courses.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              padding: 40,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🎓</div>
-            <p style={{ margin: 0, color: colors.text, fontWeight: 600, fontSize: 15 }}>
-              No enrolled courses yet
-            </p>
-            <p style={{ margin: "6px 0 0", color: colors.textMuted, fontSize: 13 }}>
-              Browse the catalog to find your first course.
-            </p>
+      <div className={dark ? "dark" : ""}>
+        <div className="mx-auto max-w-3xl bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="m-0 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              My Learning
+            </h1>
+            <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              {total} course{total === 1 ? "" : "s"} · {average_progress}%
+              average progress
+            </span>
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {courses.map((course) => {
-              const done = course.progress >= 100;
-              return (
-                <div
-                  key={course.id}
-                  style={{
-                    backgroundColor: colors.surface,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: 12,
-                    padding: 16,
-                  }}
-                >
+
+          {courses.length === 0 ? (
+            <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-2 text-3xl">🎓</div>
+              <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                No enrolled courses yet
+              </p>
+              <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                Browse the catalog to find your first course.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {courses.map((course) => {
+                const done = course.progress >= 100;
+                return (
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: 12,
-                      marginBottom: 8,
-                    }}
+                    key={course.id}
+                    className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    <div style={{ minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 15,
-                          fontWeight: 650,
-                          color: colors.text,
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {course.title}
-                      </div>
-                      {course.description && (
-                        <div
-                          style={{
-                            fontSize: 12.5,
-                            color: colors.textMuted,
-                            marginTop: 3,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {course.description}
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[15px] leading-snug font-semibold text-zinc-900 dark:text-zinc-100">
+                          {course.title}
                         </div>
-                      )}
+                        {course.description && (
+                          <div className="mt-1 line-clamp-2 text-[12.5px] text-zinc-400 dark:text-zinc-500">
+                            {course.description}
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+                          done
+                            ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
+                            : "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400"
+                        }`}
+                      >
+                        {course.progress}%
+                      </span>
                     </div>
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        backgroundColor: done ? colors.doneBg : colors.accentBg,
-                        color: done ? colors.done : colors.accent,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {course.progress}%
-                    </span>
-                  </div>
 
-                  {/* Progress bar */}
-                  <div
-                    style={{
-                      height: 8,
-                      borderRadius: 999,
-                      backgroundColor: colors.track,
-                      overflow: "hidden",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${Math.min(course.progress, 100)}%`,
-                        borderRadius: 999,
-                        backgroundColor: done ? colors.done : colors.accent,
-                        transition: "width 0.4s ease",
-                      }}
-                    />
-                  </div>
+                    {/* Progress bar */}
+                    <div className="mb-2.5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-400 ease-out ${
+                          done
+                            ? "bg-green-600 dark:bg-green-400"
+                            : "bg-violet-600 dark:bg-violet-400"
+                        }`}
+                        style={{ width: `${Math.min(course.progress, 100)}%` }}
+                      />
+                    </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span style={{ fontSize: 12, color: colors.textSecondary }}>
-                      {course.lessons_completed}/{course.lessons_total} lessons
-                      completed
-                    </span>
-                    {done ? (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: colors.done,
-                        }}
-                      >
-                        ✓ Course complete
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {course.lessons_completed}/{course.lessons_total} lessons
+                        completed
                       </span>
-                    ) : course.next_lesson ? (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                          backgroundColor: colors.track,
-                          borderRadius: 8,
-                          padding: "3px 8px",
-                        }}
-                      >
-                        Next: Lesson {course.next_lesson.sequence} ·{" "}
-                        {course.next_lesson.title}
-                      </span>
-                    ) : null}
+                      {done ? (
+                        <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                          ✓ Course complete
+                        </span>
+                      ) : course.next_lesson ? (
+                        <span className="rounded-lg bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                          Next: Lesson {course.next_lesson.sequence} ·{" "}
+                          {course.next_lesson.title}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );

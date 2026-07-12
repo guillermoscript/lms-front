@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
+import { Markdown } from "../shared/markdown";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -38,21 +39,26 @@ type Props = z.infer<typeof propsSchema>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function reviewPill(
-  status: string | null,
-  theme: "light" | "dark"
-): { bg: string; text: string } {
-  const dark = theme === "dark";
+function reviewPill(status: string | null): { bg: string; text: string } {
   switch ((status ?? "pending").toLowerCase()) {
     case "approved":
     case "graded":
-      return { bg: dark ? "#14532d" : "#dcfce7", text: dark ? "#86efac" : "#166534" };
+      return {
+        bg: "bg-green-100 dark:bg-green-900",
+        text: "text-green-600 dark:text-green-400",
+      };
     case "rejected":
     case "failed":
-      return { bg: dark ? "#7f1d1d" : "#fee2e2", text: dark ? "#fca5a5" : "#991b1b" };
+      return {
+        bg: "bg-red-100 dark:bg-red-950",
+        text: "text-red-600 dark:text-red-400",
+      };
     case "pending":
     default:
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return {
+        bg: "bg-amber-100 dark:bg-amber-950",
+        text: "text-amber-600 dark:text-amber-400",
+      };
   }
 }
 
@@ -95,46 +101,14 @@ export default function ExamSubmissions() {
 
   const dark = theme === "dark";
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    rowHover: dark ? "#222222" : "#f9fafb",
-    rowExpanded: dark ? "#1e1b2e" : "#faf5ff",
-    detailBg: dark ? "#161616" : "#f5f3ff",
-    detailBorder: dark ? "#3d2e6b" : "#ddd6fe",
-    headerBg: dark ? "#141414" : "#f3f4f6",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Loading submissions…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Loading submissions…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -166,244 +140,152 @@ export default function ExamSubmissions() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: 16 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 600,
-              color: colors.text,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Exam #{exam_id} — Submissions
-          </h2>
-          <p style={{ margin: "2px 0 0", fontSize: 13, color: colors.textSecondary }}>
-            {total} submission{total !== 1 ? "s" : ""} · Click a row to see details
-          </p>
-        </div>
-
-        {/* Table */}
-        <div
-          style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          {/* Header row */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 80px 120px 100px",
-              gap: 0,
-              backgroundColor: colors.headerBg,
-              borderBottom: `1px solid ${colors.border}`,
-              padding: "9px 16px",
-            }}
-          >
-            {["Student", "Score", "Date", "Status"].map((col) => (
-              <span
-                key={col}
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: colors.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {col}
-              </span>
-            ))}
+      <div className={dark ? "dark" : ""}>
+        <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-4">
+            <h2 className="m-0 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Exam #{exam_id} — Submissions
+            </h2>
+            <p className="mt-0.5 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
+              {total} submission{total !== 1 ? "s" : ""} · Click a row to see details
+            </p>
           </div>
 
-          {/* Empty state */}
-          {submissions.length === 0 && (
-            <div
-              style={{
-                padding: 40,
-                textAlign: "center",
-                color: colors.textMuted,
-              }}
-            >
-              <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
-              <p style={{ margin: 0, fontSize: 14 }}>No submissions yet</p>
-            </div>
-          )}
-
-          {/* Data rows */}
-          {submissions.map((sub, idx) => {
-            const pill = reviewPill(sub.review_status, theme);
-            const isExpanded = expandedId === sub.id;
-            const isLoadingThis = loadingId === sub.id;
-            const detail = detailMap[sub.id];
-            const isLast = idx === submissions.length - 1 && !isExpanded;
-
-            return (
-              <div key={sub.id}>
-                <div
-                  onClick={() => handleRowClick(sub.id)}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 80px 120px 100px",
-                    gap: 0,
-                    padding: "12px 16px",
-                    borderBottom: isLast ? "none" : `1px solid ${colors.border}`,
-                    backgroundColor: isExpanded ? colors.rowExpanded : "transparent",
-                    cursor: "pointer",
-                    transition: "background-color 0.12s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isExpanded)
-                      (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                        colors.rowHover;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isExpanded)
-                      (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent";
-                  }}
+          {/* Table */}
+          <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            {/* Header row */}
+            <div className="grid min-w-[480px] grid-cols-[minmax(140px,1fr)_80px_120px_100px] border-b border-zinc-200 bg-zinc-100 px-4 py-[9px] dark:border-zinc-800 dark:bg-zinc-800">
+              {["Student", "Score", "Date", "Status"].map((col) => (
+                <span
+                  key={col}
+                  className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase dark:text-zinc-500"
                 >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: colors.text,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {sub.student_name}
-                  </span>
-                  <span style={{ fontSize: 13, color: colors.text, fontWeight: 600 }}>
-                    {sub.score != null ? `${sub.score}%` : "—"}
-                  </span>
-                  <span style={{ fontSize: 12, color: colors.textSecondary }}>
-                    {formatDate(sub.submission_date)}
-                  </span>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        borderRadius: 8,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        backgroundColor: pill.bg,
-                        color: pill.text,
-                      }}
-                    >
-                      {sub.review_status ?? "pending"}
-                    </span>
-                  </span>
-                </div>
+                  {col}
+                </span>
+              ))}
+            </div>
 
-                {/* Expanded detail panel */}
-                {isExpanded && (
+            {/* Empty state */}
+            {submissions.length === 0 && (
+              <div className="p-10 text-center text-zinc-400 dark:text-zinc-500">
+                <div className="mb-2.5 text-3xl">📋</div>
+                <p className="m-0 text-sm">No submissions yet</p>
+              </div>
+            )}
+
+            {/* Data rows */}
+            {submissions.map((sub, idx) => {
+              const pill = reviewPill(sub.review_status);
+              const isExpanded = expandedId === sub.id;
+              const isLoadingThis = loadingId === sub.id;
+              const detail = detailMap[sub.id];
+              const isLast = idx === submissions.length - 1 && !isExpanded;
+
+              return (
+                <div key={sub.id}>
                   <div
-                    style={{
-                      padding: "14px 16px",
-                      backgroundColor: colors.detailBg,
-                      borderTop: `1px solid ${colors.detailBorder}`,
-                      borderBottom:
-                        idx === submissions.length - 1
-                          ? "none"
-                          : `1px solid ${colors.border}`,
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    onClick={() => handleRowClick(sub.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleRowClick(sub.id);
+                      }
                     }}
+                    className={`grid min-w-[480px] cursor-pointer grid-cols-[minmax(140px,1fr)_80px_120px_100px] px-4 py-3 transition-colors ${
+                      isLast ? "" : "border-b border-zinc-200 dark:border-zinc-800"
+                    } ${
+                      isExpanded
+                        ? "bg-violet-50 dark:bg-violet-950"
+                        : "bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    }`}
                   >
-                    {isLoadingThis ? (
-                      <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>
-                        Loading details…
-                      </p>
-                    ) : detail ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                          {detail.score != null && (
+                    <span className="overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap text-zinc-900 dark:text-zinc-100">
+                      {sub.student_name}
+                    </span>
+                    <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                      {sub.score != null ? `${sub.score}%` : "—"}
+                    </span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {formatDate(sub.submission_date)}
+                    </span>
+                    <span className="inline-flex items-center">
+                      <span
+                        className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${pill.bg} ${pill.text}`}
+                      >
+                        {sub.review_status ?? "pending"}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Expanded detail panel */}
+                  {isExpanded && (
+                    <div
+                      className={`box-border min-w-[480px] border-t border-t-violet-200 bg-violet-50 px-4 py-3.5 dark:border-t-violet-900 dark:bg-violet-950 ${
+                        idx === submissions.length - 1
+                          ? ""
+                          : "border-b border-b-zinc-200 dark:border-b-zinc-800"
+                      }`}
+                    >
+                      {isLoadingThis ? (
+                        <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                          Loading details…
+                        </p>
+                      ) : detail ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-wrap gap-5">
+                            {detail.score != null && (
+                              <div>
+                                <span className="block text-[11px] text-zinc-400 dark:text-zinc-500">
+                                  Score
+                                </span>
+                                <span className="text-xl font-bold text-violet-600 dark:text-violet-400">
+                                  {detail.score}%
+                                </span>
+                              </div>
+                            )}
+                            {detail.review_status && (
+                              <div>
+                                <span className="block text-[11px] text-zinc-400 dark:text-zinc-500">
+                                  Review status
+                                </span>
+                                <span
+                                  className={`text-[13px] font-semibold ${
+                                    reviewPill(detail.review_status).text
+                                  }`}
+                                >
+                                  {detail.review_status}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {detail.feedback && (
                             <div>
-                              <span
-                                style={{ fontSize: 11, color: colors.textMuted, display: "block" }}
-                              >
-                                Score
+                              <span className="mb-1 block text-[11px] text-zinc-400 dark:text-zinc-500">
+                                Feedback
                               </span>
-                              <span
-                                style={{
-                                  fontSize: 20,
-                                  fontWeight: 700,
-                                  color: colors.accent,
-                                }}
-                              >
-                                {detail.score}%
-                              </span>
-                            </div>
-                          )}
-                          {detail.review_status && (
-                            <div>
-                              <span
-                                style={{ fontSize: 11, color: colors.textMuted, display: "block" }}
-                              >
-                                Review status
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 600,
-                                  color: reviewPill(detail.review_status, theme).text,
-                                }}
-                              >
-                                {detail.review_status}
-                              </span>
+                              <Markdown
+                                content={detail.feedback}
+                                dark={dark}
+                                fontSize={13}
+                              />
                             </div>
                           )}
                         </div>
-                        {detail.feedback && (
-                          <div>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: colors.textMuted,
-                                display: "block",
-                                marginBottom: 4,
-                              }}
-                            >
-                              Feedback
-                            </span>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 13,
-                                color: colors.textSecondary,
-                                lineHeight: 1.6,
-                              }}
-                            >
-                              {detail.feedback}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>
-                        No additional detail available.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      ) : (
+                        <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
+                          No additional detail available.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </McpUseProvider>

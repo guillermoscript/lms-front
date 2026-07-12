@@ -47,18 +47,14 @@ type Tab = "preview" | "html" | "evaluation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function difficultyPill(
-  level: string,
-  theme: "light" | "dark"
-): { bg: string; text: string } {
-  const dark = theme === "dark";
+function difficultyPill(level: string): string {
   switch (level.toLowerCase()) {
     case "easy":
-      return { bg: dark ? "#14532d" : "#dcfce7", text: dark ? "#86efac" : "#166534" };
+      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
     case "hard":
-      return { bg: dark ? "#7f1d1d" : "#fee2e2", text: dark ? "#fca5a5" : "#991b1b" };
+      return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
     default: // medium
-      return { bg: dark ? "#422006" : "#fef3c7", text: dark ? "#fcd34d" : "#92400e" };
+      return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
   }
 }
 
@@ -98,51 +94,14 @@ export default function ArtifactSandbox() {
     "lms_update_artifact_exercise"
   );
 
-  const colors = {
-    bg: dark ? "#0f0f0f" : "#fafafa",
-    surface: dark ? "#1a1a1a" : "#ffffff",
-    border: dark ? "#2a2a2a" : "#e5e7eb",
-    text: dark ? "#f4f4f5" : "#111827",
-    textSecondary: dark ? "#a1a1aa" : "#6b7280",
-    textMuted: dark ? "#71717a" : "#9ca3af",
-    accent: dark ? "#a78bfa" : "#7c3aed",
-    accentBg: dark ? "#2e1065" : "#f5f3ff",
-    sectionBg: dark ? "#141414" : "#f9fafb",
-    codeBg: dark ? "#0a0a0a" : "#f6f8fa",
-    warnBg: dark ? "#3f2d0a" : "#fffbeb",
-    warnBorder: dark ? "#854d0e" : "#fde68a",
-    warnText: dark ? "#fcd34d" : "#92400e",
-    okBg: dark ? "#14532d" : "#dcfce7",
-    okText: dark ? "#86efac" : "#166534",
-    errBg: dark ? "#7f1d1d" : "#fee2e2",
-    errText: dark ? "#fca5a5" : "#991b1b",
-  };
-
   if (isPending) {
     return (
       <McpUseProvider autoSize>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: colors.textMuted,
-            backgroundColor: colors.bg,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              border: `3px solid ${colors.border}`,
-              borderTop: `3px solid ${colors.accent}`,
-              borderRadius: "50%",
-              margin: "0 auto 12px",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ margin: 0, fontSize: 14 }}>Rendering artifact…</p>
+        <div className={dark ? "dark" : ""}>
+          <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <p className="m-0 text-sm">Rendering artifact…</p>
+          </div>
         </div>
       </McpUseProvider>
     );
@@ -151,7 +110,6 @@ export default function ArtifactSandbox() {
   const { exercise, artifact } = props;
   const currentHtml = html ?? artifact.html;
   const dirty = currentHtml !== artifact.html;
-  const pill = difficultyPill(exercise.difficulty, theme);
 
   const handleSave = () => {
     saveArtifact({ exercise_id: exercise.id, artifact_html: currentHtml });
@@ -160,17 +118,11 @@ export default function ArtifactSandbox() {
   const tabButton = (id: Tab, label: string) => (
     <button
       onClick={() => setTab(id)}
-      style={{
-        padding: "6px 14px",
-        borderRadius: 8,
-        border: "none",
-        backgroundColor: tab === id ? colors.accentBg : "transparent",
-        color: tab === id ? colors.accent : colors.textSecondary,
-        fontSize: 13,
-        fontWeight: tab === id ? 600 : 500,
-        cursor: "pointer",
-        transition: "all 0.15s",
-      }}
+      className={`cursor-pointer rounded-lg border-none px-3.5 py-1.5 text-[13px] transition-all duration-150 ${
+        tab === id
+          ? "bg-violet-50 font-semibold text-violet-600 dark:bg-violet-950 dark:text-violet-400"
+          : "bg-transparent font-medium text-zinc-500 dark:text-zinc-400"
+      }`}
     >
       {label}
     </button>
@@ -178,281 +130,133 @@ export default function ArtifactSandbox() {
 
   return (
     <McpUseProvider autoSize>
-      <div
-        style={{
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: colors.bg,
-          padding: 24,
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 12,
-            marginBottom: 6,
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 19,
-              fontWeight: 700,
-              color: colors.text,
-              letterSpacing: "-0.01em",
-              lineHeight: 1.3,
-            }}
-          >
-            {artifactEmoji(artifact.type)} {exercise.title}
-          </h2>
-          <span
-            style={{
-              padding: "3px 10px",
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: 600,
-              backgroundColor: pill.bg,
-              color: pill.text,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {exercise.difficulty}
-          </span>
-        </div>
+      <div className={dark ? "dark" : ""}>
+        <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
+          {/* Header */}
+          <div className="mb-1.5 flex items-start justify-between gap-3">
+            <h2 className="m-0 text-[19px] leading-[1.3] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {artifactEmoji(artifact.type)} {exercise.title}
+            </h2>
+            <span
+              className={`shrink-0 rounded-[10px] px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${difficultyPill(exercise.difficulty)}`}
+            >
+              {exercise.difficulty}
+            </span>
+          </div>
 
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
-          <span style={{ fontSize: 13, color: colors.textMuted }}>
-            {artifact.type.replace("_", " ")}
-          </span>
-          <span style={{ fontSize: 13, color: colors.textMuted }}>
-            🎯 Pass ≥ {artifact.passing_score}%
-          </span>
-        </div>
+          <div className="mb-3.5 flex flex-wrap gap-3.5">
+            <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
+              {artifact.type.replace("_", " ")}
+            </span>
+            <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
+              🎯 Pass ≥ {artifact.passing_score}%
+            </span>
+          </div>
 
-        {exercise.instructions && (
-          <p
-            style={{
-              margin: "0 0 16px",
-              fontSize: 14,
-              color: colors.textSecondary,
-              lineHeight: 1.6,
-            }}
-          >
-            {exercise.instructions}
-          </p>
-        )}
+          {exercise.instructions && (
+            <p className="mt-0 mb-4 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {exercise.instructions}
+            </p>
+          )}
 
-        {/* Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 4,
-            marginBottom: 12,
-            padding: 4,
-            borderRadius: 10,
-            backgroundColor: colors.sectionBg,
-            width: "fit-content",
-          }}
-        >
-          {tabButton("preview", "Preview")}
-          {tabButton("html", `HTML${dirty ? " •" : ""}`)}
-          {tabButton("evaluation", "Evaluation")}
-        </div>
+          {/* Tabs */}
+          <div className="mb-3 flex w-fit gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-zinc-900">
+            {tabButton("preview", "Preview")}
+            {tabButton("html", `HTML${dirty ? " •" : ""}`)}
+            {tabButton("evaluation", "Evaluation")}
+          </div>
 
-        {/* Preview */}
-        {tab === "preview" && (
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: 12,
-              overflow: "hidden",
-              backgroundColor: "#ffffff",
-            }}
-          >
-            {currentHtml ? (
-              // sandbox WITHOUT allow-same-origin: the artifact can run scripts
-              // but cannot reach the parent — exactly how students run it.
-              <iframe
-                title="Artifact preview"
-                srcDoc={currentHtml}
-                sandbox="allow-scripts allow-forms"
-                style={{ width: "100%", height: 460, border: "none", display: "block" }}
+          {/* Preview */}
+          {tab === "preview" && (
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
+              {currentHtml ? (
+                // sandbox WITHOUT allow-same-origin: the artifact can run scripts
+                // but cannot reach the parent — exactly how students run it.
+                <iframe
+                  title="Artifact preview"
+                  srcDoc={currentHtml}
+                  sandbox="allow-scripts allow-forms"
+                  className="block h-[460px] w-full border-none"
+                />
+              ) : (
+                <div className="p-10 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
+                  No HTML content to preview.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* HTML editor */}
+          {tab === "html" && (
+            <div>
+              <textarea
+                value={currentHtml}
+                onChange={(e) => setHtml(e.target.value)}
+                spellCheck={false}
+                className="box-border h-[360px] w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[12.5px] leading-normal text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
               />
-            ) : (
-              <div
-                style={{
-                  padding: 40,
-                  textAlign: "center",
-                  fontSize: 13,
-                  color: colors.textMuted,
-                }}
-              >
-                No HTML content to preview.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* HTML editor */}
-        {tab === "html" && (
-          <div>
-            <textarea
-              value={currentHtml}
-              onChange={(e) => setHtml(e.target.value)}
-              spellCheck={false}
-              style={{
-                width: "100%",
-                height: 360,
-                boxSizing: "border-box",
-                padding: 12,
-                borderRadius: 12,
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.codeBg,
-                color: colors.text,
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                fontSize: 12.5,
-                lineHeight: 1.5,
-                resize: "vertical",
-              }}
-            />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginTop: 10,
-              }}
-            >
-              <button
-                onClick={handleSave}
-                disabled={saving || !dirty}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 8,
-                  border: "none",
-                  backgroundColor: dirty ? colors.accent : colors.border,
-                  color: dirty ? "#ffffff" : colors.textMuted,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: saving || !dirty ? "not-allowed" : "pointer",
-                  opacity: saving ? 0.7 : 1,
-                  transition: "all 0.15s",
-                }}
-              >
-                {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
-              </button>
-              {dirty && (
+              <div className="mt-2.5 flex items-center gap-3">
                 <button
-                  onClick={() => setHtml(null)}
-                  disabled={saving}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
-                    backgroundColor: "transparent",
-                    color: colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
+                  onClick={handleSave}
+                  disabled={saving || !dirty}
+                  className={`rounded-lg border-none px-[18px] py-2 text-[13px] font-semibold transition-all duration-150 ${
+                    dirty
+                      ? "cursor-pointer bg-violet-600 text-white dark:bg-violet-400 dark:text-zinc-950"
+                      : "cursor-not-allowed bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                  } ${saving ? "cursor-not-allowed opacity-70" : ""}`}
                 >
-                  Revert
+                  {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
                 </button>
-              )}
-              {saved && !dirty && (
-                <span style={{ fontSize: 13, color: colors.okText }}>✓ Saved</span>
-              )}
-              {saveFailed && (
-                <span style={{ fontSize: 13, color: colors.errText }}>
-                  {saveError instanceof Error ? saveError.message : "Save failed"}
-                </span>
+                {dirty && (
+                  <button
+                    onClick={() => setHtml(null)}
+                    disabled={saving}
+                    className="cursor-pointer rounded-lg border border-zinc-200 bg-transparent px-3.5 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
+                  >
+                    Revert
+                  </button>
+                )}
+                {saved && !dirty && (
+                  <span className="text-[13px] text-green-600 dark:text-green-400">
+                    ✓ Saved
+                  </span>
+                )}
+                {saveFailed && (
+                  <span className="text-[13px] text-red-600 dark:text-red-400">
+                    {saveError instanceof Error ? saveError.message : "Save failed"}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Evaluation (server-side answer key) */}
+          {tab === "evaluation" && (
+            <div>
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] font-medium text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                🔒 Server-side only — students never receive this.
+              </div>
+
+              <h4 className="mt-0 mb-1.5 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                Evaluation criteria
+              </h4>
+              <pre className="mt-0 mb-4 rounded-[10px] border border-zinc-200 bg-zinc-50 p-3 font-mono text-[12.5px] leading-relaxed break-words whitespace-pre-wrap text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+                {artifact.evaluation_criteria || "(none set)"}
+              </pre>
+
+              {artifact.system_prompt && (
+                <>
+                  <h4 className="mt-0 mb-1.5 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                    Evaluator system prompt
+                  </h4>
+                  <pre className="m-0 rounded-[10px] border border-zinc-200 bg-zinc-50 p-3 font-mono text-[12.5px] leading-relaxed break-words whitespace-pre-wrap text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+                    {artifact.system_prompt}
+                  </pre>
+                </>
               )}
             </div>
-          </div>
-        )}
-
-        {/* Evaluation (server-side answer key) */}
-        {tab === "evaluation" && (
-          <div>
-            <div
-              style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                backgroundColor: colors.warnBg,
-                border: `1px solid ${colors.warnBorder}`,
-                color: colors.warnText,
-                fontSize: 12.5,
-                fontWeight: 500,
-                marginBottom: 12,
-              }}
-            >
-              🔒 Server-side only — students never receive this.
-            </div>
-
-            <h4
-              style={{
-                margin: "0 0 6px",
-                fontSize: 13,
-                fontWeight: 600,
-                color: colors.text,
-              }}
-            >
-              Evaluation criteria
-            </h4>
-            <pre
-              style={{
-                margin: "0 0 16px",
-                padding: 12,
-                borderRadius: 10,
-                backgroundColor: colors.codeBg,
-                border: `1px solid ${colors.border}`,
-                color: colors.textSecondary,
-                fontSize: 12.5,
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              }}
-            >
-              {artifact.evaluation_criteria || "(none set)"}
-            </pre>
-
-            {artifact.system_prompt && (
-              <>
-                <h4
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: colors.text,
-                  }}
-                >
-                  Evaluator system prompt
-                </h4>
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: 12,
-                    borderRadius: 10,
-                    backgroundColor: colors.codeBg,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.textSecondary,
-                    fontSize: 12.5,
-                    lineHeight: 1.6,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  }}
-                >
-                  {artifact.system_prompt}
-                </pre>
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </McpUseProvider>
   );
