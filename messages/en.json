@@ -153,7 +153,27 @@
     }
   },
   "dashboard": {
+    "accountSettings": {
+      "title": "Settings",
+      "subtitle": "Manage your account and integrations.",
+      "accountTitle": "Account Details",
+      "accountSubtitle": "Update your personal information",
+      "manageTokens": "Manage API tokens"
+    },
     "student": {
+      "aiAssistant": {
+        "title": "AI Assistant",
+        "subtitle": "Connect Claude to your school and learn with an AI tutor that knows your courses.",
+        "whatYouCanDo": {
+          "title": "What you can do",
+          "description": "Once connected, ask Claude to:",
+          "item1": "Walk you through your lessons and mark them complete as you go",
+          "item2": "Quiz you with practice questions and flashcards built from your courses",
+          "item3": "Check your exam readiness and drill your weak spots",
+          "item4": "Build a weekly study plan and keep you on track",
+          "item5": "Tutor you through anything you don't understand — and pass your question to your teacher if needed"
+        }
+      },
       "billing": {
         "title": "Billing",
         "subtitle": "Your purchases, active subscription, and downloadable invoices.",
@@ -2770,16 +2790,6 @@
         "title": "Connect AI Assistants",
         "description": "Connect Claude or other MCP clients to your LMS.",
         "createToken": "Create Token",
-        "connectClaude": {
-          "title": "Connect Claude",
-          "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
-          "urlLabel": "Connector URL",
-          "step1": "Copy the connector URL above.",
-          "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
-          "step3": "Paste the URL and click Add.",
-          "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
-          "copied": "Connector URL copied"
-        },
         "howToConnect": {
           "title": "Advanced: API tokens (CLI and other MCP clients)",
           "description": "Use a token for clients that don't support OAuth sign-in.",
@@ -3135,6 +3145,7 @@
     "myCertificates": "My Certificates",
     "progressReport": "Progress Report",
     "pointStore": "Point Store",
+    "aiAssistant": "AI Assistant",
     "settings": "Settings",
     "logout": "Logout",
     "platform": "LMS Platform",
@@ -3212,6 +3223,16 @@
     "ago": "ago"
   },
   "components": {
+    "connectClaude": {
+      "title": "Connect Claude",
+      "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
+      "urlLabel": "Connector URL",
+      "step1": "Copy the connector URL above.",
+      "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
+      "step3": "Paste the URL and click Add.",
+      "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
+      "copied": "Connector URL copied"
+    },
     "courseProgress": {
       "progress": "Progress",
       "lessons": "lessons"

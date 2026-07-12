@@ -19,6 +19,7 @@ import {
     IconReceipt,
     IconSearch,
     IconSettings,
+    IconSparkles,
     IconUsers,
 } from "@tabler/icons-react"
 
@@ -223,6 +224,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     ],
                 },
                 { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
+                { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
                     title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,
                     items: [
