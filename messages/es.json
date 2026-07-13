@@ -3204,7 +3204,11 @@
       "resources": "Recursos",
       "downloadFile": "Descargar",
       "lessonLocked": "Lección bloqueada",
-      "completePreviousFirst": "Completa la lección anterior para desbloquear esta."
+      "completePreviousFirst": "Completa la lección anterior para desbloquear esta.",
+      "courseProgress": "Progreso del curso: {completed} de {total} lecciones completadas ({percent}%)",
+      "goToLesson": "Ir a: {title}",
+      "noContent": "No hay contenido disponible para esta lección.",
+      "contentError": "Error al cargar el contenido"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -3243,6 +3247,23 @@
       },
       "tooltips": {
         "restart": "Reiniciar Conversación"
+      },
+      "mobile": {
+        "title": "Tutor IA",
+        "start": "Comenzar con el tutor IA",
+        "continue": "Continuar con el tutor IA",
+        "review": "Revisar conversación",
+        "close": "Cerrar chat",
+        "messagesCount": "{count, plural, one {# mensaje} other {# mensajes}}"
+      },
+      "contextual": {
+        "chip": "No entiendo — preguntar al tutor",
+        "prompt": "No entiendo esta lección. ¿Puedes explicármela de otra manera?"
+      },
+      "restartDialog": {
+        "title": "¿Reiniciar conversación?",
+        "cancel": "Cancelar",
+        "confirm": "Reiniciar"
       }
     },
     "lessonSidebar": {
@@ -3259,7 +3280,15 @@
       "complete": "Completar",
       "next": "Siguiente",
       "finishCourse": "Finalizar Curso",
-      "completeFirst": "Completa esta lección primero"
+      "completeFirst": "Completa esta lección primero",
+      "courseComplete": "¡Curso completado! 🎉",
+      "courseCompleteDescription": "Terminaste todas las lecciones de este curso. ¡Excelente trabajo!",
+      "updateFailed": "No se pudo actualizar el estado de la lección",
+      "completeFailed": "No se pudo marcar la lección como completada",
+      "certificateEarnedTitle": "¡Certificado Obtenido!",
+      "certificateEarnedDescription": "Has completado todos los requisitos y obtenido un certificado para este curso.",
+      "certificateBanner": "¡Certificado obtenido para este curso!",
+      "view": "Ver"
     },
     "codeBlock": {
       "copy": "Copiar",
@@ -3639,6 +3668,11 @@
       "like": "Me gusta",
       "delete": "Eliminar",
       "confirmDelete": "¿Estás seguro de que quieres eliminar este comentario?",
+      "deleteDialog": {
+        "title": "¿Eliminar comentario?",
+        "cancel": "Cancelar",
+        "confirm": "Eliminar"
+      },
       "posted": "Comentario publicado",
       "errorPosting": "Error al publicar el comentario",
       "errorLoading": "Error al cargar los comentarios",

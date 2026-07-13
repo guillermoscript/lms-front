@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { RouteProgress } from "@/components/shared/route-progress";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
 import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
@@ -12,6 +13,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
+import type { StoredPreset } from '@/lib/themes/presets';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 
 const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
@@ -65,6 +67,17 @@ export async function generateMetadata({
   };
 }
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Keyboard shrinks the layout viewport so dvh-sized chat surfaces and
+  // docked composers stay visible (Chrome Android; iOS handled via
+  // visualViewport in lesson-ai-chat).
+  interactiveWidget: "resizes-content",
+  // Enables env(safe-area-inset-*) on notched devices.
+  viewportFit: "cover",
+};
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
@@ -79,7 +92,7 @@ export default async function RootLayout({
   const { locale } = await params;
 
   // Validate that the incoming `locale` parameter is valid
-  if (!locales.includes(locale as any)) {
+  if (!locales.includes(locale as (typeof locales)[number])) {
     notFound();
   }
 
@@ -91,7 +104,8 @@ export default async function RootLayout({
 
   // Load tenant settings for branding overrides (use admin client to bypass RLS
   // since these are public tenant configuration, not user-specific data)
-  let tenantSettings: Record<string, any> = {};
+  // setting_value is jsonb: `{ value: string }` for branding keys, a StoredPreset for theme_preset
+  let tenantSettings: Record<string, { value?: string } | undefined> = {};
   if (tenant) {
     const sb = createAdminClient();
     const { data: settings } = await sb
@@ -100,7 +114,7 @@ export default async function RootLayout({
       .eq('tenant_id', tenant.id)
       .in('setting_key', ['site_name', 'logo_url', 'primary_color', 'secondary_color', 'favicon_url', 'theme_preset']);
     if (settings) {
-      tenantSettings = settings.reduce((acc: Record<string, any>, s) => {
+      tenantSettings = settings.reduce((acc: typeof tenantSettings, s) => {
         acc[s.setting_key] = s.setting_value;
         return acc;
       }, {});
@@ -116,7 +130,7 @@ export default async function RootLayout({
     secondary_color: tenantSettings.secondary_color?.value || tenant.secondary_color,
     plan: tenant.plan,
     settings: tenantSettings,
-    theme_preset: tenantSettings.theme_preset ?? null,
+    theme_preset: (tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null,
   } : null;
 
   return (
@@ -140,6 +154,7 @@ export default async function RootLayout({
           >
             <TenantProvider tenant={tenantInfo}>
               <TenantCssVars />
+              <RouteProgress />
               {children}
               <Toaster />
             </TenantProvider>

@@ -3359,7 +3359,11 @@
       "resources": "Resources",
       "downloadFile": "Download",
       "lessonLocked": "Lesson locked",
-      "completePreviousFirst": "Complete the previous lesson to unlock this one."
+      "completePreviousFirst": "Complete the previous lesson to unlock this one.",
+      "courseProgress": "Course progress: {completed} of {total} lessons completed ({percent}%)",
+      "goToLesson": "Go to: {title}",
+      "noContent": "No content available for this lesson.",
+      "contentError": "Error loading content"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -3398,6 +3402,23 @@
       },
       "tooltips": {
         "restart": "Restart Conversation"
+      },
+      "mobile": {
+        "title": "AI Tutor",
+        "start": "Start with the AI Tutor",
+        "continue": "Continue with the AI Tutor",
+        "review": "Review conversation",
+        "close": "Close chat",
+        "messagesCount": "{count, plural, one {# message} other {# messages}}"
+      },
+      "contextual": {
+        "chip": "I don't understand — ask the tutor",
+        "prompt": "I don't understand this lesson. Can you explain it in a different way?"
+      },
+      "restartDialog": {
+        "title": "Restart conversation?",
+        "cancel": "Cancel",
+        "confirm": "Restart"
       }
     },
     "lessonSidebar": {
@@ -3414,7 +3435,15 @@
       "complete": "Complete",
       "next": "Next",
       "finishCourse": "Finish Course",
-      "completeFirst": "Complete this lesson first"
+      "completeFirst": "Complete this lesson first",
+      "courseComplete": "Course complete! 🎉",
+      "courseCompleteDescription": "You finished every lesson in this course. Amazing work!",
+      "updateFailed": "Failed to update lesson status",
+      "completeFailed": "Failed to mark lesson as complete",
+      "certificateEarnedTitle": "Certificate Earned!",
+      "certificateEarnedDescription": "You have completed all requirements and earned a certificate for this course.",
+      "certificateBanner": "Certificate earned for this course!",
+      "view": "View"
     },
     "codeBlock": {
       "copy": "Copy",
@@ -3646,6 +3675,11 @@
       "like": "Like",
       "delete": "Delete",
       "confirmDelete": "Are you sure you want to delete this comment?",
+      "deleteDialog": {
+        "title": "Delete comment?",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
       "posted": "Comment posted",
       "errorPosting": "Error posting comment",
       "errorLoading": "Error loading comments",

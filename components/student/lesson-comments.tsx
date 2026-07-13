@@ -2,11 +2,20 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { IconSend, IconMessage, IconUser, IconHeart, IconDots, IconMessageCircle, IconCornerDownRight } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -50,6 +59,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
   const [newComment, setNewComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -105,7 +115,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
 
         const reactions = reactionsData
           ?.filter(r => r.comment_id === c.id)
-          .map(r => ({ user_id: r.user_id, reaction_type: r.reaction_type as any })) || []
+          .map(r => ({ user_id: r.user_id, reaction_type: r.reaction_type as CommentReaction['reaction_type'] })) || []
 
         return {
           ...c,
@@ -208,7 +218,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
   }
 
   return (
-    <div className="flex flex-col h-full max-h-[800px]">
+    <div className="flex flex-col">
       <div className="mb-6">
         <h3 className="flex items-center gap-2 text-xl font-semibold mb-6">
           <IconMessage className="h-5 w-5" />
@@ -240,7 +250,8 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
         </div>
       </div>
 
-      <ScrollArea className="flex-1 -mr-4 pr-4">
+      {/* Comments flow with the page — no nested scroll region */}
+      <div>
         <div className="space-y-8 pb-8">
           {comments.length === 0 ? (
             <div className="text-center py-12 border rounded-lg border-dashed bg-muted/30">
@@ -261,17 +272,39 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
                 onReply={handlePostComment}
                 submitting={submitting}
                 handleReaction={handleReaction}
-                onDelete={async (id) => {
-                  if (confirm(t('confirmDelete'))) {
-                    await supabase.from('lesson_comments').delete().eq('id', id)
-                    loadComments()
-                  }
-                }}
+                onDelete={(id) => setDeleteTargetId(id)}
               />
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
+
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('confirmDelete')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={async () => {
+                const id = deleteTargetId
+                setDeleteTargetId(null)
+                if (id === null) return
+                await supabase.from('lesson_comments').delete().eq('id', id)
+                loadComments()
+              }}
+            >
+              {t('deleteDialog.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -283,7 +316,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
 interface CommentReplyFormProps {
   onSubmit: (content: string) => void
   submitting: boolean
-  t: any
+  t: ReturnType<typeof useTranslations>
 }
 
 function CommentReplyForm({ onSubmit, submitting, t }: CommentReplyFormProps) {
@@ -321,7 +354,7 @@ interface CommentItemProps {
   comment: Comment
   depth?: number
   userId: string
-  t: any
+  t: ReturnType<typeof useTranslations>
   locale: string
   replyingTo: number | null
   setReplyingTo: (id: number | null) => void

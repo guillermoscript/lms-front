@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonContent } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content'
+import { serializeLessonMdx } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/serialize-lesson'
 import { IconMenu2, IconSparkles, IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
@@ -131,7 +132,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
               <LessonContent
-                content={lesson.content}
+                mdx={await serializeLessonMdx(lesson.content)}
                 videoUrl={lesson.video_url}
                 embedCode={lesson.embed_code}
               />
