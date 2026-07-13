@@ -45,6 +45,16 @@ import { useRouter } from "next/navigation";
 import { DefaultChatTransport } from "ai";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import {
@@ -134,6 +144,7 @@ function InnerLessonAIChat({
     const t = useTranslations('components.lessonAIChat');
     const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
+    const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
     // full-screen overlay so it never fights the lesson page for scroll.
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -221,9 +232,10 @@ function InnerLessonAIChat({
         sendMessage({ text: suggestion });
     };
 
-    const handleRestart = async () => {
-        if (!confirm(t('confirmRestart'))) return;
+    const handleRestart = () => setRestartDialogOpen(true);
 
+    const doRestart = async () => {
+        setRestartDialogOpen(false);
         setIsRestarting(true);
         try {
             const res = await fetch("/api/chat/lesson-task/restart", {
@@ -333,14 +345,11 @@ function InnerLessonAIChat({
                 {/* Completion Banner - Positioned at bottom, doesn't block messages */}
                 {isCompleted && (
                     <div className="absolute bottom-0 left-0 right-0 z-50 p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
-                        <div className="pointer-events-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500">
+                        <div className="pointer-events-auto bg-emerald-600 dark:bg-emerald-700 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500 motion-reduce:animate-none">
                             {/* Success Header */}
                             <div className="flex items-center gap-3 sm:gap-4">
-                                <div className="relative shrink-0">
-                                    <div className="absolute inset-0 bg-white rounded-full blur-lg opacity-30 animate-pulse"></div>
-                                    <div className="relative p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-full border-2 border-white/30">
-                                        <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-white stroke-[3]" />
-                                    </div>
+                                <div className="shrink-0 p-2 sm:p-3 bg-white/15 rounded-full">
+                                    <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-white stroke-[3]" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-base sm:text-xl font-bold text-white">
@@ -531,6 +540,21 @@ function InnerLessonAIChat({
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('restartDialog.title')}</AlertDialogTitle>
+                        <AlertDialogDescription>{t('confirmRestart')}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('restartDialog.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={doRestart}>
+                            {t('restartDialog.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

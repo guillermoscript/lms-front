@@ -23,8 +23,9 @@ export function LessonScrollArea({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex-1 min-h-0">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-10">
+        {/* Reading progress — neutral so it can't be confused with the primary course-progress line above the header */}
         <div
-          className="h-0.5 bg-primary/50 transition-[width] duration-150 ease-out"
+          className="h-0.5 bg-foreground/25 transition-[width] duration-150 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -105,7 +104,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
 
         const reactions = reactionsData
           ?.filter(r => r.comment_id === c.id)
-          .map(r => ({ user_id: r.user_id, reaction_type: r.reaction_type as any })) || []
+          .map(r => ({ user_id: r.user_id, reaction_type: r.reaction_type as CommentReaction['reaction_type'] })) || []
 
         return {
           ...c,
@@ -208,7 +207,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
   }
 
   return (
-    <div className="flex flex-col h-full max-h-[800px]">
+    <div className="flex flex-col">
       <div className="mb-6">
         <h3 className="flex items-center gap-2 text-xl font-semibold mb-6">
           <IconMessage className="h-5 w-5" />
@@ -240,7 +239,8 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
         </div>
       </div>
 
-      <ScrollArea className="flex-1 -mr-4 pr-4">
+      {/* Comments flow with the page — no nested scroll region */}
+      <div>
         <div className="space-y-8 pb-8">
           {comments.length === 0 ? (
             <div className="text-center py-12 border rounded-lg border-dashed bg-muted/30">
@@ -271,7 +271,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }
@@ -283,7 +283,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
 interface CommentReplyFormProps {
   onSubmit: (content: string) => void
   submitting: boolean
-  t: any
+  t: ReturnType<typeof useTranslations>
 }
 
 function CommentReplyForm({ onSubmit, submitting, t }: CommentReplyFormProps) {
@@ -321,7 +321,7 @@ interface CommentItemProps {
   comment: Comment
   depth?: number
   userId: string
-  t: any
+  t: ReturnType<typeof useTranslations>
   locale: string
   replyingTo: number | null
   setReplyingTo: (id: number | null) => void

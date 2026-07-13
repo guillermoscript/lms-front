@@ -89,7 +89,7 @@ export function LessonNavigation({
 
       if (error) {
         console.error('Failed to uncomplete lesson:', error)
-        toast.error('Failed to update lesson status')
+        toast.error(t('updateFailed'))
         setCompleted(true)
         setLoading(false)
         return
@@ -148,7 +148,7 @@ export function LessonNavigation({
 
       if (error) {
         console.error('Failed to complete lesson:', error)
-        toast.error('Failed to mark lesson as complete')
+        toast.error(t('completeFailed'))
         setCompleted(false)
         setLoading(false)
         return
@@ -166,11 +166,11 @@ export function LessonNavigation({
 
       if (cert?.verification_code) {
         setCertificateCode(cert.verification_code)
-        toast.success('Certificate Earned!', {
-          description: 'You have completed all requirements and earned a certificate for this course.',
+        toast.success(t('certificateEarnedTitle'), {
+          description: t('certificateEarnedDescription'),
           duration: 8000,
           action: {
-            label: 'View',
+            label: t('view'),
             onClick: () => router.push(`/verify/${cert.verification_code}`),
           },
         })
@@ -193,12 +193,12 @@ export function LessonNavigation({
         <div className="flex items-center justify-center gap-3 max-w-4xl mx-auto">
           <IconCertificate className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-            Certificate earned for this course!
+            {t('certificateBanner')}
           </span>
           <Link href={`/verify/${certificateCode}`}>
             <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold gap-1.5">
               <IconCertificate className="h-3.5 w-3.5" />
-              View
+              {t('view')}
             </Button>
           </Link>
         </div>

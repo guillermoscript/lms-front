@@ -97,7 +97,7 @@ export function LessonSidebar({
                   <span className={cn(
                     'line-clamp-2 leading-snug text-[13px]',
                     isActive ? 'font-semibold' : 'font-medium',
-                    lesson.isCompleted && !isActive && 'line-through opacity-60',
+                    lesson.isCompleted && !isActive && 'opacity-70',
                     isLocked && 'opacity-50'
                   )}>
                     {lesson.title}
