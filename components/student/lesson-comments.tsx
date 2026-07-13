@@ -6,6 +6,16 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { IconSend, IconMessage, IconUser, IconHeart, IconDots, IconMessageCircle, IconCornerDownRight } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -49,6 +59,7 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
   const [newComment, setNewComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -261,17 +272,39 @@ export function LessonComments({ lessonId, userId, initialComments = [] }: Lesso
                 onReply={handlePostComment}
                 submitting={submitting}
                 handleReaction={handleReaction}
-                onDelete={async (id) => {
-                  if (confirm(t('confirmDelete'))) {
-                    await supabase.from('lesson_comments').delete().eq('id', id)
-                    loadComments()
-                  }
-                }}
+                onDelete={(id) => setDeleteTargetId(id)}
               />
             ))
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null) }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('confirmDelete')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={async () => {
+                const id = deleteTargetId
+                setDeleteTargetId(null)
+                if (id === null) return
+                await supabase.from('lesson_comments').delete().eq('id', id)
+                loadComments()
+              }}
+            >
+              {t('deleteDialog.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

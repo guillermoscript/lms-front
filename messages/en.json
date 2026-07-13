@@ -3618,6 +3618,11 @@
       "like": "Like",
       "delete": "Delete",
       "confirmDelete": "Are you sure you want to delete this comment?",
+      "deleteDialog": {
+        "title": "Delete comment?",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
       "posted": "Comment posted",
       "errorPosting": "Error posting comment",
       "errorLoading": "Error loading comments",

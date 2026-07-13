@@ -3611,6 +3611,11 @@
       "like": "Me gusta",
       "delete": "Eliminar",
       "confirmDelete": "¿Estás seguro de que quieres eliminar este comentario?",
+      "deleteDialog": {
+        "title": "¿Eliminar comentario?",
+        "cancel": "Cancelar",
+        "confirm": "Eliminar"
+      },
       "posted": "Comentario publicado",
       "errorPosting": "Error al publicar el comentario",
       "errorLoading": "Error al cargar los comentarios",
