@@ -27,7 +27,7 @@ const propsSchema = z.object({
 
 export const widgetMetadata: WidgetMetadata = {
   description:
-    "Flashcard review session: flip cards, self-rate Again/Hard/Good/Easy (SM-2 scheduled server-side), with an end-of-session summary.",
+    "Flashcard review session: flip cards, self-rate Again/Hard/Good/Easy (FSRS scheduled server-side), with an end-of-session summary.",
   props: propsSchema,
   exposeAsTool: false,
   metadata: {
@@ -90,7 +90,7 @@ export default function Flashcards() {
 
   const rate = (rating: Rating) => {
     if (!card) return;
-    // The session advances immediately so the flow stays snappy; SM-2
+    // The session advances immediately so the flow stays snappy; FSRS
     // scheduling happens server-side. Failures surface as a session notice.
     callTool(
       { card_id: card.id, rating },
