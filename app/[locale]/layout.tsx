@@ -10,10 +10,11 @@ import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server"
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, setRequestLocale } from 'next-intl/server';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
 import type { StoredPreset } from '@/lib/themes/presets';
+import { getSeoContext, ogImageUrl } from '@/lib/seo';
 
 const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
 
@@ -27,10 +28,44 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "LMS V2",
-  description: "The ultimate learning platform powered by Next.js 16 and Supabase.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'seo' });
+  const { baseUrl, siteName } = await getSeoContext();
+  const description = t('defaultDescription');
+
+  return {
+    metadataBase: new URL(baseUrl),
+    title: {
+      default: siteName,
+      template: `%s | ${siteName}`,
+    },
+    description,
+    openGraph: {
+      siteName,
+      type: 'website',
+      locale: locale === 'es' ? 'es_ES' : 'en_US',
+      title: siteName,
+      description,
+      images: [
+        {
+          url: ogImageUrl({ title: siteName, subtitle: description, site: siteName }),
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: siteName,
+      description,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

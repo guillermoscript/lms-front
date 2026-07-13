@@ -3,6 +3,7 @@ import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import { getLandingCourses } from '@/lib/puck/utils/landing-data'
+import { ogImageUrl } from '@/lib/seo'
 import type { Metadata } from 'next'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -38,10 +39,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!result) return {}
 
   const rootProps = (result.page.puck_data as any)?.root?.props
+  const title =
+    rootProps?.metaTitle ||
+    result.page.title ||
+    slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+  const description = rootProps?.metaDescription || undefined
+  const image =
+    rootProps?.ogImage ||
+    ogImageUrl({ title, subtitle: description, site: result.tenant.name })
+
   return {
-    title: rootProps?.metaTitle || result.page.title || slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-    description: rootProps?.metaDescription,
-    openGraph: rootProps?.ogImage ? { images: [rootProps.ogImage] } : undefined,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: image, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   }
 }
 

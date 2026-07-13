@@ -5,8 +5,16 @@ import PricingClient from "./pricing-client";
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    return buildPageMetadata({ title: t('pricing.title'), description: t('pricing.description'), path: '/pricing', locale });
+}
 
 interface Plan {
     plan_id: number;

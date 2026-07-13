@@ -6,6 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle, School } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
+import { buildPageMetadata } from '@/lib/seo'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'seo' })
+  return buildPageMetadata({ title: t('joinSchool.title'), description: t('joinSchool.description'), path: '/join-school', locale })
+}
 
 export default async function JoinSchoolPage() {
   const supabase = await createClient()

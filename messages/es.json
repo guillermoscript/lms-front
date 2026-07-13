@@ -1,4 +1,61 @@
 {
+  "seo": {
+    "defaultDescription": "Cursos en línea, exámenes y certificados verificados — aprende a tu ritmo.",
+    "home": {
+      "title": "Cursos en línea y certificados"
+    },
+    "courses": {
+      "title": "Cursos",
+      "description": "Explora el catálogo completo de cursos en línea y empieza a aprender hoy.",
+      "badge": "Curso"
+    },
+    "products": {
+      "title": "Planes y productos",
+      "description": "Explora los planes y paquetes de cursos disponibles."
+    },
+    "about": {
+      "title": "Nosotros",
+      "description": "Conoce más sobre nuestra escuela, nuestra misión y nuestros profesores."
+    },
+    "creators": {
+      "title": "Para creadores",
+      "description": "Lanza tu propia escuela en línea: vende cursos, gestiona estudiantes y haz crecer tu negocio educativo."
+    },
+    "pricing": {
+      "title": "Precios",
+      "description": "Precios simples y transparentes para cursos y membresías."
+    },
+    "platformPricing": {
+      "title": "Precios de la plataforma",
+      "description": "Planes para escuelas y creadores — empieza gratis y escala a tu ritmo."
+    },
+    "createSchool": {
+      "title": "Crea tu escuela",
+      "description": "Crea tu propia escuela en línea en minutos — cursos, pagos y estudiantes en un solo lugar."
+    },
+    "joinSchool": {
+      "title": "Únete a una escuela",
+      "description": "Únete a tu escuela y empieza a aprender."
+    },
+    "checkout": {
+      "title": "Pago"
+    },
+    "auth": {
+      "login": "Iniciar sesión",
+      "signUp": "Crear cuenta",
+      "signUpSuccess": "Cuenta creada",
+      "forgotPassword": "Restablecer contraseña",
+      "updatePassword": "Actualizar contraseña",
+      "error": "Error de autenticación"
+    },
+    "verify": {
+      "title": "{student} — Certificado: {course}",
+      "description": "{student} obtuvo un certificado verificado de {course}, emitido por {issuer}. Comprueba su autenticidad.",
+      "eyebrow": "Certificado de finalización",
+      "verifiedLabel": "Credencial verificada",
+      "notFoundTitle": "Certificado no encontrado"
+    }
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Ocurrió un error",

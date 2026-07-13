@@ -24,8 +24,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import type { Metadata } from 'next';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(props: { params: Promise<{ id: string; locale: string }> }): Promise<Metadata> {
+    const { id, locale } = await props.params;
+    const supabase = await createClient();
+    const { data: course } = await supabase
+        .from("courses")
+        .select("title, description, thumbnail_url")
+        .eq("course_id", parseInt(id))
+        .eq("status", "published")
+        .single();
+    if (!course) return {};
+
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    const description = course.description
+        ? course.description.replace(/\s+/g, ' ').trim().slice(0, 160)
+        : t('courses.description');
+
+    return buildPageMetadata({
+        title: course.title,
+        description,
+        path: `/courses/${id}`,
+        locale,
+        image: course.thumbnail_url || undefined,
+        ogBadge: t('courses.badge'),
+    });
+}
 
 interface Lesson {
     id: number;

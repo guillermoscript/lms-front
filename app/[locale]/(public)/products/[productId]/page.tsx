@@ -3,6 +3,31 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ManualPaymentButton } from '@/components/student/manual-payment-button'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
+import type { Metadata } from 'next'
+import { buildPageMetadata } from '@/lib/seo'
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ productId: string; locale: string }>
+}): Promise<Metadata> {
+  const { productId, locale } = await params
+  const supabase = await createClient()
+  const { data: product } = await supabase
+    .from('products')
+    .select('name, description')
+    .eq('product_id', parseInt(productId))
+    .eq('status', 'active')
+    .single()
+  if (!product) return {}
+
+  return buildPageMetadata({
+    title: product.name,
+    description: product.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || undefined,
+    path: `/products/${productId}`,
+    locale,
+  })
+}
 
 export default async function ProductDetailPage({
   params

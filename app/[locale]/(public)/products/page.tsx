@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
+import { buildPageMetadata } from '@/lib/seo'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'seo' })
+  return buildPageMetadata({ title: t('products.title'), description: t('products.description'), path: '/products', locale })
+}
 
 export default async function ProductsPage() {
   const supabase = await createClient()

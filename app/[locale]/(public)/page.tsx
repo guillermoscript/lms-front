@@ -34,11 +34,19 @@ import { getCurrentTenantId, getCurrentTenant } from "@/lib/supabase/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 import { getLandingCourses } from "@/lib/puck/utils/landing-data";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'seo' })
+  return buildPageMetadata({ title: t('home.title'), description: t('defaultDescription'), path: '/', locale })
+}
 
 export default async function LandingPage() {
   // Branch to school landing page on subdomains

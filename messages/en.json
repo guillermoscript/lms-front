@@ -1,4 +1,61 @@
 {
+  "seo": {
+    "defaultDescription": "Online courses, exams, and verified certificates — learn at your own pace.",
+    "home": {
+      "title": "Online Courses & Certificates"
+    },
+    "courses": {
+      "title": "Courses",
+      "description": "Browse the full catalog of online courses and start learning today.",
+      "badge": "Course"
+    },
+    "products": {
+      "title": "Plans & Products",
+      "description": "Explore available plans and course bundles."
+    },
+    "about": {
+      "title": "About",
+      "description": "Learn more about our school, our mission, and our teachers."
+    },
+    "creators": {
+      "title": "For Creators",
+      "description": "Launch your own online school: sell courses, manage students, and grow your teaching business."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "description": "Simple, transparent pricing for courses and memberships."
+    },
+    "platformPricing": {
+      "title": "Platform Pricing",
+      "description": "Plans for schools and creators — start free and scale as you grow."
+    },
+    "createSchool": {
+      "title": "Create Your School",
+      "description": "Set up your own online school in minutes — courses, payments, and students in one place."
+    },
+    "joinSchool": {
+      "title": "Join a School",
+      "description": "Join your school and start learning."
+    },
+    "checkout": {
+      "title": "Checkout"
+    },
+    "auth": {
+      "login": "Log In",
+      "signUp": "Sign Up",
+      "signUpSuccess": "Account Created",
+      "forgotPassword": "Reset Password",
+      "updatePassword": "Update Password",
+      "error": "Authentication Error"
+    },
+    "verify": {
+      "title": "{student} — Certificate: {course}",
+      "description": "{student} earned a verified certificate for {course}, issued by {issuer}. Check its authenticity.",
+      "eyebrow": "Certificate of Completion",
+      "verifiedLabel": "Verified credential",
+      "notFoundTitle": "Certificate Not Found"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
