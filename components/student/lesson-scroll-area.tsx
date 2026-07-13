@@ -29,7 +29,9 @@ export function LessonScrollArea({ children }: { children: React.ReactNode }) {
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div ref={scrollRef} className="h-full overflow-y-auto overscroll-y-contain">
+      {/* overflow-x-hidden: authored lesson content must never pan the whole page sideways;
+          wide blocks (code, tables) scroll inside their own containers */}
+      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden overscroll-y-contain">
         {children}
       </div>
     </div>

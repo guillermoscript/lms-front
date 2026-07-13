@@ -27,6 +27,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescri
 import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
 import { AskTutorChip } from '@/components/student/ask-tutor-chip'
+import { TaskInstructions } from '@/components/student/task-instructions'
 import { LessonProgressLine } from '@/components/student/lesson-progress-line'
 import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
@@ -253,8 +254,9 @@ export default async function LessonPage({ params }: PageProps) {
 
   // Locked lesson — show locked state
   if (isLocked && prevLessonForUnlock) {
+    // 4rem offsets the dashboard layout's h-16 header so the shell fits the viewport
     return (
-      <div className="flex h-dvh bg-background overflow-hidden">
+      <div className="flex h-[calc(100dvh-4rem)] bg-background overflow-hidden">
         <main className="flex flex-1 flex-col overflow-hidden w-full">
           <LessonProgressLine
             completed={completedCount}
@@ -262,7 +264,7 @@ export default async function LessonPage({ params }: PageProps) {
             label={progressLabel}
           />
           <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
-            <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <div className="flex items-center justify-between max-w-3xl mx-auto">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
@@ -301,8 +303,9 @@ export default async function LessonPage({ params }: PageProps) {
     )
   }
 
+  // 4rem offsets the dashboard layout's h-16 header so the shell fits the viewport
   return (
-    <div className="flex h-dvh bg-background overflow-hidden">
+    <div className="flex h-[calc(100dvh-4rem)] bg-background overflow-hidden">
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Course progress line */}
@@ -314,7 +317,7 @@ export default async function LessonPage({ params }: PageProps) {
 
         {/* Lesson header */}
         <header className="shrink-0 border-b bg-card/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
@@ -355,7 +358,7 @@ export default async function LessonPage({ params }: PageProps) {
 
         {/* Scrollable content area with reading progress */}
         <LessonScrollArea>
-          <div className="mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-10 space-y-8 sm:space-y-10">
+          <div className="mx-auto max-w-3xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-10 space-y-8 sm:space-y-10">
             <LessonContent
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
@@ -395,9 +398,7 @@ export default async function LessonPage({ params }: PageProps) {
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
                       {t('currentTask')}
                     </h4>
-                    <p className="text-sm text-foreground leading-relaxed">
-                      {aiTask.task_instructions}
-                    </p>
+                    <TaskInstructions text={aiTask.task_instructions} />
                   </div>
 
                   {/* Chat */}
