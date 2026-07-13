@@ -347,7 +347,7 @@ IMPORTANT: Use the exact "Question ID" number from each question header above (e
       "confidence": <0.0-1.0 confidence score>
     }
   ],
-  "overall_feedback": "<overall assessment of free-text responses>"
+  "overall_feedback": "<overall assessment of free-text responses, ending with 1-2 reflective pointers>"
 }
 
 **Grading Guidelines for Free-Text Questions:**
@@ -357,6 +357,8 @@ IMPORTANT: Use the exact "Question ID" number from each question header above (e
 - Be fair but thorough in your evaluation
 - Provide specific, actionable feedback explaining why points were awarded or deducted
 - Acknowledge good points even in incomplete answers
+- End "overall_feedback" with 1-2 reflective pointers instead of only listing errors: name where the misses cluster and give the student one concrete self-explanation task to do before retrying (e.g. "your misses cluster on X — before retrying, explain to yourself in one sentence how X differs from Y")
+- Write all feedback in the language the student answered in
 - Use the confidence score to indicate how certain you are about your grading (0.0-1.0)
 - Always return valid JSON
 
