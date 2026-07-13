@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
+import { TaskInstructions } from '@/components/student/task-instructions'
 import { PreviewLessonSidebar } from './preview-lesson-sidebar'
 import Link from 'next/link'
 
@@ -158,9 +159,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
                           {t('currentTask')}
                         </h4>
-                        <p className="text-sm text-foreground leading-relaxed">
-                          {aiTask.task_instructions}
-                        </p>
+                        <TaskInstructions text={aiTask.task_instructions} />
                       </div>
                     </div>
                   </div>

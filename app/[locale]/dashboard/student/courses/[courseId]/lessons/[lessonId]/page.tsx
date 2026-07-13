@@ -27,6 +27,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescri
 import { Button } from '@/components/ui/button'
 import { LessonCompletionBadge } from '@/components/student/lesson-completion-badge'
 import { AskTutorChip } from '@/components/student/ask-tutor-chip'
+import { TaskInstructions } from '@/components/student/task-instructions'
 import { LessonProgressLine } from '@/components/student/lesson-progress-line'
 import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
@@ -397,9 +398,7 @@ export default async function LessonPage({ params }: PageProps) {
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
                       {t('currentTask')}
                     </h4>
-                    <p className="text-sm text-foreground leading-relaxed">
-                      {aiTask.task_instructions}
-                    </p>
+                    <TaskInstructions text={aiTask.task_instructions} />
                   </div>
 
                   {/* Chat */}

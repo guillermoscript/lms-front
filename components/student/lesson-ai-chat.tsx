@@ -328,7 +328,10 @@ function InnerLessonAIChat({
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold leading-tight">{t('mobile.title')}</p>
-                            <p className="text-xs text-muted-foreground truncate">{taskDescription}</p>
+                            {/* single truncated line — strip markdown syntax rather than render it */}
+                            <p className="text-xs text-muted-foreground truncate">
+                                {taskDescription.replace(/[#*_`>]+/g, "").trim()}
+                            </p>
                         </div>
                         <Button
                             variant="ghost"
