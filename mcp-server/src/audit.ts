@@ -31,6 +31,13 @@ export interface AuditRecord {
   durationMs: number;
 }
 
+let insertFailures = 0;
+
+/** Total failed audit inserts since server start (monitoring/tests). */
+export function getAuditInsertFailureCount(): number {
+  return insertFailures;
+}
+
 /**
  * Record one tool call into `mcp_audit_log` using the service-role client.
  *
@@ -63,6 +70,21 @@ export function recordToolAudit(rec: AuditRecord): void {
       duration_ms: rec.durationMs,
     })
     .then(({ error }: { error: unknown }) => {
-      if (error) console.error("[audit] insert failed:", error);
+      if (error) {
+        insertFailures += 1;
+        // Loud + counted: a persistent failure here (e.g. constraint/schema
+        // drift, #401) means tool calls are going UNAUDITED.
+        console.error(
+          `[audit] INSERT FAILED (${insertFailures} since start) — tool call NOT audited`,
+          {
+            tool: rec.toolName,
+            userRole:
+              (payload.tenant_role as string | undefined) ??
+              (payload.user_role as string | undefined) ??
+              null,
+            error,
+          }
+        );
+      }
     });
 }
