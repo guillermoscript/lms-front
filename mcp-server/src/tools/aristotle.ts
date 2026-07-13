@@ -117,6 +117,14 @@ export function registerAristotleTools(server: MCPServer) {
           .describe(
             "Specific things the student struggled with this session, if any — folded into the stored summary since there's no dedicated column for it"
           ),
+        answer_seeking_count: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe(
+            "How many times this session the student pressed for a direct answer instead of engaging with hints (\"just tell me\", etc.) — folded into the stored summary as an over-reliance signal for the teacher. Omit when zero."
+          ),
       }),
       annotations: {
         readOnlyHint: false,
@@ -136,10 +144,13 @@ export function registerAristotleTools(server: MCPServer) {
       try {
         await session.verifyCourseAccess(input.course_id);
 
-        const summary =
+        let summary =
           input.key_struggles && input.key_struggles.length > 0
             ? `${input.summary}\n\nKey struggles: ${input.key_struggles.join("; ")}`
             : input.summary;
+        if (input.answer_seeking_count && input.answer_seeking_count > 0) {
+          summary += `\n\n[over-reliance signal: student asked for direct answers ${input.answer_seeking_count} time(s) instead of working through hints]`;
+        }
         const now = new Date().toISOString();
 
         const { data, error } = await session

@@ -177,7 +177,7 @@ export default function LessonViewer() {
                     if (askedTutor) return;
                     setAskedTutor(true);
                     sendFollowUpMessage(
-                      `I'm reading lesson ${lesson.sequence} "${lesson.title}" of "${course_title}" (lesson_id ${lesson.id}) and I don't fully understand it. Tutor me on it Socratically: use the socratic-tutor approach, don't just give answers, and quiz me at the end with lms_practice_quiz.`
+                      `I'm reading lesson ${lesson.sequence} "${lesson.title}" of "${course_title}" (lesson_id ${lesson.id}) and I don't fully understand it. Tutor me on it Socratically: never give me direct answers — climb the hint ladder instead (conceptual nudge, then a targeted hint at my specific confusion, then a worked example of a similar case), ground everything in this lesson's content, and quiz me at the end with lms_practice_quiz.`
                     );
                   }}
                   disabled={askedTutor}
