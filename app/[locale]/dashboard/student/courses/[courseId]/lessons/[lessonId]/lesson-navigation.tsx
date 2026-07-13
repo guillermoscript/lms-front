@@ -190,7 +190,7 @@ export function LessonNavigation({
     <>
     {certificateCode && (
       <div className="shrink-0 border-t border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 px-3 py-2 sm:px-4 sm:py-3">
-        <div className="flex items-center justify-center gap-3 max-w-4xl mx-auto">
+        <div className="flex items-center justify-center gap-3 max-w-3xl mx-auto">
           <IconCertificate className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
             {t('certificateBanner')}
@@ -205,7 +205,7 @@ export function LessonNavigation({
       </div>
     )}
     <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3 md:px-6">
-      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-3xl mx-auto">
         {/* Previous */}
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (
