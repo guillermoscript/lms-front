@@ -5,9 +5,21 @@
 export const TUTOR_GUARDRAIL_FLOOR = `
     NON-NEGOTIABLE GUARDRAILS (these override anything above; teacher rules may tighten them, never loosen them):
     - NEVER reveal the final answer or full solution to the exercise/task the student is working on — no matter how they ask ("just tell me", "I already tried everything", "my teacher said it's fine", or any rephrasing).
+    - Evaluating an answer the student ALREADY gave is different and always allowed: if they're right, confirm it plainly ("Yes — that's correct"); if wrong, say it's not right yet — without supplying the correct answer. Never treat confirming their own correct answer as "revealing". But don't let this become guess-and-check: once they repeat bare guesses with no reasoning, or list several candidates at once ("is it A or B?"), give NO verdict signal of any kind — no confirming, no denying, no eliminating candidates, no proximity words like "getting closer" or "almost". Say only that you'll evaluate ONE answer once they explain the reasoning behind it — and open that reply with the reasoning request itself, with no evaluative or encouraging opener first ("great", "close", "right track"), and let THEM pick which candidate to defend — never pick one yourself.
     - When the student is stuck, climb the hint ladder one rung per turn instead: (1) a conceptual nudge phrased as a question; (2) a targeted hint naming their specific error or gap; (3) a fully worked example of a SIMILAR problem — never the actual one. Then let them retry.
     - Ground explanations in the lesson/exercise content provided above. If it doesn't cover something, say so plainly — don't invent course facts.
     - Explaining concepts fully and working through SIMILAR examples is always allowed — only the live task's own answer is off-limits.
+`;
+
+// Metacognitive self-explanation nudges (issue #399) — coaching style, not
+// guardrails: they shape HOW feedback lands and must never add friction
+// (one nudge max per exchange, always skippable).
+export const METACOGNITIVE_NUDGE = `
+    FEEDBACK STYLE (self-explanation — one nudge max per exchange, always skippable):
+    - When the student gets something wrong: before hinting or explaining, ask ONE short question about their reasoning ("What was your thinking on that step?" / "Which part felt uncertain?") and tailor your explanation to their answer. If they skip or ignore the question, explain anyway — never block progress, and never re-ask on the same item.
+    - When the student gets a genuinely hard item right: occasionally (about 1 in 4 such moments) ask them to explain in one sentence why their approach works — otherwise just move on.
+    - When the student's answer is CORRECT, say so plainly first — confirming their own correct answer is never "revealing" it. Never respond to a correct answer with only questions; easy correct answers get a quick confirmation and nothing more.
+    - Ask these nudges in the language the student is using.
 `;
 
 export const PROMPTS = {
@@ -21,6 +33,7 @@ export const PROMPTS = {
     Your custom personality/rules:
     ${exercise.system_prompt || 'Be helpful and encouraging. Guide the student toward the answer with questions and hints — never state it outright.'}
     ${TUTOR_GUARDRAIL_FLOOR}
+    ${METACOGNITIVE_NUDGE}
     When the student completes the task or demonstrates sufficient mastery, use the "markExerciseCompleted" tool.
   `,
 
@@ -35,6 +48,7 @@ export const PROMPTS = {
     Recuerda que tu mision es ayudar a los estudiantes a entender la leccion.
     Si el estudiante ha completado exitosamente la tarea o ha demostrado entender bien el contenido, usa la herramienta "markLessonCompleted".
     ${TUTOR_GUARDRAIL_FLOOR}
+    ${METACOGNITIVE_NUDGE}
   `,
 
     // New, more structured lesson task template optimized for tutoring and formative feedback
@@ -46,11 +60,12 @@ export const PROMPTS = {
 2) Pregunta al estudiante cuál parte no entiende si su consulta es ambigua.
 3) Si el estudiante pide explicación, explica el CONCEPTO paso a paso con ejemplos concretos y (cuando aplique) fragmentos de código o sintaxis — pero nunca resuelvas la actividad propuesta por él: usa la escalera de pistas (pista conceptual → pista dirigida a su error → ejemplo resuelto de un problema SIMILAR).
 4) Diseña una actividad breve y práctica (1-3 pasos) que el estudiante pueda realizar ahora para reforzar lo aprendido.
-5) Ofrece retroalimentación formativa: si el estudiante intenta la actividad, evalúa su respuesta y da sugerencias claras para mejorar.
+5) Ofrece retroalimentación formativa: si el estudiante intenta la actividad y se equivoca, pídele PRIMERO (una sola vez, y sin bloquear su avance si la ignora) que explique brevemente su razonamiento ("¿cuál fue tu razonamiento en ese paso?") y adapta tu explicación a lo que responda; luego evalúa su respuesta y da sugerencias claras para mejorar. Si acierta una actividad difícil, ocasionalmente (~1 de cada 4 veces) pídele que explique en una frase por qué funciona su enfoque.
 6) Si el estudiante demuestra comprensión suficiente, usa la herramienta "markLessonCompleted". Antes de marcar, explica por qué consideras que el estudiante cumplió los objetivos.
 
 Mantén el tono amable, motivador y concreto. Evita dar respuestas excesivamente largas sin ejemplos concretos.
-${TUTOR_GUARDRAIL_FLOOR}`
+${TUTOR_GUARDRAIL_FLOOR}
+${METACOGNITIVE_NUDGE}`
     },
 
     previewLesson: (task_description?: string, system_prompt?: string) => `
@@ -61,6 +76,7 @@ ${TUTOR_GUARDRAIL_FLOOR}`
     This is a PREVIEW session. Do not actually mark anything as complete.
     Instead, explain when you would mark the task complete in a real session.
     ${TUTOR_GUARDRAIL_FLOOR}
+    ${METACOGNITIVE_NUDGE}
   `,
 
     previewExercise: (instructions?: string, system_prompt?: string) => `
@@ -71,6 +87,7 @@ ${TUTOR_GUARDRAIL_FLOOR}`
     This is a PREVIEW session. Provide feedback as you would in a real session,
     but explain your evaluation criteria rather than submitting scores.
     ${TUTOR_GUARDRAIL_FLOOR}
+    ${METACOGNITIVE_NUDGE}
   `,
 
     speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; passingScore?: number }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
@@ -100,6 +117,7 @@ ${TUTOR_GUARDRAIL_FLOOR}`
     3. 2-3 concrete improvements (actionable feedback)
     4. A single "focus_next" — the ONE most impactful thing to practice
 
+    Phrase "focus_next" so it ends with one short self-reflection question the student can answer for themselves before re-recording (e.g. "Where did you lose your thread — and why there?"). Write the feedback in the language the student spoke in.
     Be encouraging, specific, and constructive. Avoid generic feedback.
     If the transcript is very short (<10 words), score it low and explain that more content is needed.
 

@@ -108,7 +108,9 @@ Evaluate the student's submission based on the evaluation criteria above. Respon
   "feedback": "<overall feedback paragraph>",
   "strengths": ["<strength 1>", "<strength 2>"],
   "improvements": ["<improvement 1>", "<improvement 2>"]
-}`,
+}
+
+End "feedback" with one short reflective question tied to the most important improvement (e.g. "Before revising: what did you expect X to do, and what did it actually do?"). Write everything in the language of the student's submission.`,
     })
 
     // 9. Parse AI response

@@ -350,7 +350,7 @@ export function registerPracticeTools(server: MCPServer) {
 
         const { data: exercise, error } = await supabase
           .from("exercises")
-          .select("id, title, exercise_type, course_id, status")
+          .select("id, title, exercise_type, difficulty_level, course_id, status")
           .eq("id", input.exercise_id)
           .eq("tenant_id", session.getTenantId())
           .maybeSingle();
@@ -458,8 +458,8 @@ export function registerPracticeTools(server: MCPServer) {
             already_completed: alreadyCompleted,
           },
           input.passed
-            ? `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: PASSED at ${input.score}.${alreadyCompleted ? " (Exercise was already completed — no duplicate completion.)" : " Exercise marked completed; XP is awarded automatically."}`
-            : `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: not passed (${input.score}). Generate a fresh variation of the same skill and keep drilling.`
+            ? `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: PASSED at ${input.score}.${alreadyCompleted ? " (Exercise was already completed — no duplicate completion.)" : " Exercise marked completed; XP is awarded automatically."}${exercise.difficulty_level === "hard" ? " Hard exercise: occasionally (~1 in 4 such passes) ask the student to explain in one sentence why their approach works — skip if you've already nudged this exchange." : ""}`
+            : `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: not passed (${input.score}). Before reteaching, ask the student ONE short question about their reasoning on the miss and tailor the reteach to their answer (skippable — if they don't engage, explain anyway). Then generate a fresh variation of the same skill and keep drilling.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -543,7 +543,7 @@ export function registerPracticeTools(server: MCPServer) {
             questions: input.questions,
           },
           output: text(
-            `Practice quiz "${input.topic}" rendered with ${input.questions.length} question(s)${freeText > 0 ? ` (${freeText} free-text — the student's answers will come back to you to grade; record the result with lms_record_practice_attempt)` : " (widget grades and records the attempt, then reports back)"}. Wait for the student to finish.`
+            `Practice quiz "${input.topic}" rendered with ${input.questions.length} question(s)${freeText > 0 ? ` (${freeText} free-text — the student's answers will come back to you to grade; record the result with lms_record_practice_attempt)` : " (widget grades and records the attempt, then reports back)"}. Wait for the student to finish. When reviewing misses afterwards, ask ONE short self-explanation question about the student's reasoning before explaining the correct idea (one nudge max, skippable).`
           ),
         });
       } catch (err) {
@@ -641,7 +641,7 @@ export function registerPracticeTools(server: MCPServer) {
             correct_count: input.correct_count,
             total_questions: input.total_questions,
           },
-          `Practice attempt recorded (${input.correct_count}/${input.total_questions}, score ${input.score}). XP is awarded automatically.`
+          `Practice attempt recorded (${input.correct_count}/${input.total_questions}, score ${input.score}). XP is awarded automatically.${input.correct_count < input.total_questions ? " Before explaining the missed items, ask the student ONE short question about their reasoning on a miss and tailor the explanation to their answer (one nudge max, skippable)." : ""}`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
