@@ -1108,7 +1108,7 @@ export function registerAnalyticsTools(server: MCPServer) {
     {
       name: "lms_get_confusion_hotspots",
       description:
-        "Where students collectively struggle in a course: practice topics with low scores, exercises students are stuck on, and exam questions with high miss rates. Ranked by severity. Use it to decide what to reteach or which remediation exercises to draft.",
+        "Where students collectively struggle in a course: practice topics with low scores, exercises students are stuck on, and exam questions with high miss rates. Ranked by severity. Also returns hardest_items — the highest-Elo-rated exercises/exam questions in the course (item_ratings, #396) with ≥3 attempts, as an independent difficulty signal alongside the severity ranking. Use it to decide what to reteach or which remediation exercises to draft.",
       schema: z.object({
         course_id: z.number().describe("The course to analyze"),
         days: z
@@ -1374,12 +1374,84 @@ export function registerAnalyticsTools(server: MCPServer) {
         hotspots.sort((a, b) => b.severity - a.severity);
         const top = hotspots.slice(0, 20);
 
+        // 4. Elo hardest items (#396): independent difficulty signal — the
+        //    highest-rated exercises/exam questions in the course with enough
+        //    attempts to be meaningful. item_ratings has no join to titles, so
+        //    enrich with a second pass keyed by item_type.
+        type HardestItem = {
+          item_type: "exercise" | "exam_question";
+          item_id: number;
+          title: string;
+          rating: number;
+          attempt_count: number;
+        };
+        let hardestItems: HardestItem[] = [];
+        const itemRatingsRes = await supabase
+          .from("item_ratings")
+          .select("item_type, item_id, rating, attempt_count")
+          .eq("tenant_id", tenantId)
+          .eq("course_id", input.course_id)
+          .in("item_type", ["exercise", "exam_question"])
+          .gte("attempt_count", 3)
+          .order("rating", { ascending: false })
+          .limit(10);
+        if (!itemRatingsRes.error && (itemRatingsRes.data ?? []).length > 0) {
+          const rows = itemRatingsRes.data as Array<{
+            item_type: "exercise" | "exam_question";
+            item_id: number;
+            rating: number;
+            attempt_count: number;
+          }>;
+          const exerciseIds = rows
+            .filter((r) => r.item_type === "exercise")
+            .map((r) => r.item_id);
+          const questionIds = rows
+            .filter((r) => r.item_type === "exam_question")
+            .map((r) => r.item_id);
+          const titleByExercise = new Map<number, string>();
+          const textByQuestion = new Map<number, string>();
+          if (exerciseIds.length > 0) {
+            const exRes = await supabase
+              .from("exercises")
+              .select("id, title")
+              .in("id", exerciseIds);
+            if (!exRes.error)
+              for (const e of exRes.data ?? [])
+                titleByExercise.set(e.id as number, e.title as string);
+          }
+          if (questionIds.length > 0) {
+            // exam_questions has NO tenant_id — reached only via these ids,
+            // already scoped to this tenant's course through item_ratings.
+            const qRes = await supabase
+              .from("exam_questions")
+              .select("question_id, question_text")
+              .in("question_id", questionIds);
+            if (!qRes.error)
+              for (const q of qRes.data ?? [])
+                textByQuestion.set(
+                  q.question_id as number,
+                  (q.question_text as string).slice(0, 120)
+                );
+          }
+          hardestItems = rows.map((r) => ({
+            item_type: r.item_type,
+            item_id: r.item_id,
+            title:
+              r.item_type === "exercise"
+                ? (titleByExercise.get(r.item_id) ?? `Exercise ${r.item_id}`)
+                : (textByQuestion.get(r.item_id) ?? `Question ${r.item_id}`),
+            rating: Math.round(Number(r.rating)),
+            attempt_count: r.attempt_count,
+          }));
+        }
+
         return ok(
           {
             course_id: input.course_id,
             window_days: days,
             hotspots: top,
             truncated: hotspots.length > top.length,
+            hardest_items: hardestItems,
             sources: {
               practice_attempts: practiceCount,
               exercise_evaluations: (evalsRes.data ?? []).length,

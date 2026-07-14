@@ -264,7 +264,7 @@ Steps:
 2. ${lesson_id ? `Fetch the lesson with \`lms_view_lesson\` (lesson_id ${lesson_id})` : course_id ? `Get my progress with \`lms_my_learning\` and pick where I am in course ${course_id}` : "Ask me briefly what I'm working on if the topic above isn't enough"}.
 3. ${course_id ? `Call \`lms_get_tutor_config\` (course_id ${course_id}) and follow its persona, approach, and boundaries.` : "If a course is involved, call `lms_get_tutor_config` for it and follow its boundaries."}
 4. Teach by asking: probe what I already understand, build on it with one guided question at a time, and let me do the thinking. Correct misconceptions by leading me to spot them.
-5. When I seem to get it, verify with a short \`lms_practice_quiz\` (3-5 questions on exactly what we covered).
+5. When I seem to get it, verify with a short \`lms_practice_quiz\` (3-5 questions on exactly what we covered) — check the elo block in \`lms_get_my_weak_spots\` (and \`lms_get_adaptive_practice_items\` if drilling a real exercise) and pitch difficulty at ~80% expected success rather than guessing.
 6. If I miss questions, reteach those points and quiz again — don't move on until I pass.
 7. If I'm still stuck on the same point after ~3 reteach cycles, offer to send my question to the human teacher with \`lms_ask_teacher\` — ask me first, show me exactly what would be sent (question + any context), and only send after I agree.
 8. ${course_id ? `At a natural end of the session, call \`lms_record_tutor_session\` (course_id ${course_id}) with a summary of what we covered, the topics discussed, and any key struggles.` : "If a course was involved and it's a natural end of the session, call `lms_record_tutor_session` to record a summary."}
@@ -289,7 +289,7 @@ ${TUTOR_GUARDRAILS}`
 
 The loop:
 1. \`lms_get_exercise_for_student\` (exercise_id ${exercise_id}) — read the instructions AND my attempt history. Call \`lms_get_tutor_config\` for its course and honor the boundaries.
-2. From the lineage, judge my level: no attempts → start slightly easier than the exercise; repeated fails → isolate the sub-skill I keep missing; near-pass → drill at full difficulty.
+2. From the lineage, judge my level: no attempts → start slightly easier than the exercise; repeated fails → isolate the sub-skill I keep missing; near-pass → drill at full difficulty. Cross-check with \`lms_get_adaptive_practice_items\` (and the elo block in \`lms_get_my_weak_spots\`) to pitch difficulty at ~80% expected success rather than guessing from the lineage alone.
 3. Generate a FRESH variation of the same skill — never repeat the exercise or a previous variation verbatim. Deliver it in chat, voice, or as a \`lms_practice_quiz\` (set source_exercise_id=${exercise_id} so the drill history links up). Make variations generative — short-answer or fill-in that I must produce myself — rather than multiple choice, unless the skill being drilled is telling confusable options apart.
 4. Grade my answer against the exercise's instructions. Chat/voice rounds: record with \`lms_record_practice_attempt\` (source_exercise_id=${exercise_id}); widget quizzes record themselves.
 5. Miss → ask me one short question about my reasoning first ("what was your thinking there?"), then reteach the specific gap Socratically, tailored to my answer (if I skip the question, reteach anyway). Adjust difficulty down one notch, new variation. Pass a variation → next one harder or closer to the real exercise; on a hard variation, occasionally (~1 in 4) have me explain in one sentence why my approach worked before moving on.

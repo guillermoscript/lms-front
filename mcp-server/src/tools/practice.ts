@@ -280,6 +280,38 @@ async function isInterleavingEnabled(
   return config.interleaving_enabled !== false;
 }
 
+// ── Elo adaptive difficulty (#396) ───────────────────────────────────────────
+// Student ability and item difficulty share one Elo scale (anchor 1500). DB
+// triggers own every write (see migration 20260716120000_create_elo_ratings.sql
+// — item_ratings, student_topic_ratings); this layer only READS ratings and
+// picks items whose expected success sits near the productive-struggle target.
+
+/** Expected P(student answers correctly) — standard logistic, 400-point scale. */
+export function eloExpected(student: number, item: number): number {
+  return 1 / (1 + Math.pow(10, (item - student) / 400));
+}
+
+/** Target expected success for adaptive selection (desirable difficulty). */
+export const TARGET_SUCCESS = 0.8;
+
+/** Productive-struggle band around TARGET_SUCCESS (informational, for callers). */
+export const PRODUCTIVE_BAND: [number, number] = [0.7, 0.85];
+
+/** Cold-start rating priors for exercises with no item_ratings row yet. */
+const DIFFICULTY_PRIOR: Record<string, number> = {
+  easy: 1350,
+  medium: 1500,
+  hard: 1650,
+};
+
+/**
+ * Deterministic ±0.03 jitter keyed on an item id, so repeated selection calls
+ * don't always surface the same "nearest to target" item in a rut.
+ */
+export function eloJitter(id: number): number {
+  return (((id * 2654435761) >>> 0) % 1000) / 1000 * 0.06 - 0.03;
+}
+
 export function registerPracticeTools(server: MCPServer) {
   // ── lms_get_exercise_for_student ───────────────────────────────────────────
   server.tool(
@@ -577,7 +609,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_practice_quiz",
       description:
-        "Render an interactive practice quiz YOU author (never teacher content — write fresh questions, e.g. variations of a real exercise the student is drilling). Prefer generative formats (free_text, fill_blank) over multiple_choice wherever the topic can be answered in text — aim for at least half the questions generative; keep multiple_choice for genuinely confusable options. The student answers inside the widget; closed types are graded there (each shows its explanation) and the attempt is recorded automatically; free_text answers come back to you to grade and record via lms_record_practice_attempt. Set source_exercise_id when the quiz drills a real exercise. INTERLEAVING: when the student has ≥2 topics in the interleaving pool (lms_get_my_weak_spots reports it), prefer mode='mixed' — one session weaving questions across those topics (tag each question with its topic), prioritizing confusable/related topics together (that contrast is where interleaving shines). The server enforces a mastery gate: mixed sessions are rejected if any topic isn't interleaving-ready yet — fresh or struggling topics stay in focused single-topic practice, which is always allowed.",
+        "Render an interactive practice quiz YOU author (never teacher content — write fresh questions, e.g. variations of a real exercise the student is drilling). Prefer generative formats (free_text, fill_blank) over multiple_choice wherever the topic can be answered in text — aim for at least half the questions generative; keep multiple_choice for genuinely confusable options. The student answers inside the widget; closed types are graded there (each shows its explanation) and the attempt is recorded automatically; free_text answers come back to you to grade and record via lms_record_practice_attempt. Set source_exercise_id when the quiz drills a real exercise. INTERLEAVING: when the student has ≥2 topics in the interleaving pool (lms_get_my_weak_spots reports it), prefer mode='mixed' — one session weaving questions across those topics (tag each question with its topic), prioritizing confusable/related topics together (that contrast is where interleaving shines). The server enforces a mastery gate: mixed sessions are rejected if any topic isn't interleaving-ready yet — fresh or struggling topics stay in focused single-topic practice, which is always allowed. Pitch difficulty using the elo guidance from lms_get_my_weak_spots (target ~80% expected success).",
       schema: z.object({
         topic: z
           .string()
@@ -1126,11 +1158,74 @@ export function registerPracticeTools(server: MCPServer) {
               : "Fewer than 2 topics are interleaving-ready — stick to focused single-topic practice for now; the gate protects novices, for whom forced interleaving measurably hurts early acquisition.",
         };
 
+        // Elo context (#396): the caller's ability per topic vs that topic's
+        // difficulty anchor (item_ratings item_type='topic'). Additive to the
+        // signals above — used by the host to pitch generated-question
+        // difficulty, not to replace the weak-spot/interleaving logic.
+        let topicRatingsQuery = supabase
+          .from("student_topic_ratings")
+          .select("topic, rating, attempt_count, course_id")
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId);
+        if (input.course_id !== undefined)
+          topicRatingsQuery = topicRatingsQuery.eq("course_id", input.course_id);
+        const topicRatingsRes = await topicRatingsQuery;
+
+        type EloTopic = {
+          topic: string;
+          student_rating: number;
+          topic_difficulty: number | null;
+          attempts: number;
+          expected_success: number | null;
+        };
+        let eloTopics: EloTopic[] = [];
+        if (!topicRatingsRes.error && (topicRatingsRes.data ?? []).length > 0) {
+          const studentTopics = topicRatingsRes.data as Array<{
+            topic: string;
+            rating: number;
+            attempt_count: number;
+          }>;
+          const anchorsRes = await supabase
+            .from("item_ratings")
+            .select("topic, rating")
+            .eq("tenant_id", tenantId)
+            .eq("item_type", "topic")
+            .in(
+              "topic",
+              studentTopics.map((t) => t.topic)
+            );
+          const anchorByTopic = new Map<string, number>();
+          if (!anchorsRes.error) {
+            for (const a of anchorsRes.data ?? [])
+              anchorByTopic.set(a.topic as string, Number(a.rating));
+          }
+          eloTopics = studentTopics.map((t) => {
+            const anchor = anchorByTopic.get(t.topic) ?? null;
+            return {
+              topic: t.topic,
+              student_rating: Math.round(Number(t.rating)),
+              topic_difficulty: anchor !== null ? Math.round(anchor) : null,
+              attempts: t.attempt_count,
+              expected_success:
+                anchor !== null
+                  ? Math.round(eloExpected(Number(t.rating), anchor) * 100) / 100
+                  : null,
+            };
+          });
+        }
+        const elo = {
+          target_expected_success: TARGET_SUCCESS,
+          guidance:
+            "When authoring practice questions, aim for 70–85% expected success: make them harder when expected_success > 0.85, easier when < 0.70.",
+          topics: eloTopics,
+        };
+
         return ok(
           {
             weak_topics: weak,
             strengths: strengths.slice(0, 10),
             interleaving,
+            elo,
             sources: {
               exam_submissions: (examsRes.data ?? []).length,
               exercises_attempted: latestByExercise.size,
@@ -1149,6 +1244,172 @@ export function registerPracticeTools(server: MCPServer) {
                   .map((s) => `"${s.topic}"`)
                   .join(", ")}${readyTopics.length > 4 ? ", …" : ""}) — prefer a mixed session across confusable ones.`
               : "")
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // ── lms_get_adaptive_practice_items ─────────────────────────────────────────
+  // #396. Selects among REAL published exercises in a course, targeting the
+  // productive-struggle band around 80% expected success. For LLM-authored
+  // quizzes, use the elo block in lms_get_my_weak_spots instead — this tool is
+  // for choosing which real exercise to drill next.
+  server.tool(
+    {
+      name: "lms_get_adaptive_practice_items",
+      description:
+        "Adaptive item selection among a course's REAL published exercises: ranks them by how close the caller's expected success is to ~80% (productive struggle — hard enough to learn from, not so hard it's discouraging), using Elo ratings from item_ratings/student_topic_ratings. Composes with the interleaving mastery gate (#393) — it only picks WHICH real exercises to drill, it does not bypass the gate for mixed-topic sessions. For LLM-authored practice quizzes (lms_practice_quiz), use the elo guidance block returned by lms_get_my_weak_spots instead.",
+      schema: z.object({
+        course_id: z.number().describe("The course to pick adaptive practice items from"),
+        topic: z
+          .string()
+          .optional()
+          .describe(
+            "Rate the student against this specific topic's ability (student_topic_ratings). Omit to use the student's overall ability, averaged across their rated topics (preferring topics tied to this course when any exist)."
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .describe("How many items to return, 1-10 (default 5)"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        await session.verifyCourseAccess(input.course_id);
+        const supabase = session.getClient();
+        const userId = session.getUserId();
+        const tenantId = session.getTenantId();
+        const limit = input.limit ?? 5;
+
+        // ── Student ability ──────────────────────────────────────────────────
+        let studentRating = 1500;
+        if (input.topic !== undefined) {
+          const { data, error } = await supabase
+            .from("student_topic_ratings")
+            .select("rating")
+            .eq("user_id", userId)
+            .eq("tenant_id", tenantId)
+            .eq("topic", input.topic)
+            .maybeSingle();
+          if (error)
+            return errorResult(`Loading student rating: ${error.message}`);
+          if (data) studentRating = Number(data.rating);
+        } else {
+          const { data, error } = await supabase
+            .from("student_topic_ratings")
+            .select("rating, course_id")
+            .eq("user_id", userId)
+            .eq("tenant_id", tenantId);
+          if (error)
+            return errorResult(`Loading student ratings: ${error.message}`);
+          const rows = (data ?? []) as Array<{ rating: number; course_id: number | null }>;
+          const courseRows = rows.filter((r) => r.course_id === input.course_id);
+          const useRows = courseRows.length > 0 ? courseRows : rows;
+          if (useRows.length > 0)
+            studentRating =
+              useRows.reduce((s, r) => s + Number(r.rating), 0) / useRows.length;
+        }
+
+        // ── Candidates: published exercises in the course ───────────────────
+        // Students only ever see published exercises (mirrors the role guard
+        // in lms_get_exercise_for_student); teachers/admins see all statuses.
+        let exercisesQuery = supabase
+          .from("exercises")
+          .select("id, title, difficulty_level")
+          .eq("course_id", input.course_id)
+          .eq("tenant_id", tenantId);
+        if (session.getRole() === "student")
+          exercisesQuery = exercisesQuery.eq("status", "published");
+        const { data: exercises, error: exercisesError } = await exercisesQuery;
+        if (exercisesError)
+          return errorResult(`Loading exercises: ${exercisesError.message}`);
+
+        if (!exercises || exercises.length === 0) {
+          return ok(
+            {
+              student_rating: Math.round(studentRating),
+              topic: input.topic ?? null,
+              target_expected_success: TARGET_SUCCESS,
+              guidance:
+                "Pick items near the top; aim for 70–85% expected success — harder if the student is above the band, easier if below.",
+              items: [],
+            },
+            `No published exercises found in course ${input.course_id} to select from.`
+          );
+        }
+
+        // ── Item ratings (cold-start prior from difficulty_level if unrated) ─
+        const exerciseIds = exercises.map((e) => e.id as number);
+        const { data: ratingRows, error: ratingRowsError } = await supabase
+          .from("item_ratings")
+          .select("item_id, rating, attempt_count")
+          .eq("tenant_id", tenantId)
+          .eq("item_type", "exercise")
+          .in("item_id", exerciseIds);
+        if (ratingRowsError)
+          return errorResult(`Loading item ratings: ${ratingRowsError.message}`);
+        const ratingByItem = new Map<
+          number,
+          { rating: number; attempt_count: number }
+        >();
+        for (const r of ratingRows ?? [])
+          ratingByItem.set(r.item_id as number, {
+            rating: Number(r.rating),
+            attempt_count: r.attempt_count as number,
+          });
+
+        const scored = exercises.map((e) => {
+          const exerciseId = e.id as number;
+          const rated = ratingByItem.get(exerciseId);
+          const itemRating = rated
+            ? rated.rating
+            : (DIFFICULTY_PRIOR[e.difficulty_level as string] ?? 1500);
+          const expectedSuccess = eloExpected(studentRating, itemRating);
+          return {
+            exercise_id: exerciseId,
+            title: e.title as string,
+            difficulty_level: e.difficulty_level as string,
+            rating: Math.round(itemRating),
+            attempt_count: rated ? rated.attempt_count : 0,
+            expected_success: Math.round(expectedSuccess * 100) / 100,
+            rated: !!rated,
+            sortKey:
+              Math.abs(expectedSuccess - TARGET_SUCCESS) + eloJitter(exerciseId),
+          };
+        });
+        scored.sort((a, b) => a.sortKey - b.sortKey);
+        const items = scored
+          .slice(0, limit)
+          .map(({ sortKey: _sortKey, ...rest }) => rest);
+
+        return ok(
+          {
+            student_rating: Math.round(studentRating),
+            topic: input.topic ?? null,
+            target_expected_success: TARGET_SUCCESS,
+            guidance:
+              "Pick items near the top; aim for 70–85% expected success — harder if the student is above the band, easier if below.",
+            items,
+          },
+          `${items.length} adaptive item(s) selected for ${input.topic ? `topic "${input.topic}"` : "overall ability"} (student rating ${Math.round(studentRating)}). Top pick: "${items[0].title}" (expected success ${items[0].expected_success}).`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
