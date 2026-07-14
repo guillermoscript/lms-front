@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-subscriptions",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/daily-digest",
+      "schedule": "0 * * * *"
     }
   ]
 }

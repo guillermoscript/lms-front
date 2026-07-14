@@ -263,6 +263,8 @@ Since there's no Vercel cron, set up a system cron on the server:
 ```bash
 # crontab -e
 0 0 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/expire-subscriptions
+# Daily digest + streak nudge — must run HOURLY (each tenant sends at its own local hour)
+0 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/daily-digest
 ```
 
 ---
