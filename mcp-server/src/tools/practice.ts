@@ -84,9 +84,15 @@ const QuestionSchema = z
         "free_text",
       ])
       .describe(
-        "Question type. Closed types (multiple_choice, true_false, fill_blank, match, order) are graded inside the widget; free_text answers come back to you (the host) to grade."
+        "Question type. PREFER generative formats — free_text and fill_blank — whenever the answer can be produced as text: retrieval (generating the answer) beats recognition (picking it). Aim for at least half the quiz generative on text-suitable topics; reserve multiple_choice for genuinely discriminative tasks where the point is telling confusable options apart. Closed types (multiple_choice, true_false, fill_blank, match, order) are graded inside the widget; free_text answers come back to you (the host) to grade."
       ),
     prompt: z.string().describe("The question text shown to the student"),
+    explanation: z
+      .string()
+      .min(1)
+      .describe(
+        "One or two sentences of explanatory feedback shown after the question is graded: why the correct answer is correct and the underlying concept. Write it for a student who got it wrong — never just restate the answer."
+      ),
     options: z
       .array(z.string())
       .optional()
@@ -459,7 +465,7 @@ export function registerPracticeTools(server: MCPServer) {
           },
           input.passed
             ? `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: PASSED at ${input.score}.${alreadyCompleted ? " (Exercise was already completed — no duplicate completion.)" : " Exercise marked completed; XP is awarded automatically."}${exercise.difficulty_level === "hard" ? " Hard exercise: occasionally (~1 in 4 such passes) ask the student to explain in one sentence why their approach works — skip if you've already nudged this exchange." : ""}`
-            : `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: not passed (${input.score}). Before reteaching, ask the student ONE short question about their reasoning on the miss and tailor the reteach to their answer (skippable — if they don't engage, explain anyway). Then generate a fresh variation of the same skill and keep drilling.`
+            : `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: not passed (${input.score}). Make the feedback explanatory — name what went wrong AND the concept behind it, never a bare score. Before reteaching, ask the student ONE short question about their reasoning on the miss and tailor the reteach to their answer (skippable — if they don't engage, explain anyway). Then generate a fresh variation of the same skill and keep drilling.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -472,7 +478,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_practice_quiz",
       description:
-        "Render an interactive practice quiz YOU author (never teacher content — write fresh questions, e.g. variations of a real exercise the student is drilling). The student answers inside the widget; closed types are graded there and the attempt is recorded automatically; free_text answers come back to you to grade and record via lms_record_practice_attempt. Set source_exercise_id when the quiz drills a real exercise.",
+        "Render an interactive practice quiz YOU author (never teacher content — write fresh questions, e.g. variations of a real exercise the student is drilling). Prefer generative formats (free_text, fill_blank) over multiple_choice wherever the topic can be answered in text — aim for at least half the questions generative; keep multiple_choice for genuinely confusable options. The student answers inside the widget; closed types are graded there (each shows its explanation) and the attempt is recorded automatically; free_text answers come back to you to grade and record via lms_record_practice_attempt. Set source_exercise_id when the quiz drills a real exercise.",
       schema: z.object({
         topic: z
           .string()
@@ -543,7 +549,7 @@ export function registerPracticeTools(server: MCPServer) {
             questions: input.questions,
           },
           output: text(
-            `Practice quiz "${input.topic}" rendered with ${input.questions.length} question(s)${freeText > 0 ? ` (${freeText} free-text — the student's answers will come back to you to grade; record the result with lms_record_practice_attempt)` : " (widget grades and records the attempt, then reports back)"}. Wait for the student to finish. When reviewing misses afterwards, ask ONE short self-explanation question about the student's reasoning before explaining the correct idea (one nudge max, skippable).`
+            `Practice quiz "${input.topic}" rendered with ${input.questions.length} question(s)${freeText > 0 ? ` (${freeText} free-text — the student's answers will come back to you to grade; record the result with lms_record_practice_attempt)` : " (widget grades and records the attempt, then reports back)"}. Wait for the student to finish. When grading free-text answers, ALWAYS give explanatory feedback — say what was right or wrong AND name the underlying concept, never a bare correct/incorrect. When reviewing misses afterwards, ask ONE short self-explanation question about the student's reasoning before explaining the correct idea (one nudge max, skippable).`
           ),
         });
       } catch (err) {
@@ -574,7 +580,7 @@ export function registerPracticeTools(server: MCPServer) {
           .array(z.record(z.string(), z.unknown()))
           .min(1)
           .describe(
-            "Per-question results: [{ id, answer, correct: boolean }, ...]"
+            "Per-question results: [{ id, answer, correct: boolean, feedback?: string }, ...] — for answers you graded yourself (free_text), include the explanatory feedback you gave in 'feedback'"
           ),
         score: z
           .number()

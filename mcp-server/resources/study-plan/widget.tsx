@@ -17,6 +17,8 @@ const propsSchema = z.object({
       title: z.string(),
       kind: z.enum(["lesson", "practice", "review", "exam_prep", "custom"]),
       course_id: z.number().nullable(),
+      // Required goals gate week completion; optional for payloads predating #391.
+      required: z.boolean().optional(),
       done: z.boolean(),
       done_at: z.string().nullable(),
     })
@@ -85,6 +87,12 @@ export default function StudyPlan() {
   const doneCount = goals.filter(isDone).length;
   const progress = goals.length > 0 ? Math.round((doneCount / goals.length) * 100) : 0;
   const allDone = goals.length > 0 && doneCount === goals.length;
+  // Week completion is gated on REQUIRED goals (#391); a plan without any
+  // required goals keeps the original every-goal-done behavior.
+  const requiredGoals = goals.filter((g) => g.required);
+  const requiredLeft = requiredGoals.filter((g) => !isDone(g)).length;
+  const weekComplete =
+    goals.length > 0 && (requiredGoals.length > 0 ? requiredLeft === 0 : allDone);
 
   const weekLabel = new Date(`${week_start}T00:00:00Z`).toLocaleDateString(undefined, {
     month: "short",
@@ -141,7 +149,7 @@ export default function StudyPlan() {
                 strokeDashoffset={CIRC * (1 - progress / 100)}
                 transform="rotate(-90 32 32)"
                 className={
-                  allDone
+                  weekComplete
                     ? "stroke-green-600 dark:stroke-green-400"
                     : "stroke-violet-600 dark:stroke-violet-400"
                 }
@@ -163,16 +171,19 @@ export default function StudyPlan() {
                 {goals.length === 0
                   ? "No goals yet this week"
                   : `${doneCount} of ${goals.length} goals done`}
+                {requiredLeft > 0 ? ` · ${requiredLeft} required left` : ""}
                 {context.due_reviews > 0 ? ` · ${context.due_reviews} flashcards due` : ""}
               </p>
             </div>
           </div>
 
-          {allDone && (
+          {weekComplete && (
             <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-green-600 bg-green-100 px-4.5 py-3.5 dark:border-green-400 dark:bg-green-900">
               <span className="text-[22px]">🎉</span>
               <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                Week complete — every goal done!
+                {allDone
+                  ? "Week complete — every goal done!"
+                  : "Week complete — all required goals done!"}
               </span>
             </div>
           )}
@@ -242,7 +253,7 @@ export default function StudyPlan() {
                               {done ? "✓" : ""}
                             </span>
                             <span
-                              className={`text-sm ${
+                              className={`min-w-0 flex-1 text-sm ${
                                 done
                                   ? "text-zinc-400 line-through dark:text-zinc-500"
                                   : "text-zinc-900 dark:text-zinc-100"
@@ -250,6 +261,17 @@ export default function StudyPlan() {
                             >
                               {g.title}
                             </span>
+                            {g.required && (
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.5px] uppercase ${
+                                  done
+                                    ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                                }`}
+                              >
+                                Required
+                              </span>
+                            )}
                           </button>
                         );
                       })}

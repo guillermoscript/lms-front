@@ -21,6 +21,8 @@ const questionSchema = z.object({
     "free_text",
   ]),
   prompt: z.string(),
+  // Explanatory feedback shown after grading (#391); optional for older payloads.
+  explanation: z.string().optional(),
   options: z.array(z.string()).optional(),
   pairs: z.array(z.object({ left: z.string(), right: z.string() })).optional(),
   sequence: z.array(z.string()).optional(),
@@ -357,6 +359,11 @@ export default function PracticePlayer() {
                   )}
                   {correct === null && <> · Awaiting tutor grading</>}
                 </div>
+                {correct !== null && rq.explanation && (
+                  <div className="mt-1 text-[12.5px] leading-[1.5] text-zinc-600 dark:text-zinc-300">
+                    💡 {rq.explanation}
+                  </div>
+                )}
               </div>
             ))}
           </div>
