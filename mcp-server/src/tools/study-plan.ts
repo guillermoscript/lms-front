@@ -29,15 +29,22 @@ type GoalRow = {
   kind: string;
   course_id: number | null;
   target_ref: Record<string, unknown> | null;
+  required: boolean;
   done: boolean;
   done_at: string | null;
 };
+
+/** Retrieval-practice goals are required by default (learning-science finding
+ *  #6: assigned practice beats optional); the caller can override per goal. */
+function isRequiredByDefault(kind: (typeof GOAL_KINDS)[number]): boolean {
+  return kind === "practice" || kind === "review";
+}
 
 async function loadWeekGoals(session: LmsSession, weekStart: string) {
   const { data, error } = await session
     .getClient()
     .from("study_goals")
-    .select("id, title, kind, course_id, target_ref, done, done_at")
+    .select("id, title, kind, course_id, target_ref, required, done, done_at")
     .eq("user_id", session.getUserId())
     .eq("tenant_id", session.getTenantId())
     .eq("week_start", weekStart)
@@ -113,7 +120,7 @@ export function registerStudyPlanTools(server: MCPServer) {
     {
       name: "lms_set_study_plan",
       description:
-        "Replace the caller's study goals for a week (defaults to the current week). Sets the WHOLE week's plan in one call — existing goals for that week are removed first, so include every goal the plan should contain. Derive goals from real data (lms_get_study_plan context, lms_get_my_weak_spots, lms_get_exam_readiness), and agree on the plan with the student before saving.",
+        "Replace the caller's study goals for a week (defaults to the current week). Sets the WHOLE week's plan in one call — existing goals for that week are removed first, so include every goal the plan should contain. Derive goals from real data (lms_get_study_plan context, lms_get_my_weak_spots, lms_get_exam_readiness), and agree on the plan with the student before saving. Retrieval-practice goals (kind 'practice' or 'review') are REQUIRED by default — completing the week depends on them; only mark one optional (required: false) when the student's teacher or plan explicitly relaxes it.",
       schema: z.object({
         week_start: z
           .string()
@@ -134,6 +141,12 @@ export function registerStudyPlanTools(server: MCPServer) {
                 .record(z.string(), z.unknown())
                 .optional()
                 .describe("Machine-readable target, e.g. {\"lesson_id\": 42} or {\"topic\": \"recursion\"}"),
+              required: z
+                .boolean()
+                .optional()
+                .describe(
+                  "Whether the goal is required for week completion. Defaults to true for kind 'practice' and 'review' (retrieval practice is mandatory by default), false for other kinds. Set false only to explicitly relax a practice/review goal."
+                ),
             })
           )
           .min(1)
@@ -176,17 +189,19 @@ export function registerStudyPlanTools(server: MCPServer) {
           title: g.title,
           kind: g.kind,
           target_ref: g.target_ref ?? null,
+          required: g.required ?? isRequiredByDefault(g.kind),
           week_start: weekStart,
         }));
         const { data, error } = await supabase
           .from("study_goals")
           .insert(rows)
-          .select("id, title, kind");
+          .select("id, title, kind, required");
         if (error) return errorResult(`Saving plan: ${error.message}`);
 
+        const requiredCount = (data ?? []).filter((g) => g.required).length;
         return ok(
           { week_start: weekStart, goals: data ?? [] },
-          `Saved ${data?.length ?? 0} goal(s) for the week of ${weekStart}. Show it with lms_get_study_plan.`
+          `Saved ${data?.length ?? 0} goal(s) for the week of ${weekStart} (${requiredCount} required). Show it with lms_get_study_plan.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -237,6 +252,8 @@ export function registerStudyPlanTools(server: MCPServer) {
         const doneCount = goals.filter((g) => g.done).length;
         const progress =
           goals.length > 0 ? Math.round((doneCount / goals.length) * 100) : 0;
+        const requiredGoals = goals.filter((g) => g.required);
+        const requiredLeft = requiredGoals.filter((g) => !g.done).length;
 
         return widget({
           props: {
@@ -246,6 +263,7 @@ export function registerStudyPlanTools(server: MCPServer) {
               title: g.title,
               kind: g.kind,
               course_id: g.course_id,
+              required: g.required,
               done: g.done,
               done_at: g.done_at,
             })),
@@ -254,8 +272,14 @@ export function registerStudyPlanTools(server: MCPServer) {
           },
           output: text(
             goals.length === 0
-              ? `No plan yet for the week of ${weekStart}. Context: ${context.next_lessons.length} course(s) with a next lesson, ${context.due_reviews} flashcard(s) due. Propose goals and save them with lms_set_study_plan.`
-              : `Week of ${weekStart}: ${doneCount}/${goals.length} goals done (${progress}%). ${context.due_reviews} flashcard(s) due.`
+              ? `No plan yet for the week of ${weekStart}. Context: ${context.next_lessons.length} course(s) with a next lesson, ${context.due_reviews} flashcard(s) due. Propose goals and save them with lms_set_study_plan. Remember: practice/review goals are required by default.`
+              : `Week of ${weekStart}: ${doneCount}/${goals.length} goals done (${progress}%). ${
+                  requiredGoals.length > 0
+                    ? requiredLeft === 0
+                      ? "All required goals done. "
+                      : `${requiredLeft} REQUIRED goal(s) still open — the week isn't complete until they're done. `
+                    : ""
+                }${context.due_reviews} flashcard(s) due.`
           ),
         });
       } catch (err) {
