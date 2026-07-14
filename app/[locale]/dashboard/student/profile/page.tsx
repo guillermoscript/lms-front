@@ -23,6 +23,7 @@ import { XPProgressCircle } from '@/components/gamification/xp-progress-circle'
 import { AchievementGrid } from '@/components/gamification/achievement-grid'
 import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
+import { LeagueOptOutToggle } from '@/components/gamification/league-opt-out-toggle'
 import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
@@ -407,8 +408,9 @@ export default async function ProfilePage() {
                                     subtitle={t('accountDetailsSubtitle')}
                                 />
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-6 space-y-6">
                                 <ProfileForm profile={profile} />
+                                <LeagueOptOutToggle />
                             </CardContent>
                         </Card>
 

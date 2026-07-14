@@ -3443,11 +3443,30 @@
         "error": "Error al completar la compra",
         "empty": "La tienda está vacía por el momento. ¡Vuelve más tarde!"
       },
+      "league": {
+        "title": "Liga Semanal",
+        "endsIn": "Termina en {time}",
+        "xp": "XP",
+        "anonymous": "Anónimo",
+        "promoteZone": "Zona de ascenso",
+        "demoteZone": "Zona de descenso",
+        "emptyTitle": "Las ligas comienzan el lunes",
+        "emptyDescription": "Gana XP esta semana y entrarás a una liga con otros estudiantes.",
+        "optedOutNote": "Las ligas semanales están ocultas. Puedes volver a activarlas en la configuración de tu perfil.",
+        "optOut": {
+          "label": "Ligas semanales",
+          "description": "Compite en una liga semanal de XP con otros estudiantes.",
+          "enabledToast": "Ligas semanales activadas",
+          "disabledToast": "Ligas semanales ocultas",
+          "error": "No se pudo actualizar tu preferencia de ligas"
+        }
+      },
       "upgrade": {
         "upgradeDescription": "Pide al administrador de tu escuela que actualice el plan para desbloquear esta función.",
         "leaderboardLocked": "Tabla de Clasificación — Actualiza a Básico",
         "achievementsLocked": "Logros — Actualiza a Básico",
-        "storeLocked": "Tienda de Puntos — Actualiza a Profesional"
+        "storeLocked": "Tienda de Puntos — Actualiza a Profesional",
+        "leagueLocked": "Liga Semanal — Actualiza a Básico"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — ¡Lección completada!",

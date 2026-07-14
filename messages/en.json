@@ -3598,11 +3598,30 @@
         "error": "Failed to complete purchase",
         "empty": "The store is currently empty. Check back later!"
       },
+      "league": {
+        "title": "Weekly League",
+        "endsIn": "{time} left",
+        "xp": "XP",
+        "anonymous": "Anonymous",
+        "promoteZone": "Promotion zone",
+        "demoteZone": "Demotion zone",
+        "emptyTitle": "Leagues kick off Monday",
+        "emptyDescription": "Earn XP this week and you'll be placed in a league with other learners.",
+        "optedOutNote": "Weekly leagues are hidden. You can re-enable them in your profile settings.",
+        "optOut": {
+          "label": "Weekly leagues",
+          "description": "Compete in a weekly XP league with other learners.",
+          "enabledToast": "Weekly leagues enabled",
+          "disabledToast": "Weekly leagues hidden",
+          "error": "Could not update your league preference"
+        }
+      },
       "upgrade": {
         "upgradeDescription": "Ask your school admin to upgrade the plan to unlock this feature.",
         "leaderboardLocked": "Leaderboard — Upgrade to Basic",
         "achievementsLocked": "Achievements — Upgrade to Basic",
-        "storeLocked": "Point Store — Upgrade to Professional"
+        "storeLocked": "Point Store — Upgrade to Professional",
+        "leagueLocked": "Weekly League — Upgrade to Basic"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — Lesson completed!",
