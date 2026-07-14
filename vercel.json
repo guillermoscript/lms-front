@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-subscriptions",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/league-rollover",
+      "schedule": "0 1 * * 1"
     }
   ]
 }

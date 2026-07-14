@@ -105,18 +105,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check max_per_user limit (tenant-scoped)
+    // Check max_per_user limit (tenant-scoped).
+    // For streak_freeze the cap is PER CALENDAR MONTH (issue #394: streak
+    // saver is capped per month); all other items keep a lifetime cap.
     if (item.max_per_user !== null) {
-      const { count } = await admin
+      const isMonthlyCap = item.slug === "streak_freeze";
+
+      let query = admin
         .from("gamification_redemptions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
         .eq("item_id", item_id);
 
+      if (isMonthlyCap) {
+        const now = new Date();
+        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+        query = query.gte("redeemed_at", monthStart);
+      }
+
+      const { count } = await query;
+
       if ((count || 0) >= item.max_per_user) {
         return new Response(
-          JSON.stringify({ error: "Maximum redemptions reached for this item" }),
+          JSON.stringify({
+            error: isMonthlyCap
+              ? "Monthly redemption limit reached for this item"
+              : "Maximum redemptions reached for this item",
+          }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
