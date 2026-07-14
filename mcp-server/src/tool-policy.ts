@@ -48,6 +48,8 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_record_practice_attempt",
   "lms_get_my_weak_spots",
   "lms_get_tutor_config",
+  // #396 — Elo adaptive practice item selection.
+  "lms_get_adaptive_practice_items",
   // Phase 2 (Epic #348) — ingest, mock exams, shared tutor memory, self-enroll.
   "lms_get_course_content",
   "lms_search_content",
