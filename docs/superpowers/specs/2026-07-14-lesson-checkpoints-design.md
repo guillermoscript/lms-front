@@ -28,7 +28,21 @@ Create a tenant-scoped `lesson_checkpoints` record that links an existing exerci
 
 Exercises remain the source of truth for question content, exercise type, grading rules, and renderer. An exercise may be linked to more than one checkpoint; each checkpoint has independent attempt history and metrics.
 
-The lesson renderer inserts checkpoints after the selected content anchor. The video player pauses and opens the same checkpoint at its timestamp, including when the learner scrubs beyond it. Lessons without video use the same inline presentation.
+The current lesson player has two video paths: the lesson-level `video_url` iframe rendered by `LessonContent`, and MDX `<Video>` blocks. Both are currently passive YouTube/Vimeo iframes, so neither can observe playback time or reliably pause. Replace their shared embed behavior with a provider-aware `CheckpointVideoPlayer`: YouTube IFrame API and Vimeo Player API expose time updates and pause/resume; a native direct-video URL uses `HTMLVideoElement`; unsupported embeds show the checkpoint inline and do not claim timestamp enforcement.
+
+The block editor gains a `checkpoint` block that serializes to `<LessonCheckpoint checkpointId="…" />`; the MDX component map renders that component in the student lesson. This is the durable inline anchor after a selected content block. Teachers using raw MDX get the same documented component syntax. The lesson renderer loads the checkpoint records with the lesson, passes them into `LessonContent`, and injects the correct exercise surface at each anchor. Lessons without video use exactly this inline path.
+
+## Exercise Surface Contract
+
+The current exercise engine identifies eleven types, but their student UIs are not yet a single reusable component: code, audio, video, and artifact have dedicated surfaces, while other types are handled through their existing page/config flows. Add `CheckpointExerciseRenderer` as a thin routing layer rather than duplicating those implementations.
+
+- Deterministic selection, fill-in, matching, ordering, and quiz types receive compact adapters that call their current deterministic graders.
+- Text/essay/discussion submissions use the structured evaluator when configured for AI grading.
+- Coding mounts the existing code challenge surface and test runner.
+- Audio/video mount the current upload, transcription, and media-analysis flow; they are not forced through a text evaluator.
+- Artifact and real-time conversation preserve their existing submission/evaluation paths.
+
+Every adapter returns the same checkpoint result contract: submitted, passed/complete, score, feedback, evaluator type, and retry availability. The wrapper controls only the contextual layout, resume behavior, and checkpoint-specific limits.
 
 ## Evaluation
 
@@ -40,13 +54,15 @@ The response contains a score, whether the answer meets expectations, concise fo
 
 ## Attempts, Progress, and Metrics
 
-Checkpoint attempts retain the existing exercise attempt/completion behavior and add a checkpoint context: checkpoint ID, source (`video` or `inline`), attempt number, evaluator type, outcome, score, and completion state. This permits filtering and aggregation without duplicating exercises.
+Add a dedicated `lesson_checkpoint_attempts` table for the canonical event log. It has the checkpoint, exercise, lesson, course, tenant, and user IDs; placement source (`video` or `inline`); response/evaluation JSON; score; passed/completed status; evaluator type; attempt number; and timestamps. Its RLS mirrors `practice_attempts` and `exercise_evaluations`: the student owns their rows, while active tenant teachers/admins can read them.
 
-Completed checkpoints contribute to lesson progress. An unfinished required checkpoint leaves the lesson resumable at its exact placement and visible as a practice gap. Attempt data feeds existing weak-spot and readiness signals. Teachers can inspect marker-level completion, score distribution, common weak areas, and AI-evaluation usage.
+Do not write checkpoint answers directly into the existing `practice_attempts` table. That table is intentionally shaped for LLM-generated multi-question drills and has an insert trigger that grants 15 XP; reusing it would distort attempts, allow XP farming, and contradict its existing data contract. Instead, update weak-spot/readiness queries to consume `lesson_checkpoint_attempts` alongside `practice_attempts`, retaining a source filter so teachers can compare drills and embedded checkpoints. XP, if awarded, is explicit and capped by checkpoint policy rather than inherited accidentally.
+
+Completed checkpoints contribute to a visible per-lesson checkpoint-progress indicator. An unfinished required checkpoint leaves the lesson resumable at its exact placement and visible as a practice gap. The existing `lesson_completions` row remains the course/certificate completion authority. Before the lesson AI-task tool can insert that row, it must validate that every required checkpoint is completed; this prevents a chat completion from bypassing required retrieval practice. Attempt data feeds existing weak-spot and readiness signals. Teachers can inspect marker-level completion, score distribution, common weak areas, and AI-evaluation usage.
 
 ## Cost and Safety Controls
 
-AI evaluation is guarded at three levels:
+The current plan model exposes an `ai_grading` feature flag but has no token/evaluation allowance. Add explicit numeric checkpoint-evaluation limits to plan limits and tenant usage accounting before enforcing cost caps. AI evaluation is then guarded at three levels:
 
 1. A per-checkpoint/per-student cap prevents retry loops.
 2. A per-student monthly cap prevents a single learner consuming the tenant allowance.
@@ -56,10 +72,10 @@ Teachers may configure stricter checkpoint retry caps and disable AI evaluation,
 
 ## Teacher and Student Experience
 
-Teachers add a checkpoint from the lesson editor by choosing the content position or video timestamp, selecting an existing exercise, and configuring skip/retry behavior. The editor makes the exercise type and potential AI usage visible.
+Teachers add a checkpoint from the lesson editor by selecting a content block (which inserts the checkpoint block) or a supported video timestamp, selecting an existing exercise, and configuring skip/retry behavior. The editor makes the exercise type, evaluation path, and potential AI usage visible. It must reject an exercise from another course or tenant on the server, not only hide it in the selector.
 
 Students encounter a compact, keyboard-accessible and mobile-safe exercise in context. After evaluation they receive immediate explanatory feedback, can retry within the configured limit, and continue. Video behavior respects reduced motion. Both English and Spanish use the existing localization system.
 
 ## Verification
 
-Cover placement and resume behavior for inline and video checkpoints; all supported exercise/evaluator paths; deterministic versus AI quota consumption; quotas and exhaustion fallback; persisted context and progress; tenant isolation/RLS; locale, mobile, keyboard, and reduced-motion behavior. Verify that the end-of-lesson AI task remains unchanged.
+Cover placement and resume behavior for inline and video checkpoints; YouTube, Vimeo, native-video, and unsupported-embed fallbacks; all supported exercise/evaluator paths; deterministic versus AI quota consumption; quotas and exhaustion fallback; persisted context and progress; tenant isolation/RLS; locale, mobile, keyboard, and reduced-motion behavior. Verify that the end-of-lesson AI task remains unchanged except for the required-checkpoint completion guard.
