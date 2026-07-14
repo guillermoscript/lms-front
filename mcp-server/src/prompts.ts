@@ -294,7 +294,7 @@ The loop:
 4. Grade my answer against the exercise's instructions. Chat/voice rounds: record with \`lms_record_practice_attempt\` (source_exercise_id=${exercise_id}); widget quizzes record themselves.
 5. Miss → ask me one short question about my reasoning first ("what was your thinking there?"), then reteach the specific gap Socratically, tailored to my answer (if I skip the question, reteach anyway). Adjust difficulty down one notch, new variation. Pass a variation → next one harder or closer to the real exercise; on a hard variation, occasionally (~1 in 4) have me explain in one sentence why my approach worked before moving on.
 6. When I consistently handle real-exercise-level variations, have me attempt the REAL exercise. If my work genuinely passes it, record with \`lms_complete_exercise\` (honest score, passed=true). If not, record the attempt (passed=false) and keep drilling.
-7. On the real pass: celebrate, then check \`lms_get_my_weak_spots\` and suggest what to drill next.
+7. On the real pass: celebrate, then check \`lms_get_my_weak_spots\` and suggest what to drill next. If its interleaving pool shows ≥2 ready topics, suggest a mixed session (\`lms_practice_quiz\` mode='mixed', per-question topic tags) — mixing mastered topics beats another focused round; warn me it feels harder on purpose.
 
 ${TUTOR_GUARDRAILS}`
       )
@@ -350,7 +350,7 @@ Steps:
 2. \`lms_get_my_weak_spots\` (course_id ${course_id}) + \`lms_my_exam_results\` for how I've scored so far. Call \`lms_get_tutor_config\` (course_id ${course_id}) and honor it.
 3. Build a prioritized plan for THIS session: 2-4 weak areas, worst-evidence first. Tell me the plan in two sentences — no long preamble.
 4. Per area: quick diagnostic question → reteach what the diagnostic exposes → \`lms_practice_quiz\` (3-5 questions) → only move on when I pass.
-5. Finish with a mixed \`lms_practice_quiz\` across everything we covered (5-8 questions).
+5. Finish with one \`lms_practice_quiz\` across everything we covered (5-8 questions). If ≥2 covered topics are in the weak-spots interleaving pool, run it interleaved (mode='mixed', tag each question's topic — prioritize topics I confuse with each other) and remind me mixed practice feels harder by design; topics still below the mastery gate stay out of the mix — quiz those under a single focused label instead.
 6. Close with an honest readiness verdict per area and what to drill tomorrow.
 7. Call \`lms_record_tutor_session\` (course_id ${course_id}) with a summary of the areas covered, the topics discussed, and key struggles from today's session.
 
@@ -376,7 +376,7 @@ Steps:
 1. \`lms_my_learning\` for where I am + \`lms_get_my_weak_spots\` for what needs work.
 2. Pick 2-3 items: prefer a weak spot, something from my most recent lessons, and one older concept (spaced repetition).
 3. For each: one recall question first (make me retrieve it, don't reshow it), then a one-paragraph refresher only where I struggle.
-4. End with one mixed \`lms_practice_quiz\` (4-6 questions across today's items, mostly short-answer/fill-in — make me retrieve, not recognize) — the attempt records automatically and keeps my XP streak going.
+4. End with one \`lms_practice_quiz\` (4-6 questions across today's items, mostly short-answer/fill-in — make me retrieve, not recognize) — the attempt records automatically and keeps my XP streak going. If ≥2 of today's topics are interleaving-ready (weak-spots reports the pool), run it as mode='mixed' with per-question topic tags; otherwise keep it a single focused label — never force fresh topics into a mixed session.
 5. Sign off with one line on tomorrow's focus.
 
 ${TUTOR_GUARDRAILS}`

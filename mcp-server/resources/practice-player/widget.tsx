@@ -21,6 +21,8 @@ const questionSchema = z.object({
     "free_text",
   ]),
   prompt: z.string(),
+  // Mixed (interleaved) sessions: which topic this question drills (#393).
+  topic: z.string().optional(),
   // Explanatory feedback shown after grading (#391); optional for older payloads.
   explanation: z.string().optional(),
   options: z.array(z.string()).optional(),
@@ -33,6 +35,9 @@ const questionSchema = z.object({
 
 const propsSchema = z.object({
   topic: z.string(),
+  // mixed = interleaved session across mastery-gated topics (#393); shows the
+  // expectation-setting banner and per-question topic in the header pill.
+  mode: z.enum(["focused", "mixed"]).optional(),
   course_id: z.number().nullable(),
   lesson_id: z.number().nullable(),
   source_exercise_id: z.number().nullable(),
@@ -123,6 +128,24 @@ function answerText(q: Question, answer: Answer | undefined): string {
       return String(answer);
   }
 }
+
+// mcp-server widgets have no i18n layer; the mixed-practice explainer is the
+// one string the issue (#393) requires in en/es, so pick by browser locale.
+const IS_ES =
+  typeof navigator !== "undefined" &&
+  (navigator.language || "").toLowerCase().startsWith("es");
+
+const MIXED_COPY = IS_ES
+  ? {
+      pill: "Práctica mixta",
+      banner:
+        "Práctica mezclada: las preguntas saltan entre temas a propósito. Se siente más difícil — esa es la idea: mejora de forma comprobada la retención a largo plazo.",
+    }
+  : {
+      pill: "Mixed practice",
+      banner:
+        "Mixed practice: questions jump between topics on purpose. It feels harder — that's the point: it measurably improves long-term retention.",
+    };
 
 /** Deterministic-enough shuffle for presentation (never mutates the input). */
 function shuffled<T>(items: T[]): T[] {
@@ -222,6 +245,7 @@ export default function PracticePlayer() {
     );
   }
 
+  const isMixed = props.mode === "mixed";
   const q = questions[index];
   const answer = answers[q?.id];
   const hasFreeText = questions.some((x) => x.type === "free_text");
@@ -254,6 +278,7 @@ export default function PracticePlayer() {
       id: x.id,
       prompt: x.prompt,
       type: x.type,
+      ...(x.topic ? { topic: x.topic } : {}),
       answer: answerText(x, effectiveAnswer(x)),
       correct: isCorrect(x, effectiveAnswer(x)),
     }));
@@ -262,16 +287,18 @@ export default function PracticePlayer() {
       // Host grades: hand everything back, host records the attempt itself.
       if (!handedOff) {
         setHandedOff(true);
+        const topicTag = (r: { topic?: string }) =>
+          isMixed && r.topic ? ` [topic: ${r.topic}]` : "";
         const closedSummary = results
           .filter((r) => r.correct !== null)
-          .map((r) => `- [${r.correct ? "correct" : "wrong"}] ${r.prompt} — my answer: ${r.answer}`)
+          .map((r) => `- [${r.correct ? "correct" : "wrong"}]${topicTag(r)} ${r.prompt} — my answer: ${r.answer}`)
           .join("\n");
         const freeSummary = results
           .filter((r) => r.correct === null)
-          .map((r) => `- ${r.prompt}\n  My answer: ${r.answer}`)
+          .map((r) => `-${topicTag(r)} ${r.prompt}\n  My answer: ${r.answer}`)
           .join("\n");
         sendFollowUpMessage(
-          `I finished the practice quiz on "${topic}".\n\nWidget-graded questions (${closed.filter((x) => isCorrect(x, effectiveAnswer(x))).length}/${closed.length} correct):\n${closedSummary || "(none)"}\n\nFree-text answers for you to grade:\n${freeSummary}\n\nGrade my free-text answers, compute the overall score, record it with lms_record_practice_attempt${props.source_exercise_id ? ` (source_exercise_id ${props.source_exercise_id})` : ""}${props.lesson_id ? ` (lesson_id ${props.lesson_id})` : props.course_id ? ` (course_id ${props.course_id})` : ""}, then reteach anything I got wrong.`
+          `I finished the ${isMixed ? "mixed (interleaved) " : ""}practice quiz on "${topic}".\n\nWidget-graded questions (${closed.filter((x) => isCorrect(x, effectiveAnswer(x))).length}/${closed.length} correct):\n${closedSummary || "(none)"}\n\nFree-text answers for you to grade:\n${freeSummary}\n\nGrade my free-text answers, compute the overall score, record it with lms_record_practice_attempt${isMixed ? " (mode 'mixed', keep each question's topic tag so per-topic attribution survives)" : ""}${props.source_exercise_id ? ` (source_exercise_id ${props.source_exercise_id})` : ""}${props.lesson_id ? ` (lesson_id ${props.lesson_id})` : props.course_id ? ` (course_id ${props.course_id})` : ""}, then reteach anything I got wrong.`
         );
       }
       return;
@@ -289,6 +316,7 @@ export default function PracticePlayer() {
     recordAttempt(
       {
         topic,
+        ...(isMixed ? { mode: "mixed" as const } : {}),
         ...(props.course_id !== null ? { course_id: props.course_id } : {}),
         ...(props.lesson_id !== null ? { lesson_id: props.lesson_id } : {}),
         ...(props.source_exercise_id !== null
@@ -380,7 +408,9 @@ export default function PracticePlayer() {
           {/* Header + progress dots */}
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
             <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
-              Practice · {topic}
+              {isMixed
+                ? `${MIXED_COPY.pill} · ${q.topic ?? topic}`
+                : `Practice · ${topic}`}
             </span>
             <div
               className="flex gap-[5px]"
@@ -400,6 +430,12 @@ export default function PracticePlayer() {
               ))}
             </div>
           </div>
+
+          {isMixed && index === 0 && (
+            <p className="m-0 mb-3.5 rounded-[10px] border border-violet-200 bg-violet-50 px-3 py-2 text-[12.5px] leading-[1.5] text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200">
+              {MIXED_COPY.banner}
+            </p>
+          )}
 
           <h2 className="m-0 mb-3.5 text-[17px] leading-[1.4] font-semibold text-zinc-900 dark:text-zinc-100">
             {index + 1}. {q.prompt}

@@ -66,7 +66,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
       .order('name'),
     supabase
       .from('course_ai_tutors')
-      .select('tutor_id, enabled, persona, teaching_approach, boundaries')
+      .select('tutor_id, enabled, persona, teaching_approach, boundaries, model_config')
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .single(),

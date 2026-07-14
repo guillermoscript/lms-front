@@ -129,6 +129,8 @@
       "description": "Un tutor IA a nivel de curso con el que los estudiantes pueden chatear mientras estudian",
       "enable": "Activar para estudiantes",
       "enableDesc": "Agrega un boton flotante de tutor en todas las paginas del curso y una seccion de estudio en la vista general",
+      "interleaving": "Práctica intercalada",
+      "interleavingHint": "Mezcla temas ya dominados dentro de una misma sesión de práctica. Se siente más difícil para el estudiante, pero mejora la retención de forma comprobada. Los temas nuevos siempre se practican de forma enfocada.",
       "persona": "Persona",
       "personaPlaceholder": "Ej: Eres un desarrollador Python senior con 15 anos de experiencia. Te encantan las analogias del mundo real y el humor para explicar conceptos complejos.",
       "personaHint": "Escribe en segunda persona (\"Eres...\"). Incluye nivel de experiencia, rasgos de personalidad y tono de voz.",

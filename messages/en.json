@@ -129,6 +129,8 @@
       "description": "A course-level AI tutor students can chat with while studying",
       "enable": "Enable for students",
       "enableDesc": "Adds a floating tutor button on all course pages and a study tab on the course overview",
+      "interleaving": "Interleaved practice",
+      "interleavingHint": "Mix mastery-gated topics within one practice session. Feels harder for students but measurably improves retention. Novice topics always stay in focused practice.",
       "persona": "Persona",
       "personaPlaceholder": "e.g., You are a senior Python developer with 15 years of experience. You love real-world analogies and humor to explain complex concepts.",
       "personaHint": "Write in second person (\"You are...\"). Include expertise level, personality traits, and tone of voice.",
