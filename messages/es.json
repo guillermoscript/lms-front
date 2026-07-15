@@ -691,6 +691,7 @@
         "practice": {
           "title": "Ejercicios de Práctica",
           "description": "Ayuda a tus estudiantes a aplicar lo aprendido con ejercicios prácticos.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Añadir Ejercicio",
           "noExercises": "Sin ejercicios aún",
           "createFirst": "Crea tu primer ejercicio",
@@ -952,6 +953,51 @@
         "dragQuestion": "Arrastrar para reordenar pregunta"
       },
       "lessonEditor": {
+        "checkpointBlock": {
+          "title": "Checkpoint",
+          "saveLessonFirst": "Guarda la lección primero para añadir checkpoints.",
+          "loading": "Cargando checkpoints…",
+          "unknownExercise": "Ejercicio sin título",
+          "changeCheckpoint": "Cambiar checkpoint",
+          "requiredLabel": "Obligatorio",
+          "allowSkipLabel": "Permitir omitir",
+          "selectExisting": "Usar un checkpoint existente…",
+          "createNew": "Crear checkpoint nuevo",
+          "cancel": "Cancelar",
+          "exerciseLabel": "Ejercicio",
+          "exercisePlaceholder": "Selecciona un ejercicio…",
+          "labelOptional": "Etiqueta (opcional)",
+          "labelPlaceholder": "p. ej. Repaso rápido",
+          "save": "Guardar",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
+        },
+        "videoCheckpoints": {
+          "title": "Checkpoints de video",
+          "loading": "Cargando checkpoints…",
+          "empty": "Aún no hay checkpoints. Añade uno para colocar una pregunta de repaso en un momento del video.",
+          "unknownExercise": "Ejercicio sin título",
+          "requiredShort": "Oblig.",
+          "allowSkipShort": "Omitir",
+          "remove": "Eliminar checkpoint",
+          "timestampLabel": "Tiempo",
+          "exerciseLabel": "Ejercicio",
+          "exercisePlaceholder": "Selecciona un ejercicio…",
+          "labelOptional": "Etiqueta (opcional)",
+          "labelPlaceholder": "p. ej. Repaso rápido",
+          "requiredLabel": "Obligatorio",
+          "allowSkipLabel": "Permitir omitir",
+          "invalidTimestamp": "Ingresa un tiempo válido (mm:ss) y un ejercicio.",
+          "save": "Añadir marcador",
+          "cancel": "Cancelar",
+          "addMarker": "Añadir checkpoint de video",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
+        },
         "editTitle": "Editar Lección",
         "createTitle": "Nueva Lección",
         "backToCourse": "Volver a {course}",
@@ -3290,7 +3336,35 @@
       "certificateEarnedTitle": "¡Certificado Obtenido!",
       "certificateEarnedDescription": "Has completado todos los requisitos y obtenido un certificado para este curso.",
       "certificateBanner": "¡Certificado obtenido para este curso!",
-      "view": "Ver"
+      "view": "Ver",
+      "checkpointsRequired": "Completa {count, plural, one {el checkpoint obligatorio} other {los # checkpoints obligatorios}} de esta lección primero"
+    },
+    "checkpoints": {
+      "checkpoint": "Checkpoint",
+      "requiredBadge": "Obligatorio",
+      "completedBadge": "Completado",
+      "scoreLabel": "Puntaje: {score}%",
+      "passed": "Aprobado",
+      "notPassed": "Aún no aprobado",
+      "correct": "Correcto",
+      "incorrect": "Incorrecto",
+      "nextStep": "Siguiente paso",
+      "trueLabel": "Verdadero",
+      "falseLabel": "Falso",
+      "fillBlankPlaceholder": "Escribe tu respuesta…",
+      "textPlaceholder": "Escribe tu respuesta aquí…",
+      "submit": "Enviar",
+      "submitting": "Enviando…",
+      "retry": "Intentar de nuevo",
+      "review": "Editar y reenviar",
+      "genericError": "Algo salió mal. Inténtalo de nuevo.",
+      "aiUnavailable": "Tu respuesta fue registrada, pero la retroalimentación con IA no está disponible en este momento.",
+      "externalPrompt": "Este checkpoint se completa en su página de ejercicio. Abre el ejercicio, termínalo allí y luego sincroniza tu resultado aquí.",
+      "externalLinkLabel": "Abrir ejercicio",
+      "externalSyncLabel": "Lo completé — sincronizar",
+      "externalSyncing": "Sincronizando…",
+      "externalNotCompleted": "Aún no encontramos un intento completado para este ejercicio. Termínalo primero en la página del ejercicio.",
+      "videoCheckpointDescription": "Responde este repaso rápido para continuar el video."
     },
     "codeBlock": {
       "copy": "Copiar",

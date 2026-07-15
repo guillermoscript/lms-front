@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getEngineType } from '@/lib/exercises/engine';
+import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types';
 
 export const createExerciseTools = (
     supabase: SupabaseClient,
@@ -15,6 +16,27 @@ export const createExerciseTools = (
         }),
         execute: async ({ feedback, score }) => {
             if (!context.exerciseId) throw new Error('Exercise ID is required');
+
+            // Exercises embedded as an enabled lesson checkpoint must be answered
+            // inside the lesson so the attempt counts toward the checkpoint (#392).
+            // External types keep their dedicated flows; this chat serves the
+            // text types, which are exactly the gated ones.
+            if (!(EXTERNAL_EXERCISE_TYPES as readonly string[]).includes(context.exerciseType ?? 'essay')) {
+                const { data: checkpoint } = await supabase
+                    .from('lesson_checkpoints')
+                    .select('lesson_id')
+                    .eq('exercise_id', Number(context.exerciseId))
+                    .eq('tenant_id', context.tenantId)
+                    .eq('is_enabled', true)
+                    .limit(1)
+                    .maybeSingle();
+                if (checkpoint) {
+                    return {
+                        success: false,
+                        error: `This exercise is a lesson checkpoint — the student must answer it inside the lesson for it to count. Encourage them to open the lesson; do not mark it complete here.`,
+                    };
+                }
+            }
 
             // exercise_completions has NO tenant_id column — sending it 400s the insert.
             // There is no unique constraint, so a duplicate (23505) is treated as success.
@@ -65,6 +87,34 @@ export const createLessonTools = (
         }),
         execute: async ({ feedback }) => {
             if (!context.lessonId) throw new Error('Lesson ID is required');
+
+            // Required checkpoints must be completed before the lesson can be marked done.
+            const { data: requiredCheckpoints } = await supabase
+                .from('lesson_checkpoints')
+                .select('id, label')
+                .eq('lesson_id', context.lessonId)
+                .eq('is_required', true)
+                .eq('is_enabled', true);
+
+            if (requiredCheckpoints && requiredCheckpoints.length > 0) {
+                const { data: completedAttempts } = await supabase
+                    .from('lesson_checkpoint_attempts')
+                    .select('checkpoint_id')
+                    .eq('user_id', context.userId)
+                    .eq('lesson_id', context.lessonId)
+                    .eq('completed', true);
+
+                const completedIds = new Set((completedAttempts ?? []).map((a) => a.checkpoint_id));
+                const missing = requiredCheckpoints.filter((c) => !completedIds.has(c.id));
+
+                if (missing.length > 0) {
+                    return {
+                        success: false,
+                        error: `The student must complete ${missing.length} required checkpoint(s) in this lesson before it can be marked complete.`,
+                        missingCheckpointIds: missing.map((c) => c.id),
+                    };
+                }
+            }
 
             const { data: existing } = await supabase
                 .from('lesson_completions')

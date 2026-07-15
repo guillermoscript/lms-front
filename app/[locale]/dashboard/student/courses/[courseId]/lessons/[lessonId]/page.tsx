@@ -33,6 +33,8 @@ import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { loadLessonCheckpoints } from '@/lib/checkpoints/load'
+import { CheckpointsProvider } from '@/components/lesson/checkpoints/checkpoints-provider'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -192,7 +194,7 @@ export default async function LessonPage({ params }: PageProps) {
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   })()
 
-  const [{ data: allLessons }, { data: completions }, { data: lessonResources }] = await Promise.all([
+  const [{ data: allLessons }, { data: completions }, { data: lessonResources }, checkpoints] = await Promise.all([
     supabase
       .from('lessons')
       .select('id, title, sequence')
@@ -210,6 +212,7 @@ export default async function LessonPage({ params }: PageProps) {
       .eq('lesson_id', parseInt(lessonId))
       .eq('tenant_id', tenantId)
       .order('display_order', { ascending: true }),
+    loadLessonCheckpoints(supabase, { tenantId, lessonId: lesson.id, userId }),
   ])
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
@@ -307,6 +310,7 @@ export default async function LessonPage({ params }: PageProps) {
   return (
     <div className="flex h-[calc(100dvh-4rem)] bg-background overflow-hidden">
       {/* Main content */}
+      <CheckpointsProvider checkpoints={checkpoints} courseId={parseInt(courseId)}>
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Course progress line */}
         <LessonProgressLine
@@ -435,6 +439,7 @@ export default async function LessonPage({ params }: PageProps) {
           totalLessons={sidebarLessons.length}
         />
       </main>
+      </CheckpointsProvider>
 
       {/* Sidebar - Hidden on mobile, shown on md+ */}
       <div className="hidden md:block">

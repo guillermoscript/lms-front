@@ -691,6 +691,7 @@
         "practice": {
           "title": "Practice Exercises",
           "description": "Help students apply what they've learned with hands-on exercises.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Add Exercise",
           "noExercises": "No exercises yet",
           "createFirst": "Create your first exercise",
@@ -952,6 +953,51 @@
         "dragQuestion": "Drag to reorder question"
       },
       "lessonEditor": {
+        "checkpointBlock": {
+          "title": "Checkpoint",
+          "saveLessonFirst": "Save the lesson first to add checkpoints.",
+          "loading": "Loading checkpoints…",
+          "unknownExercise": "Untitled exercise",
+          "changeCheckpoint": "Change checkpoint",
+          "requiredLabel": "Required",
+          "allowSkipLabel": "Allow skip",
+          "selectExisting": "Use an existing checkpoint…",
+          "createNew": "Create new checkpoint",
+          "cancel": "Cancel",
+          "exerciseLabel": "Exercise",
+          "exercisePlaceholder": "Select an exercise…",
+          "labelOptional": "Label (optional)",
+          "labelPlaceholder": "e.g. Quick check",
+          "save": "Save",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
+        },
+        "videoCheckpoints": {
+          "title": "Video checkpoints",
+          "loading": "Loading checkpoints…",
+          "empty": "No checkpoints yet. Add one to place a review question at a video timestamp.",
+          "unknownExercise": "Untitled exercise",
+          "requiredShort": "Req.",
+          "allowSkipShort": "Skip",
+          "remove": "Remove checkpoint",
+          "timestampLabel": "Time",
+          "exerciseLabel": "Exercise",
+          "exercisePlaceholder": "Select an exercise…",
+          "labelOptional": "Label (optional)",
+          "labelPlaceholder": "e.g. Quick check",
+          "requiredLabel": "Required",
+          "allowSkipLabel": "Allow skip",
+          "invalidTimestamp": "Enter a valid time (mm:ss) and exercise.",
+          "save": "Add marker",
+          "cancel": "Cancel",
+          "addMarker": "Add video checkpoint",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
+        },
         "editTitle": "Edit Lesson",
         "createTitle": "New Lesson",
         "backToCourse": "Back to {course}",
@@ -3445,7 +3491,35 @@
       "certificateEarnedTitle": "Certificate Earned!",
       "certificateEarnedDescription": "You have completed all requirements and earned a certificate for this course.",
       "certificateBanner": "Certificate earned for this course!",
-      "view": "View"
+      "view": "View",
+      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first"
+    },
+    "checkpoints": {
+      "checkpoint": "Checkpoint",
+      "requiredBadge": "Required",
+      "completedBadge": "Completed",
+      "scoreLabel": "Score: {score}%",
+      "passed": "Passed",
+      "notPassed": "Not passed yet",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "nextStep": "Next step",
+      "trueLabel": "True",
+      "falseLabel": "False",
+      "fillBlankPlaceholder": "Type your answer…",
+      "textPlaceholder": "Write your answer here…",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "retry": "Try again",
+      "review": "Edit and resubmit",
+      "genericError": "Something went wrong. Please try again.",
+      "aiUnavailable": "Your answer was recorded, but AI feedback is unavailable right now.",
+      "externalPrompt": "This checkpoint is completed through its exercise page. Open the exercise, finish it there, then sync your result here.",
+      "externalLinkLabel": "Open exercise",
+      "externalSyncLabel": "I completed it — sync",
+      "externalSyncing": "Syncing…",
+      "externalNotCompleted": "We couldn't find a completed attempt for this exercise yet. Finish it on the exercise page first.",
+      "videoCheckpointDescription": "Answer this quick check to continue the video."
     },
     "codeBlock": {
       "copy": "Copy",

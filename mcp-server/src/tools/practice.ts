@@ -52,6 +52,41 @@ function engineTypeFor(exerciseType: string): "text" | "simulation" | null {
   return null;
 }
 
+/**
+ * Lesson-checkpoint guard (#392 follow-up). Text-engine exercises embedded as
+ * an enabled checkpoint must be answered inside the lesson — the checkpoint
+ * attempt API records lesson_checkpoint_attempts, while completing them here
+ * would mark the exercise done without counting toward the checkpoint.
+ * External types keep their dedicated flows (the checkpoint links out and
+ * syncs), so real_time_conversation grading via lms_complete_exercise and the
+ * in-app code/media pipelines stay allowed.
+ * Returns the first embedding lesson, or null — including when the table
+ * doesn't exist yet or RLS hides the row (degrade open, matching
+ * checkpoint_struggles in lms_get_my_weak_spots).
+ */
+async function findEnabledCheckpointLesson(
+  supabase: ReturnType<LmsSession["getClient"]>,
+  tenantId: string,
+  exerciseId: number
+): Promise<{ lesson_id: number; lesson_title: string | null } | null> {
+  const res = await supabase
+    .from("lesson_checkpoints")
+    .select("lesson_id, lessons(title)")
+    .eq("exercise_id", exerciseId)
+    .eq("tenant_id", tenantId)
+    .eq("is_enabled", true)
+    .limit(1)
+    .maybeSingle();
+  if (res.error || !res.data) return null;
+  const lesson = Array.isArray(res.data.lessons)
+    ? res.data.lessons[0]
+    : res.data.lessons;
+  return {
+    lesson_id: res.data.lesson_id as number,
+    lesson_title: (lesson as { title?: string } | null)?.title ?? null,
+  };
+}
+
 function sanitizeExerciseConfig(
   config: Record<string, unknown> | null,
   exerciseType: string
@@ -388,8 +423,17 @@ export function registerPracticeTools(server: MCPServer) {
           created_at: a.created_at,
         }));
         const completed = (completionRes.data ?? []).length > 0;
-        const gradable =
-          engineTypeFor(exercise.exercise_type as string) !== null;
+        const engineType = engineTypeFor(exercise.exercise_type as string);
+        const gradable = engineType !== null;
+
+        const checkpoint = await findEnabledCheckpointLesson(
+          supabase,
+          session.getTenantId(),
+          exercise.id
+        );
+        // Text-engine checkpoint exercises are graded in the lesson flow;
+        // lms_complete_exercise refuses them.
+        const checkpointLocked = checkpoint !== null && engineType === "text";
 
         return ok(
           {
@@ -408,11 +452,14 @@ export function registerPracticeTools(server: MCPServer) {
                 exercise.exercise_type as string
               ),
             },
-            gradable_via_mcp: gradable,
+            gradable_via_mcp: gradable && !checkpointLocked,
             completed,
             attempts,
+            checkpoint: checkpoint
+              ? { ...checkpoint, must_complete_in_lesson: checkpointLocked }
+              : null,
           },
-          `Exercise "${exercise.title}" (${exercise.exercise_type}, ${exercise.difficulty_level})${completed ? " — already completed" : ""}. ${attempts.length} prior attempt(s)${attempts.length > 0 ? `, latest: ${attempts[0].passed ? "passed" : "not passed"} at ${attempts[0].score}` : ""}.${gradable ? "" : " NOTE: this exercise type is evaluated in the app, not via lms_complete_exercise."}`
+          `Exercise "${exercise.title}" (${exercise.exercise_type}, ${exercise.difficulty_level})${completed ? " — already completed" : ""}. ${attempts.length} prior attempt(s)${attempts.length > 0 ? `, latest: ${attempts[0].passed ? "passed" : "not passed"} at ${attempts[0].score}` : ""}.${gradable ? "" : " NOTE: this exercise type is evaluated in the app, not via lms_complete_exercise."}${checkpointLocked ? ` NOTE: this exercise is a lesson checkpoint — the student answers it inside lesson ${checkpoint!.lesson_id}${checkpoint!.lesson_title ? ` ("${checkpoint!.lesson_title}")` : ""}; lms_complete_exercise will refuse it. Coach or drill variations (source_exercise_id=${exercise.id}) here instead.` : ""}`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -425,7 +472,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_complete_exercise",
       description:
-        "Record the caller's graded attempt on a REAL teacher exercise after you (the host) evaluated their work against its instructions. Every call appends an evaluation to the attempt history; a passing attempt also marks the exercise completed (XP is awarded automatically by the platform). Text-engine exercises (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank) plus real_time_conversation (voice/chat conversation practice you ran and graded live — recorded as engine_type 'simulation', matching the app's convention; requires conversation_summary and turns_count).",
+        "Record the caller's graded attempt on a REAL teacher exercise after you (the host) evaluated their work against its instructions. Every call appends an evaluation to the attempt history; a passing attempt also marks the exercise completed (XP is awarded automatically by the platform). Text-engine exercises (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank) plus real_time_conversation (voice/chat conversation practice you ran and graded live — recorded as engine_type 'simulation', matching the app's convention; requires conversation_summary and turns_count). Text exercises embedded as a lesson checkpoint are refused — those must be answered inside the lesson (drill variations via practice tools instead).",
       schema: z.object({
         exercise_id: z.number().describe("The exercise being attempted"),
         score: z
@@ -518,6 +565,23 @@ export function registerPracticeTools(server: MCPServer) {
         }
 
         await session.verifyCourseAccess(exercise.course_id);
+
+        // Checkpoint-embedded text exercises must be answered inside the
+        // lesson so the attempt counts toward the checkpoint (see
+        // findEnabledCheckpointLesson). Simulation stays allowed — this tool
+        // IS the dedicated flow the checkpoint syncs from.
+        if (engineType === "text") {
+          const checkpoint = await findEnabledCheckpointLesson(
+            supabase,
+            session.getTenantId(),
+            exercise.id
+          );
+          if (checkpoint) {
+            return errorResult(
+              `Exercise "${exercise.title}" is embedded as a checkpoint in lesson ${checkpoint.lesson_id}${checkpoint.lesson_title ? ` ("${checkpoint.lesson_title}")` : ""} — the student must answer it inside that lesson so the attempt counts toward the checkpoint. You can still coach them here, or drill a variation quiz with source_exercise_id=${exercise.id} recorded via lms_record_practice_attempt.`
+            );
+          }
+        }
 
         // A passing attempt marks the exercise completed. exercise_completions
         // has NO tenant_id and NO unique constraint — a duplicate insert would
@@ -904,7 +968,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_get_my_weak_spots",
       description:
-        "Aggregate what the caller keeps getting wrong across exam questions, exercise attempts, and practice quizzes — the student model. Use it to pick what to teach or drill next.",
+        "Aggregate what the caller keeps getting wrong across exam questions, exercise attempts, practice quizzes, and lesson checkpoints — the student model. Use it to pick what to teach or drill next.",
       schema: z.object({
         course_id: z
           .number()
@@ -980,6 +1044,90 @@ export function registerPracticeTools(server: MCPServer) {
           .limit(100);
         if (!practiceRes.error) {
           practiceRows = (practiceRes.data ?? []) as typeof practiceRows;
+        }
+
+        // 4. Lesson checkpoint attempts (#392) — degrade gracefully if the
+        //    table hasn't been migrated in this environment yet.
+        type CheckpointStruggle = {
+          checkpoint_id: number;
+          lesson_id: number;
+          exercise_id: number;
+          label: string | null;
+          attempt_count: number;
+          best_score: number | null;
+          last_attempt_at: string | null;
+        };
+        let checkpointStruggles: CheckpointStruggle[] = [];
+        const checkpointRes = await supabase
+          .from("lesson_checkpoint_attempts")
+          .select(
+            "checkpoint_id, lesson_id, exercise_id, score, passed, created_at, lesson_checkpoints(label)"
+          )
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (!checkpointRes.error) {
+          type CheckpointAttemptRow = {
+            checkpoint_id: number;
+            lesson_id: number;
+            exercise_id: number;
+            score: number | null;
+            passed: boolean | null;
+            created_at: string;
+            lesson_checkpoints: { label: string | null } | null;
+          };
+          const rows = (checkpointRes.data ??
+            []) as unknown as CheckpointAttemptRow[];
+          const byCheckpoint = new Map<
+            number,
+            {
+              lesson_id: number;
+              exercise_id: number;
+              label: string | null;
+              scores: number[];
+              struggling: boolean;
+              attempt_count: number;
+              last_attempt_at: string | null;
+            }
+          >();
+          for (const row of rows) {
+            const bucket = byCheckpoint.get(row.checkpoint_id) ?? {
+              lesson_id: row.lesson_id,
+              exercise_id: row.exercise_id,
+              label: row.lesson_checkpoints?.label ?? null,
+              scores: [],
+              struggling: false,
+              attempt_count: 0,
+              last_attempt_at: null,
+            };
+            bucket.attempt_count += 1;
+            if (!bucket.last_attempt_at) bucket.last_attempt_at = row.created_at;
+            if (row.score !== null) bucket.scores.push(Number(row.score));
+            if (
+              row.passed === false ||
+              (row.score !== null && Number(row.score) < 70)
+            )
+              bucket.struggling = true;
+            byCheckpoint.set(row.checkpoint_id, bucket);
+          }
+          checkpointStruggles = [...byCheckpoint.entries()]
+            .filter(([, bucket]) => bucket.struggling)
+            .map(([checkpointId, bucket]) => ({
+              checkpoint_id: checkpointId,
+              lesson_id: bucket.lesson_id,
+              exercise_id: bucket.exercise_id,
+              label: bucket.label,
+              attempt_count: bucket.attempt_count,
+              best_score:
+                bucket.scores.length > 0 ? Math.max(...bucket.scores) : null,
+              last_attempt_at: bucket.last_attempt_at,
+            }))
+            .sort(
+              (a, b) =>
+                (a.best_score ?? -1) - (b.best_score ?? -1)
+            )
+            .slice(0, 10);
         }
 
         type Evidence = {
@@ -1226,6 +1374,7 @@ export function registerPracticeTools(server: MCPServer) {
             strengths: strengths.slice(0, 10),
             interleaving,
             elo,
+            checkpoint_struggles: checkpointStruggles,
             sources: {
               exam_submissions: (examsRes.data ?? []).length,
               exercises_attempted: latestByExercise.size,

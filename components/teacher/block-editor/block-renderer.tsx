@@ -23,6 +23,7 @@ import type {
   FillInTheBlankBlock,
   MatchingPairsBlock,
   OrderingBlock,
+  CheckpointBlock,
 } from './types'
 import { TextBlockEditor } from './editors/text-block'
 import { HeadingBlockEditor } from './editors/heading-block'
@@ -46,13 +47,15 @@ import { FlashcardSetBlockEditor } from './editors/flashcard-set-block'
 import { FillInTheBlankBlockEditor } from './editors/fill-in-the-blank-block'
 import { MatchingPairsBlockEditor } from './editors/matching-pairs-block'
 import { OrderingBlockEditor } from './editors/ordering-block'
+import { CheckpointBlockEditor, type CheckpointContext } from './editors/checkpoint-block'
 
 interface BlockRendererProps {
   block: Block
   onChange: (updates: Partial<Block>) => void
+  checkpointContext?: CheckpointContext
 }
 
-export function BlockRenderer({ block, onChange }: BlockRendererProps) {
+export function BlockRenderer({ block, onChange, checkpointContext }: BlockRendererProps) {
   switch (block.type) {
     case 'text':
       return <TextBlockEditor block={block} onChange={onChange} />
@@ -98,6 +101,10 @@ export function BlockRenderer({ block, onChange }: BlockRendererProps) {
       return <MatchingPairsBlockEditor block={block} onChange={onChange} />
     case 'ordering':
       return <OrderingBlockEditor block={block} onChange={onChange} />
+    case 'checkpoint':
+      return (
+        <CheckpointBlockEditor block={block} onChange={onChange} checkpointContext={checkpointContext} />
+      )
     default:
       return <div className="text-muted-foreground text-sm">Bloque desconocido</div>
   }

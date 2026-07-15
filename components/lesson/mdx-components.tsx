@@ -35,6 +35,7 @@ import {
 } from './index'
 
 import { mdxComponents as uiComponents } from '@/components/ui/mdx-components'
+import { LessonCheckpoint } from './checkpoints/lesson-checkpoint'
 
 /**
  * MDX Components map for lesson content
@@ -128,6 +129,9 @@ export const lessonMdxComponents: MDXComponents = {
   FillInTheBlank,
   MatchingPairs,
   Ordering,
+
+  // Lesson checkpoints (issue #392) — inline placements
+  LessonCheckpoint,
 }
 
 export default lessonMdxComponents
