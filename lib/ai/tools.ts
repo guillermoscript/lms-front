@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getEngineType } from '@/lib/exercises/engine';
+import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types';
 
 export const createExerciseTools = (
     supabase: SupabaseClient,
@@ -15,6 +16,27 @@ export const createExerciseTools = (
         }),
         execute: async ({ feedback, score }) => {
             if (!context.exerciseId) throw new Error('Exercise ID is required');
+
+            // Exercises embedded as an enabled lesson checkpoint must be answered
+            // inside the lesson so the attempt counts toward the checkpoint (#392).
+            // External types keep their dedicated flows; this chat serves the
+            // text types, which are exactly the gated ones.
+            if (!(EXTERNAL_EXERCISE_TYPES as readonly string[]).includes(context.exerciseType ?? 'essay')) {
+                const { data: checkpoint } = await supabase
+                    .from('lesson_checkpoints')
+                    .select('lesson_id')
+                    .eq('exercise_id', Number(context.exerciseId))
+                    .eq('tenant_id', context.tenantId)
+                    .eq('is_enabled', true)
+                    .limit(1)
+                    .maybeSingle();
+                if (checkpoint) {
+                    return {
+                        success: false,
+                        error: `This exercise is a lesson checkpoint — the student must answer it inside the lesson for it to count. Encourage them to open the lesson; do not mark it complete here.`,
+                    };
+                }
+            }
 
             // exercise_completions has NO tenant_id column — sending it 400s the insert.
             // There is no unique constraint, so a duplicate (23505) is treated as success.
