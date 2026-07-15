@@ -147,7 +147,7 @@ function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
             </p>
             {q.type === 'multiple_choice' && (
               <RadioGroup
-                value={typeof answers[q.id] === 'number' ? String(answers[q.id]) : undefined}
+                value={typeof answers[q.id] === 'number' ? String(answers[q.id]) : ''}
                 onValueChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: Number(v) }))}
                 disabled={result !== null}
               >
