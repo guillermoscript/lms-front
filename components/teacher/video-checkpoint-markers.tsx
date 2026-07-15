@@ -250,7 +250,10 @@ export function VideoCheckpointMarkers({ courseId, lessonId }: VideoCheckpointMa
                 <SelectContent>
                   {exercises.map((ex) => (
                     <SelectItem key={ex.id} value={String(ex.id)}>
-                      {ex.title} ({ex.exercise_type})
+                      {ex.title} ({ex.exercise_type}
+                      {ex.status === 'draft' || ex.status === 'archived'
+                        ? ` · ${t(`exerciseStatus.${ex.status}`)}`
+                        : ''})
                     </SelectItem>
                   ))}
                 </SelectContent>

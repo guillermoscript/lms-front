@@ -691,6 +691,7 @@
         "practice": {
           "title": "Practice Exercises",
           "description": "Help students apply what they've learned with hands-on exercises.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Add Exercise",
           "noExercises": "No exercises yet",
           "createFirst": "Create your first exercise",
@@ -967,7 +968,11 @@
           "exercisePlaceholder": "Select an exercise…",
           "labelOptional": "Label (optional)",
           "labelPlaceholder": "e.g. Quick check",
-          "save": "Save"
+          "save": "Save",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
         },
         "videoCheckpoints": {
           "title": "Video checkpoints",
@@ -987,7 +992,11 @@
           "invalidTimestamp": "Enter a valid time (mm:ss) and exercise.",
           "save": "Add marker",
           "cancel": "Cancel",
-          "addMarker": "Add video checkpoint"
+          "addMarker": "Add video checkpoint",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
         },
         "editTitle": "Edit Lesson",
         "createTitle": "New Lesson",

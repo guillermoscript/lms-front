@@ -48,6 +48,7 @@ export interface CheckpointExerciseOption {
   id: number
   title: string
   exercise_type: string
+  status: string
 }
 
 export interface CheckpointMetric {
@@ -278,7 +279,7 @@ export async function listCheckpointExercises(courseId: number) {
 
     const { data, error } = await ctx.supabase
       .from('exercises')
-      .select('id, title, exercise_type')
+      .select('id, title, exercise_type, status')
       .eq('course_id', courseId)
       .eq('tenant_id', ctx.tenantId)
       .order('title', { ascending: true })
@@ -289,6 +290,7 @@ export async function listCheckpointExercises(courseId: number) {
       id: e.id,
       title: e.title,
       exercise_type: e.exercise_type,
+      status: e.status,
     }))
 
     return { exercises }

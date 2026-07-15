@@ -691,6 +691,7 @@
         "practice": {
           "title": "Ejercicios de Práctica",
           "description": "Ayuda a tus estudiantes a aplicar lo aprendido con ejercicios prácticos.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Añadir Ejercicio",
           "noExercises": "Sin ejercicios aún",
           "createFirst": "Crea tu primer ejercicio",
@@ -967,7 +968,11 @@
           "exercisePlaceholder": "Selecciona un ejercicio…",
           "labelOptional": "Etiqueta (opcional)",
           "labelPlaceholder": "p. ej. Repaso rápido",
-          "save": "Guardar"
+          "save": "Guardar",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
         },
         "videoCheckpoints": {
           "title": "Checkpoints de video",
@@ -987,7 +992,11 @@
           "invalidTimestamp": "Ingresa un tiempo válido (mm:ss) y un ejercicio.",
           "save": "Añadir marcador",
           "cancel": "Cancelar",
-          "addMarker": "Añadir checkpoint de video"
+          "addMarker": "Añadir checkpoint de video",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
         },
         "editTitle": "Editar Lección",
         "createTitle": "Nueva Lección",

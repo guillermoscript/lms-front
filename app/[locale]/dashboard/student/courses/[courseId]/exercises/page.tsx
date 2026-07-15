@@ -5,6 +5,7 @@ import ExerciseCard from '@/components/exercises/exercise-card'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
     params: Promise<{ courseId: string }>
@@ -53,6 +54,16 @@ export default async function ExercisesListPage({ params }: PageProps) {
         console.error('Error fetching exercises:', error)
     }
 
+    // Exercises embedded as lesson checkpoints are completed inside the
+    // lesson flow — hide them here so students don't do them twice.
+    const checkpointExerciseIds = await getCheckpointLinkedExerciseIds(supabase, {
+        tenantId,
+        exerciseIds: (exercises ?? []).map((exercise) => exercise.id),
+    })
+    const standaloneExercises = (exercises ?? []).filter(
+        (exercise) => !checkpointExerciseIds.has(exercise.id)
+    )
+
     const courseTitle = courseData.title
 
     const breadcrumbLinks = [
@@ -76,7 +87,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                 </div>
             </div>
 
-            {!exercises || exercises.length === 0 ? (
+            {standaloneExercises.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed rounded-3xl">
                     <IconBarbell className="h-16 w-16 text-muted-foreground/30 mb-4" />
                     <h3 className="text-xl font-semibold text-muted-foreground">{t('empty.title')}</h3>
@@ -86,7 +97,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {exercises.map((exercise: any) => (
+                    {standaloneExercises.map((exercise) => (
                         <ExerciseCard
                             key={exercise.id}
                             exercise={exercise}

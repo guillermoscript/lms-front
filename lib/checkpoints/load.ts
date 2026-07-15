@@ -32,6 +32,25 @@ export interface LessonCheckpointClientData {
 }
 
 /**
+ * Exercise ids (among the given ones) linked to an enabled checkpoint.
+ * Used to hide checkpoint-embedded exercises from standalone exercise lists,
+ * so students complete them through the lesson flow instead.
+ */
+export async function getCheckpointLinkedExerciseIds(
+  client: SupabaseClient,
+  args: { tenantId: string; exerciseIds: number[] }
+): Promise<Set<number>> {
+  if (args.exerciseIds.length === 0) return new Set()
+  const { data } = await client
+    .from('lesson_checkpoints')
+    .select('exercise_id')
+    .eq('tenant_id', args.tenantId)
+    .eq('is_enabled', true)
+    .in('exercise_id', args.exerciseIds)
+  return new Set((data ?? []).map((row) => row.exercise_id))
+}
+
+/**
  * Load enabled checkpoints for a lesson with the student's latest attempts.
  * Runs server-side (admin client) — output is safe to pass to client components.
  */
