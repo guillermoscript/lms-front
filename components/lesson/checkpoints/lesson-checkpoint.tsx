@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { IconChevronDown, IconCircleCheck, IconFlag } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
@@ -20,13 +19,17 @@ interface LessonCheckpointProps {
 export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
   const t = useTranslations('components.checkpoints')
   const ctx = useCheckpoints()
-  const [expanded, setExpanded] = useState(false)
   const numericId =
     typeof checkpointId === 'number' ? checkpointId : Number.parseInt(checkpointId, 10)
 
   if (!ctx || !Number.isFinite(numericId)) return null
   const checkpoint = ctx.getCheckpoint(numericId)
   if (!checkpoint) return null
+
+  // Expansion state lives in the provider: the MDX tree remounts on every
+  // provider update, so local useState would collapse the card on submit.
+  const expanded = ctx.isExpanded(numericId)
+  const setExpanded = (value: boolean) => ctx.setExpanded(numericId, value)
 
   const isCompleted = checkpoint.latestAttempt?.completed === true
   const title = checkpoint.label || checkpoint.exercise.title
@@ -35,7 +38,7 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
     <div className="my-6 rounded-lg border bg-card shadow-sm not-prose">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         aria-expanded={expanded}
       >

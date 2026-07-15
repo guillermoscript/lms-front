@@ -10,6 +10,12 @@ export interface CheckpointsContextValue {
   courseId: number
   getCheckpoint: (checkpointId: number) => LessonCheckpointClientData | undefined
   recordResult: (checkpointId: number, result: CheckpointAttemptResult) => void
+  /** Full result of the last attempt made THIS session (incl. per-question
+   * feedback). Lives here, not in the card, because the MDX tree remounts on
+   * every provider update and would otherwise drop the feedback on submit. */
+  getResult: (checkpointId: number) => CheckpointAttemptResult | null
+  isExpanded: (checkpointId: number) => boolean
+  setExpanded: (checkpointId: number, expanded: boolean) => void
   allRequiredCompleted: boolean
   missingRequired: number
 }
@@ -33,6 +39,7 @@ export function CheckpointsProvider({
   children,
 }: CheckpointsProviderProps) {
   const [results, setResults] = useState<Record<number, CheckpointAttemptResult>>({})
+  const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({})
 
   const checkpoints = initialCheckpoints.map((cp) => {
     const result = results[cp.id]
@@ -58,6 +65,18 @@ export function CheckpointsProvider({
     setResults((prev) => ({ ...prev, [checkpointId]: result }))
   }
 
+  function getResult(checkpointId: number) {
+    return results[checkpointId] ?? null
+  }
+
+  function isExpanded(checkpointId: number) {
+    return expandedIds[checkpointId] === true
+  }
+
+  function setExpanded(checkpointId: number, expanded: boolean) {
+    setExpandedIds((prev) => ({ ...prev, [checkpointId]: expanded }))
+  }
+
   const requiredCheckpoints = checkpoints.filter((cp) => cp.isRequired)
   const missingRequired = requiredCheckpoints.filter(
     (cp) => cp.latestAttempt?.completed !== true
@@ -68,6 +87,9 @@ export function CheckpointsProvider({
     courseId,
     getCheckpoint,
     recordResult,
+    getResult,
+    isExpanded,
+    setExpanded,
     allRequiredCompleted: missingRequired === 0,
     missingRequired,
   }

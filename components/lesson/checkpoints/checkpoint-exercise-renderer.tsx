@@ -96,12 +96,17 @@ function ResultAlert({ result }: { result: CheckpointAttemptResult }) {
 
 function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
   const t = useTranslations('components.checkpoints')
-  const { recordResult } = useCheckpoints() ?? {}
+  const ctx = useCheckpoints()
+  const recordResult = ctx?.recordResult
   const questions = checkpoint.exercise.questions ?? []
   const [answers, setAnswers] = useState<Record<string, string | number | boolean>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<CheckpointAttemptResult | null>(null)
+  // Seed from the provider: this form remounts whenever the provider updates
+  // (the MDX tree is recreated), so local-only state would lose the feedback.
+  const [result, setResult] = useState<CheckpointAttemptResult | null>(
+    () => ctx?.getResult(checkpoint.id) ?? null
+  )
 
   const allAnswered = questions.every((q) => answers[q.id] !== undefined)
 
@@ -236,11 +241,14 @@ function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
 
 function TextCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
   const t = useTranslations('components.checkpoints')
-  const { recordResult } = useCheckpoints() ?? {}
+  const ctx = useCheckpoints()
+  const recordResult = ctx?.recordResult
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<CheckpointAttemptResult | null>(null)
+  const [result, setResult] = useState<CheckpointAttemptResult | null>(
+    () => ctx?.getResult(checkpoint.id) ?? null
+  )
 
   async function handleSubmit() {
     if (!text.trim()) return
@@ -309,8 +317,9 @@ function ExternalCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps)
   const [syncing, setSyncing] = useState(false)
   const [notCompleted, setNotCompleted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<CheckpointAttemptResult | null>(
-    checkpoint.latestAttempt
+  const [result, setResult] = useState<CheckpointAttemptResult | null>(() =>
+    ctx?.getResult(checkpoint.id) ??
+    (checkpoint.latestAttempt
       ? {
           attemptId: 0,
           attemptNumber: checkpoint.latestAttempt.attemptNumber,
@@ -319,7 +328,7 @@ function ExternalCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps)
           passed: checkpoint.latestAttempt.passed,
           score: checkpoint.latestAttempt.score,
         }
-      : null
+      : null)
   )
 
   const exerciseHref = ctx
