@@ -284,7 +284,7 @@ export function registerStudentTools(server: MCPServer) {
     {
       name: "lms_complete_lesson",
       description:
-        "Mark a lesson as completed for the caller. Idempotent — completing an already-completed lesson is a no-op. Requires enrollment in the lesson's course and respects sequential-completion locks. XP and achievements are awarded by the platform automatically.",
+        "Mark a lesson as completed for the caller. Idempotent — completing an already-completed lesson is a no-op. Requires enrollment in the lesson's course, respects sequential-completion locks, and is refused while required lesson checkpoints remain unanswered. XP and achievements are awarded by the platform automatically.",
       schema: z.object({
         lesson_id: z.number().describe("The lesson ID to mark complete"),
       }),
@@ -317,6 +317,34 @@ export function registerStudentTools(server: MCPServer) {
             { lesson_id: lesson.id, completed: true, already_completed: true },
             `Lesson "${lesson.title}" was already completed — nothing to do.`
           );
+        }
+
+        // Required checkpoints gate completion, mirroring the app's UI footer
+        // and AI-tutor markLessonCompleted (#392). Degrades open if the table
+        // is absent or RLS hides the rows (query error → data null → skip).
+        const supabase = session.getClient();
+        const { data: requiredCheckpoints } = await supabase
+          .from("lesson_checkpoints")
+          .select("id, label")
+          .eq("lesson_id", lesson.id)
+          .eq("tenant_id", session.getTenantId())
+          .eq("is_required", true)
+          .eq("is_enabled", true);
+        if (requiredCheckpoints && requiredCheckpoints.length > 0) {
+          const { data: attempts } = await supabase
+            .from("lesson_checkpoint_attempts")
+            .select("checkpoint_id")
+            .eq("user_id", session.getUserId())
+            .eq("lesson_id", lesson.id)
+            .eq("tenant_id", session.getTenantId())
+            .eq("completed", true);
+          const doneIds = new Set((attempts ?? []).map((a) => a.checkpoint_id));
+          const missing = requiredCheckpoints.filter((c) => !doneIds.has(c.id));
+          if (missing.length > 0) {
+            return errorResult(
+              `Lesson "${lesson.title}" has ${missing.length} required checkpoint(s) the student hasn't completed yet${missing.some((c) => c.label) ? ` (${missing.map((c) => c.label).filter(Boolean).join(", ")})` : ""}. They must answer them inside the lesson before it can be marked complete.`
+            );
+          }
         }
 
         // Same write the app performs (lesson-navigation.tsx): two columns,
