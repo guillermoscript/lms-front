@@ -904,7 +904,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_get_my_weak_spots",
       description:
-        "Aggregate what the caller keeps getting wrong across exam questions, exercise attempts, and practice quizzes — the student model. Use it to pick what to teach or drill next.",
+        "Aggregate what the caller keeps getting wrong across exam questions, exercise attempts, practice quizzes, and lesson checkpoints — the student model. Use it to pick what to teach or drill next.",
       schema: z.object({
         course_id: z
           .number()
@@ -980,6 +980,90 @@ export function registerPracticeTools(server: MCPServer) {
           .limit(100);
         if (!practiceRes.error) {
           practiceRows = (practiceRes.data ?? []) as typeof practiceRows;
+        }
+
+        // 4. Lesson checkpoint attempts (#392) — degrade gracefully if the
+        //    table hasn't been migrated in this environment yet.
+        type CheckpointStruggle = {
+          checkpoint_id: number;
+          lesson_id: number;
+          exercise_id: number;
+          label: string | null;
+          attempt_count: number;
+          best_score: number | null;
+          last_attempt_at: string | null;
+        };
+        let checkpointStruggles: CheckpointStruggle[] = [];
+        const checkpointRes = await supabase
+          .from("lesson_checkpoint_attempts")
+          .select(
+            "checkpoint_id, lesson_id, exercise_id, score, passed, created_at, lesson_checkpoints(label)"
+          )
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (!checkpointRes.error) {
+          type CheckpointAttemptRow = {
+            checkpoint_id: number;
+            lesson_id: number;
+            exercise_id: number;
+            score: number | null;
+            passed: boolean | null;
+            created_at: string;
+            lesson_checkpoints: { label: string | null } | null;
+          };
+          const rows = (checkpointRes.data ??
+            []) as unknown as CheckpointAttemptRow[];
+          const byCheckpoint = new Map<
+            number,
+            {
+              lesson_id: number;
+              exercise_id: number;
+              label: string | null;
+              scores: number[];
+              struggling: boolean;
+              attempt_count: number;
+              last_attempt_at: string | null;
+            }
+          >();
+          for (const row of rows) {
+            const bucket = byCheckpoint.get(row.checkpoint_id) ?? {
+              lesson_id: row.lesson_id,
+              exercise_id: row.exercise_id,
+              label: row.lesson_checkpoints?.label ?? null,
+              scores: [],
+              struggling: false,
+              attempt_count: 0,
+              last_attempt_at: null,
+            };
+            bucket.attempt_count += 1;
+            if (!bucket.last_attempt_at) bucket.last_attempt_at = row.created_at;
+            if (row.score !== null) bucket.scores.push(Number(row.score));
+            if (
+              row.passed === false ||
+              (row.score !== null && Number(row.score) < 70)
+            )
+              bucket.struggling = true;
+            byCheckpoint.set(row.checkpoint_id, bucket);
+          }
+          checkpointStruggles = [...byCheckpoint.entries()]
+            .filter(([, bucket]) => bucket.struggling)
+            .map(([checkpointId, bucket]) => ({
+              checkpoint_id: checkpointId,
+              lesson_id: bucket.lesson_id,
+              exercise_id: bucket.exercise_id,
+              label: bucket.label,
+              attempt_count: bucket.attempt_count,
+              best_score:
+                bucket.scores.length > 0 ? Math.max(...bucket.scores) : null,
+              last_attempt_at: bucket.last_attempt_at,
+            }))
+            .sort(
+              (a, b) =>
+                (a.best_score ?? -1) - (b.best_score ?? -1)
+            )
+            .slice(0, 10);
         }
 
         type Evidence = {
@@ -1226,6 +1310,7 @@ export function registerPracticeTools(server: MCPServer) {
             strengths: strengths.slice(0, 10),
             interleaving,
             elo,
+            checkpoint_struggles: checkpointStruggles,
             sources: {
               exam_submissions: (examsRes.data ?? []).length,
               exercises_attempted: latestByExercise.size,

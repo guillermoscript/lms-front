@@ -18,6 +18,7 @@ import {
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
 import { toast } from 'sonner'
+import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
 
 interface LessonNavigationProps {
   lessonId: number
@@ -51,8 +52,11 @@ export function LessonNavigation({
   const router = useRouter()
   const supabase = createClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const checkpointsCtx = useCheckpoints()
 
   const nextBlocked = requireSequentialCompletion && !completed
+  // Only gates going from incomplete → complete; un-completing is always allowed.
+  const checkpointsBlocked = !completed && !!checkpointsCtx && checkpointsCtx.missingRequired > 0
 
   useHotkey('ArrowLeft', () => {
     if (prevLessonId) {
@@ -67,6 +71,12 @@ export function LessonNavigation({
   }, { enabled: !!nextLessonId && !nextBlocked })
 
   async function handleComplete() {
+    if (checkpointsBlocked) {
+      toast.error(
+        t('checkpointsRequired', { count: checkpointsCtx?.missingRequired ?? 0 })
+      )
+      return
+    }
     setLoading(true)
 
     const { data: { session } } = await supabase.auth.getSession()
@@ -230,7 +240,12 @@ export function LessonNavigation({
           ref={buttonRef}
           onClick={handleComplete}
           data-testid="lesson-complete-toggle"
-          disabled={loading}
+          disabled={loading || checkpointsBlocked}
+          title={
+            checkpointsBlocked
+              ? t('checkpointsRequired', { count: checkpointsCtx?.missingRequired ?? 0 })
+              : undefined
+          }
           variant={completed ? 'secondary' : 'default'}
           size="sm"
           className={cn(

@@ -66,6 +66,34 @@ export const createLessonTools = (
         execute: async ({ feedback }) => {
             if (!context.lessonId) throw new Error('Lesson ID is required');
 
+            // Required checkpoints must be completed before the lesson can be marked done.
+            const { data: requiredCheckpoints } = await supabase
+                .from('lesson_checkpoints')
+                .select('id, label')
+                .eq('lesson_id', context.lessonId)
+                .eq('is_required', true)
+                .eq('is_enabled', true);
+
+            if (requiredCheckpoints && requiredCheckpoints.length > 0) {
+                const { data: completedAttempts } = await supabase
+                    .from('lesson_checkpoint_attempts')
+                    .select('checkpoint_id')
+                    .eq('user_id', context.userId)
+                    .eq('lesson_id', context.lessonId)
+                    .eq('completed', true);
+
+                const completedIds = new Set((completedAttempts ?? []).map((a) => a.checkpoint_id));
+                const missing = requiredCheckpoints.filter((c) => !completedIds.has(c.id));
+
+                if (missing.length > 0) {
+                    return {
+                        success: false,
+                        error: `The student must complete ${missing.length} required checkpoint(s) in this lesson before it can be marked complete.`,
+                        missingCheckpointIds: missing.map((c) => c.id),
+                    };
+                }
+            }
+
             const { data: existing } = await supabase
                 .from('lesson_completions')
                 .select('id')
