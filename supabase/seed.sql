@@ -172,13 +172,21 @@ ON CONFLICT (provider, provider_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 4. PROFILES  (global — no tenant_id)
 -- ---------------------------------------------------------------------------
+-- handle_new_user() already created these rows when the auth.users above were
+-- inserted, and it does not set onboarding_completed (so they default to false).
+-- DO UPDATE, not DO NOTHING: with DO NOTHING every value below is silently
+-- discarded, which left admins stuck on the onboarding wizard instead of the
+-- dashboard.
 INSERT INTO profiles (id, full_name, username, onboarding_completed)
 VALUES
   ('a1000000-0000-0000-0000-000000000001', 'Test Student',          'test_student',   false),
   ('a1000000-0000-0000-0000-000000000002', 'School Owner',          'school_owner',   true),
   ('a1000000-0000-0000-0000-000000000003', 'Code Academy Creator',  'ca_creator',     true),
   ('a1000000-0000-0000-0000-000000000004', 'Alice Student',         'alice_student',  false)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  full_name            = EXCLUDED.full_name,
+  username             = EXCLUDED.username,
+  onboarding_completed = EXCLUDED.onboarding_completed;
 
 
 -- ---------------------------------------------------------------------------
