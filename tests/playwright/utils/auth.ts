@@ -29,22 +29,22 @@ export async function login(
   await dismissTours(page)
 }
 
-/** Login as student on default tenant (lvh.me:3000) */
+/** Login as student on the default tenant */
 export async function loginAsStudent(page: Page, baseUrl = BASE) {
   await login(page, ACCOUNTS.student.email, ACCOUNTS.student.password, baseUrl)
 }
 
-/** Login as teacher/owner on default tenant (lvh.me:3000) */
+/** Login as teacher/owner on the default tenant */
 export async function loginAsTeacher(page: Page, baseUrl = BASE) {
   await login(page, ACCOUNTS.teacher.email, ACCOUNTS.teacher.password, baseUrl)
 }
 
-/** Login as admin on code-academy tenant (code-academy.lvh.me:3000) */
+/** Login as admin on the code-academy tenant */
 export async function loginAsAdmin(page: Page, baseUrl = TENANT_BASE) {
   await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password, baseUrl)
 }
 
-/** Login as student on code-academy tenant (code-academy.lvh.me:3000) */
+/** Login as student on the code-academy tenant */
 export async function loginAsTenantStudent(page: Page, baseUrl = TENANT_BASE) {
   await login(
     page,
@@ -55,7 +55,7 @@ export async function loginAsTenantStudent(page: Page, baseUrl = TENANT_BASE) {
 }
 
 /**
- * Login as super admin on the platform domain (lvh.me:3000).
+ * Login as super admin on the platform domain (default tenant).
  * After login, navigates to /en/platform (does NOT wait for dashboard/**).
  */
 export async function loginAsSuperAdmin(page: Page, baseUrl = BASE) {

@@ -84,7 +84,8 @@ test.describe('Tenant Isolation', () => {
 
   test('platform root (lvh.me) loads', async ({ page }) => {
     await page.goto(`${BASE}/en`)
-    await expect(page).toHaveURL(/lvh\.me:3000\/en/)
+    // Derive from BASE rather than hardcoding a port — the dev server may run anywhere.
+    await expect(page).toHaveURL(`${BASE}/en`)
   })
 
   test('subdomain (code-academy.lvh.me) shows Code Academy Pro', async ({ page }) => {
