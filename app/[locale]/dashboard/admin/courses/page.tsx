@@ -25,21 +25,29 @@ export default async function AdminCoursesPage() {
 
   const tenantId = await getCurrentTenantId()
 
-  // Get all courses with author info
+  // Enrollment + lesson counts don't depend on the course list, so start them
+  // immediately — they run concurrently with the courses query instead of behind it.
+  const enrollmentsPromise = supabase.from('enrollments').select('course_id').eq('tenant_id', tenantId)
+  const lessonsPromise = supabase.from('lessons').select('course_id').eq('tenant_id', tenantId)
+
+  // Only select the columns the table actually renders (avoid serializing unused
+  // course fields into the client component's props).
   const { data: courses } = await supabase
     .from('courses')
-    .select('*, author_id')
+    .select('course_id, title, description, status, thumbnail_url, published_at, author_id')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
-  // Get author profiles, enrollment counts, and lesson counts in parallel
-  const authorIds = courses?.map((c) => c.author_id) || []
+  // Author profiles depend on the course list. Some courses (e.g. system/AI-generated) have no
+  // author_id — filter nulls out, otherwise PostgREST's .in() rejects the query and every row
+  // falls back to "Unknown".
+  const authorIds = [...new Set(courses?.map((c) => c.author_id).filter((id): id is string => Boolean(id)))]
 
   const [{ data: authors }, { data: enrollments }, { data: lessons }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name')
+    supabase.from('profiles').select('id, full_name, avatar_url')
       .in('id', authorIds.length > 0 ? authorIds : ['none']),
-    supabase.from('enrollments').select('course_id').eq('tenant_id', tenantId),
-    supabase.from('lessons').select('course_id').eq('tenant_id', tenantId),
+    enrollmentsPromise,
+    lessonsPromise,
   ])
 
   const authorsMap = new Map(authors?.map((a) => [a.id, a]))

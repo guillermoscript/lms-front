@@ -2152,11 +2152,10 @@
             "publishedDate": "Published",
             "actions": "Actions"
           },
-          "unknownAuthor": "Unknown",
+          "unknownAuthor": "No author assigned",
           "empty": "No courses found",
           "actions": {
-            "view": "View",
-            "edit": "Edit"
+            "manage": "Manage"
           }
         },
         "statusActions": {
@@ -2164,6 +2163,7 @@
           "archive": "Archive",
           "restore": "Restore",
           "cancel": "Cancel",
+          "moreActions": "More actions",
           "dialogs": {
             "approve": {
               "title": "Approve Course",
