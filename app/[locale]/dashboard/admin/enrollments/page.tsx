@@ -51,7 +51,7 @@ export default async function AdminEnrollmentsPage({
   // Get all enrollments
   const { data: enrollments } = await supabase
     .from('enrollments')
-    .select('*, user_id, course_id')
+    .select('enrollment_id, user_id, course_id, status, enrollment_date')
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 

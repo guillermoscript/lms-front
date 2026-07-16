@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import {
     IconBook,
@@ -46,6 +45,7 @@ import {
 } from "@/components/ui/collapsible"
 import { useTenant } from "@/components/tenant/tenant-provider"
 import { useLogout } from "@/hooks/use-logout"
+import { useActiveNav } from "@/hooks/use-active-nav"
 import Image from "next/image"
 
 interface NavSubItem {
@@ -66,25 +66,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     userRole: 'student' | 'teacher' | 'admin' | null
 }
 
-// On hard loads the browser URL carries the locale prefix (/en, /es) while nav
-// hrefs are locale-less; client-side navigations are already locale-less.
-// (i18n.ts can't be imported here — it pulls in next-intl/server.)
-function stripLocale(pathname: string): string {
-    return pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/'
-}
-
-function isNavActive(href: string, pathname: string): boolean {
-    const hrefPath = href.split('?')[0]
-    if (pathname === hrefPath) return true
-    if (hrefPath !== '/dashboard/admin' && hrefPath !== '/dashboard/teacher' && hrefPath !== '/dashboard/student') {
-        return pathname.startsWith(hrefPath + '/')
-    }
-    return false
-}
-
 function NavEntry({ item }: { item: NavItem }) {
-    const pathname = stripLocale(usePathname())
-    const active = isNavActive(item.href, pathname)
+    const { isActive } = useActiveNav()
+    const active = isActive(item.href)
     const tourProps = item.tourId ? { 'data-tour': item.tourId } : {}
 
     if (!item.items?.length) {
@@ -102,7 +86,7 @@ function NavEntry({ item }: { item: NavItem }) {
         )
     }
 
-    const childActive = item.items.some((sub) => isNavActive(sub.href, pathname))
+    const childActive = item.items.some((sub) => isActive(sub.href))
 
     return (
         <Collapsible
@@ -132,7 +116,7 @@ function NavEntry({ item }: { item: NavItem }) {
                         >
                             <SidebarMenuSubButton
                                 render={<Link href={sub.href} />}
-                                isActive={isNavActive(sub.href, pathname)}
+                                isActive={isActive(sub.href)}
                             >
                                 <span>{sub.title}</span>
                             </SidebarMenuSubButton>

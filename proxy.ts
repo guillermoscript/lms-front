@@ -29,6 +29,24 @@ async function checkSuperAdmin(userId: string): Promise<boolean> {
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+// Short-TTL in-memory cache for tenant slug -> {id, status} lookups.
+// Module scope persists for the life of the Edge isolate, so this avoids a
+// DB round trip on every request for a mapping that rarely changes. TTL
+// keeps a deactivated tenant from staying "active" for long after a status
+// flip, without needing external cache infra.
+const TENANT_LOOKUP_TTL_MS = 60_000
+const tenantLookupCache = new Map<string, { tenant: { id: string; status: string } | null; expiresAt: number }>()
+
+function getCachedTenantLookup(slug: string) {
+  const entry = tenantLookupCache.get(slug)
+  if (entry && entry.expiresAt > Date.now()) return entry.tenant
+  return undefined
+}
+
+function setCachedTenantLookup(slug: string, tenant: { id: string; status: string } | null) {
+  tenantLookupCache.set(slug, { tenant, expiresAt: Date.now() + TENANT_LOOKUP_TTL_MS })
+}
+
 // Strip port from domain for hostname comparisons
 const PLATFORM_DOMAIN_RAW = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
 const PLATFORM_DOMAIN = PLATFORM_DOMAIN_RAW.split(':')[0] // e.g. "lvh.me" from "lvh.me:3000"
@@ -180,23 +198,30 @@ export default async function proxy(request: NextRequest) {
   let tenantId = DEFAULT_TENANT_ID
 
   if (tenantSlug) {
-    // Look up tenant by slug using service client (no auth needed)
-    const supabaseLookup = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return request.cookies.getAll() },
-          setAll() { /* not needed for lookup */ },
-        },
-      }
-    )
-    const { data: tenant } = await supabaseLookup
-      .from('tenants')
-      .select('id, status')
-      .eq('slug', tenantSlug)
-      .eq('status', 'active')
-      .single()
+    let tenant = getCachedTenantLookup(tenantSlug)
+
+    if (tenant === undefined) {
+      // Look up tenant by slug using service client (no auth needed)
+      const supabaseLookup = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return request.cookies.getAll() },
+            setAll() { /* not needed for lookup */ },
+          },
+        }
+      )
+      const { data } = await supabaseLookup
+        .from('tenants')
+        .select('id, status')
+        .eq('slug', tenantSlug)
+        .eq('status', 'active')
+        .single()
+
+      tenant = data ?? null
+      setCachedTenantLookup(tenantSlug, tenant)
+    }
 
     if (!tenant) {
       // Invalid tenant slug - redirect to platform root (skip for API routes)
