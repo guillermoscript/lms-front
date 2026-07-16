@@ -1,7 +1,8 @@
 "use client";
 
+import type { UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { IconRobot, IconCheck, IconRotateClockwise2, IconSparkles } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -30,13 +31,32 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { DefaultChatTransport } from "ai";
+import { cn } from "@/lib/utils";
+import type { Database } from "@/lib/database.types";
+
+type ProfileRow = Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name">;
+
+type ExerciseCompletionToolPart = {
+    type: "tool-markExerciseCompleted";
+    state: "output-available";
+    toolCallId: string;
+    output: {
+        feedback?: string;
+    };
+};
+
+const isExerciseCompletionToolPart = (
+    part: UIMessage["parts"][number]
+): part is ExerciseCompletionToolPart =>
+    part.type === "tool-markExerciseCompleted" && part.state === "output-available";
 
 interface ExerciseChatProps {
     apiEndpoint: string;
     exerciseId: string;
-    initialMessages: any[];
+    initialMessages: UIMessage[];
     isExerciseCompleted: boolean;
-    profile: any;
+    profile: ProfileRow | null;
+    className?: string;
 }
 
 const suggestions = [
@@ -52,6 +72,7 @@ function InnerExerciseChat({
     initialMessages,
     isExerciseCompleted: initialCompleted,
     profile,
+    className,
 }: ExerciseChatProps) {
     const router = useRouter();
     const tGamification = useTranslations("gamification");
@@ -72,37 +93,31 @@ function InnerExerciseChat({
             },
         }),
         messages: initialMessages,
+        onFinish: ({ message }) => {
+            if (isCompleted) return;
+
+            const completionPart = message.parts.find(isExerciseCompletionToolPart);
+            if (!completionPart) return;
+
+            setIsCompleted(true);
+            const feedback = completionPart.output.feedback || "Great job!";
+
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#3b82f6', '#10b981', '#f59e0b']
+            });
+
+            toast.success("Exercise Completed!", {
+                description: feedback,
+            });
+            toast.success(tGamification("xpAwarded.exercise_completion"));
+            router.refresh();
+        },
     });
 
     const isLoading = status === 'submitted' || status === 'streaming';
-
-    // Watch for exercise completion tool invocation
-    useEffect(() => {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage?.role === 'assistant') {
-            const completionPart = lastMessage.parts.find(
-                (part: any) => part.type === 'tool-markExerciseCompleted' && part.state === 'output-available'
-            );
-            
-            if (completionPart && !isCompleted) {
-                setIsCompleted(true);
-                const feedback = (completionPart as any).output?.feedback || "Great job!";
-
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#3b82f6', '#10b981', '#f59e0b']
-                });
-
-                toast.success("Exercise Completed!", {
-                    description: feedback,
-                });
-                toast.success(tGamification("xpAwarded.exercise_completion"));
-                router.refresh();
-            }
-        }
-    }, [messages, isCompleted, router]);
 
     const onSubmit = (message: PromptInputMessage) => {
         if (!message.text) return;
@@ -133,7 +148,7 @@ function InnerExerciseChat({
             } else {
                 toast.error("Failed to restart chat");
             }
-        } catch (error) {
+        } catch {
             toast.error("Error restarting chat");
         } finally {
             setIsRestarting(false);
@@ -143,7 +158,7 @@ function InnerExerciseChat({
     const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
     return (
-        <div className="relative flex flex-col h-[min(500px,65vh)] sm:h-[600px] md:h-[650px] overflow-hidden bg-background rounded-xl sm:rounded-2xl border sm:border-2 shadow-sm">
+        <div className={cn("relative flex h-[calc(100dvh-12rem)] min-h-[28rem] flex-col overflow-hidden rounded-xl border bg-background shadow-sm sm:h-[600px] sm:rounded-2xl sm:border-2 lg:h-[min(650px,calc(100dvh-7rem))]", className)}>
             {/* Chat Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-muted/30">
                 <div className="flex items-center gap-2 sm:gap-2.5">
@@ -199,7 +214,7 @@ function InnerExerciseChat({
                     {messages.filter((m) => m.role !== 'system').map((message) => (
                         <Message
                             key={message.id}
-                            from={message.role as any}
+                            from={message.role}
                         >
                             <MessageContent>
                                 {message.parts.map((part, index) => {
@@ -209,6 +224,7 @@ function InnerExerciseChat({
                                     // Handle tool invocation parts with proper type checking
                                     if (part.type === 'tool-markExerciseCompleted') {
                                         if (part.state === 'output-available') {
+                                            const completionPart = part as ExerciseCompletionToolPart;
                                             return (
                                                 <div key={part.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
                                                     <div className="flex items-start gap-2 sm:gap-3">
@@ -217,7 +233,7 @@ function InnerExerciseChat({
                                                         </div>
                                                         <div className="space-y-0.5 sm:space-y-1 min-w-0">
                                                             <p className="font-bold text-emerald-900 dark:text-emerald-300 text-sm sm:text-base">Exercise Mastered!</p>
-                                                            <p className="opacity-90 leading-relaxed">{(part.output as any).feedback}</p>
+                                                            <p className="opacity-90 leading-relaxed">{completionPart.output.feedback}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -255,7 +271,7 @@ function InnerExerciseChat({
                             />
                         </PromptInputBody>
                         <PromptInputFooter>
-                            <PromptInputSubmit status={status as any} />
+                            <PromptInputSubmit status={status} />
                         </PromptInputFooter>
                     </PromptInput>
                 </div>

@@ -4615,6 +4615,12 @@
     }
   },
   "exercises": {
+    "workspace": {
+      "label": "Espacio de trabajo del ejercicio",
+      "task": "Tarea",
+      "aiChat": "Chat con IA",
+      "instructions": "Instrucciones"
+    },
     "artifact": {
       "typeLabel": "Ejercicio Interactivo",
       "evaluating": "Evaluando tu entrega...",
