@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, loginAsSuperAdmin, loginAsStudent } from './utils/auth'
-import { BASE, LOCALE, ACCOUNTS } from './utils/constants'
+import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 
 /**
  * P0 — Super Admin Platform Panel Tests
@@ -41,7 +41,7 @@ test.describe('Platform Security Guard', () => {
   test('school admin cannot access /platform — redirected away', async ({ page }) => {
     // Login as school admin on their own tenant (Code Academy Pro)
     // creator@codeacademy.com is admin on code-academy but not a super admin
-    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password, 'http://code-academy.lvh.me:3000')
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password, TENANT_BASE)
     // Try to access /platform on the main domain
     await page.goto(`${PLATFORM_BASE}`)
     await page.waitForURL((url) => !url.pathname.startsWith(`/${LOCALE}/platform`), { timeout: 10_000 })

@@ -32,7 +32,10 @@ export default defineConfig({
   reporter: process.env.CI ? [['line'], ['github'], ['html', { open: 'never' }]] : [['list'], ['html']],
   use: {
     actionTimeout: 0,
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    // lvh.me (not localhost) — it resolves to 127.0.0.1 with wildcard subdomains,
+    // which the tenant proxy needs. On localhost no subdomain resolves, so every
+    // tenant falls back to the default and authenticated tests bounce to /join-school.
+    baseURL: process.env.BASE_URL || 'http://lvh.me:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

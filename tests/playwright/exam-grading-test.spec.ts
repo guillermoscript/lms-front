@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { TENANT_BASE as BASE_URL } from './utils/constants'
 
-const BASE_URL = 'http://code-academy.lvh.me:3000'
 const STUDENT_EMAIL = 'alice@student.com'
 const STUDENT_PASSWORD = 'password123'
 const COURSE_ID = 2001
@@ -116,7 +116,7 @@ test.describe('AI Exam Grading E2E', () => {
   })
 })
 
-async function checkResultPage(page: any) {
+async function checkResultPage(page: Page) {
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(3000) // Give time for data to load
 
