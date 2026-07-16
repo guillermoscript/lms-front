@@ -6,7 +6,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { IconCheck, IconArchive, IconRestore } from '@tabler/icons-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { IconCheck, IconArchive, IconRestore, IconDotsVertical } from '@tabler/icons-react'
 import { ConfirmDialog } from './confirm-dialog'
 import { approveCourse, archiveCourse, restoreCourse } from '@/app/actions/admin/courses'
 
@@ -75,42 +81,51 @@ export function CourseStatusActions({
 
   return (
     <>
-      <div className="flex gap-2">
-        {currentStatus === 'draft' && (
-          <Button
-            size="sm"
-            onClick={() => setShowApproveDialog(true)}
-            disabled={loading}
-          >
-            <IconCheck className="mr-2 h-4 w-4" />
-            {t('approve')}
-          </Button>
-        )}
+      {/* The dropdown and its dialogs must stay siblings of DropdownMenuContent
+          (not nested inside it) — the menu popup unmounts on close, which would
+          wipe the showXDialog state right as a click opens it. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon" className="size-8">
+              <IconDotsVertical className="h-4 w-4" />
+              <span className="sr-only">{t('moreActions')}</span>
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          {currentStatus === 'draft' && (
+            <DropdownMenuItem
+              disabled={loading}
+              onClick={() => setShowApproveDialog(true)}
+            >
+              <IconCheck className="text-emerald-600 dark:text-emerald-400" />
+              {t('approve')}
+            </DropdownMenuItem>
+          )}
 
-        {currentStatus === 'published' && (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => setShowArchiveDialog(true)}
-            disabled={loading}
-          >
-            <IconArchive className="mr-2 h-4 w-4" />
-            {t('archive')}
-          </Button>
-        )}
+          {currentStatus === 'published' && (
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={loading}
+              onClick={() => setShowArchiveDialog(true)}
+            >
+              <IconArchive />
+              {t('archive')}
+            </DropdownMenuItem>
+          )}
 
-        {currentStatus === 'archived' && (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={() => setShowRestoreDialog(true)}
-            disabled={loading}
-          >
-            <IconRestore className="mr-2 h-4 w-4" />
-            {t('restore')}
-          </Button>
-        )}
-      </div>
+          {currentStatus === 'archived' && (
+            <DropdownMenuItem
+              disabled={loading}
+              onClick={() => setShowRestoreDialog(true)}
+            >
+              <IconRestore />
+              {t('restore')}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Approve Confirmation */}
       <ConfirmDialog

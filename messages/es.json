@@ -2148,11 +2148,10 @@
             "publishedDate": "Publicado",
             "actions": "Acciones"
           },
-          "unknownAuthor": "Desconocido",
+          "unknownAuthor": "Sin autor asignado",
           "empty": "No se encontraron cursos",
           "actions": {
-            "view": "Ver",
-            "edit": "Editar"
+            "manage": "Gestionar"
           }
         },
         "statusActions": {
@@ -2160,6 +2159,7 @@
           "archive": "Archivar",
           "restore": "Restaurar",
           "cancel": "Cancelar",
+          "moreActions": "Más acciones",
           "dialogs": {
             "approve": {
               "title": "Aprobar Curso",
