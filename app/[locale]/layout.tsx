@@ -9,6 +9,7 @@ import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
 import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server";
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -82,6 +83,26 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
+// Branding settings are near-static; cache per tenant for 60s so every
+// navigation doesn't re-query tenant_settings before <html> can render.
+// Admin settings updates use revalidatePath, which doesn't consistently
+// cover this root layout across all touched call sites — a short TTL is a
+// safer invalidation strategy than relying on tags being threaded through
+// every settings-write path.
+const getTenantSettings = unstable_cache(
+  async (tenantId: string) => {
+    const sb = createAdminClient();
+    const { data: settings } = await sb
+      .from('tenant_settings')
+      .select('setting_key, setting_value')
+      .eq('tenant_id', tenantId)
+      .in('setting_key', ['site_name', 'logo_url', 'primary_color', 'secondary_color', 'favicon_url', 'theme_preset']);
+    return settings ?? [];
+  },
+  ['tenant-settings-branding'],
+  { revalidate: 60 }
+);
+
 export default async function RootLayout({
   children,
   params
@@ -107,18 +128,11 @@ export default async function RootLayout({
   // setting_value is jsonb: `{ value: string }` for branding keys, a StoredPreset for theme_preset
   let tenantSettings: Record<string, { value?: string } | undefined> = {};
   if (tenant) {
-    const sb = createAdminClient();
-    const { data: settings } = await sb
-      .from('tenant_settings')
-      .select('setting_key, setting_value')
-      .eq('tenant_id', tenant.id)
-      .in('setting_key', ['site_name', 'logo_url', 'primary_color', 'secondary_color', 'favicon_url', 'theme_preset']);
-    if (settings) {
-      tenantSettings = settings.reduce((acc: typeof tenantSettings, s) => {
-        acc[s.setting_key] = s.setting_value;
-        return acc;
-      }, {});
-    }
+    const settings = await getTenantSettings(tenant.id);
+    tenantSettings = settings.reduce((acc: typeof tenantSettings, s) => {
+      acc[s.setting_key] = s.setting_value;
+      return acc;
+    }, {});
   }
 
   const tenantInfo = tenant ? {

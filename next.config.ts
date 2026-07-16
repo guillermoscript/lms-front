@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   // Allow the local tenant domains so the app is interactive under automation.
   allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost'],
   transpilePackages: ['@lms/core'],
+  experimental: {
+    // Both are used repo-wide via barrel named imports (672 files each);
+    // this lets Next.js rewrite them to per-icon imports at build time.
+    optimizePackageImports: ['@tabler/icons-react', 'lucide-react'],
+  },
   async rewrites() {
     return {
       beforeFiles: [
