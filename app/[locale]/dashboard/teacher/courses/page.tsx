@@ -171,7 +171,7 @@ export default async function TeacherCoursesPage() {
                                             </Button>
                                         </Link>
                                         <Link
-                                            href={`/dashboard/student/courses/${course.course_id}`}
+                                            href={`/dashboard/teacher/courses/${course.course_id}/preview`}
                                             className="flex-1"
                                         >
                                             <Button variant="ghost" size="sm" className="w-full gap-2 text-xs">

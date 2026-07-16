@@ -7,6 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   IconArrowLeft,
   IconPlus,
@@ -29,6 +38,24 @@ import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
+}
+
+interface IssuedCertificate {
+  certificate_id: string
+  issued_at: string
+  verification_code: string
+  pdf_url: string
+  profiles?: { full_name?: string | null; avatar_url?: string | null } | null
+}
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return ''
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }
 
 export default async function CourseManagementPage({ params }: PageProps) {
@@ -143,8 +170,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
   const certificateTemplate = certificateTemplateRes.data
   const issuedCertificates = issuedCertificatesRes.data || []
 
-  // Fetch profiles for enrolled users (no FK between enrollments and profiles)
-  const enrolledUserIds = rawEnrollments.map((e) => e.user_id)
+  // Fetch profiles for enrolled users (no FK between enrollments and profiles).
+  // Filter nulls + dedupe: a null id makes PostgREST reject the whole .in() query.
+  const enrolledUserIds = [...new Set(rawEnrollments.map((e) => e.user_id).filter(Boolean))]
   const { data: enrollmentProfiles } = enrolledUserIds.length > 0
     ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', enrolledUserIds)
     : { data: [] }
@@ -512,57 +540,54 @@ export default async function CourseManagementPage({ params }: PageProps) {
                     )}
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.student')}</th>
-                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.date')}</th>
-                            <th className="px-4 py-3 text-left font-medium">{t('certificates.issued.table.code')}</th>
-                            <th className="px-4 py-3 text-right font-medium">{t('certificates.issued.table.actions')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {issuedCertificates.length > 0 ? (
-                            issuedCertificates.map((cert: any) => (
-                              <tr key={cert.certificate_id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="h-6 w-6 rounded-full bg-accent flex items-center justify-center overflow-hidden border">
-                                      {cert.profiles?.avatar_url ? (
-                                        <img src={cert.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
-                                      ) : (
-                                        <IconUsers className="h-3 w-3 text-muted-foreground" />
-                                      )}
-                                    </div>
-                                    <span className="font-medium truncate">{cert.profiles?.full_name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-muted-foreground">
-                                  {new Date(cert.issued_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-4 py-3 font-mono text-xs uppercase">
-                                  {cert.verification_code}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="sm" aria-label={t('certificates.issued.view')}>
-                                      <IconExternalLink className="h-4 w-4" />
-                                    </Button>
-                                  </a>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                                {t('certificates.issued.noIssued')}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-4">{t('certificates.issued.table.student')}</TableHead>
+                          <TableHead className="px-4">{t('certificates.issued.table.date')}</TableHead>
+                          <TableHead className="px-4">{t('certificates.issued.table.code')}</TableHead>
+                          <TableHead className="px-4 text-right">{t('certificates.issued.table.actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {issuedCertificates.length > 0 ? (
+                          (issuedCertificates as IssuedCertificate[]).map((cert) => (
+                            <TableRow key={cert.certificate_id}>
+                              <TableCell className="px-4">
+                                <div className="flex items-center gap-2">
+                                  <Avatar size="sm">
+                                    {cert.profiles?.avatar_url && (
+                                      <AvatarImage src={cert.profiles.avatar_url} alt={cert.profiles?.full_name || ''} />
+                                    )}
+                                    <AvatarFallback>{getInitials(cert.profiles?.full_name)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium truncate">{cert.profiles?.full_name || '—'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-4 whitespace-nowrap text-muted-foreground">
+                                {new Date(cert.issued_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="px-4 font-mono text-xs uppercase">
+                                {cert.verification_code}
+                              </TableCell>
+                              <TableCell className="px-4 text-right">
+                                <a href={cert.pdf_url} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="sm" aria-label={t('certificates.issued.view')}>
+                                    <IconExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </a>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                              {t('certificates.issued.noIssued')}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               </div>

@@ -1762,7 +1762,8 @@
           },
           "actions": {
             "roles": "Roles",
-            "view": "View"
+            "view": "View",
+            "more": "More actions"
           }
         },
         "details": {
