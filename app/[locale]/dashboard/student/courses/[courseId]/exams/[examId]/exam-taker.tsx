@@ -6,12 +6,11 @@ import { useEventListener } from 'usehooks-ts'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  IconArrowLeft,
   IconClock,
   IconLoader2,
   IconChevronLeft,
@@ -45,7 +44,6 @@ export function ExamTaker({
   examId,
   courseId,
   title,
-  description,
   duration,
   questions,
   tenantId,
@@ -71,7 +69,6 @@ export function ExamTaker({
   })
 
   const currentQuestion = questions[currentQuestionIndex]
-  const isFirstQuestion = currentQuestionIndex === 0
   const isLastQuestion = currentQuestionIndex === questions.length - 1
   const answeredCount = Object.keys(answers).length
   const progressPercent = (answeredCount / questions.length) * 100
@@ -170,13 +167,13 @@ export function ExamTaker({
 
   if (questions.length === 0) {
     return (
-      <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
-        <div className="bg-card border rounded-3xl p-12 shadow-soft">
-          <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
+      <div className="container mx-auto max-w-2xl px-4 py-20 text-center">
+        <div className="rounded-xl border bg-card p-8 sm:p-12">
+          <IconFileText className="mx-auto mb-5 h-12 w-12 text-muted-foreground/40" />
           <h2 className="text-2xl font-bold mb-2">No Questions Found</h2>
           <p className="text-muted-foreground mb-8 text-lg">This exam doesn&apos;t have any questions yet. Please check back later.</p>
           <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-            <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
+            <Button variant="outline" className="h-11 gap-2 rounded-xl px-6 font-semibold">
               <IconChevronLeft className="mr-2 h-5 w-5" />
               Return to Assessments
             </Button>
@@ -187,66 +184,65 @@ export function ExamTaker({
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col pt-6 pb-12">
-      <div className="container max-w-4xl flex-1 flex flex-col gap-8">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col bg-muted/20 py-4 sm:py-6">
+      <div className="container flex max-w-5xl flex-1 flex-col gap-5 px-3 sm:gap-6 sm:px-4">
         {/* Top bar with stats and timer */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-4 z-20">
-          <div className="bg-background/80 backdrop-blur-md border border-muted-foreground/10 rounded-2xl p-4 flex flex-1 items-center gap-6 shadow-xl">
-            <div className="p-3 rounded-xl bg-primary/10 text-primary">
+        <div className="sticky top-3 z-20 flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-1 items-center gap-3 rounded-xl border bg-card/95 px-3 py-3 shadow-sm backdrop-blur-sm sm:gap-4 sm:px-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <IconFileText size={20} />
             </div>
-            <div className="flex-1 space-y-1">
-              <h1 className="font-bold tracking-tight line-clamp-1">{title}</h1>
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <h1 className="line-clamp-1 font-semibold tracking-tight">{title}</h1>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground">
                   Progress: {answeredCount}/{questions.length}
                 </span>
-                <Progress value={progressPercent} className="h-1.5 w-24" />
+                <Progress value={progressPercent} className="h-1.5 max-w-28 flex-1" />
               </div>
             </div>
           </div>
 
           {timeLeft !== null && (
             <div className={cn(
-              "p-4 rounded-2xl flex items-center gap-3 shadow-xl border animate-pulse-subtle",
-              timeLeft < 300 ? "bg-red-500 text-white border-red-400" : "bg-card text-foreground border-muted-foreground/10"
+              "flex items-center gap-3 rounded-xl border px-4 py-3 shadow-sm",
+              timeLeft < 300 ? "border-destructive bg-destructive text-destructive-foreground" : "border-border bg-card text-foreground"
             )}>
-              <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-white" : "text-muted-foreground")} />
+              <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-destructive-foreground" : "text-muted-foreground")} />
               <div className="flex flex-col -space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Time Left</span>
-                <span className="font-mono text-xl font-black">{formatTime(timeLeft)}</span>
+                <span className="text-[10px] font-semibold tracking-wide opacity-80">Time left</span>
+                <span className="font-mono text-xl font-bold tabular-nums">{formatTime(timeLeft)}</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Question Area */}
-        <div className="flex-1 flex flex-col gap-8">
-          <Card className="border-none shadow-soft rounded-[32px] overflow-hidden flex-1 flex flex-col">
+        <div className="flex flex-1 flex-col">
+          <Card className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm">
             <div className="h-2 w-full flex">
               {questions.map((_, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "flex-1 transition-all duration-500",
+                    "flex-1 transition-colors duration-200 motion-reduce:transition-none",
                     i === currentQuestionIndex ? "bg-primary" : i < currentQuestionIndex ? "bg-primary/30" : "bg-muted"
                   )}
                 />
               ))}
             </div>
 
-            <div className="flex-1 p-8 md:p-12 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
-              <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm">
-                  <span className="h-[1px] w-8 bg-current opacity-20" />
+            <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center p-5 sm:p-8 md:p-12">
+              <div className="w-full space-y-7">
+                <div className="text-sm font-semibold text-primary">
                   Question {currentQuestionIndex + 1}
                 </div>
 
-                <h2 className="text-2xl md:text-3xl font-black leading-tight text-center md:text-left">
+                <h2 className="max-w-[28ch] text-xl font-semibold leading-snug tracking-tight text-pretty sm:text-2xl md:text-3xl">
                   {currentQuestion.text}
                 </h2>
 
-                <div className="space-y-4 pt-4">
+                <div className="space-y-3 pt-1">
                   {currentQuestion.type === 'multiple_choice' && (
                     <RadioGroup
                       value={answers[currentQuestion.id] || ''}
@@ -258,10 +254,10 @@ export function ExamTaker({
                           key={option.id}
                           htmlFor={`option-${option.id}`}
                           className={cn(
-                            "flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50",
+                            "flex min-h-14 items-center gap-3 rounded-xl border p-4 text-base font-medium transition-colors focus-within:ring-2 focus-within:ring-ring sm:gap-4 sm:p-5",
                             answers[currentQuestion.id] === option.id.toString()
-                              ? "border-primary bg-primary/5 shadow-inner"
-                              : "border-muted-foreground/5 hover:bg-muted/30"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40 hover:bg-muted/30"
                           )}
                         >
                           <RadioGroupItem
@@ -286,14 +282,14 @@ export function ExamTaker({
                           key={val}
                           htmlFor={val}
                           className={cn(
-                            "flex flex-col items-center justify-center gap-4 p-8 rounded-2xl border-2 cursor-pointer transition-all",
+                            "flex min-h-36 flex-col items-center justify-center gap-3 rounded-xl border p-5 transition-colors focus-within:ring-2 focus-within:ring-ring sm:p-8",
                             answers[currentQuestion.id] === val
-                              ? "border-primary bg-primary/5 shadow-xl"
-                              : "border-muted-foreground/5 bg-background hover:bg-muted/30"
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
                           )}
                         >
                           <RadioGroupItem value={val} id={val} className="sr-only" />
-                          <span className="text-2xl font-black capitalize">{val}</span>
+                          <span className="text-xl font-semibold capitalize">{val}</span>
                           <div className={cn(
                             "h-8 w-8 rounded-full border-2 flex items-center justify-center",
                             answers[currentQuestion.id] === val ? "bg-primary border-primary text-white" : "border-muted-foreground/20"
@@ -311,7 +307,7 @@ export function ExamTaker({
                         value={answers[currentQuestion.id] || ''}
                         onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                         placeholder="Share your knowledge here..."
-                        className="min-h-[250px] p-6 text-lg rounded-3xl border-2 border-muted-foreground/10 focus-visible:ring-primary focus-visible:border-primary shadow-inner"
+                        className="min-h-[240px] rounded-xl border p-4 text-base leading-relaxed focus-visible:ring-primary sm:p-5"
                       />
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 justify-end px-2">
                         <IconMessageChatbot size={14} />
@@ -326,11 +322,11 @@ export function ExamTaker({
         </div>
 
         {/* Footer Navigation */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-3 border-t pt-4 sm:gap-4">
           <Button
             variant="ghost"
             size="lg"
-            className="rounded-2xl h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
+            className="h-12 gap-2 rounded-xl px-3 font-semibold text-muted-foreground hover:text-foreground sm:px-5"
             onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
             disabled={currentQuestionIndex === 0}
           >
@@ -343,7 +339,7 @@ export function ExamTaker({
               <Button
                 size="lg"
                 data-testid="exam-finish-submit"
-                className="rounded-2xl h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
+                className="h-12 gap-2 rounded-xl bg-green-600 px-4 font-semibold hover:bg-green-700 sm:px-6"
                 onClick={handleSubmit}
                 disabled={submitting}
               >
@@ -357,7 +353,7 @@ export function ExamTaker({
             ) : (
               <Button
                 size="lg"
-                className="rounded-2xl h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
+                className="h-12 gap-2 rounded-xl px-4 font-semibold sm:px-6"
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
                 Next Question

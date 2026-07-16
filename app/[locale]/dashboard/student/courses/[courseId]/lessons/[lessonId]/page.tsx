@@ -383,9 +383,9 @@ export default async function LessonPage({ params }: PageProps) {
             {aiTask && (
               <AnimatedSection delay={0.15}>
               <section className="-mx-3 sm:mx-0">
-                <div className="sm:rounded-2xl border-y sm:border-2 border-primary/10 bg-gradient-to-b from-primary/[0.04] to-transparent overflow-hidden">
+                <div className="overflow-hidden border-y border-primary/10 bg-card sm:rounded-2xl sm:border">
                   {/* Task header */}
-                  <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-primary/10 bg-primary/[0.03]">
+                  <div className="border-b border-primary/10 bg-primary/[0.06] px-4 py-3 sm:px-5 sm:py-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-primary/10 rounded-xl shrink-0">
                         <IconSparkles className="h-5 w-5 text-primary" />
@@ -399,7 +399,7 @@ export default async function LessonPage({ params }: PageProps) {
 
                   {/* Task description — plain block, the chat below is the interactive card */}
                   <div className="px-4 py-3 sm:px-5 sm:py-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
+                    <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-primary sm:mb-2">
                       {t('currentTask')}
                     </h4>
                     <TaskInstructions text={aiTask.task_instructions} />

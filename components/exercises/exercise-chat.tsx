@@ -36,19 +36,21 @@ import type { Database } from "@/lib/database.types";
 
 type ProfileRow = Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name">;
 
-type ExerciseCompletionToolPart = {
+type ExerciseCompletionToolPart = UIMessage["parts"][number] & {
     type: "tool-markExerciseCompleted";
     state: "output-available";
-    toolCallId: string;
-    output: {
-        feedback?: string;
-    };
 };
 
 const isExerciseCompletionToolPart = (
     part: UIMessage["parts"][number]
 ): part is ExerciseCompletionToolPart =>
     part.type === "tool-markExerciseCompleted" && part.state === "output-available";
+
+const getCompletionFeedback = (output: unknown) => {
+    if (!output || typeof output !== "object") return "Great job!";
+    const feedback = (output as { feedback?: unknown }).feedback;
+    return typeof feedback === "string" ? feedback : "Great job!";
+};
 
 interface ExerciseChatProps {
     apiEndpoint: string;
@@ -100,7 +102,7 @@ function InnerExerciseChat({
             if (!completionPart) return;
 
             setIsCompleted(true);
-            const feedback = completionPart.output.feedback || "Great job!";
+            const feedback = getCompletionFeedback(completionPart.output);
 
             confetti({
                 particleCount: 150,
@@ -233,7 +235,7 @@ function InnerExerciseChat({
                                                         </div>
                                                         <div className="space-y-0.5 sm:space-y-1 min-w-0">
                                                             <p className="font-bold text-emerald-900 dark:text-emerald-300 text-sm sm:text-base">Exercise Mastered!</p>
-                                                            <p className="opacity-90 leading-relaxed">{completionPart.output.feedback}</p>
+                                                            <p className="opacity-90 leading-relaxed">{getCompletionFeedback(completionPart.output)}</p>
                                                         </div>
                                                     </div>
                                                 </div>
