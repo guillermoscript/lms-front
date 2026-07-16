@@ -37,106 +37,81 @@ test.describe('Admin CRUD Operations', () => {
       await expect(statsCards.first()).toBeVisible()
     })
 
-    test('new product form loads with all required fields', async ({ page }) => {
+    test('new product wizard loads on the course step', async ({ page }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/products/new`, {
         timeout: 30_000,
       })
 
-      // Name field
-      const nameInput = page.locator('#name')
-      await expect(nameInput).toBeVisible()
+      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+        timeout: 10_000,
+      })
 
-      // Description field
-      const descriptionInput = page.locator('#description')
-      await expect(descriptionInput).toBeVisible()
+      // Step 1 offers both course sources.
+      await expect(page.getByTestId('course-source-new')).toBeVisible()
+      await expect(page.getByTestId('course-source-existing')).toBeVisible()
 
-      // Price field (type=number)
-      const priceInput = page.locator('#price')
-      await expect(priceInput).toBeVisible()
-      await expect(priceInput).toHaveAttribute('type', 'number')
-
-      // Image URL field
-      const imageInput = page.locator('#image')
-      await expect(imageInput).toBeVisible()
-      await expect(imageInput).toHaveAttribute('type', 'url')
-
-      // Submit button should be visible
-      const submitButton = page.locator('button[type="submit"]')
-      await expect(submitButton).toBeVisible()
+      // The wizard advances rather than submitting, so a Next control gates the flow.
+      await expect(page.getByTestId('product-creation-next')).toBeVisible()
     })
 
-    test('course selector renders courses in new product form (regression)', async ({
+    test('course selector renders courses in new product wizard (regression)', async ({
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/products/new`, {
         timeout: 30_000,
       })
+      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+        timeout: 10_000,
+      })
 
-      // Course selector section should exist with a search input
-      const courseSelectorSearch = page.locator('input[placeholder*="earch"]').last()
-      await expect(courseSelectorSearch).toBeVisible({ timeout: 10_000 })
+      // The course dropdown only renders once "use existing course" is picked.
+      await page.getByTestId('course-source-existing').click()
 
-      // Selected count text should show "0 ... selected" initially
-      const selectedText = page.getByText(/\d+.*selected/i)
-      await expect(selectedText).toBeVisible({ timeout: 10_000 })
+      const courseSelect = page.getByTestId('existing-course-select')
+      await expect(courseSelect).toBeVisible({ timeout: 10_000 })
 
-      // If there are published courses, checkboxes should render
-      const courseCheckboxes = page.locator('[role="checkbox"]')
-      const checkboxCount = await courseCheckboxes.count()
-      if (checkboxCount > 0) {
-        // At least one checkbox is visible
-        await expect(courseCheckboxes.first()).toBeVisible()
-      } else {
-        // No published courses — the empty state message should show
-        const emptyMsg = page.getByText(/no.*courses|no.*available/i)
-        await expect(emptyMsg).toBeVisible({ timeout: 5_000 })
-      }
+      // Opening it should list the tenant's courses (the regression this guards).
+      await courseSelect.click()
+      await expect(page.locator('[role="option"]').first()).toBeVisible({
+        timeout: 10_000,
+      })
     })
 
-    test('product form fields accept input without submission', async ({
+    test('product wizard fields accept input without submission', async ({
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/products/new`, {
         timeout: 30_000,
       })
+      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+        timeout: 10_000,
+      })
 
-      // Wait for the form to render
-      await expect(page.locator('#name')).toBeVisible({ timeout: 10_000 })
+      // Step 1 — Course: create a new course shell, then advance.
+      await page.getByTestId('course-source-new').click()
+      await page.getByTestId('product-creation-next').click()
 
-      // Fill name
-      const nameInput = page.locator('#name')
-      await nameInput.fill('Test Product E2E')
-      await expect(nameInput).toHaveValue('Test Product E2E')
+      // Step 2 — Basics.
+      const titleInput = page.getByTestId('product-creation-title')
+      await expect(titleInput).toBeVisible({ timeout: 10_000 })
+      await titleInput.fill('Test Product E2E')
+      await expect(titleInput).toHaveValue('Test Product E2E')
 
-      // Fill description (textarea element)
-      const descriptionInput = page.locator('#description')
-      await expect(descriptionInput).toBeVisible({ timeout: 5_000 })
+      const descriptionInput = page.getByTestId('product-creation-description')
       await descriptionInput.fill('A test product description for E2E testing')
       await expect(descriptionInput).toHaveValue(
         'A test product description for E2E testing'
       )
+      await page.getByTestId('product-creation-next').click()
 
-      // Fill price
-      const priceInput = page.locator('#price')
-      await expect(priceInput).toBeVisible({ timeout: 5_000 })
+      // Step 3 — Pricing: the price field only appears in paid mode.
+      await page.getByTestId('pricing-mode-paid').click()
+      const priceInput = page.getByTestId('product-creation-price')
+      await expect(priceInput).toBeVisible({ timeout: 10_000 })
       await priceInput.fill('29.99')
       await expect(priceInput).toHaveValue('29.99')
 
-      // Fill image URL
-      const imageInput = page.locator('#image')
-      await expect(imageInput).toBeVisible({ timeout: 5_000 })
-      await imageInput.fill('https://example.com/image.png')
-      await expect(imageInput).toHaveValue('https://example.com/image.png')
-
-      // Toggle a course checkbox if available
-      const firstCheckbox = page.locator('[role="checkbox"]').first()
-      if (await firstCheckbox.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await firstCheckbox.click()
-        // Selected count should update to 1
-        await expect(page.getByText(/1.*selected/i)).toBeVisible({ timeout: 5_000 })
-      }
-
-      // DO NOT submit — avoid data pollution
+      // DO NOT save or publish — avoid data pollution
     })
 
     test('existing product edit page loads with pre-filled data', async ({
@@ -156,17 +131,17 @@ test.describe('Admin CRUD Operations', () => {
         // URL should contain /products/.../edit
         expect(page.url()).toMatch(/\/products\/\d+\/edit/)
 
-        // Name input should have a pre-filled value (not empty)
-        const nameInput = page.locator('#name')
-        await expect(nameInput).toBeVisible()
-        const nameValue = await nameInput.inputValue()
-        expect(nameValue.length).toBeGreaterThan(0)
+        // Editing reuses the creation wizard, pre-filled with the product.
+        await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+          timeout: 10_000,
+        })
 
-        // Price input should have a value
-        const priceInput = page.locator('#price')
-        await expect(priceInput).toBeVisible()
-        const priceValue = await priceInput.inputValue()
-        expect(parseFloat(priceValue)).toBeGreaterThan(0)
+        // Basics lives on step 2 — advance from the course step to reach it.
+        await page.getByTestId('product-creation-next').click()
+
+        const titleInput = page.getByTestId('product-creation-title')
+        await expect(titleInput).toBeVisible({ timeout: 10_000 })
+        expect((await titleInput.inputValue()).length).toBeGreaterThan(0)
       }
     })
   })
