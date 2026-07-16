@@ -85,20 +85,34 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 .from("product_courses")
                 .select("product_id, product:products(price, currency, payment_provider, description)")
                 .eq("course_id", courseId)
-                .eq("tenant_id", tenantId)
-                .limit(1);
+                .eq("tenant_id", tenantId);
 
-            if (productCourses?.[0]?.product) {
-                const product = productCourses[0].product as any;
-                price = parseFloat(product.price);
+            const paidProductCourse = productCourses?.find(({ product }) => {
+                const candidate = product as unknown as { price: number | string } | null;
+                return candidate !== null && Number(candidate.price) > 0;
+            });
+            const selectedProductCourse = paidProductCourse ?? productCourses?.[0];
+
+            if (selectedProductCourse?.product) {
+                const product = selectedProductCourse.product as unknown as {
+                    price: number | string;
+                    currency: string | null;
+                    payment_provider: string | null;
+                    description: string | null;
+                };
+                price = Number(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
-                productId = productCourses[0].product_id;
+                productId = selectedProductCourse.product_id;
                 paymentProvider = product.payment_provider ?? null;
                 if (product.description) description = product.description;
 
                 if (product.payment_provider === 'manual') {
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
                 }
+            }
+
+            if (!paidProductCourse) {
+                redirect(`/courses/${courseId}?enroll=1`);
             }
         }
     } else if (planId) {

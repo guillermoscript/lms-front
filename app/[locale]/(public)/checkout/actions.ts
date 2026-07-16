@@ -3,6 +3,8 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
+import { headers } from 'next/headers';
+import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -128,12 +130,26 @@ export async function enrollFree(courseId?: string) {
     }
     const tenantId = await getCurrentTenantId();
 
+    const requestHeaders = await headers();
+    const clientIp = getClientIp({ headers: requestHeaders });
+    try {
+        await Promise.all([
+            freeEnrollmentLimiter.check(30, `user:${userId}`),
+            freeEnrollmentLimiter.check(100, `ip:${clientIp}`),
+        ]);
+    } catch {
+        throw new Error("Too many enrollment attempts. Please slow down and try again later.");
+    }
+
     try {
         if (!courseId) {
             throw new Error("Free enrollment only supported for courses currently.");
         }
 
-        const numericCourseId = parseInt(courseId);
+        const numericCourseId = Number(courseId);
+        if (!Number.isSafeInteger(numericCourseId) || numericCourseId <= 0) {
+            throw new Error("Invalid course.");
+        }
 
         // 1. Validate the course: it must belong to this tenant and be published.
         // Prevents enrolling in another tenant's course or an unpublished draft
@@ -153,18 +169,22 @@ export async function enrollFree(courseId?: string) {
         }
 
         // 2. Guard: reject if a paid product is linked to this course.
-        const { data: productCourses } = await supabase
+        const { data: productCourses, error: productError } = await supabase
             .from('product_courses')
             .select('product:products(price)')
             .eq('course_id', numericCourseId)
-            .eq('tenant_id', tenantId)
-            .limit(1);
+            .eq('tenant_id', tenantId);
 
-        const linkedProduct = productCourses?.[0]?.product as unknown as {
-            price: number | string;
-        } | undefined;
+        if (productError) {
+            throw new Error("Could not verify course pricing.");
+        }
 
-        if (linkedProduct && Number(linkedProduct.price) !== 0) {
+        const hasPaidProduct = productCourses?.some(({ product }) => {
+            const linkedProduct = product as unknown as { price: number | string } | null;
+            return linkedProduct !== null && Number(linkedProduct.price) !== 0;
+        });
+
+        if (hasPaidProduct) {
             throw new Error("This course is not free. Please use the paid enrollment flow.");
         }
 
@@ -175,10 +195,12 @@ export async function enrollFree(courseId?: string) {
         });
 
         if (grantError) {
-            throw new Error("Failed to enroll: " + grantError.message);
+            console.error("Free entitlement grant failed:", grantError);
+            throw new Error("Failed to enroll. Please try again.");
         }
 
         revalidatePath('/dashboard/student');
+        revalidatePath(`/dashboard/student/courses/${numericCourseId}`);
         return { success: true };
     } catch (error) {
         console.error("Free enrollment failed:", error);

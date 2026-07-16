@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import {
@@ -23,6 +23,7 @@ import {
   InputGroupAddon,
   InputGroupButton,
 } from '@/components/ui/input-group'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -39,6 +40,8 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showRepeatPassword, setShowRepeatPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = getSafeNextPath(searchParams.get('next'), '')
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,18 +57,18 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
 
     try {
       await supabase.auth.signOut({ scope: 'local' })
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
           data: {
             ...(tenantId ? { tenant_id: tenantId } : {}),
           },
         },
       })
       if (error) throw error
-      router.push('/auth/sign-up-success')
+      router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : t('common.error'))
     } finally {
@@ -83,7 +86,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
         },
       })
       if (error) throw error
@@ -207,7 +210,10 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
             </div>
             <div className="mt-4 text-center text-sm">
               {t('haveAccount')}{' '}
-              <Link href="/auth/login" className="underline underline-offset-4">
+              <Link
+                href={nextPath ? `/auth/login?next=${encodeURIComponent(nextPath)}` : '/auth/login'}
+                className="underline underline-offset-4"
+              >
                 {t('login')}
               </Link>
             </div>

@@ -5,6 +5,8 @@ import { ManualPaymentButton } from '@/components/student/manual-payment-button'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import type { Metadata } from 'next'
 import { buildPageMetadata } from '@/lib/seo'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export async function generateMetadata({
   params
@@ -75,9 +77,9 @@ export default async function ProductDetailPage({
                 <h3 className="font-semibold mb-2">How Manual Payment Works:</h3>
                 <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
                   <li>Click the button below to request payment information</li>
-                  <li>We'll send you payment instructions via email</li>
+                  <li>We’ll send you payment instructions via email</li>
                   <li>Complete the payment using your preferred method (bank transfer, etc.)</li>
-                  <li>Once verified, you'll get instant access to your course</li>
+                  <li>Once verified, you’ll get instant access to your course</li>
                 </ol>
               </div>
             )}
@@ -93,11 +95,9 @@ export default async function ProductDetailPage({
               ) : (
                 <div className="text-center">
                   <p className="text-muted-foreground mb-4">Please login to request payment information</p>
-                  <a href="/auth/login">
-                    <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md">
-                      Login
-                    </button>
-                  </a>
+                  <Link href={`/auth/login?next=${encodeURIComponent(`/products/${product.product_id}`)}`}>
+                    <Button>Login</Button>
+                  </Link>
                 </div>
               )}
             </div>

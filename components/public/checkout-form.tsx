@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,15 +100,14 @@ export function CheckoutForm({
     // mobile wallets; a first-time subscription needs TWO signed txs (init then
     // subscribe), which a single QR scan can't do — so subscriptions require the
     // in-app wallet (desktop extension or Phantom's in-app browser).
-    const [phantomAvailable, setPhantomAvailable] = useState(false);
+    const phantomAvailable = useSyncExternalStore(
+        () => () => undefined,
+        () => !!getPhantom(),
+        () => false,
+    );
     const [phantomBusy, setPhantomBusy] = useState(false);
     const [phantomMsg, setPhantomMsg] = useState<string | null>(null);
     const [phantomError, setPhantomError] = useState<string | null>(null);
-
-    // Detect Phantom client-side only (avoids SSR/hydration mismatch).
-    useEffect(() => {
-        setPhantomAvailable(!!getPhantom());
-    }, []);
 
     // Clean up the Solana poll on unmount.
     useEffect(() => {
@@ -140,9 +139,9 @@ export function CheckoutForm({
         return trimmed.split(/[\n,]+/).map(f => f.trim()).filter(Boolean);
     })();
 
-    const checkoutDone = () => {
+    const checkoutDone = (transactionId: number) => {
         toast.success(t('toasts.paymentSuccess'));
-        router.push(`/checkout/success?type=${planId ? 'plan' : 'product'}`);
+        router.push(`/checkout/success?transactionId=${transactionId}`);
     };
 
     // Poll /verify until the on-chain transfer/subscription is confirmed. The
@@ -160,7 +159,7 @@ export function CheckoutForm({
                 const vd = await vr.json();
                 if (vd.confirmed) {
                     if (pollRef.current) clearInterval(pollRef.current);
-                    checkoutDone();
+                    checkoutDone(txId);
                 }
             } catch {
                 /* transient poll error — keep polling */
@@ -290,7 +289,7 @@ export function CheckoutForm({
             if (isFree) {
                 await enrollFree(courseId);
                 toast.success(t('toasts.success'));
-                router.push('/checkout/success?type=product');
+                router.push(`/dashboard/student/courses/${courseId}`);
                 return;
             }
 
@@ -301,9 +300,9 @@ export function CheckoutForm({
                     const handled = await startProviderCheckout();
                     if (handled) return; // redirect leaves the page / QR keeps loading
                 }
-                await enrollUser(courseId, planId, 'mock_test');
+                const result = await enrollUser(courseId, planId, 'mock_test');
                 toast.success(t('toasts.paymentSuccess'));
-                router.push(`/checkout/success?type=${planId ? 'plan' : 'product'}`);
+                router.push(`/checkout/success?transactionId=${result.transaction_id}`);
             } else {
                 // Offline payment — works for both products and plans
                 if (productId) {

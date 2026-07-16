@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 /**
  * OAuth callback route handler.
@@ -12,11 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  let next = searchParams.get('next') ?? '/dashboard/student'
-
-  if (!next.startsWith('/')) {
-    next = '/dashboard/student'
-  }
+  const next = getSafeNextPath(searchParams.get('next'), '/dashboard/student')
 
   if (code) {
     const supabase = await createClient()

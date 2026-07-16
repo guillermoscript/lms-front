@@ -3925,6 +3925,9 @@
       "preview": "Preview this course",
       "free": "Free",
       "enrollFree": "Enroll for Free",
+      "enrolling": "Enrolling...",
+      "enrollmentSuccess": "You're enrolled! Opening your course...",
+      "enrollmentError": "We couldn't enroll you. Please try again.",
       "enrollNow": "Enroll Now",
       "goToCourse": "Go to Course",
       "buyNow": "Buy Now",
@@ -3998,7 +4001,12 @@
       "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",
       "goToCourses": "Go to my courses",
       "browseCourses": "Browse courses",
-      "viewBilling": "View billing"
+      "viewBilling": "View billing",
+      "continue": "Continue to your content",
+      "multipleCourses": "Your purchase includes these courses. Choose one to start learning.",
+      "courseFallback": "Open course",
+      "confirmingTitle": "Confirming your purchase",
+      "confirmingSubtitle": "Your payment provider is finishing the confirmation. This page will update automatically."
     },
     "title": "Checkout",
     "description": "Choose your payment method to continue.",

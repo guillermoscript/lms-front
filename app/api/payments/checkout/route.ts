@@ -202,8 +202,8 @@ export async function POST(req: NextRequest) {
         amount,
         currency,
         reference,
-        successUrl: `${appUrl}/dashboard/student?checkout=success`,
-        cancelUrl: `${appUrl}/dashboard/student?checkout=cancelled`,
+        successUrl: `${appUrl}/checkout/success?transactionId=${transaction.transaction_id}`,
+        cancelUrl: planId ? `${appUrl}/checkout?planId=${planId}` : `${appUrl}/courses`,
         baseUrl: appUrl,
         metadata: {
           transactionId: reference,
