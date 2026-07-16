@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createCourse, updateCourse, checkCourseLimit } from '@/app/actions/teacher/courses'
+import { uploadCourseImage } from '@/app/actions/teacher/course-images'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IconLoader2, IconArrowLeft, IconAlertTriangle } from '@tabler/icons-react'
+import { IconLoader2, IconArrowLeft, IconAlertTriangle, IconUpload, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 
 interface Category {
@@ -41,7 +42,9 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.courseForm')
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [limitInfo, setLimitInfo] = useState<{
     canCreate: boolean
     currentCount: number
@@ -63,6 +66,28 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
       checkCourseLimit().then(setLimitInfo)
     }
   }, [initialData])
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      const result = await uploadCourseImage(data)
+      if (result.success) {
+        setFormData((prev) => ({ ...prev, thumbnail_url: result.url }))
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('uploadError'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,9 +112,9 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         const course = await createCourse(courseData)
         router.push(`/dashboard/teacher/courses/${course.course_id}`)
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error saving course:', err)
-      setError(err.message || t('saveError'))
+      setError(err instanceof Error ? err.message : t('saveError'))
       setLoading(false)
     }
   }
@@ -181,6 +206,49 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="thumbnail_url">{t('thumbnailLabel')}</Label>
+            {formData.thumbnail_url && (
+              <div className="relative w-full max-w-sm overflow-hidden rounded-lg border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={formData.thumbnail_url}
+                  alt={t('thumbnailLabel')}
+                  className="aspect-video w-full object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute right-2 top-2 h-7 w-7 p-0"
+                  aria-label={t('removeImage')}
+                  onClick={() => setFormData({ ...formData, thumbnail_url: '' })}
+                >
+                  <IconX className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
+                ) : (
+                  <IconUpload className="mr-2 h-4 w-4" />
+                )}
+                {uploading ? t('uploading') : t('uploadImage')}
+              </Button>
+              <span className="text-xs text-muted-foreground">{t('orPasteUrl')}</span>
+            </div>
             <Input
               id="thumbnail_url"
               type="url"
@@ -220,8 +288,8 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
             <Label htmlFor="status">{t('statusLabel')}</Label>
             <Select
               value={formData.status}
-              onValueChange={(value: any) =>
-                setFormData({ ...formData, status: value })
+              onValueChange={(value) =>
+                setFormData({ ...formData, status: value as 'draft' | 'published' | 'archived' })
               }
             >
               <SelectTrigger id="status">
