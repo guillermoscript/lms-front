@@ -7,7 +7,27 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconDots,
+  IconCategory,
+} from '@tabler/icons-react'
 import { CategoryFormDialog } from './category-form-dialog'
 import { ConfirmDialog } from './confirm-dialog'
 import { deleteCategory } from '@/app/actions/admin/categories'
@@ -63,69 +83,85 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b">
-            <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-3 font-medium">{t('table.headers.name')}</th>
-              <th className="pb-3 font-medium">{t('table.headers.description')}</th>
-              <th className="pb-3 font-medium">{t('table.headers.courses')}</th>
-              <th className="pb-3 font-medium">{t('table.headers.actions')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('table.headers.name')}</TableHead>
+              <TableHead>{t('table.headers.description')}</TableHead>
+              <TableHead>{t('table.headers.courses')}</TableHead>
+              <TableHead className="text-right">{t('table.headers.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {categories.length > 0 ? (
               categories.map((category) => {
                 const courseCount = getCourseCount(category)
 
                 return (
-                  <tr key={category.id} className="text-sm">
-                    <td className="py-4">
+                  <TableRow key={category.id}>
+                    <TableCell>
                       <p className="font-medium">{category.name}</p>
-                    </td>
-                    <td className="py-4">
+                    </TableCell>
+                    <TableCell>
                       <p className="text-muted-foreground max-w-md truncate">
                         {category.description || t('table.noDescription')}
                       </p>
-                    </td>
-                    <td className="py-4">
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline">
                         {t('table.courseCount', { count: courseCount })}
                       </Badge>
-                    </td>
-                    <td className="py-4">
-                      <div className="flex gap-2">
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => setEditingCategory(category)}
                         >
                           <IconEdit className="mr-1 h-4 w-4" />
                           {t('table.actions.edit')}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeletingCategory(category)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <IconTrash className="mr-1 h-4 w-4" />
-                          {t('table.actions.delete')}
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t('table.headers.actions')}
+                              >
+                                <IconDots className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setDeletingCategory(category)}
+                              className="text-destructive"
+                            >
+                              <IconTrash className="mr-2 h-4 w-4" />
+                              {t('table.actions.delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             ) : (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-muted-foreground">
-                  {t('table.empty')}
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={4} className="h-32 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <IconCategory className="h-8 w-8" />
+                    <p>{t('table.empty')}</p>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Create Dialog */}

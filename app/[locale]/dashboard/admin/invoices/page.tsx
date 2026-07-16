@@ -7,6 +7,14 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import Link from 'next/link'
 import {
   IconFileInvoice,
@@ -155,42 +163,42 @@ export default async function AdminInvoicesPage({
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="min-w-[640px] w-full text-sm">
-                <thead className="border-b bg-muted/20">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <Table className="min-w-[640px] text-sm">
+                <TableHeader className="border-b bg-muted/20">
+                  <TableRow>
+                    <TableHead className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.invoiceNumber')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.item')}
-                    </th>
-                    <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.amount')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.status')}
-                    </th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
+                    </TableHead>
+                    <TableHead className="hidden px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                       {t('table.headers.date')}
-                    </th>
-                    <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y">
                   {rows.length > 0 ? (
                     rows.map((req) => (
-                      <tr
+                      <TableRow
                         key={req.request_id}
                         className="border-b last:border-0 transition-colors hover:bg-muted/40"
                       >
-                        <td className="px-4 py-3 align-top">
+                        <TableCell className="px-4 py-3 align-top">
                           <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono tabular-nums">
                             {req.invoice_number}
                           </code>
-                        </td>
-                        <td className="px-4 py-3 align-top">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 align-top">
                           <p className="font-medium">
                             {req.product_id
                               ? (productsMap.get(req.product_id) ?? t('table.unknownProduct'))
@@ -201,24 +209,24 @@ export default async function AdminInvoicesPage({
                               {format(new Date(req.created_at), 'MMM d, yyyy', { locale: dateLocale })}
                             </p>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-right align-top font-semibold tabular-nums">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-right align-top font-semibold tabular-nums">
                           {fmt(req.payment_amount, req.payment_currency)}
-                        </td>
-                        <td className="px-4 py-3 align-top">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 align-top">
                           {statusBadge(req.status || '')}
                           {req.payment_confirmed_at && (
                             <p className="mt-0.5 text-[10px] text-muted-foreground">
                               {format(new Date(req.payment_confirmed_at), 'MMM d, yyyy', { locale: dateLocale })}
                             </p>
                           )}
-                        </td>
-                        <td className="hidden px-4 py-3 align-top text-xs tabular-nums text-muted-foreground md:table-cell">
+                        </TableCell>
+                        <TableCell className="hidden px-4 py-3 align-top text-xs tabular-nums text-muted-foreground md:table-cell">
                           {req.created_at
                             ? format(new Date(req.created_at), 'MMM d, yyyy', { locale: dateLocale })
                             : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right align-top">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-right align-top">
                           <Link
                             href={`/api/invoices/${req.invoice_number}`}
                             target="_blank"
@@ -229,12 +237,12 @@ export default async function AdminInvoicesPage({
                             <span className="sr-only sm:hidden">{t('table.viewInvoice')}</span>
                             <IconExternalLink className="h-3 w-3" strokeWidth={2} />
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center">
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-12 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                             <IconFileInvoice className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
@@ -246,11 +254,11 @@ export default async function AdminInvoicesPage({
                             </p>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

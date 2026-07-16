@@ -5,15 +5,47 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { IconUsers, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
 
 const PAGE_SIZE = 10
 
+interface StudentEnrollment {
+  enrollment_id: string | number
+  user_id: string
+  enrollment_date: string
+  status: string
+  profiles?: { full_name?: string | null; avatar_url?: string | null } | null
+}
+
+interface IssuedCertificate {
+  id?: string
+  user_id: string
+}
+
 interface CourseStudentsTableProps {
-  enrollments: any[]
-  issuedCertificates: any[]
+  enrollments: StudentEnrollment[]
+  issuedCertificates: IssuedCertificate[]
   courseId: number
+}
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return ''
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }
 
 export function CourseStudentsTable({ enrollments, issuedCertificates, courseId }: CourseStudentsTableProps) {
@@ -26,64 +58,64 @@ export function CourseStudentsTable({ enrollments, issuedCertificates, courseId 
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">{t('studentList.table.student')}</th>
-                <th className="px-4 py-3 text-left font-medium">{t('studentList.table.date')}</th>
-                <th className="px-4 py-3 text-left font-medium">{t('studentList.table.status')}</th>
-                <th className="px-4 py-3 text-right font-medium">{t('studentList.table.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedEnrollments.length > 0 ? (
-                paginatedEnrollments.map((enrollment: any) => (
-                  <tr key={enrollment.enrollment_id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center overflow-hidden border">
-                          {enrollment.profiles?.avatar_url ? (
-                            <img src={enrollment.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <IconUsers className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <span className="font-medium">{enrollment.profiles?.full_name || t('studentList.unknownStudent')}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(enrollment.enrollment_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="capitalize">
-                        {t(`status.${enrollment.status}`)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {/* NOTE: IssueCertificateButton also appears in the Certificates tab.
-                         This is intentional redundancy — teachers may issue from either context.
-                         The Students tab is for quick per-student actions; the Certificates tab
-                         provides the full certificate management view with template preview. */}
-                      <IssueCertificateButton
-                        courseId={courseId}
-                        userId={enrollment.user_id}
-                        studentName={enrollment.profiles?.full_name || t('studentList.unknownStudent')}
-                        existingCertificateId={issuedCertificates.find((c: any) => c.user_id === enrollment.user_id)?.id}
-                      />
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                    {t('studentList.noStudents')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-4">{t('studentList.table.student')}</TableHead>
+              <TableHead className="px-4">{t('studentList.table.date')}</TableHead>
+              <TableHead className="px-4">{t('studentList.table.status')}</TableHead>
+              <TableHead className="px-4 text-right">{t('studentList.table.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedEnrollments.length > 0 ? (
+              paginatedEnrollments.map((enrollment) => (
+                <TableRow key={enrollment.enrollment_id}>
+                  <TableCell className="px-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar size="sm">
+                        {enrollment.profiles?.avatar_url && (
+                          <AvatarImage src={enrollment.profiles.avatar_url} alt={enrollment.profiles?.full_name || ''} />
+                        )}
+                        <AvatarFallback>{getInitials(enrollment.profiles?.full_name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{enrollment.profiles?.full_name || t('studentList.unknownStudent')}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 whitespace-nowrap text-muted-foreground">
+                    {new Date(enrollment.enrollment_date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <Badge variant="outline" className="capitalize">
+                      {t(`status.${enrollment.status}`)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-4 text-right">
+                    {/* NOTE: IssueCertificateButton also appears in the Certificates tab.
+                       This is intentional redundancy — teachers may issue from either context.
+                       The Students tab is for quick per-student actions; the Certificates tab
+                       provides the full certificate management view with template preview. */}
+                    <IssueCertificateButton
+                      courseId={courseId}
+                      userId={enrollment.user_id}
+                      studentName={enrollment.profiles?.full_name || t('studentList.unknownStudent')}
+                      existingCertificateId={issuedCertificates.find((c) => c.user_id === enrollment.user_id)?.id}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <IconUsers className="h-8 w-8" />
+                    <p>{t('studentList.noStudents')}</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t px-4 py-3">

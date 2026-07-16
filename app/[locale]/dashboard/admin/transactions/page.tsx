@@ -7,6 +7,15 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import Link from 'next/link'
 import {
   IconArrowLeft,
@@ -17,6 +26,16 @@ import {
 } from '@tabler/icons-react'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join('')
+    .toUpperCase()
+}
 
 export default async function AdminTransactionsPage({
   params,
@@ -151,36 +170,42 @@ export default async function AdminTransactionsPage({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.id')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.user')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.amount')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.status')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.method')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.date')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('table.headers.id')}</TableHead>
+                    <TableHead>{t('table.headers.user')}</TableHead>
+                    <TableHead>{t('table.headers.amount')}</TableHead>
+                    <TableHead>{t('table.headers.status')}</TableHead>
+                    <TableHead>{t('table.headers.method')}</TableHead>
+                    <TableHead>{t('table.headers.date')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {transactions && transactions.length > 0 ? (
                     transactions.map((transaction) => {
                       const user = usersMap.get(transaction.user_id)
+                      const userName = user?.full_name || t('table.unknown')
 
                       return (
-                        <tr key={transaction.transaction_id} className="border-b last:border-0 transition-colors hover:bg-muted/40">
-                          <td className="px-4 py-3">
+                        <TableRow key={transaction.transaction_id}>
+                          <TableCell>
                             <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
                               {transaction.transaction_id}
                             </code>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
-                          </td>
-                          <td className="px-4 py-3 font-semibold tabular-nums">
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar size="sm">
+                                <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                              </Avatar>
+                              <p className="font-medium">{userName}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold tabular-nums">
                             {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(transaction.amount)}
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell>
                             <Badge
                               variant={
                                 transaction.status === 'successful'
@@ -204,29 +229,39 @@ export default async function AdminTransactionsPage({
                               )}
                               {tm(`recentActivity.status.${transaction.status}`)}
                             </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
                             {transaction.payment_method
                               ? (t.has(`table.methods.${transaction.payment_method}`)
                                   ? t(`table.methods.${transaction.payment_method}`)
                                   : transaction.payment_method)
                               : t('table.notAvailable')}
-                          </td>
-                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-xs tabular-nums text-muted-foreground">
                             {format(new Date(transaction.transaction_date), 'MMM d, yyyy HH:mm', { locale: dateLocale })}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )
                     })
                   ) : (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                        {t('table.empty')}
-                      </td>
-                    </tr>
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                            <IconCurrencyDollar className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{t('table.empty')}</p>
+                            <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                              {t('description')}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

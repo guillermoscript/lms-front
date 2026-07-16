@@ -31,7 +31,7 @@ export default async function AdminUsersPage() {
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
 
-  const memberUserIds = tenantMembers?.map((m) => m.user_id) || []
+  const memberUserIds = [...new Set((tenantMembers ?? []).map((m) => m.user_id).filter(Boolean))]
 
   // Parallelize: profiles, enrollments, and joinUrl are independent
   const adminClient = createAdminClient()
