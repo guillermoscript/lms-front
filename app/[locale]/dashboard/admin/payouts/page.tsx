@@ -8,6 +8,14 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
   IconBuildingBank,
   IconCurrencyDollar,
   IconClock,
@@ -182,34 +190,34 @@ export default async function AdminPayoutsPage({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <Table className="text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.period')}
-                    </th>
-                    <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.amount')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.status')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.paidAt')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    </TableHead>
+                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.stripeRef')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {rows.length > 0 ? (
                     rows.map((payout) => (
-                      <tr
+                      <TableRow
                         key={payout.payout_id}
-                        className="border-b last:border-0 transition-colors hover:bg-muted/40"
+                        className="transition-colors hover:bg-muted/40"
                       >
-                        <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
+                        <TableCell className="text-xs text-muted-foreground tabular-nums">
                           {payout.period_start
                             ? format(new Date(payout.period_start), 'MMM d, yyyy', { locale: dateLocale })
                             : '—'}
@@ -217,22 +225,22 @@ export default async function AdminPayoutsPage({
                           {payout.period_end
                             ? format(new Date(payout.period_end), 'MMM d, yyyy', { locale: dateLocale })
                             : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {fmt(payout.amount || 0, payout.currency || 'USD')}
-                        </td>
-                        <td className="px-4 py-3">
+                        </TableCell>
+                        <TableCell>
                           {statusBadge(payout.status || '')}
                           {payout.failure_reason && (
                             <p className="mt-0.5 text-[10px] text-destructive">{payout.failure_reason}</p>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="text-xs tabular-nums text-muted-foreground">
                           {payout.paid_at
                             ? format(new Date(payout.paid_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })
                             : '—'}
-                        </td>
-                        <td className="px-4 py-3">
+                        </TableCell>
+                        <TableCell>
                           {payout.stripe_payout_id ? (
                             <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">
                               {payout.stripe_payout_id.length > 24
@@ -242,12 +250,12 @@ export default async function AdminPayoutsPage({
                           ) : (
                             <span className="text-xs text-muted-foreground/60">—</span>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center">
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-12 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                             <IconBuildingBank className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
@@ -259,11 +267,11 @@ export default async function AdminPayoutsPage({
                             </p>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
