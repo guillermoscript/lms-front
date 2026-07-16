@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore, useTransition } from 'react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,7 +67,7 @@ export function CheckoutForm({
     paymentProvider,
     solanaCurrencies,
 }: CheckoutFormProps) {
-    const [loading, setLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
     const [offlineData, setOfflineData] = useState({
         name: userName || '',
@@ -283,57 +283,56 @@ export function CheckoutForm({
         }
     };
 
-    const handleEnroll = async () => {
-        setLoading(true);
-        try {
-            if (isFree) {
-                await enrollFree(courseId);
-                toast.success(t('toasts.success'));
-                router.push(`/dashboard/student/courses/${courseId}`);
-                return;
-            }
+    const handleEnroll = () => {
+        startTransition(async () => {
+            try {
+                if (isFree) {
+                    await enrollFree(courseId);
+                    toast.success(t('toasts.success'));
+                    router.push(`/dashboard/student/courses/${courseId}`);
+                    return;
+                }
 
-            if (paymentMethod === 'card') {
-                // Lemon Squeezy / Solana go through the real provider checkout;
-                // everything else uses the existing inline (mock) enrollment.
-                if (isRedirectProvider || isQrProvider) {
-                    const handled = await startProviderCheckout();
-                    if (handled) return; // redirect leaves the page / QR keeps loading
-                }
-                const result = await enrollUser(courseId, planId, 'mock_test');
-                toast.success(t('toasts.paymentSuccess'));
-                router.push(`/checkout/success?transactionId=${result.transaction_id}`);
-            } else {
-                // Offline payment — works for both products and plans
-                if (productId) {
-                    await createPaymentRequest({
-                        productId,
-                        contactName: offlineData.name,
-                        contactEmail: offlineData.email,
-                        contactPhone: offlineData.phone,
-                        message: offlineData.message
-                    });
-                    toast.success(t('toasts.requestSent'));
-                    router.push('/dashboard/student/payments');
-                } else if (planId) {
-                    await createPaymentRequest({
-                        planId: parseInt(planId),
-                        contactName: offlineData.name,
-                        contactEmail: offlineData.email,
-                        contactPhone: offlineData.phone,
-                        message: offlineData.message
-                    });
-                    toast.success(t('toasts.requestSent'));
-                    router.push('/dashboard/student/payments');
+                if (paymentMethod === 'card') {
+                    // Lemon Squeezy / Solana go through the real provider checkout;
+                    // everything else uses the existing inline (mock) enrollment.
+                    if (isRedirectProvider || isQrProvider) {
+                        const handled = await startProviderCheckout();
+                        if (handled) return; // redirect leaves the page / QR keeps loading
+                    }
+                    const result = await enrollUser(courseId, planId, 'mock_test');
+                    toast.success(t('toasts.paymentSuccess'));
+                    router.push(`/checkout/success?transactionId=${result.transaction_id}`);
                 } else {
-                    throw new Error("No product or plan to process");
+                    // Offline payment — works for both products and plans
+                    if (productId) {
+                        await createPaymentRequest({
+                            productId,
+                            contactName: offlineData.name,
+                            contactEmail: offlineData.email,
+                            contactPhone: offlineData.phone,
+                            message: offlineData.message
+                        });
+                        toast.success(t('toasts.requestSent'));
+                        router.push('/dashboard/student/payments');
+                    } else if (planId) {
+                        await createPaymentRequest({
+                            planId: parseInt(planId),
+                            contactName: offlineData.name,
+                            contactEmail: offlineData.email,
+                            contactPhone: offlineData.phone,
+                            message: offlineData.message
+                        });
+                        toast.success(t('toasts.requestSent'));
+                        router.push('/dashboard/student/payments');
+                    } else {
+                        throw new Error("No product or plan to process");
+                    }
                 }
+            } catch (error) {
+                toast.error(t('toasts.error', { message: error instanceof Error ? error.message : String(error) }));
             }
-        } catch (error) {
-            toast.error(t('toasts.error', { message: error instanceof Error ? error.message : String(error) }));
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     // ─── Order summary block (shared between free and paid) ───
@@ -387,10 +386,10 @@ export function CheckoutForm({
                     <Button
                         className="w-full"
                         onClick={handleEnroll}
-                        disabled={loading}
+                        disabled={isPending}
                     >
-                        {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {loading ? t('enrollment.enrolling') : t('enrollment.button')}
+                        {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isPending ? t('enrollment.enrolling') : t('enrollment.button')}
                     </Button>
                 </div>
             </div>
@@ -493,7 +492,7 @@ export function CheckoutForm({
                         {/* Solana with Phantom available → in-app wallet (primary). */}
                         {isQrProvider && phantomAvailable ? (
                             <div className="space-y-2">
-                                <Button className="w-full" onClick={payWithPhantom} disabled={loading || phantomBusy}>
+                                <Button className="w-full" onClick={payWithPhantom} disabled={isPending || phantomBusy}>
                                     <IconWallet className="mr-2 h-4 w-4" />
                                     {phantomError ? t('payment.phantomRetry') : t('payment.payWithPhantom')}
                                 </Button>
@@ -503,7 +502,7 @@ export function CheckoutForm({
                                         variant="ghost"
                                         className="w-full"
                                         onClick={handleEnroll}
-                                        disabled={loading || phantomBusy}
+                                        disabled={isPending || phantomBusy}
                                     >
                                         <IconQrcode className="mr-2 h-4 w-4" />
                                         {t('payment.payByQr')}
@@ -513,9 +512,9 @@ export function CheckoutForm({
                             </div>
                         ) : subsNeedsWallet ? null : (
                             /* Lemon Squeezy redirect, or one-time Solana via QR. */
-                            <Button className="w-full" onClick={handleEnroll} disabled={loading}>
-                                {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {loading ? t('payment.processing') : t('payment.button')}
+                            <Button className="w-full" onClick={handleEnroll} disabled={isPending}>
+                                {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isPending ? t('payment.processing') : t('payment.button')}
                             </Button>
                         )}
                         <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
@@ -551,7 +550,7 @@ export function CheckoutForm({
                         <TabsContent value="card" className="mt-5 space-y-4">
                             <div className="space-y-1.5">
                                 <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
-                                <Input id="cardholder" placeholder="John Doe" disabled={loading} />
+                                <Input id="cardholder" placeholder="John Doe" disabled={isPending} />
                             </div>
                             <div className="space-y-1.5">
                                 <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
@@ -560,7 +559,7 @@ export function CheckoutForm({
                                         id="cardNumber"
                                         placeholder="4242 4242 4242 4242"
                                         className="pl-10"
-                                        disabled={loading}
+                                        disabled={isPending}
                                     />
                                     <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 </div>
@@ -568,11 +567,11 @@ export function CheckoutForm({
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
-                                    <Input id="expiry" placeholder="MM/YY" disabled={loading} />
+                                    <Input id="expiry" placeholder="MM/YY" disabled={isPending} />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
-                                    <Input id="cvc" placeholder="123" disabled={loading} />
+                                    <Input id="cvc" placeholder="123" disabled={isPending} />
                                 </div>
                             </div>
                         </TabsContent>
@@ -588,7 +587,7 @@ export function CheckoutForm({
                                     placeholder="Your Name"
                                     value={offlineData.name}
                                     onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
-                                    disabled={loading}
+                                    disabled={isPending}
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -599,7 +598,7 @@ export function CheckoutForm({
                                     placeholder="email@example.com"
                                     value={offlineData.email}
                                     onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
-                                    disabled={loading}
+                                    disabled={isPending}
                                     readOnly={!!userEmail}
                                     className={userEmail ? 'bg-muted' : ''}
                                 />
@@ -611,7 +610,7 @@ export function CheckoutForm({
                                     placeholder="+1 234 567 8900"
                                     value={offlineData.phone}
                                     onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
-                                    disabled={loading}
+                                    disabled={isPending}
                                 />
                             </div>
                         </TabsContent>
@@ -620,7 +619,7 @@ export function CheckoutForm({
                     <div className="space-y-4">
                         <div className="space-y-1.5">
                             <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
-                            <Input id="cardholder" placeholder="John Doe" disabled={loading} />
+                            <Input id="cardholder" placeholder="John Doe" disabled={isPending} />
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
@@ -629,7 +628,7 @@ export function CheckoutForm({
                                     id="cardNumber"
                                     placeholder="4242 4242 4242 4242"
                                     className="pl-10"
-                                    disabled={loading}
+                                    disabled={isPending}
                                 />
                                 <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             </div>
@@ -637,11 +636,11 @@ export function CheckoutForm({
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                                 <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
-                                <Input id="expiry" placeholder="MM/YY" disabled={loading} />
+                                <Input id="expiry" placeholder="MM/YY" disabled={isPending} />
                             </div>
                             <div className="space-y-1.5">
                                 <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
-                                <Input id="cvc" placeholder="123" disabled={loading} />
+                                <Input id="cvc" placeholder="123" disabled={isPending} />
                             </div>
                         </div>
                     </div>
@@ -653,10 +652,10 @@ export function CheckoutForm({
                 <Button
                     className="w-full"
                     onClick={handleEnroll}
-                    disabled={loading}
+                    disabled={isPending}
                 >
-                    {loading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {loading
+                    {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isPending
                         ? t('payment.processing')
                         : paymentMethod === 'card'
                             ? t('payment.button')

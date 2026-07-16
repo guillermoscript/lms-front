@@ -14,15 +14,13 @@ interface CheckoutSuccessPageProps {
 
 export default async function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPageProps) {
   const { transactionId: transactionIdParam, type } = await searchParams
-  const t = await getTranslations('checkout.success')
   const transactionId = Number(transactionIdParam)
 
   if (!Number.isSafeInteger(transactionId) || transactionId <= 0) {
     return <SuccessCard primaryHref={type === 'plan' ? '/dashboard/student/browse' : '/dashboard/student/courses'} />
   }
 
-  const supabase = await createClient()
-  const tenantId = await getCurrentTenantId()
+  const [supabase, tenantId] = await Promise.all([createClient(), getCurrentTenantId()])
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -66,7 +64,7 @@ export default async function CheckoutSuccessPage({ searchParams }: CheckoutSucc
 
   const courses = (productCourses ?? []).map(({ course_id, course }) => ({
     courseId: course_id,
-    title: (course as unknown as { title: string } | null)?.title ?? t('courseFallback'),
+    title: (course as unknown as { title: string } | null)?.title,
   }))
 
   if (courses.length === 1) {
@@ -76,6 +74,8 @@ export default async function CheckoutSuccessPage({ searchParams }: CheckoutSucc
   if (courses.length === 0) {
     redirect('/dashboard/student/courses')
   }
+
+  const t = await getTranslations('checkout.success')
 
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-xl items-center px-4 py-16">
@@ -89,7 +89,7 @@ export default async function CheckoutSuccessPage({ searchParams }: CheckoutSucc
           <div className="flex w-full flex-col gap-3">
             {courses.map((course) => (
               <Link key={course.courseId} href={`/dashboard/student/courses/${course.courseId}`}>
-                <Button variant="outline" className="w-full">{course.title}</Button>
+                <Button variant="outline" className="w-full">{course.title ?? t('courseFallback')}</Button>
               </Link>
             ))}
           </div>

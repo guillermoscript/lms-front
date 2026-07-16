@@ -8,15 +8,13 @@ import { toast } from 'sonner'
 import { enrollFree } from '@/app/[locale]/(public)/checkout/actions'
 import { Button } from '@/components/ui/button'
 
-interface FreeEnrollButtonProps {
+interface FreeEnrollProps {
   courseId: number
-  autoEnroll?: boolean
 }
 
-export function FreeEnrollButton({ courseId, autoEnroll = false }: FreeEnrollButtonProps) {
+function useFreeEnrollment(courseId: number) {
   const router = useRouter()
   const t = useTranslations('coursePublicDetails.pricing')
-  const hasAutoEnrolled = useRef(false)
   const [isPending, startTransition] = useTransition()
 
   const enroll = useCallback(() => {
@@ -31,11 +29,37 @@ export function FreeEnrollButton({ courseId, autoEnroll = false }: FreeEnrollBut
     })
   }, [courseId, router, t])
 
+  return { enroll, isPending }
+}
+
+export function FreeEnrollButton({ courseId }: FreeEnrollProps) {
+  const { enroll, isPending } = useFreeEnrollment(courseId)
+
+  return <FreeEnrollTrigger enroll={enroll} status={isPending ? 'pending' : 'idle'} />
+}
+
+export function AutoFreeEnrollButton({ courseId }: FreeEnrollProps) {
+  const { enroll, isPending } = useFreeEnrollment(courseId)
+  const hasStarted = useRef(false)
+
   useEffect(() => {
-    if (!autoEnroll || hasAutoEnrolled.current) return
-    hasAutoEnrolled.current = true
+    if (hasStarted.current) return
+    hasStarted.current = true
     enroll()
-  }, [autoEnroll, enroll])
+  }, [enroll])
+
+  return <FreeEnrollTrigger enroll={enroll} status={isPending ? 'pending' : 'idle'} />
+}
+
+function FreeEnrollTrigger({
+  enroll,
+  status,
+}: {
+  enroll: () => void
+  status: 'idle' | 'pending'
+}) {
+  const t = useTranslations('coursePublicDetails.pricing')
+  const isPending = status === 'pending'
 
   return (
     <Button

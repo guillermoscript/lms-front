@@ -15,26 +15,27 @@ interface SearchParams {
 }
 
 export default async function CheckoutPage(props: { params: Promise<{ locale: string }>, searchParams: Promise<SearchParams> }) {
-    const searchParams = await props.searchParams;
-    const { locale } = await props.params;
+    const [searchParams, { locale }, t, supabase, user] = await Promise.all([
+        props.searchParams,
+        props.params,
+        getTranslations('checkout'),
+        createClient(),
+        getSessionUser(),
+    ]);
     const { courseId, planId } = searchParams;
-    const t = await getTranslations('checkout');
-
-    const supabase = await createClient();
-    const user = await getSessionUser()
     if (!user) {
         const returnUrl = encodeURIComponent(`/checkout?${courseId ? `courseId=${courseId}` : `planId=${planId}`}`);
         redirect(`/auth/login?next=${returnUrl}`);
     }
 
-    const tenantId = await getCurrentTenantId();
-
-    // Get user profile for pre-filling forms
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
+    const [tenantId, { data: profile }] = await Promise.all([
+        getCurrentTenantId(),
+        supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single(),
+    ]);
 
     const userName = profile?.full_name || '';
     const userEmail = user.email || '';

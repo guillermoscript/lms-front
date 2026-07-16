@@ -26,7 +26,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/seo';
-import { FreeEnrollButton } from '@/components/public/free-enroll-button';
+import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,12 +67,15 @@ export default async function CourseDetailsPage(props: {
     params: Promise<{ id: string }>;
     searchParams: Promise<{ enroll?: string }>;
 }) {
-    const params = await props.params;
-    const searchParams = await props.searchParams;
-    const t = await getTranslations('coursePublicDetails');
-    const supabase = await createClient();
-
-    const [userId, tenantId] = await Promise.all([getCurrentUserId(), getCurrentTenantId()]);
+    const [params, searchParams, t, supabase, userId, tenantId] = await Promise.all([
+        props.params,
+        props.searchParams,
+        getTranslations('coursePublicDetails'),
+        createClient(),
+        getCurrentUserId(),
+        getCurrentTenantId(),
+    ]);
+    const courseId = Number(params.id);
     // Fetch course with lessons and category
     const { data: course, error } = await supabase
         .from("courses")
@@ -89,7 +92,7 @@ export default async function CourseDetailsPage(props: {
                 name
             )
         `)
-        .eq("course_id", parseInt(params.id))
+        .eq("course_id", courseId)
         .eq("tenant_id", tenantId)
         .eq("status", "published")
         .single();
@@ -98,35 +101,35 @@ export default async function CourseDetailsPage(props: {
         notFound();
     }
 
-    // Fetch author separately (profiles is global, no tenant_id)
-    let author = null;
-    if (course.author_id) {
-        const { data: authorData } = await supabase
+    const authorPromise = course.author_id
+        ? supabase
             .from("profiles")
             .select("id, full_name, avatar_url, bio")
             .eq("id", course.author_id)
-            .single();
-        author = authorData;
-    }
+            .single()
+        : Promise.resolve({ data: null });
+
+    const accessPromise = userId
+        ? hasCourseAccess(supabase, userId, courseId)
+        : Promise.resolve(false);
+
+    const productCoursesPromise = supabase
+        .from('product_courses')
+        .select('product:products(price, currency)')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId);
+
+    const [{ data: author }, hasAccess, { data: productCourses }] = await Promise.all([
+        authorPromise,
+        accessPromise,
+        productCoursesPromise,
+    ]);
 
     // Sort lessons by sequence
     const lessons = course.lessons?.sort((a: Lesson, b: Lesson) => a.sequence - b.sequence) || [];
     const totalLessons = lessons.length;
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
     const estimatedMinutes = (totalLessons * 10) % 60;
-
-    // Check user's access (entitlements model)
-    let hasAccess = false;
-    if (userId) {
-        hasAccess = await hasCourseAccess(supabase, userId, parseInt(params.id));
-    }
-
-    // Fetch product for pricing
-    const { data: productCourses } = await supabase
-        .from('product_courses')
-        .select('product:products(price, currency)')
-        .eq('course_id', parseInt(params.id))
-        .eq('tenant_id', tenantId);
 
     type CourseProduct = { price: number | string; currency: string | null };
     const linkedProducts = (productCourses ?? [])
@@ -384,10 +387,11 @@ export default async function CourseDetailsPage(props: {
                                                 </Button>
                                             </Link>
                                         ) : isFree ? (
-                                            <FreeEnrollButton
-                                                courseId={course.course_id}
-                                                autoEnroll={searchParams.enroll === '1'}
-                                            />
+                                            searchParams.enroll === '1' ? (
+                                                <AutoFreeEnrollButton courseId={course.course_id} />
+                                            ) : (
+                                                <FreeEnrollButton courseId={course.course_id} />
+                                            )
                                         ) : (
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
                                                 <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
