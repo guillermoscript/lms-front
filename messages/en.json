@@ -2814,6 +2814,8 @@
         "description": "Course bundles and individual items students can purchase",
         "back": "Back to Dashboard",
         "create": "Create Product",
+        "connectNudge": "You can sell with manual payments right now. Connect Stripe to accept card payments automatically —",
+        "connectNudgeLink": "set it up in Settings → Payments",
         "stats": {
           "total": "Total Products",
           "active": "Active",
@@ -2868,6 +2870,8 @@
           "methodPaypal": "PayPal (Coming Soon)",
           "methodManualHint": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
           "methodStripeHint": "Students can pay online instantly",
+          "connectNudge": "Selling with manual payments works right away. Connect Stripe to accept cards automatically —",
+          "connectNudgeLink": "set it up in Settings → Payments",
           "currencyUsd": "USD ($)",
           "currencyEur": "EUR (€)",
           "saving": "Saving...",
@@ -4159,7 +4163,7 @@
     },
     "payment": {
       "title": "Payment Setup",
-      "description": "Connect your Stripe account to start accepting payments from students.",
+      "description": "Choose how you get paid. Connect Stripe for automatic card payments — or start selling right away with manual payments and add more options later.",
       "whyTitle": "Why connect your payment account?",
       "whyDescription": "Accept payments and get paid directly to your bank account.",
       "benefit1": "Receive payments directly from students",
@@ -4171,8 +4175,8 @@
       "platformFee": "Platform Fee",
       "revenueSplitNote": "You keep 80% of all course sales. The platform fee covers hosting, support, and maintenance.",
       "connectStripe": "Connect with Stripe",
-      "skipForNow": "Skip for Now",
-      "skipWarning": "You can connect your payment account later from Settings, but you won't be able to sell courses until you do."
+      "skipForNow": "Continue with manual payments",
+      "skipWarning": "You can sell paid courses right away with manual (offline) payments — buyers get your payment instructions. Connect Stripe, PayPal, or crypto anytime in Settings → Payments."
     },
     "ready": {
       "title": "You're All Set!",

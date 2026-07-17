@@ -2635,6 +2635,8 @@
         "description": "Paquetes de cursos y artículos individuales que los estudiantes pueden comprar",
         "back": "Volver al Panel",
         "create": "Crear Producto",
+        "connectNudge": "Puedes vender con pagos manuales desde ya. Conecta Stripe para aceptar tarjetas automáticamente:",
+        "connectNudgeLink": "configúralo en Configuración → Pagos",
         "stats": {
           "total": "Total de Productos",
           "active": "Activos",
@@ -2689,6 +2691,8 @@
           "methodPaypal": "PayPal (Próximamente)",
           "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
           "methodStripeHint": "Los estudiantes pueden pagar online al instante",
+          "connectNudge": "Vender con pagos manuales funciona desde ya. Conecta Stripe para aceptar tarjetas automáticamente:",
+          "connectNudgeLink": "configúralo en Configuración → Pagos",
           "currencyUsd": "USD ($)",
           "currencyEur": "EUR (€)",
           "saving": "Guardando...",
@@ -4152,7 +4156,7 @@
     },
     "payment": {
       "title": "Configuración de Pagos",
-      "description": "Conecta tu cuenta de Stripe para empezar a aceptar pagos de estudiantes.",
+      "description": "Elige cómo recibir tus pagos. Conecta Stripe para cobros automáticos con tarjeta, o empieza a vender de inmediato con pagos manuales y agrega más opciones después.",
       "whyTitle": "¿Por qué conectar tu cuenta de pagos?",
       "whyDescription": "Acepta pagos y recibe el dinero directamente en tu cuenta bancaria.",
       "benefit1": "Recibe pagos directamente de los estudiantes",
@@ -4164,8 +4168,8 @@
       "platformFee": "Tarifa de Plataforma",
       "revenueSplitNote": "Te quedas con el 80% de todas las ventas de cursos. La tarifa de plataforma cubre alojamiento, soporte y mantenimiento.",
       "connectStripe": "Conectar con Stripe",
-      "skipForNow": "Omitir por Ahora",
-      "skipWarning": "Puedes conectar tu cuenta de pagos más tarde desde Configuración, pero no podrás vender cursos hasta que lo hagas."
+      "skipForNow": "Continuar con pagos manuales",
+      "skipWarning": "Puedes vender cursos de pago desde ya con pagos manuales (offline): los compradores reciben tus instrucciones de pago. Conecta Stripe, PayPal o cripto cuando quieras en Configuración → Pagos."
     },
     "ready": {
       "title": "¡Todo Listo!",

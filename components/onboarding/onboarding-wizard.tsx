@@ -34,14 +34,14 @@ import {
 interface OnboardingWizardProps {
   userId: string
   userName: string
-  currentSettings: Record<string, any>
+  currentSettings: Record<string, { value?: string } | undefined>
   redirectTo?: string
 }
 
 const ALL_STEPS = ['welcome', 'school', 'branding', 'payment', 'ready'] as const
 type Step = typeof ALL_STEPS[number]
 
-export default function OnboardingWizard({ userId, userName, currentSettings, redirectTo = '/dashboard/admin' }: OnboardingWizardProps) {
+export default function OnboardingWizard({ userName, currentSettings, redirectTo = '/dashboard/admin' }: OnboardingWizardProps) {
   const router = useRouter()
   const t = useTranslations('onboarding')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -59,7 +59,7 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
   const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [isConnectingStripe, setIsConnectingStripe] = useState(false)
 
-  const stepIndex = STEPS.indexOf(currentStep as any)
+  const stepIndex = STEPS.indexOf(currentStep)
 
   function goNext() {
     const nextIndex = stepIndex + 1
@@ -340,9 +340,10 @@ export default function OnboardingWizard({ userId, userName, currentSettings, re
                 {t('payment.connectStripe')}
               </Button>
 
-              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-300">
+              {/* Manual payments always work — skipping Stripe is a valid path, not a warning (#438) */}
+              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-zinc-800/40 border border-zinc-700">
+                <AlertCircle className="w-4 h-4 text-zinc-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-zinc-400">
                   {t('payment.skipWarning')}
                 </p>
               </div>
