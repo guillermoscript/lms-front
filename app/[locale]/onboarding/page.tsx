@@ -4,8 +4,13 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import OnboardingWizard from '@/components/onboarding/onboarding-wizard'
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; interval?: string }>
+}) {
   const t = await getTranslations('onboarding')
+  const { plan, interval } = await searchParams
 
   const supabase = await createClient()
   const user = await getSessionUser()
@@ -30,7 +35,17 @@ export default async function OnboardingPage() {
     .single()
 
   const role = tenantUser?.role || 'teacher'
-  const redirectTo = role === 'admin' ? '/dashboard/admin' : '/dashboard/teacher'
+  // Admins arriving from /platform-pricing with a paid plan choice continue to
+  // the upgrade page with that plan pre-selected instead of the plain dashboard.
+  const upgradeQuery = plan && plan !== 'free'
+    ? `?plan=${encodeURIComponent(plan)}${interval === 'yearly' || interval === 'monthly' ? `&interval=${interval}` : ''}`
+    : ''
+  const redirectTo =
+    role === 'admin'
+      ? upgradeQuery
+        ? `/dashboard/admin/billing/upgrade${upgradeQuery}`
+        : '/dashboard/admin'
+      : '/dashboard/teacher'
 
   if (profile?.onboarding_completed) {
     redirect(redirectTo)

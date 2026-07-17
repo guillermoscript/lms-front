@@ -22,9 +22,11 @@ interface UpgradePageClientProps {
     limits: { max_courses: number; max_students: number }
   }>
   currentPlan: string
+  preselectedPlan?: string
+  preselectedInterval?: 'monthly' | 'yearly'
 }
 
-export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps) {
+export function UpgradePageClient({ plans, currentPlan, preselectedPlan, preselectedInterval }: UpgradePageClientProps) {
   const router = useRouter()
   const locale = useLocale()
   const t = useTranslations('dashboard.admin.billing.upgrade')
@@ -100,6 +102,8 @@ export function UpgradePageClient({ plans, currentPlan }: UpgradePageClientProps
     <PlanComparisonTable
       plans={plans}
       currentPlan={currentPlan}
+      preselectedPlan={preselectedPlan}
+      initialInterval={preselectedInterval}
       onSelectPlan={handleSelectPlan}
       onManualTransfer={handleManualTransfer}
       loading={loading}

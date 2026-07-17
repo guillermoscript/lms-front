@@ -3,13 +3,27 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { UpgradePageClient } from './upgrade-page-client'
 
-export default async function UpgradePage() {
+export default async function UpgradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; interval?: string }>
+}) {
   const t = await getTranslations('dashboard.admin')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
-  const [plans, status] = await Promise.all([
+  const [plans, status, { plan: planParam, interval: intervalParam }] = await Promise.all([
     getAvailablePlans(),
     getSubscriptionStatus(),
+    searchParams,
   ])
+
+  // Pre-select only a real, paid, non-current plan; ignore anything else.
+  const preselectedPlan = plans.some(
+    (p) => p.slug === planParam && p.slug !== 'free' && p.slug !== status.plan,
+  )
+    ? planParam
+    : undefined
+  const preselectedInterval =
+    intervalParam === 'yearly' || intervalParam === 'monthly' ? intervalParam : undefined
 
   return (
     <div className="space-y-6 p-6 lg:p-8" data-testid="upgrade-page">
@@ -30,6 +44,8 @@ export default async function UpgradePage() {
       <UpgradePageClient
         plans={plans}
         currentPlan={status.plan}
+        preselectedPlan={preselectedPlan}
+        preselectedInterval={preselectedInterval}
       />
     </div>
   )

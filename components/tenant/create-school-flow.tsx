@@ -28,9 +28,15 @@ import {
 
 interface CreateSchoolFlowProps {
   user: { id: string; email: string } | null
+  plan?: string
+  interval?: 'monthly' | 'yearly'
 }
 
-export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
+export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps) {
+  // Query string carrying the pricing-page plan choice through the flow ('' when no plan / free)
+  const planQuery = plan && plan !== 'free'
+    ? `?plan=${encodeURIComponent(plan)}${interval ? `&interval=${interval}` : ''}`
+    : ''
   const router = useRouter()
   const [step, setStep] = useState<'account' | 'school'>(user ? 'school' : 'account')
   const [loading, setLoading] = useState(false)
@@ -41,9 +47,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
   // Account state
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // School state
   const [schoolName, setSchoolName] = useState('')
@@ -69,7 +73,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/create-school`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(`/create-school${planQuery}`)}`,
       },
     })
     if (error) {
@@ -82,10 +86,6 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
     e.preventDefault()
     setError(null)
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -94,10 +94,15 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
     setLoading(true)
     const supabase = createClient()
 
-    // Sign up
-    const { error: signUpError } = await supabase.auth.signUp({
+    // Sign up. Email verification is async: if Supabase returns a session
+    // (auto-confirm or confirmation-optional config) we continue immediately
+    // and the dashboard shows a "verify your email" banner until confirmed.
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/create-school`,
+      },
     })
 
     if (signUpError) {
@@ -110,16 +115,21 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
       return
     }
 
-    // Sign in immediately
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
+    if (!signUpData.session) {
+      // Sign-up may not return a session when the email already exists
+      // (Supabase obfuscation) — a direct sign-in still works there.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
 
-    if (signInError) {
-      setEmailConfirmationNeeded(true)
-      setLoading(false)
-      return
+      if (signInError) {
+        // Supabase strictly requires email confirmation before any session
+        // exists — the check-your-email fallback is unavoidable here.
+        setEmailConfirmationNeeded(true)
+        setLoading(false)
+        return
+      }
     }
 
     // Success — advance to school step
@@ -161,13 +171,13 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
 
       toast.success('School created! Setting up your dashboard...')
 
-      // Redirect to subdomain onboarding
+      // Redirect to subdomain onboarding, carrying the chosen plan (if any)
       const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
       if (platformDomain && platformDomain !== 'localhost') {
         const protocol = window.location.protocol
-        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}/onboarding`
+        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}/onboarding${planQuery}`
       } else {
-        router.push('/onboarding')
+        router.push(`/onboarding${planQuery}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -280,32 +290,6 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
                 </InputGroup>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-zinc-300">Confirm Password</Label>
-                <InputGroup>
-                  <InputGroupInput
-                    id="confirm-password"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat your password"
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="icon-xs"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showConfirmPassword ? <EyeOff /> : <Eye />}
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-
               {error && <p className="text-sm text-red-400">{error}</p>}
 
               <Button
@@ -328,7 +312,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
 
               <p className="text-center text-sm text-zinc-500">
                 Already have an account?{' '}
-                <Link href="/auth/login?redirectTo=/create-school" className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
+                <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`} className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
                   Log in
                 </Link>
               </p>
@@ -355,7 +339,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
                 </p>
               </div>
               <div className="w-full pt-2 space-y-3">
-                <Link href="/auth/login?redirectTo=/create-school">
+                <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`}>
                   <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white">
                     Go to Log in
                     <ArrowRight className="ml-2 w-4 h-4" />
