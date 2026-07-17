@@ -38,17 +38,6 @@ export default async function AdminDashboardPage({
     redirect('/auth/login')
   }
 
-  // Check if onboarding is completed
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('onboarding_completed')
-    .eq('id', userId)
-    .single()
-
-  if (adminProfile && !adminProfile.onboarding_completed) {
-    redirect('/onboarding')
-  }
-
   // Get tenant context for all queries
   const tenantId = await getCurrentTenantId()
 
@@ -98,6 +87,14 @@ export default async function AdminDashboardPage({
       .limit(5),
   ])
 
+  // Supabase infers the profiles(...) embed as an array even though the FK
+  // makes it a single row — narrow it to what the query actually returns.
+  const recentUsers = (recentTenantUsers || []) as unknown as Array<{
+    user_id: string
+    created_at: string
+    profiles: { id: string; full_name: string | null } | null
+  }>
+
   // Batch-fetch user profiles for transactions (avoids N+1)
   const transactionUserIds = [...new Set((recentTransactions || []).map(t => t.user_id).filter(Boolean))]
   const { data: transactionProfiles } = transactionUserIds.length > 0
@@ -115,16 +112,17 @@ export default async function AdminDashboardPage({
     { data: successfulTransactions },
     { data: tenant },
     { count: studentCount },
-    { data: siteNameSetting },
+    { data: onboardingSettings },
   ] = await Promise.all([
     supabase.from('transactions').select('amount')
       .eq('tenant_id', tenantId).eq('status', 'successful'),
-    adminClient.from('tenants').select('plan')
+    adminClient.from('tenants').select('plan, stripe_account_id')
       .eq('id', tenantId).single(),
     adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
-    supabase.from('tenant_settings').select('setting_value')
-      .eq('setting_key', 'site_name').maybeSingle(),
+    supabase.from('tenant_settings').select('setting_key, setting_value')
+      .eq('tenant_id', tenantId)
+      .in('setting_key', ['site_name', 'theme_preset', 'logo_url']),
   ])
 
   const totalRevenue =
@@ -140,7 +138,12 @@ export default async function AdminDashboardPage({
     .single()
   const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
 
-  const currentSettings = { site_name: siteNameSetting?.setting_value }
+  const settingsByKey = new Map(
+    (onboardingSettings || []).map(s => [s.setting_key, s.setting_value])
+  )
+  const currentSettings = { site_name: settingsByKey.get('site_name') }
+  const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
+  const isStripeConnected = Boolean(tenant?.stripe_account_id)
 
   const stats = [
     {
@@ -203,6 +206,20 @@ export default async function AdminDashboardPage({
             completed: Boolean(currentSettings?.site_name),
           },
           {
+            id: 'brand-school',
+            label: t('onboarding.brandSchool'),
+            description: t('onboarding.brandSchoolDesc'),
+            href: '/dashboard/admin/appearance',
+            completed: hasBranding,
+          },
+          {
+            id: 'connect-payments',
+            label: t('onboarding.connectPayments'),
+            description: t('onboarding.connectPaymentsDesc'),
+            href: '/dashboard/admin/monetization',
+            completed: isStripeConnected,
+          },
+          {
             id: 'add-course',
             label: t('onboarding.addCourse'),
             description: t('onboarding.addCourseDesc'),
@@ -224,6 +241,17 @@ export default async function AdminDashboardPage({
             completed: planSlug !== 'free',
           },
         ]}
+        footer={
+          <p className="text-xs text-muted-foreground">
+            {t('onboarding.wizardPrompt')}{' '}
+            <Link
+              href="/onboarding"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('onboarding.wizardLink')}
+            </Link>
+          </p>
+        }
       />
       </div>
 
@@ -306,8 +334,8 @@ export default async function AdminDashboardPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {recentTenantUsers && recentTenantUsers.length > 0 ? (
-                recentTenantUsers.map((tu: any) => (
+              {recentUsers.length > 0 ? (
+                recentUsers.map((tu) => (
                   <div
                     key={tu.user_id}
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"

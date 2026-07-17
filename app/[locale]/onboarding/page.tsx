@@ -18,10 +18,9 @@ export default async function OnboardingPage({
     redirect('/auth/login')
   }
 
-  // Check if user already completed onboarding
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed, full_name')
+    .select('full_name')
     .eq('id', user.id)
     .single()
 
@@ -47,9 +46,8 @@ export default async function OnboardingPage({
         : '/dashboard/admin'
       : '/dashboard/teacher'
 
-  if (profile?.onboarding_completed) {
-    redirect(redirectTo)
-  }
+  // The wizard is optional now — setup is driven by the dashboard checklist,
+  // so already-onboarded users may revisit this page freely.
 
   // Get current tenant settings
   const { data: settings } = await supabase
@@ -57,8 +55,8 @@ export default async function OnboardingPage({
     .select('setting_key, setting_value')
     .in('setting_key', ['site_name', 'site_description', 'logo_url', 'primary_color', 'secondary_color'])
 
-  const currentSettings = settings?.reduce((acc: Record<string, any>, s) => {
-    acc[s.setting_key] = s.setting_value
+  const currentSettings = settings?.reduce((acc: Record<string, { value?: string } | undefined>, s) => {
+    acc[s.setting_key] = s.setting_value as { value?: string } | undefined
     return acc
   }, {}) || {}
 

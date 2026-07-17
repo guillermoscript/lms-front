@@ -169,15 +169,29 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
       // (set by the create_school RPC) and tenant_role from the hook.
       await supabase.auth.refreshSession()
 
+      // Setup is checklist-driven from the dashboard now; the wizard at
+      // /onboarding stays available as an optional guided path.
+      const { data: { user: authedUser } } = await supabase.auth.getUser()
+      if (authedUser) {
+        await supabase
+          .from('profiles')
+          .update({ onboarding_completed: true })
+          .eq('id', authedUser.id)
+      }
+
       toast.success('School created! Setting up your dashboard...')
 
-      // Redirect to subdomain onboarding, carrying the chosen plan (if any)
+      // Land directly on the dashboard (subdomain if configured), carrying a
+      // paid plan choice from /platform-pricing into the upgrade page.
+      const destination = planQuery
+        ? `/dashboard/admin/billing/upgrade${planQuery}`
+        : '/dashboard/admin'
       const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
       if (platformDomain && platformDomain !== 'localhost') {
         const protocol = window.location.protocol
-        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}/onboarding${planQuery}`
+        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}${destination}`
       } else {
-        router.push(`/onboarding${planQuery}`)
+        router.push(destination)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
