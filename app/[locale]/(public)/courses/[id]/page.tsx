@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
-import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/seo';
+import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,12 +63,19 @@ interface Lesson {
     description: string | null;
 }
 
-export default async function CourseDetailsPage(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-    const t = await getTranslations('coursePublicDetails');
-    const supabase = await createClient();
-
-    const userId = await getCurrentUserId()
+export default async function CourseDetailsPage(props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ enroll?: string }>;
+}) {
+    const [params, searchParams, t, supabase, userId, tenantId] = await Promise.all([
+        props.params,
+        props.searchParams,
+        getTranslations('coursePublicDetails'),
+        createClient(),
+        getCurrentUserId(),
+        getCurrentTenantId(),
+    ]);
+    const courseId = Number(params.id);
     // Fetch course with lessons and category
     const { data: course, error } = await supabase
         .from("courses")
@@ -84,7 +92,8 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                 name
             )
         `)
-        .eq("course_id", parseInt(params.id))
+        .eq("course_id", courseId)
+        .eq("tenant_id", tenantId)
         .eq("status", "published")
         .single();
 
@@ -92,16 +101,29 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
         notFound();
     }
 
-    // Fetch author separately (profiles is global, no tenant_id)
-    let author = null;
-    if (course.author_id) {
-        const { data: authorData } = await supabase
+    const authorPromise = course.author_id
+        ? supabase
             .from("profiles")
             .select("id, full_name, avatar_url, bio")
             .eq("id", course.author_id)
-            .single();
-        author = authorData;
-    }
+            .single()
+        : Promise.resolve({ data: null });
+
+    const accessPromise = userId
+        ? hasCourseAccess(supabase, userId, courseId)
+        : Promise.resolve(false);
+
+    const productCoursesPromise = supabase
+        .from('product_courses')
+        .select('product:products(price, currency)')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId);
+
+    const [{ data: author }, hasAccess, { data: productCourses }] = await Promise.all([
+        authorPromise,
+        accessPromise,
+        productCoursesPromise,
+    ]);
 
     // Sort lessons by sequence
     const lessons = course.lessons?.sort((a: Lesson, b: Lesson) => a.sequence - b.sequence) || [];
@@ -109,21 +131,12 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
     const estimatedMinutes = (totalLessons * 10) % 60;
 
-    // Check user's access (entitlements model)
-    let hasAccess = false;
-    if (userId) {
-        hasAccess = await hasCourseAccess(supabase, userId, parseInt(params.id));
-    }
-
-    // Fetch product for pricing
-    const { data: productCourses } = await supabase
-        .from('product_courses')
-        .select('product:products(*)')
-        .eq('course_id', parseInt(params.id))
-        .limit(1);
-
-    const courseProduct = productCourses?.[0]?.product as any;
-    const isFree = courseProduct ? parseFloat(courseProduct.price) === 0 : true;
+    type CourseProduct = { price: number | string; currency: string | null };
+    const linkedProducts = (productCourses ?? [])
+        .map(({ product }) => product as unknown as CourseProduct | null)
+        .filter((product): product is CourseProduct => product !== null);
+    const courseProduct = linkedProducts.find((product) => Number(product.price) > 0) ?? linkedProducts[0];
+    const isFree = !courseProduct || Number(courseProduct.price) === 0;
     const priceDisplay = isFree ? t('pricing.free') : `$${courseProduct.price}`;
 
     const instructor = author ? {
@@ -153,7 +166,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                     {course.category && (
                         <>
                             <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                            <span className="text-zinc-300">{(course.category as any).name}</span>
+                            <span className="text-zinc-300">{course.category.name}</span>
                         </>
                     )}
                     <ChevronRight className="w-3 h-3" aria-hidden="true" />
@@ -167,7 +180,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                     <div className="max-w-4xl">
                         {course.category && (
                             <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-4">
-                                {(course.category as any).name}
+                                {course.category.name}
                             </span>
                         )}
 
@@ -362,7 +375,7 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                     {/* CTA */}
                                     <div className="space-y-3">
                                         {!userId ? (
-                                            <Link href={`/auth/login?next=${encodeURIComponent(`/courses/${params.id}`)}`}>
+                                            <Link href={`/auth/login?next=${encodeURIComponent(isFree ? `/courses/${params.id}?enroll=1` : `/checkout?courseId=${course.course_id}`)}`}>
                                                 <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
                                                     {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
                                                 </Button>
@@ -374,11 +387,11 @@ export default async function CourseDetailsPage(props: { params: Promise<{ id: s
                                                 </Button>
                                             </Link>
                                         ) : isFree ? (
-                                            <Link href={`/checkout?courseId=${course.course_id}`}>
-                                                <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
-                                                    {t('pricing.enrollFree')}
-                                                </Button>
-                                            </Link>
+                                            searchParams.enroll === '1' ? (
+                                                <AutoFreeEnrollButton courseId={course.course_id} />
+                                            ) : (
+                                                <FreeEnrollButton courseId={course.course_id} />
+                                            )
                                         ) : (
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
                                                 <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">

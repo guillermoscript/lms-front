@@ -3918,6 +3918,9 @@
       "preview": "Previsualizar este curso",
       "free": "Gratis",
       "enrollFree": "Inscribirse Gratis",
+      "enrolling": "Inscribiendo...",
+      "enrollmentSuccess": "¡Ya estás inscrito! Abriendo tu curso...",
+      "enrollmentError": "No pudimos inscribirte. Inténtalo de nuevo.",
       "enrollNow": "Inscribirse Ahora",
       "goToCourse": "Ir al Curso",
       "buyNow": "Comprar Ahora",
@@ -3991,7 +3994,12 @@
       "subtitle": "Tu compra fue exitosa. Ya tienes acceso completo — disfruta el contenido.",
       "goToCourses": "Ir a mis cursos",
       "browseCourses": "Explorar cursos",
-      "viewBilling": "Ver facturación"
+      "viewBilling": "Ver facturación",
+      "continue": "Continuar al contenido",
+      "multipleCourses": "Tu compra incluye estos cursos. Elige uno para comenzar.",
+      "courseFallback": "Abrir curso",
+      "confirmingTitle": "Confirmando tu compra",
+      "confirmingSubtitle": "Tu proveedor de pago está terminando la confirmación. Esta página se actualizará automáticamente."
     },
     "title": "Finalizar Compra",
     "description": "Elige tu método de pago para continuar.",

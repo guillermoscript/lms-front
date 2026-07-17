@@ -3,6 +3,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -10,8 +11,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const _next = searchParams.get('next')
-  const next = _next?.startsWith('/') ? _next : '/'
+  const requestedNext = searchParams.get('next')
+  const next = getSafeNextPath(requestedNext, '/')
 
   if (token_hash && type) {
     const supabase = await createClient()
@@ -34,6 +35,10 @@ export async function GET(request: NextRequest) {
 
       // Smart redirect for new signups based on context
       if (type === 'signup' && user) {
+        if (requestedNext && next !== '/') {
+          redirect(next)
+        }
+
         // Check if user already has active school memberships
         const { data: memberships } = await supabase
           .from('tenant_users')

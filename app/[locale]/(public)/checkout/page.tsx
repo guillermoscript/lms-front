@@ -15,26 +15,27 @@ interface SearchParams {
 }
 
 export default async function CheckoutPage(props: { params: Promise<{ locale: string }>, searchParams: Promise<SearchParams> }) {
-    const searchParams = await props.searchParams;
-    const { locale } = await props.params;
+    const [searchParams, { locale }, t, supabase, user] = await Promise.all([
+        props.searchParams,
+        props.params,
+        getTranslations('checkout'),
+        createClient(),
+        getSessionUser(),
+    ]);
     const { courseId, planId } = searchParams;
-    const t = await getTranslations('checkout');
-
-    const supabase = await createClient();
-    const user = await getSessionUser()
     if (!user) {
         const returnUrl = encodeURIComponent(`/checkout?${courseId ? `courseId=${courseId}` : `planId=${planId}`}`);
         redirect(`/auth/login?next=${returnUrl}`);
     }
 
-    const tenantId = await getCurrentTenantId();
-
-    // Get user profile for pre-filling forms
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
+    const [tenantId, { data: profile }] = await Promise.all([
+        getCurrentTenantId(),
+        supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single(),
+    ]);
 
     const userName = profile?.full_name || '';
     const userEmail = user.email || '';
@@ -85,14 +86,28 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 .from("product_courses")
                 .select("product_id, product:products(price, currency, payment_provider, description)")
                 .eq("course_id", courseId)
-                .eq("tenant_id", tenantId)
-                .limit(1);
+                .eq("tenant_id", tenantId);
 
-            if (productCourses?.[0]?.product) {
-                const product = productCourses[0].product as any;
-                price = parseFloat(product.price);
+            const paidProductCourse = productCourses?.find(({ product }) => {
+                const candidate = product as unknown as { price: number | string } | null;
+                return candidate !== null && Number(candidate.price) > 0;
+            });
+            // No paid product linked → this is a free course; enrollment, not
+            // a purchase. Route to the one-click flow regardless of provider.
+            if (!paidProductCourse) {
+                redirect(`/courses/${courseId}?enroll=1`);
+            }
+
+            if (paidProductCourse?.product) {
+                const product = paidProductCourse.product as unknown as {
+                    price: number | string;
+                    currency: string | null;
+                    payment_provider: string | null;
+                    description: string | null;
+                };
+                price = Number(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
-                productId = productCourses[0].product_id;
+                productId = paidProductCourse.product_id;
                 paymentProvider = product.payment_provider ?? null;
                 if (product.description) description = product.description;
 

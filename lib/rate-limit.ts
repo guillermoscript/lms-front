@@ -77,6 +77,15 @@ export const paymentAnonLimiter = rateLimit({
   uniqueTokenPerInterval: 5000,
 });
 
+/**
+ * Free enrollment attempts — checked separately by user and IP.
+ * The database grant remains idempotent; this limits bot-driven catalog churn.
+ */
+export const freeEnrollmentLimiter = rateLimit({
+  interval: 60 * 60 * 1000,
+  uniqueTokenPerInterval: 10_000,
+});
+
 /** Client IP from standard proxy headers, falling back to 'unknown'. */
 export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
   return (

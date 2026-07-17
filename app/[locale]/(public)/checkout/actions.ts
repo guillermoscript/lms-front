@@ -3,6 +3,9 @@
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
+import { headers } from 'next/headers';
+import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
+import { joinCurrentSchool } from '@/app/actions/join-school';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -128,12 +131,26 @@ export async function enrollFree(courseId?: string) {
     }
     const tenantId = await getCurrentTenantId();
 
+    const requestHeaders = await headers();
+    const clientIp = getClientIp({ headers: requestHeaders });
+    try {
+        await Promise.all([
+            freeEnrollmentLimiter.check(30, `user:${userId}`),
+            freeEnrollmentLimiter.check(100, `ip:${clientIp}`),
+        ]);
+    } catch {
+        throw new Error("Too many enrollment attempts. Please slow down and try again later.");
+    }
+
     try {
         if (!courseId) {
             throw new Error("Free enrollment only supported for courses currently.");
         }
 
-        const numericCourseId = parseInt(courseId);
+        const numericCourseId = Number(courseId);
+        if (!Number.isSafeInteger(numericCourseId) || numericCourseId <= 0) {
+            throw new Error("Invalid course.");
+        }
 
         // 1. Validate the course: it must belong to this tenant and be published.
         // Prevents enrolling in another tenant's course or an unpublished draft
@@ -153,19 +170,42 @@ export async function enrollFree(courseId?: string) {
         }
 
         // 2. Guard: reject if a paid product is linked to this course.
-        const { data: productCourses } = await supabase
+        const { data: productCourses, error: productError } = await supabase
             .from('product_courses')
             .select('product:products(price)')
             .eq('course_id', numericCourseId)
-            .eq('tenant_id', tenantId)
-            .limit(1);
+            .eq('tenant_id', tenantId);
 
-        const linkedProduct = productCourses?.[0]?.product as unknown as {
-            price: number | string;
-        } | undefined;
+        if (productError) {
+            throw new Error("Could not verify course pricing.");
+        }
 
-        if (linkedProduct && Number(linkedProduct.price) !== 0) {
+        const hasPaidProduct = productCourses?.some(({ product }) => {
+            const linkedProduct = product as unknown as { price: number | string } | null;
+            return linkedProduct !== null && Number(linkedProduct.price) !== 0;
+        });
+
+        if (hasPaidProduct) {
             throw new Error("This course is not free. Please use the paid enrollment flow.");
+        }
+
+        // 3. A brand-new account (signup-while-enrolling) has no tenant
+        // membership yet, which grant_free_entitlement requires. Join the
+        // school first through the standard path (invitation- and
+        // student-limit-aware) so enrollment stays one click.
+        const { data: membership } = await supabase
+            .from('tenant_users')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (!membership) {
+            const joinResult = await joinCurrentSchool();
+            if (!joinResult.success) {
+                throw new Error(joinResult.error || "Could not join this school.");
+            }
         }
 
         // 3. Grant a free entitlement (entitlements model). Idempotent.
@@ -175,10 +215,12 @@ export async function enrollFree(courseId?: string) {
         });
 
         if (grantError) {
-            throw new Error("Failed to enroll: " + grantError.message);
+            console.error("Free entitlement grant failed:", grantError);
+            throw new Error("Failed to enroll. Please try again.");
         }
 
         revalidatePath('/dashboard/student');
+        revalidatePath(`/dashboard/student/courses/${numericCourseId}`);
         return { success: true };
     } catch (error) {
         console.error("Free enrollment failed:", error);
