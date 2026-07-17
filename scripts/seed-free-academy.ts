@@ -55,6 +55,10 @@ async function ensureUser(p: Person): Promise<string> {
       password: PASSWORD,
       email_confirm: true,
       user_metadata: { full_name: p.name },
+      // app_metadata.tenant_id is what custom_access_token_hook reads to inject
+      // the JWT tenant claim RLS relies on. Without it an authed user's queries
+      // fail-closed on the tenant's own data (404 on the course page, etc.).
+      app_metadata: { tenant_id: TENANT_ID },
     })
     if (error) throw new Error(`createUser ${p.email}: ${error.message}`)
     id = data.user.id
