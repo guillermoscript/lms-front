@@ -3,21 +3,25 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
+type ConnectLinkResult =
+  | { url: string }
+  | { error: string; status: number }
+
 /**
- * POST /api/stripe/connect
- * Creates a Stripe Connect account link for the current tenant admin.
+ * Shared logic for both handlers: auth → tenant → admin guard →
+ * find-or-create Stripe account → account link.
  */
-export async function POST(req: NextRequest) {
+async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return { error: 'Unauthorized', status: 401 }
   }
 
   const tenantId = await getCurrentTenantId()
   if (!tenantId) {
-    return NextResponse.json({ error: 'No tenant context' }, { status: 400 })
+    return { error: 'No tenant context', status: 400 }
   }
 
   // Verify user is tenant admin
@@ -29,7 +33,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (tenantUser?.role !== 'admin') {
-    return NextResponse.json({ error: 'Only tenant admins can connect Stripe' }, { status: 403 })
+    return { error: 'Only tenant admins can connect Stripe', status: 403 }
   }
 
   // Check if tenant already has a Stripe account
@@ -66,5 +70,45 @@ export async function POST(req: NextRequest) {
     type: 'account_onboarding',
   })
 
-  return NextResponse.json({ url: accountLink.url })
+  return { url: accountLink.url }
+}
+
+/**
+ * POST /api/stripe/connect
+ * Returns the Stripe Connect onboarding link as JSON.
+ */
+export async function POST(req: NextRequest) {
+  const result = await createConnectLink(req)
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  }
+  return NextResponse.json({ url: result.url })
+}
+
+/**
+ * GET /api/stripe/connect
+ * Browser-navigation entry point (used by plain links/window.location):
+ * redirects straight to the Stripe hosted onboarding link, or back to the
+ * monetization page with ?stripe=error on failure.
+ */
+export async function GET(req: NextRequest) {
+  let result: ConnectLinkResult
+  try {
+    result = await createConnectLink(req)
+  } catch (err) {
+    console.error('[stripe/connect] failed to create account link:', err)
+    result = { error: 'stripe_error', status: 500 }
+  }
+  if ('error' in result) {
+    // Build the origin from the Host header — behind the tenant proxy,
+    // req.nextUrl.origin resolves to the internal host (localhost) and the
+    // redirect would drop the tenant subdomain (and with it the session).
+    const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
+    const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+    const back = new URL('/dashboard/admin/monetization', `${proto}://${host}`)
+    back.searchParams.set('stripe', 'error')
+    back.searchParams.set('reason', String(result.status))
+    return NextResponse.redirect(back)
+  }
+  return NextResponse.redirect(result.url)
 }
