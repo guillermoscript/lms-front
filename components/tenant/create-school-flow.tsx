@@ -47,9 +47,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
   // Account state
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // School state
   const [schoolName, setSchoolName] = useState('')
@@ -88,10 +86,6 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
     e.preventDefault()
     setError(null)
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -100,10 +94,15 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
     setLoading(true)
     const supabase = createClient()
 
-    // Sign up
-    const { error: signUpError } = await supabase.auth.signUp({
+    // Sign up. Email verification is async: if Supabase returns a session
+    // (auto-confirm or confirmation-optional config) we continue immediately
+    // and the dashboard shows a "verify your email" banner until confirmed.
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/create-school`,
+      },
     })
 
     if (signUpError) {
@@ -116,16 +115,21 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
       return
     }
 
-    // Sign in immediately
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
+    if (!signUpData.session) {
+      // Sign-up may not return a session when the email already exists
+      // (Supabase obfuscation) — a direct sign-in still works there.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
 
-    if (signInError) {
-      setEmailConfirmationNeeded(true)
-      setLoading(false)
-      return
+      if (signInError) {
+        // Supabase strictly requires email confirmation before any session
+        // exists — the check-your-email fallback is unavoidable here.
+        setEmailConfirmationNeeded(true)
+        setLoading(false)
+        return
+      }
     }
 
     // Success — advance to school step
@@ -281,32 +285,6 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff /> : <Eye />}
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-zinc-300">Confirm Password</Label>
-                <InputGroup>
-                  <InputGroupInput
-                    id="confirm-password"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat your password"
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="icon-xs"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showConfirmPassword ? <EyeOff /> : <Eye />}
                     </InputGroupButton>
                   </InputGroupAddon>
                 </InputGroup>
