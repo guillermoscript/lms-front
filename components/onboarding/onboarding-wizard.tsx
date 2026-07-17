@@ -59,7 +59,7 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
   const [currentStep, setCurrentStep] = useState<Step>('welcome')
   const [isConnectingStripe, setIsConnectingStripe] = useState(false)
 
-  const stepIndex = STEPS.indexOf(currentStep)
+  const stepIndex = (STEPS as readonly Step[]).indexOf(currentStep)
 
   function goNext() {
     const nextIndex = stepIndex + 1
