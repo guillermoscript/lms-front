@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -36,6 +37,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
   const taxRate = settings.tax_rate?.value?.value || 0
   const invoicePrefix = settings.invoice_prefix?.value?.value || 'INV'
   const requirePaymentApproval = settings.require_payment_approval?.value?.enabled ?? false
+  const manualPaymentInstructions = settings.manual_payment_instructions?.value?.value || ''
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -51,6 +53,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
         tax_rate: { value: parseFloat(formData.get('tax_rate') as string) },
         invoice_prefix: { value: formData.get('invoice_prefix') as string },
         require_payment_approval: { enabled: formData.get('require_payment_approval') === 'on' },
+        manual_payment_instructions: { value: (formData.get('manual_payment_instructions') as string) || '' },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -151,6 +154,21 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             />
           </div>
         )}
+      </div>
+
+      {/* Manual / offline payment instructions — shown to students up front */}
+      <div className="space-y-2 rounded-lg border p-4">
+        <Label htmlFor="manual_payment_instructions">{t('payment.manualInstructions')}</Label>
+        <Textarea
+          id="manual_payment_instructions"
+          name="manual_payment_instructions"
+          defaultValue={manualPaymentInstructions}
+          rows={4}
+          placeholder={t('payment.manualInstructionsPlaceholder')}
+        />
+        <p className="text-sm text-muted-foreground">
+          {t('payment.manualInstructionsHint')}
+        </p>
       </div>
 
       {/* Currency Settings */}

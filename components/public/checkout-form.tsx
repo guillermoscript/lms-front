@@ -5,7 +5,8 @@ import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { enrollUser, enrollFree } from '@/app/[locale]/(public)/checkout/actions';
+import { enrollUser, enrollFree, subscribeFree } from '@/app/[locale]/(public)/checkout/actions';
+import { StripePaymentForm } from '@/components/public/stripe-payment-form';
 import { createPaymentRequest } from '@/app/actions/payment-requests';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -287,9 +288,17 @@ export function CheckoutForm({
         startTransition(async () => {
             try {
                 if (isFree) {
-                    await enrollFree(courseId);
-                    toast.success(t('toasts.success'));
-                    router.push(`/dashboard/student/courses/${courseId}`);
+                    // Free plan → activate a zero-price subscription; free course →
+                    // grant a free entitlement. Both are one-click, no payment.
+                    if (planId) {
+                        await subscribeFree(planId);
+                        toast.success(t('toasts.success'));
+                        router.push('/dashboard/student/browse?checkout=success');
+                    } else {
+                        await enrollFree(courseId);
+                        toast.success(t('toasts.success'));
+                        router.push(`/dashboard/student/courses/${courseId}`);
+                    }
                     return;
                 }
 
@@ -528,6 +537,98 @@ export function CheckoutForm({
     }
 
     // ─── Paid checkout ───
+    // Stripe uses a real PaymentElement (webhook grants enrollment). The mock
+    // "Pay & Enroll (Test)" button is a dev-only sandbox escape hatch — never
+    // shown in production, and never for redirect/QR/manual providers (those
+    // return earlier or use the offline tab).
+    const isStripe = paymentProvider === 'stripe';
+    const allowSandbox = process.env.NODE_ENV !== 'production' && paymentProvider !== 'manual';
+
+    // Card payment panel: real Stripe form, an unavailable notice, or (in dev)
+    // just the sandbox button below it.
+    const cardPanel = (
+        <div className="space-y-4">
+            {isStripe ? (
+                <StripePaymentForm
+                    productId={productId}
+                    planId={planId}
+                    price={price}
+                    hasManualFallback={showOfflineTab}
+                />
+            ) : !allowSandbox ? (
+                <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                    {t('payment.cardUnavailable')}
+                </p>
+            ) : null}
+
+            {allowSandbox && (
+                <div className="space-y-2">
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleEnroll}
+                        disabled={isPending}
+                    >
+                        {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isPending ? t('payment.processing') : t('payment.sandboxButton')}
+                    </Button>
+                    <p className="text-center text-[11px] text-muted-foreground">
+                        {t('payment.sandboxHint')}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+
+    const offlinePanel = (
+        <div className="space-y-4">
+            <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                {t('payment.offlineInstructions')}
+            </p>
+            <div className="space-y-1.5">
+                <Label htmlFor="offlineName" className="text-xs font-medium">{t('payment.contactName')}</Label>
+                <Input
+                    id="offlineName"
+                    placeholder="Your Name"
+                    value={offlineData.name}
+                    onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
+                    disabled={isPending}
+                />
+            </div>
+            <div className="space-y-1.5">
+                <Label htmlFor="offlineEmail" className="text-xs font-medium">{t('payment.contactEmail')}</Label>
+                <Input
+                    id="offlineEmail"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={offlineData.email}
+                    onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
+                    disabled={isPending}
+                    readOnly={!!userEmail}
+                    className={userEmail ? 'bg-muted' : ''}
+                />
+            </div>
+            <div className="space-y-1.5">
+                <Label htmlFor="offlinePhone" className="text-xs font-medium">{t('payment.contactPhone')}</Label>
+                <Input
+                    id="offlinePhone"
+                    placeholder="+1 234 567 8900"
+                    value={offlineData.phone}
+                    onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
+                    disabled={isPending}
+                />
+            </div>
+            <Button
+                className="w-full"
+                onClick={handleEnroll}
+                disabled={isPending}
+            >
+                {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending ? t('payment.processing') : t('payment.requestButton')}
+            </Button>
+        </div>
+    );
+
     return (
         <div className="rounded-xl border border-border bg-card">
             {orderSummary}
@@ -547,122 +648,21 @@ export function CheckoutForm({
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="card" className="mt-5 space-y-4">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
-                                <Input id="cardholder" placeholder="John Doe" disabled={isPending} />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="cardNumber"
-                                        placeholder="4242 4242 4242 4242"
-                                        className="pl-10"
-                                        disabled={isPending}
-                                    />
-                                    <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
-                                    <Input id="expiry" placeholder="MM/YY" disabled={isPending} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
-                                    <Input id="cvc" placeholder="123" disabled={isPending} />
-                                </div>
-                            </div>
+                        <TabsContent value="card" className="mt-5">
+                            {cardPanel}
                         </TabsContent>
 
-                        <TabsContent value="offline" className="mt-5 space-y-4">
-                            <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                                {t('payment.offlineInstructions')}
-                            </p>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="offlineName" className="text-xs font-medium">{t('payment.contactName')}</Label>
-                                <Input
-                                    id="offlineName"
-                                    placeholder="Your Name"
-                                    value={offlineData.name}
-                                    onChange={e => setOfflineData({ ...offlineData, name: e.target.value })}
-                                    disabled={isPending}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="offlineEmail" className="text-xs font-medium">{t('payment.contactEmail')}</Label>
-                                <Input
-                                    id="offlineEmail"
-                                    type="email"
-                                    placeholder="email@example.com"
-                                    value={offlineData.email}
-                                    onChange={e => setOfflineData({ ...offlineData, email: e.target.value })}
-                                    disabled={isPending}
-                                    readOnly={!!userEmail}
-                                    className={userEmail ? 'bg-muted' : ''}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="offlinePhone" className="text-xs font-medium">{t('payment.contactPhone')}</Label>
-                                <Input
-                                    id="offlinePhone"
-                                    placeholder="+1 234 567 8900"
-                                    value={offlineData.phone}
-                                    onChange={e => setOfflineData({ ...offlineData, phone: e.target.value })}
-                                    disabled={isPending}
-                                />
-                            </div>
+                        <TabsContent value="offline" className="mt-5">
+                            {offlinePanel}
                         </TabsContent>
                     </Tabs>
                 ) : (
-                    <div className="space-y-4">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="cardholder" className="text-xs font-medium">{t('payment.cardholder')}</Label>
-                            <Input id="cardholder" placeholder="John Doe" disabled={isPending} />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="cardNumber" className="text-xs font-medium">{t('payment.cardNumber')}</Label>
-                            <div className="relative">
-                                <Input
-                                    id="cardNumber"
-                                    placeholder="4242 4242 4242 4242"
-                                    className="pl-10"
-                                    disabled={isPending}
-                                />
-                                <IconCreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="expiry" className="text-xs font-medium">{t('payment.expiry')}</Label>
-                                <Input id="expiry" placeholder="MM/YY" disabled={isPending} />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="cvc" className="text-xs font-medium">{t('payment.cvc')}</Label>
-                                <Input id="cvc" placeholder="123" disabled={isPending} />
-                            </div>
-                        </div>
-                    </div>
+                    cardPanel
                 )}
             </div>
 
-            {/* Submit */}
             <div className="border-t border-border px-6 py-4 sm:px-8">
-                <Button
-                    className="w-full"
-                    onClick={handleEnroll}
-                    disabled={isPending}
-                >
-                    {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isPending
-                        ? t('payment.processing')
-                        : paymentMethod === 'card'
-                            ? t('payment.button')
-                            : t('payment.requestButton')
-                    }
-                </Button>
-                <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
                     <IconLock className="h-3 w-3" />
                     {t('secureCheckout')}
                 </p>

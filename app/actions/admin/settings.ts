@@ -35,7 +35,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
       const categoryPrefixes: Record<string, string[]> = {
         general: ['site_name', 'site_description', 'contact_email', 'support_email', 'timezone', 'maintenance_mode'],
         email: ['smtp_', 'email_'],
-        payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval'],
+        payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval', 'manual_payment_instructions'],
         enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled'],
       }
       const keys = categoryPrefixes[category]
@@ -387,6 +387,30 @@ export async function getSolanaSettlementOptions(): Promise<{ usdc: boolean; sol
 }
 
 /**
+ * Get this tenant's free-text manual/offline payment instructions (if any).
+ *
+ * No role gate — students read this at checkout to learn how to pay before
+ * submitting a request. Returns a plain string ('' when unset). The value is
+ * stored under the `manual_payment_instructions` key as `{ value: string }`.
+ */
+export async function getManualPaymentInstructions(): Promise<string> {
+  try {
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'manual_payment_instructions')
+      .maybeSingle()
+    return (data?.setting_value as { value?: string } | null)?.value?.trim() || ''
+  } catch (error) {
+    console.error('Error resolving manual payment instructions:', error)
+    return ''
+  }
+}
+
+/**
  * Get all settings grouped by category (for the settings page)
  */
 export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
@@ -417,6 +441,7 @@ export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
       stripe_enabled: 'payment', paypal_enabled: 'payment',
       lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', currency: 'payment',
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
+      manual_payment_instructions: 'payment',
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',

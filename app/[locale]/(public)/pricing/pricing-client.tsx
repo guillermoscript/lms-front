@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useTranslations } from 'next-intl';
+import { FreeSubscribeButton } from "@/components/public/free-subscribe-button";
 
 interface Plan {
     plan_id: number;
@@ -21,9 +22,11 @@ interface Plan {
 interface PricingClientProps {
     monthlyPlans: Plan[];
     yearlyPlans: Plan[];
+    isAuthenticated: boolean;
+    subscribePlanId: number | null;
 }
 
-export default function PricingClient({ monthlyPlans, yearlyPlans }: PricingClientProps) {
+export default function PricingClient({ monthlyPlans, yearlyPlans, isAuthenticated, subscribePlanId }: PricingClientProps) {
     const [isYearly, setIsYearly] = useState(false);
     const t = useTranslations('pricing');
 
@@ -107,20 +110,39 @@ export default function PricingClient({ monthlyPlans, yearlyPlans }: PricingClie
                                             {plan.duration_in_days === 365 ? t('billedYearly') : t('billedMonthly')}
                                         </div>
 
-                                        <Link
-                                            href={plan.payment_provider === 'manual'
-                                                ? `/checkout/manual?planId=${plan.plan_id}`
-                                                : `/checkout?planId=${plan.plan_id}`
-                                            }
-                                            className="block mt-10"
-                                        >
-                                            <Button className={`w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
+                                        {(() => {
+                                            const ctaClass = `w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
                                                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
                                                 : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
-                                                }`}>
-                                                {t('getStarted')}
-                                            </Button>
-                                        </Link>
+                                                }`;
+                                            // Free plans (price 0) subscribe in one click instead of
+                                            // routing through checkout.
+                                            if (Number(plan.price) === 0) {
+                                                return (
+                                                    <div className="mt-10">
+                                                        <FreeSubscribeButton
+                                                            planId={plan.plan_id}
+                                                            isAuthenticated={isAuthenticated}
+                                                            autoFire={subscribePlanId === plan.plan_id}
+                                                            className={ctaClass}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <Link
+                                                    href={plan.payment_provider === 'manual'
+                                                        ? `/checkout/manual?planId=${plan.plan_id}`
+                                                        : `/checkout?planId=${plan.plan_id}`
+                                                    }
+                                                    className="block mt-10"
+                                                >
+                                                    <Button className={ctaClass}>
+                                                        {t('getStarted')}
+                                                    </Button>
+                                                </Link>
+                                            );
+                                        })()}
                                     </div>
                                     <ul className="space-y-4 m-0 p-0">
                                         {parsedFeatures?.map((feature: string, i: number) => (

@@ -2427,7 +2427,10 @@
             "invoicePrefix": "Prefijo de Factura",
             "invoicePrefixHint": "Prefijo para los números de factura (ej., INV-001)",
             "approval": "Requerir Aprobación de Pago",
-            "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos"
+            "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos",
+            "manualInstructions": "Instrucciones de Pago Manual / Offline",
+            "manualInstructionsPlaceholder": "ej. Transferencia bancaria a la cuenta 1234-5678 (Banco XYZ). Incluye tu correo como referencia y sube el comprobante.",
+            "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo."
           },
           "branding": {
             "logoUrl": "URL del Logo",
@@ -3578,6 +3581,8 @@
       "successTitle": "¡Solicitud Enviada!",
       "successDescription": "Hemos recibido su solicitud de pago y enviaremos las instrucciones a su correo en breve.",
       "viewRequests": "Ver Mis Solicitudes",
+      "howToPayTitle": "Cómo pagar",
+      "proofLabel": "Comprobante de pago (opcional)",
       "errors": {
         "nameRequired": "El nombre es requerido",
         "emailRequired": "El correo electrónico es requerido",
@@ -3948,6 +3953,10 @@
     "free": "gratis",
     "signUpFree": "Regístrate Gratis",
     "getStarted": "Comenzar Ahora",
+    "subscribeFree": "Suscribirse Gratis",
+    "subscribing": "Suscribiendo…",
+    "subscribeSuccess": "¡Listo! Disfruta tu plan.",
+    "subscribeError": "No se pudo activar el plan. Inténtalo de nuevo.",
     "billedMonthly": "Facturado mensualmente",
     "billedYearly": "Facturado anualmente",
     "empty": {
@@ -4052,7 +4061,18 @@
       "contactPhone": "Teléfono (Opcional)",
       "button": "Pagar e Inscribirse (Prueba)",
       "requestButton": "Solicitar Instrucciones",
-      "processing": "Procesando..."
+      "processing": "Procesando...",
+      "cardUnavailable": "Los pagos con tarjeta no están disponibles para este artículo por ahora. Usa otro método de pago.",
+      "sandboxButton": "Pagar e Inscribirse (Prueba)",
+      "sandboxHint": "Pago de prueba (sandbox) — omite el pago real (solo en desarrollo)."
+    },
+    "stripe": {
+      "preparing": "Preparando el pago seguro…",
+      "initError": "No se pudo iniciar el pago con tarjeta. Inténtalo de nuevo.",
+      "unavailableTitle": "Pagos con tarjeta no disponibles",
+      "tryManual": "Pagar de otra forma",
+      "payButton": "Pagar {price}",
+      "paymentError": "No se pudo completar el pago. Inténtalo de nuevo."
     },
     "empty": {
       "title": "No hay producto seleccionado",
@@ -4071,6 +4091,7 @@
       "productDetails": "Detalles del Producto",
       "price": "Precio",
       "manualPayment": "Método de Pago Manual",
+      "instructionsTitle": "Cómo pagar",
       "howItWorks": {
         "title": "Cómo Funciona",
         "description": "Sigue estos sencillos pasos para completar tu compra",

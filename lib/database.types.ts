@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.0.2 (a4e00ff)"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -2631,6 +2651,7 @@ export type Database = {
           current_streak: number | null
           id: string
           last_activity_date: string | null
+          leagues_opt_out: boolean
           level: number | null
           longest_streak: number | null
           streak_freezes_available: number | null
@@ -2644,6 +2665,7 @@ export type Database = {
           current_streak?: number | null
           id?: string
           last_activity_date?: string | null
+          leagues_opt_out?: boolean
           level?: number | null
           longest_streak?: number | null
           streak_freezes_available?: number | null
@@ -2657,6 +2679,7 @@ export type Database = {
           current_streak?: number | null
           id?: string
           last_activity_date?: string | null
+          leagues_opt_out?: boolean
           level?: number | null
           longest_streak?: number | null
           streak_freezes_available?: number | null
@@ -3147,6 +3170,50 @@ export type Database = {
         }
         Relationships: []
       }
+      item_ratings: {
+        Row: {
+          attempt_count: number
+          course_id: number | null
+          id: number
+          item_id: number | null
+          item_type: string
+          rating: number
+          tenant_id: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          course_id?: number | null
+          id?: number
+          item_id?: number | null
+          item_type: string
+          rating?: number
+          tenant_id: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          course_id?: number | null
+          id?: number
+          item_id?: number | null
+          item_type?: string
+          rating?: number
+          tenant_id?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_ratings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_page_templates: {
         Row: {
           created_at: string
@@ -3205,6 +3272,285 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "landing_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_memberships: {
+        Row: {
+          cohort_id: string
+          created_at: string
+          final_rank: number | null
+          id: string
+          movement: string | null
+          tenant_id: string
+          tier: number
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          cohort_id: string
+          created_at?: string
+          final_rank?: number | null
+          id?: string
+          movement?: string | null
+          tenant_id: string
+          tier: number
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          cohort_id?: string
+          created_at?: string
+          final_rank?: number | null
+          id?: string
+          movement?: string | null
+          tenant_id?: string
+          tier?: number
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_memberships_tier_fkey"
+            columns: ["tier"]
+            isOneToOne: false
+            referencedRelation: "league_tiers"
+            referencedColumns: ["tier"]
+          },
+          {
+            foreignKeyName: "league_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "league_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_tiers: {
+        Row: {
+          demote_count: number
+          name: string
+          promote_count: number
+          slug: string
+          tier: number
+        }
+        Insert: {
+          demote_count?: number
+          name: string
+          promote_count?: number
+          slug: string
+          tier: number
+        }
+        Update: {
+          demote_count?: number
+          name?: string
+          promote_count?: number
+          slug?: string
+          tier?: number
+        }
+        Relationships: []
+      }
+      lesson_checkpoint_attempts: {
+        Row: {
+          attempt_number: number
+          checkpoint_id: number
+          completed: boolean
+          course_id: number
+          created_at: string
+          evaluation: Json | null
+          evaluator_type: string
+          exercise_id: number
+          id: number
+          lesson_id: number
+          passed: boolean | null
+          placement_source: string
+          response: Json
+          score: number | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          attempt_number: number
+          checkpoint_id: number
+          completed?: boolean
+          course_id: number
+          created_at?: string
+          evaluation?: Json | null
+          evaluator_type: string
+          exercise_id: number
+          id?: number
+          lesson_id: number
+          passed?: boolean | null
+          placement_source: string
+          response?: Json
+          score?: number | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          attempt_number?: number
+          checkpoint_id?: number
+          completed?: boolean
+          course_id?: number
+          created_at?: string
+          evaluation?: Json | null
+          evaluator_type?: string
+          exercise_id?: number
+          id?: number
+          lesson_id?: number
+          passed?: boolean | null
+          placement_source?: string
+          response?: Json
+          score?: number | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_checkpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoint_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_checkpoints: {
+        Row: {
+          allow_skip: boolean
+          content_block_id: string | null
+          created_at: string
+          created_by: string
+          exercise_id: number
+          id: number
+          is_enabled: boolean
+          is_required: boolean
+          label: string | null
+          lesson_id: number
+          max_ai_attempts: number
+          placement_type: string
+          tenant_id: string
+          updated_at: string
+          video_timestamp_seconds: number | null
+        }
+        Insert: {
+          allow_skip?: boolean
+          content_block_id?: string | null
+          created_at?: string
+          created_by: string
+          exercise_id: number
+          id?: number
+          is_enabled?: boolean
+          is_required?: boolean
+          label?: string | null
+          lesson_id: number
+          max_ai_attempts?: number
+          placement_type: string
+          tenant_id: string
+          updated_at?: string
+          video_timestamp_seconds?: number | null
+        }
+        Update: {
+          allow_skip?: boolean
+          content_block_id?: string | null
+          created_at?: string
+          created_by?: string
+          exercise_id?: number
+          id?: number
+          is_enabled?: boolean
+          is_required?: boolean
+          label?: string | null
+          lesson_id?: number
+          max_ai_attempts?: number
+          placement_type?: string
+          tenant_id?: string
+          updated_at?: string
+          video_timestamp_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_checkpoints_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoints_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoints_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_checkpoints_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4155,8 +4501,8 @@ export type Database = {
           plan_id: number
           plan_name: string
           price: number
-          stripe_price_id: string | null
-          stripe_product_id: string | null
+          provider_price_id: string | null
+          provider_product_id: string | null
           tenant_id: string
           thumbnail: string | null
         }
@@ -4171,8 +4517,8 @@ export type Database = {
           plan_id?: number
           plan_name: string
           price: number
-          stripe_price_id?: string | null
-          stripe_product_id?: string | null
+          provider_price_id?: string | null
+          provider_product_id?: string | null
           tenant_id?: string
           thumbnail?: string | null
         }
@@ -4187,8 +4533,8 @@ export type Database = {
           plan_id?: number
           plan_name?: string
           price?: number
-          stripe_price_id?: string | null
-          stripe_product_id?: string | null
+          provider_price_id?: string | null
+          provider_product_id?: string | null
           tenant_id?: string
           thumbnail?: string | null
         }
@@ -4397,6 +4743,82 @@ export type Database = {
           },
         ]
       }
+      practice_attempts: {
+        Row: {
+          answers: Json
+          correct_count: number
+          course_id: number | null
+          created_at: string
+          id: number
+          lesson_id: number | null
+          mode: string
+          questions: Json
+          score: number
+          source: string
+          source_exercise_id: number | null
+          tenant_id: string
+          topic: string
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          correct_count: number
+          course_id?: number | null
+          created_at?: string
+          id?: number
+          lesson_id?: number | null
+          mode?: string
+          questions: Json
+          score: number
+          source?: string
+          source_exercise_id?: number | null
+          tenant_id: string
+          topic: string
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          correct_count?: number
+          course_id?: number | null
+          created_at?: string
+          id?: number
+          lesson_id?: number | null
+          mode?: string
+          questions?: Json
+          score?: number
+          source?: string
+          source_exercise_id?: number | null
+          tenant_id?: string
+          topic?: string
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_attempts_source_exercise_id_fkey"
+            columns: ["source_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_attempts_source_exercise_id_fkey"
+            columns: ["source_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_courses: {
         Row: {
           course_id: number
@@ -4437,6 +4859,63 @@ export type Database = {
           },
           {
             foreignKeyName: "product_courses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_post_registration_steps: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          product_id: number
+          sort_order: number
+          tenant_id: string
+          title: string
+          type: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          product_id: number
+          sort_order?: number
+          tenant_id: string
+          title: string
+          type: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          product_id?: number
+          sort_order?: number
+          tenant_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_post_registration_steps_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_post_registration_steps_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4665,6 +5144,83 @@ export type Database = {
           },
         ]
       }
+      review_cards: {
+        Row: {
+          back: string
+          course_id: number | null
+          created_at: string
+          difficulty: number | null
+          due_at: string
+          ease: number
+          elapsed_days: number
+          front: string
+          fsrs_state: number
+          id: number
+          interval_days: number
+          lapses: number
+          last_reviewed_at: string | null
+          learning_steps: number
+          lesson_id: number | null
+          repetitions: number
+          stability: number | null
+          suspended: boolean
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          back: string
+          course_id?: number | null
+          created_at?: string
+          difficulty?: number | null
+          due_at?: string
+          ease?: number
+          elapsed_days?: number
+          front: string
+          fsrs_state?: number
+          id?: number
+          interval_days?: number
+          lapses?: number
+          last_reviewed_at?: string | null
+          learning_steps?: number
+          lesson_id?: number | null
+          repetitions?: number
+          stability?: number | null
+          suspended?: boolean
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          back?: string
+          course_id?: number | null
+          created_at?: string
+          difficulty?: number | null
+          due_at?: string
+          ease?: number
+          elapsed_days?: number
+          front?: string
+          fsrs_state?: number
+          id?: number
+          interval_days?: number
+          lapses?: number
+          last_reviewed_at?: string | null
+          learning_steps?: number
+          lesson_id?: number | null
+          repetitions?: number
+          stability?: number | null
+          suspended?: boolean
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_cards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           created_at: string | null
@@ -4743,6 +5299,100 @@ export type Database = {
         }
         Relationships: []
       }
+      student_topic_ratings: {
+        Row: {
+          attempt_count: number
+          course_id: number | null
+          id: number
+          rating: number
+          tenant_id: string
+          topic: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          course_id?: number | null
+          id?: number
+          rating?: number
+          tenant_id: string
+          topic: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number
+          course_id?: number | null
+          id?: number
+          rating?: number
+          tenant_id?: string
+          topic?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_topic_ratings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_goals: {
+        Row: {
+          course_id: number | null
+          created_at: string
+          done: boolean
+          done_at: string | null
+          id: number
+          kind: string
+          required: boolean
+          target_ref: Json | null
+          tenant_id: string
+          title: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          course_id?: number | null
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: number
+          kind: string
+          required?: boolean
+          target_ref?: Json | null
+          tenant_id: string
+          title: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          course_id?: number | null
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: number
+          kind?: string
+          required?: boolean
+          target_ref?: Json | null
+          tenant_id?: string
+          title?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_goals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           assignment_id: number
@@ -4785,7 +5435,10 @@ export type Database = {
           current_period_start: string
           end_date: string
           ended_at: string | null
+          payment_provider: string
           plan_id: number
+          provider_metadata: Json | null
+          provider_subscription_id: string | null
           start_date: string
           subscription_id: number
           subscription_status: Database["public"]["Enums"]["subscription_status"]
@@ -4804,7 +5457,10 @@ export type Database = {
           current_period_start?: string
           end_date: string
           ended_at?: string | null
+          payment_provider?: string
           plan_id: number
+          provider_metadata?: Json | null
+          provider_subscription_id?: string | null
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
@@ -4823,7 +5479,10 @@ export type Database = {
           current_period_start?: string
           end_date?: string
           ended_at?: string | null
+          payment_provider?: string
           plan_id?: number
+          provider_metadata?: Json | null
+          provider_subscription_id?: string | null
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
@@ -4983,6 +5642,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tenant_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_payment_wallets: {
+        Row: {
+          created_at: string
+          credentials: Json
+          id: string
+          provider: string
+          tenant_id: string
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          provider: string
+          tenant_id: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_payment_wallets_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5184,8 +5881,16 @@ export type Database = {
           amount: number
           currency: Database["public"]["Enums"]["currency_type"] | null
           payment_method: string | null
+          payment_provider: string | null
           plan_id: number | null
           product_id: number | null
+          provider_charge_id: string | null
+          provider_metadata: Json | null
+          provider_subscription_id: string | null
+          settlement_base: number | null
+          settlement_currency: string | null
+          settlement_mint: string | null
+          settlement_sol_usd: number | null
           status: Database["public"]["Enums"]["transaction_status"]
           stripe_payment_intent_id: string | null
           tenant_id: string
@@ -5197,8 +5902,16 @@ export type Database = {
           amount: number
           currency?: Database["public"]["Enums"]["currency_type"] | null
           payment_method?: string | null
+          payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
+          provider_charge_id?: string | null
+          provider_metadata?: Json | null
+          provider_subscription_id?: string | null
+          settlement_base?: number | null
+          settlement_currency?: string | null
+          settlement_mint?: string | null
+          settlement_sol_usd?: number | null
           status?: Database["public"]["Enums"]["transaction_status"]
           stripe_payment_intent_id?: string | null
           tenant_id?: string
@@ -5210,8 +5923,16 @@ export type Database = {
           amount?: number
           currency?: Database["public"]["Enums"]["currency_type"] | null
           payment_method?: string | null
+          payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
+          provider_charge_id?: string | null
+          provider_metadata?: Json | null
+          provider_subscription_id?: string | null
+          settlement_base?: number | null
+          settlement_currency?: string | null
+          settlement_mint?: string | null
+          settlement_sol_usd?: number | null
           status?: Database["public"]["Enums"]["transaction_status"]
           stripe_payment_intent_id?: string | null
           tenant_id?: string
@@ -5317,6 +6038,39 @@ export type Database = {
           id?: number
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          error: string | null
+          event_type: string | null
+          id: string
+          payload: Json
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+        }
+        Insert: {
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider: string
+          provider_event_id: string
+          received_at?: string
+        }
+        Update: {
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
         }
         Relationships: []
       }
@@ -5508,18 +6262,58 @@ export type Database = {
             Returns: undefined
           }
       create_school: { Args: { _name: string; _slug: string }; Returns: string }
+      create_student_question_notification: {
+        Args: { _context?: string; _course_id: number; _message: string }
+        Returns: number
+      }
       create_transaction_for_renewal: {
         Args: { pln_id: number; sub_id: number; usr_id: string }
         Returns: number
       }
+      elo_apply_match: {
+        Args: {
+          _course_id: number
+          _item_id: number
+          _item_topic: string
+          _item_type: string
+          _score: number
+          _student_topic: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      elo_expected: { Args: { a: number; b: number }; Returns: number }
+      elo_k: { Args: { attempts: number }; Returns: number }
       enroll_user: {
         Args: { _product_id: number; _user_id: string }
+        Returns: undefined
+      }
+      extend_subscription_period: {
+        Args: {
+          _new_period_end: string
+          _provider: string
+          _provider_subscription_id: string
+        }
         Returns: undefined
       }
       generate_verification_code: { Args: never; Returns: string }
       get_completed_courses_count: {
         Args: { _user_id: string }
         Returns: number
+      }
+      get_daily_digest_candidates: {
+        Args: never
+        Returns: {
+          current_streak: number
+          due_cards: number
+          email: string
+          full_name: string
+          goals_pending: number
+          last_activity_date: string
+          tenant_id: string
+          user_id: string
+        }[]
       }
       get_exam_submissions: {
         Args: { p_exam_id: number }
@@ -5537,13 +6331,22 @@ export type Database = {
         }[]
       }
       get_gamification_features: { Args: { _tenant_id: string }; Returns: Json }
+      get_league_standings: { Args: never; Returns: Json }
       get_likes_received_count: { Args: { _user_id: string }; Returns: number }
       get_plan_features: { Args: { _tenant_id: string }; Returns: Json }
+      get_platform_revenue: {
+        Args: { _end?: string; _start?: string }
+        Returns: Json
+      }
       get_platform_stats: { Args: never; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       get_tenant_role: { Args: never; Returns: string }
       grant_free_entitlement: {
         Args: { _course_id: number; _user_id: string }
+        Returns: undefined
+      }
+      grant_free_subscription: {
+        Args: { _plan_id: number; _user_id: string }
         Returns: undefined
       }
       handle_manual_subscription_expiry: { Args: never; Returns: undefined }
@@ -5611,6 +6414,11 @@ export type Database = {
         Args: { _template_id: number; _version_number: number }
         Returns: undefined
       }
+      rollover_all_leagues: { Args: { _week_start?: string }; Returns: number }
+      rollover_leagues: {
+        Args: { _tenant_id: string; _week_start?: string }
+        Returns: number
+      }
       save_exam_feedback: {
         Args: {
           p_ai_model?: string
@@ -5625,10 +6433,26 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_product_creation_wizard: {
+        Args: {
+          _author_id: string
+          _course: Json
+          _existing_course_id: number
+          _intent: string
+          _pricing_mode: string
+          _product: Json
+          _product_id: number
+          _source_mode: string
+          _steps: Json
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       self_enroll_subscription_course: {
         Args: { _course_id: number }
         Returns: undefined
       }
+      set_league_opt_out: { Args: { _opt_out: boolean }; Returns: undefined }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }
         Returns: undefined
@@ -5828,6 +6652,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       ai_sender_type: [
@@ -5889,3 +6716,4 @@ export const Constants = {
     },
   },
 } as const
+

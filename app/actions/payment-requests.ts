@@ -9,10 +9,66 @@ import { revalidatePath } from 'next/cache'
 export interface PaymentRequestFormData {
   productId?: number
   planId?: number
-  contactName: string
-  contactEmail: string
+  /** Optional fallback only — identity is derived from the authenticated user. */
+  contactName?: string
+  /** Optional fallback only — identity is derived from the authenticated user. */
+  contactEmail?: string
   contactPhone?: string
   message?: string
+}
+
+/**
+ * Best-effort in-app notification to a student about a payment-request status
+ * change. Mirrors the fan-out shape used by app/actions/admin/notifications.ts:
+ * one `notifications` row (tenant-scoped) + one `user_notifications` delivery
+ * row. Never throws — notification failure must not fail the caller.
+ */
+/** Resolve a human item name from a request row with product/plan embeds. */
+type RequestWithItemEmbeds = {
+  product?: { name?: string | null } | { name?: string | null }[] | null
+  plan?: { plan_name?: string | null } | { plan_name?: string | null }[] | null
+}
+function itemNameFromRequest(request: RequestWithItemEmbeds | null): string {
+  const product = Array.isArray(request?.product) ? request.product[0] : request?.product
+  const plan = Array.isArray(request?.plan) ? request.plan[0] : request?.plan
+  return product?.name || plan?.plan_name || 'your purchase'
+}
+
+async function notifyPaymentRequestStatus(params: {
+  adminClient: ReturnType<typeof createAdminClient>
+  tenantId: string
+  studentUserId: string
+  createdBy: string
+  itemName: string
+  status: string
+}) {
+  const { adminClient, tenantId, studentUserId, createdBy, itemName, status } = params
+  try {
+    const { data: notification, error } = await adminClient
+      .from('notifications')
+      .insert({
+        title: 'Payment request update',
+        content: `Your payment request for ${itemName} is now ${status}`,
+        notification_type: 'info',
+        priority: 'normal',
+        target_type: 'user',
+        target_user_ids: [studentUserId],
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        created_by: createdBy,
+        tenant_id: tenantId,
+      })
+      .select('id')
+      .single()
+
+    if (error || !notification) return
+
+    await adminClient
+      .from('user_notifications')
+      .insert({ notification_id: notification.id, user_id: studentUserId })
+  } catch (err) {
+    console.error('Failed to send payment-request notification:', err)
+  }
 }
 
 export interface PaymentInstructionsData {
@@ -38,6 +94,19 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
   if (!data.productId && !data.planId) {
     throw new Error('Must provide either productId or planId')
   }
+
+  // Derive identity from the authenticated user — do NOT trust client-sent
+  // name/email. Client values are used only as a fallback if profile/auth
+  // data is missing.
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .single()
+
+  const contactName = profile?.full_name?.trim() || data.contactName?.trim() || ''
+  const contactEmail = user?.email?.trim() || data.contactEmail?.trim() || ''
 
   let paymentAmount: number
   let paymentCurrency: string
@@ -85,8 +154,8 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
       user_id: userId,
       product_id: data.productId || null,
       plan_id: data.planId || null,
-      contact_name: data.contactName,
-      contact_email: data.contactEmail,
+      contact_name: contactName,
+      contact_email: contactEmail,
       contact_phone: data.contactPhone || null,
       message: data.message || null,
       status: 'pending',
@@ -126,7 +195,7 @@ export async function sendPaymentInstructions(
   // Verify request belongs to tenant
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, status, tenant_id')
+    .select('request_id, status, tenant_id, user_id, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
@@ -159,6 +228,15 @@ export async function sendPaymentInstructions(
     throw new Error('Failed to send payment instructions')
   }
 
+  await notifyPaymentRequestStatus({
+    adminClient: createAdminClient(),
+    tenantId: request.tenant_id,
+    studentUserId: request.user_id,
+    createdBy: userId,
+    itemName: itemNameFromRequest(request),
+    status: 'awaiting payment',
+  })
+
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
 
@@ -182,7 +260,7 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
   // Verify request belongs to tenant
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, status, tenant_id')
+    .select('request_id, status, tenant_id, user_id, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
@@ -211,6 +289,15 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
     console.error('Failed to confirm payment:', error)
     throw new Error('Failed to confirm payment')
   }
+
+  await notifyPaymentRequestStatus({
+    adminClient: createAdminClient(),
+    tenantId: request.tenant_id,
+    studentUserId: request.user_id,
+    createdBy: userId,
+    itemName: itemNameFromRequest(request),
+    status: 'payment received',
+  })
 
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
@@ -289,6 +376,15 @@ export async function completeAndEnroll(requestId: number) {
     console.error('Failed to complete payment request:', updateError)
     throw new Error('Failed to complete payment request')
   }
+
+  await notifyPaymentRequestStatus({
+    adminClient,
+    tenantId: request.tenant_id,
+    studentUserId: request.user_id,
+    createdBy: userId,
+    itemName: itemNameFromRequest(request),
+    status: 'completed — you now have access',
+  })
 
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
@@ -545,7 +641,7 @@ export async function cancelPaymentRequest(requestId: number, reason?: string) {
   // Get request
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, user_id, status, tenant_id')
+    .select('request_id, user_id, status, tenant_id, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
@@ -577,6 +673,18 @@ export async function cancelPaymentRequest(requestId: number, reason?: string) {
   if (error) {
     console.error('Failed to cancel payment request:', error)
     throw new Error('Failed to cancel payment request')
+  }
+
+  // Notify the student only when an admin cancelled (not their own cancel).
+  if ((role === 'admin' || superAdmin) && request.user_id !== userId) {
+    await notifyPaymentRequestStatus({
+      adminClient: createAdminClient(),
+      tenantId: request.tenant_id,
+      studentUserId: request.user_id,
+      createdBy: userId,
+      itemName: itemNameFromRequest(request),
+      status: 'cancelled',
+    })
   }
 
   revalidatePath('/dashboard/admin/payment-requests')
