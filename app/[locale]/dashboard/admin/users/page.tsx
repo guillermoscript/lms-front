@@ -31,14 +31,14 @@ export default async function AdminUsersPage() {
     .eq('tenant_id', tenantId)
     .eq('status', 'active')
 
-  const memberUserIds = tenantMembers?.map((m) => m.user_id) || []
+  const memberUserIds = [...new Set((tenantMembers ?? []).map((m) => m.user_id).filter(Boolean))]
 
   // Parallelize: profiles, enrollments, and joinUrl are independent
   const adminClient = createAdminClient()
   const [{ data: rawProfiles }, { data: enrollments }, joinUrl] = await Promise.all([
     supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, created_at, deactivated_at')
       .in('id', memberUserIds.length > 0 ? memberUserIds : ['00000000-0000-0000-0000-000000000000'])
       .order('created_at', { ascending: false }),
     supabase

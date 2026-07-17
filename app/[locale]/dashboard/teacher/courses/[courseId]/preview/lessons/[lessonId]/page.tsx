@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { LessonContent } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content'
+import { serializeLessonMdx } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/serialize-lesson'
 import { IconMenu2, IconSparkles, IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
+import { TaskInstructions } from '@/components/student/task-instructions'
 import { PreviewLessonSidebar } from './preview-lesson-sidebar'
 import Link from 'next/link'
 
@@ -131,7 +133,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
               <LessonContent
-                content={lesson.content}
+                mdx={await serializeLessonMdx(lesson.content)}
                 videoUrl={lesson.video_url}
                 embedCode={lesson.embed_code}
               />
@@ -157,9 +159,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-2">
                           {t('currentTask')}
                         </h4>
-                        <p className="text-sm text-foreground leading-relaxed">
-                          {aiTask.task_instructions}
-                        </p>
+                        <TaskInstructions text={aiTask.task_instructions} />
                       </div>
                     </div>
                   </div>

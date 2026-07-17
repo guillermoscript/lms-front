@@ -8,6 +8,11 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isSuperAdmin } from "@/lib/supabase/get-user-role"
 import { getSessionUser } from "@/lib/supabase/tenant"
 import { redirect } from "next/navigation"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 async function PlatformSidebarWithCount() {
   const adminClient = createAdminClient()

@@ -55,6 +55,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
     const brandName = brandingOverrides.site_name || tenant?.name || t('brand');
     const logoUrl = brandingOverrides.logo_url || tenant?.logo_url;
     const logoColor = brandingOverrides.primary_color || tenant?.primary_color || '#3B82F6';
+    const platformLogo = '/brand/logo-mark.svg';
 
     return (
         <nav className="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
@@ -65,6 +66,8 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                     <Link href="/" className="flex items-center space-x-2">
                         {logoUrl ? (
                             <img src={logoUrl} alt={brandName} className="w-8 h-8 rounded-lg object-cover" />
+                        ) : isMainPlatform ? (
+                            <img src={platformLogo} alt={brandName} className="w-8 h-8" />
                         ) : (
                             <div
                                 className="w-8 h-8 rounded-lg flex items-center justify-center"

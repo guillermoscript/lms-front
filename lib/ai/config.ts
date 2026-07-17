@@ -12,3 +12,5 @@ export const AI_MODELS = {
     grader: openai('gpt-4o-mini'),
     aristotle: openai('gpt-4o-mini'),
 };
+
+export const DEFAULT_PASSING_SCORE = 70;

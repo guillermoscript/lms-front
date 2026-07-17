@@ -1,16 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 
 const STORAGE_BUCKET = 'exercise-media'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
+  // Auth — cookie session (web) or Bearer token (mobile), server-verified
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new Response('Unauthorized', { status: 401 })
+  const { user, tenantId } = auth
   const adminClient = createAdminClient()
-  const tenantId = await getCurrentTenantId()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
 
   let submissionId: number
   try {

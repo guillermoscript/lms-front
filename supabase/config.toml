@@ -147,7 +147,7 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3005"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["https://127.0.0.1:3000"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
@@ -181,9 +181,11 @@ sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
-token_refresh = 150
+token_refresh = 1000
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+# Raised for local E2E: the Playwright suite signs in once per test (~260 logins), which
+# trips the default limit of 30/5min and cascades into auth timeouts under parallel workers.
+sign_in_sign_ups = 1000
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -345,7 +347,7 @@ enabled = false
 [auth.oauth_server]
 # Enable OAuth server functionality
 enabled = true
-# Path for OAuth consent flow UI
+# Path for OAuth consent flow UI (Next.js app hosts it at /oauth/consent)
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = true

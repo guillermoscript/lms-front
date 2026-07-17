@@ -1,405 +1,145 @@
 # LMS MCP Server
 
-A secure Model Context Protocol (MCP) server that provides AI assistants with controlled access to your Learning Management System. Designed for integration with Claude and other MCP-compatible AI tools.
+Course-management tools, resources, prompts, and interactive widgets for the
+multi-tenant LMS, exposed to AI agents over the Model Context Protocol.
 
-## 🔒 Security Architecture
+Built with **[mcp-use](https://docs.mcp-use.com/typescript/server)** + **MCP Apps**
+(OpenAI Apps SDK widgets). Replaces the previous `@modelcontextprotocol/sdk`
+implementation.
 
-This MCP server uses an **HTTP Proxy Authentication** model for maximum security:
+## Architecture
 
-- **No credential storage**: Users authenticate through your existing LMS session (cookies)
-- **Per-user attribution**: All actions are tracked and logged per user
-- **Role-based access**: Only teachers and admins can use MCP tools
-- **Rate limiting**: 100 requests/minute per user
-- **Audit logging**: Complete compliance trail in database
-- **Shared secret validation**: Ensures requests come from your authenticated proxy
+- **Auth:** Supabase OAuth 2.1 (`oauthSupabaseProvider`). Clients authenticate
+  against Supabase; this server only verifies the resulting JWT.
+- **Data access:** every tool runs queries with a request-scoped Supabase client
+  carrying the caller's access token, so **Postgres RLS enforces tenant
+  isolation and ownership**. The server holds no elevated data privileges.
+- **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
+  the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
+  tools; `student` gets only the 18 self-scoped learning/practice tools (list
+  hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
+- **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
+  via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
-### How It Works
+## What it exposes
 
-```
-User Browser → Claude Web (claude.ai)
-    ↓ (Session cookies)
-Next.js API Proxy (/api/mcp)
-    ↓ (Validates auth + role + rate limit)
-    ↓ (Injects X-User-ID, X-User-Role, X-MCP-Secret headers)
-MCP HTTP Server (localhost:3001)
-    ↓ (Validates secret + enforces RLS per user)
-Supabase Database
-```
+- **75 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+  student learning (`lms_my_learning`, `lms_view_lesson`,
+  `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
+  `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
+  with attempt history, `lms_complete_exercise` for host-graded text +
+  real_time_conversation exercises, `lms_practice_quiz`,
+  `lms_record_practice_attempt`, `lms_get_my_weak_spots`,
+  `lms_get_tutor_config`), course ingest (`lms_get_course_content` paginated
+  bulk pull, `lms_search_content` snippet search over entitled courses),
+  mock exams (`lms_get_mock_exam_source` — missed questions + rubrics from
+  the caller's own submitted exams only), shared tutor memory
+  (`lms_get_tutor_history`, `lms_record_tutor_session` — same
+  `aristotle_sessions` table the in-app tutor uses), self-enrollment
+  (`lms_enroll_in_course` via the `self_enroll_subscription_course` RPC),
+  exam readiness (`lms_get_exam_readiness` — per-topic mastery + weighted
+  readiness score from the caller's own history), and the teacher coaching
+  loop (`lms_get_confusion_hotspots` — where students collectively struggle,
+  ranked by severity; `lms_duplicate_exercise` — copy an exercise as a draft
+  variation for remediation), flashcards with SM-2 spaced repetition
+  (`lms_create_review_cards`, `lms_get_due_reviews`, `lms_grade_review` —
+  scheduling math runs server-side), weekly study plans (`lms_set_study_plan`
+  replace-per-week, `lms_get_study_plan` with next-lesson + due-card context,
+  `lms_complete_study_goal`), and consented teacher escalation
+  (`lms_ask_teacher` — notifies the course's teacher via a SECURITY DEFINER
+  RPC, enrollment-validated and rate-limited to 3/day/course).
+- **17 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
+  "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
+  drill into a submission), `lesson-preview` (← `lms_get_lesson`),
+  `artifact-sandbox`, `submission-grader`, `student-progress-roster`,
+  `school-overview`; student: `my-learning` (← `lms_my_learning`),
+  `lesson-viewer` (← `lms_view_lesson`, mark-complete button calls
+  `lms_complete_lesson`, "I don't understand" button hands off to the tutor),
+  `my-exam-results` (← `lms_my_exam_results`),
+  `gamification-profile` (← `lms_my_gamification`), `course-catalog`
+  (← `lms_browse_catalog`), `practice-player` (← `lms_practice_quiz`:
+  answers in-widget, grades closed types locally, records via
+  `lms_record_practice_attempt`, free-text answers go back to the host),
+  `exam-readiness` (← `lms_get_exam_readiness`: readiness dial, component
+  breakdown, per-topic mastery bars with "Practice this" launch buttons),
+  `flashcards` (← `lms_get_due_reviews`: flip-card review session,
+  Again/Hard/Good/Easy self-rating → `lms_grade_review`, end-of-session
+  summary with a drill-my-misses action), `study-plan`
+  (← `lms_get_study_plan`: weekly progress ring, kind-grouped goal checklist
+  with check-off → `lms_complete_study_goal`, plan-next-week action).
+- **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
+- **12 prompts:** create-course-outline, generate-lesson-content,
+  create-exam-questions, review-course, generate-remediation-exercises,
+  socratic-tutor, drill-coach, explain-my-mistake, exam-prep-session,
+  daily-review, conversation-practice, mock-exam.
 
-**Key Benefits:**
-- Users never enter credentials into Claude or external tools
-- Your LMS session security is preserved
-- Supabase RLS policies enforce data access per user
-- Full audit trail for compliance
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- Running LMS instance with Supabase
-- `.env` file configured (see Setup)
-
-### 1. Install Dependencies
+## Develop
 
 ```bash
-cd mcp-server
+cp .env.example .env   # fill in Supabase OAuth values
 npm install
+npm run dev            # server + inspector at http://localhost:3000/inspector
 ```
 
-### 2. Configure Environment
-
-Copy the example environment file:
+Verify a widget without the UI:
 
 ```bash
-cp .env.example .env
+npx mcp-use client connect dev http://localhost:3000/mcp
+npx mcp-use client dev tools call lms_list_courses --screenshot
 ```
 
-Edit `.env` and set:
+## Build & run
 
 ```bash
-# Supabase Configuration
-SUPABASE_URL=your-project-url
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# HTTP Proxy Mode (Recommended)
-MCP_PROXY_SECRET=your-shared-secret-here
-MCP_SERVER_PORT=3001
-MCP_SERVER_HOST=127.0.0.1
+npm run build          # mcp-use build (compiles widgets + server to dist/)
+npm start              # mcp-use start
+# or: npm run deploy
+docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-mcp-server
 ```
 
-**Important**: The `MCP_PROXY_SECRET` must match the value in your main LMS `.env.local` file.
+## Supabase OAuth setup (one-time, in the dashboard)
 
-### 3. Build the Server
+1. **Authentication → OAuth Server** — enable the OAuth 2.1 server and
+   **Allow Dynamic OAuth Apps** (so MCP clients like Claude can self-register).
+2. Set the **consent screen URL**:
+   - Standalone/local: `<MCP_SERVER_URL>/auth/consent` (this server hosts that
+     route — see `src/auth-routes.ts`).
+   - Production behind the Next.js proxy: `https://<platform-domain>/oauth/consent`
+     (the Next.js app's consent page — real login UI + existing session reuse).
+3. **Authentication → Sign In / Providers** — enable at least one method
+   (email/password, magic link, or anonymous for demos).
+4. Copy the **publishable key** into `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`.
 
-```bash
-npm run build
-```
+## Connect from Claude (custom connector)
 
-### 4. Start the Server
+Claude (claude.ai or desktop) → **Settings → Connectors → Add custom connector**
+and paste the MCP URL — OAuth discovery, sign-in, and consent are automatic:
 
-```bash
-npm run start:http
-```
+- Standalone/local: `http://localhost:3000/mcp` (desktop app)
+- Production: `https://<tenant>.<platform-domain>/api/mcp` (the Next.js proxy
+  forwards to this server; `/.well-known/oauth-protected-resource` advertises
+  Supabase as the authorization server)
 
-You should see:
+Teachers/admins get management tools, students get self-scoped learning tools
+(`src/tool-policy.ts`). The in-app connection instructions live at
+Dashboard → API Tokens (`components/dashboard/api-tokens-page.tsx`).
 
-```
-╔════════════════════════════════════════════╗
-║       MCP Server - HTTP Proxy Mode         ║
-╠════════════════════════════════════════════╣
-║ Port:   3001                               ║
-║ Mode:   HTTP Proxy Authentication          ║
-║ Status: Ready for connections              ║
-╚════════════════════════════════════════════╝
+See [docs](https://docs.mcp-use.com/typescript/server) and the
+`mcp-apps-builder` skill (bundled under `.claude/skills/`) for details.
 
-Server capabilities:
-✓ 27 tools available
-✓ 3 resources available
-✓ 4 prompts available
-```
-
-### 5. Connect Claude
-
-See the comprehensive setup guide: [docs/MCP_SETUP.md](../docs/MCP_SETUP.md#connecting-claude-web)
-
-## 📚 Available Capabilities
-
-### Tools (27)
-
-**Course Management:**
-- `list_courses` - List all courses with filtering
-- `get_course` - Get detailed course information
-- `create_course` - Create a new course
-- `update_course` - Update course details
-- `delete_course` - Delete a course
-- `publish_course` - Publish a draft course
-
-**Lesson Management:**
-- `list_lessons` - List lessons for a course
-- `get_lesson` - Get lesson content and metadata
-- `create_lesson` - Create a new lesson
-- `update_lesson` - Update lesson content
-- `delete_lesson` - Delete a lesson
-- `reorder_lessons` - Change lesson sequence
-
-**Exercise Management:**
-- `list_exercises` - List exercises for a lesson
-- `get_exercise` - Get exercise details
-- `create_exercise` - Create a new exercise
-- `update_exercise` - Update exercise content
-- `delete_exercise` - Delete an exercise
-
-**Exam Management:**
-- `list_exams` - List all exams
-- `get_exam` - Get exam with questions
-- `create_exam` - Create a new exam
-- `update_exam` - Update exam details
-- `delete_exam` - Delete an exam
-- `create_exam_question` - Add question to exam
-- `update_exam_question` - Update exam question
-- `delete_exam_question` - Remove exam question
-
-**Student Data:**
-- `list_students` - List students with progress
-- `get_student_progress` - Get detailed student progress
-- `list_exam_submissions` - View exam submissions with scores
-
-### Resources (3)
-
-- `course://{id}` - Access course details
-- `lesson://{id}` - Access lesson content
-- `exam://{id}` - Access exam structure
-
-### Prompts (4)
-
-- `create-course` - Interactive course creation wizard
-- `create-lesson` - Guided lesson creation with MDX
-- `create-exam` - Exam builder with question templates
-- `analyze-progress` - Student progress analysis
-
-## 🐳 Docker Deployment
-
-### Build Image
-
-```bash
-npm run docker:build
-```
-
-### Run Container
-
-```bash
-npm run docker:run
-```
-
-### Stop Container
-
-```bash
-npm run docker:stop
-```
-
-### Manual Docker Commands
-
-```bash
-# Build
-docker build -t lms-mcp-server .
-
-# Run with environment file
-docker run -d \
-  --name lms-mcp-server \
-  -p 3001:3001 \
-  --env-file .env \
-  lms-mcp-server
-
-# View logs
-docker logs -f lms-mcp-server
-
-# Stop
-docker stop lms-mcp-server
-docker rm lms-mcp-server
-```
-
-## 🔧 Development
-
-### Project Structure
+## Layout
 
 ```
-mcp-server/
-├── src/
-│   ├── index.ts           # Stdio mode entry (deprecated)
-│   ├── http-server.ts     # HTTP server with proxy auth
-│   ├── auth.ts            # Authentication manager
-│   ├── tools/             # Tool implementations
-│   ├── resources/         # Resource handlers
-│   └── prompts/           # Prompt templates
-├── build/                 # Compiled output
-├── .env                   # Environment config (git-ignored)
-├── .env.example           # Template
-├── package.json
-└── tsconfig.json
+index.ts              # server: oauth, audit, registrations
+src/env.ts            # env resolution
+src/supabase.ts       # request-scoped (RLS) + service-role clients
+src/session.ts        # LmsSession — identity, tenant, ownership guards
+src/format.ts         # response helpers (ok/okText/errorResult) + pagination
+src/audit.ts          # mcp:tools/call audit middleware
+src/auth-routes.ts    # Supabase OAuth consent UI route
+src/tools/*.ts        # courses, lessons, exercises, exams, analytics
+src/resources.ts      # course/lesson/exam resource templates
+src/prompts.ts        # prompt templates
+resources/<widget>/   # React widgets (MCP Apps)
 ```
-
-### NPM Scripts
-
-```bash
-npm run build           # Compile TypeScript
-npm run start:http      # Start HTTP server (recommended)
-npm run start:stdio     # Start stdio mode (legacy)
-npm run docker:build    # Build Docker image
-npm run docker:run      # Run Docker container
-npm run docker:stop     # Stop and remove container
-```
-
-### Adding New Tools
-
-1. Create tool file in `src/tools/your-tool.ts`:
-
-```typescript
-import { AuthManager } from '../auth'
-
-export async function yourTool(auth: AuthManager, args: any) {
-  const supabase = auth.getSupabaseClient()
-  
-  // Log the action for audit trail
-  await auth.logAction('tool', 'your_tool', true, 0, args)
-  
-  // Implement your logic
-  const { data, error } = await supabase
-    .from('your_table')
-    .select('*')
-  
-  if (error) throw error
-  return data
-}
-```
-
-2. Register in `src/http-server.ts`:
-
-```typescript
-server.tool('your-tool', 'Description', { /* schema */ }, async (args) => {
-  return await yourTool(auth, args)
-})
-```
-
-3. Rebuild and restart:
-
-```bash
-npm run build
-npm run start:http
-```
-
-## 🔍 Monitoring
-
-### Check Server Health
-
-```bash
-curl http://localhost:3001/health
-```
-
-### View Audit Logs
-
-Connect to your Supabase database and query:
-
-```sql
--- Recent actions
-SELECT * FROM mcp_audit_log
-ORDER BY created_at DESC
-LIMIT 50;
-
--- Actions by user
-SELECT * FROM mcp_audit_log
-WHERE user_id = 'user-uuid-here'
-ORDER BY created_at DESC;
-
--- Failed actions
-SELECT * FROM mcp_audit_log
-WHERE success = false
-ORDER BY created_at DESC;
-
--- Summary statistics
-SELECT * FROM mcp_audit_summary;
-```
-
-### Rate Limiting
-
-Rate limits are enforced at the API proxy level:
-- **Limit**: 100 requests per minute per user
-- **Scope**: Per user_id
-- **Response**: HTTP 429 with Retry-After header
-
-## 🐛 Troubleshooting
-
-### Server won't start
-
-**Problem**: Port already in use
-
-```bash
-# Find process using port 3001
-lsof -i :3001
-
-# Kill the process
-kill -9 <PID>
-```
-
-**Problem**: Missing environment variables
-
-```bash
-# Verify .env file exists
-cat .env
-
-# Check required variables
-grep -E "SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|MCP_PROXY_SECRET" .env
-```
-
-### Claude can't connect
-
-**Problem**: MCP server URL incorrect
-
-- Verify in Claude settings: `http://localhost:3001/mcp` (NOT just `http://localhost:3001`)
-- Ensure server is running: `curl http://localhost:3001/health`
-
-**Problem**: Authentication failing
-
-- Check shared secret matches in both `.env` files:
-  - `mcp-server/.env` → `MCP_PROXY_SECRET`
-  - `.env.local` → `MCP_PROXY_SECRET`
-- Verify you're logged into the LMS in your browser
-- Check role: Only teachers and admins can use MCP tools
-
-**Problem**: Rate limited
-
-- Wait 60 seconds and try again
-- Check recent activity: Query `mcp_audit_log` for your user_id
-- Contact admin if limit is too restrictive
-
-### Database errors
-
-**Problem**: RLS policy denying access
-
-- This is expected behavior - RLS enforces data access per user
-- Teachers can only access their own courses
-- Admins have broader access
-- Check your role: `SELECT * FROM user_roles WHERE user_id = 'your-id'`
-
-**Problem**: Audit log table doesn't exist
-
-```bash
-# Apply migration from project root
-cd ..
-supabase db push
-```
-
-## 📖 Documentation
-
-- **[MCP Setup Guide](../docs/MCP_SETUP.md)** - Comprehensive setup and usage
-- **[Database Schema](../docs/DATABASE_SCHEMA.md)** - LMS database structure
-- **[Auth Guide](../docs/AUTH.md)** - Authentication and authorization
-- **[AI Agent Guide](../docs/AI_AGENT_GUIDE.md)** - Development patterns
-
-## 🔐 Security Best Practices
-
-1. **Never share your service role key** - It bypasses RLS
-2. **Keep shared secret secure** - Treat it like a password
-3. **Use HTTPS in production** - Encrypt traffic between proxy and MCP server
-4. **Monitor audit logs** - Review for suspicious activity
-5. **Limit network access** - MCP server binds to 127.0.0.1 by default
-6. **Regular updates** - Keep dependencies updated
-
-## 📝 License
-
-This MCP server is part of the LMS V2 project. See the main project LICENSE file for details.
-
-## 🤝 Contributing
-
-This server is actively developed as part of the LMS V2 rebuild. For questions or contributions, see the main project repository.
-
-## 🆘 Support
-
-- Check troubleshooting section above
-- Review [docs/MCP_SETUP.md](../docs/MCP_SETUP.md)
-- Check audit logs for error details
-- Review server logs for detailed error messages
-
----
-
-**Note**: The legacy stdio mode (direct authentication) is deprecated. All new deployments should use HTTP proxy mode for security and auditability.

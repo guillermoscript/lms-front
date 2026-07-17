@@ -1,31 +1,30 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { fetchTenantLesson } from '@/lib/ai/chat-helpers'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const bodySchema = z.object({
+    lessonId: z.coerce.number().int().positive(),
+})
 
 export async function POST(req: Request) {
     try {
-        const supabase = await createClient()
-        const tenantId = await getCurrentTenantId()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
+        const auth = await getApiAuthContext(req)
+        if (!auth) {
             return new NextResponse('Unauthorized', { status: 401 })
         }
+        const { supabase, user, tenantId } = auth
 
-        const { lessonId } = await req.json()
-
-        if (!lessonId) {
-            return new NextResponse('Lesson ID is required', { status: 400 })
+        const parsed = bodySchema.safeParse(await req.json().catch(() => null))
+        if (!parsed.success) {
+            return new NextResponse('Invalid request body', { status: 400 })
         }
+        const { lessonId } = parsed.data
 
         // Validate lesson belongs to tenant
-        const { data: lesson } = await supabase
-            .from('lessons')
-            .select('id, course:courses!inner(tenant_id)')
-            .eq('id', lessonId)
-            .single()
+        const lesson = await fetchTenantLesson(supabase, lessonId, tenantId, 'id, course:courses!inner(tenant_id)')
 
-        if (!lesson || (lesson as any).course?.tenant_id !== tenantId) {
+        if (!lesson) {
             return new NextResponse('Lesson not found', { status: 404 })
         }
 
@@ -38,7 +37,7 @@ export async function POST(req: Request) {
 
         if (messagesError) {
             console.error('Error deleting messages:', messagesError)
-            return new NextResponse(messagesError.message, { status: 500 })
+            return new NextResponse('Failed to restart', { status: 500 })
         }
 
         // Also delete lesson completion to allow retrying

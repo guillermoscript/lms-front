@@ -121,6 +121,11 @@ function blockToMdx(block: Block): string {
       return `<Ordering items={JSON.parse('${itemsJson}')}${explanation} />`
     }
 
+    case 'checkpoint':
+      return block.checkpointId !== null
+        ? `<LessonCheckpoint checkpointId="${block.checkpointId}" />`
+        : ''
+
     default:
       return ''
   }
@@ -463,6 +468,18 @@ export function mdxToBlocks(mdx: string): Block[] {
         type: 'ordering',
         items,
         explanation: explanationMatch?.[1],
+      })
+      i++
+      continue
+    }
+
+    // LessonCheckpoint component
+    if (line.includes('<LessonCheckpoint')) {
+      const idMatch = line.match(/checkpointId="(\d+)"/)
+      blocks.push({
+        id: nanoid(),
+        type: 'checkpoint',
+        checkpointId: idMatch ? parseInt(idMatch[1], 10) : null,
       })
       i++
       continue

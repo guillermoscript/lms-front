@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next-nprogress-bar'
 import Link from 'next/link'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +18,7 @@ import {
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
 import { toast } from 'sonner'
+import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
 
 interface LessonNavigationProps {
   lessonId: number
@@ -26,6 +28,8 @@ interface LessonNavigationProps {
   nextLessonId?: number
   tenantId: string
   requireSequentialCompletion?: boolean
+  completedCount?: number
+  totalLessons?: number
 }
 
 export function LessonNavigation({
@@ -36,6 +40,8 @@ export function LessonNavigation({
   nextLessonId,
   tenantId,
   requireSequentialCompletion = false,
+  completedCount = 0,
+  totalLessons = 0,
 }: LessonNavigationProps) {
   const t = useTranslations('components.lessonNavigation')
   const tGamification = useTranslations('components.gamification')
@@ -46,8 +52,31 @@ export function LessonNavigation({
   const router = useRouter()
   const supabase = createClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const checkpointsCtx = useCheckpoints()
+
+  const nextBlocked = requireSequentialCompletion && !completed
+  // Only gates going from incomplete → complete; un-completing is always allowed.
+  const checkpointsBlocked = !completed && !!checkpointsCtx && checkpointsCtx.missingRequired > 0
+
+  useHotkey('ArrowLeft', () => {
+    if (prevLessonId) {
+      router.push(`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`)
+    }
+  }, { enabled: !!prevLessonId })
+
+  useHotkey('ArrowRight', () => {
+    if (nextLessonId && !nextBlocked) {
+      router.push(`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`)
+    }
+  }, { enabled: !!nextLessonId && !nextBlocked })
 
   async function handleComplete() {
+    if (checkpointsBlocked) {
+      toast.error(
+        t('checkpointsRequired', { count: checkpointsCtx?.missingRequired ?? 0 })
+      )
+      return
+    }
     setLoading(true)
 
     const { data: { session } } = await supabase.auth.getSession()
@@ -59,6 +88,9 @@ export function LessonNavigation({
     }
 
     if (completed) {
+      // Optimistic: flip immediately, revert on error
+      setCompleted(false)
+
       const { error } = await supabase
         .from('lesson_completions')
         .delete()
@@ -67,33 +99,43 @@ export function LessonNavigation({
 
       if (error) {
         console.error('Failed to uncomplete lesson:', error)
-        toast.error('Failed to update lesson status')
+        toast.error(t('updateFailed'))
+        setCompleted(true)
         setLoading(false)
         return
       }
 
-      setCompleted(false)
       setLoading(false)
       startTransition(() => { router.refresh() })
     } else {
-      const { error } = await supabase.from('lesson_completions').insert({
-        lesson_id: lessonId,
-        user_id: user.id,
-      })
-
-      if (error) {
-        console.error('Failed to complete lesson:', error)
-        toast.error('Failed to mark lesson as complete')
-        setLoading(false)
-        return
-      }
-
+      // Optimistic: celebrate immediately, revert on error
       setCompleted(true)
-      setLoading(false)
+      const isCourseNowComplete = totalLessons > 0 && completedCount + 1 >= totalLessons
+
       toast.success(tGamification('xpAwarded.lesson_completion'))
 
-      // Celebrate completion with a subtle confetti burst from the button
-      if (buttonRef.current) {
+      if (isCourseNowComplete) {
+        toast.success(t('courseComplete'), {
+          description: t('courseCompleteDescription'),
+          duration: 8000,
+        })
+        // Full-width celebration for finishing the whole course
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { x: 0.2, y: 0.8 },
+          angle: 60,
+          disableForReducedMotion: true,
+        })
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { x: 0.8, y: 0.8 },
+          angle: 120,
+          disableForReducedMotion: true,
+        })
+      } else if (buttonRef.current) {
+        // Subtle confetti burst from the button
         const rect = buttonRef.current.getBoundingClientRect()
         const x = (rect.left + rect.width / 2) / window.innerWidth
         const y = (rect.top + rect.height / 2) / window.innerHeight
@@ -109,6 +151,21 @@ export function LessonNavigation({
         })
       }
 
+      const { error } = await supabase.from('lesson_completions').insert({
+        lesson_id: lessonId,
+        user_id: user.id,
+      })
+
+      if (error) {
+        console.error('Failed to complete lesson:', error)
+        toast.error(t('completeFailed'))
+        setCompleted(false)
+        setLoading(false)
+        return
+      }
+
+      setLoading(false)
+
       // Check if a certificate was auto-issued after this lesson completion
       const { data: cert } = await supabase
         .from('certificates')
@@ -119,11 +176,11 @@ export function LessonNavigation({
 
       if (cert?.verification_code) {
         setCertificateCode(cert.verification_code)
-        toast.success('Certificate Earned!', {
-          description: 'You have completed all requirements and earned a certificate for this course.',
+        toast.success(t('certificateEarnedTitle'), {
+          description: t('certificateEarnedDescription'),
           duration: 8000,
           action: {
-            label: 'View',
+            label: t('view'),
             onClick: () => router.push(`/verify/${cert.verification_code}`),
           },
         })
@@ -143,34 +200,34 @@ export function LessonNavigation({
     <>
     {certificateCode && (
       <div className="shrink-0 border-t border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 px-3 py-2 sm:px-4 sm:py-3">
-        <div className="flex items-center justify-center gap-3 max-w-4xl mx-auto">
+        <div className="flex items-center justify-center gap-3 max-w-3xl mx-auto">
           <IconCertificate className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-            Certificate earned for this course!
+            {t('certificateBanner')}
           </span>
           <Link href={`/verify/${certificateCode}`}>
             <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold gap-1.5">
               <IconCertificate className="h-3.5 w-3.5" />
-              View
+              {t('view')}
             </Button>
           </Link>
         </div>
       </div>
     )}
-    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3 md:px-6">
-      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-4xl mx-auto">
+    <footer className="shrink-0 border-t bg-card/80 backdrop-blur-sm px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3 md:px-6">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 max-w-3xl mx-auto">
         {/* Previous */}
         <div className="flex-1 flex justify-start">
           {prevLessonId ? (
             <Link href={`/dashboard/student/courses/${courseId}/lessons/${prevLessonId}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" title={`${t('previous')} (←)`} className="gap-1.5 text-muted-foreground hover:text-foreground max-sm:h-10 max-sm:min-w-10">
                 <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('previous')}</span>
               </Button>
             </Link>
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground max-sm:h-10 max-sm:min-w-10">
                 <IconArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('backToCourse')}</span>
               </Button>
@@ -183,11 +240,16 @@ export function LessonNavigation({
           ref={buttonRef}
           onClick={handleComplete}
           data-testid="lesson-complete-toggle"
-          disabled={loading}
+          disabled={loading || checkpointsBlocked}
+          title={
+            checkpointsBlocked
+              ? t('checkpointsRequired', { count: checkpointsCtx?.missingRequired ?? 0 })
+              : undefined
+          }
           variant={completed ? 'secondary' : 'default'}
           size="sm"
           className={cn(
-            'gap-2 px-5 font-semibold transition-all duration-300',
+            'gap-2 px-5 font-semibold transition-all duration-300 max-sm:h-10',
             completed && 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20'
           )}
         >
@@ -206,13 +268,13 @@ export function LessonNavigation({
         <div className="flex-1 flex justify-end">
           {nextLessonId ? (
             requireSequentialCompletion && !completed ? (
-              <Button size="sm" className="gap-1.5" disabled title={t('completeFirst')}>
+              <Button size="sm" className="gap-1.5 max-sm:h-10 max-sm:min-w-10" disabled title={t('completeFirst')}>
                 <span className="hidden sm:inline">{t('next')}</span>
                 <IconArrowRight className="h-4 w-4" />
               </Button>
             ) : (
               <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLessonId}`}>
-                <Button size="sm" className="gap-1.5">
+                <Button size="sm" title={`${t('next')} (→)`} className="gap-1.5 max-sm:h-10 max-sm:min-w-10">
                   <span className="hidden sm:inline">{t('next')}</span>
                   <IconArrowRight className="h-4 w-4" />
                 </Button>
@@ -220,7 +282,7 @@ export function LessonNavigation({
             )
           ) : (
             <Link href={`/dashboard/student/courses/${courseId}`}>
-              <Button size="sm" className="gap-1.5">
+              <Button size="sm" className="gap-1.5 max-sm:h-10 max-sm:min-w-10">
                 <span className="hidden sm:inline">{t('finishCourse')}</span>
                 <IconCheck className="h-4 w-4" />
               </Button>

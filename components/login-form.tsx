@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import {
@@ -23,6 +23,7 @@ import {
   InputGroupAddon,
   InputGroupButton,
 } from '@/components/ui/input-group'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -37,6 +38,9 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
   const [isSocialLoading, setIsSocialLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedNext = searchParams.get('next') ?? searchParams.get('redirectTo')
+  const nextPath = getSafeNextPath(requestedNext, '')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,7 +83,13 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         }
       }
 
-      router.push(`/dashboard/${userRole}`)
+      // Return to where the user came from (e.g. the OAuth consent page) —
+      // relative paths only, so the param can't redirect off-site.
+      if (nextPath) {
+        router.push(nextPath)
+      } else {
+        router.push(`/dashboard/${userRole}`)
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : t('common.error'))
     } finally {
@@ -97,7 +107,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
         },
       })
       if (error) throw error
@@ -203,7 +213,10 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
             </div>
             <div className="mt-4 text-center text-sm">
               {t('noAccount')}{' '}
-              <Link href="/auth/sign-up" className="underline underline-offset-4">
+              <Link
+                href={nextPath ? `/auth/sign-up?next=${encodeURIComponent(nextPath)}` : '/auth/sign-up'}
+                className="underline underline-offset-4"
+              >
                 {t('signup')}
               </Link>
             </div>

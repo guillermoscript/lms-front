@@ -175,13 +175,21 @@ ON CONFLICT (provider, provider_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 4. PROFILES  (global — no tenant_id)
 -- ---------------------------------------------------------------------------
+-- handle_new_user() already created these rows when the auth.users above were
+-- inserted, and it does not set onboarding_completed (so they default to false).
+-- DO UPDATE, not DO NOTHING: with DO NOTHING every value below is silently
+-- discarded, which left admins stuck on the onboarding wizard instead of the
+-- dashboard.
 INSERT INTO profiles (id, full_name, username, onboarding_completed)
 VALUES
   ('a1000000-0000-0000-0000-000000000001', 'Test Student',          'test_student',   false),
   ('a1000000-0000-0000-0000-000000000002', 'School Owner',          'school_owner',   true),
   ('a1000000-0000-0000-0000-000000000003', 'Code Academy Creator',  'ca_creator',     true),
   ('a1000000-0000-0000-0000-000000000004', 'Alice Student',         'alice_student',  false)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  full_name            = EXCLUDED.full_name,
+  username             = EXCLUDED.username,
+  onboarding_completed = EXCLUDED.onboarding_completed;
 
 
 -- ---------------------------------------------------------------------------
@@ -466,7 +474,7 @@ ON CONFLICT (product_id, course_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 14. ENROLLMENTS
 -- student@e2etest.com enrolled in Default School courses
--- alice@student.com   has NO enrollments — tests plan purchase → self-enroll flow
+-- alice@student.com enrolled in Python for Beginners (for mobile app testing)
 -- Note: product_id/subscription_id were dropped in phase3_drop_legacy_enrollment_columns
 -- Access tracking moved to the entitlements table (see section 14b below)
 -- ---------------------------------------------------------------------------
@@ -486,8 +494,18 @@ VALUES
   1002,                                     -- Web Dev Basics
   'active',
   '00000000-0000-0000-0000-000000000001'
+),
+(
+  2001,
+  'a1000000-0000-0000-0000-000000000004',  -- alice@student.com
+  2001,                                     -- Python for Beginners
+  'active',
+  '00000000-0000-0000-0000-000000000002'
 )
-ON CONFLICT (enrollment_id) DO NOTHING;
+-- Bare DO NOTHING: covers both the enrollment_id PK and the
+-- (user_id, course_id) unique key — alice may have self-enrolled on a live
+-- DB before this row existed, which would abort the whole statement.
+ON CONFLICT DO NOTHING;
 
 SELECT setval('enrollments_enrollment_id_seq', 10000, false);
 
@@ -510,6 +528,14 @@ VALUES
   '00000000-0000-0000-0000-000000000001',
   'product',
   1002,                                     -- Web Dev Starter
+  'active'
+),
+(
+  'a1000000-0000-0000-0000-000000000004',  -- alice@student.com
+  2001,                                     -- Python for Beginners
+  '00000000-0000-0000-0000-000000000002',
+  'product',
+  2001,                                     -- Python Bundle
   'active'
 )
 ON CONFLICT ON CONSTRAINT entitlements_unique_source DO NOTHING;
@@ -546,6 +572,38 @@ VALUES
   (2001, 2001),  -- Code Academy Pro Monthly → Python for Beginners
   (2001, 2002)   -- Code Academy Pro Monthly → Data Analysis with Pandas
 ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 15b. ALICE'S SUBSCRIPTION (Code Academy Pro Monthly)
+-- Gives alice@student.com an active subscription to plan 2001 so she can
+-- self-enroll into covered courses (2001/2002) via /browse and exercise the
+-- exam-taking + exercise-completion flows.
+--
+-- We only insert the backing transaction: the `after_transaction_insert`
+-- trigger (trigger_manage_transactions) fires handle_new_subscription() on a
+-- successful plan transaction, which creates the 'active' subscription
+-- (end_date = now + plan.duration_in_days = 30d) and grants entitlements for
+-- every plan_courses row (courses 2001 + 2002). Enrollment is NOT auto-created
+-- by design — alice self-enrolls via /browse (which calls
+-- self_enroll_subscription_course()). Do NOT also insert the subscription
+-- here: that collides with subscriptions_user_id_plan_id_key.
+-- ---------------------------------------------------------------------------
+INSERT INTO transactions (transaction_id, user_id, plan_id, amount, status, currency, tenant_id)
+OVERRIDING SYSTEM VALUE
+VALUES
+(
+  2001,
+  'a1000000-0000-0000-0000-000000000004',  -- alice@student.com
+  2001,                                     -- Code Academy Pro Monthly
+  19.00,
+  'successful',
+  'usd',
+  '00000000-0000-0000-0000-000000000002'    -- Code Academy Pro tenant
+)
+ON CONFLICT (transaction_id) DO NOTHING;
+
+SELECT setval('transactions_transaction_id_seq', 10000, false);
+SELECT setval('subscriptions_subscription_id_seq', 10000, false);
 
 
 -- ---------------------------------------------------------------------------
@@ -1374,7 +1432,144 @@ Do NOT accept essays under 150 words or those that are clearly AI-generated boil
 )
 ON CONFLICT (id) DO NOTHING;
 
+
+-- ---------------------------------------------------------------------------
+-- 20b. MEDIA + ARTIFACT EXERCISES — Python for Beginners (course 2001)
+-- One of each remaining student-facing exercise_type so every variation is
+-- testable from the web AND the mobile app (alice@student.com):
+--   2005 audio_evaluation  → record voice, STT + AI coach pipeline
+--   2006 video_evaluation  → record video, same media pipeline
+--   2007 artifact          → interactive HTML, AI-graded submission
+-- ---------------------------------------------------------------------------
+INSERT INTO exercises (id, course_id, lesson_id, title, description, instructions, exercise_type,
+                       difficulty_level, status, created_by, tenant_id, time_limit, exercise_config)
+OVERRIDING SYSTEM VALUE
+VALUES
+-- Audio evaluation
+(
+  2005, 2001, 2001,
+  'Explica variables en voz alta',
+  'Practica comunicación técnica: explica un concepto de Python hablando, y la IA evalúa tu claridad.',
+  'Graba un audio de 20 a 120 segundos explicando, con tus propias palabras, qué es una variable en Python y la diferencia entre un entero (int), una cadena (str) y una lista (list). Da al menos un ejemplo de cada tipo. Imagina que se lo explicas a alguien que nunca ha programado.',
+  'audio_evaluation', 'easy',
+  'published',
+  'a1000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000002',
+  10,
+  '{
+    "passing_score": 70,
+    "max_daily_attempts": 5,
+    "min_duration_seconds": 20,
+    "max_duration_seconds": 120,
+    "topic_prompt": "Explica qué es una variable en Python y la diferencia entre int, str y list, con un ejemplo de cada uno.",
+    "rubric": "Evalúa: (1) precisión técnica — definición correcta de variable y de los tres tipos; (2) claridad — explicación entendible para un principiante; (3) ejemplos — al menos un ejemplo concreto por tipo; (4) fluidez — discurso ordenado, sin divagar. La explicación puede ser informal; no exijas terminología académica."
+  }'::jsonb
+),
+-- Video evaluation
+(
+  2006, 2001, 2002,
+  'Video: explica un bucle for',
+  'Grábate explicando código: la IA evalúa tu explicación del flujo de un bucle.',
+  'Graba un video corto (30 a 180 segundos) explicando qué hace este código, línea por línea, y cuál es su salida:
+
+for i in range(1, 6):
+    if i % 2 == 0:
+        print(f"{i} es par")
+    else:
+        print(f"{i} es impar")
+
+Explica qué valores toma i, qué hace el operador %, y por qué cada número cae en una rama u otra.',
+  'video_evaluation', 'medium',
+  'published',
+  'a1000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000002',
+  10,
+  '{
+    "passing_score": 70,
+    "max_daily_attempts": 5,
+    "min_duration_seconds": 30,
+    "max_duration_seconds": 180,
+    "topic_prompt": "Explica línea por línea el bucle for con range(1, 6) y la condición i % 2 == 0, indicando la salida exacta del programa.",
+    "rubric": "Evalúa: (1) corrección — range(1,6) produce 1..5, la salida exacta (1 impar, 2 par, 3 impar, 4 par, 5 impar); (2) comprensión del operador módulo; (3) orden de la explicación línea por línea; (4) claridad al hablar. Acepta lenguaje informal."
+  }'::jsonb
+),
+-- Artifact (interactive HTML)
+(
+  2007, 2001, 2001,
+  'Predice la salida: tipos de Python',
+  'Mini-reto interactivo: predice qué imprime cada fragmento de código y la IA califica tus respuestas.',
+  'Lee cada fragmento de código Python y escribe exactamente qué imprime. Cuando termines, presiona "Enviar respuestas" para que la IA las evalúe.',
+  'artifact', 'easy',
+  'published',
+  'a1000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000002',
+  15,
+  jsonb_build_object(
+    'passing_score', 70,
+    'artifact_type', 'quiz',
+    'evaluation_criteria', 'Respuestas correctas: P1 → "8" (3 + 5). P2 → "55" (concatenación de cadenas "5" + "5"). P3 → "3" (len de la lista [10, 20, 30]). Acepta variaciones de formato (con o sin comillas, espacios). Califica proporcionalmente: 3/3 = 100, 2/3 ≈ 67, 1/3 ≈ 33. Da feedback en español explicando el porqué de cada respuesta.',
+    'artifact_html', '<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #111; }
+  .q { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  pre { background: #111; color: #9fef9f; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  label { font-size: 13px; color: #555; display: block; margin-bottom: 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; }
+  button { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; color: #fff; background: #111; border: 0; border-radius: 10px; margin-top: 4px; }
+  button:disabled { opacity: 0.5; }
+  #fb { margin-top: 12px; font-size: 14px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+  <div class="q"><pre>print(3 + 5)</pre><label>¿Qué imprime?</label><input id="a1" placeholder="Tu respuesta"></div>
+  <div class="q"><pre>print("5" + "5")</pre><label>¿Qué imprime?</label><input id="a2" placeholder="Tu respuesta"></div>
+  <div class="q"><pre>nums = [10, 20, 30]
+print(len(nums))</pre><label>¿Qué imprime?</label><input id="a3" placeholder="Tu respuesta"></div>
+  <button id="send">Enviar respuestas</button>
+  <div id="fb"></div>
+<script>
+  var btn = document.getElementById("send");
+  btn.addEventListener("click", function () {
+    var content =
+      "P1: print(3 + 5) -> respuesta del estudiante: " + document.getElementById("a1").value + "\n" +
+      "P2: print(\"5\" + \"5\") -> respuesta del estudiante: " + document.getElementById("a2").value + "\n" +
+      "P3: len([10, 20, 30]) -> respuesta del estudiante: " + document.getElementById("a3").value;
+    btn.disabled = true;
+    btn.textContent = "Evaluando…";
+    window.parent.postMessage({ type: "SUBMIT", payload: { content: content, metadata: { questions: 3 } } }, "*");
+  });
+  window.addEventListener("message", function (e) {
+    var d = e && e.data;
+    if (d && d.type === "FEEDBACK" && d.payload) {
+      btn.disabled = false;
+      btn.textContent = "Enviar respuestas";
+      document.getElementById("fb").textContent =
+        (d.payload.passed ? "✅ Aprobado" : "❌ No aprobado") + " — " + d.payload.score + "/100\n" + (d.payload.feedback || "");
+    }
+  });
+</script>
+</body>
+</html>'
+  )
+)
+ON CONFLICT (id) DO NOTHING;
+
 SELECT setval('exercises_id_seq', 10000, false);
+
+
+-- ---------------------------------------------------------------------------
+-- 20c. STORAGE BUCKET for media submissions
+-- The media upload/analyze routes sign URLs against this bucket via the
+-- admin client (no storage RLS policies needed). Without it, local
+-- audio/video submissions 500 on createSignedUploadUrl.
+-- ---------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('exercise-media', 'exercise-media', false)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ---------------------------------------------------------------------------
@@ -1452,3 +1647,20 @@ VALUES
 ON CONFLICT (option_id) DO NOTHING;
 
 SELECT setval('question_options_option_id_seq', 10000, false);
+
+-- ============================================================
+-- Aristotle AI tutor for Code Academy's "Python for Beginners"
+-- (course 2001). Required by /api/chat/aristotle — the route
+-- 404s when a course has no enabled course_ai_tutors row.
+-- ============================================================
+INSERT INTO course_ai_tutors (course_id, tenant_id, persona, teaching_approach, boundaries, enabled, model_config)
+VALUES (
+  2001,
+  '00000000-0000-0000-0000-000000000002',
+  'Friendly Python tutor',
+  'Socratic',
+  'Stay on course topics',
+  true,
+  '{}'::jsonb
+)
+ON CONFLICT (course_id) DO NOTHING;

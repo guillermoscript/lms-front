@@ -6,6 +6,18 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Local multi-tenant dev is served on subdomains (e.g. code-academy.lvh.me),
+  // which differ from the dev server origin (localhost). Next.js 16 blocks
+  // cross-origin access to /_next/* dev resources (HMR + client chunks) by
+  // default, which prevents the client bundle from hydrating on those hosts.
+  // Allow the local tenant domains so the app is interactive under automation.
+  allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost'],
+  transpilePackages: ['@lms/core'],
+  experimental: {
+    // Both are used repo-wide via barrel named imports (672 files each);
+    // this lets Next.js rewrite them to per-icon imports at build time.
+    optimizePackageImports: ['@tabler/icons-react', 'lucide-react'],
+  },
   async rewrites() {
     return {
       beforeFiles: [

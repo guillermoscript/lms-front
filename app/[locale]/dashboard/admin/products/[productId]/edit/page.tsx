@@ -1,16 +1,47 @@
 import { redirect, notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getUserRole } from '@/lib/supabase/get-user-role'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { IconArrowLeft } from '@tabler/icons-react'
-import { ProductForm } from '@/components/admin/product-form'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import type {
+  ProductCreationPaymentProvider,
+  ProductCreationWizardInput,
+} from '@/lib/admin/product-creation/types'
 
 interface PageProps {
   params: Promise<{ productId: string }>
+}
+
+type UntypedSupabaseClient = {
+  from: (table: string) => {
+    select: (columns?: string) => {
+      eq: (column: string, value: unknown) => {
+        eq: (column: string, value: unknown) => {
+          order: (column: string) => Promise<{ data: unknown; error: unknown }>
+        }
+      }
+    }
+  }
+}
+
+interface ProductCourseLink {
+  course_id: number
+}
+
+const supportedPaymentProviders = new Set<ProductCreationPaymentProvider>([
+  'manual',
+  'stripe',
+  'paypal',
+])
+
+function getSupportedPaymentProvider(value: string | null): ProductCreationPaymentProvider {
+  if (value && supportedPaymentProviders.has(value as ProductCreationPaymentProvider)) {
+    return value as ProductCreationPaymentProvider
+  }
+
+  return 'manual'
 }
 
 export default async function EditProductPage({ params }: PageProps) {
@@ -26,25 +57,41 @@ export default async function EditProductPage({ params }: PageProps) {
 
   const tenantId = await getCurrentTenantId()
 
-  // Fetch product with courses and published courses in parallel
-  const [{ data: product, error }, { data: courses }] = await Promise.all([
+  const productIdNumber = parseInt(productId)
+
+  const [
+    { data: product, error },
+    { data: courses },
+    { data: categories },
+    { data: postRegistrationSteps },
+  ] = await Promise.all([
     supabase
-    .from('products')
-    .select(`
-      *,
-      product_courses (
-        course_id
-      )
-    `)
-    .eq('product_id', parseInt(productId))
-    .eq('tenant_id', tenantId)
-    .single(),
+      .from('products')
+      .select(`
+        *,
+        product_courses (
+          course_id
+        )
+      `)
+      .eq('product_id', productIdNumber)
+      .eq('tenant_id', tenantId)
+      .single(),
     supabase
       .from('courses')
-      .select('course_id, title')
+      .select('course_id, title, description, thumbnail_url, category_id, status')
       .eq('tenant_id', tenantId)
-      .eq('status', 'published')
       .order('title'),
+    supabase
+      .from('course_categories')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .order('name'),
+    (supabase as unknown as UntypedSupabaseClient)
+      .from('product_post_registration_steps')
+      .select('id, type, title, description, url, sort_order, is_active')
+      .eq('product_id', productIdNumber)
+      .eq('tenant_id', tenantId)
+      .order('sort_order'),
   ])
 
   if (error || !product) {
@@ -53,17 +100,60 @@ export default async function EditProductPage({ params }: PageProps) {
 
   // PostgREST returns product_courses as a single object (PK=product_id → one-to-one).
   // Normalise to the array shape the form expects.
-  const raw = (product as any).product_courses
+  const raw = (product as { product_courses?: ProductCourseLink | ProductCourseLink[] | null })
+    .product_courses
   const productWithCourses = {
     ...product,
     courses: raw == null ? [] : Array.isArray(raw) ? raw : [raw],
   }
+  const linkedCourseId = productWithCourses.courses[0]?.course_id
+  const linkedCourse = courses?.find((course) => course.course_id === linkedCourseId)
+
+  type PostRegistrationRow = {
+    id: number
+    type: 'whatsapp' | 'telegram' | 'discord' | 'link' | 'text'
+    title: string
+    description: string | null
+    url: string | null
+    sort_order: number | null
+    is_active: boolean
+  }
+
+  const initialInput: ProductCreationWizardInput = {
+    intent: 'draft',
+    productId: product.product_id,
+    course: {
+      sourceMode: 'existing',
+      existingCourseId: linkedCourseId,
+      title: linkedCourse?.title || product.name,
+      description: linkedCourse?.description || product.description || '',
+      thumbnailUrl: linkedCourse?.thumbnail_url || product.image || '',
+      categoryId: linkedCourse?.category_id || null,
+    },
+    pricing: {
+      mode: 'paid',
+      price: Number(product.price),
+      currency: product.currency === 'eur' ? 'eur' : 'usd',
+      paymentProvider: getSupportedPaymentProvider(product.payment_provider),
+    },
+    postRegistrationSteps: ((postRegistrationSteps || []) as PostRegistrationRow[]).map((step, index) => ({
+      id: step.id,
+      type: step.type,
+      title: step.title,
+      description: step.description,
+      url: step.url,
+      sortOrder: step.sort_order ?? index,
+      isActive: step.is_active,
+    })),
+  }
+
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -83,18 +173,15 @@ export default async function EditProductPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>{product.name}</CardTitle>
-            <CardDescription>
-              {t('details.description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProductForm mode="edit" initialData={productWithCourses} courses={courses || []} />
-          </CardContent>
-        </Card>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <ProductCreationWizard
+          mode="edit"
+          categories={categories || []}
+          courses={courses || []}
+          initialInput={initialInput}
+          enabledProviders={enabledProviders}
+        />
+
       </main>
     </div>
   )

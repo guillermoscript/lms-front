@@ -2,13 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
+import { getPaymentProvider, PaymentProvider, PROVIDER_CAPABILITIES } from '@/lib/payments'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-02-25.clover',
-})
 
 interface PlanFormData {
   plan_name: string
@@ -18,6 +14,9 @@ interface PlanFormData {
   currency: 'usd' | 'eur'
   features?: string
   courseIds: number[]
+  paymentProvider?: PaymentProvider
+  /** Lemon Squeezy variant id, pasted by the admin (→ provider_price_id). LS only. */
+  providerPriceId?: string
 }
 
 interface Plan {
@@ -28,8 +27,9 @@ interface Plan {
   duration_in_days: number
   currency: string
   features?: string
-  stripe_product_id?: string
-  stripe_price_id?: string
+  payment_provider: string
+  provider_product_id?: string
+  provider_price_id?: string
 }
 
 /**
@@ -54,35 +54,70 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
       throw new Error('Duration must be 30 (monthly) or 365 (yearly)')
     }
 
-    // 1. Create Stripe product for subscription
-    const stripeProduct = await stripe.products.create({
-      name: formData.plan_name.trim(),
-      description: formData.description?.trim() || undefined,
-      metadata: {
-        type: 'subscription',
-        duration_days: formData.duration_in_days.toString(),
-        created_by: 'admin',
-        created_at: new Date().toISOString()
-      }
-    })
+    // Resolve provider by capability from the static map. Do NOT instantiate the
+    // provider yet — provider constructors (e.g. Lemon Squeezy) throw on missing
+    // env, and only the createsCatalog branch actually needs a live client.
+    const providerType = formData.paymentProvider || 'stripe'
+    const caps = PROVIDER_CAPABILITIES[providerType]
+    const adminClient = createAdminClient()
 
-    // 2. Create Stripe recurring price
-    const interval = formData.duration_in_days === 30 ? 'month' : 'year'
-    const stripePrice = await stripe.prices.create({
-      product: stripeProduct.id,
-      unit_amount: Math.round(formData.price * 100), // Convert to cents
-      currency: formData.currency,
-      recurring: {
-        interval: interval,
-        interval_count: 1
-      },
-      metadata: {
-        plan_name: formData.plan_name
+    // Resolve provider catalog ids by CAPABILITY, never by provider name:
+    //  - createsCatalog (Stripe/PayPal) → auto-create product + recurring price.
+    //  - isMerchantOfRecord (Lemon Squeezy) → catalog lives in their dashboard;
+    //    the admin pastes the variant id; provider_product_id stays null.
+    //  - else (Solana/manual) → no catalog ids; Solana needs a configured wallet.
+    let providerProductId: string | null = null
+    let providerPriceId: string | null = null
+
+    if (caps.createsCatalog) {
+      // Only providers with their own catalog API need a live client.
+      const provider = getPaymentProvider(providerType)
+      const paymentProduct = await provider.createProduct({
+        name: formData.plan_name.trim(),
+        description: formData.description?.trim() || '',
+        metadata: {
+          type: 'subscription',
+          duration_days: formData.duration_in_days.toString(),
+          created_by: 'admin',
+          created_at: new Date().toISOString()
+        }
+      })
+
+      const interval = formData.duration_in_days === 30 ? 'month' : 'year'
+      const paymentPrice = await provider.createPrice({
+        productId: paymentProduct.id,
+        amount: provider.convertAmount(formData.price, 'major'), // Convert to base units
+        currency: formData.currency,
+        type: 'subscription',
+        interval,
+        metadata: {
+          plan_name: formData.plan_name
+        }
+      })
+
+      providerProductId = paymentProduct.id
+      providerPriceId = paymentPrice.id
+    } else if (caps.isMerchantOfRecord) {
+      // Lemon Squeezy — admin must paste the variant id (checkout 400s without it).
+      const variantId = formData.providerPriceId?.trim()
+      if (!variantId) {
+        throw new Error('Lemon Squeezy requires a variant id. Copy it from your Lemon Squeezy dashboard.')
       }
-    })
+      providerPriceId = variantId
+    } else if (providerType === 'solana' || providerType === 'solana_subs') {
+      // No catalog — but the school must have a receiving wallet, else checkout 400s.
+      const { data: wallet } = await adminClient
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', providerType)
+        .maybeSingle()
+      if (!wallet?.wallet_address) {
+        throw new Error('Configure your Solana wallet in Settings → Payment before creating a Solana plan.')
+      }
+    }
 
     // 3. Insert plan into database
-    const adminClient = createAdminClient()
     const { data: plan, error: insertError } = await adminClient
       .from('plans')
       .insert({
@@ -92,8 +127,9 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
         duration_in_days: formData.duration_in_days,
         currency: formData.currency,
         features: formData.features || null,
-        stripe_product_id: stripeProduct.id,
-        stripe_price_id: stripePrice.id,
+        payment_provider: providerType,
+        provider_product_id: providerProductId,
+        provider_price_id: providerPriceId,
         tenant_id: tenantId
       })
       .select()
@@ -172,38 +208,67 @@ export async function updatePlan(
       throw new Error('Plan not found or access denied')
     }
 
-    // Update Stripe product
-    if (existingPlan.stripe_product_id) {
-      await stripe.products.update(existingPlan.stripe_product_id, {
+    // Get payment provider from the existing plan (provider is immutable post-create)
+    const providerType = (existingPlan.payment_provider as PaymentProvider) || 'stripe'
+    const caps = PROVIDER_CAPABILITIES[providerType]
+
+    // Solana native subscriptions (solana_subs) mirror price/duration onto an
+    // IMMUTABLE on-chain plan (per-period cap set once at creation). If price or
+    // duration changes here while subscribers exist, every future crank pull
+    // charges an amount that no longer matches the on-chain cap and reverts —
+    // renewals silently fail (issue #343). Block the edit instead.
+    if (providerType === 'solana_subs') {
+      const priceOrDurationChanged =
+        formData.price !== existingPlan.price || formData.duration_in_days !== existingPlan.duration_in_days
+      if (priceOrDurationChanged) {
+        const { count, error: countError } = await adminClient
+          .from('subscriptions')
+          .select('subscription_id', { count: 'exact', head: true })
+          .eq('plan_id', planId)
+          .eq('payment_provider', 'solana_subs')
+          .eq('subscription_status', 'active')
+        if (countError) throw countError
+        if ((count ?? 0) > 0) {
+          throw new Error(
+            'This Solana plan has active subscribers — price and duration are locked on-chain and cannot be changed. Archive this plan and create a new one instead.',
+          )
+        }
+      }
+    }
+
+    // Catalog-syncing providers (Stripe/PayPal) only: update the provider product
+    // and recreate the recurring price on change. LS/Solana/manual skip this — they
+    // have no provider catalog to mutate; their price lives in the plan columns
+    // (and the LS variant id is edited via the form below). Instantiate the provider
+    // only here — its constructor (e.g. Lemon Squeezy) throws on missing env.
+    if (caps.createsCatalog && existingPlan.provider_product_id) {
+      const provider = getPaymentProvider(providerType)
+      await provider.updateProduct(existingPlan.provider_product_id, {
         name: formData.plan_name.trim(),
-        description: formData.description?.trim() || undefined
+        description: formData.description?.trim() || ''
       })
 
-      // If price or duration changed, create new Stripe price
+      // If price or duration changed, create a new recurring price
       const priceChanged = formData.price !== existingPlan.price
       const durationChanged = formData.duration_in_days !== existingPlan.duration_in_days
       const currencyChanged = formData.currency !== existingPlan.currency
 
       if (priceChanged || durationChanged || currencyChanged) {
         const interval = formData.duration_in_days === 30 ? 'month' : 'year'
-        const newPrice = await stripe.prices.create({
-          product: existingPlan.stripe_product_id,
-          unit_amount: Math.round(formData.price * 100),
+        const newPrice = await provider.createPrice({
+          productId: existingPlan.provider_product_id,
+          amount: provider.convertAmount(formData.price, 'major'),
           currency: formData.currency,
-          recurring: {
-            interval: interval,
-            interval_count: 1
-          },
+          type: 'subscription',
+          interval,
           metadata: {
             plan_name: formData.plan_name
           }
         })
 
         // Archive old price
-        if (existingPlan.stripe_price_id) {
-          await stripe.prices.update(existingPlan.stripe_price_id, {
-            active: false
-          })
+        if (existingPlan.provider_price_id) {
+          await provider.archivePrice(existingPlan.provider_price_id)
         }
 
         // Update plan with new price ID
@@ -216,7 +281,7 @@ export async function updatePlan(
             duration_in_days: formData.duration_in_days,
             currency: formData.currency,
             features: formData.features || null,
-            stripe_price_id: newPrice.id,
+            provider_price_id: newPrice.id,
             updated_at: new Date().toISOString()
           })
           .eq('plan_id', planId)
@@ -248,15 +313,28 @@ export async function updatePlan(
       }
     }
 
-    // Update plan without price change
+    // Fallthrough update: Stripe/PayPal with no price change keep their
+    // provider-managed price columns untouched (only name/description/features).
+    // Non-catalog providers (LS/Solana/manual) own their price columns directly,
+    // so write price/currency/duration here; LS may also re-paste its variant id.
+    const fallthroughUpdate: Record<string, unknown> = {
+      plan_name: formData.plan_name.trim(),
+      description: formData.description?.trim() || null,
+      features: formData.features || null,
+      updated_at: new Date().toISOString()
+    }
+    if (!caps.createsCatalog) {
+      fallthroughUpdate.price = formData.price
+      fallthroughUpdate.duration_in_days = formData.duration_in_days
+      fallthroughUpdate.currency = formData.currency
+      if (caps.isMerchantOfRecord && formData.providerPriceId !== undefined) {
+        fallthroughUpdate.provider_price_id = formData.providerPriceId.trim() || null
+      }
+    }
+
     const { data: plan, error: updateError } = await adminClient
       .from('plans')
-      .update({
-        plan_name: formData.plan_name.trim(),
-        description: formData.description?.trim() || null,
-        features: formData.features || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(fallthroughUpdate)
       .eq('plan_id', planId)
       .eq('tenant_id', tenantId)
       .select()
@@ -312,7 +390,7 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
     // Get plan details and verify tenant ownership
     const { data: plan, error: fetchError } = await adminClient
       .from('plans')
-      .select('stripe_product_id, stripe_price_id, tenant_id')
+      .select('payment_provider, provider_product_id, provider_price_id, tenant_id')
       .eq('plan_id', planId)
       .single()
 
@@ -325,18 +403,20 @@ export async function archivePlan(planId: number): Promise<ActionResult> {
       throw new Error('Plan not found or access denied')
     }
 
-    // Archive Stripe price
-    if (plan.stripe_price_id) {
-      await stripe.prices.update(plan.stripe_price_id, {
-        active: false
-      })
-    }
+    // Archive in payment provider — ONLY for providers that own their catalog
+    // (Stripe/PayPal). For Lemon Squeezy the stored id is a variant in THEIR
+    // dashboard (not ours to archive), and its provider constructor throws on
+    // missing env; Solana/manual have no catalog. So gate on the capability.
+    const providerType = (plan.payment_provider as PaymentProvider) || 'stripe'
+    if (PROVIDER_CAPABILITIES[providerType]?.createsCatalog && (plan.provider_price_id || plan.provider_product_id)) {
+      const provider = getPaymentProvider(providerType)
 
-    // Archive Stripe product
-    if (plan.stripe_product_id) {
-      await stripe.products.update(plan.stripe_product_id, {
-        active: false
-      })
+      if (plan.provider_price_id) {
+        await provider.archivePrice(plan.provider_price_id)
+      }
+      if (plan.provider_product_id) {
+        await provider.archiveProduct(plan.provider_product_id)
+      }
     }
 
     // Update database (plans don't have status column, so we'll add deleted_at)

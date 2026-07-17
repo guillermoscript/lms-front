@@ -1,41 +1,25 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type { MCPServer } from "mcp-use/server";
+import { widget, text } from "mcp-use/server";
 import { nanoid } from "nanoid";
-import { AuthManager } from "../auth.js";
+import { LmsSession } from "../session.js";
+import {
+  ok,
+  okText,
+  errorResult,
+  ResponseFormat,
+  PaginationSchema,
+} from "../format.js";
 
-enum ResponseFormat {
-  MARKDOWN = "markdown",
-  JSON = "json",
-}
-
-const PaginationSchema = {
-  limit: z.number().int().min(1).max(100).default(20).describe("Maximum results to return"),
-  offset: z.number().int().min(0).default(0).describe("Number of results to skip for pagination"),
-  response_format: z
-    .nativeEnum(ResponseFormat)
-    .default(ResponseFormat.MARKDOWN)
-    .describe("Output format"),
-};
-
-function errorResult(message: string) {
-  return {
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
-    isError: true,
-  };
-}
-
-export function registerLessonTools(server: McpServer, auth: AuthManager) {
-  server.registerTool(
-    "lms_list_lessons",
+export function registerLessonTools(server: MCPServer) {
+  server.tool(
     {
-      title: "List Lessons",
+      name: "lms_list_lessons",
       description: "List all lessons in a course, ordered by sequence number.",
-      inputSchema: z
-        .object({
-          ...PaginationSchema,
-          course_id: z.number().describe("The course ID"),
-        })
-        .strict(),
+      schema: z.object({
+        ...PaginationSchema,
+        course_id: z.number().describe("The course ID"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -43,21 +27,30 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, limit, offset, response_format }) => {
+    async ({ course_id, limit, offset, response_format }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyCourseOwnership(course_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
 
         const { data, error, count } = await supabase
           .from("lessons")
-          .select("id, title, sequence, status, description, video_url, created_at", { count: "exact" })
+          .select(
+            "id, title, sequence, status, description, video_url, created_at",
+            { count: "exact" }
+          )
           .eq("course_id", course_id)
           .order("sequence")
           .range(offset, offset + limit - 1);
 
         if (error) return errorResult(`Listing lessons: ${error.message}`);
         if (!data || data.length === 0) {
-          return { content: [{ type: "text", text: "No lessons found for this course." }] };
+          return okText("No lessons found for this course.");
         }
 
         const total = count || 0;
@@ -66,7 +59,8 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           count: data.length,
           offset,
           has_more: total > offset + data.length,
-          next_offset: total > offset + data.length ? offset + data.length : undefined,
+          next_offset:
+            total > offset + data.length ? offset + data.length : undefined,
           lessons: data.map((l) => ({
             id: l.id,
             title: l.title,
@@ -82,7 +76,11 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         if (response_format === ResponseFormat.JSON) {
           textContent = JSON.stringify(output, null, 2);
         } else {
-          const lines = [`# Lessons for course ${course_id}`, `Showing ${data.length} of ${total} lessons`, ""];
+          const lines = [
+            `# Lessons for course ${course_id}`,
+            `Showing ${data.length} of ${total} lessons`,
+            "",
+          ];
           for (const l of output.lessons) {
             lines.push(
               `${l.sequence}. **${l.title}** (ID: ${l.id}) [${l.status}]${l.video_url ? " [has video]" : ""}`
@@ -91,46 +89,50 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           textContent = lines.join("\n");
         }
 
-        return {
-          content: [{ type: "text", text: textContent }],
-          structuredContent: output,
-        };
+        return ok(output, textContent);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_get_lesson",
+  server.tool(
     {
-      title: "Get Lesson Details",
-      description: "Get full lesson details including MDX content, attached resources, and scheduling info.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          response_format: z
-            .nativeEnum(ResponseFormat)
-            .default(ResponseFormat.MARKDOWN)
-            .describe("Output format"),
-        })
-        .strict(),
+      name: "lms_get_lesson",
+      description:
+        "Get full lesson details including MDX content, attached resources, and scheduling info.",
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: true,
       },
+      widget: {
+        name: "lesson-preview",
+        invoking: "Loading lesson...",
+        invoked: "Lesson loaded",
+      },
     },
-    async ({ lesson_id, response_format }) => {
+    async ({ lesson_id }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const [{ data, error }, { data: resources }] = await Promise.all([
           supabase
             .from("lessons")
-            .select("id, title, description, content, sequence, status, video_url, publish_at, course_id, created_at, updated_at")
+            .select(
+              "id, title, description, content, sequence, status, video_url, publish_at, course_id, created_at, updated_at"
+            )
             .eq("id", lesson_id)
             .single(),
           supabase
@@ -140,79 +142,61 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             .order("display_order", { ascending: true }),
         ]);
 
-        if (error || !data) return errorResult(`Lesson ${lesson_id} not found.`);
+        if (error || !data)
+          return errorResult(`Lesson ${lesson_id} not found.`);
 
-        const output = {
+        const props = {
           lesson: {
-            id: data.id,
-            title: data.title,
-            description: data.description,
-            content: data.content,
-            sequence: data.sequence,
-            status: data.status,
-            video_url: data.video_url,
-            publish_at: data.publish_at,
-            course_id: data.course_id,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
+            id: data.id as number,
+            title: data.title as string,
+            description: data.description as string | null,
+            video_url: data.video_url as string | null,
+            content: data.content as string | null,
+            status: data.status as string,
+            sequence: data.sequence as number,
           },
-          resources: (resources || []).map((r: any) => ({
-            id: r.id,
-            file_name: r.file_name,
-            file_size: r.file_size,
-            mime_type: r.mime_type,
+          resources: ((resources || []) as any[]).map((r) => ({
+            id: r.id as number,
+            file_name: r.file_name as string,
+            file_size: r.file_size as number | null,
+            mime_type: r.mime_type as string | null,
           })),
         };
 
-        let textContent: string;
-        if (response_format === ResponseFormat.JSON) {
-          textContent = JSON.stringify(output, null, 2);
-        } else {
-          let result = `# ${data.title} (ID: ${data.id})\n\n`;
-          result += `**Course ID:** ${data.course_id}\n`;
-          result += `**Sequence:** ${data.sequence}\n`;
-          result += `**Status:** ${data.status}\n`;
-          if (data.publish_at) result += `**Scheduled Publish:** ${data.publish_at}\n`;
-          result += `**Description:** ${data.description ?? "None"}\n`;
-          result += `**Video URL:** ${data.video_url ?? "None"}\n\n`;
-          if (output.resources.length > 0) {
-            result += `## Resources (${output.resources.length})\n\n`;
-            for (const r of output.resources) {
-              const sizeKB = (r.file_size / 1024).toFixed(1);
-              result += `- **${r.file_name}** (ID: ${r.id}) — ${sizeKB} KB, ${r.mime_type}\n`;
-            }
-            result += "\n";
-          }
-          result += `## Content\n\n${data.content ?? "(empty)"}`;
-          textContent = result;
-        }
-
-        return {
-          content: [{ type: "text", text: textContent }],
-          structuredContent: output,
-        };
+        return widget({
+          props,
+          output: text(`Lesson: ${data.title}`),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_create_lesson",
+  server.tool(
     {
-      title: "Create Lesson",
-      description: "Create a new lesson in a course in draft status. Optionally schedule auto-publish with publish_at.",
-      inputSchema: z
-        .object({
-          course_id: z.number().describe("The course ID"),
-          title: z.string().min(1).describe("Lesson title"),
-          content: z.string().optional().describe("MDX content for the lesson"),
-          sequence: z.number().int().describe("Order position (1-based)"),
-          description: z.string().optional().describe("Short description"),
-          video_url: z.string().url().optional().or(z.literal("")).describe("Video URL"),
-          publish_at: z.string().optional().describe("ISO 8601 datetime to auto-publish the lesson (e.g. '2026-04-01T09:00:00Z'). Leave empty for manual publishing."),
-        })
-        .strict(),
+      name: "lms_create_lesson",
+      description:
+        "Create a new lesson in a course in draft status. Optionally schedule auto-publish with publish_at.",
+      schema: z.object({
+        course_id: z.number().describe("The course ID"),
+        title: z.string().min(1).describe("Lesson title"),
+        content: z.string().optional().describe("MDX content for the lesson"),
+        sequence: z.number().int().describe("Order position (1-based)"),
+        description: z.string().optional().describe("Short description"),
+        video_url: z
+          .string()
+          .url()
+          .optional()
+          .or(z.literal(""))
+          .describe("Video URL"),
+        publish_at: z
+          .string()
+          .optional()
+          .describe(
+            "ISO 8601 datetime to auto-publish the lesson (e.g. '2026-04-01T09:00:00Z'). Leave empty for manual publishing."
+          ),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -220,10 +204,19 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, title, content, sequence, description, video_url, publish_at }) => {
+    async (
+      { course_id, title, content, sequence, description, video_url, publish_at },
+      ctx
+    ) => {
+      let session: LmsSession;
       try {
-        await auth.verifyCourseOwnership(course_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lessons")
@@ -236,49 +229,51 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             video_url: video_url || null,
             status: "draft",
             publish_at: publish_at || null,
-            tenant_id: auth.getTenantId(),
+            tenant_id: session.getTenantId(),
           })
           .select("id, title, sequence, status")
           .single();
 
         if (error) return errorResult(`Creating lesson: ${error.message}`);
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Lesson created: **${data.title}** (ID: ${data.id}) at position ${data.sequence} [${data.status}]\n\nUse \`lms_publish_lesson\` when ready to make it available.`,
-            },
-          ],
-          structuredContent: {
-            id: data.id,
-            title: data.title,
-            sequence: data.sequence,
-            status: data.status,
-          },
-        };
+        return ok(
+          { id: data.id, title: data.title, sequence: data.sequence, status: data.status },
+          `Lesson created: **${data.title}** (ID: ${data.id}) at position ${data.sequence} [${data.status}]\n\nUse \`lms_publish_lesson\` when ready to make it available.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_update_lesson",
+  server.tool(
     {
-      title: "Update Lesson",
-      description: "Update lesson fields like title, content, description, status, or publish_at schedule.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          title: z.string().optional().describe("New title"),
-          content: z.string().optional().describe("New MDX content"),
-          description: z.string().optional().describe("New description"),
-          video_url: z.string().url().optional().or(z.literal("")).describe("New video URL"),
-          status: z.enum(["draft", "published"]).optional().describe("New status"),
-          publish_at: z.string().nullable().optional().describe("ISO 8601 datetime for auto-publish, or null to clear schedule"),
-        })
-        .strict(),
+      name: "lms_update_lesson",
+      description:
+        "Update lesson fields like title, content, description, status, or publish_at schedule.",
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        title: z.string().optional().describe("New title"),
+        content: z.string().optional().describe("New MDX content"),
+        description: z.string().optional().describe("New description"),
+        video_url: z
+          .string()
+          .url()
+          .optional()
+          .or(z.literal(""))
+          .describe("New video URL"),
+        status: z
+          .enum(["draft", "published"])
+          .optional()
+          .describe("New status"),
+        publish_at: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "ISO 8601 datetime for auto-publish, or null to clear schedule"
+          ),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -286,10 +281,19 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, title, content, description, video_url, status, publish_at }) => {
+    async (
+      { lesson_id, title, content, description, video_url, status, publish_at },
+      ctx
+    ) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const updateData: Record<string, unknown> = {};
         if (title !== undefined) updateData.title = title;
@@ -300,7 +304,7 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         if (publish_at !== undefined) updateData.publish_at = publish_at;
 
         if (Object.keys(updateData).length === 0) {
-          return { content: [{ type: "text", text: "No fields to update." }] };
+          return okText("No fields to update.");
         }
 
         const { data, error } = await supabase
@@ -311,36 +315,24 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           .single();
 
         if (error) return errorResult(`Updating lesson: ${error.message}`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Lesson updated: **${data.title}** (ID: ${data.id}) [${data.status}]`,
-            },
-          ],
-          structuredContent: {
-            id: data.id,
-            title: data.title,
-            status: data.status,
-          },
-        };
+        return ok(
+          { id: data.id, title: data.title, status: data.status },
+          `Lesson updated: **${data.title}** (ID: ${data.id}) [${data.status}]`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_update_lesson_content",
+  server.tool(
     {
-      title: "Update Lesson Content",
+      name: "lms_update_lesson_content",
       description: "Quickly update ONLY the MDX content of a lesson.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          content: z.string().describe("The new MDX content"),
-        })
-        .strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        content: z.string().describe("The new MDX content"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -348,10 +340,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, content }) => {
+    async ({ lesson_id, content }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lessons")
@@ -360,32 +358,26 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           .select("id, title")
           .single();
 
-        if (error) return errorResult(`Updating lesson content: ${error.message}`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Lesson content updated for: **${data.title}** (ID: ${data.id})`,
-            },
-          ],
-          structuredContent: {
-            id: data.id,
-            title: data.title,
-          },
-        };
+        if (error)
+          return errorResult(`Updating lesson content: ${error.message}`);
+        return ok(
+          { id: data.id, title: data.title },
+          `Lesson content updated for: **${data.title}** (ID: ${data.id})`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_delete_lesson",
+  server.tool(
     {
-      title: "Delete Lesson",
+      name: "lms_delete_lesson",
       description:
         "Permanently delete a lesson and its associated AI task. This is irreversible. Student completion records for this lesson will also be removed.",
-      inputSchema: z.object({ lesson_id: z.number().describe("The lesson ID to delete") }).strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID to delete"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -393,10 +385,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id }) => {
+    async ({ lesson_id }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data: lesson } = await supabase
           .from("lessons")
@@ -404,29 +402,30 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           .eq("id", lesson_id)
           .single();
 
-        const { error } = await supabase.from("lessons").delete().eq("id", lesson_id);
+        const { error } = await supabase
+          .from("lessons")
+          .delete()
+          .eq("id", lesson_id);
         if (error) return errorResult(`Deleting lesson: ${error.message}`);
 
-        return {
-          content: [{ type: "text", text: `Lesson "${lesson?.title ?? lesson_id}" (ID: ${lesson_id}) has been deleted.` }],
-          structuredContent: { success: true, deleted_lesson_id: lesson_id },
-        };
+        return ok(
+          { success: true, deleted_lesson_id: lesson_id },
+          `Lesson "${lesson?.title ?? lesson_id}" (ID: ${lesson_id}) has been deleted.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_get_lesson_ai_task",
+  server.tool(
     {
-      title: "Get Lesson AI Task",
-      description: "Get the AI task (instructions and system prompt) configured for a lesson.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-        })
-        .strict(),
+      name: "lms_get_lesson_ai_task",
+      description:
+        "Get the AI task (instructions and system prompt) configured for a lesson.",
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -434,50 +433,60 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id }) => {
+    async ({ lesson_id }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lessons_ai_tasks")
-          .select("id, lesson_id, task_instructions, system_prompt, created_at, updated_at")
+          .select(
+            "id, lesson_id, task_instructions, system_prompt, created_at, updated_at"
+          )
           .eq("lesson_id", lesson_id)
           .maybeSingle();
 
         if (error) return errorResult(`Getting AI task: ${error.message}`);
         if (!data) {
-          return { content: [{ type: "text", text: `No AI task configured for lesson ${lesson_id}.` }] };
+          return okText(
+            `No AI task configured for lesson ${lesson_id}.`
+          );
         }
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `# AI Task for Lesson ${lesson_id}\n\n**Task Instructions:**\n${data.task_instructions ?? "(not set)"}\n\n**System Prompt:**\n${data.system_prompt ?? "(not set)"}`,
-            },
-          ],
-          structuredContent: data,
-        };
+        return ok(
+          data as Record<string, unknown>,
+          `# AI Task for Lesson ${lesson_id}\n\n**Task Instructions:**\n${data.task_instructions ?? "(not set)"}\n\n**System Prompt:**\n${data.system_prompt ?? "(not set)"}`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  // Tool to create or update the AI task attached to a lesson
-  server.registerTool(
-    "lms_upsert_lesson_ai_task",
+  server.tool(
     {
-      title: "Upsert Lesson AI Task",
-      description: "Create or update the AI task (instructions + system prompt) for a lesson.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          task_instructions: z.string().optional().describe("Instructions the student should follow (task description)"),
-          system_prompt: z.string().optional().describe("System prompt / persona for the AI tutor"),
-        })
-        .strict(),
+      name: "lms_upsert_lesson_ai_task",
+      description:
+        "Create or update the AI task (instructions + system prompt) for a lesson.",
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        task_instructions: z
+          .string()
+          .optional()
+          .describe(
+            "Instructions the student should follow (task description)"
+          ),
+        system_prompt: z
+          .string()
+          .optional()
+          .describe("System prompt / persona for the AI tutor"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -485,15 +494,22 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, task_instructions, system_prompt }) => {
+    async ({ lesson_id, task_instructions, system_prompt }, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
       try {
         if (!task_instructions && !system_prompt) {
-          return errorResult("At least one of task_instructions or system_prompt must be provided.");
+          return errorResult(
+            "At least one of task_instructions or system_prompt must be provided."
+          );
         }
 
-        // Verify teacher owns the lesson (or is admin)
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const upsertObj: Record<string, unknown> = {
           lesson_id,
@@ -502,46 +518,42 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         };
 
         const { data, error } = await supabase
-          .from('lessons_ai_tasks')
-          .upsert(upsertObj, { onConflict: 'lesson_id' })
-          .select('*')
+          .from("lessons_ai_tasks")
+          .upsert(upsertObj, { onConflict: "lesson_id" })
+          .select("*")
           .single();
 
-        if (error) return errorResult(`Upserting lesson AI task: ${error.message}`);
+        if (error)
+          return errorResult(`Upserting lesson AI task: ${error.message}`);
 
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `AI task upserted for lesson ${lesson_id}.`,
-            },
-          ],
-          structuredContent: data,
-        };
+        return ok(
+          data as Record<string, unknown>,
+          `AI task upserted for lesson ${lesson_id}.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_reorder_lessons",
+  server.tool(
     {
-      title: "Reorder Lessons",
-      description: "Reorder lessons in a course by updating their sequence numbers.",
-      inputSchema: z
-        .object({
-          course_id: z.number().describe("The course ID"),
-          lesson_orders: z
-            .array(
-              z.object({
-                lesson_id: z.number().describe("Lesson ID"),
-                sequence: z.number().int().describe("New sequence number"),
-              })
-            )
-            .describe("Array of lesson IDs with their new sequence numbers"),
-        })
-        .strict(),
+      name: "lms_reorder_lessons",
+      description:
+        "Reorder lessons in a course by updating their sequence numbers.",
+      schema: z.object({
+        course_id: z.number().describe("The course ID"),
+        lesson_orders: z
+          .array(
+            z.object({
+              lesson_id: z.number().describe("Lesson ID"),
+              sequence: z.number().int().describe("New sequence number"),
+            })
+          )
+          .describe(
+            "Array of lesson IDs with their new sequence numbers"
+          ),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -549,10 +561,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ course_id, lesson_orders }) => {
+    async ({ course_id, lesson_orders }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyCourseOwnership(course_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyCourseOwnership(course_id);
+        const supabase = session.getClient();
 
         const errors: string[] = [];
         for (const { lesson_id, sequence } of lesson_orders) {
@@ -566,33 +584,28 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         }
 
         if (errors.length > 0) {
-          return errorResult(`Reorder completed with errors:\n${errors.join("\n")}`);
+          return errorResult(
+            `Reorder completed with errors:\n${errors.join("\n")}`
+          );
         }
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Successfully reordered ${lesson_orders.length} lessons in course ${course_id}.`,
-            },
-          ],
-          structuredContent: {
-            course_id,
-            reordered_count: lesson_orders.length,
-          },
-        };
+        return ok(
+          { course_id, reordered_count: lesson_orders.length },
+          `Successfully reordered ${lesson_orders.length} lessons in course ${course_id}.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_publish_lesson",
+  server.tool(
     {
-      title: "Publish Lesson",
+      name: "lms_publish_lesson",
       description: "Publish a lesson by setting its status to 'published'.",
-      inputSchema: z.object({ lesson_id: z.number().describe("The lesson ID to publish") }).strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID to publish"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -600,10 +613,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id }) => {
+    async ({ lesson_id }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lessons")
@@ -613,31 +632,22 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           .single();
 
         if (error) return errorResult(`Publishing lesson: ${error.message}`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Lesson published: **${data.title}** (ID: ${data.id})`,
-            },
-          ],
-          structuredContent: {
-            id: data.id,
-            title: data.title,
-            status: data.status,
-          },
-        };
+        return ok(
+          { id: data.id, title: data.title, status: data.status },
+          `Lesson published: **${data.title}** (ID: ${data.id})`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_list_mdx_components",
+  server.tool(
     {
-      title: "List MDX Components",
-      description: "List available MDX components and example snippets you can use in lesson MDX content.",
-      inputSchema: z.object({}).strict(),
+      name: "lms_list_mdx_components",
+      description:
+        "List available MDX components and example snippets you can use in lesson MDX content.",
+      schema: z.object({}),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -645,18 +655,26 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: false,
       },
     },
-    async () => {
+    async (_input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
       try {
         const components = [
           {
             name: "Callout",
             description: "A colored box for notes, warnings, or info.",
-            snippet: '<Callout type="info">Mensaje informativo para estudiantes.</Callout>',
+            snippet:
+              '<Callout type="info">Mensaje informativo para estudiantes.</Callout>',
           },
           {
             name: "Spoiler",
             description: "Collapsible content used for solutions or extra info.",
-            snippet: '<Spoiler label="Mostrar solución">Aquí va la solución ocultada.</Spoiler>',
+            snippet:
+              '<Spoiler label="Mostrar solución">Aquí va la solución ocultada.</Spoiler>',
           },
           {
             name: "Quiz",
@@ -667,12 +685,14 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           {
             name: "Steps",
             description: "A numbered list of steps.",
-            snippet: "<Steps><Step title=\"Paso 1\">Contenido...</Step></Steps>",
+            snippet:
+              '<Steps><Step title="Paso 1">Contenido...</Step></Steps>',
           },
           {
             name: "Vocabulary",
             description: "Word with translation and audio.",
-            snippet: '<Vocabulary word="Hola" translation="Hello" audioUrl="/audio/hola.mp3" />',
+            snippet:
+              '<Vocabulary word="Hola" translation="Hello" audioUrl="/audio/hola.mp3" />',
           },
           {
             name: "Definition",
@@ -682,57 +702,74 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           {
             name: "Video",
             description: "Embedded video player.",
-            snippet: '<Video url="https://www.youtube.com/watch?v=VIDEO_ID" />',
+            snippet:
+              '<Video url="https://www.youtube.com/watch?v=VIDEO_ID" />',
           },
           {
             name: "Audio",
             description: "Audio player with optional title.",
-            snippet: '<Audio src="https://example.com/audio.mp3" title="Episode 1" />',
+            snippet:
+              '<Audio src="https://example.com/audio.mp3" title="Episode 1" />',
           },
           {
             name: "Embed",
             description: "Generic iframe embed for external content.",
-            snippet: '<Embed url="https://example.com/interactive" title="Demo" caption="Interactive demo" />',
+            snippet:
+              '<Embed url="https://example.com/interactive" title="Demo" caption="Interactive demo" />',
           },
           {
             name: "FileDownload",
             description: "Downloadable file attachment with description.",
-            snippet: '<FileDownload url="https://example.com/guide.pdf" filename="guide.pdf" description="Course materials" />',
+            snippet:
+              '<FileDownload url="https://example.com/guide.pdf" filename="guide.pdf" description="Course materials" />',
           },
           {
             name: "Glossary",
             description: "List of term/definition pairs. Uses JSON.parse for items.",
-            snippet: '<Glossary items={JSON.parse(\'[{"term":"API","definition":"Application Programming Interface"},{"term":"REST","definition":"Representational State Transfer"}]\')} />',
+            snippet:
+              '<Glossary items={JSON.parse(\'[{"term":"API","definition":"Application Programming Interface"},{"term":"REST","definition":"Representational State Transfer"}]\')} />',
           },
           {
             name: "Comparison",
-            description: "Side-by-side comparison of two options with bullet points. Uses JSON.parse for sides.",
-            snippet: '<Comparison sideA={JSON.parse(\'{"title":"Python","points":["Easy to learn","Great for data science"],"highlight":"positive"}\')} sideB={JSON.parse(\'{"title":"Java","points":["Strongly typed","Enterprise standard"],"highlight":"neutral"}\')} summary="Both are great languages for different use cases." />',
+            description:
+              "Side-by-side comparison of two options with bullet points. Uses JSON.parse for sides.",
+            snippet:
+              '<Comparison sideA={JSON.parse(\'{"title":"Python","points":["Easy to learn","Great for data science"],"highlight":"positive"}\')} sideB={JSON.parse(\'{"title":"Java","points":["Strongly typed","Enterprise standard"],"highlight":"neutral"}\')} summary="Both are great languages for different use cases." />',
           },
           {
             name: "Table",
-            description: "Data table with headers and rows. Uses JSON.parse for data.",
-            snippet: '<Table headers={JSON.parse(\'["Concepto","Descripción","Ejemplo"]\')} rows={JSON.parse(\'[["Variable","Almacena un valor","let x = 5"],["Función","Bloque reutilizable","function sum(){}"]]\')} striped={true} />',
+            description:
+              "Data table with headers and rows. Uses JSON.parse for data.",
+            snippet:
+              '<Table headers={JSON.parse(\'["Concepto","Descripción","Ejemplo"]\')} rows={JSON.parse(\'[["Variable","Almacena un valor","let x = 5"],["Función","Bloque reutilizable","function sum(){}"]]\')} striped={true} />',
           },
           {
             name: "FlashcardSet",
-            description: "Deck of flashcards with front/back for self-study. Uses JSON.parse.",
-            snippet: '<FlashcardSet cards={JSON.parse(\'[{"front":"What is HTTP?","back":"HyperText Transfer Protocol"},{"front":"What is DNS?","back":"Domain Name System"}]\')} />',
+            description:
+              "Deck of flashcards with front/back for self-study. Uses JSON.parse.",
+            snippet:
+              '<FlashcardSet cards={JSON.parse(\'[{"front":"What is HTTP?","back":"HyperText Transfer Protocol"},{"front":"What is DNS?","back":"Domain Name System"}]\')} />',
           },
           {
             name: "FillInTheBlank",
-            description: "Sentence with blank slots for self-check. Uses JSON.parse for segments.",
-            snippet: '<FillInTheBlank segments={JSON.parse(\'[{"type":"text","value":"The capital of France is "},{"type":"blank","value":"Paris"},{"type":"text","value":"."}]\')} explanation="Paris has been the capital since the 10th century." />',
+            description:
+              "Sentence with blank slots for self-check. Uses JSON.parse for segments.",
+            snippet:
+              '<FillInTheBlank segments={JSON.parse(\'[{"type":"text","value":"The capital of France is "},{"type":"blank","value":"Paris"},{"type":"text","value":"."}]\')} explanation="Paris has been the capital since the 10th century." />',
           },
           {
             name: "MatchingPairs",
-            description: "Connect terms to their matches. Uses JSON.parse for pairs.",
-            snippet: '<MatchingPairs pairs={JSON.parse(\'[{"term":"H2O","match":"Water"},{"term":"NaCl","match":"Salt"},{"term":"CO2","match":"Carbon Dioxide"}]\')} explanation="These are common chemical formulas." />',
+            description:
+              "Connect terms to their matches. Uses JSON.parse for pairs.",
+            snippet:
+              '<MatchingPairs pairs={JSON.parse(\'[{"term":"H2O","match":"Water"},{"term":"NaCl","match":"Salt"},{"term":"CO2","match":"Carbon Dioxide"}]\')} explanation="These are common chemical formulas." />',
           },
           {
             name: "Ordering",
-            description: "Arrange items in the correct sequence. Uses JSON.parse for items (provide in correct order).",
-            snippet: '<Ordering items={JSON.parse(\'["Define the problem","Research solutions","Implement","Test","Deploy"]\')} explanation="The software development lifecycle follows these steps." />',
+            description:
+              "Arrange items in the correct sequence. Uses JSON.parse for items (provide in correct order).",
+            snippet:
+              '<Ordering items={JSON.parse(\'["Define the problem","Research solutions","Implement","Test","Deploy"]\')} explanation="The software development lifecycle follows these steps." />',
           },
         ];
 
@@ -741,10 +778,7 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           result += `### ${c.name}\n${c.description}\n\`\`\`mdx\n${c.snippet}\n\`\`\`\n\n`;
         }
 
-        return {
-          content: [{ type: "text", text: result }],
-          structuredContent: { components },
-        };
+        return ok({ components } as Record<string, unknown>, result);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -753,16 +787,13 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
 
   // ── Lesson Resource Tools ──────────────────────────────────────────
 
-  server.registerTool(
-    "lms_list_lesson_resources",
+  server.tool(
     {
-      title: "List Lesson Resources",
+      name: "lms_list_lesson_resources",
       description: "List downloadable file resources attached to a lesson.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-        })
-        .strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -770,20 +801,28 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id }) => {
+    async ({ lesson_id }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lesson_resources")
-          .select("id, file_name, file_size, mime_type, display_order, created_at")
+          .select(
+            "id, file_name, file_size, mime_type, display_order, created_at"
+          )
           .eq("lesson_id", lesson_id)
           .order("display_order", { ascending: true });
 
         if (error) return errorResult(`Listing resources: ${error.message}`);
         if (!data || data.length === 0) {
-          return { content: [{ type: "text", text: `No resources attached to lesson ${lesson_id}.` }] };
+          return okText(`No resources attached to lesson ${lesson_id}.`);
         }
 
         const output = {
@@ -798,49 +837,57 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           })),
         };
 
-        const lines = [`# Resources for lesson ${lesson_id}`, `${data.length} file(s)`, ""];
+        const lines = [
+          `# Resources for lesson ${lesson_id}`,
+          `${data.length} file(s)`,
+          "",
+        ];
         for (const r of output.resources) {
           const sizeKB = (r.file_size / 1024).toFixed(1);
-          lines.push(`${r.display_order + 1}. **${r.file_name}** (ID: ${r.id}) — ${sizeKB} KB, ${r.mime_type}`);
+          lines.push(
+            `${r.display_order + 1}. **${r.file_name}** (ID: ${r.id}) — ${sizeKB} KB, ${r.mime_type}`
+          );
         }
 
-        return {
-          content: [{ type: "text", text: lines.join("\n") }],
-          structuredContent: output,
-        };
+        return ok(output, lines.join("\n"));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_upload_lesson_resource",
+  server.tool(
     {
-      title: "Upload Lesson Resource",
+      name: "lms_upload_lesson_resource",
       description:
         "Upload a file resource to a lesson. The file content must be provided as a base64-encoded string. Max 10MB. Supported types: PDF, Word, Excel, CSV, images (JPEG, PNG, GIF, WebP).",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          file_name: z.string().min(1).describe("Original file name with extension (e.g. 'worksheet.pdf')"),
-          file_content_base64: z.string().min(1).describe("Base64-encoded file content"),
-          mime_type: z
-            .enum([
-              "application/pdf",
-              "application/msword",
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-              "application/vnd.ms-excel",
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              "text/csv",
-              "image/jpeg",
-              "image/png",
-              "image/gif",
-              "image/webp",
-            ])
-            .describe("MIME type of the file"),
-        })
-        .strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        file_name: z
+          .string()
+          .min(1)
+          .describe(
+            "Original file name with extension (e.g. 'worksheet.pdf')"
+          ),
+        file_content_base64: z
+          .string()
+          .min(1)
+          .describe("Base64-encoded file content"),
+        mime_type: z
+          .enum([
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/csv",
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+          ])
+          .describe("MIME type of the file"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -848,17 +895,25 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, file_name, file_content_base64, mime_type }) => {
+    async ({ lesson_id, file_name, file_content_base64, mime_type }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
-        const tenantId = auth.getTenantId();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
+        const tenantId = session.getTenantId();
 
         // Decode base64 to buffer
         const buffer = Buffer.from(file_content_base64, "base64");
         const MAX_SIZE = 10 * 1024 * 1024; // 10MB
         if (buffer.length > MAX_SIZE) {
-          return errorResult(`File too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Maximum is 10MB.`);
+          return errorResult(
+            `File too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Maximum is 10MB.`
+          );
         }
 
         const ext = file_name.split(".").pop()?.toLowerCase() || "bin";
@@ -872,7 +927,8 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             upsert: false,
           });
 
-        if (uploadError) return errorResult(`Upload failed: ${uploadError.message}`);
+        if (uploadError)
+          return errorResult(`Upload failed: ${uploadError.message}`);
 
         // Get current max display_order
         const { data: existing } = await supabase
@@ -895,44 +951,38 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             file_path: storagePath,
             file_size: buffer.length,
             mime_type,
-            uploaded_by: auth.getUserId(),
+            uploaded_by: session.getUserId(),
             display_order: nextOrder,
           })
           .select("id, file_name, file_size, mime_type")
           .single();
 
-        if (error) return errorResult(`Saving resource record: ${error.message}`);
+        if (error)
+          return errorResult(`Saving resource record: ${error.message}`);
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Resource uploaded: **${data.file_name}** (ID: ${data.id}) — ${(data.file_size / 1024).toFixed(1)} KB`,
-            },
-          ],
-          structuredContent: {
+        return ok(
+          {
             id: data.id,
             file_name: data.file_name,
             file_size: data.file_size,
             mime_type: data.mime_type,
           },
-        };
+          `Resource uploaded: **${data.file_name}** (ID: ${data.id}) — ${(data.file_size / 1024).toFixed(1)} KB`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_delete_lesson_resource",
+  server.tool(
     {
-      title: "Delete Lesson Resource",
-      description: "Delete a file resource from a lesson. Removes both the file from storage and the database record.",
-      inputSchema: z
-        .object({
-          resource_id: z.number().describe("The resource ID to delete"),
-        })
-        .strict(),
+      name: "lms_delete_lesson_resource",
+      description:
+        "Delete a file resource from a lesson. Removes both the file from storage and the database record.",
+      schema: z.object({
+        resource_id: z.number().describe("The resource ID to delete"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -940,10 +990,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ resource_id }) => {
+    async ({ resource_id }, ctx) => {
+      let session: LmsSession;
       try {
-        const supabase = auth.getClient();
-        const tenantId = auth.getTenantId();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        const supabase = session.getClient();
+        const tenantId = session.getTenantId();
 
         // Fetch resource and verify ownership
         const { data: resource, error: fetchError } = await supabase
@@ -952,14 +1008,20 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
           .eq("id", resource_id)
           .single();
 
-        if (fetchError || !resource) return errorResult(`Resource ${resource_id} not found.`);
-        if (resource.tenant_id !== tenantId) return errorResult("Access denied: resource belongs to a different tenant.");
+        if (fetchError || !resource)
+          return errorResult(`Resource ${resource_id} not found.`);
+        if (resource.tenant_id !== tenantId)
+          return errorResult(
+            "Access denied: resource belongs to a different tenant."
+          );
 
         // Verify lesson ownership
-        await auth.verifyLessonOwnership(resource.lesson_id);
+        await session.verifyLessonOwnership(resource.lesson_id);
 
         // Remove from storage
-        await supabase.storage.from("lesson-resources").remove([resource.file_path]);
+        await supabase.storage
+          .from("lesson-resources")
+          .remove([resource.file_path]);
 
         // Remove from DB
         const { error } = await supabase
@@ -969,31 +1031,26 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
 
         if (error) return errorResult(`Deleting resource: ${error.message}`);
 
-        return {
-          content: [
-            { type: "text", text: `Resource deleted: **${resource.file_name}** (ID: ${resource_id})` },
-          ],
-          structuredContent: { success: true, deleted_resource_id: resource_id },
-        };
+        return ok(
+          { success: true, deleted_resource_id: resource_id },
+          `Resource deleted: **${resource.file_name}** (ID: ${resource_id})`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_reorder_lesson_resources",
+  server.tool(
     {
-      title: "Reorder Lesson Resources",
+      name: "lms_reorder_lesson_resources",
       description: "Reorder the downloadable resources attached to a lesson.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          resource_ids: z
-            .array(z.number())
-            .describe("Resource IDs in the desired display order"),
-        })
-        .strict(),
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        resource_ids: z
+          .array(z.number())
+          .describe("Resource IDs in the desired display order"),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -1001,10 +1058,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, resource_ids }) => {
+    async ({ lesson_id, resource_ids }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const errors: string[] = [];
         for (let i = 0; i < resource_ids.length; i++) {
@@ -1014,42 +1077,40 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
             .eq("id", resource_ids[i])
             .eq("lesson_id", lesson_id);
 
-          if (error) errors.push(`Resource ${resource_ids[i]}: ${error.message}`);
+          if (error)
+            errors.push(`Resource ${resource_ids[i]}: ${error.message}`);
         }
 
         if (errors.length > 0) {
-          return errorResult(`Reorder completed with errors:\n${errors.join("\n")}`);
+          return errorResult(
+            `Reorder completed with errors:\n${errors.join("\n")}`
+          );
         }
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Successfully reordered ${resource_ids.length} resources for lesson ${lesson_id}.`,
-            },
-          ],
-          structuredContent: { lesson_id, reordered_count: resource_ids.length },
-        };
+        return ok(
+          { lesson_id, reordered_count: resource_ids.length },
+          `Successfully reordered ${resource_ids.length} resources for lesson ${lesson_id}.`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     }
   );
 
-  server.registerTool(
-    "lms_schedule_lesson",
+  server.tool(
     {
-      title: "Schedule Lesson Publish",
-      description: "Schedule a draft lesson to be auto-published at a specific date/time. The cron job runs every 5 minutes.",
-      inputSchema: z
-        .object({
-          lesson_id: z.number().describe("The lesson ID"),
-          publish_at: z
-            .string()
-            .nullable()
-            .describe("ISO 8601 datetime for auto-publish (e.g. '2026-04-01T09:00:00Z'), or null to clear the schedule"),
-        })
-        .strict(),
+      name: "lms_schedule_lesson",
+      description:
+        "Schedule a draft lesson to be auto-published at a specific date/time. The cron job runs every 5 minutes.",
+      schema: z.object({
+        lesson_id: z.number().describe("The lesson ID"),
+        publish_at: z
+          .string()
+          .nullable()
+          .describe(
+            "ISO 8601 datetime for auto-publish (e.g. '2026-04-01T09:00:00Z'), or null to clear the schedule"
+          ),
+      }),
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -1057,10 +1118,16 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
         openWorldHint: true,
       },
     },
-    async ({ lesson_id, publish_at }) => {
+    async ({ lesson_id, publish_at }, ctx) => {
+      let session: LmsSession;
       try {
-        await auth.verifyLessonOwnership(lesson_id);
-        const supabase = auth.getClient();
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+      try {
+        await session.verifyLessonOwnership(lesson_id);
+        const supabase = session.getClient();
 
         const { data, error } = await supabase
           .from("lessons")
@@ -1071,21 +1138,18 @@ export function registerLessonTools(server: McpServer, auth: AuthManager) {
 
         if (error) return errorResult(`Scheduling lesson: ${error.message}`);
 
-        const action = publish_at ? `scheduled for ${publish_at}` : "schedule cleared";
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Lesson **${data.title}** (ID: ${data.id}) — ${action}`,
-            },
-          ],
-          structuredContent: {
+        const action = publish_at
+          ? `scheduled for ${publish_at}`
+          : "schedule cleared";
+        return ok(
+          {
             id: data.id,
             title: data.title,
             status: data.status,
             publish_at: data.publish_at,
           },
-        };
+          `Lesson **${data.title}** (ID: ${data.id}) — ${action}`
+        );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }

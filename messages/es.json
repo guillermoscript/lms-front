@@ -1,4 +1,61 @@
 {
+  "seo": {
+    "defaultDescription": "Cursos en línea, exámenes y certificados verificados — aprende a tu ritmo.",
+    "home": {
+      "title": "Cursos en línea y certificados"
+    },
+    "courses": {
+      "title": "Cursos",
+      "description": "Explora el catálogo completo de cursos en línea y empieza a aprender hoy.",
+      "badge": "Curso"
+    },
+    "products": {
+      "title": "Planes y productos",
+      "description": "Explora los planes y paquetes de cursos disponibles."
+    },
+    "about": {
+      "title": "Nosotros",
+      "description": "Conoce más sobre nuestra escuela, nuestra misión y nuestros profesores."
+    },
+    "creators": {
+      "title": "Para creadores",
+      "description": "Lanza tu propia escuela en línea: vende cursos, gestiona estudiantes y haz crecer tu negocio educativo."
+    },
+    "pricing": {
+      "title": "Precios",
+      "description": "Precios simples y transparentes para cursos y membresías."
+    },
+    "platformPricing": {
+      "title": "Precios de la plataforma",
+      "description": "Planes para escuelas y creadores — empieza gratis y escala a tu ritmo."
+    },
+    "createSchool": {
+      "title": "Crea tu escuela",
+      "description": "Crea tu propia escuela en línea en minutos — cursos, pagos y estudiantes en un solo lugar."
+    },
+    "joinSchool": {
+      "title": "Únete a una escuela",
+      "description": "Únete a tu escuela y empieza a aprender."
+    },
+    "checkout": {
+      "title": "Pago"
+    },
+    "auth": {
+      "login": "Iniciar sesión",
+      "signUp": "Crear cuenta",
+      "signUpSuccess": "Cuenta creada",
+      "forgotPassword": "Restablecer contraseña",
+      "updatePassword": "Actualizar contraseña",
+      "error": "Error de autenticación"
+    },
+    "verify": {
+      "title": "{student} — Certificado: {course}",
+      "description": "{student} obtuvo un certificado verificado de {course}, emitido por {issuer}. Comprueba su autenticidad.",
+      "eyebrow": "Certificado de finalización",
+      "verifiedLabel": "Credencial verificada",
+      "notFoundTitle": "Certificado no encontrado"
+    }
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Ocurrió un error",
@@ -72,6 +129,8 @@
       "description": "Un tutor IA a nivel de curso con el que los estudiantes pueden chatear mientras estudian",
       "enable": "Activar para estudiantes",
       "enableDesc": "Agrega un boton flotante de tutor en todas las paginas del curso y una seccion de estudio en la vista general",
+      "interleaving": "Práctica intercalada",
+      "interleavingHint": "Mezcla temas ya dominados dentro de una misma sesión de práctica. Se siente más difícil para el estudiante, pero mejora la retención de forma comprobada. Los temas nuevos siempre se practican de forma enfocada.",
       "persona": "Persona",
       "personaPlaceholder": "Ej: Eres un desarrollador Python senior con 15 anos de experiencia. Te encantan las analogias del mundo real y el humor para explicar conceptos complejos.",
       "personaHint": "Escribe en segunda persona (\"Eres...\"). Incluye nivel de experiencia, rasgos de personalidad y tono de voz.",
@@ -153,7 +212,57 @@
     }
   },
   "dashboard": {
+    "accountSettings": {
+      "title": "Configuración",
+      "subtitle": "Administra tu cuenta e integraciones.",
+      "accountTitle": "Detalles de la Cuenta",
+      "accountSubtitle": "Actualiza tu información personal",
+      "manageTokens": "Administrar tokens de API"
+    },
     "student": {
+      "aiAssistant": {
+        "title": "Asistente de IA",
+        "subtitle": "Conecta Claude a tu escuela y aprende con un tutor de IA que conoce tus cursos.",
+        "whatYouCanDo": {
+          "title": "Qué puedes hacer",
+          "description": "Una vez conectado, pídele a Claude que:",
+          "item1": "Te guíe por tus lecciones y las marque como completadas a medida que avanzas",
+          "item2": "Te haga preguntas de práctica y tarjetas de memoria basadas en tus cursos",
+          "item3": "Revise tu preparación para exámenes y refuerce tus puntos débiles",
+          "item4": "Cree un plan de estudio semanal y te mantenga al día",
+          "item5": "Te explique lo que no entiendas — y envíe tu pregunta a tu profesor si hace falta"
+        }
+      },
+      "billing": {
+        "title": "Facturación",
+        "subtitle": "Tus compras, suscripción activa y facturas descargables.",
+        "subscription": {
+          "sectionTitle": "Suscripción activa",
+          "unknownPlan": "Plan desconocido",
+          "renewsOn": "Se renueva el",
+          "cancelsOn": "Se cancela el",
+          "cancelAtPeriodEndNotice": "Esta suscripción no se renovará. El acceso termina el {date}.",
+          "cancelNote": "Para cancelar tu suscripción, comunícate con tu institución.",
+          "empty": "No tienes una suscripción activa.",
+          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" }
+        },
+        "purchases": {
+          "sectionTitle": "Historial de compras",
+          "empty": "Aún no tienes compras.",
+          "unknownItem": "Elemento desconocido",
+          "table": { "item": "Artículo", "provider": "Proveedor", "date": "Fecha", "status": "Estado", "amount": "Monto" },
+          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" }
+        },
+        "offline": {
+          "sectionTitle": "Pagos offline / manuales",
+          "table": { "product": "Producto", "date": "Fecha", "status": "Estado", "amount": "Monto", "invoice": "Factura" },
+          "downloadInvoice": "Descargar",
+          "downloadInvoiceLabel": "Descargar factura {number}",
+          "managePaymentsNote": "¿Necesitas subir comprobante o ver detalles?",
+          "managePaymentsLink": "Ir a Pagos"
+        },
+        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+      },
       "notifications": {
         "title": "Notificaciones",
         "description": "Mantente al día con la actividad de tu escuela.",
@@ -374,6 +483,11 @@
         "viewDetails": "Ver Detalles",
         "viewProof": "Ver Comprobante",
         "unknownProduct": "Producto Desconocido",
+        "nextSteps": {
+          "title": "Próximos pasos de tu compra",
+          "description": "Tu pago de {product} fue confirmado. Sigue estos pasos para comenzar:",
+          "open": "Abrir enlace"
+        },
         "instructionsAvailable": "Instrucciones de pago disponibles",
         "empty": {
           "title": "Sin Solicitudes de Pago",
@@ -577,6 +691,7 @@
         "practice": {
           "title": "Ejercicios de Práctica",
           "description": "Ayuda a tus estudiantes a aplicar lo aprendido con ejercicios prácticos.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Añadir Ejercicio",
           "noExercises": "Sin ejercicios aún",
           "createFirst": "Crea tu primer ejercicio",
@@ -750,6 +865,11 @@
         "thumbnailLabel": "URL de la Miniatura",
         "thumbnailPlaceholder": "https://ejemplo.com/imagen.jpg",
         "thumbnailHint": "Proporciona una URL a una imagen (se recomienda relación de aspecto 16:9)",
+        "uploadImage": "Subir imagen",
+        "uploading": "Subiendo…",
+        "orPasteUrl": "o pega una URL abajo",
+        "removeImage": "Eliminar imagen",
+        "uploadError": "Error al subir la imagen",
         "categoryLabel": "Categoría",
         "categoryPlaceholder": "Selecciona una categoría",
         "statusLabel": "Estado",
@@ -838,6 +958,51 @@
         "dragQuestion": "Arrastrar para reordenar pregunta"
       },
       "lessonEditor": {
+        "checkpointBlock": {
+          "title": "Checkpoint",
+          "saveLessonFirst": "Guarda la lección primero para añadir checkpoints.",
+          "loading": "Cargando checkpoints…",
+          "unknownExercise": "Ejercicio sin título",
+          "changeCheckpoint": "Cambiar checkpoint",
+          "requiredLabel": "Obligatorio",
+          "allowSkipLabel": "Permitir omitir",
+          "selectExisting": "Usar un checkpoint existente…",
+          "createNew": "Crear checkpoint nuevo",
+          "cancel": "Cancelar",
+          "exerciseLabel": "Ejercicio",
+          "exercisePlaceholder": "Selecciona un ejercicio…",
+          "labelOptional": "Etiqueta (opcional)",
+          "labelPlaceholder": "p. ej. Repaso rápido",
+          "save": "Guardar",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
+        },
+        "videoCheckpoints": {
+          "title": "Checkpoints de video",
+          "loading": "Cargando checkpoints…",
+          "empty": "Aún no hay checkpoints. Añade uno para colocar una pregunta de repaso en un momento del video.",
+          "unknownExercise": "Ejercicio sin título",
+          "requiredShort": "Oblig.",
+          "allowSkipShort": "Omitir",
+          "remove": "Eliminar checkpoint",
+          "timestampLabel": "Tiempo",
+          "exerciseLabel": "Ejercicio",
+          "exercisePlaceholder": "Selecciona un ejercicio…",
+          "labelOptional": "Etiqueta (opcional)",
+          "labelPlaceholder": "p. ej. Repaso rápido",
+          "requiredLabel": "Obligatorio",
+          "allowSkipLabel": "Permitir omitir",
+          "invalidTimestamp": "Ingresa un tiempo válido (mm:ss) y un ejercicio.",
+          "save": "Añadir marcador",
+          "cancel": "Cancelar",
+          "addMarker": "Añadir checkpoint de video",
+          "exerciseStatus": {
+            "draft": "Borrador",
+            "archived": "Archivado"
+          }
+        },
         "editTitle": "Editar Lección",
         "createTitle": "Nueva Lección",
         "backToCourse": "Volver a {course}",
@@ -1295,6 +1460,45 @@
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
+      "payouts": {
+        "title": "Pagos recibidos",
+        "description": "Desembolsos de Stripe Connect a la cuenta de tu escuela.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "stats": {
+          "totalPaid": "Total recibido",
+          "totalPaidDesc": "Desembolsos exitosos acumulados",
+          "pendingCount": "Pendientes / en proceso",
+          "pendingCountDesc": "Pagos aún no completados"
+        },
+        "status": { "paid": "Pagado", "processing": "Procesando", "pending": "Pendiente", "failed": "Fallido" },
+        "table": {
+          "title": "Historial de pagos",
+          "headers": { "period": "Período", "amount": "Monto", "status": "Estado", "paidAt": "Pagado el", "stripeRef": "Ref. Stripe" }
+        },
+        "empty": {
+          "title": "Sin pagos aún",
+          "description": "Los pagos aparecerán aquí una vez que Stripe Connect transfiera los fondos a tu cuenta bancaria. Asegúrate de que tu cuenta Stripe esté completamente verificada."
+        }
+      },
+      "invoices": {
+        "title": "Facturas",
+        "description": "Documentos de factura para pagos manuales y fuera de línea.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "note": { "text": "Las compras con tarjeta y Solana se registran en", "transactionsLink": "Transacciones" },
+        "status": { "paid": "Pagado", "pending": "Pendiente", "cancelled": "Cancelado" },
+        "table": {
+          "title": "Registro de facturas",
+          "headers": { "invoiceNumber": "Factura #", "item": "Artículo", "amount": "Monto", "status": "Estado", "date": "Fecha", "actions": "Acciones" },
+          "unknownProduct": "Producto desconocido",
+          "viewInvoice": "Ver factura"
+        },
+        "empty": {
+          "title": "No hay facturas",
+          "description": "Los documentos de factura se generan para solicitudes de pago manuales. Aparecerán aquí una vez que se asigne un número de factura a una solicitud."
+        }
+      },
       "breadcrumbs": {
         "admin": "Admin",
         "analytics": "Analíticas",
@@ -1322,7 +1526,8 @@
         "tenants": "Inquilinos",
         "apiTokens": "Tokens de API",
         "monetization": "Monetización",
-        "appearance": "Apariencia"
+        "appearance": "Apariencia",
+        "website": "Sitio Web"
       },
       "appearance": {
         "title": "Apariencia",
@@ -1508,7 +1713,14 @@
           "renewalRequired": "Renovación Necesaria Pronto",
           "renewalDescription": "Tu período de suscripción termina en {count, plural, one {# día} other {# días}}. Renueva ahora para asegurar un servicio ininterrumpido para tus estudiantes.",
           "courses": "Cursos",
-          "students": "Estudiantes"
+          "students": "Estudiantes",
+          "usagePercent": "{percent}% usado",
+          "limitReached": "Límite alcanzado",
+          "unlimitedPlan": "Plan ilimitado",
+          "upcomingPayment": "Próximo pago",
+          "dueOn": "Vence el {date}",
+          "bankTransfer": "Transferencia bancaria",
+          "cardPayment": "Pago con tarjeta"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
@@ -1554,7 +1766,8 @@
           },
           "actions": {
             "roles": "Roles",
-            "view": "Ver"
+            "view": "Ver",
+            "more": "Más acciones"
           }
         },
         "details": {
@@ -1941,11 +2154,10 @@
             "publishedDate": "Publicado",
             "actions": "Acciones"
           },
-          "unknownAuthor": "Desconocido",
+          "unknownAuthor": "Sin autor asignado",
           "empty": "No se encontraron cursos",
           "actions": {
-            "view": "Ver",
-            "edit": "Editar"
+            "manage": "Gestionar"
           }
         },
         "statusActions": {
@@ -1953,6 +2165,7 @@
           "archive": "Archivar",
           "restore": "Restaurar",
           "cancel": "Cancelar",
+          "moreActions": "Más acciones",
           "dialogs": {
             "approve": {
               "title": "Aprobar Curso",
@@ -2146,6 +2359,10 @@
           "branding": {
             "title": "Ajustes de Marca",
             "description": "Personaliza la identidad visual de tu plataforma — logo, colores y favicon"
+          },
+          "solanaWallet": {
+            "title": "Wallet de Solana",
+            "description": "La wallet receptora de tu escuela para pagos en cripto Solana (pago único y suscripción)."
           }
         },
         "form": {
@@ -2195,6 +2412,12 @@
             "stripeHint": "Activar el procesamiento de pagos con Stripe",
             "paypal": "PayPal",
             "paypalHint": "Activar el procesamiento de pagos con PayPal",
+            "lemonsqueezy": "Lemon Squeezy",
+            "lemonsqueezyHint": "Acepta pagos con Lemon Squeezy (comerciante registrado). Pega un ID de variante en cada plan o producto.",
+            "solana": "Solana (cripto)",
+            "solanaHint": "Acepta pagos cripto con Solana. Configura tu billetera receptora abajo. Cubre pago único y suscripción.",
+            "solanaAcceptSol": "Aceptar también SOL nativo",
+            "solanaAcceptSolHint": "Por defecto recibes USDC (una stablecoin 1:1 con el dólar). Activa esto para permitir también pagos en SOL — el precio en USD se convierte a SOL al tipo de cambio en vivo al momento del pago. Quedarás con SOL, cuyo valor puede variar después del pago.",
             "currency": "Moneda por Defecto",
             "currencyPlaceholder": "Seleccionar moneda",
             "currencyHint": "Moneda por defecto para todas las transacciones",
@@ -2204,7 +2427,10 @@
             "invoicePrefix": "Prefijo de Factura",
             "invoicePrefixHint": "Prefijo para los números de factura (ej., INV-001)",
             "approval": "Requerir Aprobación de Pago",
-            "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos"
+            "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos",
+            "manualInstructions": "Instrucciones de Pago Manual / Offline",
+            "manualInstructionsPlaceholder": "ej. Transferencia bancaria a la cuenta 1234-5678 (Banco XYZ). Incluye tu correo como referencia y sube el comprobante.",
+            "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo."
           },
           "branding": {
             "logoUrl": "URL del Logo",
@@ -2233,20 +2459,29 @@
             "expirationHint": "Número de días hasta que la inscripción expire (0 = nunca expira)",
             "capacity": "Activar Capacidad de Curso",
             "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
+          },
+          "solanaWallet": {
+            "label": "Dirección de la wallet receptora",
+            "placeholder": "Tu wallet de Solana (base58)",
+            "hint": "Los fondos de los pagos en Solana se envían aquí. Esta única dirección respalda tanto los pagos únicos como las suscripciones en cripto.",
+            "save": "Guardar Wallet",
+            "saving": "Guardando...",
+            "success": "Wallet de Solana guardada",
+            "error": "Error al guardar la wallet de Solana"
           }
         }
       },
       "apiTokens": {
-        "title": "Tokens de API",
-        "description": "Genera tokens para conectar Claude Desktop u otros clientes MCP al LMS.",
+        "title": "Conectar Asistentes de IA",
+        "description": "Conecta Claude u otros clientes MCP a tu LMS.",
         "createToken": "Crear Token",
         "howToConnect": {
-          "title": "Cómo Conectar",
-          "description": "Configura Claude Desktop u otros clientes MCP para acceder a los datos del LMS.",
-          "step1": "Crea un token arriba y copia el fragmento de configuración de Claude Desktop.",
-          "step2": "Abre la configuración de Claude Desktop y busca el archivo de configuración de servidores MCP.",
+          "title": "Avanzado: tokens de API (CLI y otros clientes MCP)",
+          "description": "Usa un token para clientes que no soportan inicio de sesión OAuth.",
+          "step1": "Crea un token arriba y copia el fragmento de configuración.",
+          "step2": "Abre el archivo de configuración de tu cliente MCP.",
           "step3": "Pega el fragmento de configuración y guarda.",
-          "step4": "Reinicia Claude Desktop — deberías ver las herramientas del LMS disponibles."
+          "step4": "Reinicia el cliente — deberías ver las herramientas del LMS disponibles."
         },
         "yourTokens": {
           "title": "Tus Tokens",
@@ -2328,7 +2563,7 @@
           "back": "Volver a Planes",
           "details": {
             "title": "Detalles del Plan",
-            "description": "Los planes de suscripción se crearán automáticamente en Stripe con facturación recurrente."
+            "description": "Configura un plan recurrente. La forma de facturación depende del método de pago que elijas a continuación."
           }
         },
         "edit": {
@@ -2341,6 +2576,12 @@
           "namePlaceholder": "ej., Plan Mensual Premium",
           "description": "Descripción",
           "descriptionPlaceholder": "Describe qué incluye este plan...",
+          "method": "Método de Pago",
+          "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
+          "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
+          "methodPaypal": "PayPal (Próximamente)",
+          "methodManualHint": "La facturación se gestiona en la app; los estudiantes coordinan el pago recurrente contigo de forma offline. No requiere credenciales de procesador de pago.",
+          "methodStripeHint": "Stripe gestiona la suscripción recurrente y la facturación automáticamente.",
           "price": "Precio",
           "currency": "Moneda",
           "duration": "Duración",
@@ -2363,6 +2604,22 @@
           "toasts": {
             "createSuccess": "Plan creado con éxito",
             "updateSuccess": "Plan actualizado con éxito"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Checkout Alojado, Impuestos Incluidos)",
+          "methodSolana": "Solana (Cripto, Pago único)",
+          "methodSolanaSubs": "Solana (Cripto, Recurrente)",
+          "variantIdLabel": "ID de Variante de Lemon Squeezy",
+          "variantIdPlaceholder": "ej. 123456",
+          "variantIdHint": "Encuéntralo en tu panel de Lemon Squeezy bajo la variante del producto. El checkout falla sin él.",
+          "solanaWalletHint": "Configura la wallet de Solana de tu escuela en Ajustes → Pagos para que los estudiantes te paguen. Sin ella, el checkout falla.",
+          "solanaWalletCta": "Configúrala en Ajustes → Pagos",
+          "methodHint": {
+            "manual": "La facturación se gestiona en la app; los estudiantes coordinan el pago recurrente contigo de forma offline. No requiere credenciales de procesador de pago.",
+            "stripe": "Stripe gestiona la suscripción recurrente y la facturación automáticamente.",
+            "paypal": "PayPal gestiona la suscripción recurrente automáticamente.",
+            "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
+            "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero.",
+            "solana_subs": "Suscripción recurrente on-chain cobrada automáticamente desde la wallet del estudiante. Configura tu wallet de Solana en Ajustes → Pagos primero."
           }
         }
       },
@@ -2399,7 +2656,7 @@
           "back": "Volver a Productos",
           "details": {
             "title": "Detalles del Producto",
-            "description": "Los productos se crearán automáticamente en Stripe. Vincula cursos para crear paquetes."
+            "description": "Configura un producto de pago único. La forma de cobro depende del método de pago que elijas. Vincula cursos para crear paquetes."
           }
         },
         "edit": {
@@ -2440,6 +2697,21 @@
           "toasts": {
             "createSuccess": "Producto creado con éxito",
             "updateSuccess": "Producto actualizado con éxito"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Checkout Alojado, Impuestos Incluidos)",
+          "methodSolana": "Solana (Cripto, Pago único)",
+          "methodSolanaSubs": "Solana (Cripto, Recurrente)",
+          "variantIdLabel": "ID de Variante de Lemon Squeezy",
+          "variantIdPlaceholder": "ej. 123456",
+          "variantIdHint": "Encuéntralo en tu panel de Lemon Squeezy bajo la variante del producto. El checkout falla sin él.",
+          "solanaWalletHint": "Configura la wallet de Solana de tu escuela en Ajustes → Pagos para que los estudiantes te paguen. Sin ella, el checkout falla.",
+          "solanaWalletCta": "Configúrala en Ajustes → Pagos",
+          "methodHint": {
+            "manual": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
+            "stripe": "Los estudiantes pueden pagar online al instante",
+            "paypal": "Los estudiantes pueden pagar online con PayPal.",
+            "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
+            "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero."
           }
         },
         "actions": {
@@ -2836,6 +3108,7 @@
     "myCertificates": "Mis Certificados",
     "progressReport": "Informe de Progreso",
     "pointStore": "Tienda de Puntos",
+    "aiAssistant": "Asistente de IA",
     "settings": "Configuración",
     "logout": "Cerrar Sesión",
     "platform": "Plataforma LMS",
@@ -2856,11 +3129,17 @@
     "analytics": "Analíticas",
     "monetization": "Monetización",
     "monetizationOverview": "Resumen",
+    "courses": "Cursos",
+    "people": "Personas",
+    "website": "Sitio Web",
     "products": "Productos",
     "plans": "Planes",
     "subscriptions": "Suscripciones",
     "paymentRequests": "Solicitudes de Pago",
+    "payouts": "Pagos Recibidos",
+    "invoices": "Facturas",
     "myPayments": "Mis Pagos",
+    "myBilling": "Facturación y Recibos",
     "community": "Comunidad"
   },
   "userNav": {
@@ -2908,6 +3187,16 @@
     "ago": "atrás"
   },
   "components": {
+    "connectClaude": {
+      "title": "Conectar Claude",
+      "description": "Agrega el LMS como conector personalizado — sin tokens, inicias sesión con tu cuenta del LMS.",
+      "urlLabel": "URL del conector",
+      "step1": "Copia la URL del conector de arriba.",
+      "step2": "En Claude (claude.ai o la app de escritorio), abre Configuración → Conectores → Agregar conector personalizado.",
+      "step3": "Pega la URL y haz clic en Agregar.",
+      "step4": "Cuando Claude pida autorización, inicia sesión con tu cuenta del LMS y aprueba — las herramientas del LMS aparecerán en tus chats.",
+      "copied": "URL del conector copiada"
+    },
     "courseProgress": {
       "progress": "Progreso",
       "lessons": "lecciones"
@@ -2943,7 +3232,8 @@
       "enrolling": "Inscribiendo...",
       "subscribeAccess": "Suscribirse para Acceder",
       "enrolled": "Inscrito",
-      "notInPlan": "No incluido en tu Plan"
+      "notInPlan": "No incluido en tu Plan",
+      "upgradePlan": "Mejora tu plan para desbloquear"
     },
     "profileForm": {
       "fullName": "Nombre Completo",
@@ -2972,7 +3262,11 @@
       "resources": "Recursos",
       "downloadFile": "Descargar",
       "lessonLocked": "Lección bloqueada",
-      "completePreviousFirst": "Completa la lección anterior para desbloquear esta."
+      "completePreviousFirst": "Completa la lección anterior para desbloquear esta.",
+      "courseProgress": "Progreso del curso: {completed} de {total} lecciones completadas ({percent}%)",
+      "goToLesson": "Ir a: {title}",
+      "noContent": "No hay contenido disponible para esta lección.",
+      "contentError": "Error al cargar el contenido"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -3011,6 +3305,23 @@
       },
       "tooltips": {
         "restart": "Reiniciar Conversación"
+      },
+      "mobile": {
+        "title": "Tutor IA",
+        "start": "Comenzar con el tutor IA",
+        "continue": "Continuar con el tutor IA",
+        "review": "Revisar conversación",
+        "close": "Cerrar chat",
+        "messagesCount": "{count, plural, one {# mensaje} other {# mensajes}}"
+      },
+      "contextual": {
+        "chip": "No entiendo — preguntar al tutor",
+        "prompt": "No entiendo esta lección. ¿Puedes explicármela de otra manera?"
+      },
+      "restartDialog": {
+        "title": "¿Reiniciar conversación?",
+        "cancel": "Cancelar",
+        "confirm": "Reiniciar"
       }
     },
     "lessonSidebar": {
@@ -3027,7 +3338,43 @@
       "complete": "Completar",
       "next": "Siguiente",
       "finishCourse": "Finalizar Curso",
-      "completeFirst": "Completa esta lección primero"
+      "completeFirst": "Completa esta lección primero",
+      "courseComplete": "¡Curso completado! 🎉",
+      "courseCompleteDescription": "Terminaste todas las lecciones de este curso. ¡Excelente trabajo!",
+      "updateFailed": "No se pudo actualizar el estado de la lección",
+      "completeFailed": "No se pudo marcar la lección como completada",
+      "certificateEarnedTitle": "¡Certificado Obtenido!",
+      "certificateEarnedDescription": "Has completado todos los requisitos y obtenido un certificado para este curso.",
+      "certificateBanner": "¡Certificado obtenido para este curso!",
+      "view": "Ver",
+      "checkpointsRequired": "Completa {count, plural, one {el checkpoint obligatorio} other {los # checkpoints obligatorios}} de esta lección primero"
+    },
+    "checkpoints": {
+      "checkpoint": "Checkpoint",
+      "requiredBadge": "Obligatorio",
+      "completedBadge": "Completado",
+      "scoreLabel": "Puntaje: {score}%",
+      "passed": "Aprobado",
+      "notPassed": "Aún no aprobado",
+      "correct": "Correcto",
+      "incorrect": "Incorrecto",
+      "nextStep": "Siguiente paso",
+      "trueLabel": "Verdadero",
+      "falseLabel": "Falso",
+      "fillBlankPlaceholder": "Escribe tu respuesta…",
+      "textPlaceholder": "Escribe tu respuesta aquí…",
+      "submit": "Enviar",
+      "submitting": "Enviando…",
+      "retry": "Intentar de nuevo",
+      "review": "Editar y reenviar",
+      "genericError": "Algo salió mal. Inténtalo de nuevo.",
+      "aiUnavailable": "Tu respuesta fue registrada, pero la retroalimentación con IA no está disponible en este momento.",
+      "externalPrompt": "Este checkpoint se completa en su página de ejercicio. Abre el ejercicio, termínalo allí y luego sincroniza tu resultado aquí.",
+      "externalLinkLabel": "Abrir ejercicio",
+      "externalSyncLabel": "Lo completé — sincronizar",
+      "externalSyncing": "Sincronizando…",
+      "externalNotCompleted": "Aún no encontramos un intento completado para este ejercicio. Termínalo primero en la página del ejercicio.",
+      "videoCheckpointDescription": "Responde este repaso rápido para continuar el video."
     },
     "codeBlock": {
       "copy": "Copiar",
@@ -3180,11 +3527,30 @@
         "error": "Error al completar la compra",
         "empty": "La tienda está vacía por el momento. ¡Vuelve más tarde!"
       },
+      "league": {
+        "title": "Liga Semanal",
+        "endsIn": "Termina en {time}",
+        "xp": "XP",
+        "anonymous": "Anónimo",
+        "promoteZone": "Zona de ascenso",
+        "demoteZone": "Zona de descenso",
+        "emptyTitle": "Las ligas comienzan el lunes",
+        "emptyDescription": "Gana XP esta semana y entrarás a una liga con otros estudiantes.",
+        "optedOutNote": "Las ligas semanales están ocultas. Puedes volver a activarlas en la configuración de tu perfil.",
+        "optOut": {
+          "label": "Ligas semanales",
+          "description": "Compite en una liga semanal de XP con otros estudiantes.",
+          "enabledToast": "Ligas semanales activadas",
+          "disabledToast": "Ligas semanales ocultas",
+          "error": "No se pudo actualizar tu preferencia de ligas"
+        }
+      },
       "upgrade": {
         "upgradeDescription": "Pide al administrador de tu escuela que actualice el plan para desbloquear esta función.",
         "leaderboardLocked": "Tabla de Clasificación — Actualiza a Básico",
         "achievementsLocked": "Logros — Actualiza a Básico",
-        "storeLocked": "Tienda de Puntos — Actualiza a Profesional"
+        "storeLocked": "Tienda de Puntos — Actualiza a Profesional",
+        "leagueLocked": "Liga Semanal — Actualiza a Básico"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — ¡Lección completada!",
@@ -3216,6 +3582,8 @@
       "successTitle": "¡Solicitud Enviada!",
       "successDescription": "Hemos recibido su solicitud de pago y enviaremos las instrucciones a su correo en breve.",
       "viewRequests": "Ver Mis Solicitudes",
+      "howToPayTitle": "Cómo pagar",
+      "proofLabel": "Comprobante de pago (opcional)",
       "errors": {
         "nameRequired": "El nombre es requerido",
         "emailRequired": "El correo electrónico es requerido",
@@ -3407,6 +3775,11 @@
       "like": "Me gusta",
       "delete": "Eliminar",
       "confirmDelete": "¿Estás seguro de que quieres eliminar este comentario?",
+      "deleteDialog": {
+        "title": "¿Eliminar comentario?",
+        "cancel": "Cancelar",
+        "confirm": "Eliminar"
+      },
       "posted": "Comentario publicado",
       "errorPosting": "Error al publicar el comentario",
       "errorLoading": "Error al cargar los comentarios",
@@ -3544,13 +3917,18 @@
       "instructor": {
         "title": "Instructor",
         "experience": "Instructor Experimentado",
-        "defaultBio": "Instructor apasionado por la enseñanza."
+        "defaultBio": "Instructor apasionado por la enseñanza.",
+        "defaultName": "Instructor"
       }
     },
     "pricing": {
       "preview": "Previsualizar este curso",
       "free": "Gratis",
       "enrollFree": "Inscribirse Gratis",
+      "enrolling": "Inscribiendo...",
+      "enrollmentSuccess": "¡Ya estás inscrito! Abriendo tu curso...",
+      "enrollmentError": "No pudimos inscribirte. Inténtalo de nuevo.",
+      "enrollWithPlan": "Inscríbete con tu plan",
       "enrollNow": "Inscribirse Ahora",
       "goToCourse": "Ir al Curso",
       "buyNow": "Comprar Ahora",
@@ -3578,6 +3956,10 @@
     "free": "gratis",
     "signUpFree": "Regístrate Gratis",
     "getStarted": "Comenzar Ahora",
+    "subscribeFree": "Suscribirse Gratis",
+    "subscribing": "Suscribiendo…",
+    "subscribeSuccess": "¡Listo! Disfruta tu plan.",
+    "subscribeError": "No se pudo activar el plan. Inténtalo de nuevo.",
     "billedMonthly": "Facturado mensualmente",
     "billedYearly": "Facturado anualmente",
     "empty": {
@@ -3619,6 +4001,18 @@
     "issuedBy": "Emitido por LMS Platform"
   },
   "checkout": {
+    "success": {
+      "title": "¡Todo listo!",
+      "subtitle": "Tu compra fue exitosa. Ya tienes acceso completo — disfruta el contenido.",
+      "goToCourses": "Ir a mis cursos",
+      "browseCourses": "Explorar cursos",
+      "viewBilling": "Ver facturación",
+      "continue": "Continuar al contenido",
+      "multipleCourses": "Tu compra incluye estos cursos. Elige uno para comenzar.",
+      "courseFallback": "Abrir curso",
+      "confirmingTitle": "Confirmando tu compra",
+      "confirmingSubtitle": "Tu proveedor de pago está terminando la confirmación. Esta página se actualizará automáticamente."
+    },
     "title": "Finalizar Compra",
     "description": "Elige tu método de pago para continuar.",
     "item": "Artículo",
@@ -3641,12 +4035,47 @@
       "expiry": "Vencimiento",
       "cvc": "CVC",
       "offlineInstructions": "Solicita instrucciones de pago. Te enviaremos los detalles para transferencia bancaria u otros métodos manuales.",
+      "redirectInstructions": "Serás redirigido a una página de pago segura para completar tu compra.",
+      "solanaInstructions": "Paga con Solana Pay. Continúa para generar un código QR que puedes escanear con tu billetera.",
+      "solanaScan": "Escanea para pagar con Solana",
+      "solanaWaiting": "Esperando confirmación en la cadena…",
+      "payWithPhantom": "Pagar con Phantom",
+      "phantomHint": "Paga directamente con tu billetera Phantom conectada.",
+      "payByQr": "Pagar con QR en su lugar",
+      "payInLabel": "Pagar con",
+      "payInUsdc": "USDC",
+      "payInSol": "SOL",
+      "usdcNote": "USDC es una stablecoin 1:1 con el dólar — pagas exactamente el precio indicado.",
+      "solConversionNote": "Precio en USD; pagas el equivalente en SOL al tipo de cambio en vivo, fijado al iniciar el pago.",
+      "phantomPreparing": "Preparando el pago…",
+      "phantomConnecting": "Conectando con Phantom…",
+      "phantomRequesting": "Solicitando transacción…",
+      "phantomSignInit": "Aprueba el paso 1 de 2 en Phantom: inicializa tu billetera de suscripción.",
+      "phantomSign": "Aprueba en Phantom para firmar…",
+      "phantomSubmitting": "Enviando a la red…",
+      "phantomInitDone": "Billetera inicializada — aprueba el paso 2 en Phantom para suscribirte…",
+      "phantomConfirming": "Confirmando en la cadena…",
+      "phantomNotFound": "No se encontró la billetera Phantom. Instala Phantom y desbloquéala, luego intenta de nuevo.",
+      "phantomRetry": "Intentar de nuevo",
+      "subsDesktopOnly": "Para suscribirte con cripto, abre esta página en la app de Phantom o instala la extensión de escritorio de Phantom — una suscripción requiere dos aprobaciones de billetera que un escaneo QR no puede hacer.",
+      "phantomInstall": "Obtén la billetera Phantom",
       "contactName": "Nombre de Contacto",
       "contactEmail": "Correo para Instrucciones",
       "contactPhone": "Teléfono (Opcional)",
       "button": "Pagar e Inscribirse (Prueba)",
       "requestButton": "Solicitar Instrucciones",
-      "processing": "Procesando..."
+      "processing": "Procesando...",
+      "cardUnavailable": "Los pagos con tarjeta no están disponibles para este artículo por ahora. Usa otro método de pago.",
+      "sandboxButton": "Pagar e Inscribirse (Prueba)",
+      "sandboxHint": "Pago de prueba (sandbox) — omite el pago real (solo en desarrollo)."
+    },
+    "stripe": {
+      "preparing": "Preparando el pago seguro…",
+      "initError": "No se pudo iniciar el pago con tarjeta. Inténtalo de nuevo.",
+      "unavailableTitle": "Pagos con tarjeta no disponibles",
+      "tryManual": "Pagar de otra forma",
+      "payButton": "Pagar {price}",
+      "paymentError": "No se pudo completar el pago. Inténtalo de nuevo."
     },
     "empty": {
       "title": "No hay producto seleccionado",
@@ -3665,6 +4094,7 @@
       "productDetails": "Detalles del Producto",
       "price": "Precio",
       "manualPayment": "Método de Pago Manual",
+      "instructionsTitle": "Cómo pagar",
       "howItWorks": {
         "title": "Cómo Funciona",
         "description": "Sigue estos sencillos pasos para completar tu compra",

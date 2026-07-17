@@ -15,10 +15,22 @@ import {
   CreatePriceParams,
   UpdateProductParams,
   UpdatePriceParams,
+  ProviderCapabilities,
 } from './types'
 
 export class PayPalPaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'paypal'
+  // PayPal: hosted checkout redirect, native Billing Plans (recurring) +
+  // webhooks, programmatic refunds. Not a Merchant of Record.
+  readonly capabilities: ProviderCapabilities = {
+    supportsNativeSubscriptions: true,
+    emitsRenewalWebhooks: true,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: false,
+    createsCatalog: true,
+  }
   private clientId: string
   private clientSecret: string
 

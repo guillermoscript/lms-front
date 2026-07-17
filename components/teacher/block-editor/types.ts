@@ -25,6 +25,7 @@ export type BlockType =
   | 'fill-in-the-blank'
   | 'matching-pairs'
   | 'ordering'
+  | 'checkpoint'
 
 export interface BaseBlock {
   id: string
@@ -175,6 +176,11 @@ export interface OrderingBlock extends BaseBlock {
   explanation?: string
 }
 
+export interface CheckpointBlock extends BaseBlock {
+  type: 'checkpoint'
+  checkpointId: number | null
+}
+
 export type Block =
   | TextBlock
   | HeadingBlock
@@ -198,6 +204,7 @@ export type Block =
   | FillInTheBlankBlock
   | MatchingPairsBlock
   | OrderingBlock
+  | CheckpointBlock
 
 // Block metadata for the add menu
 export interface BlockMeta {
@@ -230,6 +237,7 @@ export const BLOCK_METAS: BlockMeta[] = [
   { type: 'fill-in-the-blank', label: 'Completar', icon: 'text-plus', description: 'Oración con espacios en blanco' },
   { type: 'matching-pairs', label: 'Emparejar', icon: 'arrows-shuffle', description: 'Conectar términos con respuestas' },
   { type: 'ordering', label: 'Ordenar', icon: 'sort-ascending', description: 'Ordenar elementos en secuencia' },
+  { type: 'checkpoint', label: 'Checkpoint', icon: 'checkpoint', description: 'Ejercicio de repaso vinculado a la lección' },
 ]
 
 // Factory to create empty blocks
@@ -285,5 +293,7 @@ export function createBlock(type: BlockType): Block {
       return { id, type: 'matching-pairs', pairs: [{ term: '', match: '' }, { term: '', match: '' }] }
     case 'ordering':
       return { id, type: 'ordering', items: ['', ''] }
+    case 'checkpoint':
+      return { id, type: 'checkpoint', checkpointId: null }
   }
 }

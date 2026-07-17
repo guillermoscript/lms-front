@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
+# Workspace package manifests must exist at install time so npm links
+# @lms/core into node_modules (source-only package via transpilePackages).
+COPY packages/core/package.json ./packages/core/package.json
 # Remove the lockfile so npm freshly resolves platform-specific optional
 # native binaries (lightningcss/Tailwind v4) for this Linux image — npm has a
 # long-standing bug that skips optional native deps when a lockfile is present.

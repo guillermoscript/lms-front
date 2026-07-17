@@ -8,9 +8,28 @@ import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import Link from 'next/link'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { IconArrowLeft, IconCertificate, IconCheck, IconClock } from '@tabler/icons-react'
+import { IconCertificate, IconCheck, IconClock, IconSettings } from '@tabler/icons-react'
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return ''
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+}
 
 export default async function AdminEnrollmentsPage({
   params,
@@ -32,22 +51,24 @@ export default async function AdminEnrollmentsPage({
   // Get all enrollments
   const { data: enrollments } = await supabase
     .from('enrollments')
-    .select('*, user_id, course_id')
+    .select('enrollment_id, user_id, course_id, status, enrollment_date')
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
-  // Get user profiles, courses, and emails in parallel
-  const userIds = enrollments?.map((e) => e.user_id) || []
-  const courseIds = enrollments?.map((e) => e.course_id) || []
+  // Get user profiles, courses, and emails in parallel.
+  // Filter nulls + dedupe before the .in() queries: a null id makes PostgREST reject
+  // the whole query (every cell → "Unknown"), and getUserById(null) would throw.
+  const userIds = [...new Set((enrollments ?? []).map((e) => e.user_id).filter(Boolean))]
+  const courseIds = [...new Set((enrollments ?? []).map((e) => e.course_id).filter(Boolean))]
   const adminClient = createAdminClient()
 
   const [{ data: profiles }, { data: courses }, ...emailResults] = await Promise.all([
-    supabase.from('profiles').select('id, full_name')
+    supabase.from('profiles').select('id, full_name, avatar_url')
       .in('id', userIds.length > 0 ? userIds : ['none']),
     supabase.from('courses').select('course_id, title')
       .eq('tenant_id', tenantId)
       .in('course_id', courseIds.length > 0 ? courseIds : [-1]),
-    ...userIds.map(uid => adminClient.auth.admin.getUserById(uid)),
+    ...userIds.map((uid) => adminClient.auth.admin.getUserById(uid)),
   ])
 
   const emailMap = new Map<string, string>()
@@ -131,39 +152,45 @@ export default async function AdminEnrollmentsPage({
             <CardTitle>{t('table.title')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.student')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.course')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.status')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.enrolled')}</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('table.headers.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[220px] py-3">{t('table.headers.student')}</TableHead>
+                    <TableHead className="py-3">{t('table.headers.course')}</TableHead>
+                    <TableHead className="py-3">{t('table.headers.status')}</TableHead>
+                    <TableHead className="py-3">{t('table.headers.enrolled')}</TableHead>
+                    <TableHead className="py-3 text-right">{t('table.headers.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {enrollments && enrollments.length > 0 ? (
                     enrollments.map((enrollment) => {
                       const user = usersMap.get(enrollment.user_id)
                       const course = coursesMap.get(enrollment.course_id)
 
                       return (
-                        <tr key={enrollment.enrollment_id} className="border-b last:border-0 transition-colors hover:bg-muted/40">
-                          <td className="px-4 py-3">
-                            <div>
-                              <p className="font-medium">{user?.full_name || t('table.unknown')}</p>
-                              <p className="text-[11px] text-muted-foreground/70">
-                                {user?.email}
-                              </p>
+                        <TableRow key={enrollment.enrollment_id}>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar size="sm">
+                                {user?.avatar_url && <AvatarImage src={user.avatar_url} alt={user.full_name || ''} />}
+                                <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <p className="font-medium whitespace-nowrap">{user?.full_name || t('table.unknown')}</p>
+                                <p className="text-[11px] text-muted-foreground/70">
+                                  {user?.email || '—'}
+                                </p>
+                              </div>
                             </div>
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell className="py-3">
                             <p className="font-medium line-clamp-1">
                               {course?.title || t('table.unknownCourse')}
                             </p>
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell className="py-3">
                             <Badge
                               variant={
                                 enrollment.status === 'active'
@@ -176,29 +203,32 @@ export default async function AdminEnrollmentsPage({
                             >
                               {enrollment.status === 'active' ? t('stats.active') : t('stats.completed')}
                             </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="py-3 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                             {format(new Date(enrollment.enrollment_date), 'MMM d, yyyy', { locale: dateLocale })}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Link href={`/dashboard/student/courses/${enrollment.course_id}`}>
-                              <Button variant="ghost" size="sm" className="text-xs">
-                                {t('table.viewCourse')}
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex justify-end">
+                              <Link href={`/dashboard/teacher/courses/${enrollment.course_id}`}>
+                                <Button variant="outline" size="sm">
+                                  <IconSettings className="h-4 w-4" />
+                                  {t('table.viewCourse')}
+                                </Button>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )
                     })
                   ) : (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                         {t('table.empty')}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

@@ -14,6 +14,7 @@ import {
   IconMessageCircle,
   IconFileText,
   IconBooks,
+  IconChecklist,
   IconClock,
   IconTarget,
 } from '@tabler/icons-react'
@@ -47,6 +48,26 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
     .eq('course_id', courseId)
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
+
+  // Which exercises are embedded as lesson checkpoints, and in which lessons —
+  // editing/deleting one affects those lessons, so surface it on each row.
+  const exerciseIds = (exercises ?? []).map((e) => e.id)
+  const { data: checkpointRows } = exerciseIds.length
+    ? await supabase
+        .from('lesson_checkpoints')
+        .select('exercise_id, lessons(title)')
+        .eq('tenant_id', tenantId)
+        .in('exercise_id', exerciseIds)
+    : { data: [] as { exercise_id: number; lessons: { title: string } | { title: string }[] | null }[] }
+
+  const checkpointLessonsByExercise = new Map<number, string[]>()
+  for (const row of checkpointRows ?? []) {
+    const lesson = Array.isArray(row.lessons) ? row.lessons[0] : row.lessons
+    if (!lesson?.title) continue
+    const titles = checkpointLessonsByExercise.get(row.exercise_id) ?? []
+    if (!titles.includes(lesson.title)) titles.push(lesson.title)
+    checkpointLessonsByExercise.set(row.exercise_id, titles)
+  }
 
   const getExerciseIcon = (type: string) => {
     switch (type) {
@@ -149,6 +170,24 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                                 <IconBooks className="h-3 w-3" />
                                 <span className="truncate max-w-[120px]">{exercise.lesson.title}</span>
                               </span>
+                            </>
+                          )}
+                          {checkpointLessonsByExercise.has(exercise.id) && (
+                            <>
+                              <span className="text-muted-foreground/30">·</span>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-4 gap-1 border-teal-500/40 text-teal-600 dark:text-teal-400"
+                              >
+                                <IconChecklist className="h-3 w-3" />
+                                <span className="truncate max-w-[140px]">
+                                  {t('practice.checkpointIn', {
+                                    lesson: checkpointLessonsByExercise.get(exercise.id)![0],
+                                  })}
+                                </span>
+                                {checkpointLessonsByExercise.get(exercise.id)!.length > 1 &&
+                                  ` +${checkpointLessonsByExercise.get(exercise.id)!.length - 1}`}
+                              </Badge>
                             </>
                           )}
                           {exercise.time_limit && (

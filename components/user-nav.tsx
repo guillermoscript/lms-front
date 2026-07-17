@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { User } from "@supabase/supabase-js"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,16 +16,15 @@ import {
 import { IconLogout, IconSettings, IconUser } from "@tabler/icons-react"
 import { GamificationHeaderCard } from "./gamification/gamification-header-card"
 import { CurrentUserAvatar } from "./current-user-avatar"
-import { useCurrentUserName } from "@/hooks/use-current-user-name"
 import { useLogout } from "@/hooks/use-logout"
 
 interface UserNavProps {
-  user: any
+  user: User | null
 }
 
 export function UserNav({ user }: UserNavProps) {
   const t = useTranslations('userNav')
-  const currentName = useCurrentUserName()
+  const currentName = user?.user_metadata?.full_name || user?.email || "User"
   const logout = useLogout()
 
   return (
@@ -41,7 +41,7 @@ export function UserNav({ user }: UserNavProps) {
           <DropdownMenuLabel className="font-normal p-4">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-semibold leading-none text-foreground">
-                {currentName || user?.user_metadata?.full_name || "User"}
+                {currentName}
               </p>
               <p className="text-xs leading-none text-muted-foreground truncate">
                 {user?.email}

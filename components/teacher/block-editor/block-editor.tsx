@@ -25,14 +25,16 @@ import { SortableBlock } from './sortable-block'
 import { BlockRenderer } from './block-renderer'
 import { AddBlockMenu } from './add-block-menu'
 import { cn } from '@/lib/utils'
+import type { CheckpointContext } from './editors/checkpoint-block'
 
 interface BlockEditorProps {
   initialContent?: string
   onChange?: (mdx: string) => void
   className?: string
+  checkpointContext?: CheckpointContext
 }
 
-export function BlockEditor({ initialContent = '', onChange, className }: BlockEditorProps) {
+export function BlockEditor({ initialContent = '', onChange, className, checkpointContext }: BlockEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>(() => {
     if (!initialContent) {
       return [createBlock('text')]
@@ -174,6 +176,7 @@ export function BlockEditor({ initialContent = '', onChange, className }: BlockE
                   <BlockRenderer
                     block={block}
                     onChange={(updates: Partial<Block>) => updateBlock(block.id, updates)}
+                    checkpointContext={checkpointContext}
                   />
                 </SortableBlock>
               ))}

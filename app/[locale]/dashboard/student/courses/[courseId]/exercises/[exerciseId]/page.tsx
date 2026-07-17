@@ -2,6 +2,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
+import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types'
+import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import type { SpeechEvaluation } from '@/lib/speech/types'
 
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -97,7 +100,24 @@ export default async function ExercisePage({ params }: PageProps) {
         notFound()
     }
 
-    const [{ data: profile }, { data: otherExercises }, { data: exerciseFiles }, { data: lastSubmission }] = await Promise.all([
+    // Non-external checkpoint exercises are answered inside the lesson flow —
+    // block direct access and send the student to the lesson instead. External
+    // types (code/media/artifact/conversation) keep this page as their flow.
+    if (!(EXTERNAL_EXERCISE_TYPES as readonly string[]).includes(exercise.exercise_type)) {
+        const { data: checkpoint } = await supabase
+            .from('lesson_checkpoints')
+            .select('lesson_id')
+            .eq('exercise_id', exercise.id)
+            .eq('tenant_id', tenantId)
+            .eq('is_enabled', true)
+            .limit(1)
+            .maybeSingle()
+        if (checkpoint) {
+            redirect(`/dashboard/student/courses/${courseId}/lessons/${checkpoint.lesson_id}`)
+        }
+    }
+
+    const [{ data: profile }, { data: relatedExercises }, { data: exerciseFiles }, { data: lastSubmission }] = await Promise.all([
         supabase
             .from('profiles')
             .select('full_name, avatar_url')
@@ -114,7 +134,7 @@ export default async function ExercisePage({ params }: PageProps) {
             .eq('tenant_id', tenantId)
             .eq('exercise_completions.user_id', userId)
             .neq('id', parseInt(exerciseId))
-            .limit(3),
+            .limit(6),
         supabase
             .from('exercise_files')
             .select('file_path, content')
@@ -130,8 +150,17 @@ export default async function ExercisePage({ params }: PageProps) {
             .single(),
     ])
 
+    // "More exercises" suggestions — hide checkpoint-linked ones here too
+    const relatedCheckpointIds = await getCheckpointLinkedExerciseIds(supabase, {
+        tenantId,
+        exerciseIds: (relatedExercises ?? []).map((e) => e.id),
+    })
+    const otherExercises = (relatedExercises ?? [])
+        .filter((e) => !relatedCheckpointIds.has(e.id))
+        .slice(0, 3)
+
     // Fetch evaluation history from unified exercise_evaluations table
-    let submissionHistory: { id: number; ai_evaluation: any; score: any; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
     try {
         const { data: evaluations } = await supabase
             .from('exercise_evaluations')
@@ -144,22 +173,30 @@ export default async function ExercisePage({ params }: PageProps) {
         // Map to legacy format for AudioExercise component compatibility
         submissionHistory = (evaluations ?? []).map(ev => ({
             id: Number(ev.id),
-            ai_evaluation: ev.ai_result,
+            ai_evaluation: ev.ai_result as unknown as SpeechEvaluation | null,
             score: ev.score,
             status: ev.passed ? 'completed' : 'failed',
             media_url: '',
             created_at: ev.created_at,
-            duration_seconds: (ev.ai_metrics as any)?.duration_seconds ?? null,
+            duration_seconds:
+                (ev.ai_metrics as unknown as { duration_seconds?: number | null } | null)
+                    ?.duration_seconds ?? null,
         }))
     } catch {
         // RLS or table access may fail — gracefully degrade
     }
 
-    const passingScore = (exercise.exercise_config as any)?.passing_score ?? 70
+    const exerciseConfig = exercise.exercise_config as unknown as {
+        passing_score?: number
+        max_daily_attempts?: number
+        artifact_type?: string
+        artifact_html?: string
+    } | null
+    const passingScore = exerciseConfig?.passing_score ?? 70
 
     // Count today's submissions for daily attempt tracking
     let dailyAttemptsUsed = 0
-    const maxDailyAttempts = (exercise.exercise_config as any)?.max_daily_attempts ?? 5
+    const maxDailyAttempts = exerciseConfig?.max_daily_attempts ?? 5
     if (exercise.exercise_type === 'audio_evaluation') {
         try {
             const todayStart = new Date()
@@ -185,7 +222,7 @@ export default async function ExercisePage({ params }: PageProps) {
     const isExerciseCompleted = exercise.exercise_completions?.length > 0
 
     const initialMessages = [
-        ...(exercise.exercise_messages || []).map((m: any) => ({
+        ...(exercise.exercise_messages || []).map((m: { id: number; message: string; role: string }) => ({
             id: m.id.toString(),
             role: m.role,
             content: m.message,
@@ -194,7 +231,7 @@ export default async function ExercisePage({ params }: PageProps) {
 
     const courseTitle = Array.isArray(exercise.courses)
         ? exercise.courses[0]?.title
-        : (exercise.courses as any)?.title || 'Course'
+        : (exercise.courses as unknown as { title?: string } | null)?.title || 'Course'
 
     const tExList = await getTranslations('exercises.list')
     const breadcrumbLinks = [
@@ -209,7 +246,7 @@ export default async function ExercisePage({ params }: PageProps) {
         <>
             <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">{t('moreExercises')}</h3>
             <div className="grid gap-3">
-                {otherExercises.map((ex: any) => (
+                {otherExercises.map((ex) => (
                     <ExerciseCard
                         key={ex.id}
                         exercise={ex}
@@ -247,7 +284,6 @@ export default async function ExercisePage({ params }: PageProps) {
                         exerciseId={exercise.id}
                         isExerciseCompleted={isExerciseCompleted}
                         userCode={lastSubmission?.submission_code}
-                        tenantId={tenantId}
                     />
 
                     {otherExercises && otherExercises.length > 0 && (
@@ -255,7 +291,7 @@ export default async function ExercisePage({ params }: PageProps) {
                             title={<h3 className="font-semibold">{t('moreExercises')}</h3>}
                         >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {otherExercises.map((ex: any) => (
+                                {otherExercises.map((ex) => (
                                     <ExerciseCard
                                         key={ex.id}
                                         exercise={ex}
@@ -271,8 +307,8 @@ export default async function ExercisePage({ params }: PageProps) {
                     exercise={{
                         ...exercise,
                         exercise_config: {
-                            artifact_type: (exercise.exercise_config as any)?.artifact_type,
-                            artifact_html: (exercise.exercise_config as any)?.artifact_html,
+                            artifact_type: exerciseConfig?.artifact_type,
+                            artifact_html: exerciseConfig?.artifact_html,
                             passing_score: passingScore,
                         },
                     }}

@@ -25,6 +25,7 @@ import {
   IconTextPlus,
   IconArrowsShuffle,
   IconSortAscending,
+  IconChecklist,
 } from '@tabler/icons-react'
 import {
   Popover,
@@ -58,6 +59,7 @@ const BLOCK_ICONS: Record<BlockType, { icon: typeof IconAlignLeft; color: string
   'fill-in-the-blank': { icon: IconTextPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950' },
   'matching-pairs': { icon: IconArrowsShuffle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950' },
   ordering: { icon: IconSortAscending, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-950' },
+  checkpoint: { icon: IconChecklist, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-950' },
 }
 
 // Group blocks by category for the palette
@@ -72,7 +74,7 @@ const BLOCK_GROUPS = [
   },
   {
     label: 'Interactivo',
-    types: ['quiz', 'flashcard-set', 'fill-in-the-blank', 'matching-pairs', 'ordering'] as BlockType[],
+    types: ['quiz', 'flashcard-set', 'fill-in-the-blank', 'matching-pairs', 'ordering', 'checkpoint'] as BlockType[],
   },
   {
     label: 'Datos',

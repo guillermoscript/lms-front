@@ -1,22 +1,26 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import {
-  IconArrowLeft,
   IconPlus,
   IconShoppingCart,
   IconEdit,
   IconArchive,
-  IconRestore
 } from '@tabler/icons-react'
 import { ProductActions } from '@/components/admin/product-actions'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+
+interface ProductCourseLink {
+  course_id: number
+  course?: {
+    title?: string | null
+  } | null
+}
 
 export default async function AdminProductsPage() {
   const t = await getTranslations('dashboard.admin.products')
@@ -143,6 +147,11 @@ export default async function AdminProductsPage() {
                           >
                             {t(`card.status.${product.status}`)}
                           </Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase">
+                            {product.payment_provider === 'manual'
+                              ? 'Manual'
+                              : product.payment_provider}
+                          </Badge>
                           <span className="text-sm text-muted-foreground">
                             {courseCount} {courseCount === 1 ? t('card.course') : t('card.courses')}
                           </span>
@@ -171,11 +180,13 @@ export default async function AdminProductsPage() {
                           {t('card.includedCourses')}
                         </p>
                         <ul className="space-y-1">
-                          {product.product_courses.slice(0, 3).map((pc: any) => (
+                          {product.product_courses
+                            .slice(0, 3)
+                            .map((pc: ProductCourseLink) => (
                             <li key={pc.course_id} className="text-xs text-muted-foreground truncate">
                               • {pc.course?.title}
                             </li>
-                          ))}
+                            ))}
                           {product.product_courses.length > 3 && (
                             <li className="text-xs text-muted-foreground">
                               • {t('card.more', { count: product.product_courses.length - 3 })}

@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -8,8 +9,10 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
  * then falls back to JWT claims.
  *
  * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
+ * Wrapped in React.cache() so multiple call sites within one request tree
+ * (e.g. layout + nested page) collapse into a single tenant_users query.
  */
-export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | null> {
+export const getUserRole = cache(async (): Promise<'student' | 'teacher' | 'admin' | null> => {
   const userId = await getCurrentUserId()
   if (!userId) return null
 
@@ -42,12 +45,12 @@ export async function getUserRole(): Promise<'student' | 'teacher' | 'admin' | n
   } catch {
     return 'student'
   }
-}
+})
 
 /**
  * Get user role from JWT claims (used in middleware)
  */
-export function getRoleFromClaims(claims: any): 'student' | 'teacher' | 'admin' {
+export function getRoleFromClaims(claims: { tenant_role?: string; user_role?: string } | null | undefined): 'student' | 'teacher' | 'admin' {
   const role = (claims?.tenant_role || claims?.user_role) as 'student' | 'teacher' | 'admin' | undefined
   return role || 'student'
 }
@@ -77,8 +80,9 @@ export async function getUserTenantId(): Promise<string | null> {
  * Does NOT trust JWT claims to prevent privilege escalation.
  *
  * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
+ * Wrapped in React.cache() to dedupe repeated calls within one request tree.
  */
-export async function isSuperAdmin(): Promise<boolean> {
+export const isSuperAdmin = cache(async (): Promise<boolean> => {
   const userId = await getCurrentUserId()
   if (!userId) return false
 
@@ -90,4 +94,4 @@ export async function isSuperAdmin(): Promise<boolean> {
     .maybeSingle()
 
   return !!data
-}
+})

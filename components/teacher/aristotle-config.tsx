@@ -20,6 +20,7 @@ interface AristotleConfigProps {
         persona: string
         teaching_approach: string
         boundaries: string
+        model_config?: Record<string, unknown> | null
     } | null
 }
 
@@ -28,6 +29,7 @@ export function AristotleConfig({ courseId, tenantId, initialConfig }: Aristotle
     const [persona, setPersona] = useState(initialConfig?.persona ?? '')
     const [teachingApproach, setTeachingApproach] = useState(initialConfig?.teaching_approach ?? '')
     const [boundaries, setBoundaries] = useState(initialConfig?.boundaries ?? '')
+    const [interleavingEnabled, setInterleavingEnabled] = useState((initialConfig?.model_config as Record<string, unknown> | null | undefined)?.['interleaving_enabled'] !== false)
     const [isSaving, setIsSaving] = useState(false)
     const t = useTranslations('aristotle.config')
 
@@ -44,6 +46,7 @@ export function AristotleConfig({ courseId, tenantId, initialConfig }: Aristotle
                         persona,
                         teaching_approach: teachingApproach,
                         boundaries,
+                        model_config: { ...(initialConfig?.model_config ?? {}), interleaving_enabled: interleavingEnabled },
                     })
                     .eq('tutor_id', initialConfig.tutor_id)
 
@@ -58,6 +61,7 @@ export function AristotleConfig({ courseId, tenantId, initialConfig }: Aristotle
                         persona,
                         teaching_approach: teachingApproach,
                         boundaries,
+                        model_config: { ...(initialConfig?.model_config ?? {}), interleaving_enabled: interleavingEnabled },
                     })
 
                 if (error) throw error
@@ -98,6 +102,18 @@ export function AristotleConfig({ courseId, tenantId, initialConfig }: Aristotle
 
                 {enabled && (
                     <>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="aristotle-interleaving" className="font-medium">{t('interleaving')}</Label>
+                                <p className="text-sm text-muted-foreground mt-0.5">{t('interleavingHint')}</p>
+                            </div>
+                            <Switch
+                                id="aristotle-interleaving"
+                                checked={interleavingEnabled}
+                                onCheckedChange={setInterleavingEnabled}
+                            />
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="persona">{t('persona')}</Label>
                             <Textarea

@@ -1,4 +1,61 @@
 {
+  "seo": {
+    "defaultDescription": "Online courses, exams, and verified certificates — learn at your own pace.",
+    "home": {
+      "title": "Online Courses & Certificates"
+    },
+    "courses": {
+      "title": "Courses",
+      "description": "Browse the full catalog of online courses and start learning today.",
+      "badge": "Course"
+    },
+    "products": {
+      "title": "Plans & Products",
+      "description": "Explore available plans and course bundles."
+    },
+    "about": {
+      "title": "About",
+      "description": "Learn more about our school, our mission, and our teachers."
+    },
+    "creators": {
+      "title": "For Creators",
+      "description": "Launch your own online school: sell courses, manage students, and grow your teaching business."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "description": "Simple, transparent pricing for courses and memberships."
+    },
+    "platformPricing": {
+      "title": "Platform Pricing",
+      "description": "Plans for schools and creators — start free and scale as you grow."
+    },
+    "createSchool": {
+      "title": "Create Your School",
+      "description": "Set up your own online school in minutes — courses, payments, and students in one place."
+    },
+    "joinSchool": {
+      "title": "Join a School",
+      "description": "Join your school and start learning."
+    },
+    "checkout": {
+      "title": "Checkout"
+    },
+    "auth": {
+      "login": "Log In",
+      "signUp": "Sign Up",
+      "signUpSuccess": "Account Created",
+      "forgotPassword": "Reset Password",
+      "updatePassword": "Update Password",
+      "error": "Authentication Error"
+    },
+    "verify": {
+      "title": "{student} — Certificate: {course}",
+      "description": "{student} earned a verified certificate for {course}, issued by {issuer}. Check its authenticity.",
+      "eyebrow": "Certificate of Completion",
+      "verifiedLabel": "Verified credential",
+      "notFoundTitle": "Certificate Not Found"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
@@ -72,6 +129,8 @@
       "description": "A course-level AI tutor students can chat with while studying",
       "enable": "Enable for students",
       "enableDesc": "Adds a floating tutor button on all course pages and a study tab on the course overview",
+      "interleaving": "Interleaved practice",
+      "interleavingHint": "Mix mastery-gated topics within one practice session. Feels harder for students but measurably improves retention. Novice topics always stay in focused practice.",
       "persona": "Persona",
       "personaPlaceholder": "e.g., You are a senior Python developer with 15 years of experience. You love real-world analogies and humor to explain complex concepts.",
       "personaHint": "Write in second person (\"You are...\"). Include expertise level, personality traits, and tone of voice.",
@@ -153,7 +212,57 @@
     }
   },
   "dashboard": {
+    "accountSettings": {
+      "title": "Settings",
+      "subtitle": "Manage your account and integrations.",
+      "accountTitle": "Account Details",
+      "accountSubtitle": "Update your personal information",
+      "manageTokens": "Manage API tokens"
+    },
     "student": {
+      "aiAssistant": {
+        "title": "AI Assistant",
+        "subtitle": "Connect Claude to your school and learn with an AI tutor that knows your courses.",
+        "whatYouCanDo": {
+          "title": "What you can do",
+          "description": "Once connected, ask Claude to:",
+          "item1": "Walk you through your lessons and mark them complete as you go",
+          "item2": "Quiz you with practice questions and flashcards built from your courses",
+          "item3": "Check your exam readiness and drill your weak spots",
+          "item4": "Build a weekly study plan and keep you on track",
+          "item5": "Tutor you through anything you don't understand — and pass your question to your teacher if needed"
+        }
+      },
+      "billing": {
+        "title": "Billing",
+        "subtitle": "Your purchases, active subscription, and downloadable invoices.",
+        "subscription": {
+          "sectionTitle": "Active Subscription",
+          "unknownPlan": "Unknown plan",
+          "renewsOn": "Renews on",
+          "cancelsOn": "Cancels on",
+          "cancelAtPeriodEndNotice": "This subscription will not renew. Access ends on {date}.",
+          "cancelNote": "To cancel your subscription, please contact your school.",
+          "empty": "You don't have an active subscription.",
+          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" }
+        },
+        "purchases": {
+          "sectionTitle": "Purchase History",
+          "empty": "No purchases yet.",
+          "unknownItem": "Unknown item",
+          "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
+          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" }
+        },
+        "offline": {
+          "sectionTitle": "Offline / Manual Payments",
+          "table": { "product": "Product", "date": "Date", "status": "Status", "amount": "Amount", "invoice": "Invoice" },
+          "downloadInvoice": "Download",
+          "downloadInvoiceLabel": "Download invoice {number}",
+          "managePaymentsNote": "Need to upload proof or check details?",
+          "managePaymentsLink": "Go to Payments"
+        },
+        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+      },
       "notifications": {
         "title": "Notifications",
         "description": "Stay up to date with activity across your school.",
@@ -375,6 +484,11 @@
         "viewProof": "View Proof",
         "unknownProduct": "Unknown Product",
         "instructionsAvailable": "Payment instructions available",
+        "nextSteps": {
+          "title": "Next steps for your purchase",
+          "description": "Your payment for {product} was confirmed. Follow these steps to get started:",
+          "open": "Open link"
+        },
         "empty": {
           "title": "No Payment Requests",
           "description": "Your payment requests will appear here once you request access to a course.",
@@ -577,6 +691,7 @@
         "practice": {
           "title": "Practice Exercises",
           "description": "Help students apply what they've learned with hands-on exercises.",
+          "checkpointIn": "Checkpoint · {lesson}",
           "addExercise": "Add Exercise",
           "noExercises": "No exercises yet",
           "createFirst": "Create your first exercise",
@@ -750,6 +865,11 @@
         "thumbnailLabel": "Thumbnail URL",
         "thumbnailPlaceholder": "https://example.com/image.jpg",
         "thumbnailHint": "Provide a URL to an image (16:9 aspect ratio recommended)",
+        "uploadImage": "Upload image",
+        "uploading": "Uploading…",
+        "orPasteUrl": "or paste a URL below",
+        "removeImage": "Remove image",
+        "uploadError": "Failed to upload image",
         "categoryLabel": "Category",
         "categoryPlaceholder": "Select a category",
         "statusLabel": "Status",
@@ -838,6 +958,51 @@
         "dragQuestion": "Drag to reorder question"
       },
       "lessonEditor": {
+        "checkpointBlock": {
+          "title": "Checkpoint",
+          "saveLessonFirst": "Save the lesson first to add checkpoints.",
+          "loading": "Loading checkpoints…",
+          "unknownExercise": "Untitled exercise",
+          "changeCheckpoint": "Change checkpoint",
+          "requiredLabel": "Required",
+          "allowSkipLabel": "Allow skip",
+          "selectExisting": "Use an existing checkpoint…",
+          "createNew": "Create new checkpoint",
+          "cancel": "Cancel",
+          "exerciseLabel": "Exercise",
+          "exercisePlaceholder": "Select an exercise…",
+          "labelOptional": "Label (optional)",
+          "labelPlaceholder": "e.g. Quick check",
+          "save": "Save",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
+        },
+        "videoCheckpoints": {
+          "title": "Video checkpoints",
+          "loading": "Loading checkpoints…",
+          "empty": "No checkpoints yet. Add one to place a review question at a video timestamp.",
+          "unknownExercise": "Untitled exercise",
+          "requiredShort": "Req.",
+          "allowSkipShort": "Skip",
+          "remove": "Remove checkpoint",
+          "timestampLabel": "Time",
+          "exerciseLabel": "Exercise",
+          "exercisePlaceholder": "Select an exercise…",
+          "labelOptional": "Label (optional)",
+          "labelPlaceholder": "e.g. Quick check",
+          "requiredLabel": "Required",
+          "allowSkipLabel": "Allow skip",
+          "invalidTimestamp": "Enter a valid time (mm:ss) and exercise.",
+          "save": "Add marker",
+          "cancel": "Cancel",
+          "addMarker": "Add video checkpoint",
+          "exerciseStatus": {
+            "draft": "Draft",
+            "archived": "Archived"
+          }
+        },
         "editTitle": "Edit Lesson",
         "createTitle": "New Lesson",
         "backToCourse": "Back to {course}",
@@ -1295,6 +1460,45 @@
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
+      "payouts": {
+        "title": "Payouts",
+        "description": "Stripe Connect disbursements to your school account.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "stats": {
+          "totalPaid": "Total paid out",
+          "totalPaidDesc": "Cumulative successful disbursements",
+          "pendingCount": "Pending / processing",
+          "pendingCountDesc": "Payouts not yet completed"
+        },
+        "status": { "paid": "Paid", "processing": "Processing", "pending": "Pending", "failed": "Failed" },
+        "table": {
+          "title": "Payout history",
+          "headers": { "period": "Period", "amount": "Amount", "status": "Status", "paidAt": "Paid at", "stripeRef": "Stripe ref" }
+        },
+        "empty": {
+          "title": "No payouts yet",
+          "description": "Payouts appear here once Stripe Connect disburses funds to your connected bank account. Make sure your Stripe account is fully verified."
+        }
+      },
+      "invoices": {
+        "title": "Invoices",
+        "description": "Invoice documents for offline and manual payments.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "note": { "text": "Card and Solana purchases are tracked under", "transactionsLink": "Transactions" },
+        "status": { "paid": "Paid", "pending": "Pending", "cancelled": "Cancelled" },
+        "table": {
+          "title": "Invoice registry",
+          "headers": { "invoiceNumber": "Invoice #", "item": "Item", "amount": "Amount", "status": "Status", "date": "Date", "actions": "Actions" },
+          "unknownProduct": "Unknown product",
+          "viewInvoice": "View invoice"
+        },
+        "empty": {
+          "title": "No invoices found",
+          "description": "Invoice documents are generated for offline (manual) payment requests. They will appear here once a payment request has an invoice number assigned."
+        }
+      },
       "breadcrumbs": {
         "admin": "Admin",
         "analytics": "Analytics",
@@ -1322,7 +1526,8 @@
         "tenants": "Tenants",
         "apiTokens": "API Tokens",
         "monetization": "Monetization",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "website": "Website"
       },
       "appearance": {
         "title": "Appearance",
@@ -1508,7 +1713,14 @@
           "renewalRequired": "Renewal Required Soon",
           "renewalDescription": "Your subscription period ends in {count, plural, one {# day} other {# days}}. Renew now to ensure uninterrupted service for your students.",
           "courses": "Courses",
-          "students": "Students"
+          "students": "Students",
+          "usagePercent": "{percent}% used",
+          "limitReached": "Limit reached",
+          "unlimitedPlan": "Unlimited plan",
+          "upcomingPayment": "Upcoming payment",
+          "dueOn": "Due {date}",
+          "bankTransfer": "Bank transfer",
+          "cardPayment": "Card payment"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
@@ -1555,7 +1767,8 @@
           },
           "actions": {
             "roles": "Roles",
-            "view": "View"
+            "view": "View",
+            "more": "More actions"
           }
         },
         "details": {
@@ -1945,11 +2158,10 @@
             "publishedDate": "Published",
             "actions": "Actions"
           },
-          "unknownAuthor": "Unknown",
+          "unknownAuthor": "No author assigned",
           "empty": "No courses found",
           "actions": {
-            "view": "View",
-            "edit": "Edit"
+            "manage": "Manage"
           }
         },
         "statusActions": {
@@ -1957,6 +2169,7 @@
           "archive": "Archive",
           "restore": "Restore",
           "cancel": "Cancel",
+          "moreActions": "More actions",
           "dialogs": {
             "approve": {
               "title": "Approve Course",
@@ -2150,6 +2363,10 @@
           "branding": {
             "title": "Branding Settings",
             "description": "Customize your platform's visual identity — logo, colors, and favicon"
+          },
+          "solanaWallet": {
+            "title": "Solana Wallet",
+            "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
           }
         },
         "form": {
@@ -2199,6 +2416,12 @@
             "stripeHint": "Enable Stripe payment processing",
             "paypal": "PayPal",
             "paypalHint": "Enable PayPal payment processing",
+            "lemonsqueezy": "Lemon Squeezy",
+            "lemonsqueezyHint": "Accept payments via Lemon Squeezy (merchant of record). Paste a variant ID on each plan or product.",
+            "solana": "Solana (crypto)",
+            "solanaHint": "Accept Solana crypto payments. Set your receiving wallet below. Covers one-time and subscription.",
+            "solanaAcceptSol": "Also accept native SOL",
+            "solanaAcceptSolHint": "By default you receive USDC (a 1:1 US-dollar stablecoin). Turn this on to also let students pay in SOL — the USD price is converted to SOL at the live rate at checkout. You then hold SOL, whose value can move after payment.",
             "currency": "Default Currency",
             "currencyPlaceholder": "Select currency",
             "currencyHint": "Default currency for all transactions",
@@ -2208,7 +2431,10 @@
             "invoicePrefix": "Invoice Prefix",
             "invoicePrefixHint": "Prefix for invoice numbers (e.g., INV-001)",
             "approval": "Require Payment Approval",
-            "approvalHint": "Require admin approval before processing payments"
+            "approvalHint": "Require admin approval before processing payments",
+            "manualInstructions": "Manual / Offline Payment Instructions",
+            "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
+            "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide."
           },
           "branding": {
             "logoUrl": "Logo URL",
@@ -2237,6 +2463,15 @@
             "expirationHint": "Number of days until enrollment expires (0 = never expires)",
             "capacity": "Enable Course Capacity",
             "capacityHint": "Allow setting maximum student limits for courses"
+          },
+          "solanaWallet": {
+            "label": "Receiving wallet address",
+            "placeholder": "Your Solana wallet (base58)",
+            "hint": "Funds from Solana payments are sent here. This one address backs both one-time and subscription crypto payments.",
+            "save": "Save Wallet",
+            "saving": "Saving...",
+            "success": "Solana wallet saved",
+            "error": "Failed to save Solana wallet"
           }
         }
       },
@@ -2506,7 +2741,7 @@
           "back": "Back to Plans",
           "details": {
             "title": "Plan Details",
-            "description": "Subscription plans will be automatically created in Stripe with recurring billing."
+            "description": "Set up a recurring plan. How billing is handled depends on the payment method you choose below."
           }
         },
         "edit": {
@@ -2519,6 +2754,12 @@
           "namePlaceholder": "e.g., Premium Monthly Plan",
           "description": "Description",
           "descriptionPlaceholder": "Describe what's included in this plan...",
+          "method": "Payment Method",
+          "methodManual": "Manual/Offline Payment (Bank Transfer, Invoice)",
+          "methodStripe": "Stripe (Credit Card, Online)",
+          "methodPaypal": "PayPal (Coming Soon)",
+          "methodManualHint": "Billing is managed in-app; students arrange recurring payment with you offline. No payment processor credentials required.",
+          "methodStripeHint": "Stripe manages the recurring subscription and billing automatically.",
           "price": "Price",
           "currency": "Currency",
           "duration": "Duration",
@@ -2541,6 +2782,22 @@
           "toasts": {
             "createSuccess": "Plan created successfully",
             "updateSuccess": "Plan updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
+          "methodHint": {
+            "manual": "Billing is managed in-app; students arrange recurring payment with you offline. No payment processor credentials required.",
+            "stripe": "Stripe manages the recurring subscription and billing automatically.",
+            "paypal": "PayPal manages the recurring subscription automatically.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first.",
+            "solana_subs": "On-chain recurring subscription auto-charged from the student wallet. Set your Solana wallet in Settings → Payment first."
           }
         }
       },
@@ -2577,7 +2834,7 @@
           "back": "Back to Products",
           "details": {
             "title": "Product Details",
-            "description": "Products will be automatically created in Stripe. Link courses to create bundles."
+            "description": "Set up a one-time product. How payment is handled depends on the payment method you choose below. Link courses to create bundles."
           }
         },
         "edit": {
@@ -2618,6 +2875,21 @@
           "toasts": {
             "createSuccess": "Product created successfully",
             "updateSuccess": "Product updated successfully"
+          },
+          "methodLemonsqueezy": "Lemon Squeezy (Hosted Checkout, Tax Handled)",
+          "methodSolana": "Solana (Crypto, One-time)",
+          "methodSolanaSubs": "Solana (Crypto, Recurring)",
+          "variantIdLabel": "Lemon Squeezy Variant ID",
+          "variantIdPlaceholder": "e.g. 123456",
+          "variantIdHint": "Find this in your Lemon Squeezy dashboard under the product variant. Checkout fails without it.",
+          "solanaWalletHint": "Set your school Solana wallet in Settings → Payment so students can pay you. Without it, checkout fails.",
+          "solanaWalletCta": "Set it up in Settings → Payment",
+          "methodHint": {
+            "manual": "Students will contact you to arrange offline payment (bank transfer, invoice, etc.)",
+            "stripe": "Students can pay online instantly",
+            "paypal": "Students can pay online with PayPal.",
+            "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first."
           }
         },
         "actions": {
@@ -2634,16 +2906,16 @@
         }
       },
       "apiTokens": {
-        "title": "API Tokens",
-        "description": "Generate tokens to connect Claude Desktop or other MCP clients to the LMS.",
+        "title": "Connect AI Assistants",
+        "description": "Connect Claude or other MCP clients to your LMS.",
         "createToken": "Create Token",
         "howToConnect": {
-          "title": "How to Connect",
-          "description": "Set up Claude Desktop or other MCP clients to access your LMS data.",
-          "step1": "Create a token above and copy the Claude Desktop config snippet.",
-          "step2": "Open Claude Desktop settings and find the MCP servers configuration file.",
+          "title": "Advanced: API tokens (CLI and other MCP clients)",
+          "description": "Use a token for clients that don't support OAuth sign-in.",
+          "step1": "Create a token above and copy the config snippet.",
+          "step2": "Open your MCP client's configuration file.",
           "step3": "Paste the config snippet and save.",
-          "step4": "Restart Claude Desktop — you should see the LMS tools available."
+          "step4": "Restart the client — you should see the LMS tools available."
         },
         "yourTokens": {
           "title": "Your Tokens",
@@ -2992,6 +3264,7 @@
     "myCertificates": "My Certificates",
     "progressReport": "Progress Report",
     "pointStore": "Point Store",
+    "aiAssistant": "AI Assistant",
     "settings": "Settings",
     "logout": "Logout",
     "platform": "LMS Platform",
@@ -3011,11 +3284,17 @@
     "analytics": "Analytics",
     "monetization": "Monetization",
     "monetizationOverview": "Overview",
+    "courses": "Courses",
+    "people": "People",
+    "website": "Website",
     "products": "Products",
     "plans": "Plans",
     "subscriptions": "Subscriptions",
     "paymentRequests": "Payment Requests",
+    "payouts": "Payouts",
+    "invoices": "Invoices",
     "myPayments": "My Payments",
+    "myBilling": "Billing & Receipts",
     "community": "Community"
   },
   "userNav": {
@@ -3063,6 +3342,16 @@
     "ago": "ago"
   },
   "components": {
+    "connectClaude": {
+      "title": "Connect Claude",
+      "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
+      "urlLabel": "Connector URL",
+      "step1": "Copy the connector URL above.",
+      "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
+      "step3": "Paste the URL and click Add.",
+      "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
+      "copied": "Connector URL copied"
+    },
     "courseProgress": {
       "progress": "Progress",
       "lessons": "lessons"
@@ -3098,7 +3387,8 @@
       "enrolling": "Enrolling...",
       "subscribeAccess": "Subscribe to Access",
       "enrolled": "Enrolled",
-      "notInPlan": "Not in Your Plan"
+      "notInPlan": "Not in Your Plan",
+      "upgradePlan": "Upgrade plan to unlock"
     },
     "profileForm": {
       "fullName": "Full name",
@@ -3127,7 +3417,11 @@
       "resources": "Resources",
       "downloadFile": "Download",
       "lessonLocked": "Lesson locked",
-      "completePreviousFirst": "Complete the previous lesson to unlock this one."
+      "completePreviousFirst": "Complete the previous lesson to unlock this one.",
+      "courseProgress": "Course progress: {completed} of {total} lessons completed ({percent}%)",
+      "goToLesson": "Go to: {title}",
+      "noContent": "No content available for this lesson.",
+      "contentError": "Error loading content"
     },
     "lessonAIChat": {
       "suggestions": {
@@ -3166,6 +3460,23 @@
       },
       "tooltips": {
         "restart": "Restart Conversation"
+      },
+      "mobile": {
+        "title": "AI Tutor",
+        "start": "Start with the AI Tutor",
+        "continue": "Continue with the AI Tutor",
+        "review": "Review conversation",
+        "close": "Close chat",
+        "messagesCount": "{count, plural, one {# message} other {# messages}}"
+      },
+      "contextual": {
+        "chip": "I don't understand — ask the tutor",
+        "prompt": "I don't understand this lesson. Can you explain it in a different way?"
+      },
+      "restartDialog": {
+        "title": "Restart conversation?",
+        "cancel": "Cancel",
+        "confirm": "Restart"
       }
     },
     "lessonSidebar": {
@@ -3182,7 +3493,43 @@
       "complete": "Complete",
       "next": "Next",
       "finishCourse": "Finish Course",
-      "completeFirst": "Complete this lesson first"
+      "completeFirst": "Complete this lesson first",
+      "courseComplete": "Course complete! 🎉",
+      "courseCompleteDescription": "You finished every lesson in this course. Amazing work!",
+      "updateFailed": "Failed to update lesson status",
+      "completeFailed": "Failed to mark lesson as complete",
+      "certificateEarnedTitle": "Certificate Earned!",
+      "certificateEarnedDescription": "You have completed all requirements and earned a certificate for this course.",
+      "certificateBanner": "Certificate earned for this course!",
+      "view": "View",
+      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first"
+    },
+    "checkpoints": {
+      "checkpoint": "Checkpoint",
+      "requiredBadge": "Required",
+      "completedBadge": "Completed",
+      "scoreLabel": "Score: {score}%",
+      "passed": "Passed",
+      "notPassed": "Not passed yet",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "nextStep": "Next step",
+      "trueLabel": "True",
+      "falseLabel": "False",
+      "fillBlankPlaceholder": "Type your answer…",
+      "textPlaceholder": "Write your answer here…",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "retry": "Try again",
+      "review": "Edit and resubmit",
+      "genericError": "Something went wrong. Please try again.",
+      "aiUnavailable": "Your answer was recorded, but AI feedback is unavailable right now.",
+      "externalPrompt": "This checkpoint is completed through its exercise page. Open the exercise, finish it there, then sync your result here.",
+      "externalLinkLabel": "Open exercise",
+      "externalSyncLabel": "I completed it — sync",
+      "externalSyncing": "Syncing…",
+      "externalNotCompleted": "We couldn't find a completed attempt for this exercise yet. Finish it on the exercise page first.",
+      "videoCheckpointDescription": "Answer this quick check to continue the video."
     },
     "codeBlock": {
       "copy": "Copy",
@@ -3335,11 +3682,30 @@
         "error": "Failed to complete purchase",
         "empty": "The store is currently empty. Check back later!"
       },
+      "league": {
+        "title": "Weekly League",
+        "endsIn": "{time} left",
+        "xp": "XP",
+        "anonymous": "Anonymous",
+        "promoteZone": "Promotion zone",
+        "demoteZone": "Demotion zone",
+        "emptyTitle": "Leagues kick off Monday",
+        "emptyDescription": "Earn XP this week and you'll be placed in a league with other learners.",
+        "optedOutNote": "Weekly leagues are hidden. You can re-enable them in your profile settings.",
+        "optOut": {
+          "label": "Weekly leagues",
+          "description": "Compete in a weekly XP league with other learners.",
+          "enabledToast": "Weekly leagues enabled",
+          "disabledToast": "Weekly leagues hidden",
+          "error": "Could not update your league preference"
+        }
+      },
       "upgrade": {
         "upgradeDescription": "Ask your school admin to upgrade the plan to unlock this feature.",
         "leaderboardLocked": "Leaderboard — Upgrade to Basic",
         "achievementsLocked": "Achievements — Upgrade to Basic",
-        "storeLocked": "Point Store — Upgrade to Professional"
+        "storeLocked": "Point Store — Upgrade to Professional",
+        "leagueLocked": "Weekly League — Upgrade to Basic"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — Lesson completed!",
@@ -3371,6 +3737,8 @@
       "successTitle": "Request Submitted!",
       "successDescription": "We've received your payment request and will send instructions to your email shortly.",
       "viewRequests": "View My Requests",
+      "howToPayTitle": "How to pay",
+      "proofLabel": "Payment proof (optional)",
       "errors": {
         "nameRequired": "Name is required",
         "emailRequired": "Email is required",
@@ -3414,6 +3782,11 @@
       "like": "Like",
       "delete": "Delete",
       "confirmDelete": "Are you sure you want to delete this comment?",
+      "deleteDialog": {
+        "title": "Delete comment?",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
       "posted": "Comment posted",
       "errorPosting": "Error posting comment",
       "errorLoading": "Error loading comments",
@@ -3551,13 +3924,18 @@
       "instructor": {
         "title": "Instructor",
         "experience": "Experienced Instructor",
-        "defaultBio": "Instructor passionate about teaching."
+        "defaultBio": "Instructor passionate about teaching.",
+        "defaultName": "Instructor"
       }
     },
     "pricing": {
       "preview": "Preview this course",
       "free": "Free",
       "enrollFree": "Enroll for Free",
+      "enrolling": "Enrolling...",
+      "enrollmentSuccess": "You're enrolled! Opening your course...",
+      "enrollmentError": "We couldn't enroll you. Please try again.",
+      "enrollWithPlan": "Enroll with your plan",
       "enrollNow": "Enroll Now",
       "goToCourse": "Go to Course",
       "buyNow": "Buy Now",
@@ -3585,6 +3963,10 @@
     "free": "free",
     "signUpFree": "Sign Up Free",
     "getStarted": "Get Started",
+    "subscribeFree": "Subscribe Free",
+    "subscribing": "Subscribing…",
+    "subscribeSuccess": "You're subscribed! Enjoy your plan.",
+    "subscribeError": "Couldn't activate the plan. Please try again.",
     "billedMonthly": "Billed monthly",
     "billedYearly": "Billed yearly",
     "empty": {
@@ -3626,6 +4008,18 @@
     "issuedBy": "Issued by LMS Platform"
   },
   "checkout": {
+    "success": {
+      "title": "You're all set!",
+      "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",
+      "goToCourses": "Go to my courses",
+      "browseCourses": "Browse courses",
+      "viewBilling": "View billing",
+      "continue": "Continue to your content",
+      "multipleCourses": "Your purchase includes these courses. Choose one to start learning.",
+      "courseFallback": "Open course",
+      "confirmingTitle": "Confirming your purchase",
+      "confirmingSubtitle": "Your payment provider is finishing the confirmation. This page will update automatically."
+    },
     "title": "Checkout",
     "description": "Choose your payment method to continue.",
     "item": "Item",
@@ -3648,12 +4042,47 @@
       "expiry": "Expiry",
       "cvc": "CVC",
       "offlineInstructions": "Request payment instructions. We'll send you details for bank transfer or other offline methods.",
+      "redirectInstructions": "You'll be redirected to a secure checkout page to complete your payment.",
+      "solanaInstructions": "Pay with Solana Pay. Continue to generate a QR code you can scan with your wallet.",
+      "solanaScan": "Scan to pay with Solana",
+      "solanaWaiting": "Waiting for on-chain confirmation…",
+      "payWithPhantom": "Pay with Phantom",
+      "phantomHint": "Pay directly with your connected Phantom wallet.",
+      "payByQr": "Pay by QR instead",
+      "payInLabel": "Pay with",
+      "payInUsdc": "USDC",
+      "payInSol": "SOL",
+      "usdcNote": "USDC is a 1:1 US-dollar stablecoin — you pay exactly the listed price.",
+      "solConversionNote": "Priced in USD; you pay the equivalent in SOL at the live exchange rate, locked when you start checkout.",
+      "phantomPreparing": "Preparing checkout…",
+      "phantomConnecting": "Connecting to Phantom…",
+      "phantomRequesting": "Requesting transaction…",
+      "phantomSignInit": "Approve step 1 of 2 in Phantom: initialize your subscription wallet.",
+      "phantomSign": "Approve in Phantom to sign…",
+      "phantomSubmitting": "Submitting to the network…",
+      "phantomInitDone": "Wallet initialized — approve step 2 in Phantom to subscribe…",
+      "phantomConfirming": "Confirming on-chain…",
+      "phantomNotFound": "Phantom wallet not found. Install Phantom and unlock it, then try again.",
+      "phantomRetry": "Try again",
+      "subsDesktopOnly": "To subscribe with crypto, open this page in the Phantom app or install the Phantom desktop extension — a subscription needs two wallet approvals that a QR scan can't do.",
+      "phantomInstall": "Get the Phantom wallet",
       "contactName": "Contact Name",
       "contactEmail": "Email for Instructions",
       "contactPhone": "Phone (Optional)",
       "button": "Pay & Enroll (Test)",
       "requestButton": "Request Payment Instructions",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "cardUnavailable": "Card payments aren't available for this item right now. Please use another payment method.",
+      "sandboxButton": "Pay & Enroll (Test)",
+      "sandboxHint": "Sandbox test checkout — skips real payment (development only)."
+    },
+    "stripe": {
+      "preparing": "Preparing secure payment…",
+      "initError": "Couldn't start the card payment. Please try again.",
+      "unavailableTitle": "Card payments unavailable",
+      "tryManual": "Pay another way",
+      "payButton": "Pay {price}",
+      "paymentError": "Payment could not be completed. Please try again."
     },
     "empty": {
       "title": "No Product Selected",
@@ -3672,6 +4101,7 @@
       "productDetails": "Product Details",
       "price": "Price",
       "manualPayment": "Manual Payment Method",
+      "instructionsTitle": "How to pay",
       "howItWorks": {
         "title": "How It Works",
         "description": "Follow these simple steps to complete your purchase",

@@ -24,6 +24,7 @@ import {
 import { IconPlus, IconCopy, IconTrash, IconBan, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { createMcpToken, revokeMcpToken, deleteMcpToken, type McpToken } from '@/app/actions/mcp-tokens'
+import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
 
 interface ApiTokensPageProps {
   tokens: McpToken[]
@@ -40,6 +41,9 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
   const [copied, setCopied] = useState(false)
   const [copiedConfig, setCopiedConfig] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
+
+  // OAuth custom-connector URL — same endpoint without the /cli token path.
+  const connectorUrl = mcpUrl.replace(/\/cli$/, '')
 
   const handleCreate = () => {
     if (!tokenName.trim()) {
@@ -228,7 +232,10 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
         </Dialog>
       </div>
 
-      {/* Connection Instructions */}
+      {/* Connect Claude (OAuth custom connector) */}
+      <ConnectClaudeCard connectorUrl={connectorUrl} />
+
+      {/* Advanced: API token instructions */}
       <Card>
         <CardHeader
           className="cursor-pointer"

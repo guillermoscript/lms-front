@@ -12,10 +12,24 @@ import {
   CreatePriceParams,
   UpdateProductParams,
   UpdatePriceParams,
+  CreateSubscriptionParams,
+  ProviderSubscription,
+  ProviderCapabilities,
 } from './types'
 
 export class ManualPaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'manual'
+  // Offline/manual: no external engine. WE own the billing period; an admin
+  // confirms each payment and a cron expires lapsed rows. No webhooks/refunds.
+  readonly capabilities: ProviderCapabilities = {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+    createsCatalog: false,
+  }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {
     // Manual payments use major units (no conversion needed)
@@ -104,5 +118,30 @@ export class ManualPaymentProvider implements IPaymentProvider {
 
   async archivePrice(priceId: string): Promise<void> {
     // Manual prices archived in database only
+  }
+
+  // Subscription operations are no-ops for manual/offline billing.
+  // There is no external recurring engine: the admin confirms each payment and
+  // the subscription row is managed entirely in our database.
+  async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
+    return {
+      id: `manual_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: 'active',
+      currentPeriodEnd: new Date(),
+      cancelAtPeriodEnd: false,
+    }
+  }
+
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+    // Nothing to cancel externally — the DB row carries the real state.
+  }
+
+  async getSubscription(providerSubId: string): Promise<ProviderSubscription> {
+    return {
+      id: providerSubId,
+      status: 'active',
+      currentPeriodEnd: new Date(),
+      cancelAtPeriodEnd: false,
+    }
   }
 }

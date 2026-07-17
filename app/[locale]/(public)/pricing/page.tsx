@@ -5,23 +5,28 @@ import PricingClient from "./pricing-client";
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
-interface Plan {
-    plan_id: number;
-    plan_name: string;
-    price: number;
-    duration_in_days: number;
-    description: string;
-    features: string | string[];
-    payment_provider?: string;
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'seo' });
+    return buildPageMetadata({ title: t('pricing.title'), description: t('pricing.description'), path: '/pricing', locale });
 }
 
-export default async function PricingPage() {
+export default async function PricingPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ subscribe?: string }>;
+}) {
     const supabase = await createClient();
     const tenantId = await getCurrentTenantId();
     const t = await getTranslations('pricing');
+    const { subscribe } = await searchParams;
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Fetch plans from database - filtered by tenant
     const { data: plans, error } = await supabase
@@ -106,6 +111,8 @@ export default async function PricingPage() {
                     <PricingClient
                         monthlyPlans={monthlyPlans}
                         yearlyPlans={yearlyPlans}
+                        isAuthenticated={!!user}
+                        subscribePlanId={subscribe ? Number(subscribe) : null}
                     />
                 )}
 

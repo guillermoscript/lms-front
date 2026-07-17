@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { PlanForm } from '@/components/admin/plan-form'
+import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewPlanPage() {
@@ -34,6 +35,9 @@ export default async function NewPlanPage() {
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('title')
+
+  // Resolve which providers the admin enabled (single source of truth for the form).
+  const { data: enabledProviders } = await getEnabledPaymentProviders()
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,7 +72,7 @@ export default async function NewPlanPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PlanForm mode="create" courses={courses || []} />
+            <PlanForm mode="create" courses={courses || []} enabledProviders={enabledProviders} />
           </CardContent>
         </Card>
       </main>

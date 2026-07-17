@@ -11,9 +11,10 @@ const MCP_PROXY_SECRET = process.env.MCP_PROXY_SECRET;
  * This proxy sits between MCP clients and the internal MCP server.
  * It handles three access patterns:
  *
- * 1. **OAuth (Claude Desktop)** — /.well-known/*, /auth/*, /mcp
- *    Metadata served by proxy with per-tenant URLs.
- *    All other OAuth endpoints forwarded to MCP server.
+ * 1. **OAuth (claude.ai custom connectors, Claude Desktop)** — /.well-known/*, /mcp
+ *    Protected-resource metadata served here (tenant-aware); the authorization
+ *    server is Supabase's OAuth 2.1 server (hosts /authorize, /token, DCR).
+ *    Consent screen is the Next.js /oauth/consent page.
  *
  * 2. **CLI API Tokens** — /cli
  *    Validates Bearer tokens via validate_mcp_api_token() RPC,
@@ -41,39 +42,22 @@ function getSubpath(request: NextRequest): string {
   return path.replace(/^\/api\/mcp/, '') || '/mcp';
 }
 
-// ─── OAuth Metadata (served directly by proxy, tenant-aware) ───────────────
+// ─── OAuth Metadata (RFC 9728, tenant-aware) ────────────────────────────────
+// Supabase's OAuth 2.1 server is the authorization server — it hosts
+// /authorize, /token, /register and dynamic client registration. We only
+// advertise it; the consent screen is the Next.js /oauth/consent page.
 
-function serveAuthorizationServerMetadata(request: NextRequest): NextResponse {
-  const origin = getOrigin(request);
-  const mcpBase = `${origin}/api/mcp`;
-
-  return NextResponse.json({
-    issuer: mcpBase,
-    authorization_endpoint: `${mcpBase}/auth/authorize`,
-    token_endpoint: `${mcpBase}/auth/token`,
-    registration_endpoint: `${mcpBase}/auth/register`,
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
-    token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
-    code_challenge_methods_supported: ['S256'],
-    scopes_supported: ['mcp:tools'],
-    revocation_endpoint: `${mcpBase}/auth/revoke`,
-  }, {
-    headers: {
-      'cache-control': 'public, max-age=3600',
-      'access-control-allow-origin': '*',
-    },
-  });
+function supabaseIssuer(): string {
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`;
 }
 
 function serveProtectedResourceMetadata(request: NextRequest): NextResponse {
   const origin = getOrigin(request);
-  const mcpBase = `${origin}/api/mcp`;
 
   return NextResponse.json({
-    resource: mcpBase,
-    authorization_servers: [mcpBase],
-    scopes_supported: ['mcp:tools'],
+    resource: `${origin}/api/mcp`,
+    authorization_servers: [supabaseIssuer()],
+    scopes_supported: ['openid', 'profile', 'email'],
     bearer_methods_supported: ['header'],
     resource_name: 'LMS MCP Server',
   }, {
@@ -82,6 +66,30 @@ function serveProtectedResourceMetadata(request: NextRequest): NextResponse {
       'access-control-allow-origin': '*',
     },
   });
+}
+
+async function serveAuthorizationServerMetadata(): Promise<NextResponse> {
+  // Legacy-client fallback: pass through Supabase's real metadata verbatim.
+  try {
+    const upstream = await fetch(
+      `${supabaseIssuer()}/.well-known/oauth-authorization-server`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!upstream.ok) throw new Error(`upstream ${upstream.status}`);
+    return new NextResponse(await upstream.text(), {
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'public, max-age=3600',
+        'access-control-allow-origin': '*',
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      { error: 'server_error', error_description: 'Failed to fetch authorization server metadata' },
+      { status: 502 }
+    );
+  }
 }
 
 // ─── CLI Token Handler (/cli) ──────────────────────────────────────────────
@@ -213,7 +221,7 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
   });
 
   const headers = new Headers();
-  for (const name of ['content-type', 'content-length', 'accept', 'authorization', 'x-tenant-id', 'x-forwarded-for', 'x-real-ip']) {
+  for (const name of ['content-type', 'content-length', 'accept', 'authorization', 'x-tenant-id', 'x-forwarded-for', 'x-real-ip', 'mcp-session-id', 'mcp-protocol-version', 'last-event-id']) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
@@ -255,16 +263,32 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
     }
 
     const responseHeaders = new Headers();
-    for (const name of ['content-type', 'cache-control', 'www-authenticate', 'set-cookie']) {
+    for (const name of ['content-type', 'cache-control', 'set-cookie', 'mcp-session-id']) {
       const value = response.headers.get(name);
       if (value) responseHeaders.set(name, value);
     }
+
+    // The MCP server builds WWW-Authenticate from its internal baseUrl —
+    // rewrite resource_metadata to this tenant's public /api/mcp base so
+    // clients discover OAuth metadata at the URL they actually connected to.
+    const wwwAuth = response.headers.get('www-authenticate');
+    if (wwwAuth) {
+      responseHeaders.set(
+        'www-authenticate',
+        wwwAuth.replace(
+          /resource_metadata="[^"]*"/,
+          `resource_metadata="${origin}/api/mcp/.well-known/oauth-protected-resource"`
+        )
+      );
+    }
+
     responseHeaders.set('access-control-allow-origin', '*');
     responseHeaders.set('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS');
-    responseHeaders.set('access-control-allow-headers', 'Content-Type, Authorization');
+    responseHeaders.set('access-control-allow-headers', 'Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version');
+    responseHeaders.set('access-control-expose-headers', 'Mcp-Session-Id, WWW-Authenticate');
 
-    const responseBody = await response.arrayBuffer();
-    return new NextResponse(responseBody, { status: response.status, headers: responseHeaders });
+    // Stream the body through — MCP streamable HTTP can respond with SSE.
+    return new NextResponse(response.body, { status: response.status, headers: responseHeaders });
   } catch (error) {
     console.error(`[MCP Proxy] Error forwarding to ${targetUrl}:`, error);
     return NextResponse.json(
@@ -279,11 +303,12 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
 export async function GET(request: NextRequest) {
   const subpath = getSubpath(request);
 
-  // OAuth metadata — served directly with per-tenant URLs
-  if (subpath === '/.well-known/oauth-authorization-server') {
-    return serveAuthorizationServerMetadata(request);
+  // OAuth metadata — protected-resource is tenant-aware, auth-server is Supabase's
+  if (subpath.startsWith('/.well-known/oauth-authorization-server') ||
+      subpath.startsWith('/.well-known/openid-configuration')) {
+    return serveAuthorizationServerMetadata();
   }
-  if (subpath === '/.well-known/oauth-protected-resource') {
+  if (subpath.startsWith('/.well-known/oauth-protected-resource')) {
     return serveProtectedResourceMetadata(request);
   }
 
@@ -311,7 +336,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version',
       'Access-Control-Max-Age': '86400',
     },
   });

@@ -9,9 +9,33 @@ import { es, enUS } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { IconUser, IconSettings } from '@tabler/icons-react'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { IconUsers, IconSettings, IconDotsVertical } from '@tabler/icons-react'
 import { RoleAssignmentDialog } from './role-assignment-dialog'
 import Link from 'next/link'
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('')
+}
 
 interface Profile {
   id: string
@@ -72,45 +96,46 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b">
-            <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-3 font-medium">{t('headers.user')}</th>
-              <th className="pb-3 font-medium">{t('headers.email')}</th>
-              <th className="pb-3 font-medium">{t('headers.roles')}</th>
-              <th className="pb-3 font-medium">{t('headers.enrollments')}</th>
-              <th className="pb-3 font-medium">{t('headers.status')}</th>
-              <th className="pb-3 font-medium">{t('headers.joined')}</th>
-              <th className="pb-3 font-medium">{t('headers.actions')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('headers.user')}</TableHead>
+              <TableHead>{t('headers.email')}</TableHead>
+              <TableHead>{t('headers.roles')}</TableHead>
+              <TableHead>{t('headers.enrollments')}</TableHead>
+              <TableHead>{t('headers.status')}</TableHead>
+              <TableHead>{t('headers.joined')}</TableHead>
+              <TableHead className="text-right">{t('headers.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredProfiles.length > 0 ? (
               filteredProfiles.map((profile) => {
                 const userRolesList = rolesMap.get(profile.id) || []
                 const enrollmentCount = enrollmentCounts.get(profile.id) || 0
                 const isDeactivated = !!profile.deactivated_at
+                const displayName = profile.full_name || t('unknown')
 
                 return (
-                  <tr key={profile.id} className="text-sm">
-                    <td className="py-4">
+                  <TableRow key={profile.id}>
+                    <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                          <IconUser className="h-5 w-5" />
-                        </div>
+                        <Avatar size="sm">
+                          <AvatarFallback>
+                            {getInitials(profile.full_name || profile.email)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="font-medium">
-                            {profile.full_name || t('unknown')}
-                          </p>
+                          <p className="font-medium">{displayName}</p>
                           <p className="text-xs text-muted-foreground">
                             {profile.id.slice(0, 8)}...
                           </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="py-4">{profile.email}</td>
-                    <td className="py-4">
+                    </TableCell>
+                    <TableCell>{profile.email}</TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {userRolesList.length > 0 ? (
                           userRolesList.map((role) => (
@@ -131,9 +156,9 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                           <Badge variant="outline">{t('roles.noRoles')}</Badge>
                         )}
                       </div>
-                    </td>
-                    <td className="py-4">{enrollmentCount}</td>
-                    <td className="py-4">
+                    </TableCell>
+                    <TableCell>{enrollmentCount}</TableCell>
+                    <TableCell>
                       {isDeactivated ? (
                         <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
@@ -141,39 +166,53 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                           {t('status.active')}
                         </Badge>
                       )}
-                    </td>
-                    <td className="py-4 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {format(new Date(profile.created_at), 'MMM d, yyyy', { locale: dateLocale })}
-                    </td>
-                    <td className="py-4">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleManageRoles(profile)}
-                        >
-                          <IconSettings className="mr-1 h-4 w-4" />
-                          {t('actions.roles')}
-                        </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
                         <Link href={`/dashboard/admin/users/${profile.id}`}>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="outline" size="sm">
                             {t('actions.view')}
                           </Button>
                         </Link>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t('actions.more')}
+                              >
+                                <IconDotsVertical className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
+                              <IconSettings className="h-4 w-4" />
+                              {t('actions.roles')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             ) : (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                  {t('noUsers')}
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <IconUsers className="h-8 w-8" />
+                    <p>{t('noUsers')}</p>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Role Assignment Dialog */}

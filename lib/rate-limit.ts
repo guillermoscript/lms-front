@@ -49,3 +49,48 @@ export const mcpLimiter = rateLimit({
   interval: 60 * 1000, // 1 minute
   uniqueTokenPerInterval: 500, // Track 500 users
 });
+
+/**
+ * Authenticated payment routes (checkout, submit) — keyed by user id.
+ * 2000 users tracked; low limits since these trigger real checkout/RPC work.
+ */
+export const paymentAuthLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 2000,
+});
+
+/**
+ * Polling routes (verify) — keyed by user id. Higher limit: the client polls
+ * every 1-2s while waiting for on-chain confirmation.
+ */
+export const paymentPollLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 2000,
+});
+
+/**
+ * Anonymous Solana Pay wallet endpoints (/tx, /subscribe-tx) — no session, hit
+ * directly by wallet apps, so keyed by IP instead of user id.
+ */
+export const paymentAnonLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 5000,
+});
+
+/**
+ * Free enrollment attempts — checked separately by user and IP.
+ * The database grant remains idempotent; this limits bot-driven catalog churn.
+ */
+export const freeEnrollmentLimiter = rateLimit({
+  interval: 60 * 60 * 1000,
+  uniqueTokenPerInterval: 10_000,
+});
+
+/** Client IP from standard proxy headers, falling back to 'unknown'. */
+export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" role="img" aria-label="LMS platform mark">
+  <circle cx="128" cy="128" r="82" stroke="#0F172A" stroke-width="18"/>
+  <path d="M79 166C97 119 129 94 177 80" stroke="#0F172A" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="180" cy="76" r="14" fill="#0F172A"/>
+  <circle cx="76" cy="180" r="14" fill="#0F172A"/>
+  <circle cx="128" cy="128" r="16" fill="#0F172A"/>
+</svg>

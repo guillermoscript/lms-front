@@ -9,6 +9,13 @@ import Link from 'next/link'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchCourseAccessMap } from '@/lib/services/course-access'
 import type { CourseAccess } from '@/lib/services/enrollment-service'
+import {
+  getCoursesByIds,
+  getLessonsByCourseIds,
+  getExamsByCourseIds,
+  getLessonCompletions,
+  getExamSubmissions,
+} from '@lms/core'
 
 const NO_ACCESS: CourseAccess = {
   hasAccess: false,
@@ -62,16 +69,11 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       { data: lessonCompletions },
       { data: examSubmissions },
     ] = await Promise.all([
-      supabase.from('courses').select('course_id, title, description, thumbnail_url, status')
-        .in('course_id', courseIds).eq('tenant_id', tenantId),
-      supabase.from('lessons').select('id, title, sequence, course_id')
-        .in('course_id', courseIds).eq('tenant_id', tenantId),
-      supabase.from('exams').select('exam_id, title, sequence, course_id')
-        .in('course_id', courseIds).eq('tenant_id', tenantId),
-      supabase.from('lesson_completions').select('lesson_id, completed_at')
-        .eq('user_id', userId),
-      supabase.from('exam_submissions').select('submission_id, exam_id, submission_date, score')
-        .eq('student_id', userId).eq('tenant_id', tenantId),
+      getCoursesByIds(supabase, courseIds, tenantId),
+      getLessonsByCourseIds(supabase, courseIds, tenantId),
+      getExamsByCourseIds(supabase, courseIds, tenantId),
+      getLessonCompletions(supabase, userId),
+      getExamSubmissions(supabase, userId, tenantId),
     ])
 
     // Build lookup maps

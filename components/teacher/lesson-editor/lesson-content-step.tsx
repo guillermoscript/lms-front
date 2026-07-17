@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { useLessonEditor } from './lesson-editor-context'
 
 export function LessonContentStep() {
-  const { formData, updateField, contentMode, setContentMode } = useLessonEditor()
+  const { formData, updateField, contentMode, setContentMode, courseId, initialData } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
 
   const contentLineCount = useMemo(
@@ -73,6 +73,7 @@ export function LessonContentStep() {
           <BlockEditor
             initialContent={formData.content || ''}
             onChange={(mdx) => updateField('content', mdx)}
+            checkpointContext={{ courseId, lessonId: initialData?.id ?? null }}
           />
         </div>
       )}

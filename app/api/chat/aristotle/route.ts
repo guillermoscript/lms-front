@@ -1,27 +1,31 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
+import { lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { z } from 'zod'
 
 export const maxDuration = 120
 
 const SESSION_IDLE_MINUTES = 30
 
+const bodySchema = z.object({
+    messages: z.array(z.any()),
+    courseId: z.coerce.number().int().positive(),
+    contextPage: z.string().optional(),
+})
+
 export async function POST(req: Request) {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
-    const { data: { user } } = await supabase.auth.getUser()
+    const auth = await getApiAuthContext(req)
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
 
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const parsed = bodySchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) return new Response('Invalid request body', { status: 400 })
+    const { messages, courseId, contextPage } = parsed.data
 
-    const body = await req.json()
-    const { messages, courseId, contextPage } = body
-
-    if (!courseId) return new Response('Course ID is required', { status: 400 })
-
-    const numericCourseId = parseInt(courseId)
+    const numericCourseId = courseId
 
     // Verify access (entitlements model)
     if (!(await hasCourseAccess(supabase, user.id, numericCourseId))) {
@@ -112,7 +116,7 @@ export async function POST(req: Request) {
         .gte('started_at', cutoff)
         .order('started_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
     let sessionId: string
 
@@ -161,13 +165,18 @@ export async function POST(req: Request) {
     const totalLessons = lessons?.length || 0
     const overallPercent = totalLessons > 0 ? Math.round((relevantCompletions.length / totalLessons) * 100) : 0
 
+    // exercise_completions has no tenant scope and spans all courses — limit to
+    // the exercises that belong to this course (mirrors the lesson handling above).
+    const courseExerciseIds = new Set(exercises?.map(e => e.id) || [])
+    const relevantExerciseCompletions = (exerciseCompletions || []).filter(e => courseExerciseIds.has(e.exercise_id))
+
     // Build exam results with pass/fail
     const examResults = (examSubmissions || []).map(s => {
         const exam = exams?.find(e => e.exam_id === s.exam_id)
         return {
             exam_id: s.exam_id,
             score: s.score,
-            passed: (s.score || 0) >= 70,
+            passed: (s.score || 0) >= DEFAULT_PASSING_SCORE,
         }
     })
 
@@ -187,7 +196,7 @@ export async function POST(req: Request) {
         },
         progress: {
             completedLessonIds: relevantCompletions,
-            exerciseScores: (exerciseCompletions || []).map(e => ({
+            exerciseScores: relevantExerciseCompletions.map(e => ({
                 exercise_id: e.exercise_id,
                 score: e.score,
             })),
@@ -204,21 +213,14 @@ export async function POST(req: Request) {
     })
 
     // Save user message
-    const lastMessage = messages[messages.length - 1]
-    if (lastMessage?.role === 'user') {
-        const messageText = lastMessage.parts
-            ?.filter((part: any) => part.type === 'text')
-            .map((part: any) => part.text)
-            .join(' ') || lastMessage.content || ''
-
-        if (messageText) {
-            await supabase.from('aristotle_messages').insert({
-                session_id: sessionId,
-                role: 'user',
-                content: messageText,
-                context_page: contextPage || null,
-            })
-        }
+    const messageText = lastUserMessageText(messages)
+    if (messageText) {
+        await supabase.from('aristotle_messages').insert({
+            session_id: sessionId,
+            role: 'user',
+            content: messageText,
+            context_page: contextPage || null,
+        })
     }
 
     // Stream response
@@ -229,12 +231,13 @@ export async function POST(req: Request) {
         experimental_telemetry: { isEnabled: true, functionId: 'aristotle-assistant', metadata: { userId: user.id, tenantId, contextPage: contextPage || '' } },
         onFinish: async (event) => {
             if (event.text) {
-                await supabase.from('aristotle_messages').insert({
+                const { error } = await supabase.from('aristotle_messages').insert({
                     session_id: sessionId,
                     role: 'assistant',
                     content: event.text,
                     context_page: contextPage || null,
                 })
+                if (error) console.error('Failed to persist aristotle assistant message:', error)
             }
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),

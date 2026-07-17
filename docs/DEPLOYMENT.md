@@ -263,6 +263,10 @@ Since there's no Vercel cron, set up a system cron on the server:
 ```bash
 # crontab -e
 0 0 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/expire-subscriptions
+# Daily digest + streak nudge — must run HOURLY (each tenant sends at its own local hour)
+0 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/daily-digest
+# Weekly league rollover (Mondays 01:00). pg_cron inside the database also runs it (Mondays 00:05), so this entry is a fallback.
+0 1 * * 1 curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/league-rollover
 ```
 
 ---

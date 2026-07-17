@@ -2,32 +2,23 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import {
     IconBook,
     IconBookmark,
-    IconCalendar,
-    IconCertificate,
     IconChartBar,
+    IconChevronRight,
     IconCoins,
-    IconCreditCard,
-    IconCrown,
     IconCurrencyDollar,
     IconDashboard,
-    IconFileInvoice,
     IconKey,
     IconLayout,
     IconLogout,
     IconMessages,
-    IconPalette,
-    IconPlus,
     IconReceipt,
     IconSearch,
     IconSettings,
-    IconShoppingCart,
-    IconTrendingUp,
-    IconTrophy,
+    IconSparkles,
     IconUsers,
 } from "@tabler/icons-react"
 
@@ -37,65 +28,103 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
+    SidebarMenuAction,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
     SidebarRail,
 } from "@/components/ui/sidebar"
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { useTenant } from "@/components/tenant/tenant-provider"
 import { useLogout } from "@/hooks/use-logout"
+import { useActiveNav } from "@/hooks/use-active-nav"
 import Image from "next/image"
+
+interface NavSubItem {
+    title: string
+    href: string
+    tourId?: string
+}
 
 interface NavItem {
     title: string
     href: string
     icon: React.ComponentType<{ className?: string }>
     tourId?: string
-}
-
-interface NavGroup {
-    label: string
-    items: NavItem[]
+    items?: NavSubItem[]
 }
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     userRole: 'student' | 'teacher' | 'admin' | null
 }
 
-function isNavActive(href: string, pathname: string): boolean {
-    const hrefPath = href.split('?')[0]
-    if (pathname === hrefPath) return true
-    if (hrefPath !== '/dashboard/admin' && hrefPath !== '/dashboard/teacher' && hrefPath !== '/dashboard/student') {
-        return pathname.startsWith(hrefPath + '/')
-    }
-    return false
-}
+function NavEntry({ item }: { item: NavItem }) {
+    const { isActive } = useActiveNav()
+    const active = isActive(item.href)
+    const tourProps = item.tourId ? { 'data-tour': item.tourId } : {}
 
-function NavSection({ group }: { group: NavGroup }) {
-    const pathname = usePathname()
+    if (!item.items?.length) {
+        return (
+            <SidebarMenuItem {...tourProps}>
+                <SidebarMenuButton
+                    render={<Link href={item.href} />}
+                    isActive={active}
+                    tooltip={item.title}
+                >
+                    <item.icon />
+                    <span>{item.title}</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        )
+    }
+
+    const childActive = item.items.some((sub) => isActive(sub.href))
 
     return (
-        <SidebarGroup>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-                <SidebarMenu>
-                    {group.items.map((item) => (
-                        <SidebarMenuItem key={item.href} {...(item.tourId ? { 'data-tour': item.tourId } : {})}>
-                            <SidebarMenuButton
-                                render={<Link href={item.href} />}
-                                isActive={isNavActive(item.href, pathname)}
-                                tooltip={item.title}
+        <Collapsible
+            defaultOpen={active || childActive}
+            render={<SidebarMenuItem {...tourProps} />}
+        >
+            <SidebarMenuButton
+                render={<Link href={item.href} />}
+                isActive={active}
+                tooltip={item.title}
+            >
+                <item.icon />
+                <span>{item.title}</span>
+            </SidebarMenuButton>
+            <CollapsibleTrigger
+                render={<SidebarMenuAction className="data-[panel-open]:rotate-90" />}
+            >
+                <IconChevronRight />
+                <span className="sr-only">{item.title}</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <SidebarMenuSub>
+                    {item.items.map((sub) => (
+                        <SidebarMenuSubItem
+                            key={sub.href}
+                            {...(sub.tourId ? { 'data-tour': sub.tourId } : {})}
+                        >
+                            <SidebarMenuSubButton
+                                render={<Link href={sub.href} />}
+                                isActive={isActive(sub.href)}
                             >
-                                <item.icon />
-                                <span>{item.title}</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                                <span>{sub.title}</span>
+                            </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
                     ))}
-                </SidebarMenu>
-            </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenuSub>
+            </CollapsibleContent>
+        </Collapsible>
     )
 }
 
@@ -108,100 +137,89 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
     const logoUrl = tenant?.logo_url
     const initials = schoolName.slice(0, 2).toUpperCase()
 
-    const navGroups = React.useMemo((): NavGroup[] => {
+    const navItems = React.useMemo((): NavItem[] => {
         if (!userRole) return []
 
-        const groups: Record<string, NavGroup[]> = {
+        const items: Record<string, NavItem[]> = {
             admin: [
+                { title: t('dashboard'), href: "/dashboard/admin", icon: IconDashboard },
                 {
-                    label: t('main'),
+                    title: t('courses'), href: "/dashboard/admin/courses", icon: IconBook,
                     items: [
-                        { title: t('dashboard'), href: "/dashboard/admin", icon: IconDashboard },
+                        { title: t('myCourses'), href: "/dashboard/teacher/courses", tourId: 'sidebar-courses' },
+                        { title: t('enrollments'), href: "/dashboard/admin/enrollments" },
                     ],
                 },
                 {
-                    label: t('management'),
+                    title: t('people'), href: "/dashboard/admin/users", icon: IconUsers,
                     items: [
-                        { title: t('users'), href: "/dashboard/admin/users", icon: IconUsers },
-                        { title: t('community'), href: "/dashboard/admin/community", icon: IconMessages },
-                        { title: t('allCourses'), href: "/dashboard/admin/courses", icon: IconBook },
-                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
-                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus, tourId: 'sidebar-create-course' },
-                        { title: t('enrollments'), href: "/dashboard/admin/enrollments", icon: IconCertificate },
-                        { title: t('analytics'), href: "/dashboard/admin/analytics", icon: IconChartBar },
-                        { title: t('billing'), href: "/dashboard/admin/billing", icon: IconCreditCard },
-                        { title: t('pages'), href: "/dashboard/admin/landing-page", icon: IconLayout },
-                        { title: t('appearance'), href: "/dashboard/admin/appearance", icon: IconPalette },
-                        { title: t('settings'), href: "/dashboard/admin/settings", icon: IconSettings, tourId: 'sidebar-settings' },
-                        { title: t('apiTokens'), href: "/dashboard/admin/api-tokens", icon: IconKey },
+                        { title: t('community'), href: "/dashboard/admin/community" },
                     ],
                 },
                 {
-                    label: t('monetization'),
+                    title: t('monetization'), href: "/dashboard/admin/monetization", icon: IconCurrencyDollar,
                     items: [
-                        { title: t('monetizationOverview'), href: "/dashboard/admin/monetization", icon: IconCurrencyDollar },
-                        { title: t('products'), href: "/dashboard/admin/products", icon: IconShoppingCart },
-                        { title: t('plans'), href: "/dashboard/admin/plans", icon: IconCalendar },
-                        { title: t('revenue'), href: "/dashboard/admin/revenue", icon: IconTrendingUp },
-                        { title: t('transactions'), href: "/dashboard/admin/transactions", icon: IconReceipt },
-                        { title: t('subscriptions'), href: "/dashboard/admin/subscriptions", icon: IconCrown },
-                        { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests", icon: IconFileInvoice },
+                        { title: t('products'), href: "/dashboard/admin/products" },
+                        { title: t('plans'), href: "/dashboard/admin/plans" },
+                        { title: t('subscriptions'), href: "/dashboard/admin/subscriptions" },
+                        { title: t('transactions'), href: "/dashboard/admin/transactions" },
+                        { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests" },
+                        { title: t('revenue'), href: "/dashboard/admin/revenue" },
+                        { title: t('payouts'), href: "/dashboard/admin/payouts" },
+                        { title: t('invoices'), href: "/dashboard/admin/invoices" },
+                    ],
+                },
+                { title: t('analytics'), href: "/dashboard/admin/analytics", icon: IconChartBar },
+                {
+                    title: t('website'), href: "/dashboard/admin/landing-page", icon: IconLayout,
+                    items: [
+                        { title: t('appearance'), href: "/dashboard/admin/appearance" },
+                    ],
+                },
+                {
+                    title: t('settings'), href: "/dashboard/admin/settings", icon: IconSettings, tourId: 'sidebar-settings',
+                    items: [
+                        { title: t('billing'), href: "/dashboard/admin/billing" },
+                        { title: t('apiTokens'), href: "/dashboard/admin/api-tokens" },
                     ],
                 },
             ],
             teacher: [
-                {
-                    label: t('main'),
-                    items: [
-                        { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
-                        { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
-                    ],
-                },
-                {
-                    label: t('contentManagement'),
-                    items: [
-                        { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
-                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new", icon: IconPlus, tourId: 'sidebar-create-course' },
-                        { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
-                    ],
-                },
-                {
-                    label: t('business'),
-                    items: [
-                        { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
-                    ],
-                },
+                { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
+                { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
+                { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
+                { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
+                { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
             ],
             student: [
+                { title: t('dashboard'), href: "/dashboard/student", icon: IconDashboard },
                 {
-                    label: t('main'),
+                    title: t('myCourses'), href: "/dashboard/student/courses", icon: IconBookmark,
                     items: [
-                        { title: t('dashboard'), href: "/dashboard/student", icon: IconDashboard },
-                        { title: t('myCourses'), href: "/dashboard/student/courses", icon: IconBookmark },
-                        { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
+                        { title: t('completed'), href: "/dashboard/student/courses?status=completed" },
+                        { title: t('myCertificates'), href: "/dashboard/student/certificates" },
+                        { title: t('progressReport'), href: "/dashboard/student/progress", tourId: 'sidebar-progress' },
                     ],
                 },
                 {
-                    label: t('discover'),
+                    title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse',
                     items: [
-                        { title: t('browseCourses'), href: "/dashboard/student/browse", icon: IconSearch, tourId: 'sidebar-browse' },
-                        { title: t('courseCatalog'), href: "/courses", icon: IconBook },
+                        { title: t('courseCatalog'), href: "/courses" },
                     ],
                 },
+                { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
+                { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
-                    label: t('resources'),
+                    title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,
                     items: [
-                        { title: t('myPayments'), href: "/dashboard/student/payments", icon: IconCreditCard },
-                        { title: t('myCertificates'), href: "/dashboard/student/certificates", icon: IconCertificate },
-                        { title: t('progressReport'), href: "/dashboard/student/progress", icon: IconChartBar, tourId: 'sidebar-progress' },
-                        { title: t('completed'), href: "/dashboard/student/courses?status=completed", icon: IconTrophy },
-                        { title: t('pointStore'), href: "/dashboard/student/store", icon: IconCoins },
+                        { title: t('myPayments'), href: "/dashboard/student/payments" },
                     ],
                 },
+                { title: t('pointStore'), href: "/dashboard/student/store", icon: IconCoins },
             ],
         }
 
-        return groups[userRole] || []
+        return items[userRole] || []
     }, [userRole, t])
 
     return (
@@ -233,9 +251,15 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             </SidebarHeader>
 
             <SidebarContent>
-                {navGroups.map((group) => (
-                    <NavSection key={group.label} group={group} />
-                ))}
+                <SidebarGroup>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {navItems.map((item) => (
+                                <NavEntry key={item.href} item={item} />
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter>

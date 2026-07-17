@@ -13,9 +13,10 @@ import {
   IconCalendarEvent,
 } from '@tabler/icons-react'
 import { useLessonEditor } from './lesson-editor-context'
+import { VideoCheckpointMarkers } from '../video-checkpoint-markers'
 
 export function LessonDetailsStep() {
-  const { formData, updateField, initialData, setActiveStep } = useLessonEditor()
+  const { formData, updateField, initialData, setActiveStep, courseId } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
 
   return (
@@ -87,6 +88,10 @@ export function LessonDetailsStep() {
               />
             </div>
           </div>
+        )}
+
+        {formData.video_url && initialData?.id && (
+          <VideoCheckpointMarkers courseId={courseId} lessonId={initialData.id} />
         )}
       </div>
 

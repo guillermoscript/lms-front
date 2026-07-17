@@ -27,6 +27,7 @@ const AristotleStudySection = dynamic(
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -129,7 +130,12 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
   const nextLesson = lessons?.find((l) => !completedLessonIds.has(l.id)) || lessons?.[0]
   const examCount = exams?.length || 0
-  const exerciseCount = exercises?.length || 0
+  // Match the exercises page: checkpoint-embedded exercises live in the lesson flow.
+  const checkpointExerciseIds = await getCheckpointLinkedExerciseIds(supabase, {
+    tenantId,
+    exerciseIds: exercises?.map((e) => e.id) ?? [],
+  })
+  const exerciseCount = exercises?.filter((e) => !checkpointExerciseIds.has(e.id)).length || 0
   const userHasReviewed = !!userReview
   const aristotleEnabled = tutorConfig?.enabled ?? false
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { TENANT_BASE as BASE_URL } from './utils/constants'
 
-const BASE_URL = 'http://code-academy.lvh.me:3000'
 const STUDENT_EMAIL = 'alice@student.com'
 const STUDENT_PASSWORD = 'password123'
 const COURSE_ID = 2001

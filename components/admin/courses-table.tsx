@@ -9,6 +9,15 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   Select,
   SelectContent,
@@ -16,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { IconUsers, IconEye } from '@tabler/icons-react'
+import { IconUsers, IconSettings, IconBook, IconUserOff } from '@tabler/icons-react'
 import { CourseStatusActions } from './course-status-actions'
 import Link from 'next/link'
 
@@ -27,12 +36,13 @@ interface Course {
   status: 'draft' | 'published' | 'archived'
   thumbnail_url: string | null
   published_at: string | null
-  author_id: string
+  author_id: string | null
 }
 
 interface Author {
   id: string
   full_name: string | null
+  avatar_url?: string | null
 }
 
 interface CoursesTableProps {
@@ -40,6 +50,16 @@ interface CoursesTableProps {
   authorsMap: Map<string, Author>
   lessonCounts: Map<number, number>
   enrollmentCounts: Map<number, number>
+}
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return ''
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }
 
 export function CoursesTable({
@@ -91,49 +111,67 @@ export function CoursesTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b">
-            <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-3 font-medium">{t('headers.course')}</th>
-              <th className="pb-3 font-medium">{t('headers.author')}</th>
-              <th className="pb-3 font-medium">{t('headers.status')}</th>
-              <th className="pb-3 font-medium">{t('headers.lessons')}</th>
-              <th className="pb-3 font-medium">{t('headers.students')}</th>
-              <th className="pb-3 font-medium">{t('headers.publishedDate')}</th>
-              <th className="pb-3 font-medium">{t('headers.actions')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[240px] py-3">{t('headers.course')}</TableHead>
+              <TableHead className="py-3">{t('headers.author')}</TableHead>
+              <TableHead className="py-3">{t('headers.status')}</TableHead>
+              <TableHead className="py-3 text-right">{t('headers.lessons')}</TableHead>
+              <TableHead className="py-3 text-right">{t('headers.students')}</TableHead>
+              <TableHead className="py-3">{t('headers.publishedDate')}</TableHead>
+              <TableHead className="py-3 text-right">{t('headers.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredCourses.length > 0 ? (
               filteredCourses.map((course) => {
-                const author = authorsMap.get(course.author_id)
+                const author = course.author_id ? authorsMap.get(course.author_id) : undefined
                 const lessonCount = lessonCounts.get(course.course_id) || 0
                 const enrollmentCount = enrollmentCounts.get(course.course_id) || 0
 
                 return (
-                  <tr key={course.course_id} className="text-sm">
-                    <td className="py-4">
+                  <TableRow key={course.course_id}>
+                    <TableCell className="py-3">
                       <div className="flex items-center gap-3">
-                        {course.thumbnail_url && (
-                          <img
-                            src={course.thumbnail_url}
-                            alt={course.title}
-                            className="h-12 w-16 rounded object-cover"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium line-clamp-1">{course.title}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">
+                        <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                          {course.thumbnail_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={course.thumbnail_url}
+                              alt={course.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <IconBook className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm whitespace-normal line-clamp-1">{course.title}</p>
+                          <p className="text-xs text-muted-foreground whitespace-normal line-clamp-1">
                             {course.description}
                           </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="py-4">
-                      <p className="font-medium">{author?.full_name || t('unknownAuthor')}</p>
-                    </td>
-                    <td className="py-4">
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {author?.full_name ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm">
+                            {author.avatar_url && <AvatarImage src={author.avatar_url} alt={author.full_name} />}
+                            <AvatarFallback>{getInitials(author.full_name)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm whitespace-nowrap">{author.full_name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <IconUserOff className="h-4 w-4" strokeWidth={1.75} />
+                          <span className="text-xs whitespace-nowrap">{t('unknownAuthor')}</span>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3">
                       <Badge
                         variant={
                           course.status === 'published'
@@ -145,53 +183,46 @@ export function CoursesTable({
                       >
                         {t(`statuses.${course.status}`)}
                       </Badge>
-                    </td>
-                    <td className="py-4">{lessonCount}</td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-1">
+                    </TableCell>
+                    <TableCell className="py-3 text-right tabular-nums">{lessonCount}</TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center justify-end gap-1 tabular-nums">
                         <IconUsers className="h-4 w-4 text-muted-foreground" />
                         {enrollmentCount}
                       </div>
-                    </td>
-                    <td className="py-4 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="py-3 whitespace-nowrap text-muted-foreground">
                       {course.published_at
                         ? format(new Date(course.published_at), 'MMM d, yyyy', { locale: dateLocale })
-                        : '-'}
-                    </td>
-                    <td className="py-4">
-                      <div className="flex flex-col gap-2">
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link href={`/dashboard/teacher/courses/${course.course_id}`}>
+                          <Button variant="outline" size="sm">
+                            <IconSettings className="h-4 w-4" />
+                            {t('actions.manage')}
+                          </Button>
+                        </Link>
                         <CourseStatusActions
                           courseId={course.course_id}
                           currentStatus={course.status}
                           courseTitle={course.title}
                         />
-                        <div className="flex gap-2">
-                          <Link href={`/dashboard/student/courses/${course.course_id}`}>
-                            <Button variant="ghost" size="sm">
-                              <IconEye className="mr-1 h-4 w-4" />
-                              {t('actions.view')}
-                            </Button>
-                          </Link>
-                          <Link href={`/dashboard/teacher/courses/${course.course_id}`}>
-                            <Button variant="ghost" size="sm">
-                              {t('actions.edit')}
-                            </Button>
-                          </Link>
-                        </div>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             ) : (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-muted-foreground">
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   {t('empty')}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </>
   )

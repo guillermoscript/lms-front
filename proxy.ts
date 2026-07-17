@@ -29,6 +29,24 @@ async function checkSuperAdmin(userId: string): Promise<boolean> {
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+// Short-TTL in-memory cache for tenant slug -> {id, status} lookups.
+// Module scope persists for the life of the Edge isolate, so this avoids a
+// DB round trip on every request for a mapping that rarely changes. TTL
+// keeps a deactivated tenant from staying "active" for long after a status
+// flip, without needing external cache infra.
+const TENANT_LOOKUP_TTL_MS = 60_000
+const tenantLookupCache = new Map<string, { tenant: { id: string; status: string } | null; expiresAt: number }>()
+
+function getCachedTenantLookup(slug: string) {
+  const entry = tenantLookupCache.get(slug)
+  if (entry && entry.expiresAt > Date.now()) return entry.tenant
+  return undefined
+}
+
+function setCachedTenantLookup(slug: string, tenant: { id: string; status: string } | null) {
+  tenantLookupCache.set(slug, { tenant, expiresAt: Date.now() + TENANT_LOOKUP_TTL_MS })
+}
+
 // Strip port from domain for hostname comparisons
 const PLATFORM_DOMAIN_RAW = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
 const PLATFORM_DOMAIN = PLATFORM_DOMAIN_RAW.split(':')[0] // e.g. "lvh.me" from "lvh.me:3000"
@@ -80,28 +98,30 @@ function getTenantSlugFromHost(host: string): string | null {
  * internal container port (3000), so `request.url` / `request.nextUrl` carry
  * `:3000`. Constructing redirects from those leaks `host:3000` into the browser
  * (e.g. `acme.preciopana.com:3000/auth/login`), which then fails because port
- * 3000 isn't exposed through Cloudflare. Always derive the host from the `Host`
- * header (set to the real public host by the proxy) and the scheme from
- * `x-forwarded-proto`, and never carry a port.
+ * 3000 isn't exposed through Cloudflare. Always derive host AND port from the
+ * `Host` header (the authority the browser actually used: port-less in
+ * production, `:3005`-style in local dev) and the scheme from
+ * `x-forwarded-proto`.
  */
 function publicRedirectUrl(request: NextRequest, path: string): URL {
   const url = new URL(path, request.url)
   const forwardedProto = request.headers.get('x-forwarded-proto')
   const hostHeader = request.headers.get('host') || url.host
 
+  // The Host header is the exact authority the browser dialed, so it is the
+  // only host:port a redirect can safely send it back to. Behind
+  // Cloudflare → Traefik it is port-less (the public domain); in local dev it
+  // carries the real port (e.g. acme.lvh.me:3005). Trust it verbatim.
+  // `x-forwarded-proto` cannot distinguish the two — Next dev sets it on every
+  // request — so it is only used for the scheme, never to decide on the port.
+  // Set hostname/port separately: the WHATWG URL host setter keeps the old
+  // port when the new value has none, so a port-less Host header would
+  // otherwise leak request.url's internal container port into the redirect.
+  const [hostname, port = ''] = hostHeader.split(':')
+  url.hostname = hostname
+  url.port = port
   if (forwardedProto) {
-    // Behind a proxy (Cloudflare → Traefik): derive the real public host from
-    // the Host header, force the external scheme, and ALWAYS drop the port.
-    // Setting `.host` to a port-less value does not reliably clear a port that
-    // request.url already carries (the WHATWG URL host setter keeps the old
-    // port when the new value has none), so clear `.port` explicitly.
-    url.hostname = hostHeader.split(':')[0]
-    url.port = ''
     url.protocol = forwardedProto + ':'
-  } else {
-    // Direct connection (local dev, e.g. acme.lvh.me:3000): the Host header's
-    // port IS the real port — keep it as-is.
-    url.host = hostHeader
   }
   return url
 }
@@ -114,39 +134,24 @@ export default async function proxy(request: NextRequest) {
   }
 
   // --- OAuth well-known metadata (RFC 9728) ---
-  // Claude Desktop fetches /.well-known/oauth-protected-resource/api/mcp
+  // MCP clients (claude.ai custom connectors, Claude Desktop) fetch
+  // /.well-known/oauth-protected-resource/api/mcp to discover the auth server.
+  // Supabase's OAuth 2.1 server IS the authorization server (it hosts
+  // /authorize, /token, /register and DCR) — we only advertise it here.
   // Must return JSON before intl middleware adds locale prefix.
   if (pathname.startsWith('/.well-known/')) {
-    if (pathname.startsWith('/.well-known/oauth-protected-resource') ||
-        pathname.startsWith('/.well-known/oauth-authorization-server')) {
+    if (pathname.startsWith('/.well-known/oauth-protected-resource')) {
       const proto = request.headers.get('x-forwarded-proto') || 'https'
       const reqHost = request.headers.get('host') || 'localhost:3000'
-      const origin = `${proto}://${reqHost}`
-      const mcpBase = `${origin}/api/mcp`
+      const supabaseIssuer = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`
 
-      const isResource = pathname.startsWith('/.well-known/oauth-protected-resource')
-      const body = isResource
-        ? {
-            resource: mcpBase,
-            authorization_servers: [mcpBase],
-            scopes_supported: ['mcp:tools'],
-            bearer_methods_supported: ['header'],
-            resource_name: 'LMS MCP Server',
-          }
-        : {
-            issuer: mcpBase,
-            authorization_endpoint: `${mcpBase}/auth/authorize`,
-            token_endpoint: `${mcpBase}/auth/token`,
-            registration_endpoint: `${mcpBase}/auth/register`,
-            response_types_supported: ['code'],
-            grant_types_supported: ['authorization_code', 'refresh_token'],
-            token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
-            code_challenge_methods_supported: ['S256'],
-            scopes_supported: ['mcp:tools'],
-            revocation_endpoint: `${mcpBase}/auth/revoke`,
-          }
-
-      return new NextResponse(JSON.stringify(body), {
+      return new NextResponse(JSON.stringify({
+        resource: `${proto}://${reqHost}/api/mcp`,
+        authorization_servers: [supabaseIssuer],
+        scopes_supported: ['openid', 'profile', 'email'],
+        bearer_methods_supported: ['header'],
+        resource_name: 'LMS MCP Server',
+      }), {
         status: 200,
         headers: {
           'content-type': 'application/json',
@@ -154,6 +159,33 @@ export default async function proxy(request: NextRequest) {
           'access-control-allow-origin': '*',
         },
       })
+    }
+    if (pathname.startsWith('/.well-known/oauth-authorization-server') ||
+        pathname.startsWith('/.well-known/openid-configuration')) {
+      // Legacy-client fallback (pre-RFC 9728 discovery): serve the REAL
+      // authorization-server metadata from Supabase, verbatim.
+      const supabaseIssuer = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`
+      try {
+        const upstream = await fetch(
+          `${supabaseIssuer}/.well-known/oauth-authorization-server`,
+          { next: { revalidate: 3600 } }
+        )
+        if (!upstream.ok) throw new Error(`upstream ${upstream.status}`)
+        const body = await upstream.text()
+        return new NextResponse(body, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': 'public, max-age=3600',
+            'access-control-allow-origin': '*',
+          },
+        })
+      } catch {
+        return NextResponse.json(
+          { error: 'server_error', error_description: 'Failed to fetch authorization server metadata' },
+          { status: 502 }
+        )
+      }
     }
     // Other .well-known paths — pass through without intl
     return NextResponse.next()
@@ -166,23 +198,30 @@ export default async function proxy(request: NextRequest) {
   let tenantId = DEFAULT_TENANT_ID
 
   if (tenantSlug) {
-    // Look up tenant by slug using service client (no auth needed)
-    const supabaseLookup = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return request.cookies.getAll() },
-          setAll() { /* not needed for lookup */ },
-        },
-      }
-    )
-    const { data: tenant } = await supabaseLookup
-      .from('tenants')
-      .select('id, status')
-      .eq('slug', tenantSlug)
-      .eq('status', 'active')
-      .single()
+    let tenant = getCachedTenantLookup(tenantSlug)
+
+    if (tenant === undefined) {
+      // Look up tenant by slug using service client (no auth needed)
+      const supabaseLookup = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return request.cookies.getAll() },
+            setAll() { /* not needed for lookup */ },
+          },
+        }
+      )
+      const { data } = await supabaseLookup
+        .from('tenants')
+        .select('id, status')
+        .eq('slug', tenantSlug)
+        .eq('status', 'active')
+        .single()
+
+      tenant = data ?? null
+      setCachedTenantLookup(tenantSlug, tenant)
+    }
 
     if (!tenant) {
       // Invalid tenant slug - redirect to platform root (skip for API routes)
@@ -199,8 +238,10 @@ export default async function proxy(request: NextRequest) {
     tenantId = tenant.id
   }
 
-  // For API routes: set tenant header and pass through (no intl/auth guards)
-  if (pathname.startsWith('/api')) {
+  // For API routes and root SEO files (robots/sitemap live outside the locale
+  // tree and must not be locale-redirected): set tenant header and pass through
+  // (no intl/auth guards)
+  if (pathname.startsWith('/api') || pathname === '/robots.txt' || pathname === '/sitemap.xml') {
     request.headers.set('x-tenant-id', tenantId)
     const response = NextResponse.next({ request })
     response.headers.set('x-tenant-id', tenantId)
@@ -222,7 +263,7 @@ export default async function proxy(request: NextRequest) {
   // --- Path normalization ---
   const segments = pathname.split('/')
   const locale = segments[1]
-  const hasValidLocale = locales.includes(locale as any)
+  const hasValidLocale = (locales as readonly string[]).includes(locale)
 
   // --- Guarantee a locale prefix before any auth / membership logic ---
   // Server Actions and RSC navigations can reach the middleware on a locale-less
@@ -240,7 +281,7 @@ export default async function proxy(request: NextRequest) {
     // falling back to the default — so a Spanish user isn't flipped to English
     // after a locale-less server-action redirect.
     const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
-    const targetLocale = locales.includes(cookieLocale as any) ? cookieLocale : defaultLocale
+    const targetLocale = cookieLocale && (locales as readonly string[]).includes(cookieLocale) ? cookieLocale : defaultLocale
     const localizedUrl = publicRedirectUrl(request, `/${targetLocale}${pathname}`)
     localizedUrl.search = request.nextUrl.search
     return NextResponse.redirect(localizedUrl)
@@ -269,6 +310,10 @@ export default async function proxy(request: NextRequest) {
     '/pricing',
     '/verify',
     '/courses',
+    // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
+    // Must be public: the page handles its own login redirect and preserves the
+    // authorization_id — the middleware's redirectTo drops query strings.
+    '/oauth/consent',
   ]
 
   const isPublicRoute = publicRoutes.some(route =>
@@ -352,7 +397,9 @@ export default async function proxy(request: NextRequest) {
   // Protected Routes
   if (!user) {
     const redirectUrl = publicRedirectUrl(request, `/${locale}/auth/login`)
-    redirectUrl.searchParams.set('redirectTo', normalizedPath)
+    // Keep the query string so purchase/enroll intent survives login
+    // (e.g. /checkout?courseId=42). Login form validates via getSafeNextPath.
+    redirectUrl.searchParams.set('redirectTo', normalizedPath + request.nextUrl.search)
     return NextResponse.redirect(redirectUrl)
   }
 

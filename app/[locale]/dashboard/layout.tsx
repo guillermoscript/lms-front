@@ -7,6 +7,11 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GamificationHeaderCard } from "@/components/gamification/gamification-header-card"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+    robots: { index: false, follow: false },
+}
 
 export default async function DashboardLayout({
     children,
