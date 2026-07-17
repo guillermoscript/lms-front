@@ -28,9 +28,15 @@ import {
 
 interface CreateSchoolFlowProps {
   user: { id: string; email: string } | null
+  plan?: string
+  interval?: 'monthly' | 'yearly'
 }
 
-export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
+export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps) {
+  // Query string carrying the pricing-page plan choice through the flow ('' when no plan / free)
+  const planQuery = plan && plan !== 'free'
+    ? `?plan=${encodeURIComponent(plan)}${interval ? `&interval=${interval}` : ''}`
+    : ''
   const router = useRouter()
   const [step, setStep] = useState<'account' | 'school'>(user ? 'school' : 'account')
   const [loading, setLoading] = useState(false)
@@ -69,7 +75,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/create-school`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(`/create-school${planQuery}`)}`,
       },
     })
     if (error) {
@@ -161,13 +167,13 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
 
       toast.success('School created! Setting up your dashboard...')
 
-      // Redirect to subdomain onboarding
+      // Redirect to subdomain onboarding, carrying the chosen plan (if any)
       const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
       if (platformDomain && platformDomain !== 'localhost') {
         const protocol = window.location.protocol
-        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}/onboarding`
+        window.location.href = `${protocol}//${slug.trim()}.${platformDomain}/onboarding${planQuery}`
       } else {
-        router.push('/onboarding')
+        router.push(`/onboarding${planQuery}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -328,7 +334,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
 
               <p className="text-center text-sm text-zinc-500">
                 Already have an account?{' '}
-                <Link href="/auth/login?redirectTo=/create-school" className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
+                <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`} className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
                   Log in
                 </Link>
               </p>
@@ -355,7 +361,7 @@ export function CreateSchoolFlow({ user }: CreateSchoolFlowProps) {
                 </p>
               </div>
               <div className="w-full pt-2 space-y-3">
-                <Link href="/auth/login?redirectTo=/create-school">
+                <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`}>
                   <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white">
                     Go to Log in
                     <ArrowRight className="ml-2 w-4 h-4" />
