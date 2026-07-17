@@ -92,10 +92,14 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 const candidate = product as unknown as { price: number | string } | null;
                 return candidate !== null && Number(candidate.price) > 0;
             });
-            const selectedProductCourse = paidProductCourse ?? productCourses?.[0];
+            // No paid product linked → this is a free course; enrollment, not
+            // a purchase. Route to the one-click flow regardless of provider.
+            if (!paidProductCourse) {
+                redirect(`/courses/${courseId}?enroll=1`);
+            }
 
-            if (selectedProductCourse?.product) {
-                const product = selectedProductCourse.product as unknown as {
+            if (paidProductCourse?.product) {
+                const product = paidProductCourse.product as unknown as {
                     price: number | string;
                     currency: string | null;
                     payment_provider: string | null;
@@ -103,17 +107,13 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 };
                 price = Number(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
-                productId = selectedProductCourse.product_id;
+                productId = paidProductCourse.product_id;
                 paymentProvider = product.payment_provider ?? null;
                 if (product.description) description = product.description;
 
                 if (product.payment_provider === 'manual') {
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
                 }
-            }
-
-            if (!paidProductCourse) {
-                redirect(`/courses/${courseId}?enroll=1`);
             }
         }
     } else if (planId) {

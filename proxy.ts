@@ -397,7 +397,9 @@ export default async function proxy(request: NextRequest) {
   // Protected Routes
   if (!user) {
     const redirectUrl = publicRedirectUrl(request, `/${locale}/auth/login`)
-    redirectUrl.searchParams.set('redirectTo', normalizedPath)
+    // Keep the query string so purchase/enroll intent survives login
+    // (e.g. /checkout?courseId=42). Login form validates via getSafeNextPath.
+    redirectUrl.searchParams.set('redirectTo', normalizedPath + request.nextUrl.search)
     return NextResponse.redirect(redirectUrl)
   }
 
