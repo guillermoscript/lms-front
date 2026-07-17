@@ -3187,6 +3187,14 @@
     "ago": "atrás"
   },
   "components": {
+    "verifyEmailBanner": {
+      "message": "Verifica tu correo — enviamos un enlace de confirmación a {email}.",
+      "gatedNote": "Las invitaciones y la configuración de pagos quedan bloqueadas hasta verificar.",
+      "resend": "Reenviar correo",
+      "resending": "Enviando...",
+      "resendSuccess": "Correo de confirmación enviado. Revisa tu bandeja.",
+      "dismiss": "Descartar"
+    },
     "connectClaude": {
       "title": "Conectar Claude",
       "description": "Agrega el LMS como conector personalizado — sin tokens, inicias sesión con tu cuenta del LMS.",

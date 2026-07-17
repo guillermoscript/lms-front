@@ -3342,6 +3342,14 @@
     "ago": "ago"
   },
   "components": {
+    "verifyEmailBanner": {
+      "message": "Verify your email — we sent a confirmation link to {email}.",
+      "gatedNote": "Sending invitations and payout setup are locked until verified.",
+      "resend": "Resend email",
+      "resending": "Sending...",
+      "resendSuccess": "Confirmation email sent. Check your inbox.",
+      "dismiss": "Dismiss"
+    },
     "connectClaude": {
       "title": "Connect Claude",
       "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",

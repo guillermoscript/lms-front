@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
 
 /**
  * POST /api/stripe/connect
@@ -13,6 +14,12 @@ export async function POST(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Email verification is async at signup (issue #436), but payout setup
+  // requires a verified email.
+  if (!user.email_confirmed_at) {
+    return NextResponse.json({ error: EMAIL_NOT_VERIFIED_ERROR }, { status: 403 })
   }
 
   const tenantId = await getCurrentTenantId()
