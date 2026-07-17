@@ -37,7 +37,7 @@ import { SchoolLandingPage } from "@/components/public/school-landing-page";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
-import { getLandingCourses } from "@/lib/puck/utils/landing-data";
+import { getLandingData } from "@/lib/puck/utils/landing-data";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -65,8 +65,8 @@ export default async function LandingPage() {
           .eq('is_published', true)
           .maybeSingle()
         if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
-          const courses = await getLandingCourses(tenantId)
-          return <PuckPageRenderer data={customPage.puck_data as any} courses={courses} />
+          const landingData = await getLandingData(tenantId)
+          return <PuckPageRenderer data={customPage.puck_data as any} landingData={landingData} />
         }
       }
 

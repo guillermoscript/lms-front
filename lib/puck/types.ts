@@ -34,20 +34,69 @@ export interface CtaProps extends LinkProps {
 
 export type PuckConfig = Config
 
-// A course card resolved server-side and handed to dynamic components
-// (e.g. CourseGrid) through Puck's `metadata`.
+// Live tenant data resolved server-side and handed to dynamic components
+// (CourseGrid, PricingTable, StatsBand, TestimonialGrid, TeamGrid, …) through
+// Puck's `metadata`. Every shape below is a STABLE exposed contract — the
+// resolver (lib/puck/utils/landing-data.ts) maps DB rows onto these.
+
+// A course card (CourseGrid, CatalogBrowser, EnrollCta).
 export interface LandingCourse {
   id: string
   title: string
   description: string | null
   image: string | null
-  price: number | null
+  price: number | null // null = free (no active priced product)
   currency: string | null
 }
 
+// A subscription plan (PricingTable).
+export interface LandingPlan {
+  id: string
+  name: string
+  price: number | null
+  currency: string | null
+  interval: string | null // 'month' | 'year' | null (one-off)
+  features: string[]
+  href: string // where the CTA sends the buyer
+  highlighted: boolean
+}
+
+// Aggregate counts for the tenant (StatsBand / AnimatedStats / StatsCounter).
+export interface LandingStats {
+  students: number
+  courses: number
+  completions: number
+}
+
+// A course review (TestimonialGrid / SocialProof).
+export interface LandingTestimonial {
+  id: string
+  name: string
+  avatar: string | null
+  rating: number | null
+  quote: string
+  courseTitle: string | null
+}
+
+// A tenant instructor (TeamGrid).
+export interface LandingTeacher {
+  id: string
+  name: string
+  avatar: string | null
+  bio: string | null
+}
+
+// The full live-data bundle resolved once per page render.
+export interface LandingData {
+  courses: LandingCourse[]
+  plans: LandingPlan[]
+  stats: LandingStats
+  testimonials: LandingTestimonial[]
+  teachers: LandingTeacher[]
+}
+
 // Shared metadata passed to <Puck> / <Render>, readable in a component's
-// render via `puck.metadata`.
-export interface PuckMetadata {
-  courses?: LandingCourse[]
+// render via `puck.metadata`. Superset of LandingData plus tenant context.
+export interface PuckMetadata extends Partial<LandingData> {
   tenantId?: string
 }
