@@ -9,11 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
+import StripeConnectCard from '@/components/admin/stripe-connect-card'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
   const t = await getTranslations('dashboard.admin.settings')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   // Verify admin role
@@ -46,6 +53,20 @@ export default async function SettingsPage() {
   const solanaWallet = await getSolanaWallet().catch(() => null)
   const solanaWalletAddress = solanaWallet?.data?.wallet_address || ''
 
+  // Stripe Connect status for the payment tab card (#434)
+  const tenantId = await getCurrentTenantId()
+  const { data: tenant } = await createAdminClient()
+    .from('tenants')
+    .select('stripe_account_id')
+    .eq('id', tenantId)
+    .single()
+  const stripeAccountId = tenant?.stripe_account_id ?? null
+
+  // Deep link support: /dashboard/admin/settings?tab=payment
+  const { tab } = await searchParams
+  const validTabs = ['general', 'email', 'payment', 'enrollment']
+  const defaultTab = tab && validTabs.includes(tab) ? tab : 'general'
+
   // Fetch referral code (non-blocking — silently skip if it fails)
   const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
@@ -71,7 +92,7 @@ export default async function SettingsPage() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Tabbed Settings Interface */}
-          <Tabs defaultValue="general" className="space-y-6">
+          <Tabs defaultValue={defaultTab} className="space-y-6">
             <TabsList className="flex w-full overflow-x-auto lg:w-auto">
               <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
               <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
@@ -111,6 +132,10 @@ export default async function SettingsPage() {
 
             {/* Payment Settings */}
             <TabsContent value="payment">
+              {/* Stripe Connect status lives here so payment setup is one page (#434) */}
+              <div className="mb-6">
+                <StripeConnectCard accountId={stripeAccountId} />
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>{t('sections.payment.title')}</CardTitle>
