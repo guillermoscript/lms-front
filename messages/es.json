@@ -4900,6 +4900,8 @@
       "TeamGrid": "Equipo",
       "ImageGallery": "Galería de Imágenes",
       "SocialProof": "Prueba Social",
+      "EnrollCta": "CTA de Inscripción",
+      "CatalogBrowser": "Explorador de Catálogo",
       "Header": "Encabezado",
       "Footer": "Pie de Página",
       "Navbar": "Barra de Navegación",
@@ -5070,7 +5072,20 @@
       "courseDescription": "Un curso interactivo diseñado para ayudarte a dominar nuevas habilidades y avanzar en tu carrera.",
       "home": "Inicio",
       "logOut": "Cerrar sesión",
-      "dashboard": "Panel"
+      "dashboard": "Panel",
+      "free": "Gratis",
+      "getStarted": "Comenzar",
+      "enroll": "Inscribirse",
+      "browseCourses": "Ver cursos",
+      "searchCourses": "Buscar cursos…",
+      "filterAll": "Todos",
+      "filterFree": "Gratis",
+      "filterPaid": "De pago",
+      "loadMore": "Ver más",
+      "noCoursesFound": "No se encontraron cursos.",
+      "statStudents": "Estudiantes",
+      "statCourses": "Cursos",
+      "statCompletions": "Completados"
     }
   },
   "verification": {

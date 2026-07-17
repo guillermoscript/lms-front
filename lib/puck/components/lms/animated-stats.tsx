@@ -1,5 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { NumberTicker } from '@/components/ui/number-ticker'
+import type { PuckMetadata } from '../../types'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
@@ -17,6 +19,7 @@ type AnimatedStat = {
 
 export type AnimatedStatsProps = {
   heading: string
+  useLiveStats: boolean
   items: AnimatedStat[]
 } & SectionSpacingProps
 
@@ -30,6 +33,14 @@ export const AnimatedStats: ComponentConfig<AnimatedStatsProps> = {
   label: 'Animated Stats',
   fields: {
     heading: { type: 'text', label: 'Heading' },
+    useLiveStats: {
+      type: 'radio',
+      label: 'Use Live Stats',
+      options: [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+      ],
+    },
     items: {
       type: 'array',
       label: 'Stats',
@@ -46,28 +57,43 @@ export const AnimatedStats: ComponentConfig<AnimatedStatsProps> = {
   defaultProps: {
     ...sectionSpacingDefaults,
     heading: 'Trusted by learners worldwide',
+    useLiveStats: true,
     items: [
       { value: 1200, prefix: '+', suffix: '', label: 'Courses published' },
       { value: 22000, prefix: '', suffix: '', label: 'Active students' },
       { value: 98, prefix: '', suffix: '%', label: 'Completion rate' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, heading, items }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, heading, useLiveStats, items, puck }) => {
+    const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
+
+    // Live stats resolved server-side and handed in via metadata. When present and not opted
+    // out, count up the tenant's real Students/Courses/Completions; otherwise keep the
+    // manually-entered stats so the canvas is never empty.
+    const liveStats = (puck?.metadata as PuckMetadata | undefined)?.stats
+    const safeItems: AnimatedStat[] = (useLiveStats && liveStats)
+      ? [
+          { value: liveStats.students, prefix: '', suffix: '', label: t('statStudents') },
+          { value: liveStats.courses, prefix: '', suffix: '', label: t('statCourses') },
+          { value: liveStats.completions, prefix: '', suffix: '', label: t('statCompletions') },
+        ]
+      : (items ?? [])
+
     return (
       <div className={sectionOuterClass(spacing)}>
         <div className={sectionInnerClass(spacing)}>
           {heading && (
             <h2 className="mb-12 text-center text-3xl font-medium lg:text-4xl">{heading}</h2>
           )}
-          {items.length > 0 && (
+          {safeItems.length > 0 && (
             <div
               className="grid gap-12 text-center md:gap-2"
               style={{
-                gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))`,
+                gridTemplateColumns: `repeat(${Math.min(safeItems.length, 4)}, minmax(0, 1fr))`,
               }}
             >
-              {items.map((stat, i) => (
+              {safeItems.map((stat, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-center text-5xl font-bold tabular-nums">
                     {stat.prefix && <span>{stat.prefix}</span>}

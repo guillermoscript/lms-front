@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
+import type { LandingTeacher, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
@@ -47,13 +48,26 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
       { name: 'David Kim', role: 'AI Specialist', bio: 'Machine learning researcher and educator.', avatar: '' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, members, accentColor }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, members, accentColor, puck }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
-    if (!members.length) return <></>
 
-    const gridCols = members.length <= 2
+    // Real tenant instructors resolved server-side and handed in via metadata. When present we
+    // render actual teachers; otherwise fall back to placeholders so the canvas is never empty.
+    const live = ((puck?.metadata as PuckMetadata | undefined)?.teachers ?? []) as LandingTeacher[]
+    const resolvedMembers: TeamMemberItem[] = live.length > 0
+      ? live.map((teacher) => ({
+          name: teacher.name,
+          role: '',
+          bio: teacher.bio ?? '',
+          avatar: teacher.avatar ?? '',
+        }))
+      : (members ?? [])
+
+    if (!resolvedMembers.length) return <></>
+
+    const gridCols = resolvedMembers.length <= 2
       ? 'grid-cols-1 md:grid-cols-2'
-      : members.length === 3
+      : resolvedMembers.length === 3
         ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
         : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
@@ -67,7 +81,7 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
             <p className="text-center text-muted-foreground mb-10">{subtitle}</p>
           )}
           <div className={cn('grid gap-8', gridCols)}>
-            {members.map((m, i) => (
+            {resolvedMembers.map((m, i) => (
               <div key={i} className="group text-center">
                 <div className="size-24 rounded-full bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] ring-1 ring-[color-mix(in_srgb,var(--block-accent)_18%,transparent)] mx-auto mb-4 overflow-hidden flex items-center justify-center text-3xl font-semibold text-[var(--block-accent)] transition-transform duration-500 group-hover:scale-105">
                   {m.avatar ? (

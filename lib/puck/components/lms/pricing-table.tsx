@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import type { LandingPlan, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
 
 type PricingItem = {
@@ -70,10 +71,38 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
     ],
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) => {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
-    if (!items.length) return <></>
+
+    // Real subscription plans resolved server-side and handed in via metadata. When present
+    // (published pages, preview, editor with data) we render the tenant's actual plans;
+    // otherwise fall back to the manually-entered items so the canvas is never empty.
+    const livePlans = ((puck?.metadata as PuckMetadata | undefined)?.plans ?? []) as LandingPlan[]
+
+    const formatPrice = (price: number | null, currency: string | null) => {
+      if (price == null || price === 0) return t('free')
+      try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'USD').toUpperCase(), maximumFractionDigits: 2 }).format(price)
+      } catch {
+        return `$${price}`
+      }
+    }
+
+    const resolvedItems: PricingItem[] = livePlans.length > 0
+      ? livePlans.map((p) => ({
+          name: p.name,
+          price: formatPrice(p.price, p.currency),
+          period: p.interval ? `/${p.interval}` : '',
+          description: '',
+          features: (p.features ?? []).join('\n'),
+          highlighted: p.highlighted,
+          ctaLabel: t('getStarted'),
+          ctaHref: p.href || '#',
+        }))
+      : (items ?? [])
+
+    if (!resolvedItems.length) return <></>
 
     return (
       <div className={sectionOuterClass(spacing)}>
@@ -86,7 +115,7 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
               <p className="text-muted-foreground mb-10 text-lg">{subtitle}</p>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {items.map((plan, i) => (
+              {resolvedItems.map((plan, i) => (
                 <div
                   key={i}
                   className={cn(

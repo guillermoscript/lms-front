@@ -2109,6 +2109,20 @@
           }
         ]
       },
+      "useLiveStats": {
+        "type": "radio",
+        "label": "Use Live Stats",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
       "accentColor": {
         "type": "text",
         "label": "Accent Color"
@@ -2246,6 +2260,7 @@
         }
       ],
       "alignment": "center",
+      "useLiveStats": true,
       "accentColor": "",
       "paddingY": "lg",
       "paddingX": "md",
@@ -2968,6 +2983,20 @@
         "type": "textarea",
         "label": "Subtitle"
       },
+      "useLiveStats": {
+        "type": "radio",
+        "label": "Use Live Stats",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
       "items": {
         "type": "array",
         "label": "Stats",
@@ -3094,6 +3123,7 @@
       "marginY": "none",
       "heading": "Our platform in numbers",
       "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
+      "useLiveStats": true,
       "items": [
         {
           "value": "+1200",
@@ -3147,6 +3177,20 @@
       "heading": {
         "type": "text",
         "label": "Heading"
+      },
+      "useLiveStats": {
+        "type": "radio",
+        "label": "Use Live Stats",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
       },
       "items": {
         "type": "array",
@@ -3281,6 +3325,7 @@
       "maxWidth": "xl",
       "marginY": "none",
       "heading": "Trusted by learners worldwide",
+      "useLiveStats": true,
       "items": [
         {
           "value": 1200,
@@ -4294,6 +4339,325 @@
       "rating": 5,
       "reviewCount": "Based on 2,000+ reviews",
       "avatarCount": 5
+    }
+  },
+  "EnrollCta": {
+    "category": "lms",
+    "fields": {
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "headline": {
+        "type": "text",
+        "label": "Headline"
+      },
+      "subtext": {
+        "type": "textarea",
+        "label": "Subtext"
+      },
+      "buttonLabel": {
+        "type": "text",
+        "label": "Button Label"
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "courseId": "",
+      "headline": "Ready to start learning?",
+      "subtext": "Enroll now and get instant access — no cost, no credit card required.",
+      "buttonLabel": "",
+      "accentColor": ""
+    }
+  },
+  "CatalogBrowser": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      "pageSize": {
+        "type": "number",
+        "label": "Courses Per Page"
+      },
+      "showSearch": {
+        "type": "radio",
+        "label": "Show Search",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "showPriceFilter": {
+        "type": "radio",
+        "label": "Show Price Filter",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Browse our catalog",
+      "subtitle": "Find the right course and start learning today.",
+      "columns": "3",
+      "pageSize": 9,
+      "showSearch": true,
+      "showPriceFilter": true
     }
   },
   "Header": {

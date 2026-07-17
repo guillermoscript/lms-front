@@ -4907,6 +4907,8 @@
       "TeamGrid": "Team Grid",
       "ImageGallery": "Image Gallery",
       "SocialProof": "Social Proof",
+      "EnrollCta": "Enroll CTA",
+      "CatalogBrowser": "Catalog Browser",
       "Header": "Header",
       "Footer": "Footer",
       "Navbar": "Navbar",
@@ -5077,7 +5079,20 @@
       "courseDescription": "An engaging course designed to help you master new skills and advance your career.",
       "home": "Home",
       "logOut": "Log out",
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "free": "Free",
+      "getStarted": "Get Started",
+      "enroll": "Enroll now",
+      "browseCourses": "Browse courses",
+      "searchCourses": "Search courses…",
+      "filterAll": "All",
+      "filterFree": "Free",
+      "filterPaid": "Paid",
+      "loadMore": "Load more",
+      "noCoursesFound": "No courses found.",
+      "statStudents": "Students",
+      "statCourses": "Courses",
+      "statCompletions": "Completions"
     }
   },
   "verification": {

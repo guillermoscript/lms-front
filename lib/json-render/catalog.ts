@@ -72,6 +72,10 @@ const DESCRIPTIONS: Record<string, string> = {
   TeamGrid: 'A grid of team members/instructors with photo, name, and role.',
   ImageGallery: 'A gallery of images.',
   SocialProof: 'A social-proof strip (ratings, counts, short quotes).',
+  EnrollCta:
+    'A single-course call-to-action band with a headline, subtext, and an enroll button. Leave courseId empty (you cannot know real course IDs) — it then links to the full catalog; targeting a specific course is a human-only step.',
+  CatalogBrowser:
+    'A filterable, paginated browser over the tenant\'s real courses with search and an All/Free/Paid filter. Use when the page should let visitors explore the whole catalog.',
   ShinyEyebrow:
     'A small animated eyebrow/announcement label, placed above a hero headline.',
   ContentFeature:
