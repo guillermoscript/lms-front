@@ -23,7 +23,7 @@ async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
   // Email verification is async at signup (issue #436), but payout setup
   // requires a verified email.
   if (!user.email_confirmed_at) {
-    return NextResponse.json({ error: EMAIL_NOT_VERIFIED_ERROR }, { status: 403 })
+    return { error: EMAIL_NOT_VERIFIED_ERROR, status: 403 }
   }
 
   const tenantId = await getCurrentTenantId()

@@ -2350,7 +2350,14 @@
           },
           "payment": {
             "title": "Ajustes de Pago",
-            "description": "Gestiona los procesadores de pago, moneda y ajustes de transacciones"
+            "description": "Gestiona los procesadores de pago, moneda y ajustes de transacciones",
+            "connect": {
+              "connectedTitle": "Stripe Conectado",
+              "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea con tarjeta.",
+              "notConnectedTitle": "Stripe No Conectado",
+              "notConnectedDesc": "Conecta una cuenta de Stripe para aceptar pagos con tarjeta, o usa los interruptores de abajo para habilitar otros métodos de pago.",
+              "connectButton": "Conectar Stripe"
+            }
           },
           "enrollment": {
             "title": "Ajustes de Inscripción",
@@ -2889,8 +2896,9 @@
           "connected": "Pagos Activos",
           "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea.",
           "notConnected": "Pagos No Configurados",
-          "notConnectedDesc": "Conecta una cuenta de Stripe para que los estudiantes puedan pagar con tarjeta y otros métodos en línea.",
-          "connect": "Conectar Stripe"
+          "notConnectedDesc": "Elige cómo pagan tus estudiantes: conecta Stripe o habilita pagos manuales, PayPal o cripto en Configuración.",
+          "connect": "Conectar Stripe",
+          "setup": "Configurar Pagos"
         },
         "split": {
           "title": "División de Ingresos",

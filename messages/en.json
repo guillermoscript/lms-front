@@ -2354,7 +2354,14 @@
           },
           "payment": {
             "title": "Payment Settings",
-            "description": "Manage payment processors, currency, and transaction settings"
+            "description": "Manage payment processors, currency, and transaction settings",
+            "connect": {
+              "connectedTitle": "Stripe Connected",
+              "connectedDesc": "Your Stripe account is connected. Students can pay online with credit cards.",
+              "notConnectedTitle": "Stripe Not Connected",
+              "notConnectedDesc": "Connect a Stripe account to accept credit card payments, or use the toggles below to enable other payment methods.",
+              "connectButton": "Connect Stripe"
+            }
           },
           "enrollment": {
             "title": "Enrollment Settings",
@@ -2497,8 +2504,9 @@
           "connected": "Payments Active",
           "connectedDesc": "Your Stripe account is connected. Students can pay online.",
           "notConnected": "Payments Not Set Up",
-          "notConnectedDesc": "Connect a Stripe account so students can pay with credit cards and other online methods.",
-          "connect": "Connect Stripe"
+          "notConnectedDesc": "Choose how students pay — connect Stripe, or enable manual, PayPal, or crypto payments in Settings.",
+          "connect": "Connect Stripe",
+          "setup": "Set Up Payments"
         },
         "split": {
           "title": "Revenue Split",
