@@ -63,11 +63,19 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         options: {
           emailRedirectTo: `${window.location.origin}/auth/confirm${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
           data: {
-            ...(tenantId ? { tenant_id: tenantId } : {}),
+            // handle_new_user() reads preferred_tenant_id to stamp the JWT's
+            // tenant claim; without it a fresh signup can't see tenant content.
+            ...(tenantId ? { tenant_id: tenantId, preferred_tenant_id: tenantId } : {}),
           },
         },
       })
       if (error) throw error
+      if (data.session) {
+        // The signup token predates handle_new_user()'s app_metadata write, so
+        // it lacks the tenant_id claim — refresh to get one that has it, or
+        // tenant-scoped RLS fails closed and the next page 404s.
+        await supabase.auth.refreshSession()
+      }
       router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : t('common.error'))

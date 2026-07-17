@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { headers } from 'next/headers';
 import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
+import { joinCurrentSchool } from '@/app/actions/join-school';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -186,6 +187,25 @@ export async function enrollFree(courseId?: string) {
 
         if (hasPaidProduct) {
             throw new Error("This course is not free. Please use the paid enrollment flow.");
+        }
+
+        // 3. A brand-new account (signup-while-enrolling) has no tenant
+        // membership yet, which grant_free_entitlement requires. Join the
+        // school first through the standard path (invitation- and
+        // student-limit-aware) so enrollment stays one click.
+        const { data: membership } = await supabase
+            .from('tenant_users')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (!membership) {
+            const joinResult = await joinCurrentSchool();
+            if (!joinResult.success) {
+                throw new Error(joinResult.error || "Could not join this school.");
+            }
         }
 
         // 3. Grant a free entitlement (entitlements model). Idempotent.
