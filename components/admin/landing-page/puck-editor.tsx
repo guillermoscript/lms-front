@@ -5,6 +5,7 @@ import { Puck, usePuck } from '@measured/puck'
 import type { Data } from '@measured/puck'
 import '@measured/puck/puck.css'
 import { createPuckConfig } from '@/lib/puck/config'
+import { LandingCoursesProvider } from '@/lib/puck/utils/courses-context'
 import type { LandingCourse } from '@/lib/puck/types'
 import { updateLandingPage, publishLandingPage } from '@/app/actions/admin/landing-pages'
 import { toast } from 'sonner'
@@ -118,6 +119,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, branding
 
   return (
     <div className="h-[calc(100dvh-4rem)] flex flex-col">
+      <LandingCoursesProvider value={courses}>
       <Puck
         config={config}
         data={initialData}
@@ -163,6 +165,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, branding
           { width: 1280, height: 'auto', label: 'Desktop', icon: 'Monitor' },
         ]}
       />
+      </LandingCoursesProvider>
 
       <Sheet open={brandingOpen} onOpenChange={setBrandingOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">

@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { LandingCourse, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { CoursePickerField } from './course-picker-field'
 
 export type CourseGridProps = {
   title: string
@@ -26,13 +27,11 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
     courseIds: {
-      type: 'array',
+      type: 'custom',
       label: 'Curated Courses (leave empty for latest)',
-      arrayFields: {
-        id: { type: 'text', label: 'Course ID' },
-      },
-      defaultItemProps: { id: '' },
-      getItemSummary: (item: { id: string }) => item.id || 'Course ID',
+      render: ({ value, onChange }) => (
+        <CoursePickerField value={value as { id: string }[] | undefined} onChange={onChange} />
+      ),
     },
     maxItems: { type: 'number', label: 'Max Courses', min: 1, max: 24 },
     columns: {

@@ -1368,14 +1368,8 @@
         "label": "Subtitle"
       },
       "courseIds": {
-        "type": "array",
-        "label": "Curated Courses (leave empty for latest)",
-        "arrayFields": {
-          "id": {
-            "type": "text",
-            "label": "Course ID"
-          }
-        }
+        "type": "custom",
+        "label": "Curated Courses (leave empty for latest)"
       },
       "maxItems": {
         "type": "number",
