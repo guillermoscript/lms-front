@@ -27,16 +27,19 @@ import { hasCourseAccess } from '@/lib/services/course-access'
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/seo';
 import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
+import { PlanEnrollButton } from '@/components/public/plan-enroll-button';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: { params: Promise<{ id: string; locale: string }> }): Promise<Metadata> {
     const { id, locale } = await props.params;
-    const supabase = await createClient();
+    const [supabase, tenantId] = await Promise.all([createClient(), getCurrentTenantId()]);
     const { data: course } = await supabase
         .from("courses")
         .select("title, description, thumbnail_url")
         .eq("course_id", parseInt(id))
+        .eq("tenant_id", tenantId)
         .eq("status", "published")
         .single();
     if (!course) return {};
@@ -54,6 +57,18 @@ export async function generateMetadata(props: { params: Promise<{ id: string; lo
         image: course.thumbnail_url || undefined,
         ogBadge: t('courses.badge'),
     });
+}
+
+function formatPrice(price: number, currency: string | null): string {
+    if (!currency) return `$${price}`;
+    try {
+        return new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: currency.toUpperCase(),
+        }).format(price);
+    } catch {
+        return `${price} ${currency.toUpperCase()}`;
+    }
 }
 
 interface Lesson {
@@ -119,10 +134,35 @@ export default async function CourseDetailsPage(props: {
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId);
 
-    const [{ data: author }, hasAccess, { data: productCourses }] = await Promise.all([
+    // Plan coverage — subscribers whose plan covers this course get a one-click
+    // enroll instead of "Buy Now". Mirrors the browse-page semantics: a plan
+    // with no plan_courses rows covers every course.
+    const planCoveragePromise: Promise<boolean> = userId
+        ? (async () => {
+            const admin = createAdminClient()
+            const { data: subs } = await admin
+                .from('subscriptions')
+                .select('plan_id')
+                .eq('user_id', userId)
+                .eq('tenant_id', tenantId)
+                .eq('subscription_status', 'active')
+                .limit(1)
+            const planId = subs?.[0]?.plan_id
+            if (!planId) return false
+            const { data: planCourses } = await admin
+                .from('plan_courses')
+                .select('course_id')
+                .eq('plan_id', planId)
+            if (!planCourses || planCourses.length === 0) return true
+            return planCourses.some((pc) => pc.course_id === courseId)
+        })()
+        : Promise.resolve(false);
+
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
+        planCoveragePromise,
     ]);
 
     // Sort lessons by sequence
@@ -135,12 +175,18 @@ export default async function CourseDetailsPage(props: {
     const linkedProducts = (productCourses ?? [])
         .map(({ product }) => product as unknown as CourseProduct | null)
         .filter((product): product is CourseProduct => product !== null);
-    const courseProduct = linkedProducts.find((product) => Number(product.price) > 0) ?? linkedProducts[0];
+    // Deterministic pick: cheapest paid product (catalog cards should agree).
+    const paidProducts = linkedProducts
+        .filter((product) => Number(product.price) > 0)
+        .sort((a, b) => Number(a.price) - Number(b.price));
+    const courseProduct = paidProducts[0] ?? linkedProducts[0];
     const isFree = !courseProduct || Number(courseProduct.price) === 0;
-    const priceDisplay = isFree ? t('pricing.free') : `$${courseProduct.price}`;
+    const priceDisplay = isFree
+        ? t('pricing.free')
+        : formatPrice(Number(courseProduct.price), courseProduct.currency);
 
     const instructor = author ? {
-        name: author.full_name || t('sections.instructor.defaultBio'),
+        name: author.full_name || t('sections.instructor.defaultName'),
         avatar_url: author.avatar_url,
         bio: author.bio || t('sections.instructor.defaultBio')
     } : null;
@@ -357,20 +403,11 @@ export default async function CourseDetailsPage(props: {
                                             <PlayCircle className="w-16 h-16 text-zinc-600" aria-hidden="true" />
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <PlayCircle className="w-14 h-14 text-white/80" aria-hidden="true" />
-                                        <span className="mt-3 font-medium text-sm text-white/90">{t('pricing.preview')}</span>
-                                    </div>
                                 </div>
 
                                 <CardContent className="p-6 space-y-6">
                                     {/* Price */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-3xl font-bold text-white">{priceDisplay}</div>
-                                        {courseProduct?.currency && (
-                                            <div className="text-zinc-400 text-sm uppercase">{courseProduct.currency}</div>
-                                        )}
-                                    </div>
+                                    <div className="text-3xl font-bold text-white">{priceDisplay}</div>
 
                                     {/* CTA */}
                                     <div className="space-y-3">
@@ -392,6 +429,8 @@ export default async function CourseDetailsPage(props: {
                                             ) : (
                                                 <FreeEnrollButton courseId={course.course_id} />
                                             )
+                                        ) : planCoversCourse ? (
+                                            <PlanEnrollButton courseId={course.course_id} />
                                         ) : (
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
                                                 <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
@@ -400,7 +439,7 @@ export default async function CourseDetailsPage(props: {
                                             </Link>
                                         )}
 
-                                        {!hasAccess && !isFree && (
+                                        {!hasAccess && !isFree && !planCoversCourse && (
                                             <div className="text-center">
                                                 <span className="text-zinc-400 text-xs">{t('pricing.or')}</span>
                                                 <Link href="/pricing" className="block text-cyan-400 hover:underline text-sm mt-1">

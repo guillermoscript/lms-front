@@ -150,10 +150,12 @@ function BrowseCardAction({
       )
     case 'not-in-plan':
       return (
-        <Button variant="outline" className="w-full gap-2" disabled>
-          <IconLock className="w-4 h-4" />
-          {t('notInPlan')}
-        </Button>
+        <Link href="/pricing" className="w-full">
+          <Button variant="outline" className="w-full gap-2">
+            <IconLock className="w-4 h-4" />
+            {t('upgradePlan')}
+          </Button>
+        </Link>
       )
     case 'no-subscription':
       return (
