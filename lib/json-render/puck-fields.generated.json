@@ -1367,6 +1367,16 @@
         "type": "textarea",
         "label": "Subtitle"
       },
+      "courseIds": {
+        "type": "array",
+        "label": "Curated Courses (leave empty for latest)",
+        "arrayFields": {
+          "id": {
+            "type": "text",
+            "label": "Course ID"
+          }
+        }
+      },
       "maxItems": {
         "type": "number",
         "label": "Max Courses"
@@ -1525,6 +1535,7 @@
     "defaultProps": {
       "title": "Our Courses",
       "subtitle": "Explore our catalog and start learning today.",
+      "courseIds": [],
       "maxItems": 6,
       "columns": "3",
       "showPrice": true,

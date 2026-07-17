@@ -7,6 +7,7 @@ import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults,
 export type CourseGridProps = {
   title: string
   subtitle: string
+  courseIds: { id: string }[]
   maxItems: number
   columns: '2' | '3' | '4'
   showPrice: boolean
@@ -24,6 +25,15 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
   fields: {
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
+    courseIds: {
+      type: 'array',
+      label: 'Curated Courses (leave empty for latest)',
+      arrayFields: {
+        id: { type: 'text', label: 'Course ID' },
+      },
+      defaultItemProps: { id: '' },
+      getItemSummary: (item: { id: string }) => item.id || 'Course ID',
+    },
     maxItems: { type: 'number', label: 'Max Courses', min: 1, max: 24 },
     columns: {
       type: 'select',
@@ -55,13 +65,14 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
   defaultProps: {
     title: 'Our Courses',
     subtitle: 'Explore our catalog and start learning today.',
+    courseIds: [],
     maxItems: 6,
     columns: '3',
     showPrice: true,
     showDescription: true,
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) => {
+  render: ({ title, subtitle, courseIds, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) => {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (maxItems <= 0) return <></>
@@ -73,8 +84,17 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     const liveCourses = ((puck?.metadata as PuckMetadata | undefined)?.courses ?? []) as LandingCourse[]
     const usingLive = liveCourses.length > 0
 
+    // Curation: when the admin has pinned specific course IDs, show exactly those
+    // (in the given order); otherwise show the latest published courses. Curated IDs
+    // that no longer resolve (unpublished/deleted) are skipped. If curation is set
+    // but matches nothing, fall back to the latest so the section is never empty.
+    const curatedIds = (courseIds ?? []).map((c) => c?.id).filter((id): id is string => !!id)
+    const byId = new Map(liveCourses.map((c) => [c.id, c]))
+    const curated = curatedIds.map((id) => byId.get(id)).filter((c): c is LandingCourse => !!c)
+    const sourceCourses = curated.length > 0 ? curated : liveCourses
+
     const items = usingLive
-      ? liveCourses.slice(0, maxItems).map((c) => ({
+      ? sourceCourses.slice(0, maxItems).map((c) => ({
           id: c.id,
           title: c.title,
           description: c.description ?? '',

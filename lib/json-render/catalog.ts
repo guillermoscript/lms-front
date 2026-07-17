@@ -52,7 +52,7 @@ const DESCRIPTIONS: Record<string, string> = {
   FeaturesGrid:
     'A grid of features/benefits, each with an icon, title, and description. Use to explain what the course/school offers.',
   CourseGrid:
-    'A grid of the tenant\'s real courses (data-bound). Use when the page should showcase actual courses.',
+    'A grid of the tenant\'s real courses (data-bound). Use when the page should showcase actual courses. Leave courseIds empty so it shows the latest published courses — do NOT invent course IDs; curation is a human-only step.',
   PricingTable: 'Side-by-side pricing plans with features and CTAs.',
   TestimonialGrid: 'A grid of student testimonials with name, role, and quote.',
   FaqAccordion: 'An expandable FAQ accordion. Good general-purpose FAQ.',
