@@ -19,42 +19,54 @@
 
 
 -- ---------------------------------------------------------------------------
--- 0. PLATFORM PLANS  (idempotent — already seeded by migration but kept here
---    so `supabase db reset` produces a consistent state)
+-- 0. PLATFORM PLANS  (authoritative for local dev — DO UPDATE so this seed
+--    always wins over whatever the original billing migration inserted;
+--    the migration's INSERT never included a `community` feature flag, which
+--    left the community feature 100% inaccessible on every plan/tenant —
+--    see issue #291. Free = locked w/ upgrade nudge, Starter+ = accessible,
+--    per the #291 spec.)
 -- ---------------------------------------------------------------------------
 INSERT INTO platform_plans (slug, name, description, price_monthly, price_yearly, transaction_fee_percent, sort_order, features, limits)
 VALUES
 (
   'free', 'Free', 'Get started with basic features',
   0, 0, 10.00, 0,
-  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
   '{"max_courses":5,"max_students":50}'::jsonb
 ),
 (
   'starter', 'Starter', 'For growing schools that need more capacity',
   9, 90, 5.00, 1,
-  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
   '{"max_courses":15,"max_students":200}'::jsonb
 ),
 (
   'pro', 'Pro', 'Advanced features for professional educators',
   29, 290, 2.00, 2,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
   '{"max_courses":100,"max_students":1000}'::jsonb
 ),
 (
   'business', 'Business', 'Full platform with custom branding and priority support',
   79, 790, 0, 3,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":false,"white_label":false,"priority_support":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":false,"white_label":false,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
   '{"max_courses":-1,"max_students":5000}'::jsonb
 ),
 (
   'enterprise', 'Enterprise', 'Unlimited everything with white-label and API access',
   199, 1990, 0, 4,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
   '{"max_courses":-1,"max_students":-1}'::jsonb
 )
-ON CONFLICT (slug) DO NOTHING;
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  price_monthly = EXCLUDED.price_monthly,
+  price_yearly = EXCLUDED.price_yearly,
+  transaction_fee_percent = EXCLUDED.transaction_fee_percent,
+  sort_order = EXCLUDED.sort_order,
+  features = EXCLUDED.features,
+  limits = EXCLUDED.limits;
 
 
 -- ---------------------------------------------------------------------------
@@ -68,9 +80,12 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
+-- On 'enterprise' (full plan, all features unlocked) so it's the go-to tenant
+-- for testing gated features; Default School stays on 'free' (all gates
+-- active) so upgrade-nudge / locked-feature UX is also covered. See #291.
 INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'pro', 'active', 'active')
-ON CONFLICT (id) DO NOTHING;
+VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'enterprise', 'active', 'active')
+ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, billing_status = EXCLUDED.billing_status;
 
 
 -- ---------------------------------------------------------------------------
