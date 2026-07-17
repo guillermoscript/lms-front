@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
 
 type ConnectLinkResult =
   | { url: string }
@@ -17,6 +18,12 @@ async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
 
   if (!user) {
     return { error: 'Unauthorized', status: 401 }
+  }
+
+  // Email verification is async at signup (issue #436), but payout setup
+  // requires a verified email.
+  if (!user.email_confirmed_at) {
+    return { error: EMAIL_NOT_VERIFIED_ERROR, status: 403 }
   }
 
   const tenantId = await getCurrentTenantId()

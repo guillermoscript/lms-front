@@ -33,12 +33,10 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const t = useTranslations('auth.signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [repeatPassword, setRepeatPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSocialLoading, setIsSocialLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showRepeatPassword, setShowRepeatPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextPath = getSafeNextPath(searchParams.get('next'), '')
@@ -48,12 +46,6 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-
-    if (password !== repeatPassword) {
-      setError(t('errors.passwordsDontMatch'))
-      setIsLoading(false)
-      return
-    }
 
     try {
       await supabase.auth.signOut({ scope: 'local' })
@@ -173,6 +165,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                     data-testid="signup-password"
                     type={showPassword ? 'text' : 'password'}
                     required
+                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -183,30 +176,6 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff /> : <Eye />}
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">{t('repeatPassword')}</Label>
-                </div>
-                <InputGroup>
-                  <InputGroupInput
-                    id="repeat-password"
-                    data-testid="signup-repeat-password"
-                    type={showRepeatPassword ? 'text' : 'password'}
-                    required
-                    value={repeatPassword}
-                    onChange={(e) => setRepeatPassword(e.target.value)}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="icon-xs"
-                      onClick={() => setShowRepeatPassword(!showRepeatPassword)}
-                      aria-label={showRepeatPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showRepeatPassword ? <EyeOff /> : <Eye />}
                     </InputGroupButton>
                   </InputGroupAddon>
                 </InputGroup>
