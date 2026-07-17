@@ -3387,7 +3387,8 @@
       "enrolling": "Enrolling...",
       "subscribeAccess": "Subscribe to Access",
       "enrolled": "Enrolled",
-      "notInPlan": "Not in Your Plan"
+      "notInPlan": "Not in Your Plan",
+      "upgradePlan": "Upgrade plan to unlock"
     },
     "profileForm": {
       "fullName": "Full name",
@@ -3923,7 +3924,8 @@
       "instructor": {
         "title": "Instructor",
         "experience": "Experienced Instructor",
-        "defaultBio": "Instructor passionate about teaching."
+        "defaultBio": "Instructor passionate about teaching.",
+        "defaultName": "Instructor"
       }
     },
     "pricing": {
@@ -3933,6 +3935,7 @@
       "enrolling": "Enrolling...",
       "enrollmentSuccess": "You're enrolled! Opening your course...",
       "enrollmentError": "We couldn't enroll you. Please try again.",
+      "enrollWithPlan": "Enroll with your plan",
       "enrollNow": "Enroll Now",
       "goToCourse": "Go to Course",
       "buyNow": "Buy Now",

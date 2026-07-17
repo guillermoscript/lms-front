@@ -3232,7 +3232,8 @@
       "enrolling": "Inscribiendo...",
       "subscribeAccess": "Suscribirse para Acceder",
       "enrolled": "Inscrito",
-      "notInPlan": "No incluido en tu Plan"
+      "notInPlan": "No incluido en tu Plan",
+      "upgradePlan": "Mejora tu plan para desbloquear"
     },
     "profileForm": {
       "fullName": "Nombre Completo",
@@ -3916,7 +3917,8 @@
       "instructor": {
         "title": "Instructor",
         "experience": "Instructor Experimentado",
-        "defaultBio": "Instructor apasionado por la enseñanza."
+        "defaultBio": "Instructor apasionado por la enseñanza.",
+        "defaultName": "Instructor"
       }
     },
     "pricing": {
@@ -3926,6 +3928,7 @@
       "enrolling": "Inscribiendo...",
       "enrollmentSuccess": "¡Ya estás inscrito! Abriendo tu curso...",
       "enrollmentError": "No pudimos inscribirte. Inténtalo de nuevo.",
+      "enrollWithPlan": "Inscríbete con tu plan",
       "enrollNow": "Inscribirse Ahora",
       "goToCourse": "Ir al Curso",
       "buyNow": "Comprar Ahora",
