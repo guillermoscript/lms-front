@@ -1,0 +1,42 @@
+{
+  "skill_name": "work-issue",
+  "note": "Each run has real side effects (assigns the issue, moves board items, posts comments, opens a PR). Run only with the user present, ideally against a small throwaway or low-stakes issue, in a repo you don't mind touching.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "https://github.com/<OWNER>/<REPO>/issues/<SMALL_BUG_ISSUE> work on this",
+      "expected_output": "Repo/user/config resolved in Step 0 (asking about board/Slack/template only if not already configured for this repo). Issue assigned to the authenticated gh user and moved to In Progress (if a board is configured) with an attack-plan comment; branch named per the repo's inferred convention; PR opened following the repo's template (or a sensible default if none), QA steps included, labels/milestone mirrored from the issue if applicable, board updated to In Review if configured; wrap-up summary in chat.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "pick up #<SMALL_UI_ISSUE>",
+      "expected_output": "Same as eval 1, plus: /verify drives the changed UI flow in Chrome, a GIF named issue-<N>-verification.gif is recorded and posted as a PR comment (or embedded directly if the repo is public, or local path surfaced if upload fails).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "start working on https://github.com/<OWNER>/<REPO>/issues/<ISSUE_ASSIGNED_TO_SOMEONE_ELSE>",
+      "expected_output": "Skill stops and asks the user before taking over an issue already assigned to someone else / already In Progress.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "https://github.com/<OWNER>/<REPO_WITH_NO_PROJECT_BOARD_NO_SLACK>/issues/<N> work on this",
+      "expected_output": "Skill detects no linked project board and no connected Slack MCP, skips those steps gracefully without blocking or erroring, still produces a PR with plan/QA steps, and says in the wrap-up that board/Slack steps were skipped and why.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "/work-issue #<N> (run a second time in a repo already configured from a prior run)",
+      "expected_output": "Step 0 reads the existing .claude/gh-workflow.config.json (or migrates a legacy .claude/work-issue.config.json) and does not re-ask about board/Slack/reviewer; proceeds straight to reading the issue.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "/work-issue #<N> (observe the Step 2 housekeeping delegation, performed via issue-plan)",
+      "expected_output": "The housekeeping subagent's prompt marks the plan file as given/final (\"do NOT create, edit, or overwrite it; only pass its path\") and the file is uniquely named (issue-<N>-plan.md). After the subagent reports, the main agent fetches the posted comment body via gh api and compares it to the authored plan. If they differ, the comment is corrected in place with gh api -X PATCH from a fresh uniquely-named file — never delete-and-repost.",
+      "files": []
+    }
+  ]
+}

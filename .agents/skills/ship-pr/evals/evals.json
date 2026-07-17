@@ -1,0 +1,30 @@
+{
+  "skill_name": "ship-pr",
+  "note": "Each run opens a real PR and may post to Slack. Use a throwaway branch and a test channel.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "open a PR for this branch (repo has a PR template and a project board)",
+      "expected_output": "PR body authored to a file filling every template section including a QA verification steps list and Closes #<N>; created as a DRAFT by a subagent with labels/milestone/assignee mirrored from the issue; PR added to the board at In Progress; PR URL and item id reported back.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "mark PR #<N> ready and announce it (Slack configured with a default reviewer)",
+      "expected_output": "Ready flipped only because checks passed and (if UI) media was posted; board moved to In Review; Slack message has the reviewer @mention on its own leading line and every link in <url|text> markup, no bare URLs.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "announce PR #<N> (still a draft, checks failing)",
+      "expected_output": "Refuses to announce: PR stays a draft, board stays In Progress, and the blocking reasons are stated explicitly.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "PR #<N> just got approved and merged — close it out",
+      "expected_output": "Merge state verified via gh pr view before posting. Final comment on the PR summarizing what actually shipped (including review-driven changes, checks/QA, deferred follow-ups); short comment on the linked issue referencing the PR with a one-line resolution. No board action taken (automation handles Done). Refuses if the PR is not actually merged.",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "skill_name": "gh-repo-config",
+  "note": "Safe to run anywhere with gh auth; only writes <repo-root>/.claude/gh-workflow.config.json.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "what conventions does this repo use? set up the workflow config",
+      "expected_output": "Repo + gh user resolved via gh; PR template and branch/commit conventions detected (not asked); board and Slack asked about only if discoverable candidates are ambiguous/absent, batched in one AskUserQuestion; resolved values written to .claude/gh-workflow.config.json and the user told where it lives.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "run in a repo that has a legacy .claude/work-issue.config.json from an old run",
+      "expected_output": "read/get fall back to the legacy file; init copies it to gh-workflow.config.json; no values are re-asked.",
+      "files": []
+    }
+  ]
+}
