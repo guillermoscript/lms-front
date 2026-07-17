@@ -17,6 +17,7 @@ const SPACED_COMPONENTS = new Set([
   'FeaturesGrid', 'CourseGrid', 'TestimonialGrid', 'CtaBlock',
   'PricingTable', 'FaqAccordion', 'StatsCounter', 'ContactForm',
   'LogoCloud', 'Banner', 'TeamGrid', 'ImageGallery', 'SocialProof',
+  'StatsBand', 'AnimatedStats', 'CtaBanner', 'EnrollCta', 'CatalogBrowser',
 ])
 
 // Module-level counter for stable, unique build-time IDs. Real per-instance
