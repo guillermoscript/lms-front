@@ -226,7 +226,14 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                     </div>
 
                     {/* CTA */}
-                    <Link href="/create-school" className="block mb-7">
+                    <Link
+                      href={
+                        plan.slug === 'free'
+                          ? '/create-school'
+                          : `/create-school?plan=${plan.slug}&interval=${yearly ? 'yearly' : 'monthly'}`
+                      }
+                      className="block mb-7"
+                    >
                       <Button
                         className={cn(
                           'w-full h-12 rounded-xl font-bold text-sm transition-all duration-300',
