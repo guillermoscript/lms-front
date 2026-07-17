@@ -2657,6 +2657,29 @@
           "details": {
             "title": "Detalles del Producto",
             "description": "Configura un producto de pago único. La forma de cobro depende del método de pago que elijas. Vincula cursos para crear paquetes."
+          },
+          "quick": {
+            "title": "Creación rápida",
+            "description": "Nombra tu curso, elige un precio y publica. Puedes agregar detalles después.",
+            "courseTitleLabel": "Título del curso",
+            "courseTitlePlaceholder": "p. ej. Introducción a la fotografía",
+            "pricingLabel": "Precio",
+            "free": "Gratis",
+            "paid": "De pago",
+            "priceLabel": "Precio (USD)",
+            "priceHint": "Los pagos se cobran manualmente por defecto. Configura otros proveedores en Configuración → Pagos.",
+            "publish": "Crear y publicar",
+            "publishing": "Publicando…",
+            "saveDraft": "Guardar borrador",
+            "savingDraft": "Guardando…",
+            "published": "Curso publicado.",
+            "draftSaved": "Borrador guardado.",
+            "saveError": "No se pudo crear el curso. Inténtalo de nuevo.",
+            "moreOptions": "Más opciones (categorías, miniatura, proveedores, pasos post-compra)",
+            "limitReachedTitle": "Límite de cursos alcanzado",
+            "limitReachedDescription": "Tu plan {plan} permite {limit} cursos y ya tienes {count}.",
+            "upgradeCta": "Mejora tu plan",
+            "limitApproaching": "Estás usando {count} de {limit} cursos de tu plan."
           }
         },
         "edit": {

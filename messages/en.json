@@ -2835,6 +2835,29 @@
           "details": {
             "title": "Product Details",
             "description": "Set up a one-time product. How payment is handled depends on the payment method you choose below. Link courses to create bundles."
+          },
+          "quick": {
+            "title": "Quick create",
+            "description": "Name your course, pick a price, publish. You can add details later.",
+            "courseTitleLabel": "Course title",
+            "courseTitlePlaceholder": "e.g. Intro to Photography",
+            "pricingLabel": "Pricing",
+            "free": "Free",
+            "paid": "Paid",
+            "priceLabel": "Price (USD)",
+            "priceHint": "Payments are collected manually by default. Configure other providers in Settings → Payments.",
+            "publish": "Create & publish",
+            "publishing": "Publishing…",
+            "saveDraft": "Save as draft",
+            "savingDraft": "Saving…",
+            "published": "Course published.",
+            "draftSaved": "Draft saved.",
+            "saveError": "Could not create the course. Try again.",
+            "moreOptions": "More options (categories, thumbnail, providers, after-purchase steps)",
+            "limitReachedTitle": "Course limit reached",
+            "limitReachedDescription": "Your {plan} plan allows {limit} courses and you already have {count}.",
+            "upgradeCta": "Upgrade your plan",
+            "limitApproaching": "You are using {count} of {limit} courses on your plan."
           }
         },
         "edit": {
