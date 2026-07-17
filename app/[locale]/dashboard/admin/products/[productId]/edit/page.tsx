@@ -148,6 +148,11 @@ export default async function EditProductPage({ params }: PageProps) {
   }
 
   const { data: enabledProviders } = await getEnabledPaymentProviders()
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('stripe_account_id')
+    .eq('id', tenantId)
+    .single()
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,6 +185,7 @@ export default async function EditProductPage({ params }: PageProps) {
           courses={courses || []}
           initialInput={initialInput}
           enabledProviders={enabledProviders}
+          stripeConnected={Boolean(tenant?.stripe_account_id)}
         />
 
       </main>

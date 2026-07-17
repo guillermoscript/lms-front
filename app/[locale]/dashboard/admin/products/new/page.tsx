@@ -32,6 +32,11 @@ export default async function NewProductPage() {
   ])
 
   const { data: enabledProviders } = await getEnabledPaymentProviders()
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('stripe_account_id')
+    .eq('id', tenantId)
+    .single()
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,6 +68,7 @@ export default async function NewProductPage() {
           categories={categories || []}
           courses={courses || []}
           enabledProviders={enabledProviders}
+          stripeConnected={Boolean(tenant?.stripe_account_id)}
         />
 
       </main>
