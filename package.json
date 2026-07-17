@@ -63,6 +63,7 @@
     "@streamdown/code": "^1.1.0",
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
+    "@stripe/react-stripe-js": "^6.8.0",
     "@stripe/stripe-js": "^8.9.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.99.0",

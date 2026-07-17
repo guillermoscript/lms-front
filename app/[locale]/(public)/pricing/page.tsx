@@ -16,20 +16,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     return buildPageMetadata({ title: t('pricing.title'), description: t('pricing.description'), path: '/pricing', locale });
 }
 
-interface Plan {
-    plan_id: number;
-    plan_name: string;
-    price: number;
-    duration_in_days: number;
-    description: string;
-    features: string | string[];
-    payment_provider?: string;
-}
-
-export default async function PricingPage() {
+export default async function PricingPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ subscribe?: string }>;
+}) {
     const supabase = await createClient();
     const tenantId = await getCurrentTenantId();
     const t = await getTranslations('pricing');
+    const { subscribe } = await searchParams;
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Fetch plans from database - filtered by tenant
     const { data: plans, error } = await supabase
@@ -114,6 +111,8 @@ export default async function PricingPage() {
                     <PricingClient
                         monthlyPlans={monthlyPlans}
                         yearlyPlans={yearlyPlans}
+                        isAuthenticated={!!user}
+                        subscribePlanId={subscribe ? Number(subscribe) : null}
                     />
                 )}
 

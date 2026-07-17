@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { PaymentRequestForm } from '@/components/student/payment-request-form'
+import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
 import type { Metadata } from 'next'
 
@@ -103,6 +104,7 @@ export default async function ManualCheckoutPage(props: {
 
   const userEmail = user.email || ''
   const userName = profile?.full_name || ''
+  const instructions = await getManualPaymentInstructions()
 
   const formattedPrice = new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -175,6 +177,16 @@ export default async function ManualCheckoutPage(props: {
                   ))}
                 </ol>
               </div>
+
+              {/* Tenant payment instructions — shown up front */}
+              {instructions && (
+                <div className="mt-8 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <h2 className="text-sm font-semibold">{t('instructionsTitle')}</h2>
+                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    {instructions}
+                  </p>
+                </div>
+              )}
 
               {/* Trust signals */}
               <div className="mt-8 flex items-center gap-4 text-xs text-muted-foreground">

@@ -2431,7 +2431,10 @@
             "invoicePrefix": "Invoice Prefix",
             "invoicePrefixHint": "Prefix for invoice numbers (e.g., INV-001)",
             "approval": "Require Payment Approval",
-            "approvalHint": "Require admin approval before processing payments"
+            "approvalHint": "Require admin approval before processing payments",
+            "manualInstructions": "Manual / Offline Payment Instructions",
+            "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
+            "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide."
           },
           "branding": {
             "logoUrl": "Logo URL",
@@ -3733,6 +3736,8 @@
       "successTitle": "Request Submitted!",
       "successDescription": "We've received your payment request and will send instructions to your email shortly.",
       "viewRequests": "View My Requests",
+      "howToPayTitle": "How to pay",
+      "proofLabel": "Payment proof (optional)",
       "errors": {
         "nameRequired": "Name is required",
         "emailRequired": "Email is required",
@@ -3955,6 +3960,10 @@
     "free": "free",
     "signUpFree": "Sign Up Free",
     "getStarted": "Get Started",
+    "subscribeFree": "Subscribe Free",
+    "subscribing": "Subscribing…",
+    "subscribeSuccess": "You're subscribed! Enjoy your plan.",
+    "subscribeError": "Couldn't activate the plan. Please try again.",
     "billedMonthly": "Billed monthly",
     "billedYearly": "Billed yearly",
     "empty": {
@@ -4059,7 +4068,18 @@
       "contactPhone": "Phone (Optional)",
       "button": "Pay & Enroll (Test)",
       "requestButton": "Request Payment Instructions",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "cardUnavailable": "Card payments aren't available for this item right now. Please use another payment method.",
+      "sandboxButton": "Pay & Enroll (Test)",
+      "sandboxHint": "Sandbox test checkout — skips real payment (development only)."
+    },
+    "stripe": {
+      "preparing": "Preparing secure payment…",
+      "initError": "Couldn't start the card payment. Please try again.",
+      "unavailableTitle": "Card payments unavailable",
+      "tryManual": "Pay another way",
+      "payButton": "Pay {price}",
+      "paymentError": "Payment could not be completed. Please try again."
     },
     "empty": {
       "title": "No Product Selected",
@@ -4078,6 +4098,7 @@
       "productDetails": "Product Details",
       "price": "Price",
       "manualPayment": "Manual Payment Method",
+      "instructionsTitle": "How to pay",
       "howItWorks": {
         "title": "How It Works",
         "description": "Follow these simple steps to complete your purchase",

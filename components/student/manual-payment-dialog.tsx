@@ -1,11 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,9 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { createPaymentRequest, uploadStudentPaymentProof } from '@/app/actions/payment-requests'
 import { useTranslations } from 'next-intl'
-import { ProofUpload } from '@/components/shared/proof-upload'
+import { createClient } from '@/lib/supabase/client'
+import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
+import { PaymentRequestForm } from './payment-request-form'
 
 interface ManualPaymentDialogProps {
   open: boolean
@@ -23,7 +19,8 @@ interface ManualPaymentDialogProps {
   productName: string
   productPrice: number
   productCurrency: string
-  productId: number
+  productId?: number
+  planId?: number
 }
 
 export function ManualPaymentDialog({
@@ -32,48 +29,46 @@ export function ManualPaymentDialog({
   productName,
   productPrice,
   productCurrency,
-  productId
+  productId,
+  planId,
 }: ManualPaymentDialogProps) {
   const t = useTranslations('components.manualPayment')
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  })
-  const [loading, setLoading] = useState(false)
-  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [userName, setUserName] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
+  const [instructions, setInstructions] = useState<string>('')
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  // Load known identity + tenant instructions once the dialog opens.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
 
-    try {
-      const result = await createPaymentRequest({
-        productId,
-        contactName: formData.name,
-        contactEmail: formData.email,
-        contactPhone: formData.phone,
-        message: formData.message
-      })
-
-      // Upload proof if one was selected
-      if (proofFile && result.request_id) {
-        const fd = new FormData()
-        fd.append('file', proofFile)
-        await uploadStudentPaymentProof(result.request_id, fd)
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && !cancelled) {
+          setUserEmail(user.email || '')
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single()
+          if (!cancelled) setUserName(profile?.full_name || '')
+        }
+      } catch {
+        // Non-fatal — the server derives identity anyway.
       }
 
-      toast.success(t('success'))
-      onOpenChange(false)
-      setFormData({ name: '', email: '', phone: '', message: '' })
-      setProofFile(null)
-    } catch {
-      toast.error(t('error'))
-    }
+      try {
+        const text = await getManualPaymentInstructions()
+        if (!cancelled) setInstructions(text)
+      } catch {
+        // Non-fatal — instructions are optional.
+      }
+    })()
 
-    setLoading(false)
-  }
+    return () => { cancelled = true }
+  }, [open])
 
   const currencySymbol = productCurrency === 'usd' ? '$' : '€'
 
@@ -87,94 +82,23 @@ export function ManualPaymentDialog({
               productName: productName,
               symbol: currencySymbol,
               price: productPrice,
-              strong: (chunks) => <strong>{chunks}</strong>
+              strong: (chunks) => <strong>{chunks}</strong>,
             })}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              {t('fullName')} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={t('fullNamePlaceholder')}
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              {t('email')} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={t('emailPlaceholder')}
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">{t('phone')}</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder={t('phonePlaceholder')}
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">{t('message')}</Label>
-            <Textarea
-              id="message"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder={t('messagePlaceholder')}
-              rows={3}
-              disabled={loading}
-            />
-          </div>
-
-          <ProofUpload
-            onUpload={async (file) => { setProofFile(file) }}
-            label={t('proofLabel') || 'Payment Proof (optional)'}
-            disabled={loading}
-          />
-
-          <div className="rounded-lg bg-muted p-4 text-sm">
-            <p className="font-semibold mb-2">{t('whatHappensNext')}</p>
-            <ul className="space-y-1 text-muted-foreground">
-              <li>• {t('step1')}</li>
-              <li>• {t('step2')}</li>
-              <li>• {t('step3')}</li>
-            </ul>
-          </div>
-
-          <div className="flex gap-3">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? t('sending') : t('submit')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              {t('cancel')}
-            </Button>
-          </div>
-        </form>
+        <PaymentRequestForm
+          variant="dialog"
+          productId={productId}
+          planId={planId}
+          productName={productName}
+          price={`${currencySymbol}${productPrice}`}
+          currency={productCurrency}
+          userName={userName}
+          userEmail={userEmail}
+          instructions={instructions}
+          onSuccess={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )

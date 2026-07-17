@@ -123,6 +123,91 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
  * (SECURITY DEFINER, idempotent). No product/transaction is fabricated.
  * See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
  */
+/**
+ * Activate a free (price = 0) plan for the current user.
+ *
+ * Grants via the grant_free_subscription RPC (SECURITY DEFINER, idempotent),
+ * which creates a synthetic zero-amount transaction so the standard
+ * transaction trigger builds the subscription + entitlements, then sets a
+ * far-future period end so free subscriptions never expire.
+ */
+export async function subscribeFree(planId?: string) {
+    const supabase = await createServerClient();
+    const userId = await getCurrentUserId()
+    if (!userId) {
+        throw new Error("You must be logged in to subscribe.");
+    }
+    const tenantId = await getCurrentTenantId();
+
+    const requestHeaders = await headers();
+    const clientIp = getClientIp({ headers: requestHeaders });
+    try {
+        await Promise.all([
+            freeEnrollmentLimiter.check(30, `user:${userId}`),
+            freeEnrollmentLimiter.check(100, `ip:${clientIp}`),
+        ]);
+    } catch {
+        throw new Error("Too many enrollment attempts. Please slow down and try again later.");
+    }
+
+    try {
+        const numericPlanId = Number(planId);
+        if (!Number.isSafeInteger(numericPlanId) || numericPlanId <= 0) {
+            throw new Error("Invalid plan.");
+        }
+
+        // Validate the plan: tenant-owned, not deleted, genuinely free. The RPC
+        // re-checks price server-side; this gives a friendlier early error.
+        const { data: plan, error: planError } = await supabase
+            .from('plans')
+            .select('plan_id, price, tenant_id, deleted_at')
+            .eq('plan_id', numericPlanId)
+            .eq('tenant_id', tenantId)
+            .is('deleted_at', null)
+            .single();
+
+        if (planError || !plan) {
+            throw new Error("Plan not found.");
+        }
+        if (Number(plan.price) !== 0) {
+            throw new Error("This plan is not free. Please use the paid checkout.");
+        }
+
+        // Signup-while-subscribing: join the school first (same as enrollFree).
+        const { data: membership } = await supabase
+            .from('tenant_users')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (!membership) {
+            const joinResult = await joinCurrentSchool();
+            if (!joinResult.success) {
+                throw new Error(joinResult.error || "Could not join this school.");
+            }
+        }
+
+        const { error: grantError } = await supabase.rpc('grant_free_subscription', {
+            _user_id: userId,
+            _plan_id: numericPlanId,
+        });
+
+        if (grantError) {
+            console.error("Free subscription grant failed:", grantError);
+            throw new Error("Failed to activate the plan. Please try again.");
+        }
+
+        revalidatePath('/dashboard/student');
+        revalidatePath('/dashboard/student/browse');
+        return { success: true };
+    } catch (error) {
+        console.error("Free subscription failed:", error);
+        throw error;
+    }
+}
+
 export async function enrollFree(courseId?: string) {
     const supabase = await createServerClient();
     const userId = await getCurrentUserId()
