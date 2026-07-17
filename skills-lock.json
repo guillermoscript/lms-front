@@ -74,6 +74,24 @@
       "sourceType": "github",
       "computedHash": "5316f00e012e2d4a81f996adda009b6862a6684af4f6eef3f46a69f456121c6a"
     },
+    "gh-board": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gh-board/SKILL.md",
+      "computedHash": "313966158a493570a28515e76192636951bd0e5c9372597a9f1e1896a9396992"
+    },
+    "gh-repo-config": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gh-repo-config/SKILL.md",
+      "computedHash": "538d2c3a4c1a03249b1e6217ec6cdfb5df5abc10456b4e3c303c198b3714f93b"
+    },
+    "handoff": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/handoff/SKILL.md",
+      "computedHash": "ad03e8d4ea3cbbff66420eb7ba3cc375b5cbe1821a2449b53e863256cf5b5cde"
+    },
     "harden": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -84,6 +102,12 @@
       "sourceType": "github",
       "skillPath": "skill/SKILL.md",
       "computedHash": "ada9c434d56c794352ccd5c7a6901e5ebb4b7f3b7fe42e8c17c2c4b96c3735c8"
+    },
+    "issue-plan": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/issue-plan/SKILL.md",
+      "computedHash": "fa73d61b7c58d4fe83abc0bafa8da55375b2b3c7e55a1d3eb8d6142d04ddacef"
     },
     "mcp-apps-builder": {
       "source": "mcp-use/mcp-use",
@@ -146,6 +170,12 @@
       "sourceType": "github",
       "computedHash": "91c02eb706f046fb9d6a061efbb96496e4be751b5b14c283cf82baaa50f3a985"
     },
+    "ship-pr": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ship-pr/SKILL.md",
+      "computedHash": "785602ef6a93bbf5addce0a226cedc60425e09f19ebe937464c1d06df3ec4b72"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",
@@ -167,6 +197,12 @@
       "sourceType": "github",
       "computedHash": "61855594bf79bc5b2665cfca3580b93840cfe645872c5a2deeaa5ad336570d5a"
     },
+    "ui-evidence": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-evidence/SKILL.md",
+      "computedHash": "62407877e97804050097e52d5775e1ec93b8625b65efccfdea634b79ac1240ce"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
@@ -183,6 +219,12 @@
       "sourceType": "github",
       "skillPath": "skills/web-design-guidelines/SKILL.md",
       "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    },
+    "work-issue": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/work-issue/SKILL.md",
+      "computedHash": "7fc314a50182848d50950936ba2b35bb5705b8100cb85a3ae37ad5dd5290478e"
     }
   }
 }

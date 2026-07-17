@@ -3900,6 +3900,11 @@
     "clearFilters": "Clear filters"
   },
   "coursePublicDetails": {
+    "socialProof": {
+      "title": "What students say",
+      "reviewCount": "({count, plural, one {# review} other {# reviews}})",
+      "students": "{count, plural, one {# student} other {# students}}"
+    },
     "breadcrumbs": {
       "home": "Home",
       "courses": "Courses"

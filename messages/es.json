@@ -3893,6 +3893,11 @@
     "clearFilters": "Limpiar filtros"
   },
   "coursePublicDetails": {
+    "socialProof": {
+      "title": "Lo que dicen los estudiantes",
+      "reviewCount": "({count, plural, one {# reseña} other {# reseñas}})",
+      "students": "{count, plural, one {# estudiante} other {# estudiantes}}"
+    },
     "breadcrumbs": {
       "home": "Inicio",
       "courses": "Cursos"
