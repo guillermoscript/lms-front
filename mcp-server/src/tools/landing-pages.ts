@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { MCPServer } from "mcp-use/server";
+import { widget, text } from "mcp-use/server";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult } from "../format.js";
 import {
@@ -115,6 +116,130 @@ function previewPath(pageId: string): string {
   return `/dashboard/admin/landing-page/preview/${pageId}`;
 }
 
+/**
+ * Absolute base URL of the tenant site, when derivable. In production the MCP server is
+ * fronted by the Next.js proxy at https://<tenant>.<domain>/api/mcp, so stripping the
+ * proxy suffix yields the site origin the preview/public paths live under.
+ */
+function siteBaseUrl(): string | null {
+  const u = (process.env.MCP_SERVER_URL ?? "").replace(/\/$/, "");
+  return u.endsWith("/api/mcp") ? u.slice(0, -"/api/mcp".length) : null;
+}
+
+// ── Section summaries for the landing-page-preview widget ────────────────────
+
+/** Wireframe layout archetype per block type (widget rendering hint). */
+const LAYOUT_BY_TYPE: Record<string, string> = {
+  HeroBlock: "hero",
+  CtaBanner: "band",
+  CtaBlock: "band",
+  EnrollCta: "band",
+  Banner: "band",
+  ShinyEyebrow: "band",
+  SocialProof: "band",
+  LogoCloud: "band",
+  LogoMarquee: "band",
+  StatsBand: "stats",
+  StatsCounter: "stats",
+  AnimatedStats: "stats",
+  FeaturesGrid: "grid",
+  TestimonialGrid: "grid",
+  TeamGrid: "grid",
+  PricingTable: "grid",
+  ImageGallery: "grid",
+  CourseGrid: "grid",
+  CatalogBrowser: "grid",
+  FaqAccordion: "list",
+  FaqSplit: "list",
+  Image: "media",
+  Video: "media",
+  ContentFeature: "media",
+  Header: "nav",
+  Footer: "nav",
+  Navbar: "nav",
+  BreadcrumbBlock: "nav",
+};
+
+interface SectionSummary {
+  type: string;
+  layout: string;
+  heading: string;
+  subtitle: string;
+  ctas: string[];
+  items: string[];
+  itemCount: number;
+}
+
+/** Reduce a block's props to the display-friendly summary the preview widget renders. */
+function summarizeSection(type: string, props: Record<string, unknown>): SectionSummary {
+  const s = (v: unknown) => (typeof v === "string" ? v : "");
+  const heading = s(props.title) || s(props.heading) || s(props.text) || "";
+  const subtitle =
+    s(props.subtitle) || s(props.subheading) || s(props.description) || s(props.subtext) || "";
+
+  const ctas: string[] = [];
+  for (const key of [
+    "primaryCtaLabel",
+    "secondaryCtaLabel",
+    "primaryLabel",
+    "secondaryLabel",
+    "buttonLabel",
+    "ctaLabel",
+    "label",
+  ]) {
+    const v = s(props[key]);
+    if (v) ctas.push(v);
+  }
+
+  // First array-of-objects prop = the block's repeating items (features, stats, FAQs…).
+  let items: string[] = [];
+  let itemCount = 0;
+  for (const v of Object.values(props)) {
+    if (Array.isArray(v) && v.length > 0 && typeof v[0] === "object" && v[0] !== null) {
+      itemCount = v.length;
+      items = v
+        .slice(0, 8)
+        .map((raw) => {
+          const o = raw as Record<string, unknown>;
+          const value = s(o.value);
+          const label = s(o.label);
+          return (
+            s(o.title) ||
+            s(o.name) ||
+            s(o.question) ||
+            (value && label ? `${value} ${label}` : value || label) ||
+            s(o.quote).slice(0, 48) ||
+            s(o.text).slice(0, 48)
+          );
+        })
+        .filter(Boolean);
+      break;
+    }
+  }
+
+  return { type, layout: LAYOUT_BY_TYPE[type] ?? "text", heading, subtitle, ctas, items, itemCount };
+}
+
+/** Props for the landing-page-preview widget, built from a DB row. */
+function previewWidgetProps(row: Record<string, unknown>, warnings: string[] = []) {
+  const puck = row.puck_data as PuckData | null;
+  const sections = (puck?.content ?? []).map((c) => {
+    const { id: _id, ...props } = c.props ?? {};
+    return summarizeSection(c.type, props);
+  });
+  const base = siteBaseUrl();
+  return {
+    title: row.title as string,
+    slug: row.slug as string,
+    is_published: row.is_published as boolean,
+    public_path: publicPath(row.slug as string),
+    preview_path: previewPath(row.page_id as string),
+    preview_url: base ? `${base}${previewPath(row.page_id as string)}` : null,
+    sections,
+    warnings: Array.isArray(warnings) ? warnings : [],
+  };
+}
+
 function publicPath(slug: string): string {
   return slug === "home" ? "/" : `/p/${slug}`;
 }
@@ -212,6 +337,11 @@ export function registerLandingPageTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
+      widget: {
+        name: "landing-page-preview",
+        invoking: "Loading page...",
+        invoked: "Page loaded",
+      },
     },
     async (input, ctx) => {
       try {
@@ -232,15 +362,14 @@ export function registerLandingPageTools(server: MCPServer) {
           return { type: c.type, props };
         });
 
-        return ok(
-          {
-            ...pageSummary(data),
-            preview_path: previewPath(data.page_id),
-            public_path: publicPath(data.slug),
-            sections,
-          },
-          `"${data.title}" (/${data.slug}) — ${data.is_published ? "PUBLISHED" : "draft"}, ${sections.length} sections: ${sections.map((s) => s.type).join(" → ") || "(empty)"}. Preview at ${previewPath(data.page_id)}.`
-        );
+        // Note: with a widget, structuredContent carries the widget props — the
+        // machine-readable full section list must travel in the text instead.
+        return widget({
+          props: previewWidgetProps(data),
+          output: text(
+            `"${data.title}" (/${data.slug}) — ${data.is_published ? "PUBLISHED" : "draft"}, ${sections.length} sections: ${sections.map((s) => s.type).join(" → ") || "(empty)"}. Preview at ${previewPath(data.page_id)}.\n\nFull sections (use as the basis for lms_update_landing_page elements):\n\`\`\`json\n${JSON.stringify(sections, null, 1)}\n\`\`\``
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -268,6 +397,11 @@ export function registerLandingPageTools(server: MCPServer) {
         destructiveHint: false,
         idempotentHint: false,
         openWorldHint: false,
+      },
+      widget: {
+        name: "landing-page-preview",
+        invoking: "Drafting page...",
+        invoked: "Draft created",
       },
     },
     async (input, ctx) => {
@@ -304,14 +438,12 @@ export function registerLandingPageTools(server: MCPServer) {
           built.warnings.length > 0
             ? `\nWarnings (page saved, but review these):\n${built.warnings.map((w) => `- ${w}`).join("\n")}`
             : "";
-        return ok(
-          {
-            ...pageSummary(data),
-            preview_path: previewPath(data.page_id),
-            warnings: built.warnings,
-          },
-          `Created draft "${data.title}" (/${data.slug}) with ${built.data.content.length} sections. Preview it at ${previewPath(data.page_id)} or refine it in the visual editor, then publish with lms_publish_landing_page.${warningText}`
-        );
+        return widget({
+          props: previewWidgetProps(data, built.warnings),
+          output: text(
+            `Created draft "${data.title}" (/${data.slug}, page_id ${data.page_id}) with ${built.data.content.length} sections. Preview it at ${previewPath(data.page_id)} or refine it in the visual editor, then publish with lms_publish_landing_page.${warningText}`
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -335,6 +467,11 @@ export function registerLandingPageTools(server: MCPServer) {
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
+      },
+      widget: {
+        name: "landing-page-preview",
+        invoking: "Updating page...",
+        invoked: "Page updated",
       },
     },
     async (input, ctx) => {
@@ -393,10 +530,12 @@ export function registerLandingPageTools(server: MCPServer) {
           warnings.length > 0
             ? `\nWarnings:\n${warnings.map((w) => `- ${w}`).join("\n")}`
             : "";
-        return ok(
-          { ...pageSummary(data), preview_path: previewPath(data.page_id), warnings },
-          `Updated "${data.title}" (/${data.slug})${input.elements ? ` — now ${(data.puck_data as PuckData).content.length} sections` : ""}.${data.is_published ? " The page is LIVE; changes are visible immediately." : ""} Preview at ${previewPath(data.page_id)}.${warningText}`
-        );
+        return widget({
+          props: previewWidgetProps(data, warnings),
+          output: text(
+            `Updated "${data.title}" (/${data.slug}, page_id ${data.page_id})${input.elements ? ` — now ${(data.puck_data as PuckData).content.length} sections` : ""}.${data.is_published ? " The page is LIVE; changes are visible immediately." : ""} Preview at ${previewPath(data.page_id)}.${warningText}`
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
