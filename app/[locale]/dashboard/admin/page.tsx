@@ -47,7 +47,7 @@ export default async function AdminDashboardPage({
   const [
     { count: totalUsers },
     { count: totalCourses },
-    { count: publishedCourses },
+    { count: publishedCourses, data: publishedCourseRows },
     { count: totalEnrollments },
     { count: totalTransactions },
     { count: pendingPaymentRequests },
@@ -60,9 +60,11 @@ export default async function AdminDashboardPage({
     supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
       .from('courses')
-      .select('*', { count: 'exact', head: true })
+      .select('course_id, title', { count: 'exact' })
       .eq('tenant_id', tenantId)
-      .eq('status', 'published'),
+      .eq('status', 'published')
+      .order('created_at', { ascending: true })
+      .limit(1),
     supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
@@ -149,6 +151,7 @@ export default async function AdminDashboardPage({
   const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
   const isStripeConnected = Boolean(tenant?.stripe_account_id)
   const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
+  const firstPublishedCourse = publishedCourseRows?.[0]
 
   const stats = [
     {
@@ -208,6 +211,17 @@ export default async function AdminDashboardPage({
         dismissed={isChecklistDismissed(uiState, 'admin')}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
+        milestone={firstPublishedCourse ? {
+          stepId: 'add-course',
+          title: t('onboarding.courseSuccessTitle'),
+          description: t('onboarding.courseSuccessDescription', {
+            course: firstPublishedCourse.title,
+          }),
+          href: `/courses/${firstPublishedCourse.course_id}`,
+          copyLabel: t('onboarding.copyCourseLink'),
+          copiedLabel: t('onboarding.courseLinkCopied'),
+          viewLabel: t('onboarding.viewCourse'),
+        } : undefined}
         steps={[
           {
             id: 'add-course',
@@ -215,6 +229,7 @@ export default async function AdminDashboardPage({
             description: t('onboarding.addCourseDesc'),
             href: '/dashboard/admin/products/new',
             completed: (publishedCourses || 0) > 0,
+            timeHint: t('onboarding.addCourseTime'),
           },
           {
             id: 'connect-payments',
@@ -222,6 +237,7 @@ export default async function AdminDashboardPage({
             description: t('onboarding.connectPaymentsDesc'),
             href: '/dashboard/admin/settings?tab=payment',
             completed: hasConfiguredPayments,
+            timeHint: t('onboarding.connectPaymentsTime'),
           },
           {
             id: 'brand-school',
@@ -229,6 +245,7 @@ export default async function AdminDashboardPage({
             description: t('onboarding.brandSchoolDesc'),
             href: '/dashboard/admin/appearance',
             completed: hasBranding,
+            timeHint: t('onboarding.brandSchoolTime'),
           },
           {
             id: 'invite-users',
@@ -236,6 +253,7 @@ export default async function AdminDashboardPage({
             description: t('onboarding.inviteUsersDesc'),
             href: '/dashboard/admin/users',
             completed: (totalUsers || 0) > 1, // More than just the admin
+            timeHint: t('onboarding.inviteUsersTime'),
           },
           {
             id: 'configure-school',
@@ -243,6 +261,7 @@ export default async function AdminDashboardPage({
             description: t('onboarding.configureSchoolDesc'),
             href: '/dashboard/admin/settings',
             completed: Boolean(currentSettings?.site_name),
+            timeHint: t('onboarding.configureSchoolTime'),
           },
         ]}
         footer={

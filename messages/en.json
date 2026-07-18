@@ -76,6 +76,17 @@
     "completed": "Completed",
     "lessonsCompleted": "lessons completed",
     "lessons": "lessons",
+    "tour": {
+      "replay": "Replay tour"
+    },
+    "onboardingChecklist": {
+      "dismiss": "Dismiss checklist",
+      "nextAction": "Do this next",
+      "doThisNext": "Do this next → {step}",
+      "completedSteps": "Completed steps",
+      "remainingSteps": "{count, plural, one {# more step} other {# more steps}}",
+      "allDone": "All done! You can dismiss this checklist."
+    },
     "courseSelector": {
       "label": "Courses Included",
       "loading": "Loading courses...",
@@ -1661,16 +1672,26 @@
           "subtitle": "Set up your school in a few simple steps.",
           "configureSchool": "Configure school details",
           "configureSchoolDesc": "Set your school name and basic details.",
+          "configureSchoolTime": "~1 min",
           "brandSchool": "Brand your school",
           "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional \u2014 the defaults look great.",
+          "brandSchoolTime": "~2 min",
           "connectPayments": "Set up how you get paid",
           "connectPaymentsDesc": "Choose manual payments, Stripe, or another available provider.",
+          "connectPaymentsTime": "~2 min",
           "wizardPrompt": "Prefer a guided setup?",
           "wizardLink": "Open the setup wizard",
           "addCourse": "Create your first course — set a price and publish",
           "addCourseDesc": "Use quick create to publish in minutes, or generate a draft with AI.",
+          "addCourseTime": "~3 min",
           "inviteUsers": "Invite your first students",
-          "inviteUsersDesc": "Invite students to join your school."
+          "inviteUsersDesc": "Invite students to join your school.",
+          "inviteUsersTime": "~1 min",
+          "courseSuccessTitle": "Your first course is live!",
+          "courseSuccessDescription": "{course} is ready to share. Send the link to your first students.",
+          "copyCourseLink": "Copy course link",
+          "courseLinkCopied": "Link copied",
+          "viewCourse": "View course"
         },
         "tour": {
           "checklist": {
