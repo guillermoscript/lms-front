@@ -2699,7 +2699,24 @@
             "limitReachedTitle": "Límite de cursos alcanzado",
             "limitReachedDescription": "Tu plan {plan} permite {limit} cursos y ya tienes {count}.",
             "upgradeCta": "Mejora tu plan",
-            "limitApproaching": "Estás usando {count} de {limit} cursos de tu plan."
+            "limitApproaching": "Estás usando {count} de {limit} cursos de tu plan.",
+            "or": "o"
+          },
+          "ai": {
+            "title": "Generar con IA",
+            "description": "Describe tu curso en una frase y obtén un borrador con lecciones que puedes editar.",
+            "promptLabel": "¿De qué trata tu curso?",
+            "promptPlaceholder": "p. ej. Un curso para principiantes sobre hornear pan de masa madre en casa",
+            "generate": "Generar borrador",
+            "generating": "Redactando tu curso…",
+            "generatingHint": "Esto suele tardar menos de un minuto.",
+            "draftNote": "Todo se crea como borrador — nada se publica hasta que tú lo decidas.",
+            "successTitle": "Tu borrador está listo",
+            "successDescription": "Se {count, plural, one {creó # lección en borrador} other {crearon # lecciones en borrador}}. Revisa y edita antes de publicar.",
+            "thumbnailIdea": "Idea de miniatura",
+            "openCourse": "Editar tu curso",
+            "startOver": "Generar otro",
+            "error": "No se pudo generar el borrador del curso. Inténtalo de nuevo."
           }
         },
         "edit": {

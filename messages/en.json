@@ -2878,7 +2878,24 @@
             "limitReachedTitle": "Course limit reached",
             "limitReachedDescription": "Your {plan} plan allows {limit} courses and you already have {count}.",
             "upgradeCta": "Upgrade your plan",
-            "limitApproaching": "You are using {count} of {limit} courses on your plan."
+            "limitApproaching": "You are using {count} of {limit} courses on your plan.",
+            "or": "or"
+          },
+          "ai": {
+            "title": "Generate with AI",
+            "description": "Describe your course in a sentence and get a drafted outline with lessons you can edit.",
+            "promptLabel": "What is your course about?",
+            "promptPlaceholder": "e.g. A beginner-friendly course on baking sourdough bread at home",
+            "generate": "Generate draft",
+            "generating": "Drafting your course…",
+            "generatingHint": "This usually takes under a minute.",
+            "draftNote": "Everything is created as a draft — nothing is published until you decide.",
+            "successTitle": "Your draft is ready",
+            "successDescription": "{count, plural, one {# draft lesson was} other {# draft lessons were}} created. Review and edit before publishing.",
+            "thumbnailIdea": "Thumbnail idea",
+            "openCourse": "Edit your course",
+            "startOver": "Generate another",
+            "error": "Could not generate the course draft. Try again."
           }
         },
         "edit": {
