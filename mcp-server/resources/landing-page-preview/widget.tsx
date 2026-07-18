@@ -16,6 +16,7 @@ const sectionSchema = z.object({
   ctas: z.array(z.string()),
   items: z.array(z.string()),
   itemCount: z.number(),
+  color: z.string().nullable(), // explicit block backgroundColor/accentColor override
 });
 
 const propsSchema = z.object({
@@ -25,13 +26,14 @@ const propsSchema = z.object({
   public_path: z.string(),
   preview_path: z.string(),
   preview_url: z.string().nullable(),
+  brand_color: z.string().nullable(), // tenants.primary_color — what var(--primary) resolves to
   sections: z.array(sectionSchema),
   warnings: z.array(z.string()),
 });
 
 export const widgetMetadata: WidgetMetadata = {
   description:
-    "Structural preview of a landing page: each section rendered as a wireframe card (hero, stats, grids, FAQ…) in page order, with publish state and a link to the pixel-perfect admin preview",
+    "Structural preview of a landing page: each section rendered as a wireframe card (hero, stats, grids, FAQ…) in page order using the tenant's real brand color, with publish state and a link to the pixel-perfect admin preview",
   props: propsSchema,
   exposeAsTool: false,
   metadata: {
@@ -43,6 +45,21 @@ export const widgetMetadata: WidgetMetadata = {
 type Props = z.infer<typeof propsSchema>;
 type Section = z.infer<typeof sectionSchema>;
 
+// ── Accent color ─────────────────────────────────────────────────────────────
+// Mirrors the app's accentVars(): explicit block color wins, else the tenant's
+// brand color (var(--primary) in the real render), else a neutral fallback.
+
+const FALLBACK_ACCENT = "#7c3aed";
+
+function accentOf(section: Section, brand: string | null): string {
+  return section.color ?? brand ?? FALLBACK_ACCENT;
+}
+
+/** Translucent tint of the accent, akin to the app's color-mix accent tints. */
+function tint(accent: string, pct: number): string {
+  return `color-mix(in srgb, ${accent} ${pct}%, transparent)`;
+}
+
 // ── Section wireframes ───────────────────────────────────────────────────────
 
 function TypeBadge({ type }: { type: string }) {
@@ -53,51 +70,80 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-function CtaPills({ ctas, light }: { ctas: string[]; light?: boolean }) {
+function CtaPills({
+  ctas,
+  accent,
+  onDark,
+}: {
+  ctas: string[];
+  accent: string;
+  onDark?: boolean;
+}) {
   if (ctas.length === 0) return null;
   return (
     <div className="mt-3 flex flex-wrap justify-center gap-2">
-      {ctas.map((c, i) => (
-        <span
-          key={i}
-          className={
-            i === 0
-              ? "rounded-lg bg-violet-600 px-3 py-1 text-xs font-semibold text-white"
-              : light
+      {ctas.map((c, i) =>
+        i === 0 ? (
+          // Primary CTA: on a colored hero the real button is white-on-accent;
+          // elsewhere it's accent-on-white.
+          <span
+            key={i}
+            className="rounded-lg px-3 py-1 text-xs font-semibold"
+            style={
+              onDark
+                ? { background: "#ffffff", color: accent }
+                : { background: accent, color: "#ffffff" }
+            }
+          >
+            {c}
+          </span>
+        ) : (
+          <span
+            key={i}
+            className={
+              onDark
                 ? "rounded-lg border border-white/40 px-3 py-1 text-xs font-semibold text-white"
                 : "rounded-lg border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-600 dark:border-zinc-600 dark:text-zinc-300"
-          }
-        >
-          {c}
-        </span>
-      ))}
+            }
+          >
+            {c}
+          </span>
+        )
+      )}
     </div>
   );
 }
 
-function SectionCard({ section }: { section: Section }) {
+function SectionCard({ section, brand }: { section: Section; brand: string | null }) {
   const { layout, heading, subtitle, ctas, items, itemCount } = section;
+  const accent = accentOf(section, brand);
 
   if (layout === "hero") {
     return (
-      <div className="relative rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-10 text-center">
+      <div
+        className="relative rounded-xl px-6 py-10 text-center"
+        style={{ background: accent }}
+      >
         <TypeBadge type={section.type} />
         <div className="text-xl leading-tight font-bold text-white">
           {heading || "Hero headline"}
         </div>
         {subtitle && (
-          <div className="mx-auto mt-2 max-w-[420px] text-[13px] leading-snug text-violet-100">
+          <div className="mx-auto mt-2 max-w-[420px] text-[13px] leading-snug text-white/85">
             {subtitle}
           </div>
         )}
-        <CtaPills ctas={ctas} light />
+        <CtaPills ctas={ctas} accent={accent} onDark />
       </div>
     );
   }
 
   if (layout === "band") {
     return (
-      <div className="relative rounded-xl border border-violet-200 bg-violet-50 px-6 py-6 text-center dark:border-violet-900 dark:bg-violet-950">
+      <div
+        className="relative rounded-xl border px-6 py-6 text-center"
+        style={{ background: tint(accent, 8), borderColor: tint(accent, 30) }}
+      >
         <TypeBadge type={section.type} />
         <div className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100">
           {heading || section.type}
@@ -117,7 +163,7 @@ function SectionCard({ section }: { section: Section }) {
             ))}
           </div>
         )}
-        <CtaPills ctas={ctas} />
+        <CtaPills ctas={ctas} accent={accent} />
       </div>
     );
   }
@@ -136,7 +182,7 @@ function SectionCard({ section }: { section: Section }) {
             const [value, ...rest] = it.split(" ");
             return (
               <div key={i} className="text-center">
-                <div className="text-lg font-bold text-violet-600 tabular-nums dark:text-violet-400">
+                <div className="text-lg font-bold tabular-nums" style={{ color: accent }}>
                   {value}
                 </div>
                 <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -163,7 +209,7 @@ function SectionCard({ section }: { section: Section }) {
               key={i}
               className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800"
             >
-              <div className="mb-1.5 size-5 rounded-md bg-violet-200 dark:bg-violet-800" />
+              <div className="mb-1.5 size-5 rounded-md" style={{ background: tint(accent, 20) }} />
               <div className="truncate text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
                 {it || "Item"}
               </div>
@@ -247,7 +293,7 @@ function SectionCard({ section }: { section: Section }) {
       {subtitle && (
         <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</div>
       )}
-      <CtaPills ctas={ctas} />
+      <CtaPills ctas={ctas} accent={accent} />
     </div>
   );
 }
@@ -264,7 +310,7 @@ export default function LandingPagePreview() {
       <McpUseProvider autoSize>
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-zinc-500 dark:border-zinc-800 dark:border-t-zinc-400" />
             <p className="m-0 text-sm">Loading page…</p>
           </div>
         </div>
@@ -272,8 +318,18 @@ export default function LandingPagePreview() {
     );
   }
 
-  const { title, slug, is_published, public_path, preview_path, preview_url, sections, warnings } =
-    props;
+  const {
+    title,
+    slug,
+    is_published,
+    public_path,
+    preview_path,
+    preview_url,
+    brand_color,
+    sections,
+    warnings,
+  } = props;
+  const headerAccent = brand_color ?? FALLBACK_ACCENT;
 
   return (
     <McpUseProvider autoSize>
@@ -298,6 +354,15 @@ export default function LandingPagePreview() {
               </div>
               <div className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
                 {public_path} · {sections.length} sections
+                {brand_color && (
+                  <>
+                    {" · brand "}
+                    <span
+                      className="inline-block size-2.5 rounded-full align-[-1px]"
+                      style={{ background: brand_color }}
+                    />
+                  </>
+                )}
               </div>
             </div>
             {preview_url ? (
@@ -305,7 +370,8 @@ export default function LandingPagePreview() {
                 href={preview_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white no-underline hover:bg-violet-700"
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white no-underline"
+                style={{ background: headerAccent }}
               >
                 Open real preview ↗
               </a>
@@ -318,7 +384,8 @@ export default function LandingPagePreview() {
 
           {/* Wireframe note */}
           <div className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
-            Structural wireframe — real styling, images, and live data render in the editor/preview.
+            Structural wireframe in the school's brand colors — images and live data render in the
+            editor/preview.
           </div>
 
           {/* Section flow */}
@@ -329,7 +396,7 @@ export default function LandingPagePreview() {
           ) : (
             <div className="flex flex-col gap-2">
               {sections.map((section, i) => (
-                <SectionCard key={i} section={section} />
+                <SectionCard key={i} section={section} brand={brand_color} />
               ))}
             </div>
           )}

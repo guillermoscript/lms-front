@@ -168,6 +168,8 @@ interface SectionSummary {
   ctas: string[];
   items: string[];
   itemCount: number;
+  /** Explicit per-block color override (backgroundColor/accentColor prop), if set. */
+  color: string | null;
 }
 
 /** Reduce a block's props to the display-friendly summary the preview widget renders. */
@@ -217,11 +219,35 @@ function summarizeSection(type: string, props: Record<string, unknown>): Section
     }
   }
 
-  return { type, layout: LAYOUT_BY_TYPE[type] ?? "text", heading, subtitle, ctas, items, itemCount };
+  // Mirror the app's accentVars() precedence: explicit block color, else tenant brand.
+  const rawColor = s(props.backgroundColor) || s(props.accentColor);
+  const color = rawColor.trim() ? rawColor.trim() : null;
+
+  return { type, layout: LAYOUT_BY_TYPE[type] ?? "text", heading, subtitle, ctas, items, itemCount, color };
+}
+
+/**
+ * The tenant's brand primary color (`tenants.primary_color`). Blocks that don't set an
+ * explicit color render with `var(--primary)` in the real app, so the wireframe must use
+ * this to match. Null when unset/unreadable — the widget falls back to a neutral accent.
+ */
+async function tenantBrandColor(session: LmsSession): Promise<string | null> {
+  const { data } = await session
+    .getClient()
+    .from("tenants")
+    .select("primary_color")
+    .eq("id", session.getTenantId())
+    .maybeSingle();
+  const color = (data?.primary_color as string | undefined)?.trim();
+  return color ? color : null;
 }
 
 /** Props for the landing-page-preview widget, built from a DB row. */
-function previewWidgetProps(row: Record<string, unknown>, warnings: string[] = []) {
+function previewWidgetProps(
+  row: Record<string, unknown>,
+  brandColor: string | null,
+  warnings: string[] = []
+) {
   const puck = row.puck_data as PuckData | null;
   const sections = (puck?.content ?? []).map((c) => {
     const { id: _id, ...props } = c.props ?? {};
@@ -235,6 +261,7 @@ function previewWidgetProps(row: Record<string, unknown>, warnings: string[] = [
     public_path: publicPath(row.slug as string),
     preview_path: previewPath(row.page_id as string),
     preview_url: base ? `${base}${previewPath(row.page_id as string)}` : null,
+    brand_color: brandColor,
     sections,
     warnings: Array.isArray(warnings) ? warnings : [],
   };
@@ -365,7 +392,7 @@ export function registerLandingPageTools(server: MCPServer) {
         // Note: with a widget, structuredContent carries the widget props — the
         // machine-readable full section list must travel in the text instead.
         return widget({
-          props: previewWidgetProps(data),
+          props: previewWidgetProps(data, await tenantBrandColor(session)),
           output: text(
             `"${data.title}" (/${data.slug}) — ${data.is_published ? "PUBLISHED" : "draft"}, ${sections.length} sections: ${sections.map((s) => s.type).join(" → ") || "(empty)"}. Preview at ${previewPath(data.page_id)}.\n\nFull sections (use as the basis for lms_update_landing_page elements):\n\`\`\`json\n${JSON.stringify(sections, null, 1)}\n\`\`\``
           ),
@@ -439,7 +466,7 @@ export function registerLandingPageTools(server: MCPServer) {
             ? `\nWarnings (page saved, but review these):\n${built.warnings.map((w) => `- ${w}`).join("\n")}`
             : "";
         return widget({
-          props: previewWidgetProps(data, built.warnings),
+          props: previewWidgetProps(data, await tenantBrandColor(session), built.warnings),
           output: text(
             `Created draft "${data.title}" (/${data.slug}, page_id ${data.page_id}) with ${built.data.content.length} sections. Preview it at ${previewPath(data.page_id)} or refine it in the visual editor, then publish with lms_publish_landing_page.${warningText}`
           ),
@@ -531,7 +558,7 @@ export function registerLandingPageTools(server: MCPServer) {
             ? `\nWarnings:\n${warnings.map((w) => `- ${w}`).join("\n")}`
             : "";
         return widget({
-          props: previewWidgetProps(data, warnings),
+          props: previewWidgetProps(data, await tenantBrandColor(session), warnings),
           output: text(
             `Updated "${data.title}" (/${data.slug}, page_id ${data.page_id})${input.elements ? ` — now ${(data.puck_data as PuckData).content.length} sections` : ""}.${data.is_published ? " The page is LIVE; changes are visible immediately." : ""} Preview at ${previewPath(data.page_id)}.${warningText}`
           ),
