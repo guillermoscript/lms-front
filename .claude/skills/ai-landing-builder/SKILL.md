@@ -38,6 +38,17 @@ Puck Data  ──▶  dispatch({type:'setData'})  ──▶  opens live in the P
    ▼  saved to landing_pages.puck_data
 ```
 
+**A third flow (July 2026): MCP tools.** The MCP server exposes the same pipeline to external AI
+agents via 8 admin-only tools (`lms_get_landing_blocks`, `lms_list/get/create/update_landing_page`,
+`lms_publish/unpublish/delete_landing_page` in `mcp-server/src/tools/landing-pages.ts`). Because
+mcp-server is built/deployed standalone (Docker context = `./mcp-server`), it cannot import
+`lib/json-render/*`; instead `npm run gen:puck-fields` ALSO emits generated mirrors into
+`mcp-server/src/landing/` (`puck-fields.generated.ts` + `catalog-meta.generated.ts` from
+`catalog-meta.ts`/`LANDING_PAGE_CRAFT_GUIDE`), and `mcp-server/src/landing/{from-puck-fields,to-puck}.ts`
+are kept-in-sync copies of the same-named lib files. **After changing any Puck block or the
+descriptions, re-run `npm run gen:puck-fields` — it updates both surfaces.** If you edit
+`lib/json-render/from-puck-fields.ts` or `to-puck.ts`, apply the same change to the mcp-server copy.
+
 ## Map of the system
 
 | File | Role |

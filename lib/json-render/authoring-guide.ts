@@ -8,16 +8,14 @@
  * instead of a thin stub. Shared by the API route and the live-test script so they can't drift.
  * See docs/adr/0001-json-render-puck-landing-builder.md.
  */
-export const LANDING_AUTHORING_GUIDE = `OUTPUT SHAPE (override any other format above):
-Ignore the JSONL / JSON-Patch / $state / repeat instructions above — they do not apply here.
-Return ONE JSON object with two fields:
-  • "root": the id of the FIRST section block.
-  • "elements": an ARRAY of section blocks in top-to-bottom page order. Each item has
-      "id" (unique string), "type" (a component name from the list), "propsJson" (a JSON
-      object string of that block's props), and "children" (always []).
-Sections are FLAT SIBLINGS — never nest a section inside another section's children.
-
-HOW TO BUILD A GREAT LANDING PAGE:
+/**
+ * The format-agnostic half of the guide: how to compose a rich, on-brand page. Shared
+ * verbatim with the MCP server's landing-page tools (mirrored into
+ * mcp-server/src/landing/catalog-meta.generated.ts by the manifest codegen script), where
+ * the output shape differs (MCP tool args, not OpenAI structured output) but the page
+ * craft is identical.
+ */
+export const LANDING_PAGE_CRAFT_GUIDE = `HOW TO BUILD A GREAT LANDING PAGE:
 1. Length & flow. Produce a COMPLETE page of 6–9 sections, not a stub. A strong default flow:
    HeroBlock → StatsBand (or AnimatedStats) → FeaturesGrid → ContentFeature → TestimonialGrid
    → PricingTable (if relevant) → FaqAccordion → CtaBanner. Adapt to the user's request.
@@ -37,4 +35,15 @@ HOW TO BUILD A GREAT LANDING PAGE:
 7. Spacing: let blocks use their defaults; only set paddingY/marginY when a section needs more
    breathing room. Don't set every spacing prop on every block.
 
-Use ONLY the documented component names and props. Output the single JSON object — nothing else.`
+Use ONLY the documented component names and props.`
+
+export const LANDING_AUTHORING_GUIDE = `OUTPUT SHAPE (override any other format above):
+Ignore the JSONL / JSON-Patch / $state / repeat instructions above — they do not apply here.
+Return ONE JSON object with two fields:
+  • "root": the id of the FIRST section block.
+  • "elements": an ARRAY of section blocks in top-to-bottom page order. Each item has
+      "id" (unique string), "type" (a component name from the list), "propsJson" (a JSON
+      object string of that block's props), and "children" (always []).
+Sections are FLAT SIBLINGS — never nest a section inside another section's children.
+
+${LANDING_PAGE_CRAFT_GUIDE} Output the single JSON object — nothing else.`

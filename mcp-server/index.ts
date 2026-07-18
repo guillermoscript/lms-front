@@ -17,6 +17,7 @@ import { registerEnrollTools } from "./src/tools/enroll.js";
 import { registerFlashcardTools } from "./src/tools/flashcards.js";
 import { registerStudyPlanTools } from "./src/tools/study-plan.js";
 import { registerAskTeacherTools } from "./src/tools/ask-teacher.js";
+import { registerLandingPageTools } from "./src/tools/landing-pages.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -35,7 +36,7 @@ const server = new MCPServer({
   description:
     "Manage courses, lessons, exercises, exams, and analytics for the LMS. Teachers and admins get management tools; students get self-scoped learning tools.",
   instructions:
-    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. All actions are scoped to the caller's tenant and enforced by row-level security.",
+    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Admins can also draft school landing pages: lms_get_landing_blocks for the block vocabulary, then lms_create_landing_page (draft) and lms_publish_landing_page. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. All actions are scoped to the caller's tenant and enforced by row-level security.",
   baseUrl:
     process.env.MCP_SERVER_URL || process.env.MCP_URL || "http://localhost:3000",
   favicon: "favicon.ico",
@@ -80,6 +81,7 @@ registerEnrollTools(server);
 registerFlashcardTools(server);
 registerStudyPlanTools(server);
 registerAskTeacherTools(server);
+registerLandingPageTools(server);
 registerResources(server);
 registerPrompts(server);
 
