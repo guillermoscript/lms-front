@@ -77,6 +77,17 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   // partial "school" (their own courses via RLS), which is misleading; the
   // per-course tools (lms_get_course_stats, lms_get_student_progress) cover them.
   "lms_get_school_stats",
+  // Landing pages are school-level marketing — admin only (the landing_pages RLS
+  // policy also only grants tenant admins, so hiding these from teachers just
+  // avoids guaranteed permission errors). lms_delete_landing_page is already
+  // covered by the lms_delete_ prefix.
+  "lms_get_landing_blocks",
+  "lms_list_landing_pages",
+  "lms_get_landing_page",
+  "lms_create_landing_page",
+  "lms_update_landing_page",
+  "lms_publish_landing_page",
+  "lms_unpublish_landing_page",
 ]);
 
 export function isToolAllowedForRole(
