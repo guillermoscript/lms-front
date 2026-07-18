@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconCheck, IconX, IconArrowRight } from '@tabler/icons-react'
+import { setUiState } from '@/app/actions/ui-state'
 
 export interface OnboardingStep {
   id: string
@@ -16,8 +17,12 @@ export interface OnboardingStep {
 }
 
 interface OnboardingChecklistProps {
-  /** Unique key for localStorage persistence (e.g., "teacher-onboarding") */
+  /** Unique key for the localStorage optimistic cache (e.g., "teacher-onboarding") */
   storageKey: string
+  /** user_ui_state key (e.g. checklistStateKey('admin')) — dismissal persists server-side */
+  stateKey?: string
+  /** Server-persisted dismissal, read in the page. localStorage is only a cache on top. */
+  dismissed?: boolean
   title: string
   subtitle?: string
   steps: OnboardingStep[]
@@ -25,25 +30,27 @@ interface OnboardingChecklistProps {
   footer?: React.ReactNode
 }
 
-export function OnboardingChecklist({ storageKey, title, subtitle, steps, footer }: OnboardingChecklistProps) {
-  // Hydration-safe localStorage read: hidden on the server (avoids flash),
-  // real value on the client. Same-tab dismissal re-renders via local state.
-  const storedDismissed = useSyncExternalStore(
+export function OnboardingChecklist({ storageKey, stateKey, dismissed = false, title, subtitle, steps, footer }: OnboardingChecklistProps) {
+  // The server-provided `dismissed` prop decides the SSR output (no hydration
+  // flash). The localStorage cache only papers over the window where a
+  // dismissal hasn't round-tripped to the server yet; server value wins.
+  const cachedDismissed = useSyncExternalStore(
     () => () => undefined,
     () => localStorage.getItem(`onboarding-dismissed:${storageKey}`) === 'true',
-    () => true,
+    () => false,
   )
   const [dismissedNow, setDismissedNow] = useState(false)
-  const dismissed = storedDismissed || dismissedNow
+  const isDismissed = dismissed || cachedDismissed || dismissedNow
 
   const completedCount = steps.filter(s => s.completed).length
   const allDone = completedCount === steps.length
 
-  if (dismissed) return null
+  if (isDismissed) return null
 
   const handleDismiss = () => {
     localStorage.setItem(`onboarding-dismissed:${storageKey}`, 'true')
     setDismissedNow(true)
+    if (stateKey) void setUiState(stateKey, 'dismissed')
   }
 
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0

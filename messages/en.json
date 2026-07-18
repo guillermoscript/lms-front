@@ -217,6 +217,8 @@
       "subtitle": "Manage your account and integrations.",
       "accountTitle": "Account Details",
       "accountSubtitle": "Update your personal information",
+      "preferencesTitle": "Preferences",
+      "preferencesSubtitle": "Personal settings for how the dashboard behaves",
       "manageTokens": "Manage API tokens"
     },
     "student": {
@@ -2383,6 +2385,10 @@
           "solanaWallet": {
             "title": "Solana Wallet",
             "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
+          },
+          "personalPreferences": {
+            "title": "Personal preferences",
+            "description": "These settings apply only to your account, not the whole school."
           }
         },
         "form": {
@@ -3403,6 +3409,13 @@
     "ago": "ago"
   },
   "components": {
+    "toursToggle": {
+      "label": "Show tips & tours",
+      "description": "Guided tours and onboarding tips on your dashboards. Turning this off stops tours from starting automatically — you can still replay one with the help button.",
+      "enabledToast": "Tips & tours enabled",
+      "disabledToast": "Tips & tours disabled",
+      "error": "Could not save your preference. Please try again."
+    },
     "verifyEmailBanner": {
       "message": "Verify your email — we sent a confirmation link to {email}.",
       "gatedNote": "Sending invitations and payout setup are locked until verified.",

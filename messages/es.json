@@ -217,6 +217,8 @@
       "subtitle": "Administra tu cuenta e integraciones.",
       "accountTitle": "Detalles de la Cuenta",
       "accountSubtitle": "Actualiza tu información personal",
+      "preferencesTitle": "Preferencias",
+      "preferencesSubtitle": "Ajustes personales sobre el comportamiento del panel",
       "manageTokens": "Administrar tokens de API"
     },
     "student": {
@@ -2379,6 +2381,10 @@
           "solanaWallet": {
             "title": "Wallet de Solana",
             "description": "La wallet receptora de tu escuela para pagos en cripto Solana (pago único y suscripción)."
+          },
+          "personalPreferences": {
+            "title": "Preferencias personales",
+            "description": "Estos ajustes aplican solo a tu cuenta, no a toda la escuela."
           }
         },
         "form": {
@@ -3248,6 +3254,13 @@
     "ago": "atrás"
   },
   "components": {
+    "toursToggle": {
+      "label": "Mostrar consejos y recorridos",
+      "description": "Recorridos guiados y consejos de bienvenida en tus paneles. Al desactivarlo, los recorridos dejan de iniciarse automáticamente; aún puedes repetirlos con el botón de ayuda.",
+      "enabledToast": "Consejos y recorridos activados",
+      "disabledToast": "Consejos y recorridos desactivados",
+      "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
+    },
     "verifyEmailBanner": {
       "message": "Verifica tu correo — enviamos un enlace de confirmación a {email}.",
       "gatedNote": "Las invitaciones y la configuración de pagos quedan bloqueadas hasta verificar.",

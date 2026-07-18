@@ -11,11 +11,14 @@ import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import StripeConnectCard from '@/components/admin/stripe-connect-card'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
+import { ToursToggle } from '@/components/shared/tours-toggle'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { areToursEnabled } from '@/lib/ui-state-keys'
 
 export default async function SettingsPage({
   searchParams,
@@ -78,6 +81,11 @@ export default async function SettingsPage({
   const { tab } = await searchParams
   const validTabs = ['general', 'email', 'payment', 'enrollment']
   const defaultTab = tab && validTabs.includes(tab) ? tab : 'general'
+
+  // Personal (per-user) UI preferences — distinct from the tenant-wide settings
+  // in the tabs above (#452). Absent user id just falls back to tours-enabled.
+  const userId = await getCurrentUserId()
+  const uiState = userId ? await getUiState(userId) : {}
 
   // Fetch referral code (non-blocking — silently skip if it fails)
   const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
@@ -195,6 +203,20 @@ export default async function SettingsPage({
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Personal preferences — per-user, kept visually separate from the
+              tenant-wide settings tabs above (#452). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('sections.personalPreferences.title')}</CardTitle>
+              <CardDescription>
+                {t('sections.personalPreferences.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ToursToggle initialEnabled={areToursEnabled(uiState)} />
+            </CardContent>
+          </Card>
 
           {/* Referral Program — secondary, below main settings */}
           {referralCode && (

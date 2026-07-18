@@ -10,9 +10,11 @@ const TOUR_ID = 'lesson-editor'
 
 interface LessonEditorTourProps {
   userId: string
+  completed?: boolean
+  toursEnabled?: boolean
 }
 
-export function LessonEditorTour({ userId }: LessonEditorTourProps) {
+export function LessonEditorTour({ userId, completed, toursEnabled }: LessonEditorTourProps) {
   const t = useTranslations('dashboard.teacher.lessonEditor')
   const [restartKey, setRestartKey] = useState(0)
 
@@ -37,6 +39,8 @@ export function LessonEditorTour({ userId }: LessonEditorTourProps) {
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
+        completed={completed}
+        toursEnabled={toursEnabled}
       />
     </>
   )

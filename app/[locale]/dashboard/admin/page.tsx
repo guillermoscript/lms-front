@@ -21,6 +21,8 @@ import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 
 export default async function AdminDashboardPage({
   params,
@@ -52,6 +54,7 @@ export default async function AdminDashboardPage({
     { count: activeSubscriptions },
     { data: recentTransactions },
     { data: recentTenantUsers },
+    uiState,
   ] = await Promise.all([
     supabase.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
@@ -85,6 +88,7 @@ export default async function AdminDashboardPage({
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(5),
+    getUiState(userId),
   ])
 
   // Supabase infers the profiles(...) embed as an array even though the FK
@@ -190,12 +194,18 @@ export default async function AdminDashboardPage({
       />
 
       {/* Guided Tour (client component) */}
-      <AdminDashboardTour userId={userId} />
+      <AdminDashboardTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'admin-dashboard')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">
       <OnboardingChecklist
         storageKey={`admin-${userId}`}
+        stateKey={checklistStateKey('admin')}
+        dismissed={isChecklistDismissed(uiState, 'admin')}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
         steps={[

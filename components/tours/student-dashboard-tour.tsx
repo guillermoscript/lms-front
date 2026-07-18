@@ -10,9 +10,11 @@ const TOUR_ID = 'student-dashboard'
 
 interface StudentDashboardTourProps {
   userId: string
+  completed?: boolean
+  toursEnabled?: boolean
 }
 
-export function StudentDashboardTour({ userId }: StudentDashboardTourProps) {
+export function StudentDashboardTour({ userId, completed, toursEnabled }: StudentDashboardTourProps) {
   const t = useTranslations('dashboard.student')
   const [restartKey, setRestartKey] = useState(0)
 
@@ -37,6 +39,8 @@ export function StudentDashboardTour({ userId }: StudentDashboardTourProps) {
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
+        completed={completed}
+        toursEnabled={toursEnabled}
       />
     </>
   )

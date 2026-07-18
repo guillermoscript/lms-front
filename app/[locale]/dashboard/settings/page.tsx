@@ -6,8 +6,11 @@ import { getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
 import { createClient } from '@/lib/supabase/server'
 import { ProfileForm } from '@/components/student/profile-form'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
+import { ToursToggle } from '@/components/shared/tours-toggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { areToursEnabled } from '@/lib/ui-state-keys'
 
 // Shared settings entry point for the sidebar/user-nav links. Admins and
 // students already have richer settings surfaces; teachers get their account
@@ -27,6 +30,8 @@ export default async function DashboardSettingsPage() {
     .select('*')
     .eq('id', userId)
     .single()
+
+  const uiState = await getUiState(userId)
 
   const tenant = await getCurrentTenant()
   const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
@@ -51,6 +56,16 @@ export default async function DashboardSettingsPage() {
           </CardHeader>
           <CardContent>
             <ProfileForm profile={profile} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t('preferencesTitle')}</CardTitle>
+            <CardDescription>{t('preferencesSubtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ToursToggle initialEnabled={areToursEnabled(uiState)} />
           </CardContent>
         </Card>
 
