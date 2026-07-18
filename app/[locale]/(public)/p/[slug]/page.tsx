@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
-import { getLandingCourses } from '@/lib/puck/utils/landing-data'
+import { getLandingData } from '@/lib/puck/utils/landing-data'
 import { ogImageUrl } from '@/lib/seo'
 import type { Metadata } from 'next'
 
@@ -70,6 +70,6 @@ export default async function CustomPage({ params }: PageProps) {
   const result = await getPageData(slug)
   if (!result) notFound()
 
-  const courses = await getLandingCourses(result.tenantId)
-  return <PuckPageRenderer data={result.page.puck_data as any} courses={courses} />
+  const landingData = await getLandingData(result.tenantId)
+  return <PuckPageRenderer data={result.page.puck_data as any} landingData={landingData} />
 }

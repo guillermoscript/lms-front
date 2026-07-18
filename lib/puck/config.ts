@@ -40,6 +40,8 @@ import { Banner } from './components/lms/banner'
 import { TeamGrid } from './components/lms/team-grid'
 import { ImageGallery } from './components/lms/image-gallery'
 import { SocialProof } from './components/lms/social-proof'
+import { EnrollCta } from './components/lms/enroll-cta'
+import { CatalogBrowser } from './components/lms/catalog-browser'
 
 // Navigation
 import { Header } from './components/navigation/header'
@@ -86,6 +88,8 @@ const componentDefinitions = {
   TeamGrid,
   ImageGallery,
   SocialProof,
+  EnrollCta,
+  CatalogBrowser,
   // Navigation
   Header,
   Footer,
@@ -133,6 +137,8 @@ const categoryDefinitions = {
       'TeamGrid',
       'ImageGallery',
       'SocialProof',
+      'EnrollCta',
+      'CatalogBrowser',
     ] as string[],
   },
   navigation: {

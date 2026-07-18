@@ -4,6 +4,7 @@ import { fitnessStudioTemplates } from './fitness-studio'
 import { musicAcademyTemplates } from './music-academy'
 import { businessCoachingTemplates } from './business-coaching'
 import { designSchoolTemplates } from './design-school'
+import { freeCourseSchoolTemplates } from './free-course-school'
 
 // Re-export shared helpers so existing importers (`@/lib/puck/templates`)
 // keep working unchanged.
@@ -1109,4 +1110,5 @@ export const PUCK_TEMPLATES: PuckTemplate[] = [
   ...musicAcademyTemplates,
   ...businessCoachingTemplates,
   ...designSchoolTemplates,
+  ...freeCourseSchoolTemplates,
 ]

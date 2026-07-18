@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
+import type { LandingTestimonial, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
 
 type TestimonialItem = {
@@ -43,11 +44,25 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
     ],
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY }) => {
+  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) => {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
-    if (!items.length) return <></>
 
-    const gridCols = items.length <= 2
+    // Real course reviews resolved server-side and handed in via metadata. When present we
+    // render the tenant's actual testimonials; otherwise fall back to placeholders so the
+    // canvas is never empty.
+    const live = ((puck?.metadata as PuckMetadata | undefined)?.testimonials ?? []) as LandingTestimonial[]
+    const resolvedItems: TestimonialItem[] = live.length > 0
+      ? live.map((tm) => ({
+          name: tm.name,
+          role: tm.courseTitle ?? '',
+          quote: tm.quote,
+          rating: tm.rating ?? 5,
+        }))
+      : (items ?? [])
+
+    if (!resolvedItems.length) return <></>
+
+    const gridCols = resolvedItems.length <= 2
       ? 'grid-cols-1 md:grid-cols-2'
       : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
 
@@ -62,7 +77,7 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
               <p className="text-center text-muted-foreground mb-10">{subtitle}</p>
             )}
             <div className={cn('grid gap-6', gridCols)}>
-              {items.map((item, i) => (
+              {resolvedItems.map((item, i) => (
                 <div
                   key={i}
                   className="p-6 rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"

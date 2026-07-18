@@ -19,7 +19,7 @@ import {
 } from '@tabler/icons-react'
 import type { LandingPage } from '@/app/actions/admin/landing-pages'
 import type { Data } from '@measured/puck'
-import type { LandingCourse } from '@/lib/puck/types'
+import type { LandingData } from '@/lib/puck/types'
 import { deepCloneWithFreshIds } from '@/lib/puck/templates'
 import dynamic from 'next/dynamic'
 
@@ -78,7 +78,7 @@ interface Props {
   tenantId: string
   templates: PuckTemplate[]
   brandingSettings: Record<string, any>
-  courses: LandingCourse[]
+  landingData: LandingData
 }
 
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
@@ -99,7 +99,7 @@ function pageUrl(slug: string): string {
   return slug === 'home' ? '/' : `/p/${slug}`
 }
 
-export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, brandingSettings, courses }: Props) {
+export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, brandingSettings, landingData }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const [pages, setPages] = useState<LandingPage[]>(initialPages)
@@ -213,7 +213,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         pageStatus={editingPage.status}
         initialData={editingPage.puck_data || { root: { props: {} }, content: [], zones: {} }}
         brandingSettings={brandingSettings}
-        courses={courses}
+        landingData={landingData}
         onBack={() => {
           router.refresh()
           setEditingPage(null)

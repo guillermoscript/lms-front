@@ -6,7 +6,7 @@ import type { Data } from '@measured/puck'
 import '@measured/puck/puck.css'
 import { createPuckConfig } from '@/lib/puck/config'
 import { LandingCoursesProvider } from '@/lib/puck/utils/courses-context'
-import type { LandingCourse } from '@/lib/puck/types'
+import type { LandingData } from '@/lib/puck/types'
 import { updateLandingPage, publishLandingPage } from '@/app/actions/admin/landing-pages'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ interface Props {
   pageStatus: 'draft' | 'published'
   initialData: Data
   brandingSettings: Record<string, any>
-  courses: LandingCourse[]
+  landingData: LandingData
   onBack: () => void
 }
 
@@ -87,13 +87,14 @@ function SaveButton({ pageId, saving, onSaveStateChange }: { pageId: string; sav
   )
 }
 
-export function PuckEditor({ pageId, pageName, pageStatus, initialData, brandingSettings, courses, onBack }: Props) {
+export function PuckEditor({ pageId, pageName, pageStatus, initialData, brandingSettings, landingData, onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(pageStatus)
   const [brandingOpen, setBrandingOpen] = useState(false)
   const t = useTranslations('puck')
   const config = useMemo(() => createPuckConfig(t), [t])
-  const metadata = useMemo(() => ({ courses }), [courses])
+  const metadata = useMemo(() => ({ ...landingData }), [landingData])
+  const courses = landingData.courses
 
   const handlePublish = useCallback(async (data: Data) => {
     setSaving(true)

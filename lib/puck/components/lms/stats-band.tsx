@@ -1,4 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
+import type { PuckMetadata } from '../../types'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
@@ -15,6 +17,7 @@ type Stat = {
 export type StatsBandProps = {
   heading: string
   subtitle: string
+  useLiveStats: boolean
   items: Stat[]
 } & SectionSpacingProps
 
@@ -33,6 +36,14 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
   fields: {
     heading: { type: 'text', label: 'Heading' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
+    useLiveStats: {
+      type: 'radio',
+      label: 'Use Live Stats',
+      options: [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+      ],
+    },
     items: {
       type: 'array',
       label: 'Stats',
@@ -49,18 +60,33 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
     heading: 'Our platform in numbers',
     subtitle:
       'A growing community of learners and educators building courses, tracking progress, and earning certificates every day.',
+    useLiveStats: true,
     items: [
       { value: '+1200', label: 'Courses published' },
       { value: '22,000', label: 'Active students' },
       { value: '+500', label: 'Certificates issued' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, heading, subtitle, items }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, heading, subtitle, useLiveStats, items, puck }) => {
+    const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     // Guard against a missing array: AI-generated specs (and Puck's Render path, which does
     // not always backfill defaultProps for top-level array props) can deliver `items` as
     // undefined/null. Default to [] so the block degrades gracefully instead of crashing.
-    const safeItems = items ?? []
+    const manualItems = items ?? []
+
+    // Live stats resolved server-side and handed in via metadata. When present and the admin
+    // hasn't opted out (useLiveStats), render the tenant's real Students/Courses/Completions
+    // counts; otherwise keep the manually-entered stats so the canvas is never empty.
+    const liveStats = (puck?.metadata as PuckMetadata | undefined)?.stats
+    const nf = new Intl.NumberFormat('en-US')
+    const safeItems: Stat[] = (useLiveStats && liveStats)
+      ? [
+          { value: nf.format(liveStats.students), label: t('statStudents') },
+          { value: nf.format(liveStats.courses), label: t('statCourses') },
+          { value: nf.format(liveStats.completions), label: t('statCompletions') },
+        ]
+      : manualItems
 
     return (
       <div className={sectionOuterClass(spacing)}>

@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
+import type { LandingTestimonial, PuckMetadata } from '../../types'
 
 export type SocialProofProps = {
   text: string
@@ -22,11 +23,27 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
     reviewCount: 'Based on 2,000+ reviews',
     avatarCount: 5,
   },
-  render: ({ text, rating, reviewCount, avatarCount }) => {
+  render: ({ text, rating, reviewCount, avatarCount, puck }) => {
+    // Real course reviews resolved server-side and handed in via metadata. When present we
+    // derive the rating (average), review count, and avatar initials from actual reviews;
+    // otherwise fall back to the manually-entered values so the strip is never empty.
+    const live = ((puck?.metadata as PuckMetadata | undefined)?.testimonials ?? []) as LandingTestimonial[]
+    const rated = live.filter((tm) => tm.rating != null)
+
+    const displayRating = rated.length > 0
+      ? Math.round((rated.reduce((sum, tm) => sum + (tm.rating ?? 0), 0) / rated.length) * 10) / 10
+      : rating
+    const displayReviewCount = live.length > 0
+      ? `Based on ${live.length} review${live.length === 1 ? '' : 's'}`
+      : reviewCount
+    const initials = live.length > 0
+      ? live.slice(0, avatarCount).map((tm) => (tm.name?.trim()?.charAt(0) || '?').toUpperCase())
+      : Array.from({ length: avatarCount }, (_, i) => String.fromCharCode(65 + i))
+
     return (
       <div className="flex flex-col items-center gap-3">
         <div className="flex">
-          {Array.from({ length: avatarCount }, (_, i) => (
+          {initials.map((letter, i) => (
             <div
               key={i}
               className={cn(
@@ -34,7 +51,7 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
                 i > 0 && '-ml-2'
               )}
             >
-              {String.fromCharCode(65 + i)}
+              {letter}
             </div>
           ))}
         </div>
@@ -45,17 +62,17 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
                 key={i}
                 className={cn(
                   'text-base',
-                  i < rating ? 'text-amber-500' : 'text-muted-foreground/30'
+                  i < displayRating ? 'text-amber-500' : 'text-muted-foreground/30'
                 )}
               >
                 ★
               </span>
             ))}
           </span>
-          <span className="sr-only">{rating} out of 5 stars</span>
+          <span className="sr-only">{displayRating} out of 5 stars</span>
         </div>
         <p className="font-semibold text-[0.9375rem] text-foreground truncate">{text}</p>
-        <p className="text-[0.8125rem] text-muted-foreground">{reviewCount}</p>
+        <p className="text-[0.8125rem] text-muted-foreground">{displayReviewCount}</p>
       </div>
     )
   },
