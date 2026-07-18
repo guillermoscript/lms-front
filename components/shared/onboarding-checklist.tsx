@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import * as motion from 'motion/react-client'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,15 +21,20 @@ interface OnboardingChecklistProps {
   title: string
   subtitle?: string
   steps: OnboardingStep[]
+  /** Optional slot rendered below the steps (e.g., a link to the guided wizard) */
+  footer?: React.ReactNode
 }
 
-export function OnboardingChecklist({ storageKey, title, subtitle, steps }: OnboardingChecklistProps) {
-  const [dismissed, setDismissed] = useState(true) // default hidden to avoid flash
-
-  useEffect(() => {
-    const stored = localStorage.getItem(`onboarding-dismissed:${storageKey}`)
-    setDismissed(stored === 'true')
-  }, [storageKey])
+export function OnboardingChecklist({ storageKey, title, subtitle, steps, footer }: OnboardingChecklistProps) {
+  // Hydration-safe localStorage read: hidden on the server (avoids flash),
+  // real value on the client. Same-tab dismissal re-renders via local state.
+  const storedDismissed = useSyncExternalStore(
+    () => () => undefined,
+    () => localStorage.getItem(`onboarding-dismissed:${storageKey}`) === 'true',
+    () => true,
+  )
+  const [dismissedNow, setDismissedNow] = useState(false)
+  const dismissed = storedDismissed || dismissedNow
 
   const completedCount = steps.filter(s => s.completed).length
   const allDone = completedCount === steps.length
@@ -38,7 +43,7 @@ export function OnboardingChecklist({ storageKey, title, subtitle, steps }: Onbo
 
   const handleDismiss = () => {
     localStorage.setItem(`onboarding-dismissed:${storageKey}`, 'true')
-    setDismissed(true)
+    setDismissedNow(true)
   }
 
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0
@@ -123,6 +128,12 @@ export function OnboardingChecklist({ storageKey, title, subtitle, steps }: Onbo
               <p className="text-xs text-muted-foreground">
                 All done! You can dismiss this checklist.
               </p>
+            </div>
+          )}
+
+          {footer && (
+            <div className="mt-3 pt-3 border-t">
+              {footer}
             </div>
           )}
         </CardContent>
