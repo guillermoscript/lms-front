@@ -27,11 +27,9 @@ export function CommunityTour({ userId, userRole, completed, toursEnabled }: Com
 
   return (
     <>
-      <TourTrigger
-        tourId={TOUR_ID}
-        userId={userId}
-        onRestart={handleRestart}
-      />
+      {toursEnabled !== false && (
+        <TourTrigger onRestart={handleRestart} />
+      )}
       <GuidedTour
         key={restartKey}
         forceStart={restartKey > 0}

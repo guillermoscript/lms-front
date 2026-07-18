@@ -76,6 +76,17 @@
     "completed": "Completado",
     "lessonsCompleted": "lecciones completadas",
     "lessons": "lecciones",
+    "tour": {
+      "replay": "Repetir recorrido"
+    },
+    "onboardingChecklist": {
+      "dismiss": "Descartar lista",
+      "nextAction": "Haz esto ahora",
+      "doThisNext": "Haz esto ahora → {step}",
+      "completedSteps": "Pasos completados",
+      "remainingSteps": "{count, plural, one {# paso más} other {# pasos más}}",
+      "allDone": "¡Todo listo! Puedes descartar esta lista."
+    },
     "courseSelector": {
       "label": "Cursos Incluidos",
       "loading": "Cargando cursos...",
@@ -1661,16 +1672,26 @@
           "subtitle": "Configura tu escuela en unos simples pasos.",
           "configureSchool": "Configura los datos de tu escuela",
           "configureSchoolDesc": "Define el nombre y los datos básicos de tu escuela.",
+          "configureSchoolTime": "~1 min",
           "brandSchool": "Dale identidad a tu escuela",
           "brandSchoolDesc": "Elige un tema, colores y tipograf\u00eda. Opcional \u2014 los valores por defecto lucen muy bien.",
+          "brandSchoolTime": "~2 min",
           "connectPayments": "Configura cómo recibir pagos",
           "connectPaymentsDesc": "Elige pagos manuales, Stripe u otro proveedor disponible.",
+          "connectPaymentsTime": "~2 min",
           "wizardPrompt": "\u00bfPrefieres una configuraci\u00f3n guiada?",
           "wizardLink": "Abrir el asistente de configuraci\u00f3n",
           "addCourse": "Crea tu primer curso — define un precio y publícalo",
           "addCourseDesc": "Usa la creación rápida para publicar en minutos o genera un borrador con IA.",
+          "addCourseTime": "~3 min",
           "inviteUsers": "Invita a tus primeros estudiantes",
-          "inviteUsersDesc": "Invita estudiantes a unirse a tu escuela."
+          "inviteUsersDesc": "Invita estudiantes a unirse a tu escuela.",
+          "inviteUsersTime": "~1 min",
+          "courseSuccessTitle": "¡Tu primer curso ya está disponible!",
+          "courseSuccessDescription": "{course} está listo para compartir. Envía el enlace a tus primeros estudiantes.",
+          "copyCourseLink": "Copiar enlace del curso",
+          "courseLinkCopied": "Enlace copiado",
+          "viewCourse": "Ver curso"
         },
         "tour": {
           "checklist": {

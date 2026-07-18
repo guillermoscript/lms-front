@@ -26,13 +26,11 @@ export function StudentDashboardTour({ userId, completed, toursEnabled }: Studen
 
   return (
     <>
-      <div className="fixed right-4 top-4 z-40">
+      {toursEnabled !== false && <div className="fixed right-4 top-4 z-40">
         <TourTrigger
-          tourId={TOUR_ID}
-          userId={userId}
           onRestart={handleRestart}
         />
-      </div>
+      </div>}
       <GuidedTour
         key={restartKey}
         forceStart={restartKey > 0}

@@ -1,25 +1,19 @@
 'use client'
 
 import { HelpCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { clearTourCompleted } from './guided-tour'
-
 interface TourTriggerProps {
-  tourId: string
-  userId: string
   onRestart: () => void
 }
 
-export function TourTrigger({ tourId, userId, onRestart }: TourTriggerProps) {
-  function handleClick() {
-    clearTourCompleted(tourId, userId)
-    onRestart()
-  }
+export function TourTrigger({ onRestart }: TourTriggerProps) {
+  const t = useTranslations('common.tour')
 
   return (
     <Tooltip>
@@ -28,15 +22,15 @@ export function TourTrigger({ tourId, userId, onRestart }: TourTriggerProps) {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={handleClick}
+            onClick={onRestart}
             className="text-muted-foreground hover:text-foreground"
           >
             <HelpCircle className="size-4" />
-            <span className="sr-only">Replay tour</span>
+            <span className="sr-only">{t('replay')}</span>
           </Button>
         }
       />
-      <TooltipContent>Replay tour</TooltipContent>
+      <TooltipContent>{t('replay')}</TooltipContent>
     </Tooltip>
   )
 }
