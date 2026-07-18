@@ -5773,7 +5773,10 @@ export type Database = {
           slug: string
           status: string | null
           stripe_account_id: string | null
+          stripe_charges_enabled: boolean
           stripe_customer_id: string | null
+          stripe_details_submitted: boolean
+          stripe_payouts_enabled: boolean
           updated_at: string | null
         }
         Insert: {
@@ -5791,7 +5794,10 @@ export type Database = {
           slug: string
           status?: string | null
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
           stripe_customer_id?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
           updated_at?: string | null
         }
         Update: {
@@ -5809,7 +5815,10 @@ export type Database = {
           slug?: string
           status?: string | null
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
           stripe_customer_id?: string | null
+          stripe_details_submitted?: boolean
+          stripe_payouts_enabled?: boolean
           updated_at?: string | null
         }
         Relationships: []

@@ -2366,7 +2366,12 @@
               "connectedDesc": "Your Stripe account is connected. Students can pay online with credit cards.",
               "notConnectedTitle": "Stripe Not Connected",
               "notConnectedDesc": "Connect a Stripe account to accept credit card payments, or use the toggles below to enable other payment methods.",
-              "connectButton": "Connect Stripe"
+              "connectButton": "Connect Stripe",
+              "pendingTitle": "Stripe Setup Incomplete",
+              "pendingDesc": "Your Stripe account was created but onboarding isn't finished. Resume where you left off — it only takes a few minutes.",
+              "pendingReviewDesc": "Your details were submitted and Stripe is reviewing them. Card payments will be enabled automatically once the review completes.",
+              "resumeButton": "Finish Stripe setup",
+              "payoutsPending": "Payouts are not enabled yet — Stripe may need additional information before transferring funds to your bank."
             }
           },
           "enrollment": {

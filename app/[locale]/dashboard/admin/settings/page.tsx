@@ -12,6 +12,7 @@ import PaymentSettingsForm from '@/components/admin/payment-settings-form'
 import StripeConnectCard from '@/components/admin/stripe-connect-card'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
@@ -57,10 +58,21 @@ export default async function SettingsPage({
   const tenantId = await getCurrentTenantId()
   const { data: tenant } = await createAdminClient()
     .from('tenants')
-    .select('stripe_account_id')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
     .eq('id', tenantId)
     .single()
   const stripeAccountId = tenant?.stripe_account_id ?? null
+  let connectStatus = {
+    chargesEnabled: tenant?.stripe_charges_enabled ?? false,
+    payoutsEnabled: tenant?.stripe_payouts_enabled ?? false,
+    detailsSubmitted: tenant?.stripe_details_submitted ?? false,
+  }
+  // While Express onboarding is incomplete, pull live status from Stripe so
+  // the card is fresh right after the admin returns from the hosted flow
+  // (webhook lag / local dev without webhooks). Falls back to DB state (#439).
+  if (stripeAccountId && !connectStatus.chargesEnabled) {
+    connectStatus = (await syncConnectAccountStatus(tenantId, stripeAccountId)) ?? connectStatus
+  }
 
   // Deep link support: /dashboard/admin/settings?tab=payment
   const { tab } = await searchParams
@@ -134,7 +146,12 @@ export default async function SettingsPage({
             <TabsContent value="payment">
               {/* Stripe Connect status lives here so payment setup is one page (#434) */}
               <div className="mb-6">
-                <StripeConnectCard accountId={stripeAccountId} />
+                <StripeConnectCard
+                  accountId={stripeAccountId}
+                  chargesEnabled={connectStatus.chargesEnabled}
+                  payoutsEnabled={connectStatus.payoutsEnabled}
+                  detailsSubmitted={connectStatus.detailsSubmitted}
+                />
               </div>
               <Card>
                 <CardHeader>

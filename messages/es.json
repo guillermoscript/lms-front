@@ -2362,7 +2362,12 @@
               "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea con tarjeta.",
               "notConnectedTitle": "Stripe No Conectado",
               "notConnectedDesc": "Conecta una cuenta de Stripe para aceptar pagos con tarjeta, o usa los interruptores de abajo para habilitar otros métodos de pago.",
-              "connectButton": "Conectar Stripe"
+              "connectButton": "Conectar Stripe",
+              "pendingTitle": "Configuración de Stripe Incompleta",
+              "pendingDesc": "Tu cuenta de Stripe fue creada pero la configuración no está terminada. Retómala donde la dejaste — solo toma unos minutos.",
+              "pendingReviewDesc": "Tus datos fueron enviados y Stripe los está revisando. Los pagos con tarjeta se habilitarán automáticamente cuando termine la revisión.",
+              "resumeButton": "Terminar configuración de Stripe",
+              "payoutsPending": "Los retiros aún no están habilitados — Stripe podría necesitar información adicional antes de transferir fondos a tu banco."
             }
           },
           "enrollment": {

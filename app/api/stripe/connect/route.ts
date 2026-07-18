@@ -54,9 +54,16 @@ async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
   let accountId = tenant?.stripe_account_id
 
   if (!accountId) {
-    // Create a new Stripe Connect account
+    // Express account: Stripe-hosted onboarding with progressive KYC — only
+    // `currently_due` fields are asked upfront, so a school can start taking
+    // payments in minutes (#439). Existing tenants keep their standard
+    // accounts; this branch only runs when the tenant has no account yet.
     const account = await stripe.accounts.create({
-      type: 'standard',
+      type: 'express',
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
       metadata: { tenant_id: tenantId },
     })
     accountId = account.id
@@ -68,12 +75,16 @@ async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
       .eq('id', tenantId)
   }
 
-  // Create account link for onboarding
-  const { origin } = req.nextUrl
+  // Create account link for onboarding. Build the origin from forwarded
+  // headers — behind the tenant proxy req.nextUrl.origin is the internal
+  // host, which would drop the tenant subdomain on return from Stripe.
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
+  const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+  const origin = `${proto}://${host}`
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${origin}/dashboard/admin/settings?stripe=refresh`,
-    return_url: `${origin}/dashboard/admin/settings?stripe=connected`,
+    refresh_url: `${origin}/dashboard/admin/settings?tab=payment&stripe=refresh`,
+    return_url: `${origin}/dashboard/admin/settings?tab=payment&stripe=connected`,
     type: 'account_onboarding',
   })
 
