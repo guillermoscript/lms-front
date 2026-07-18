@@ -11,9 +11,11 @@ const TOUR_ID = 'community'
 interface CommunityTourProps {
   userId: string
   userRole: 'student' | 'teacher' | 'admin'
+  completed?: boolean
+  toursEnabled?: boolean
 }
 
-export function CommunityTour({ userId, userRole }: CommunityTourProps) {
+export function CommunityTour({ userId, userRole, completed, toursEnabled }: CommunityTourProps) {
   const t = useTranslations('community')
   const [restartKey, setRestartKey] = useState(0)
 
@@ -36,6 +38,8 @@ export function CommunityTour({ userId, userRole }: CommunityTourProps) {
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
+        completed={completed}
+        toursEnabled={toursEnabled}
       />
     </>
   )

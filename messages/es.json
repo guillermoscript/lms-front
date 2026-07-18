@@ -217,6 +217,8 @@
       "subtitle": "Administra tu cuenta e integraciones.",
       "accountTitle": "Detalles de la Cuenta",
       "accountSubtitle": "Actualiza tu información personal",
+      "preferencesTitle": "Preferencias",
+      "preferencesSubtitle": "Ajustes personales sobre el comportamiento del panel",
       "manageTokens": "Administrar tokens de API"
     },
     "student": {
@@ -2379,6 +2381,10 @@
           "solanaWallet": {
             "title": "Wallet de Solana",
             "description": "La wallet receptora de tu escuela para pagos en cripto Solana (pago único y suscripción)."
+          },
+          "personalPreferences": {
+            "title": "Preferencias personales",
+            "description": "Estos ajustes aplican solo a tu cuenta, no a toda la escuela."
           }
         },
         "form": {

@@ -6,6 +6,8 @@ import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 export default async function TeacherCommunityPage() {
   const t = await getTranslations('community')
@@ -44,7 +46,7 @@ export default async function TeacherCommunityPage() {
   const adminClient = createAdminClient()
 
   // Fetch school-level posts (course_id IS NULL) and user reactions in parallel
-  const [{ data: posts }, { data: userReactions }] = await Promise.all([
+  const [{ data: posts }, { data: userReactions }, uiState] = await Promise.all([
     adminClient
       .from('community_posts')
       .select(`
@@ -64,6 +66,7 @@ export default async function TeacherCommunityPage() {
       .select('post_id, reaction_type')
       .eq('user_id', userId)
       .eq('tenant_id', tenantId),
+    getUiState(userId),
   ])
 
   // Collect unique author IDs and fetch profiles
@@ -128,7 +131,12 @@ export default async function TeacherCommunityPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <CommunityTour userId={userId} userRole={role as 'student' | 'teacher' | 'admin'} />
+      <CommunityTour
+        userId={userId}
+        userRole={role as 'student' | 'teacher' | 'admin'}
+        completed={isTourCompleted(uiState, 'community')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
       <header className="border-b bg-card">
         <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8" data-tour="community-header">
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>

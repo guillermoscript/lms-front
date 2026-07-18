@@ -217,6 +217,8 @@
       "subtitle": "Manage your account and integrations.",
       "accountTitle": "Account Details",
       "accountSubtitle": "Update your personal information",
+      "preferencesTitle": "Preferences",
+      "preferencesSubtitle": "Personal settings for how the dashboard behaves",
       "manageTokens": "Manage API tokens"
     },
     "student": {
@@ -2383,6 +2385,10 @@
           "solanaWallet": {
             "title": "Solana Wallet",
             "description": "Your school receiving wallet for Solana crypto payments (one-time and subscription)."
+          },
+          "personalPreferences": {
+            "title": "Personal preferences",
+            "description": "These settings apply only to your account, not the whole school."
           }
         },
         "form": {

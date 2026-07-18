@@ -21,6 +21,8 @@ const LessonEditor = dynamic(
 )
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -46,19 +48,26 @@ export default async function NewLessonPage({ params }: PageProps) {
   if (!course) return notFound()
 
   // Get the next sequence number
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('sequence')
-    .eq('course_id', parseInt(courseId))
-    .eq('tenant_id', tenantId)
-    .order('sequence', { ascending: false })
-    .limit(1)
+  const [{ data: lessons }, uiState] = await Promise.all([
+    supabase
+      .from('lessons')
+      .select('sequence')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .order('sequence', { ascending: false })
+      .limit(1),
+    getUiState(userId),
+  ])
 
   const nextSequence = (lessons?.[0]?.sequence || 0) + 1
 
   return (
     <div className="min-h-screen bg-background">
-      <LessonEditorTour userId={userId} />
+      <LessonEditorTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'lesson-editor')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

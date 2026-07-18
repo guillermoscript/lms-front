@@ -15,6 +15,8 @@ import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 import { getLessonCompletions } from '@lms/core'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 
 async function getData(userId: string, tenantId: string) {
   const supabase = createAdminClient()
@@ -108,7 +110,10 @@ export default async function StudentDashboard() {
     redirect('/auth/login')
   }
 
-  const data = await getData(user.id, tenantId)
+  const [data, uiState] = await Promise.all([
+    getData(user.id, tenantId),
+    getUiState(user.id),
+  ])
   const t = await getTranslations('dashboard.student')
   const tCommon = await getTranslations('common')
 
@@ -123,7 +128,11 @@ export default async function StudentDashboard() {
   return (
     <div className="min-h-screen bg-background" data-testid="student-dashboard">
       {/* Guided Tour */}
-      <StudentDashboardTour userId={user.id} />
+      <StudentDashboardTour
+        userId={user.id}
+        completed={isTourCompleted(uiState, 'student-dashboard')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
 
       <main className="container mx-auto px-4 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Welcome + Continue CTA */}
@@ -151,6 +160,8 @@ export default async function StudentDashboard() {
         <div data-tour="student-checklist">
         <OnboardingChecklist
           storageKey={`student-${user.id}`}
+          stateKey={checklistStateKey('student')}
+          dismissed={isChecklistDismissed(uiState, 'student')}
           title={t('onboarding.title')}
           subtitle={t('onboarding.subtitle')}
           steps={[
