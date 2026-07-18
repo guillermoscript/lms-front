@@ -17,6 +17,52 @@ test.describe('Admin Pages', () => {
     await expect(page.getByTestId('admin-stats-grid')).toBeVisible()
   })
 
+  test('getting started checklist follows the course-first funnel', async ({ page }) => {
+    const checklist = page.locator('[data-tour="admin-checklist"]')
+    const createCourse = checklist.getByRole('link', {
+      name: /Create your first course — set a price and publish/,
+    })
+    const payments = checklist.getByRole('link', { name: /Set up how you get paid/ })
+    const branding = checklist.getByRole('link', { name: /Brand your school/ })
+    const inviteStudents = checklist.getByRole('link', { name: /Invite your first students/ })
+    const schoolDetails = checklist.getByRole('link', { name: /Configure school details/ })
+
+    await expect(checklist.getByText(/^\d\/5$/)).toBeVisible()
+    await expect(createCourse).toHaveAttribute('href', '/dashboard/admin/products/new')
+    await expect(payments).toHaveAttribute('href', '/dashboard/admin/settings?tab=payment')
+    await expect(branding).toHaveAttribute('href', '/dashboard/admin/appearance')
+    await expect(inviteStudents).toHaveAttribute('href', '/dashboard/admin/users')
+    await expect(schoolDetails).toHaveAttribute('href', '/dashboard/admin/settings')
+    await expect(checklist.getByText('Review your billing plan')).toHaveCount(0)
+
+    const stepLabels = await checklist.locator('a').evaluateAll((links) =>
+      links.slice(0, 5).map((link) => link.textContent?.trim())
+    )
+    expect(stepLabels).toEqual([
+      expect.stringContaining('Create your first course'),
+      expect.stringContaining('Set up how you get paid'),
+      expect.stringContaining('Brand your school'),
+      expect.stringContaining('Invite your first students'),
+      expect.stringContaining('Configure school details'),
+    ])
+
+    // Code Academy has school details configured, so this validates that a
+    // checked row remains a real navigation link.
+    await schoolDetails.click()
+    await expect(page).toHaveURL(/\/en\/dashboard\/admin\/settings$/)
+  })
+
+  test('getting started checklist copy is localized in Spanish', async ({ page }) => {
+    await page.goto(`${TENANT_BASE}/es/dashboard/admin`)
+    const checklist = page.locator('[data-tour="admin-checklist"]')
+
+    await expect(checklist.getByRole('link', {
+      name: /Crea tu primer curso — define un precio y publícalo/,
+    })).toBeVisible()
+    await expect(checklist.getByRole('link', { name: /Configura cómo recibir pagos/ })).toBeVisible()
+    await expect(checklist.getByRole('link', { name: /Invita a tus primeros estudiantes/ })).toBeVisible()
+  })
+
   test('admin users page loads with user list', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
     await expect(page.getByTestId('users-page')).toBeVisible()

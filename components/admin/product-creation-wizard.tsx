@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import {
@@ -77,6 +78,7 @@ interface ProductCreationWizardProps {
   initialInput?: ProductCreationWizardInput
   /** Provider slugs the tenant has enabled in Settings → Payments. Manual is always available. */
   enabledProviders?: string[]
+  stripeConnected?: boolean
   className?: string
 }
 
@@ -163,6 +165,7 @@ export function ProductCreationWizard({
   courses,
   initialInput,
   enabledProviders = [],
+  stripeConnected = false,
   className,
 }: ProductCreationWizardProps) {
   const router = useRouter()
@@ -675,6 +678,22 @@ export function ProductCreationWizard({
                   </Select>
                   <FieldError>{fieldError('pricing.paymentProvider', 2)}</FieldError>
                 </Field>
+
+                {/* Non-blocking Connect nudge: manual selling always works, but cards need Stripe (#438) */}
+                {!stripeConnected && (
+                  <Alert>
+                    <IconInfoCircle />
+                    <AlertDescription>
+                      {tProductForm('connectNudge')}{' '}
+                      <Link
+                        href="/dashboard/admin/settings?tab=payment"
+                        className="font-medium underline underline-offset-2"
+                      >
+                        {tProductForm('connectNudgeLink')}
+                      </Link>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
           </FieldSet>

@@ -10,9 +10,11 @@ const TOUR_ID = 'admin-dashboard'
 
 interface AdminDashboardTourProps {
   userId: string
+  completed?: boolean
+  toursEnabled?: boolean
 }
 
-export function AdminDashboardTour({ userId }: AdminDashboardTourProps) {
+export function AdminDashboardTour({ userId, completed, toursEnabled }: AdminDashboardTourProps) {
   const t = useTranslations('dashboard.admin.main')
   const [restartKey, setRestartKey] = useState(0)
 
@@ -37,6 +39,8 @@ export function AdminDashboardTour({ userId }: AdminDashboardTourProps) {
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
+        completed={completed}
+        toursEnabled={toursEnabled}
       />
     </>
   )

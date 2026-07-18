@@ -1,0 +1,24 @@
+{
+  "skill_name": "issue-plan",
+  "note": "Evals 1 and 3 have real side effects (assign the issue, move a board item, post a comment). Run only with the user present against a low-stakes issue.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "plan https://github.com/<OWNER>/<REPO>/issues/<N> — I'll implement it after",
+      "expected_output": "Issue read in one gh call including comments; code surveyed read-only; a four-part plan (root cause, approach, risks, test plan) written to issue-<N>-plan.md; a housekeeping subagent assigns the issue, moves it to In Progress (if a board is configured), and posts the plan as an issue comment with the plan file marked as given/final in its prompt; after the subagent reports, the posted comment body is fetched via gh api and compared to the authored plan. No code is changed.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "what's the approach for #<N>? just want your read on it",
+      "expected_output": "The plan is delivered in chat only. The skill does NOT assign the issue, move the board, or post a comment without asking — a read-only request gets a read-only response, with an offer to post it.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "plan #<ISSUE_ASSIGNED_TO_SOMEONE_ELSE>",
+      "expected_output": "Skill stops and asks the user before taking over an issue already assigned to someone else or already In Progress.",
+      "files": []
+    }
+  ]
+}

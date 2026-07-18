@@ -1,0 +1,18 @@
+{
+  "skill_name": "ui-evidence",
+  "note": "Needs the claude-in-chrome extension and a locally runnable app; posting evals need a real PR.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm about to change the <SCREEN> page — capture the before state first",
+      "expected_output": "Affected screen(s) opened in Chrome BEFORE any code change and screenshotted as before-<screen>.png (issue-numbered if an issue is in context); if the app isn't running and starting it is disruptive, the skip is noted explicitly.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "record a GIF of the changed flow and post everything to PR #<N> (private repo)",
+      "expected_output": "Flow driven in Chrome and recorded with gif_creator (extra frames around each step, issue-named file); matching after-shots taken; repo detected as private so media is attached via browser file_upload on the PR page with a labeled Before/After/Flow-recording comment. On two upload failures, falls back to a text comment with local file paths.",
+      "files": []
+    }
+  ]
+}

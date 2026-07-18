@@ -9,11 +9,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
+import StripeConnectCard from '@/components/admin/stripe-connect-card'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
+import { ToursToggle } from '@/components/shared/tours-toggle'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { areToursEnabled } from '@/lib/ui-state-keys'
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
   const t = await getTranslations('dashboard.admin.settings')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   // Verify admin role
@@ -46,6 +57,36 @@ export default async function SettingsPage() {
   const solanaWallet = await getSolanaWallet().catch(() => null)
   const solanaWalletAddress = solanaWallet?.data?.wallet_address || ''
 
+  // Stripe Connect status for the payment tab card (#434)
+  const tenantId = await getCurrentTenantId()
+  const { data: tenant } = await createAdminClient()
+    .from('tenants')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
+    .eq('id', tenantId)
+    .single()
+  const stripeAccountId = tenant?.stripe_account_id ?? null
+  let connectStatus = {
+    chargesEnabled: tenant?.stripe_charges_enabled ?? false,
+    payoutsEnabled: tenant?.stripe_payouts_enabled ?? false,
+    detailsSubmitted: tenant?.stripe_details_submitted ?? false,
+  }
+  // While Express onboarding is incomplete, pull live status from Stripe so
+  // the card is fresh right after the admin returns from the hosted flow
+  // (webhook lag / local dev without webhooks). Falls back to DB state (#439).
+  if (stripeAccountId && !connectStatus.chargesEnabled) {
+    connectStatus = (await syncConnectAccountStatus(tenantId, stripeAccountId)) ?? connectStatus
+  }
+
+  // Deep link support: /dashboard/admin/settings?tab=payment
+  const { tab } = await searchParams
+  const validTabs = ['general', 'email', 'payment', 'enrollment']
+  const defaultTab = tab && validTabs.includes(tab) ? tab : 'general'
+
+  // Personal (per-user) UI preferences — distinct from the tenant-wide settings
+  // in the tabs above (#452). Absent user id just falls back to tours-enabled.
+  const userId = await getCurrentUserId()
+  const uiState = userId ? await getUiState(userId) : {}
+
   // Fetch referral code (non-blocking — silently skip if it fails)
   const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
@@ -71,7 +112,7 @@ export default async function SettingsPage() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Tabbed Settings Interface */}
-          <Tabs defaultValue="general" className="space-y-6">
+          <Tabs defaultValue={defaultTab} className="space-y-6">
             <TabsList className="flex w-full overflow-x-auto lg:w-auto">
               <TabsTrigger value="general">{t('tabs.general')}</TabsTrigger>
               <TabsTrigger value="email">{t('tabs.email')}</TabsTrigger>
@@ -111,6 +152,15 @@ export default async function SettingsPage() {
 
             {/* Payment Settings */}
             <TabsContent value="payment">
+              {/* Stripe Connect status lives here so payment setup is one page (#434) */}
+              <div className="mb-6">
+                <StripeConnectCard
+                  accountId={stripeAccountId}
+                  chargesEnabled={connectStatus.chargesEnabled}
+                  payoutsEnabled={connectStatus.payoutsEnabled}
+                  detailsSubmitted={connectStatus.detailsSubmitted}
+                />
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>{t('sections.payment.title')}</CardTitle>
@@ -153,6 +203,20 @@ export default async function SettingsPage() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Personal preferences — per-user, kept visually separate from the
+              tenant-wide settings tabs above (#452). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('sections.personalPreferences.title')}</CardTitle>
+              <CardDescription>
+                {t('sections.personalPreferences.description')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ToursToggle initialEnabled={areToursEnabled(uiState)} />
+            </CardContent>
+          </Card>
 
           {/* Referral Program — secondary, below main settings */}
           {referralCode && (

@@ -35,6 +35,8 @@ import {
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -124,7 +126,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
   }
 
   // Fetch all related data in parallel
-  const [lessonsRes, exercisesRes, examsRes, enrollmentsRes, certificateTemplateRes, issuedCertificatesRes] = await Promise.all([
+  const [lessonsRes, exercisesRes, examsRes, enrollmentsRes, certificateTemplateRes, issuedCertificatesRes, uiState] = await Promise.all([
     supabase
       .from('lessons')
       .select('*')
@@ -160,7 +162,8 @@ export default async function CourseManagementPage({ params }: PageProps) {
       .select('*, profiles!certificates_user_id_fkey(full_name, avatar_url)')
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
-      .order('issued_at', { ascending: false })
+      .order('issued_at', { ascending: false }),
+    getUiState(userId),
   ])
 
   const lessons = lessonsRes.data || []
@@ -185,7 +188,11 @@ export default async function CourseManagementPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Guided Tour */}
-      <CourseEditorTour userId={userId} />
+      <CourseEditorTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'course-editor')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
 
       {/* Header */}
       <header data-tour="course-header" className="border-b bg-card sticky top-0 z-10">

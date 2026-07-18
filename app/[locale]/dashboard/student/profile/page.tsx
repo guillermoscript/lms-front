@@ -24,11 +24,14 @@ import { AchievementGrid } from '@/components/gamification/achievement-grid'
 import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
 import { LeagueOptOutToggle } from '@/components/gamification/league-opt-out-toggle'
+import { ToursToggle } from '@/components/shared/tours-toggle'
 import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { areToursEnabled } from '@/lib/ui-state-keys'
 
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
@@ -264,6 +267,7 @@ export default async function ProfilePage() {
     }
 
     const { profile, subscription, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
+    const uiState = await getUiState(user.id)
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
@@ -411,6 +415,7 @@ export default async function ProfilePage() {
                             <CardContent className="p-6 space-y-6">
                                 <ProfileForm profile={profile} />
                                 <LeagueOptOutToggle />
+                                <ToursToggle initialEnabled={areToursEnabled(uiState)} />
                             </CardContent>
                         </Card>
 

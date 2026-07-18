@@ -21,6 +21,8 @@ const LessonEditor = dynamic(
 )
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -50,7 +52,7 @@ export default async function EditLessonPage({ params }: PageProps) {
   }
 
   // Get lesson and resources in parallel
-  const [{ data: lesson }, { data: resources }] = await Promise.all([
+  const [{ data: lesson }, { data: resources }, uiState] = await Promise.all([
     supabase
       .from('lessons')
       .select('*')
@@ -64,6 +66,7 @@ export default async function EditLessonPage({ params }: PageProps) {
       .eq('lesson_id', parseInt(lessonId))
       .eq('tenant_id', tenantId)
       .order('display_order', { ascending: true }),
+    getUiState(userId),
   ])
 
   if (!lesson) {
@@ -72,7 +75,11 @@ export default async function EditLessonPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <LessonEditorTour userId={userId} />
+      <LessonEditorTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'lesson-editor')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

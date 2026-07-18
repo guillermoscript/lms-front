@@ -7,6 +7,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GamificationHeaderCard } from "@/components/gamification/gamification-header-card"
+import { VerifyEmailBanner } from "@/components/shared/verify-email-banner"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -39,6 +40,9 @@ export default async function DashboardLayout({
                         <UserNav user={user} />
                     </div>
                 </header>
+                {user?.email && !user.email_confirmed_at && (
+                    <VerifyEmailBanner email={user.email} />
+                )}
                 <div className="flex flex-1 flex-col">
                     {children}
                 </div>

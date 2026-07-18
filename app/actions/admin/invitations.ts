@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { isEmailVerified, EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
 import { sendEmail } from '@/lib/email/send'
 import { invitationTemplate } from '@/lib/email/templates/invitation'
 import { revalidatePath } from 'next/cache'
@@ -24,6 +25,10 @@ export async function createInvitation({
   const userRole = await getUserRole()
   if (userRole !== 'admin') {
     return { success: false, error: 'Unauthorized' }
+  }
+
+  if (!(await isEmailVerified())) {
+    return { success: false, error: EMAIL_NOT_VERIFIED_ERROR }
   }
 
   const supabase = await createClient()

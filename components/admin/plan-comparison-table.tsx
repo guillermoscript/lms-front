@@ -26,6 +26,8 @@ interface PlanComparisonTableProps {
   onManualTransfer?: (planId: string, interval: 'monthly' | 'yearly') => void
   loading?: boolean
   showActions?: boolean
+  preselectedPlan?: string
+  initialInterval?: 'monthly' | 'yearly'
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -74,8 +76,10 @@ export function PlanComparisonTable({
   onManualTransfer,
   loading = false,
   showActions = true,
+  preselectedPlan,
+  initialInterval,
 }: PlanComparisonTableProps) {
-  const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly')
+  const [interval, setInterval] = useState<'monthly' | 'yearly'>(initialInterval ?? 'monthly')
   const yearly = interval === 'yearly'
   const featureKeys = useMemo(
     () => FEATURE_KEYS.filter((key) => plans.some((plan) => plan.features[key] !== undefined)),
@@ -124,6 +128,7 @@ export function PlanComparisonTable({
       <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = plan.slug === currentPlan
+          const isPreselected = !isCurrent && plan.slug === preselectedPlan
           const isPopular = plan.slug === 'pro'
           const price = yearly ? plan.price_yearly : plan.price_monthly
           const monthlyEquivalent = yearly ? Math.round(plan.price_yearly / 12) : plan.price_monthly
@@ -138,8 +143,13 @@ export function PlanComparisonTable({
                 'relative flex flex-col overflow-visible',
                 isPopular && 'border-primary shadow-lg shadow-primary/10',
                 isCurrent && 'bg-muted/30',
+                isPreselected && 'border-primary ring-2 ring-primary shadow-lg shadow-primary/15',
               )}
+              data-preselected={isPreselected || undefined}
             >
+              {isPreselected && (
+                <Badge className="absolute -top-3 right-5 shadow-sm">Your selection</Badge>
+              )}
               {isPopular && (
                 <Badge className="absolute -top-3 left-5 gap-1.5 shadow-sm">
                   <IconSparkles className="size-3" />

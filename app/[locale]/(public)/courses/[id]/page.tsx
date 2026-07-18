@@ -29,6 +29,9 @@ import { buildPageMetadata } from '@/lib/seo';
 import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
 import { PlanEnrollButton } from '@/components/public/plan-enroll-button';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getCourseSocialProof } from '@/lib/social-proof';
+import { StarRating } from '@/components/shared/star-rating';
+import { Users } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -158,12 +161,15 @@ export default async function CourseDetailsPage(props: {
         })()
         : Promise.resolve(false);
 
-    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse] = await Promise.all([
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
         planCoveragePromise,
+        getCourseSocialProof(courseId, tenantId),
     ]);
+
+    const { averageRating, reviewCount, studentCount, recentReviews } = socialProof;
 
     // Sort lessons by sequence
     const lessons = course.lessons?.sort((a: Lesson, b: Lesson) => a.sequence - b.sequence) || [];
@@ -241,6 +247,19 @@ export default async function CourseDetailsPage(props: {
                         )}
 
                         <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-300">
+                            {averageRating !== null && (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                    <StarRating rating={averageRating} />
+                                    <span className="text-zinc-400">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                </div>
+                            )}
+                            {studentCount > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                    <Users className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                    <span>{t('socialProof.students', { count: studentCount })}</span>
+                                </div>
+                            )}
                             {totalLessons > 0 && (
                                 <div className="flex items-center gap-1.5">
                                     <BookOpen className="w-4 h-4 text-zinc-400" aria-hidden="true" />
@@ -346,6 +365,34 @@ export default async function CourseDetailsPage(props: {
                             )}
                         </section>
 
+                        {/* What students say */}
+                        {recentReviews.length > 0 && (
+                            <section>
+                                <h2 className="text-2xl font-bold mb-2 text-white">{t('socialProof.title')}</h2>
+                                {averageRating !== null && (
+                                    <div className="flex items-center gap-2 text-sm text-zinc-300 mb-6">
+                                        <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                        <StarRating rating={averageRating} />
+                                        <span className="text-zinc-400">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                    </div>
+                                )}
+                                <div className="space-y-4">
+                                    {recentReviews.map((review) => (
+                                        <div key={review.reviewId} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-6">
+                                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                                                <span className="font-bold text-white text-sm">{review.reviewerName}</span>
+                                                <StarRating rating={review.rating} starClassName="w-3.5 h-3.5" />
+                                                <span className="text-xs text-zinc-500">
+                                                    {new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(review.createdAt))}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-zinc-300 leading-relaxed">{review.reviewText}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
                         {/* About */}
                         {course.description && (
                             <section className="space-y-6">
@@ -408,6 +455,25 @@ export default async function CourseDetailsPage(props: {
                                 <CardContent className="p-6 space-y-6">
                                     {/* Price */}
                                     <div className="text-3xl font-bold text-white">{priceDisplay}</div>
+
+                                    {/* Social proof */}
+                                    {(averageRating !== null || studentCount > 0) && (
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-300">
+                                            {averageRating !== null && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                                    <StarRating rating={averageRating} starClassName="w-3.5 h-3.5" />
+                                                    <span className="text-zinc-400 text-xs">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                                </div>
+                                            )}
+                                            {studentCount > 0 && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <Users className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                                    <span className="text-xs">{t('socialProof.students', { count: studentCount })}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* CTA */}
                                     <div className="space-y-3">

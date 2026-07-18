@@ -1,0 +1,18 @@
+{
+  "skill_name": "gh-board",
+  "note": "Runs mutate a real project board. Use a throwaway board or low-stakes items.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "move https://github.com/<OWNER>/<REPO>/issues/<N> to In Review on the board",
+      "expected_output": "Board owner/number resolved from .claude/gh-workflow.config.json (or discovered/asked and offered to save). board.sh find used first; add only if absent; status set to \"In Review\" via board.sh, with field/option resolved by name.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "set priority P1 on issue #<N> (board has no Priority field)",
+      "expected_output": "board.sh set-field warns and exits 0; the skill reports the field doesn't exist on this board instead of erroring or retrying blindly.",
+      "files": []
+    }
+  ]
+}

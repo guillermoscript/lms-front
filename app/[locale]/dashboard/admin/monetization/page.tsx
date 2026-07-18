@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/currency'
@@ -185,12 +184,12 @@ export default async function MonetizationPage() {
                 <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
                   {t('stripe.notConnectedDesc')}
                 </p>
-                <a
-                  href="/api/stripe/connect"
+                <Link
+                  href="/dashboard/admin/settings?tab=payment"
                   className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 h-8 px-4 transition-colors"
                 >
-                  {t('stripe.connect')}
-                </a>
+                  {t('stripe.setup')}
+                </Link>
               </div>
             </div>
           </div>

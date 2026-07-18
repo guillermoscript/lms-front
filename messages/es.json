@@ -217,6 +217,8 @@
       "subtitle": "Administra tu cuenta e integraciones.",
       "accountTitle": "Detalles de la Cuenta",
       "accountSubtitle": "Actualiza tu información personal",
+      "preferencesTitle": "Preferencias",
+      "preferencesSubtitle": "Ajustes personales sobre el comportamiento del panel",
       "manageTokens": "Administrar tokens de API"
     },
     "student": {
@@ -1657,14 +1659,18 @@
         "onboarding": {
           "title": "Primeros Pasos",
           "subtitle": "Configura tu escuela en unos simples pasos.",
-          "configureSchool": "Configura tu escuela",
-          "configureSchoolDesc": "Establece el nombre, logo y configuración básica de tu escuela.",
-          "addCourse": "Crea tu primer curso",
-          "addCourseDesc": "Agrega un curso para que los estudiantes puedan inscribirse.",
-          "inviteUsers": "Invita a tus primeros usuarios",
-          "inviteUsersDesc": "Agrega profesores o estudiantes a tu escuela.",
-          "reviewBilling": "Revisa tu plan de facturación",
-          "reviewBillingDesc": "Elige un plan que se adapte a las necesidades de tu escuela."
+          "configureSchool": "Configura los datos de tu escuela",
+          "configureSchoolDesc": "Define el nombre y los datos básicos de tu escuela.",
+          "brandSchool": "Dale identidad a tu escuela",
+          "brandSchoolDesc": "Elige un tema, colores y tipograf\u00eda. Opcional \u2014 los valores por defecto lucen muy bien.",
+          "connectPayments": "Configura cómo recibir pagos",
+          "connectPaymentsDesc": "Elige pagos manuales, Stripe u otro proveedor disponible.",
+          "wizardPrompt": "\u00bfPrefieres una configuraci\u00f3n guiada?",
+          "wizardLink": "Abrir el asistente de configuraci\u00f3n",
+          "addCourse": "Crea tu primer curso — define un precio y publícalo",
+          "addCourseDesc": "Usa la creación rápida para publicar en minutos o genera un borrador con IA.",
+          "inviteUsers": "Invita a tus primeros estudiantes",
+          "inviteUsersDesc": "Invita estudiantes a unirse a tu escuela."
         },
         "tour": {
           "checklist": {
@@ -2350,7 +2356,19 @@
           },
           "payment": {
             "title": "Ajustes de Pago",
-            "description": "Gestiona los procesadores de pago, moneda y ajustes de transacciones"
+            "description": "Gestiona los procesadores de pago, moneda y ajustes de transacciones",
+            "connect": {
+              "connectedTitle": "Stripe Conectado",
+              "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea con tarjeta.",
+              "notConnectedTitle": "Stripe No Conectado",
+              "notConnectedDesc": "Conecta una cuenta de Stripe para aceptar pagos con tarjeta, o usa los interruptores de abajo para habilitar otros métodos de pago.",
+              "connectButton": "Conectar Stripe",
+              "pendingTitle": "Configuración de Stripe Incompleta",
+              "pendingDesc": "Tu cuenta de Stripe fue creada pero la configuración no está terminada. Retómala donde la dejaste — solo toma unos minutos.",
+              "pendingReviewDesc": "Tus datos fueron enviados y Stripe los está revisando. Los pagos con tarjeta se habilitarán automáticamente cuando termine la revisión.",
+              "resumeButton": "Terminar configuración de Stripe",
+              "payoutsPending": "Los retiros aún no están habilitados — Stripe podría necesitar información adicional antes de transferir fondos a tu banco."
+            }
           },
           "enrollment": {
             "title": "Ajustes de Inscripción",
@@ -2363,6 +2381,10 @@
           "solanaWallet": {
             "title": "Wallet de Solana",
             "description": "La wallet receptora de tu escuela para pagos en cripto Solana (pago único y suscripción)."
+          },
+          "personalPreferences": {
+            "title": "Preferencias personales",
+            "description": "Estos ajustes aplican solo a tu cuenta, no a toda la escuela."
           }
         },
         "form": {
@@ -2628,6 +2650,8 @@
         "description": "Paquetes de cursos y artículos individuales que los estudiantes pueden comprar",
         "back": "Volver al Panel",
         "create": "Crear Producto",
+        "connectNudge": "Puedes vender con pagos manuales desde ya. Conecta Stripe para aceptar tarjetas automáticamente:",
+        "connectNudgeLink": "configúralo en Configuración → Pagos",
         "stats": {
           "total": "Total de Productos",
           "active": "Activos",
@@ -2657,6 +2681,46 @@
           "details": {
             "title": "Detalles del Producto",
             "description": "Configura un producto de pago único. La forma de cobro depende del método de pago que elijas. Vincula cursos para crear paquetes."
+          },
+          "quick": {
+            "title": "Creación rápida",
+            "description": "Nombra tu curso, elige un precio y publica. Puedes agregar detalles después.",
+            "courseTitleLabel": "Título del curso",
+            "courseTitlePlaceholder": "p. ej. Introducción a la fotografía",
+            "pricingLabel": "Precio",
+            "free": "Gratis",
+            "paid": "De pago",
+            "priceLabel": "Precio (USD)",
+            "priceHint": "Los pagos se cobran manualmente por defecto. Configura otros proveedores en Configuración → Pagos.",
+            "publish": "Crear y publicar",
+            "publishing": "Publicando…",
+            "saveDraft": "Guardar borrador",
+            "savingDraft": "Guardando…",
+            "published": "Curso publicado.",
+            "draftSaved": "Borrador guardado.",
+            "saveError": "No se pudo crear el curso. Inténtalo de nuevo.",
+            "moreOptions": "Más opciones (categorías, miniatura, proveedores, pasos post-compra)",
+            "limitReachedTitle": "Límite de cursos alcanzado",
+            "limitReachedDescription": "Tu plan {plan} permite {limit} cursos y ya tienes {count}.",
+            "upgradeCta": "Mejora tu plan",
+            "limitApproaching": "Estás usando {count} de {limit} cursos de tu plan.",
+            "or": "o"
+          },
+          "ai": {
+            "title": "Generar con IA",
+            "description": "Describe tu curso en una frase y obtén un borrador con lecciones que puedes editar.",
+            "promptLabel": "¿De qué trata tu curso?",
+            "promptPlaceholder": "p. ej. Un curso para principiantes sobre hornear pan de masa madre en casa",
+            "generate": "Generar borrador",
+            "generating": "Redactando tu curso…",
+            "generatingHint": "Esto suele tardar menos de un minuto.",
+            "draftNote": "Todo se crea como borrador — nada se publica hasta que tú lo decidas.",
+            "successTitle": "Tu borrador está listo",
+            "successDescription": "Se {count, plural, one {creó # lección en borrador} other {crearon # lecciones en borrador}}. Revisa y edita antes de publicar.",
+            "thumbnailIdea": "Idea de miniatura",
+            "openCourse": "Editar tu curso",
+            "startOver": "Generar otro",
+            "error": "No se pudo generar el borrador del curso. Inténtalo de nuevo."
           }
         },
         "edit": {
@@ -2682,6 +2746,8 @@
           "methodPaypal": "PayPal (Próximamente)",
           "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
           "methodStripeHint": "Los estudiantes pueden pagar online al instante",
+          "connectNudge": "Vender con pagos manuales funciona desde ya. Conecta Stripe para aceptar tarjetas automáticamente:",
+          "connectNudgeLink": "configúralo en Configuración → Pagos",
           "currencyUsd": "USD ($)",
           "currencyEur": "EUR (€)",
           "saving": "Guardando...",
@@ -2889,8 +2955,9 @@
           "connected": "Pagos Activos",
           "connectedDesc": "Tu cuenta de Stripe está conectada. Los estudiantes pueden pagar en línea.",
           "notConnected": "Pagos No Configurados",
-          "notConnectedDesc": "Conecta una cuenta de Stripe para que los estudiantes puedan pagar con tarjeta y otros métodos en línea.",
-          "connect": "Conectar Stripe"
+          "notConnectedDesc": "Elige cómo pagan tus estudiantes: conecta Stripe o habilita pagos manuales, PayPal o cripto en Configuración.",
+          "connect": "Conectar Stripe",
+          "setup": "Configurar Pagos"
         },
         "split": {
           "title": "División de Ingresos",
@@ -3187,6 +3254,21 @@
     "ago": "atrás"
   },
   "components": {
+    "toursToggle": {
+      "label": "Mostrar consejos y recorridos",
+      "description": "Recorridos guiados y consejos de bienvenida en tus paneles. Al desactivarlo, los recorridos dejan de iniciarse automáticamente; aún puedes repetirlos con el botón de ayuda.",
+      "enabledToast": "Consejos y recorridos activados",
+      "disabledToast": "Consejos y recorridos desactivados",
+      "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
+    },
+    "verifyEmailBanner": {
+      "message": "Verifica tu correo — enviamos un enlace de confirmación a {email}.",
+      "gatedNote": "Las invitaciones y la configuración de pagos quedan bloqueadas hasta verificar.",
+      "resend": "Reenviar correo",
+      "resending": "Enviando...",
+      "resendSuccess": "Correo de confirmación enviado. Revisa tu bandeja.",
+      "dismiss": "Descartar"
+    },
     "connectClaude": {
       "title": "Conectar Claude",
       "description": "Agrega el LMS como conector personalizado — sin tokens, inicias sesión con tu cuenta del LMS.",
@@ -3893,6 +3975,11 @@
     "clearFilters": "Limpiar filtros"
   },
   "coursePublicDetails": {
+    "socialProof": {
+      "title": "Lo que dicen los estudiantes",
+      "reviewCount": "({count, plural, one {# reseña} other {# reseñas}})",
+      "students": "{count, plural, one {# estudiante} other {# estudiantes}}"
+    },
     "breadcrumbs": {
       "home": "Inicio",
       "courses": "Cursos"
@@ -4139,7 +4226,7 @@
     },
     "payment": {
       "title": "Configuración de Pagos",
-      "description": "Conecta tu cuenta de Stripe para empezar a aceptar pagos de estudiantes.",
+      "description": "Elige cómo recibir tus pagos. Conecta Stripe para cobros automáticos con tarjeta, o empieza a vender de inmediato con pagos manuales y agrega más opciones después.",
       "whyTitle": "¿Por qué conectar tu cuenta de pagos?",
       "whyDescription": "Acepta pagos y recibe el dinero directamente en tu cuenta bancaria.",
       "benefit1": "Recibe pagos directamente de los estudiantes",
@@ -4151,8 +4238,8 @@
       "platformFee": "Tarifa de Plataforma",
       "revenueSplitNote": "Te quedas con el 80% de todas las ventas de cursos. La tarifa de plataforma cubre alojamiento, soporte y mantenimiento.",
       "connectStripe": "Conectar con Stripe",
-      "skipForNow": "Omitir por Ahora",
-      "skipWarning": "Puedes conectar tu cuenta de pagos más tarde desde Configuración, pero no podrás vender cursos hasta que lo hagas."
+      "skipForNow": "Continuar con pagos manuales",
+      "skipWarning": "Puedes vender cursos de pago desde ya con pagos manuales (offline): los compradores reciben tus instrucciones de pago. Conecta Stripe, PayPal o cripto cuando quieras en Configuración → Pagos."
     },
     "ready": {
       "title": "¡Todo Listo!",

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
@@ -21,6 +21,8 @@ import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 
 export default async function AdminDashboardPage({
   params,
@@ -38,17 +40,6 @@ export default async function AdminDashboardPage({
     redirect('/auth/login')
   }
 
-  // Check if onboarding is completed
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('onboarding_completed')
-    .eq('id', userId)
-    .single()
-
-  if (adminProfile && !adminProfile.onboarding_completed) {
-    redirect('/onboarding')
-  }
-
   // Get tenant context for all queries
   const tenantId = await getCurrentTenantId()
 
@@ -63,6 +54,7 @@ export default async function AdminDashboardPage({
     { count: activeSubscriptions },
     { data: recentTransactions },
     { data: recentTenantUsers },
+    uiState,
   ] = await Promise.all([
     supabase.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
@@ -96,7 +88,16 @@ export default async function AdminDashboardPage({
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(5),
+    getUiState(userId),
   ])
+
+  // Supabase infers the profiles(...) embed as an array even though the FK
+  // makes it a single row — narrow it to what the query actually returns.
+  const recentUsers = (recentTenantUsers || []) as unknown as Array<{
+    user_id: string
+    created_at: string
+    profiles: { id: string; full_name: string | null } | null
+  }>
 
   // Batch-fetch user profiles for transactions (avoids N+1)
   const transactionUserIds = [...new Set((recentTransactions || []).map(t => t.user_id).filter(Boolean))]
@@ -115,16 +116,17 @@ export default async function AdminDashboardPage({
     { data: successfulTransactions },
     { data: tenant },
     { count: studentCount },
-    { data: siteNameSetting },
+    { data: onboardingSettings },
   ] = await Promise.all([
     supabase.from('transactions').select('amount')
       .eq('tenant_id', tenantId).eq('status', 'successful'),
-    adminClient.from('tenants').select('plan')
+    adminClient.from('tenants').select('plan, stripe_account_id')
       .eq('id', tenantId).single(),
     adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
-    supabase.from('tenant_settings').select('setting_value')
-      .eq('setting_key', 'site_name').maybeSingle(),
+    supabase.from('tenant_settings').select('setting_key, setting_value')
+      .eq('tenant_id', tenantId)
+      .in('setting_key', ['site_name', 'theme_preset', 'logo_url', 'manual_payment_instructions']),
   ])
 
   const totalRevenue =
@@ -140,7 +142,13 @@ export default async function AdminDashboardPage({
     .single()
   const planLimits = (platformPlan?.limits as { max_courses?: number; max_students?: number }) || { max_courses: 5, max_students: 50 }
 
-  const currentSettings = { site_name: siteNameSetting?.setting_value }
+  const settingsByKey = new Map(
+    (onboardingSettings || []).map(s => [s.setting_key, s.setting_value])
+  )
+  const currentSettings = { site_name: settingsByKey.get('site_name') }
+  const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
+  const isStripeConnected = Boolean(tenant?.stripe_account_id)
+  const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
 
   const stats = [
     {
@@ -186,28 +194,41 @@ export default async function AdminDashboardPage({
       />
 
       {/* Guided Tour (client component) */}
-      <AdminDashboardTour userId={userId} />
+      <AdminDashboardTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'admin-dashboard')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">
       <OnboardingChecklist
         storageKey={`admin-${userId}`}
+        stateKey={checklistStateKey('admin')}
+        dismissed={isChecklistDismissed(uiState, 'admin')}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
         steps={[
           {
-            id: 'configure-school',
-            label: t('onboarding.configureSchool'),
-            description: t('onboarding.configureSchoolDesc'),
-            href: '/dashboard/admin/settings',
-            completed: Boolean(currentSettings?.site_name),
-          },
-          {
             id: 'add-course',
             label: t('onboarding.addCourse'),
             description: t('onboarding.addCourseDesc'),
-            href: '/dashboard/teacher/courses/new',
-            completed: (totalCourses || 0) > 0,
+            href: '/dashboard/admin/products/new',
+            completed: (publishedCourses || 0) > 0,
+          },
+          {
+            id: 'connect-payments',
+            label: t('onboarding.connectPayments'),
+            description: t('onboarding.connectPaymentsDesc'),
+            href: '/dashboard/admin/settings?tab=payment',
+            completed: hasConfiguredPayments,
+          },
+          {
+            id: 'brand-school',
+            label: t('onboarding.brandSchool'),
+            description: t('onboarding.brandSchoolDesc'),
+            href: '/dashboard/admin/appearance',
+            completed: hasBranding,
           },
           {
             id: 'invite-users',
@@ -217,13 +238,24 @@ export default async function AdminDashboardPage({
             completed: (totalUsers || 0) > 1, // More than just the admin
           },
           {
-            id: 'review-billing',
-            label: t('onboarding.reviewBilling'),
-            description: t('onboarding.reviewBillingDesc'),
-            href: '/dashboard/admin/billing/upgrade',
-            completed: planSlug !== 'free',
+            id: 'configure-school',
+            label: t('onboarding.configureSchool'),
+            description: t('onboarding.configureSchoolDesc'),
+            href: '/dashboard/admin/settings',
+            completed: Boolean(currentSettings?.site_name),
           },
         ]}
+        footer={
+          <p className="text-xs text-muted-foreground">
+            {t('onboarding.wizardPrompt')}{' '}
+            <Link
+              href="/onboarding"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('onboarding.wizardLink')}
+            </Link>
+          </p>
+        }
       />
       </div>
 
@@ -306,8 +338,8 @@ export default async function AdminDashboardPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {recentTenantUsers && recentTenantUsers.length > 0 ? (
-                recentTenantUsers.map((tu: any) => (
+              {recentUsers.length > 0 ? (
+                recentUsers.map((tu) => (
                   <div
                     key={tu.user_id}
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"

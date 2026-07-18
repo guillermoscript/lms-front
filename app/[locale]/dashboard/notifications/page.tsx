@@ -26,7 +26,7 @@ export default async function NotificationsPage() {
     .limit(50)
 
   return (
-    <div className="container max-w-4xl py-8">
+    <div className="container max-w-4xl p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">

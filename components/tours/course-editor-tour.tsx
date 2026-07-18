@@ -10,9 +10,11 @@ const TOUR_ID = 'course-editor'
 
 interface CourseEditorTourProps {
   userId: string
+  completed?: boolean
+  toursEnabled?: boolean
 }
 
-export function CourseEditorTour({ userId }: CourseEditorTourProps) {
+export function CourseEditorTour({ userId, completed, toursEnabled }: CourseEditorTourProps) {
   const t = useTranslations('dashboard.teacher.manageCourse')
   const [restartKey, setRestartKey] = useState(0)
 
@@ -37,6 +39,8 @@ export function CourseEditorTour({ userId }: CourseEditorTourProps) {
         tourId={TOUR_ID}
         userId={userId}
         steps={steps}
+        completed={completed}
+        toursEnabled={toursEnabled}
       />
     </>
   )

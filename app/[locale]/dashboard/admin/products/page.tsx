@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import {
   IconPlus,
+  IconInfoCircle,
   IconShoppingCart,
   IconEdit,
   IconArchive,
@@ -49,6 +50,13 @@ export default async function AdminProductsPage() {
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('stripe_account_id')
+    .eq('id', tenantId)
+    .single()
+  const stripeConnected = Boolean(tenant?.stripe_account_id)
+
   const activeCount = products?.filter(p => p.status === 'active').length || 0
   const inactiveCount = products?.filter(p => p.status === 'inactive').length || 0
 
@@ -82,6 +90,22 @@ export default async function AdminProductsPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Non-blocking Connect nudge — manual selling works without it (#438) */}
+        {!stripeConnected && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl bg-blue-50 p-4 ring-1 ring-blue-200 dark:bg-blue-950/30 dark:ring-blue-800">
+            <IconInfoCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+            <p className="text-sm text-blue-900 dark:text-blue-200">
+              {t('connectNudge')}{' '}
+              <Link
+                href="/dashboard/admin/settings?tab=payment"
+                className="font-medium underline underline-offset-2"
+              >
+                {t('connectNudgeLink')}
+              </Link>
+            </p>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>

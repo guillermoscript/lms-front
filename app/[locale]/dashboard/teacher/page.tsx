@@ -23,6 +23,8 @@ import * as motion from 'motion/react-client'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 
 interface EnrollmentActivity {
   enrollment_date: string
@@ -60,7 +62,7 @@ export default async function TeacherDashboard() {
   const courseIds = courses.map(c => c.course_id)
 
   // 2. Fetch other related data in parallel using courseIds
-  const [enrollmentsRes, allEnrollmentsRes, submissionsRes, profileRes] = await Promise.all([
+  const [enrollmentsRes, allEnrollmentsRes, submissionsRes, profileRes, uiState] = await Promise.all([
     // Recent activity enrollments
     courseIds.length > 0
       ? supabase
@@ -98,7 +100,9 @@ export default async function TeacherDashboard() {
       .from('profiles')
       .select('full_name')
       .eq('id', userId)
-      .single()
+      .single(),
+
+    getUiState(userId),
   ])
 
   // PostgREST returns objects for these to-one embeds; the untyped client infers arrays
@@ -116,7 +120,11 @@ export default async function TeacherDashboard() {
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-dashboard">
       {/* Guided Tour (client component) */}
-      <TeacherDashboardTour userId={userId} />
+      <TeacherDashboardTour
+        userId={userId}
+        completed={isTourCompleted(uiState, 'teacher-dashboard')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
 
       <div data-tour="teacher-welcome" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -246,6 +254,8 @@ export default async function TeacherDashboard() {
       {/* Getting Started Checklist — shown until dismissed */}
       <OnboardingChecklist
         storageKey={`teacher-${userId}`}
+        stateKey={checklistStateKey('teacher')}
+        dismissed={isChecklistDismissed(uiState, 'teacher')}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
         steps={[

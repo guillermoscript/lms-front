@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { IconFlag } from '@tabler/icons-react'
 import Link from 'next/link'
 import { CommunityTour } from '@/components/tours/community-tour'
+import { getUiState } from '@/lib/supabase/ui-state'
+import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 export default async function AdminCommunityPage() {
   const t = await getTranslations('community')
@@ -59,7 +61,7 @@ export default async function AdminCommunityPage() {
   const adminClient = createAdminClient()
 
   // Fetch posts, user reactions, and flagged content count in parallel
-  const [{ data: posts }, { data: userReactions }, { count: flaggedCount }] = await Promise.all([
+  const [{ data: posts }, { data: userReactions }, { count: flaggedCount }, uiState] = await Promise.all([
     adminClient
       .from('community_posts')
       .select(`
@@ -84,6 +86,7 @@ export default async function AdminCommunityPage() {
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('status', 'pending'),
+    getUiState(userId),
   ])
 
   // Collect unique author IDs and fetch profiles
@@ -148,7 +151,12 @@ export default async function AdminCommunityPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <CommunityTour userId={userId} userRole="admin" />
+      <CommunityTour
+        userId={userId}
+        userRole="admin"
+        completed={isTourCompleted(uiState, 'community')}
+        toursEnabled={areToursEnabled(uiState)}
+      />
       <header className="border-b bg-card">
         <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">

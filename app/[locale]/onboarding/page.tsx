@@ -4,8 +4,13 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import OnboardingWizard from '@/components/onboarding/onboarding-wizard'
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; interval?: string }>
+}) {
   const t = await getTranslations('onboarding')
+  const { plan, interval } = await searchParams
 
   const supabase = await createClient()
   const user = await getSessionUser()
@@ -13,10 +18,9 @@ export default async function OnboardingPage() {
     redirect('/auth/login')
   }
 
-  // Check if user already completed onboarding
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed, full_name')
+    .select('full_name')
     .eq('id', user.id)
     .single()
 
@@ -30,11 +34,20 @@ export default async function OnboardingPage() {
     .single()
 
   const role = tenantUser?.role || 'teacher'
-  const redirectTo = role === 'admin' ? '/dashboard/admin' : '/dashboard/teacher'
+  // Admins arriving from /platform-pricing with a paid plan choice continue to
+  // the upgrade page with that plan pre-selected instead of the plain dashboard.
+  const upgradeQuery = plan && plan !== 'free'
+    ? `?plan=${encodeURIComponent(plan)}${interval === 'yearly' || interval === 'monthly' ? `&interval=${interval}` : ''}`
+    : ''
+  const redirectTo =
+    role === 'admin'
+      ? upgradeQuery
+        ? `/dashboard/admin/billing/upgrade${upgradeQuery}`
+        : '/dashboard/admin'
+      : '/dashboard/teacher'
 
-  if (profile?.onboarding_completed) {
-    redirect(redirectTo)
-  }
+  // The wizard is optional now — setup is driven by the dashboard checklist,
+  // so already-onboarded users may revisit this page freely.
 
   // Get current tenant settings
   const { data: settings } = await supabase
@@ -42,8 +55,8 @@ export default async function OnboardingPage() {
     .select('setting_key, setting_value')
     .in('setting_key', ['site_name', 'site_description', 'logo_url', 'primary_color', 'secondary_color'])
 
-  const currentSettings = settings?.reduce((acc: Record<string, any>, s) => {
-    acc[s.setting_key] = s.setting_value
+  const currentSettings = settings?.reduce((acc: Record<string, { value?: string } | undefined>, s) => {
+    acc[s.setting_key] = s.setting_value as { value?: string } | undefined
     return acc
   }, {}) || {}
 
