@@ -1657,20 +1657,18 @@
         "onboarding": {
           "title": "Getting Started",
           "subtitle": "Set up your school in a few simple steps.",
-          "configureSchool": "Configure your school",
-          "configureSchoolDesc": "Set your school name, logo, and basic settings.",
+          "configureSchool": "Configure school details",
+          "configureSchoolDesc": "Set your school name and basic details.",
           "brandSchool": "Brand your school",
           "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional \u2014 the defaults look great.",
-          "connectPayments": "Connect payments",
-          "connectPaymentsDesc": "Connect Stripe to sell courses and receive payouts.",
+          "connectPayments": "Set up how you get paid",
+          "connectPaymentsDesc": "Choose manual payments, Stripe, or another available provider.",
           "wizardPrompt": "Prefer a guided setup?",
           "wizardLink": "Open the setup wizard",
-          "addCourse": "Create your first course",
-          "addCourseDesc": "Add a course so students have something to enroll in.",
-          "inviteUsers": "Invite your first users",
-          "inviteUsersDesc": "Add teachers or students to your school.",
-          "reviewBilling": "Review your billing plan",
-          "reviewBillingDesc": "Choose a plan that fits your school's needs."
+          "addCourse": "Create your first course — set a price and publish",
+          "addCourseDesc": "Use quick create to publish in minutes, or generate a draft with AI.",
+          "inviteUsers": "Invite your first students",
+          "inviteUsersDesc": "Invite students to join your school."
         },
         "tour": {
           "checklist": {

@@ -92,12 +92,11 @@ export function OnboardingChecklist({ storageKey, title, subtitle, steps, footer
             {steps.map((step) => (
               <Link
                 key={step.id}
-                href={step.completed ? '#' : step.href}
-                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${step.completed
+                href={step.href}
+                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-primary/5 ${step.completed
                     ? 'opacity-60'
-                    : 'hover:bg-primary/5'
+                    : ''
                   }`}
-                onClick={step.completed ? (e) => e.preventDefault() : undefined}
               >
                 <div
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${step.completed
@@ -108,16 +107,14 @@ export function OnboardingChecklist({ storageKey, title, subtitle, steps, footer
                   {step.completed && <IconCheck className="h-3 w-3" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${step.completed ? 'line-through' : 'group-hover:text-primary transition-colors'}`}>
+                  <p className={`text-sm font-medium transition-colors group-hover:text-primary ${step.completed ? 'line-through' : ''}`}>
                     {step.label}
                   </p>
                   {step.description && !step.completed && (
                     <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
                   )}
                 </div>
-                {!step.completed && (
-                  <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
-                )}
+                <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
               </Link>
             ))}
           </div>

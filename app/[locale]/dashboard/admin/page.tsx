@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
@@ -122,7 +122,7 @@ export default async function AdminDashboardPage({
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
     supabase.from('tenant_settings').select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
-      .in('setting_key', ['site_name', 'theme_preset', 'logo_url']),
+      .in('setting_key', ['site_name', 'theme_preset', 'logo_url', 'manual_payment_instructions']),
   ])
 
   const totalRevenue =
@@ -144,6 +144,7 @@ export default async function AdminDashboardPage({
   const currentSettings = { site_name: settingsByKey.get('site_name') }
   const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
   const isStripeConnected = Boolean(tenant?.stripe_account_id)
+  const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
 
   const stats = [
     {
@@ -199,11 +200,18 @@ export default async function AdminDashboardPage({
         subtitle={t('onboarding.subtitle')}
         steps={[
           {
-            id: 'configure-school',
-            label: t('onboarding.configureSchool'),
-            description: t('onboarding.configureSchoolDesc'),
-            href: '/dashboard/admin/settings',
-            completed: Boolean(currentSettings?.site_name),
+            id: 'add-course',
+            label: t('onboarding.addCourse'),
+            description: t('onboarding.addCourseDesc'),
+            href: '/dashboard/admin/products/new',
+            completed: (publishedCourses || 0) > 0,
+          },
+          {
+            id: 'connect-payments',
+            label: t('onboarding.connectPayments'),
+            description: t('onboarding.connectPaymentsDesc'),
+            href: '/dashboard/admin/settings?tab=payment',
+            completed: hasConfiguredPayments,
           },
           {
             id: 'brand-school',
@@ -213,20 +221,6 @@ export default async function AdminDashboardPage({
             completed: hasBranding,
           },
           {
-            id: 'connect-payments',
-            label: t('onboarding.connectPayments'),
-            description: t('onboarding.connectPaymentsDesc'),
-            href: '/dashboard/admin/monetization',
-            completed: isStripeConnected,
-          },
-          {
-            id: 'add-course',
-            label: t('onboarding.addCourse'),
-            description: t('onboarding.addCourseDesc'),
-            href: '/dashboard/teacher/courses/new',
-            completed: (totalCourses || 0) > 0,
-          },
-          {
             id: 'invite-users',
             label: t('onboarding.inviteUsers'),
             description: t('onboarding.inviteUsersDesc'),
@@ -234,11 +228,11 @@ export default async function AdminDashboardPage({
             completed: (totalUsers || 0) > 1, // More than just the admin
           },
           {
-            id: 'review-billing',
-            label: t('onboarding.reviewBilling'),
-            description: t('onboarding.reviewBillingDesc'),
-            href: '/dashboard/admin/billing/upgrade',
-            completed: planSlug !== 'free',
+            id: 'configure-school',
+            label: t('onboarding.configureSchool'),
+            description: t('onboarding.configureSchoolDesc'),
+            href: '/dashboard/admin/settings',
+            completed: Boolean(currentSettings?.site_name),
           },
         ]}
         footer={
