@@ -29,6 +29,13 @@ import { StatsCounter } from './components/lms/stats-counter'
 import { CtaBlock } from './components/lms/cta-block'
 import { ContactForm } from './components/lms/contact-form'
 import { LogoCloud } from './components/lms/logo-cloud'
+import { LogoMarquee } from './components/lms/logo-marquee'
+import { StatsBand } from './components/lms/stats-band'
+import { ShinyEyebrow } from './components/lms/shiny-eyebrow'
+import { AnimatedStats } from './components/lms/animated-stats'
+import { FaqSplit } from './components/lms/faq-split'
+import { CtaBanner } from './components/lms/cta-banner'
+import { ContentFeature } from './components/lms/content-feature'
 import { Banner } from './components/lms/banner'
 import { TeamGrid } from './components/lms/team-grid'
 import { ImageGallery } from './components/lms/image-gallery'
@@ -68,6 +75,13 @@ const componentDefinitions = {
   CtaBlock,
   ContactForm,
   LogoCloud,
+  LogoMarquee,
+  StatsBand,
+  ShinyEyebrow,
+  AnimatedStats,
+  FaqSplit,
+  CtaBanner,
+  ContentFeature,
   Banner,
   TeamGrid,
   ImageGallery,
@@ -108,6 +122,13 @@ const categoryDefinitions = {
       'CtaBlock',
       'ContactForm',
       'LogoCloud',
+      'LogoMarquee',
+      'StatsBand',
+      'ShinyEyebrow',
+      'AnimatedStats',
+      'FaqSplit',
+      'CtaBanner',
+      'ContentFeature',
       'Banner',
       'TeamGrid',
       'ImageGallery',

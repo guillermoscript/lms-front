@@ -1,0 +1,4642 @@
+{
+  "Heading": {
+    "category": "primitives",
+    "fields": {
+      "text": {
+        "type": "text",
+        "label": "Text"
+      },
+      "level": {
+        "type": "select",
+        "label": "Level",
+        "options": [
+          {
+            "label": "H1",
+            "value": "h1"
+          },
+          {
+            "label": "H2",
+            "value": "h2"
+          },
+          {
+            "label": "H3",
+            "value": "h3"
+          },
+          {
+            "label": "H4",
+            "value": "h4"
+          },
+          {
+            "label": "H5",
+            "value": "h5"
+          },
+          {
+            "label": "H6",
+            "value": "h6"
+          }
+        ]
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      },
+      "fontSize": {
+        "type": "select",
+        "label": "Font Size",
+        "options": [
+          {
+            "label": "Small",
+            "value": "1.125rem"
+          },
+          {
+            "label": "Medium",
+            "value": "1.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "2rem"
+          },
+          {
+            "label": "XL",
+            "value": "2.5rem"
+          },
+          {
+            "label": "2XL",
+            "value": "3rem"
+          },
+          {
+            "label": "3XL",
+            "value": "3.75rem"
+          },
+          {
+            "label": "4XL",
+            "value": "4.5rem"
+          }
+        ]
+      },
+      "fontWeight": {
+        "type": "select",
+        "label": "Font Weight",
+        "options": [
+          {
+            "label": "Normal",
+            "value": "400"
+          },
+          {
+            "label": "Medium",
+            "value": "500"
+          },
+          {
+            "label": "Semibold",
+            "value": "600"
+          },
+          {
+            "label": "Bold",
+            "value": "700"
+          },
+          {
+            "label": "Extra Bold",
+            "value": "800"
+          },
+          {
+            "label": "Black",
+            "value": "900"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "text": "Heading",
+      "level": "h2",
+      "alignment": "left",
+      "color": "",
+      "fontSize": "2rem",
+      "fontWeight": "700"
+    }
+  },
+  "TextBlock": {
+    "category": "primitives",
+    "fields": {
+      "content": {
+        "type": "textarea",
+        "label": "Content"
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Max Width",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small (480px)",
+            "value": "480px"
+          },
+          {
+            "label": "Medium (640px)",
+            "value": "640px"
+          },
+          {
+            "label": "Large (768px)",
+            "value": "768px"
+          },
+          {
+            "label": "XL (960px)",
+            "value": "960px"
+          }
+        ]
+      },
+      "fontSize": {
+        "type": "select",
+        "label": "Font Size",
+        "options": [
+          {
+            "label": "Small",
+            "value": "0.875rem"
+          },
+          {
+            "label": "Base",
+            "value": "1rem"
+          },
+          {
+            "label": "Large",
+            "value": "1.125rem"
+          },
+          {
+            "label": "XL",
+            "value": "1.25rem"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "content": "Enter your text here...",
+      "alignment": "left",
+      "color": "",
+      "maxWidth": "none",
+      "fontSize": "1rem"
+    }
+  },
+  "Image": {
+    "category": "primitives",
+    "fields": {
+      "src": {
+        "type": "text",
+        "label": "Image URL"
+      },
+      "alt": {
+        "type": "text",
+        "label": "Alt Text"
+      },
+      "width": {
+        "type": "text",
+        "label": "Width"
+      },
+      "height": {
+        "type": "text",
+        "label": "Height"
+      },
+      "objectFit": {
+        "type": "select",
+        "label": "Object Fit",
+        "options": [
+          {
+            "label": "Cover",
+            "value": "cover"
+          },
+          {
+            "label": "Contain",
+            "value": "contain"
+          },
+          {
+            "label": "Fill",
+            "value": "fill"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "borderRadius": {
+        "type": "select",
+        "label": "Border Radius",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "0.25rem"
+          },
+          {
+            "label": "Medium",
+            "value": "0.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "1rem"
+          },
+          {
+            "label": "XL",
+            "value": "1.5rem"
+          },
+          {
+            "label": "Full",
+            "value": "9999px"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "src": "https://placehold.co/800x400/e2e8f0/64748b?text=Image",
+      "alt": "Image",
+      "width": "100%",
+      "height": "auto",
+      "objectFit": "cover",
+      "borderRadius": "0.5rem"
+    }
+  },
+  "ButtonBlock": {
+    "category": "primitives",
+    "fields": {
+      "label": {
+        "type": "text",
+        "label": "Label"
+      },
+      "href": {
+        "type": "text",
+        "label": "Link URL"
+      },
+      "variant": {
+        "type": "select",
+        "label": "Variant",
+        "options": [
+          {
+            "label": "Solid",
+            "value": "solid"
+          },
+          {
+            "label": "Outline",
+            "value": "outline"
+          },
+          {
+            "label": "Ghost",
+            "value": "ghost"
+          }
+        ]
+      },
+      "size": {
+        "type": "select",
+        "label": "Size",
+        "options": [
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "label": "Click me",
+      "href": "#",
+      "variant": "solid",
+      "size": "md",
+      "color": "",
+      "alignment": "left"
+    }
+  },
+  "Video": {
+    "category": "primitives",
+    "fields": {
+      "url": {
+        "type": "text",
+        "label": "Video URL (YouTube or Vimeo)"
+      },
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "aspectRatio": {
+        "type": "select",
+        "label": "Aspect Ratio",
+        "options": [
+          {
+            "label": "16:9",
+            "value": "16/9"
+          },
+          {
+            "label": "4:3",
+            "value": "4/3"
+          },
+          {
+            "label": "1:1",
+            "value": "1/1"
+          }
+        ]
+      },
+      "borderRadius": {
+        "type": "select",
+        "label": "Border Radius",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "0.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "1rem"
+          },
+          {
+            "label": "XL",
+            "value": "1.5rem"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "url": "",
+      "title": "Video",
+      "aspectRatio": "16/9",
+      "borderRadius": "0.5rem"
+    }
+  },
+  "Divider": {
+    "category": "primitives",
+    "fields": {
+      "style": {
+        "type": "select",
+        "label": "Style",
+        "options": [
+          {
+            "label": "Line",
+            "value": "line"
+          },
+          {
+            "label": "Dashed",
+            "value": "dashed"
+          },
+          {
+            "label": "Dotted",
+            "value": "dotted"
+          },
+          {
+            "label": "Gradient",
+            "value": "gradient"
+          },
+          {
+            "label": "Space",
+            "value": "space"
+          }
+        ]
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      },
+      "thickness": {
+        "type": "select",
+        "label": "Thickness",
+        "options": [
+          {
+            "label": "Thin (1px)",
+            "value": "1px"
+          },
+          {
+            "label": "Medium (2px)",
+            "value": "2px"
+          },
+          {
+            "label": "Thick (4px)",
+            "value": "4px"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "style": "line",
+      "color": "",
+      "thickness": "1px"
+    }
+  },
+  "Spacer": {
+    "category": "primitives",
+    "fields": {
+      "height": {
+        "type": "number",
+        "label": "Height (px)"
+      },
+      "mobileHeight": {
+        "type": "number",
+        "label": "Mobile Height (px)"
+      }
+    },
+    "defaultProps": {
+      "height": 40,
+      "mobileHeight": 20
+    }
+  },
+  "IconBlock": {
+    "category": "primitives",
+    "fields": {
+      "icon": {
+        "type": "select",
+        "label": "Icon",
+        "options": [
+          {
+            "label": "Star",
+            "value": "star"
+          },
+          {
+            "label": "Heart",
+            "value": "heart"
+          },
+          {
+            "label": "Check",
+            "value": "check"
+          },
+          {
+            "label": "Arrow",
+            "value": "arrow"
+          },
+          {
+            "label": "Info",
+            "value": "info"
+          },
+          {
+            "label": "Warning",
+            "value": "warning"
+          },
+          {
+            "label": "Rocket",
+            "value": "rocket"
+          },
+          {
+            "label": "Book",
+            "value": "book"
+          },
+          {
+            "label": "Trophy",
+            "value": "trophy"
+          },
+          {
+            "label": "Lightning",
+            "value": "lightning"
+          },
+          {
+            "label": "Graduation",
+            "value": "graduation"
+          },
+          {
+            "label": "Lock",
+            "value": "lock"
+          },
+          {
+            "label": "Globe",
+            "value": "globe"
+          },
+          {
+            "label": "Code",
+            "value": "code"
+          },
+          {
+            "label": "Chart",
+            "value": "chart"
+          }
+        ]
+      },
+      "size": {
+        "type": "number",
+        "label": "Size (px)"
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "icon": "star",
+      "size": 32,
+      "color": "",
+      "alignment": "center"
+    }
+  },
+  "BadgeBlock": {
+    "category": "primitives",
+    "fields": {
+      "text": {
+        "type": "text",
+        "label": "Text"
+      },
+      "variant": {
+        "type": "select",
+        "label": "Variant",
+        "options": [
+          {
+            "label": "Solid",
+            "value": "solid"
+          },
+          {
+            "label": "Outline",
+            "value": "outline"
+          },
+          {
+            "label": "Subtle",
+            "value": "subtle"
+          }
+        ]
+      },
+      "color": {
+        "type": "text",
+        "label": "Color"
+      }
+    },
+    "defaultProps": {
+      "text": "Badge",
+      "variant": "subtle",
+      "color": ""
+    }
+  },
+  "Section": {
+    "category": "layout",
+    "fields": {
+      "backgroundColor": {
+        "type": "text",
+        "label": "Background Color"
+      },
+      "backgroundImage": {
+        "type": "text",
+        "label": "Background Image URL"
+      },
+      "backgroundGradient": {
+        "type": "text",
+        "label": "Background Gradient CSS"
+      },
+      "overlayOpacity": {
+        "type": "number",
+        "label": "Overlay Opacity (%)"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "2rem"
+          },
+          {
+            "label": "Medium",
+            "value": "4rem"
+          },
+          {
+            "label": "Large",
+            "value": "6rem"
+          },
+          {
+            "label": "XL",
+            "value": "8rem"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Max Width",
+        "options": [
+          {
+            "label": "Small (768px)",
+            "value": "768px"
+          },
+          {
+            "label": "Medium (1024px)",
+            "value": "1024px"
+          },
+          {
+            "label": "Large (1280px)",
+            "value": "1280px"
+          },
+          {
+            "label": "Full",
+            "value": "100%"
+          }
+        ]
+      },
+      "theme": {
+        "type": "select",
+        "label": "Theme",
+        "options": [
+          {
+            "label": "Light",
+            "value": "light"
+          },
+          {
+            "label": "Dark",
+            "value": "dark"
+          },
+          {
+            "label": "Transparent",
+            "value": "transparent"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "backgroundColor": "",
+      "backgroundImage": "",
+      "backgroundGradient": "",
+      "overlayOpacity": 0,
+      "paddingY": "4rem",
+      "maxWidth": "1280px",
+      "theme": "light"
+    }
+  },
+  "Columns": {
+    "category": "layout",
+    "fields": {
+      "columnCount": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2 Columns",
+            "value": "2"
+          },
+          {
+            "label": "3 Columns",
+            "value": "3"
+          },
+          {
+            "label": "4 Columns",
+            "value": "4"
+          }
+        ]
+      },
+      "gap": {
+        "type": "select",
+        "label": "Gap",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "1rem"
+          },
+          {
+            "label": "Medium",
+            "value": "1.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "2rem"
+          },
+          {
+            "label": "XL",
+            "value": "3rem"
+          }
+        ]
+      },
+      "verticalAlign": {
+        "type": "select",
+        "label": "Vertical Alignment",
+        "options": [
+          {
+            "label": "Top",
+            "value": "top"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Bottom",
+            "value": "bottom"
+          },
+          {
+            "label": "Stretch",
+            "value": "stretch"
+          }
+        ]
+      },
+      "stackOnMobile": {
+        "type": "radio",
+        "label": "Stack on Mobile",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "columnCount": "2",
+      "gap": "1.5rem",
+      "verticalAlign": "top",
+      "stackOnMobile": true
+    }
+  },
+  "Container": {
+    "category": "layout",
+    "fields": {
+      "maxWidth": {
+        "type": "select",
+        "label": "Max Width",
+        "options": [
+          {
+            "label": "Small (640px)",
+            "value": "640px"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "768px"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "1024px"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "1280px"
+          },
+          {
+            "label": "Full",
+            "value": "100%"
+          }
+        ]
+      },
+      "padding": {
+        "type": "select",
+        "label": "Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "1rem"
+          },
+          {
+            "label": "Medium",
+            "value": "1.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "2rem"
+          }
+        ]
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "maxWidth": "1280px",
+      "padding": "1.5rem",
+      "alignment": "center"
+    }
+  },
+  "Grid": {
+    "category": "layout",
+    "fields": {
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          },
+          {
+            "label": "5",
+            "value": "5"
+          },
+          {
+            "label": "6",
+            "value": "6"
+          }
+        ]
+      },
+      "gap": {
+        "type": "select",
+        "label": "Gap",
+        "options": [
+          {
+            "label": "Small",
+            "value": "0.75rem"
+          },
+          {
+            "label": "Medium",
+            "value": "1rem"
+          },
+          {
+            "label": "Large",
+            "value": "1.5rem"
+          },
+          {
+            "label": "XL",
+            "value": "2rem"
+          }
+        ]
+      },
+      "minItemWidth": {
+        "type": "select",
+        "label": "Min Item Width",
+        "options": [
+          {
+            "label": "Auto",
+            "value": "auto"
+          },
+          {
+            "label": "200px",
+            "value": "200px"
+          },
+          {
+            "label": "250px",
+            "value": "250px"
+          },
+          {
+            "label": "300px",
+            "value": "300px"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "columns": "3",
+      "gap": "1.5rem",
+      "minItemWidth": "auto"
+    }
+  },
+  "Card": {
+    "category": "layout",
+    "fields": {
+      "shadow": {
+        "type": "select",
+        "label": "Shadow",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "padding": {
+        "type": "select",
+        "label": "Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "1rem"
+          },
+          {
+            "label": "Medium",
+            "value": "1.5rem"
+          },
+          {
+            "label": "Large",
+            "value": "2rem"
+          }
+        ]
+      },
+      "borderRadius": {
+        "type": "select",
+        "label": "Border Radius",
+        "options": [
+          {
+            "label": "None",
+            "value": "0"
+          },
+          {
+            "label": "Small",
+            "value": "0.5rem"
+          },
+          {
+            "label": "Medium",
+            "value": "0.75rem"
+          },
+          {
+            "label": "Large",
+            "value": "1rem"
+          },
+          {
+            "label": "XL",
+            "value": "1.5rem"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "shadow": "sm",
+      "padding": "1.5rem",
+      "borderRadius": "0.75rem"
+    }
+  },
+  "HeroBlock": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "primaryCtaLabel": {
+        "type": "text",
+        "label": "Primary Button Label"
+      },
+      "primaryCtaHref": {
+        "type": "text",
+        "label": "Primary Button URL"
+      },
+      "secondaryCtaLabel": {
+        "type": "text",
+        "label": "Secondary Button Label"
+      },
+      "secondaryCtaHref": {
+        "type": "text",
+        "label": "Secondary Button URL"
+      },
+      "backgroundImage": {
+        "type": "text",
+        "label": "Background Image URL"
+      },
+      "backgroundColor": {
+        "type": "text",
+        "label": "Background Color"
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      },
+      "overlayOpacity": {
+        "type": "number",
+        "label": "Overlay Opacity (%)"
+      },
+      "minHeight": {
+        "type": "select",
+        "label": "Min Height",
+        "options": [
+          {
+            "label": "Auto",
+            "value": "auto"
+          },
+          {
+            "label": "Medium (400px)",
+            "value": "400px"
+          },
+          {
+            "label": "Large (500px)",
+            "value": "500px"
+          },
+          {
+            "label": "XL (600px)",
+            "value": "600px"
+          },
+          {
+            "label": "Full Screen",
+            "value": "100vh"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Welcome to Our Academy",
+      "subtitle": "Start your learning journey today with expert-led courses designed to help you succeed.",
+      "primaryCtaLabel": "Get Started",
+      "primaryCtaHref": "/courses",
+      "secondaryCtaLabel": "Learn More",
+      "secondaryCtaHref": "#features",
+      "backgroundImage": "",
+      "backgroundColor": "",
+      "alignment": "center",
+      "overlayOpacity": 50,
+      "minHeight": "500px"
+    }
+  },
+  "FeaturesGrid": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Features",
+        "arrayFields": {
+          "icon": {
+            "type": "text",
+            "label": "Icon (emoji)"
+          },
+          "title": {
+            "type": "text",
+            "label": "Title"
+          },
+          "description": {
+            "type": "textarea",
+            "label": "Description"
+          }
+        }
+      },
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Why Choose Us",
+      "subtitle": "Everything you need to succeed in your learning journey.",
+      "items": [
+        {
+          "icon": "🎓",
+          "title": "Expert Instructors",
+          "description": "Learn from industry professionals with years of experience."
+        },
+        {
+          "icon": "📚",
+          "title": "Structured Courses",
+          "description": "Well-organized curriculum designed for effective learning."
+        },
+        {
+          "icon": "🏆",
+          "title": "Certificates",
+          "description": "Earn verifiable certificates upon course completion."
+        }
+      ],
+      "columns": "3",
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "CourseGrid": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "courseIds": {
+        "type": "custom",
+        "label": "Curated Courses (leave empty for latest)"
+      },
+      "maxItems": {
+        "type": "number",
+        "label": "Max Courses"
+      },
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      "showPrice": {
+        "type": "radio",
+        "label": "Show Price",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "showDescription": {
+        "type": "radio",
+        "label": "Show Description",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Our Courses",
+      "subtitle": "Explore our catalog and start learning today.",
+      "courseIds": [],
+      "maxItems": 6,
+      "columns": "3",
+      "showPrice": true,
+      "showDescription": true,
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "PricingTable": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Plans",
+        "arrayFields": {
+          "name": {
+            "type": "text",
+            "label": "Plan Name"
+          },
+          "price": {
+            "type": "text",
+            "label": "Price"
+          },
+          "period": {
+            "type": "text",
+            "label": "Period (eg /month)"
+          },
+          "description": {
+            "type": "text",
+            "label": "Description"
+          },
+          "features": {
+            "type": "textarea",
+            "label": "Features (one per line)"
+          },
+          "highlighted": {
+            "type": "radio",
+            "label": "Highlighted",
+            "options": [
+              {
+                "label": "Yes",
+                "value": true
+              },
+              {
+                "label": "No",
+                "value": false
+              }
+            ]
+          },
+          "ctaLabel": {
+            "type": "text",
+            "label": "Button Label"
+          },
+          "ctaHref": {
+            "type": "text",
+            "label": "Button URL"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Simple Pricing",
+      "subtitle": "Choose the plan that fits your needs.",
+      "items": [
+        {
+          "name": "Basic",
+          "price": "$19",
+          "period": "/month",
+          "description": "For individuals",
+          "features": "Access to all courses\nCommunity support\nCertificates",
+          "highlighted": false,
+          "ctaLabel": "Start Free",
+          "ctaHref": "#"
+        },
+        {
+          "name": "Pro",
+          "price": "$49",
+          "period": "/month",
+          "description": "For professionals",
+          "features": "Everything in Basic\nPriority support\n1-on-1 mentoring\nAdvanced courses",
+          "highlighted": true,
+          "ctaLabel": "Get Pro",
+          "ctaHref": "#"
+        },
+        {
+          "name": "Team",
+          "price": "$99",
+          "period": "/month",
+          "description": "For organizations",
+          "features": "Everything in Pro\nTeam management\nCustom integrations\nDedicated support",
+          "highlighted": false,
+          "ctaLabel": "Contact Us",
+          "ctaHref": "#"
+        }
+      ],
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "TestimonialGrid": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Testimonials",
+        "arrayFields": {
+          "name": {
+            "type": "text",
+            "label": "Name"
+          },
+          "role": {
+            "type": "text",
+            "label": "Role"
+          },
+          "quote": {
+            "type": "textarea",
+            "label": "Quote"
+          },
+          "rating": {
+            "type": "number",
+            "label": "Rating (1-5)"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "What Our Students Say",
+      "subtitle": "",
+      "items": [
+        {
+          "name": "Maria S.",
+          "role": "Web Developer",
+          "quote": "The courses are incredibly well-structured. I went from beginner to professional in just 3 months.",
+          "rating": 5
+        },
+        {
+          "name": "Carlos R.",
+          "role": "Data Analyst",
+          "quote": "Best online learning platform I have used. The AI tutor is a game changer.",
+          "rating": 5
+        },
+        {
+          "name": "Ana L.",
+          "role": "UX Designer",
+          "quote": "The gamification keeps me motivated every day. Already on a 30-day streak!",
+          "rating": 5
+        }
+      ],
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "FaqAccordion": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Questions",
+        "arrayFields": {
+          "question": {
+            "type": "text",
+            "label": "Question"
+          },
+          "answer": {
+            "type": "textarea",
+            "label": "Answer"
+          }
+        }
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "",
+      "items": [
+        {
+          "question": "How do I get started?",
+          "answer": "Simply create an account and browse our course catalog. You can start learning immediately with our free courses."
+        },
+        {
+          "question": "Do I get a certificate?",
+          "answer": "Yes! Upon completing a course, you receive a verifiable digital certificate that you can share on your resume or LinkedIn."
+        },
+        {
+          "question": "Can I learn at my own pace?",
+          "answer": "Absolutely. All courses are self-paced, so you can learn whenever and wherever works best for you."
+        }
+      ],
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "StatsCounter": {
+    "category": "lms",
+    "fields": {
+      "items": {
+        "type": "array",
+        "label": "Stats",
+        "arrayFields": {
+          "value": {
+            "type": "text",
+            "label": "Value"
+          },
+          "label": {
+            "type": "text",
+            "label": "Label"
+          },
+          "prefix": {
+            "type": "text",
+            "label": "Prefix"
+          },
+          "suffix": {
+            "type": "text",
+            "label": "Suffix"
+          }
+        }
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "items": [
+        {
+          "value": "10,000",
+          "label": "Students",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "500",
+          "label": "Courses",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "50",
+          "label": "Instructors",
+          "prefix": "",
+          "suffix": "+"
+        },
+        {
+          "value": "4.9",
+          "label": "Rating",
+          "prefix": "",
+          "suffix": "/5"
+        }
+      ],
+      "alignment": "center",
+      "accentColor": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none"
+    }
+  },
+  "CtaBlock": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "primaryCtaLabel": {
+        "type": "text",
+        "label": "Primary Button Label"
+      },
+      "primaryCtaHref": {
+        "type": "text",
+        "label": "Primary Button URL"
+      },
+      "secondaryCtaLabel": {
+        "type": "text",
+        "label": "Secondary Button Label"
+      },
+      "secondaryCtaHref": {
+        "type": "text",
+        "label": "Secondary Button URL"
+      },
+      "style": {
+        "type": "select",
+        "label": "Style",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Gradient",
+            "value": "gradient"
+          },
+          {
+            "label": "Bordered",
+            "value": "bordered"
+          }
+        ]
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Ready to Start Learning?",
+      "subtitle": "Join thousands of students and start your journey today.",
+      "primaryCtaLabel": "Get Started",
+      "primaryCtaHref": "/courses",
+      "secondaryCtaLabel": "",
+      "secondaryCtaHref": "",
+      "style": "gradient",
+      "accentColor": ""
+    }
+  },
+  "ContactForm": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "email": {
+        "type": "text",
+        "label": "Contact Email"
+      },
+      "showPhone": {
+        "type": "radio",
+        "label": "Show Phone Field",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "showMessage": {
+        "type": "radio",
+        "label": "Show Message Field",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Contact Us",
+      "subtitle": "Have a question? We would love to hear from you.",
+      "email": "hello@school.com",
+      "showPhone": false,
+      "showMessage": true
+    }
+  },
+  "LogoCloud": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "items": {
+        "type": "array",
+        "label": "Logos",
+        "arrayFields": {
+          "src": {
+            "type": "text",
+            "label": "Image URL"
+          },
+          "alt": {
+            "type": "text",
+            "label": "Alt Text"
+          },
+          "url": {
+            "type": "text",
+            "label": "Link URL"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Trusted By",
+      "items": [
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+1",
+          "alt": "Brand 1",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+2",
+          "alt": "Brand 2",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+3",
+          "alt": "Brand 3",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+4",
+          "alt": "Brand 4",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+5",
+          "alt": "Brand 5",
+          "url": ""
+        }
+      ]
+    }
+  },
+  "LogoMarquee": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "items": {
+        "type": "array",
+        "label": "Logos",
+        "arrayFields": {
+          "src": {
+            "type": "text",
+            "label": "Image URL"
+          },
+          "alt": {
+            "type": "text",
+            "label": "Alt Text"
+          },
+          "url": {
+            "type": "text",
+            "label": "Link URL"
+          }
+        }
+      },
+      "reverse": {
+        "type": "radio",
+        "label": "Direction",
+        "options": [
+          {
+            "label": "Left",
+            "value": "false"
+          },
+          {
+            "label": "Right",
+            "value": "true"
+          }
+        ]
+      },
+      "pauseOnHover": {
+        "type": "radio",
+        "label": "Pause on Hover",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "true"
+          },
+          {
+            "label": "No",
+            "value": "false"
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Trusted By",
+      "reverse": "false",
+      "pauseOnHover": "true",
+      "items": [
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+1",
+          "alt": "Brand 1",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+2",
+          "alt": "Brand 2",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+3",
+          "alt": "Brand 3",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+4",
+          "alt": "Brand 4",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+5",
+          "alt": "Brand 5",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+6",
+          "alt": "Brand 6",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+7",
+          "alt": "Brand 7",
+          "url": ""
+        },
+        {
+          "src": "https://placehold.co/120x40/e2e8f0/94a3b8?text=Brand+8",
+          "alt": "Brand 8",
+          "url": ""
+        }
+      ]
+    }
+  },
+  "StatsBand": {
+    "category": "lms",
+    "fields": {
+      "heading": {
+        "type": "text",
+        "label": "Heading"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Stats",
+        "arrayFields": {
+          "value": {
+            "type": "text",
+            "label": "Value"
+          },
+          "label": {
+            "type": "text",
+            "label": "Label"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Our platform in numbers",
+      "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
+      "items": [
+        {
+          "value": "+1200",
+          "label": "Courses published"
+        },
+        {
+          "value": "22,000",
+          "label": "Active students"
+        },
+        {
+          "value": "+500",
+          "label": "Certificates issued"
+        }
+      ]
+    }
+  },
+  "ShinyEyebrow": {
+    "category": "lms",
+    "fields": {
+      "text": {
+        "type": "text",
+        "label": "Text"
+      },
+      "align": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "text": "✨ Introducing our new course builder",
+      "align": "center"
+    }
+  },
+  "AnimatedStats": {
+    "category": "lms",
+    "fields": {
+      "heading": {
+        "type": "text",
+        "label": "Heading"
+      },
+      "items": {
+        "type": "array",
+        "label": "Stats",
+        "arrayFields": {
+          "value": {
+            "type": "number",
+            "label": "Value"
+          },
+          "prefix": {
+            "type": "text",
+            "label": "Prefix"
+          },
+          "suffix": {
+            "type": "text",
+            "label": "Suffix"
+          },
+          "label": {
+            "type": "text",
+            "label": "Label"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Trusted by learners worldwide",
+      "items": [
+        {
+          "value": 1200,
+          "prefix": "+",
+          "suffix": "",
+          "label": "Courses published"
+        },
+        {
+          "value": 22000,
+          "prefix": "",
+          "suffix": "",
+          "label": "Active students"
+        },
+        {
+          "value": 98,
+          "prefix": "",
+          "suffix": "%",
+          "label": "Completion rate"
+        }
+      ]
+    }
+  },
+  "FaqSplit": {
+    "category": "lms",
+    "fields": {
+      "heading": {
+        "type": "text",
+        "label": "Heading"
+      },
+      "items": {
+        "type": "array",
+        "label": "Questions",
+        "arrayFields": {
+          "question": {
+            "type": "text",
+            "label": "Question"
+          },
+          "answer": {
+            "type": "textarea",
+            "label": "Answer"
+          }
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "What is the refund policy?",
+          "answer": "We offer a 30-day money back guarantee. If you are not satisfied, request a refund within 30 days of purchase."
+        },
+        {
+          "question": "How do I cancel my subscription?",
+          "answer": "You can cancel at any time from your account settings — your access continues until the end of the current billing period."
+        },
+        {
+          "question": "Can I upgrade my plan?",
+          "answer": "Yes. Upgrade any time from your account; the price difference is prorated and the new plan takes effect immediately."
+        }
+      ]
+    }
+  },
+  "CtaBanner": {
+    "category": "lms",
+    "fields": {
+      "heading": {
+        "type": "text",
+        "label": "Heading"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "primaryLabel": {
+        "type": "text",
+        "label": "Primary Button Label"
+      },
+      "primaryHref": {
+        "type": "text",
+        "label": "Primary Button URL"
+      },
+      "secondaryLabel": {
+        "type": "text",
+        "label": "Secondary Button Label"
+      },
+      "secondaryHref": {
+        "type": "text",
+        "label": "Secondary Button URL"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Start building your course today",
+      "subtitle": "Join thousands of educators publishing on the platform.",
+      "primaryLabel": "Get Started",
+      "primaryHref": "/auth/sign-up",
+      "secondaryLabel": "Book a Demo",
+      "secondaryHref": "/contact"
+    }
+  },
+  "ContentFeature": {
+    "category": "lms",
+    "fields": {
+      "heading": {
+        "type": "text",
+        "label": "Heading"
+      },
+      "body": {
+        "type": "textarea",
+        "label": "Body"
+      },
+      "imageUrl": {
+        "type": "text",
+        "label": "Image URL"
+      },
+      "imageAlt": {
+        "type": "text",
+        "label": "Image Alt Text"
+      },
+      "imagePosition": {
+        "type": "radio",
+        "label": "Image Position",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      },
+      "quote": {
+        "type": "textarea",
+        "label": "Pull Quote"
+      },
+      "quoteAuthor": {
+        "type": "text",
+        "label": "Quote Author"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "heading": "Everything you need to teach online",
+      "body": "Build courses, track learner progress, run assessments, and issue certificates — all from one platform designed to get out of your way.",
+      "imageUrl": "https://placehold.co/1207x929/e2e8f0/64748b?text=Feature",
+      "imageAlt": "Product feature illustration",
+      "imagePosition": "left",
+      "quote": "Switching to this platform cut our course setup time in half and our completion rates went up.",
+      "quoteAuthor": "Jane Doe, Course Creator"
+    }
+  },
+  "Banner": {
+    "category": "lms",
+    "fields": {
+      "text": {
+        "type": "text",
+        "label": "Text"
+      },
+      "style": {
+        "type": "select",
+        "label": "Style",
+        "options": [
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Info",
+            "value": "info"
+          },
+          {
+            "label": "Warning",
+            "value": "warning"
+          },
+          {
+            "label": "Success",
+            "value": "success"
+          },
+          {
+            "label": "Urgent",
+            "value": "urgent"
+          }
+        ]
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color (Brand style)"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "sm",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "text": "Welcome! Enrollment is now open for our new courses.",
+      "style": "info",
+      "accentColor": ""
+    }
+  },
+  "TeamGrid": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "members": {
+        "type": "array",
+        "label": "Members",
+        "arrayFields": {
+          "name": {
+            "type": "text",
+            "label": "Name"
+          },
+          "role": {
+            "type": "text",
+            "label": "Role"
+          },
+          "bio": {
+            "type": "textarea",
+            "label": "Bio"
+          },
+          "avatar": {
+            "type": "text",
+            "label": "Avatar URL"
+          }
+        }
+      },
+      "accentColor": {
+        "type": "text",
+        "label": "Accent Color"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "Meet Our Team",
+      "subtitle": "",
+      "accentColor": "",
+      "members": [
+        {
+          "name": "Alex Johnson",
+          "role": "Lead Instructor",
+          "bio": "Full-stack developer with 10+ years of experience.",
+          "avatar": ""
+        },
+        {
+          "name": "Sarah Chen",
+          "role": "Course Designer",
+          "bio": "Expert in curriculum development and instructional design.",
+          "avatar": ""
+        },
+        {
+          "name": "David Kim",
+          "role": "AI Specialist",
+          "bio": "Machine learning researcher and educator.",
+          "avatar": ""
+        }
+      ]
+    }
+  },
+  "ImageGallery": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "images": {
+        "type": "array",
+        "label": "Images",
+        "arrayFields": {
+          "src": {
+            "type": "text",
+            "label": "Image URL"
+          },
+          "alt": {
+            "type": "text",
+            "label": "Alt Text"
+          },
+          "caption": {
+            "type": "text",
+            "label": "Caption"
+          }
+        }
+      },
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "title": "",
+      "images": [
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+1",
+          "alt": "Photo 1",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+2",
+          "alt": "Photo 2",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+3",
+          "alt": "Photo 3",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+4",
+          "alt": "Photo 4",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+5",
+          "alt": "Photo 5",
+          "caption": ""
+        },
+        {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Photo+6",
+          "alt": "Photo 6",
+          "caption": ""
+        }
+      ],
+      "columns": "3"
+    }
+  },
+  "SocialProof": {
+    "category": "lms",
+    "fields": {
+      "text": {
+        "type": "text",
+        "label": "Text"
+      },
+      "rating": {
+        "type": "number",
+        "label": "Rating (1-5)"
+      },
+      "reviewCount": {
+        "type": "text",
+        "label": "Review Count Text"
+      },
+      "avatarCount": {
+        "type": "number",
+        "label": "Number of Avatars"
+      }
+    },
+    "defaultProps": {
+      "text": "Trusted by 10,000+ students worldwide",
+      "rating": 5,
+      "reviewCount": "Based on 2,000+ reviews",
+      "avatarCount": 5
+    }
+  },
+  "Header": {
+    "category": "navigation",
+    "fields": {
+      "logo": {
+        "type": "text",
+        "label": "Logo Image URL"
+      },
+      "logoText": {
+        "type": "text",
+        "label": "Logo Text (fallback)"
+      },
+      "navLinks": {
+        "type": "array",
+        "label": "Navigation Links",
+        "arrayFields": {
+          "label": {
+            "type": "text",
+            "label": "Label"
+          },
+          "href": {
+            "type": "text",
+            "label": "URL"
+          }
+        }
+      },
+      "ctaLabel": {
+        "type": "text",
+        "label": "CTA Button Label"
+      },
+      "ctaHref": {
+        "type": "text",
+        "label": "CTA Button URL"
+      },
+      "showLogin": {
+        "type": "radio",
+        "label": "Show Login Button",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "showLanguageSwitcher": {
+        "type": "radio",
+        "label": "Show Language Switcher",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "sticky": {
+        "type": "radio",
+        "label": "Sticky",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "transparent": {
+        "type": "radio",
+        "label": "Transparent Background",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "logo": "",
+      "logoText": "Academy",
+      "navLinks": [
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "About",
+          "href": "#about"
+        },
+        {
+          "label": "Contact",
+          "href": "#contact"
+        }
+      ],
+      "ctaLabel": "Enroll Now",
+      "ctaHref": "/courses",
+      "showLogin": true,
+      "showLanguageSwitcher": true,
+      "sticky": true,
+      "transparent": false
+    }
+  },
+  "Footer": {
+    "category": "navigation",
+    "fields": {
+      "description": {
+        "type": "textarea",
+        "label": "Description"
+      },
+      "columns": {
+        "type": "array",
+        "label": "Link Columns",
+        "arrayFields": {
+          "title": {
+            "type": "text",
+            "label": "Column Title"
+          },
+          "links": {
+            "type": "array",
+            "label": "Links",
+            "arrayFields": {
+              "label": {
+                "type": "text",
+                "label": "Label"
+              },
+              "href": {
+                "type": "text",
+                "label": "URL"
+              }
+            }
+          }
+        }
+      },
+      "socialLinks": {
+        "type": "array",
+        "label": "Social Links",
+        "arrayFields": {
+          "platform": {
+            "type": "text",
+            "label": "Platform (eg Twitter)"
+          },
+          "url": {
+            "type": "text",
+            "label": "URL"
+          }
+        }
+      },
+      "copyright": {
+        "type": "text",
+        "label": "Copyright Text"
+      }
+    },
+    "defaultProps": {
+      "description": "Your online academy for professional development and personal growth.",
+      "columns": [
+        {
+          "title": "Courses",
+          "links": [
+            {
+              "label": "All Courses",
+              "href": "/courses"
+            },
+            {
+              "label": "Pricing",
+              "href": "/pricing"
+            }
+          ]
+        },
+        {
+          "title": "Company",
+          "links": [
+            {
+              "label": "About",
+              "href": "#about"
+            },
+            {
+              "label": "Contact",
+              "href": "#contact"
+            }
+          ]
+        },
+        {
+          "title": "Legal",
+          "links": [
+            {
+              "label": "Terms",
+              "href": "/terms"
+            },
+            {
+              "label": "Privacy",
+              "href": "/privacy"
+            }
+          ]
+        }
+      ],
+      "socialLinks": [],
+      "copyright": "© 2026 Academy. All rights reserved."
+    }
+  },
+  "Navbar": {
+    "category": "navigation",
+    "fields": {
+      "links": {
+        "type": "array",
+        "label": "Links",
+        "arrayFields": {
+          "label": {
+            "type": "text",
+            "label": "Label"
+          },
+          "href": {
+            "type": "text",
+            "label": "URL"
+          }
+        }
+      },
+      "sticky": {
+        "type": "radio",
+        "label": "Sticky",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "alignment": {
+        "type": "radio",
+        "label": "Alignment",
+        "options": [
+          {
+            "label": "Left",
+            "value": "left"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          },
+          {
+            "label": "Right",
+            "value": "right"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "links": [
+        {
+          "label": "Home",
+          "href": "/"
+        },
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "About",
+          "href": "#about"
+        },
+        {
+          "label": "Contact",
+          "href": "#contact"
+        }
+      ],
+      "sticky": false,
+      "alignment": "center"
+    }
+  },
+  "BreadcrumbBlock": {
+    "category": "navigation",
+    "fields": {
+      "items": {
+        "type": "array",
+        "label": "Items",
+        "arrayFields": {
+          "label": {
+            "type": "text",
+            "label": "Label"
+          },
+          "href": {
+            "type": "text",
+            "label": "URL"
+          }
+        }
+      },
+      "separator": {
+        "type": "select",
+        "label": "Separator",
+        "options": [
+          {
+            "label": "/",
+            "value": "/"
+          },
+          {
+            "label": ">",
+            "value": "›"
+          },
+          {
+            "label": "→",
+            "value": "→"
+          },
+          {
+            "label": "·",
+            "value": "·"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "items": [
+        {
+          "label": "Home",
+          "href": "/"
+        },
+        {
+          "label": "Courses",
+          "href": "/courses"
+        },
+        {
+          "label": "Current Page",
+          "href": ""
+        }
+      ],
+      "separator": "/"
+    }
+  }
+}
