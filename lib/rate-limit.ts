@@ -86,6 +86,16 @@ export const freeEnrollmentLimiter = rateLimit({
   uniqueTokenPerInterval: 10_000,
 });
 
+/**
+ * AI generation actions (starter-course drafts) — keyed by user id.
+ * Each call is a full LLM generation, so the per-user limit is low; the
+ * caller passes the allowed count per interval to `.check()`.
+ */
+export const aiGenerationLimiter = rateLimit({
+  interval: 60 * 60 * 1000,
+  uniqueTokenPerInterval: 2000,
+});
+
 /** Client IP from standard proxy headers, falling back to 'unknown'. */
 export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
   return (
