@@ -26,6 +26,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { rateLimit } from '@/lib/rate-limit'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { streamObject, generateObject, NoObjectGeneratedError, type ModelMessage } from 'ai'
@@ -112,6 +113,14 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 })
   if (!tenantId) return new Response('No tenant context', { status: 400 })
+
+  // Role gate — only admins can use the landing builder (every save action goes through
+  // verifyAdminAccess), so don't let students/teachers spend OpenAI tokens generating pages
+  // they can never persist.
+  const role = await getUserRole()
+  if (role !== 'admin') {
+    return new Response('The landing-page AI assistant requires admin access.', { status: 403 })
+  }
 
   // Rate limit per user — AI generation is expensive, so throttle before doing any work.
   try {
