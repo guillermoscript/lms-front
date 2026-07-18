@@ -26,7 +26,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { getUserRole } from '@/lib/supabase/get-user-role'
 import { rateLimit } from '@/lib/rate-limit'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { streamObject, generateObject, NoObjectGeneratedError, type ModelMessage } from 'ai'
@@ -116,9 +115,18 @@ export async function POST(req: Request) {
 
   // Role gate — only admins can use the landing builder (every save action goes through
   // verifyAdminAccess), so don't let students/teachers spend OpenAI tokens generating pages
-  // they can never persist.
-  const role = await getUserRole()
-  if (role !== 'admin') {
+  // they can never persist. tenant_users is the authoritative role source; checked via the
+  // admin client with the getUser()-verified id (getUserRole()'s x-user-id header is not
+  // forwarded to API route handlers).
+  const admin = createAdminClient()
+  const { data: membership } = await admin
+    .from('tenant_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .maybeSingle()
+  if (membership?.role !== 'admin') {
     return new Response('The landing-page AI assistant requires admin access.', { status: 403 })
   }
 
@@ -131,7 +139,6 @@ export async function POST(req: Request) {
 
   // Plan gate — the landing-page AI assistant is a paid feature. Enforce server-side (the UI
   // already hides it on the free plan) so the endpoint can't be hit directly to spend tokens.
-  const admin = createAdminClient()
   const { data: planResult } = await admin.rpc('get_plan_features', { _tenant_id: tenantId })
   const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
   if (!PAID_PLANS.includes(plan)) {
