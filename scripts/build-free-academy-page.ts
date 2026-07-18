@@ -18,13 +18,35 @@ if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error(`Refusing: ${url} is no
 
 const db = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 const TENANT_ID = '00000000-0000-0000-0000-000000000010'
-const FREE_COURSE_ID = '10004'
+
+// Course ids are sequence-assigned and vary per database — resolve the seeded free course
+// instead of hardcoding an id (seed-free-academy.ts creates it as "Intro to Freelancing").
+async function resolveFreeCourseId(): Promise<string> {
+  const { data: byTitle } = await db
+    .from('courses')
+    .select('course_id')
+    .eq('tenant_id', TENANT_ID)
+    .eq('status', 'published')
+    .eq('title', 'Intro to Freelancing')
+    .maybeSingle()
+  if (byTitle) return String(byTitle.course_id)
+  const { data: first } = await db
+    .from('courses')
+    .select('course_id')
+    .eq('tenant_id', TENANT_ID)
+    .eq('status', 'published')
+    .order('course_id')
+    .limit(1)
+    .maybeSingle()
+  if (!first) throw new Error('No published Free Academy course found — run scripts/seed-free-academy.ts first.')
+  return String(first.course_id)
+}
 
 const manifest = JSON.parse(readFileSync(resolve('lib/json-render/puck-fields.generated.json'), 'utf8'))
 const defaults = (type: string): Record<string, unknown> => ({ ...(manifest[type]?.defaultProps ?? {}) })
 
 // The page: [blockType, overrides]. Order = render order.
-const BLOCKS: Array<[string, Record<string, unknown>]> = [
+const buildBlocks = (FREE_COURSE_ID: string): Array<[string, Record<string, unknown>]> => [
   ['Header', {
     logoText: 'Free Academy',
     navLinks: [
@@ -78,14 +100,14 @@ const BLOCKS: Array<[string, Record<string, unknown>]> = [
   }],
 ]
 
-const content = BLOCKS.map(([type, overrides], i) => ({
-  type,
-  props: { ...defaults(type), ...overrides, id: `${type}-${i + 1}` },
-}))
-
-const puckData = { root: { props: {} }, content, zones: {} }
-
 async function main() {
+  const content = buildBlocks(await resolveFreeCourseId()).map(([type, overrides], i) => ({
+    type,
+    props: { ...defaults(type), ...overrides, id: `${type}-${i + 1}` },
+  }))
+
+  const puckData = { root: { props: {} }, content, zones: {} }
+
   // Emit for template extraction.
   const out = resolve('scratchpad-free-academy-home.json')
   writeFileSync(out, JSON.stringify(puckData, null, 2))
