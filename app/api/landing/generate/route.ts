@@ -113,6 +113,23 @@ export async function POST(req: Request) {
   if (!user) return new Response('Unauthorized', { status: 401 })
   if (!tenantId) return new Response('No tenant context', { status: 400 })
 
+  // Role gate — only admins can use the landing builder (every save action goes through
+  // verifyAdminAccess), so don't let students/teachers spend OpenAI tokens generating pages
+  // they can never persist. tenant_users is the authoritative role source; checked via the
+  // admin client with the getUser()-verified id (getUserRole()'s x-user-id header is not
+  // forwarded to API route handlers).
+  const admin = createAdminClient()
+  const { data: membership } = await admin
+    .from('tenant_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .maybeSingle()
+  if (membership?.role !== 'admin') {
+    return new Response('The landing-page AI assistant requires admin access.', { status: 403 })
+  }
+
   // Rate limit per user — AI generation is expensive, so throttle before doing any work.
   try {
     await landingAiLimiter.check(LANDING_AI_RATE_LIMIT, user.id)
@@ -122,7 +139,6 @@ export async function POST(req: Request) {
 
   // Plan gate — the landing-page AI assistant is a paid feature. Enforce server-side (the UI
   // already hides it on the free plan) so the endpoint can't be hit directly to spend tokens.
-  const admin = createAdminClient()
   const { data: planResult } = await admin.rpc('get_plan_features', { _tenant_id: tenantId })
   const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
   if (!PAID_PLANS.includes(plan)) {
