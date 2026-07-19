@@ -3,7 +3,7 @@ import { StripePaymentProvider } from '@/lib/payments/stripe-provider'
 import { LemonSqueezyProvider } from '@/lib/payments/lemonsqueezy-provider'
 import { ManualPaymentProvider } from '@/lib/payments/manual-provider'
 import { PayPalPaymentProvider } from '@/lib/payments/paypal-provider'
-import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES, type IPaymentProvider } from '@/lib/payments/types'
 
 /**
  * Pins the native plan-change contract (#463): a provider that advertises
@@ -157,7 +157,9 @@ describe('supportsPlanChange capability', () => {
   it('exposes updateSubscription only on native-swap providers', () => {
     expect(typeof new StripePaymentProvider('sk_test_x').updateSubscription).toBe('function')
     expect(typeof new LemonSqueezyProvider('k', 's', 'w').updateSubscription).toBe('function')
-    expect(new ManualPaymentProvider().updateSubscription).toBeUndefined()
-    expect(new PayPalPaymentProvider('id', 'secret').updateSubscription).toBeUndefined()
+    // updateSubscription is an OPTIONAL IPaymentProvider member these classes
+    // omit — assert through the interface type so tsc is happy.
+    expect((new ManualPaymentProvider() as IPaymentProvider).updateSubscription).toBeUndefined()
+    expect((new PayPalPaymentProvider('id', 'secret') as IPaymentProvider).updateSubscription).toBeUndefined()
   })
 })
