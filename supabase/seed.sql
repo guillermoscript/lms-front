@@ -573,6 +573,19 @@ VALUES
   'usd',
   'stripe',
   '00000000-0000-0000-0000-000000000002'
+),
+-- Second Code Academy plan: exercises the parallel-subscription guard (#459)
+-- in E2E — alice holds plan 2001, so checking out 2002 must be blocked.
+(
+  2002,
+  'Code Academy Pro Annual',
+  190.00,
+  365,
+  'Full access to all Code Academy Pro courses for a year.',
+  '["Unlimited course access","Certificate of completion","Priority support","Offline downloads","2 months free"]',
+  'usd',
+  'stripe',
+  '00000000-0000-0000-0000-000000000002'
 )
 ON CONFLICT (plan_id) DO NOTHING;
 
