@@ -360,6 +360,11 @@ export interface IPaymentProvider {
   // e.g. manual/offline, implement these as no-ops)
   createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
   cancelSubscription?(providerSubId: string, immediate: boolean): Promise<void>
+  // Reverse a scheduled cancel-at-period-end before the period ends. Providers
+  // that scheduled the cancel on their side (Stripe, Lemon Squeezy) must clear it
+  // here — a DB-only "reactivate" would leave the provider still set to cancel and
+  // the subscription would lapse anyway.
+  reactivateSubscription?(providerSubId: string): Promise<void>
   getSubscription?(providerSubId: string): Promise<ProviderSubscription>
   // Move an existing subscription to a different plan/price in place, with
   // proration (capability-gated by supportsPlanChange — Stripe/LS). Providers

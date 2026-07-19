@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { RevokeSolanaDelegation } from '@/components/student/revoke-solana-delegation'
+import { ManageSubscription } from '@/components/student/manage-subscription'
 import {
   IconCreditCard,
   IconReceipt,
@@ -334,6 +335,7 @@ export default async function StudentBillingPage() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
+                  {/* Plan switch (from #463) */}
                   {canSwitchPlan && (
                     <ChangePlanDialog
                       currentPlanId={activeSubscription.plan_id}
@@ -342,9 +344,21 @@ export default async function StudentBillingPage() {
                       plans={switchablePlans}
                     />
                   )}
-                  <div className="flex items-start gap-2 rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
-                    <IconInfoCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>{t('subscription.cancelNote')}</span>
+                  {/* Self-service cancel / resume at period end (#464) — replaces
+                      the old "contact your school" note. */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <span className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <IconInfoCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {activeSubscription.cancel_at_period_end
+                          ? t('subscription.manage.canceledHint')
+                          : t('subscription.manage.cancelHint')}
+                      </span>
+                    </span>
+                    <ManageSubscription
+                      subscriptionId={activeSubscription.subscription_id}
+                      cancelAtPeriodEnd={!!activeSubscription.cancel_at_period_end}
+                    />
                   </div>
                 </div>
               )}
