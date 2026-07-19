@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { RevokeSolanaDelegation } from '@/components/student/revoke-solana-delegation'
 import {
   IconCreditCard,
   IconReceipt,
@@ -296,11 +297,23 @@ export default async function StudentBillingPage() {
                   </span>
                 </div>
               )}
-              {/* No self-cancel note */}
-              <div className="flex items-start gap-2 rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
-                <IconInfoCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>{t('subscription.cancelNote')}</span>
-              </div>
+              {/* Solana native subs: the student revokes the on-chain auto-pull
+                  delegation from their own wallet (the server cannot). Other
+                  providers keep the "contact us to cancel" note. */}
+              {activeSubscription.payment_provider === 'solana_subs' ? (
+                <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/50 px-3 py-2">
+                  <span className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <IconWallet className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{t('subscription.revoke.walletNote')}</span>
+                  </span>
+                  <RevokeSolanaDelegation subscriptionId={activeSubscription.subscription_id} />
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+                  <IconInfoCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{t('subscription.cancelNote')}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (

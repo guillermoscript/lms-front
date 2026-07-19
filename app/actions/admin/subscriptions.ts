@@ -44,7 +44,11 @@ export async function cancelSubscription(
     // If the subscription is managed by an external provider, cancel it there
     // first (provider-agnostic). Manual subscriptions no-op. We still update our
     // own row below regardless, so a provider error shouldn't strand the admin —
-    // log and continue.
+    // but we no longer swallow it silently: some providers (e.g. solana_subs)
+    // cannot cancel server-side, and reporting a clean success while the
+    // provider-side authorization is still live is the money leak in #460. We
+    // surface the message so the UI can warn the admin.
+    let providerCancelError: string | undefined
     if (subscription.provider_subscription_id) {
       try {
         const provider = getPaymentProvider(
@@ -52,6 +56,8 @@ export async function cancelSubscription(
         )
         await provider.cancelSubscription?.(subscription.provider_subscription_id, immediate)
       } catch (providerError) {
+        providerCancelError =
+          providerError instanceof Error ? providerError.message : String(providerError)
         console.error('Provider cancelSubscription failed (continuing to update DB):', providerError)
       }
     }
@@ -88,7 +94,11 @@ export async function cancelSubscription(
     // Revalidate the subscriptions page
     revalidatePath('/dashboard/admin/subscriptions')
 
-    return { success: true }
+    // `providerCancelError` is set when the DB row was canceled but the provider
+    // could not be canceled server-side (e.g. solana_subs needs the student's
+    // wallet signature). The cancel still succeeded on our side; the UI turns
+    // this into a warning rather than a plain success.
+    return { success: true, providerCancelError }
   } catch (error) {
     console.error('Cancel subscription error:', error)
     return { success: false, error: 'An unexpected error occurred' }

@@ -507,6 +507,57 @@ export async function buildCancelTxBase64(p: {
   return buildAndSignTx(p.rpcUrl, subscriberSigner, [ix]);
 }
 
+/**
+ * Builds an UNSIGNED base64 wire transaction that CANCELS a subscription.
+ *
+ * The owner-signed analogue of buildCancelTxBase64: the caller provides only the
+ * subscriber's public key (no secret key), so this can be built server-side and
+ * handed to the wallet to sign. This is the ONLY way to revoke the on-chain
+ * auto-pull delegation — the Subscriptions program's `cancel` instruction is
+ * signed by the subscriber, and the server never holds the subscriber's key
+ * (issue #460). The wallet deserialises, signs, and submits via
+ * /api/payments/solana/submit (the Subscriptions program is allowlisted there).
+ */
+export async function buildCancelTxUnsignedBase64(p: {
+  rpcUrl: string;
+  /** Subscriber's base58 public key — NOT a secret key. */
+  subscriber: string;
+  merchant: string;
+  planId: bigint;
+}): Promise<string> {
+  const rpc = makeRpc(p.rpcUrl);
+  const subscriberAddr = addr(p.subscriber) as Address;
+  // NoopSigner satisfies TransactionSigner but never signs — signature stays null.
+  const subscriberSigner = createNoopSigner(subscriberAddr);
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+  const [planPda] = await findPlanPda({
+    owner: addr(p.merchant) as Address,
+    planId: p.planId,
+  });
+
+  const [subscriptionPda] = await findSubscriptionDelegationPda({
+    planPda,
+    subscriber: subscriberAddr,
+  });
+
+  const ix = getCancelSubscriptionInstruction({
+    subscriber: subscriberSigner,
+    planPda,
+    subscriptionPda,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let msg: any = createTransactionMessage({ version: 0 });
+  msg = setTransactionMessageFeePayer(subscriberAddr, msg);
+  msg = setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, msg);
+  msg = appendTransactionMessageInstruction(ix as never, msg);
+
+  const compiledTx = compileTransaction(msg);
+  return getBase64EncodedWireTransaction(compiledTx) as string;
+}
+
 // ─── New exports ─────────────────────────────────────────────────────────────
 
 /**
