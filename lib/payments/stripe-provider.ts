@@ -272,6 +272,20 @@ export class StripePaymentProvider implements IPaymentProvider {
   }
 
   /**
+   * Reverse a scheduled cancel-at-period-end — the subscription keeps renewing.
+   * No-op-safe if it was never scheduled to cancel.
+   */
+  async reactivateSubscription(providerSubId: string): Promise<void> {
+    try {
+      await this.stripe.subscriptions.update(providerSubId, {
+        cancel_at_period_end: false,
+      })
+    } catch (error) {
+      throw new Error(`Stripe reactivateSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
    * Retrieve a Stripe subscription's current state.
    */
   async getSubscription(providerSubId: string): Promise<ProviderSubscription> {

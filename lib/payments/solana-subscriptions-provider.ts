@@ -145,6 +145,18 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
   }
 
   /**
+   * Reactivation is not possible server-side either: once the subscriber has
+   * revoked the on-chain delegation, only they can re-authorize auto-pull by
+   * subscribing again from their wallet. Throwing keeps the caller honest rather
+   * than reporting a renewal that will never be charged.
+   */
+  async reactivateSubscription(_providerSubId: string): Promise<void> {
+    throw new Error(
+      'solana_subs: auto-pull cannot be reactivated server-side — the subscriber must re-subscribe from their wallet to re-authorize the on-chain delegation.',
+    )
+  }
+
+  /**
    * No signed inbound webhook. Authenticity comes from the chain: a real
    * subscribe tx carrying our unique reference plus an existing on-chain
    * SubscriptionDelegation. Always returns `false` so the unified webhook route

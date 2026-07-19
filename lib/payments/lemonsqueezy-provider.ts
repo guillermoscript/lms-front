@@ -341,6 +341,31 @@ export class LemonSqueezyProvider implements IPaymentProvider {
   }
 
   /**
+   * Un-cancel a Lemon Squeezy subscription that was scheduled to cancel at
+   * period end (PATCH with `cancelled: false`). Restores auto-renewal.
+   */
+  async reactivateSubscription(providerSubId: string): Promise<void> {
+    const response = await fetch(`${LS_BASE_URL}/v1/subscriptions/${providerSubId}`, {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify({
+        data: {
+          type: 'subscriptions',
+          id: providerSubId,
+          attributes: { cancelled: false },
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(
+        `LemonSqueezy reactivateSubscription failed: HTTP ${response.status} — ${text}`,
+      )
+    }
+  }
+
+  /**
    * Retrieve the current state of a Lemon Squeezy subscription.
    *
    * Maps LS status strings to our three-value enum:

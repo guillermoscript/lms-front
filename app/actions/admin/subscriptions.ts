@@ -142,12 +142,37 @@ export async function reactivateSubscription(subscriptionId: number) {
       return { success: false, error: 'Subscription is not scheduled to cancel' }
     }
 
-    // Reactivate the subscription
+    // Reverse the provider-side cancel too. A DB-only reactivate would leave the
+    // provider (e.g. Stripe) still set to cancel at period end, so the sub would
+    // lapse anyway. Errors are surfaced as a warning, not swallowed (mirrors the
+    // cancel action) — some providers (solana_subs) cannot reactivate server-side.
+    let providerReactivateError: string | undefined
+    if (subscription.provider_subscription_id) {
+      try {
+        const provider = getPaymentProvider(
+          (subscription.payment_provider as PaymentProvider) || 'stripe'
+        )
+        await provider.reactivateSubscription?.(subscription.provider_subscription_id)
+      } catch (providerError) {
+        providerReactivateError =
+          providerError instanceof Error ? providerError.message : String(providerError)
+        console.error('Provider reactivateSubscription failed (continuing to update DB):', providerError)
+      }
+    }
+
+    // Reactivate the subscription. NB: `cancel_at` is NOT NULL in the schema —
+    // setting it to null here would fail the update (a latent bug that silently
+    // broke admin reactivate). Clearing `cancel_at_period_end` un-schedules the
+    // subscription-expiry crons, but the Solana auto-pull crank
+    // (lib/payments/solana-pull-decision.ts) reads `cancel_at` on its own, so we
+    // push it forward to the live period end instead of leaving a past value that
+    // would re-cancel the row. `canceled_at` is cleared.
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
         cancel_at_period_end: false,
-        cancel_at: null,
+        cancel_at: subscription.current_period_end || subscription.end_date,
+        canceled_at: null,
       })
       .eq('subscription_id', subscriptionId)
       .eq('tenant_id', tenantId)
@@ -160,7 +185,7 @@ export async function reactivateSubscription(subscriptionId: number) {
     // Revalidate the subscriptions page
     revalidatePath('/dashboard/admin/subscriptions')
 
-    return { success: true }
+    return { success: true, providerReactivateError }
   } catch (error) {
     console.error('Reactivate subscription error:', error)
     return { success: false, error: 'An unexpected error occurred' }

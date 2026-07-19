@@ -136,6 +136,10 @@ export class ManualPaymentProvider implements IPaymentProvider {
     // Nothing to cancel externally — the DB row carries the real state.
   }
 
+  async reactivateSubscription(providerSubId: string): Promise<void> {
+    // Nothing to reactivate externally — the DB row carries the real state.
+  }
+
   async getSubscription(providerSubId: string): Promise<ProviderSubscription> {
     return {
       id: providerSubId,
