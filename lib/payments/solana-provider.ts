@@ -51,6 +51,7 @@ export class SolanaProvider implements IPaymentProvider {
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
     createsCatalog: false,
+    supportsPlanChange: false,
   }
 
   private readonly rpcUrl: string

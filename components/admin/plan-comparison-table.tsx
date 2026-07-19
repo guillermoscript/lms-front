@@ -28,6 +28,14 @@ interface PlanComparisonTableProps {
   showActions?: boolean
   preselectedPlan?: string
   initialInterval?: 'monthly' | 'yearly'
+  /**
+   * When true, the tenant already has an active Stripe subscription. CTAs become
+   * direction-aware (Upgrade / Downgrade / Switch interval) and route through an
+   * in-app Stripe subscription update instead of a fresh checkout / bank transfer.
+   */
+  existingSubscriber?: boolean
+  /** The tenant's current billing interval — enables same-plan interval switches. */
+  currentInterval?: 'monthly' | 'yearly'
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -78,6 +86,8 @@ export function PlanComparisonTable({
   showActions = true,
   preselectedPlan,
   initialInterval,
+  existingSubscriber = false,
+  currentInterval,
 }: PlanComparisonTableProps) {
   const [interval, setInterval] = useState<'monthly' | 'yearly'>(initialInterval ?? 'monthly')
   const yearly = interval === 'yearly'
@@ -85,6 +95,7 @@ export function PlanComparisonTable({
     () => FEATURE_KEYS.filter((key) => plans.some((plan) => plan.features[key] !== undefined)),
     [plans],
   )
+  const currentIndex = plans.findIndex((p) => p.slug === currentPlan)
 
   return (
     <div className="space-y-10">
@@ -126,7 +137,7 @@ export function PlanComparisonTable({
       </div>
 
       <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {plans.map((plan) => {
+        {plans.map((plan, planIndex) => {
           const isCurrent = plan.slug === currentPlan
           const isPreselected = !isCurrent && plan.slug === preselectedPlan
           const isPopular = plan.slug === 'pro'
@@ -217,7 +228,23 @@ export function PlanComparisonTable({
 
               {showActions && (
                 <CardFooter className="flex flex-col gap-2 pt-2">
-                  {isCurrent ? (
+                  {existingSubscriber ? (
+                    isCurrent ? (
+                      currentInterval && interval !== currentInterval ? (
+                        <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
+                          {interval === 'yearly' ? 'Switch to yearly billing' : 'Switch to monthly billing'}
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                      )
+                    ) : plan.slug === 'free' ? (
+                      <Button variant="ghost" className="w-full" disabled>Cancel to downgrade</Button>
+                    ) : (
+                      <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
+                        {planIndex > currentIndex ? 'Upgrade to this plan' : 'Downgrade to this plan'}
+                      </Button>
+                    )
+                  ) : isCurrent ? (
                     <Button variant="outline" className="w-full" disabled>Current plan</Button>
                   ) : plan.slug === 'free' ? (
                     <Button variant="ghost" className="w-full" disabled>Free plan</Button>

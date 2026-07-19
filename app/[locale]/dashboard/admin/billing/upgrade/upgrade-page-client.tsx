@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { PlanComparisonTable } from '@/components/admin/plan-comparison-table'
 import { ManualTransferForm } from '@/components/admin/manual-transfer-form'
+import { PlanChangeDialog, type PlanChangeTarget } from '@/components/admin/plan-change-dialog'
 import { requestManualPlanUpgrade } from '@/app/actions/admin/billing'
 import { useTranslations } from 'next-intl'
 import { useLocale } from 'next-intl'
@@ -24,13 +25,17 @@ interface UpgradePageClientProps {
   currentPlan: string
   preselectedPlan?: string
   preselectedInterval?: 'monthly' | 'yearly'
+  /** Tenant already has an active Stripe subscription → in-app change flow. */
+  activeStripeSub?: boolean
+  currentInterval?: 'monthly' | 'yearly'
 }
 
-export function UpgradePageClient({ plans, currentPlan, preselectedPlan, preselectedInterval }: UpgradePageClientProps) {
+export function UpgradePageClient({ plans, currentPlan, preselectedPlan, preselectedInterval, activeStripeSub = false, currentInterval }: UpgradePageClientProps) {
   const router = useRouter()
   const locale = useLocale()
   const t = useTranslations('dashboard.admin.billing.upgrade')
   const [loading, setLoading] = useState(false)
+  const [planChange, setPlanChange] = useState<PlanChangeTarget | null>(null)
   const [manualTransfer, setManualTransfer] = useState<{
     planId: string
     planName: string
@@ -39,6 +44,23 @@ export function UpgradePageClient({ plans, currentPlan, preselectedPlan, presele
   } | null>(null)
 
   const handleSelectPlan = async (planId: string, interval: 'monthly' | 'yearly') => {
+    // Existing Stripe subscribers change plans in-app (Stripe subscription
+    // update + proration preview) rather than starting a fresh checkout.
+    if (activeStripeSub) {
+      const plan = plans.find((p) => p.plan_id === planId)
+      if (!plan) return
+      const currentIndex = plans.findIndex((p) => p.slug === currentPlan)
+      const targetIndex = plans.findIndex((p) => p.plan_id === planId)
+      const direction =
+        plan.slug === currentPlan
+          ? 'interval'
+          : targetIndex > currentIndex
+            ? 'upgrade'
+            : 'downgrade'
+      setPlanChange({ planId, planName: plan.name, interval, direction })
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch('/api/stripe/checkout-session', {
@@ -99,14 +121,26 @@ export function UpgradePageClient({ plans, currentPlan, preselectedPlan, presele
   }
 
   return (
-    <PlanComparisonTable
-      plans={plans}
-      currentPlan={currentPlan}
-      preselectedPlan={preselectedPlan}
-      initialInterval={preselectedInterval}
-      onSelectPlan={handleSelectPlan}
-      onManualTransfer={handleManualTransfer}
-      loading={loading}
-    />
+    <>
+      <PlanComparisonTable
+        plans={plans}
+        currentPlan={currentPlan}
+        preselectedPlan={preselectedPlan}
+        initialInterval={preselectedInterval}
+        onSelectPlan={handleSelectPlan}
+        onManualTransfer={activeStripeSub ? undefined : handleManualTransfer}
+        loading={loading}
+        existingSubscriber={activeStripeSub}
+        currentInterval={currentInterval}
+      />
+      <PlanChangeDialog
+        open={planChange !== null}
+        onOpenChange={(open) => {
+          if (!open) setPlanChange(null)
+        }}
+        target={planChange}
+        onConfirmed={navigateToBilling}
+      />
+    </>
   )
 }

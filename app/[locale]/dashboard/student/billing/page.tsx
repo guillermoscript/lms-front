@@ -24,6 +24,8 @@ import {
   IconInfoCircle,
 } from '@tabler/icons-react'
 import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
+import { ChangePlanDialog, type SwitchablePlan } from '@/components/student/change-plan-dialog'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -237,6 +239,27 @@ export default async function StudentBillingPage() {
     (s) => s.subscription_status === 'active' || s.subscription_status === 'renewed'
   )
 
+  // ── Plan-change (switch) support ────────────────────────────────────────────
+  // Switchable when the provider does an in-place swap (Stripe/LS) OR is
+  // self-managed (manual / one-time crypto). Native recurring providers with no
+  // swap (solana_subs / paypal) keep their own cancel UX and are excluded.
+  const activeProvider = (activeSubscription?.payment_provider ?? 'manual') as PaymentProvider
+  const activeCaps = PROVIDER_CAPABILITIES[activeProvider]
+  const canSwitchPlan =
+    !!activeSubscription &&
+    !!activeCaps &&
+    (activeCaps.supportsPlanChange || !activeCaps.supportsNativeSubscriptions)
+
+  let switchablePlans: SwitchablePlan[] = []
+  if (canSwitchPlan) {
+    const { data: rawPlans } = await supabase
+      .from('plans')
+      .select('plan_id, plan_name, price, payment_provider')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+    switchablePlans = (rawPlans ?? []) as SwitchablePlan[]
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -311,19 +334,32 @@ export default async function StudentBillingPage() {
                   <RevokeSolanaDelegation subscriptionId={activeSubscription.subscription_id} />
                 </div>
               ) : (
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <span className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <IconInfoCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>
-                      {activeSubscription.cancel_at_period_end
-                        ? t('subscription.manage.canceledHint')
-                        : t('subscription.manage.cancelHint')}
+                <div className="flex flex-col gap-2">
+                  {/* Plan switch (from #463) */}
+                  {canSwitchPlan && (
+                    <ChangePlanDialog
+                      currentPlanId={activeSubscription.plan_id}
+                      currentProvider={activeProvider}
+                      isNativeSwap={!!activeCaps?.supportsPlanChange}
+                      plans={switchablePlans}
+                    />
+                  )}
+                  {/* Self-service cancel / resume at period end (#464) — replaces
+                      the old "contact your school" note. */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <span className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <IconInfoCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {activeSubscription.cancel_at_period_end
+                          ? t('subscription.manage.canceledHint')
+                          : t('subscription.manage.cancelHint')}
+                      </span>
                     </span>
-                  </span>
-                  <ManageSubscription
-                    subscriptionId={activeSubscription.subscription_id}
-                    cancelAtPeriodEnd={!!activeSubscription.cancel_at_period_end}
-                  />
+                    <ManageSubscription
+                      subscriptionId={activeSubscription.subscription_id}
+                      cancelAtPeriodEnd={!!activeSubscription.cancel_at_period_end}
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>

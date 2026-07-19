@@ -15,7 +15,7 @@ COPY packages/core/package.json ./packages/core/package.json
 # Remove the lockfile so npm freshly resolves platform-specific optional
 # native binaries (lightningcss/Tailwind v4) for this Linux image — npm has a
 # long-standing bug that skips optional native deps when a lockfile is present.
-RUN rm -f package-lock.json && npm install --include=optional
+RUN rm -f package-lock.json && npm install --include=optional --legacy-peer-deps
 
 # Build
 FROM base AS builder

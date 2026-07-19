@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
+import { classifyPlanChange } from '@/lib/billing/plan-change'
 import { revalidatePath } from 'next/cache'
 
 async function verifyAdminAccess() {
@@ -142,9 +144,41 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
     .single()
 
   if (!plan) throw new Error('Plan not found')
-  if (plan.slug === 'free') throw new Error('Cannot request upgrade to free plan')
+  if (plan.slug === 'free') throw new Error('Cannot request a change to the free plan')
 
   const amount = interval === 'yearly' ? plan.price_yearly : plan.price_monthly
+
+  // Derive a real request_type (upgrade vs downgrade) by comparing against the
+  // tenant's current plan, instead of the old hardcoded 'upgrade'.
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .single()
+  const currentSlug = tenant?.plan || 'free'
+  const { data: currentPlan } = await adminClient
+    .from('platform_plans')
+    .select('sort_order, price_monthly, price_yearly')
+    .eq('slug', currentSlug)
+    .maybeSingle()
+  const currentAmount = currentPlan
+    ? interval === 'yearly'
+      ? currentPlan.price_yearly
+      : currentPlan.price_monthly
+    : 0
+  const { requestType } = classifyPlanChange({
+    currentSortOrder: currentPlan?.sort_order ?? 0,
+    currentAmount: Number(currentAmount) || 0,
+    targetSortOrder: plan.sort_order ?? 0,
+    targetAmount: Number(amount) || 0,
+  })
+
+  // Pre-flight limit check at request time — block an over-limit downgrade
+  // request now, rather than surfacing it days later at super-admin confirm.
+  const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
+  if (!limitCheck.ok) {
+    throw new Error(formatPlanLimitError(limitCheck) || 'Plan limits exceeded')
+  }
 
   // Check for existing pending request
   const { data: existingRequest } = await adminClient
@@ -155,7 +189,7 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
     .single()
 
   if (existingRequest) {
-    throw new Error('You already have a pending upgrade request. Please wait for it to be processed.')
+    throw new Error('You already have a pending plan change request. Please wait for it to be processed.')
   }
 
   const { data: request, error } = await adminClient
@@ -168,7 +202,7 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
       amount,
       currency: 'usd',
       status: 'pending',
-      request_type: 'upgrade',
+      request_type: requestType,
       bank_reference: bankReference || null,
       notes: notes || null,
     })
@@ -209,43 +243,8 @@ async function checkDowngradeLimits(
   tenantId: string,
   targetPlanId: string,
 ): Promise<string | null> {
-  const [planResult, coursesResult, studentsResult] = await Promise.all([
-    adminClient
-      .from('platform_plans')
-      .select('name, limits')
-      .eq('plan_id', targetPlanId)
-      .single(),
-    adminClient
-      .from('courses')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .neq('status', 'archived'),
-    adminClient
-      .from('tenant_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('role', 'student')
-      .eq('status', 'active'),
-  ])
-
-  const plan = planResult.data
-  if (!plan) return null
-
-  const limits = plan.limits as { max_courses?: number; max_students?: number } | null
-  const maxCourses = limits?.max_courses ?? -1
-  const maxStudents = limits?.max_students ?? -1
-  const currentCourses = coursesResult.count ?? 0
-  const currentStudents = studentsResult.count ?? 0
-
-  const errors: string[] = []
-  if (maxCourses !== -1 && currentCourses > maxCourses) {
-    errors.push(`You have ${currentCourses} active courses but the ${plan.name} plan allows ${maxCourses}. Archive ${currentCourses - maxCourses} course(s) before downgrading.`)
-  }
-  if (maxStudents !== -1 && currentStudents > maxStudents) {
-    errors.push(`You have ${currentStudents} students but the ${plan.name} plan allows ${maxStudents}.`)
-  }
-
-  return errors.length > 0 ? errors.join(' ') : null
+  const result = await checkPlanLimits(adminClient, tenantId, { planId: targetPlanId })
+  return formatPlanLimitError(result)
 }
 
 /**
@@ -361,6 +360,180 @@ export async function confirmManualPayment(requestId: string) {
 }
 
 /**
+ * Load the pieces needed to modify an active Stripe platform subscription: the
+ * live Stripe subscription item + the target plan's Stripe price. Throws a
+ * friendly Error for every non-actionable state (no active sub, manual sub,
+ * free target, unconfigured price, unreadable Stripe subscription).
+ */
+async function resolvePlatformPlanChange(
+  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
+  tenantId: string,
+  planId: string,
+  interval: 'monthly' | 'yearly',
+) {
+  const { data: sub } = await adminClient
+    .from('platform_subscriptions')
+    .select('stripe_subscription_id, stripe_customer_id, payment_method, status')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!sub || sub.status !== 'active') {
+    throw new Error('No active subscription to change')
+  }
+  if (sub.payment_method !== 'stripe' || !sub.stripe_subscription_id) {
+    throw new Error('In-app plan change is only available for Stripe subscriptions.')
+  }
+
+  const { data: plan } = await adminClient
+    .from('platform_plans')
+    .select('plan_id, slug, name, transaction_fee_percent, stripe_price_id_monthly, stripe_price_id_yearly')
+    .eq('plan_id', planId)
+    .eq('is_active', true)
+    .single()
+
+  if (!plan) throw new Error('Plan not found')
+  if (plan.slug === 'free') {
+    throw new Error('To move to the Free plan, cancel your subscription instead.')
+  }
+
+  const targetPriceId = interval === 'yearly' ? plan.stripe_price_id_yearly : plan.stripe_price_id_monthly
+  if (!targetPriceId) {
+    throw new Error('Stripe price is not configured for this plan. Please contact support.')
+  }
+
+  const { getStripe } = await import('@/lib/stripe')
+  const stripe = getStripe()
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const item = (stripeSub as any).items?.data?.[0]
+  if (!item?.id) {
+    throw new Error('Could not read the current subscription from Stripe.')
+  }
+
+  return {
+    stripe,
+    subId: sub.stripe_subscription_id as string,
+    itemId: item.id as string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    customerId: (sub.stripe_customer_id as string) || ((stripeSub as any).customer as string),
+    targetPriceId: targetPriceId as string,
+    plan,
+  }
+}
+
+/**
+ * Preview an in-app plan change for an active Stripe subscriber. Returns the
+ * blocking limit violations (computed before any Stripe call) OR a Stripe
+ * proration preview so the admin sees the credit/charge before confirming.
+ */
+export async function previewPlanChange(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
+  const { tenantId } = await verifyAdminAccess()
+  const adminClient = await createAdminClient()
+
+  // Pre-flight limit check BEFORE any Stripe call.
+  const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
+  if (!limitCheck.ok) {
+    return { ok: false as const, violations: limitCheck.violations, planName: limitCheck.planName }
+  }
+
+  const ctx = await resolvePlatformPlanChange(adminClient, tenantId, planId, interval)
+
+  try {
+    const preview = await ctx.stripe.invoices.createPreview({
+      customer: ctx.customerId,
+      subscription: ctx.subId,
+      subscription_details: {
+        items: [{ id: ctx.itemId, price: ctx.targetPriceId }],
+        proration_behavior: 'create_prorations',
+      },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = preview as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lines = (p.lines?.data || []) as any[]
+    const prorationAmount = lines
+      .filter((l) => l?.parent?.subscription_item_details?.proration)
+      .reduce((sum, l) => sum + (l.amount ?? 0), 0)
+    return {
+      ok: true as const,
+      proration: {
+        prorationAmount: prorationAmount / 100,
+        total: (p.amount_due ?? p.total ?? 0) / 100,
+        currency: (p.currency || 'usd').toUpperCase(),
+        planName: ctx.plan.name,
+      },
+    }
+  } catch (err) {
+    console.error('Failed to preview plan change:', err)
+    // Preview is best-effort — allow the change to proceed without one.
+    return { ok: true as const, proration: null }
+  }
+}
+
+/**
+ * Apply an in-app plan change (upgrade / downgrade / interval switch) for an
+ * active Stripe subscriber, replacing the old "use the Stripe portal" punt.
+ *
+ * Order matters: the pre-flight limit check and the Stripe update run BEFORE any
+ * DB write, so an over-limit downgrade is blocked with actionable messaging and
+ * our plan state only ever moves after Stripe confirms (the #461 invariant —
+ * Stripe price and DB plan may never disagree). The subsequent optimistic DB
+ * mirror lets the webhook echo (applyPortalPlanChange) hit its no-op guard.
+ */
+export async function changePlan(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
+  const { tenantId } = await verifyAdminAccess()
+  const adminClient = await createAdminClient()
+
+  // Pre-flight limit check BEFORE touching Stripe.
+  const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
+  if (!limitCheck.ok) {
+    throw new Error(formatPlanLimitError(limitCheck) || 'Plan limits exceeded')
+  }
+
+  const ctx = await resolvePlatformPlanChange(adminClient, tenantId, planId, interval)
+
+  // 1) Update Stripe first — swap the subscription item's price, prorate, and
+  //    keep tenant/plan metadata current so the webhook reconciles correctly.
+  await ctx.stripe.subscriptions.update(ctx.subId, {
+    items: [{ id: ctx.itemId, price: ctx.targetPriceId }],
+    proration_behavior: 'create_prorations',
+    metadata: {
+      tenant_id: tenantId,
+      plan_id: ctx.plan.plan_id,
+      plan_slug: ctx.plan.slug,
+      interval,
+    },
+  })
+
+  // 2) Optimistically mirror into our DB so the UI reflects immediately. The
+  //    customer.subscription.updated echo maps the new price back to this same
+  //    plan_id and hits applyPortalPlanChange's no-op guard.
+  const now = new Date().toISOString()
+  await adminClient
+    .from('platform_subscriptions')
+    .update({ plan_id: ctx.plan.plan_id, interval, updated_at: now })
+    .eq('tenant_id', tenantId)
+  await adminClient
+    .from('tenants')
+    .update({ plan: ctx.plan.slug, updated_at: now })
+    .eq('id', tenantId)
+  await adminClient
+    .from('revenue_splits')
+    .upsert(
+      {
+        tenant_id: tenantId,
+        platform_percentage: ctx.plan.transaction_fee_percent,
+        school_percentage: 100 - ctx.plan.transaction_fee_percent,
+        updated_at: now,
+      },
+      { onConflict: 'tenant_id' }
+    )
+
+  revalidatePath('/dashboard/admin/billing')
+  return { success: true, plan: ctx.plan.slug }
+}
+
+/**
  * Cancel subscription (sets cancel_at_period_end)
  */
 export async function cancelSubscription() {
@@ -378,13 +551,24 @@ export async function cancelSubscription() {
   }
 
   if (subscription.payment_method === 'stripe' && subscription.stripe_subscription_id) {
-    // Cancel via Stripe (at period end)
+    // Cancel via Stripe (at period end).
     const { getStripe } = await import('@/lib/stripe')
     await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
       cancel_at_period_end: true,
     })
+    // Mirror locally so the overview reflects the pending cancellation
+    // immediately; the customer.subscription.updated webhook confirms it with
+    // Stripe's authoritative values.
+    await adminClient
+      .from('platform_subscriptions')
+      .update({
+        cancel_at_period_end: true,
+        canceled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
   } else {
-    // Manual subscription — just mark for cancellation
+    // Manual subscription — just mark for cancellation.
     await adminClient
       .from('platform_subscriptions')
       .update({
@@ -395,6 +579,7 @@ export async function cancelSubscription() {
       .eq('tenant_id', tenantId)
   }
 
+  revalidatePath('/dashboard/admin/billing')
   return { success: true }
 }
 

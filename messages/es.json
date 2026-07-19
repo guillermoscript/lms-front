@@ -294,7 +294,20 @@
             "error": "No se pudo revocar la delegación. Inténtalo de nuevo."
           },
           "empty": "No tienes una suscripción activa.",
-          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" }
+          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" },
+          "changePlan": {
+            "button": "Cambiar de plan",
+            "title": "Cambia tu plan",
+            "description": "Cámbiate a un plan diferente. Tu plan actual se reemplaza: no tendrás dos suscripciones a la vez.",
+            "switch": "Cambiar",
+            "switching": "Cambiando…",
+            "prorationNote": "Se te cobrará o abonará la diferencia prorrateada por el resto de este período de facturación.",
+            "manualNote": "El tiempo pagado que te queda se traslada al nuevo plan. Cualquier diferencia de precio se coordina con tu escuela.",
+            "noPlans": "No hay otros planes disponibles para cambiar en este momento.",
+            "free": "Gratis",
+            "success": "Tu plan ha sido cambiado.",
+            "error": "No pudimos cambiar tu plan. Inténtalo de nuevo."
+          }
         },
         "purchases": {
           "sectionTitle": "Historial de compras",
@@ -1788,11 +1801,39 @@
           "upcomingPayment": "Próximo pago",
           "dueOn": "Vence el {date}",
           "bankTransfer": "Transferencia bancaria",
-          "cardPayment": "Pago con tarjeta"
+          "cardPayment": "Pago con tarjeta",
+          "cancelPlan": "Cancelar plan",
+          "cancelConfirmTitle": "¿Cancelar suscripción?",
+          "cancelConfirmBody": "Tu escuela conserva el acceso a {plan} hasta el {date}, y luego pasa al plan Gratis. Puedes volver a suscribirte cuando quieras.",
+          "cancelConfirmBodyNoDate": "Tu escuela pasará al plan Gratis al final de tu período de facturación. Puedes volver a suscribirte cuando quieras.",
+          "cancelConfirmAction": "Cancelar suscripción",
+          "cancelKeep": "Mantener suscripción",
+          "cancelSuccess": "Tu suscripción se cancelará al final de tu período de facturación",
+          "cancelError": "Error al cancelar la suscripción"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
           "checkoutFailed": "Error al iniciar el pago. Por favor, inténtalo de nuevo."
+        },
+        "changePlan": {
+          "upgradeTitle": "Mejorar a {plan}",
+          "downgradeTitle": "Bajar a {plan}",
+          "intervalTitle": "Cambiar facturación de {plan}",
+          "previewIntro": "Revisa el prorrateo antes de confirmar. Se cobrará automáticamente a tu tarjeta registrada.",
+          "loadingPreview": "Calculando prorrateo…",
+          "previewUnavailable": "No pudimos cargar una vista previa del precio, pero aún puedes cambiar: tu próxima factura reflejará el cambio.",
+          "prorationDueNow": "Prorrateo en tu próxima factura",
+          "prorationCredit": "Crédito en tu próxima factura",
+          "nextInvoiceTotal": "Total de la próxima factura",
+          "overLimitTitle": "Superas los límites del plan {plan}",
+          "overLimitIntro": "Reduce tu uso antes de bajar de plan:",
+          "violationCourses": "Tienes {current} cursos activos — el plan permite {max}. Archiva {reduceBy} para continuar.",
+          "violationStudents": "Tienes {current} estudiantes — el plan permite {max}. Elimina {reduceBy} para continuar.",
+          "confirm": "Confirmar cambio",
+          "cancel": "Cancelar",
+          "close": "Cerrar",
+          "success": "Plan actualizado",
+          "error": "Error al cambiar de plan"
         }
       },
       "users": {
@@ -4108,6 +4149,11 @@
     "signUpFree": "Regístrate Gratis",
     "getStarted": "Comenzar Ahora",
     "subscribeFree": "Suscribirse Gratis",
+    "currentPlan": "Plan actual",
+    "switchToThis": "Cambiar a este plan",
+    "switching": "Cambiando…",
+    "switchSuccess": "Tu plan ha sido cambiado.",
+    "switchError": "No pudimos cambiar tu plan.",
     "subscribing": "Suscribiendo…",
     "subscribeSuccess": "¡Listo! Disfruta tu plan.",
     "subscribeError": "No se pudo activar el plan. Inténtalo de nuevo.",

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { HelpCircle, PackageSearch, ArrowRight } from "lucide-react";
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types";
 import PricingClient from "./pricing-client";
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -27,6 +28,29 @@ export default async function PricingPage({
     const { subscribe } = await searchParams;
 
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Current subscription → drives "Current plan" / "Switch" CTAs instead of a
+    // fresh checkout when the student is already subscribed (#463).
+    let currentPlanId: number | null = null;
+    let currentProvider = 'manual';
+    let canSwitchPlan = false;
+    if (user) {
+        const { data: currentSub } = await supabase
+            .from('subscriptions')
+            .select('plan_id, payment_provider')
+            .eq('user_id', user.id)
+            .eq('tenant_id', tenantId)
+            .in('subscription_status', ['active', 'renewed', 'past_due'])
+            .order('created', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (currentSub) {
+            currentPlanId = currentSub.plan_id;
+            currentProvider = currentSub.payment_provider ?? 'manual';
+            const caps = PROVIDER_CAPABILITIES[currentProvider as PaymentProvider];
+            canSwitchPlan = !!caps && (caps.supportsPlanChange || !caps.supportsNativeSubscriptions);
+        }
+    }
 
     // Fetch plans from database - filtered by tenant
     const { data: plans, error } = await supabase
@@ -113,6 +137,9 @@ export default async function PricingPage({
                         yearlyPlans={yearlyPlans}
                         isAuthenticated={!!user}
                         subscribePlanId={subscribe ? Number(subscribe) : null}
+                        currentPlanId={currentPlanId}
+                        currentProvider={currentProvider}
+                        canSwitchPlan={canSwitchPlan}
                     />
                 )}
 

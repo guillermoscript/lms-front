@@ -5,9 +5,12 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useTranslations } from 'next-intl';
 import { FreeSubscribeButton } from "@/components/public/free-subscribe-button";
+import { changePlan } from "@/app/[locale]/(public)/checkout/actions";
 
 interface Plan {
     plan_id: number;
@@ -24,11 +27,43 @@ interface PricingClientProps {
     yearlyPlans: Plan[];
     isAuthenticated: boolean;
     subscribePlanId: number | null;
+    /** The student's current plan id, if subscribed → shows "Current plan" / "Switch". */
+    currentPlanId?: number | null;
+    /** The current subscription's payment provider — only same-provider plans switch. */
+    currentProvider?: string;
+    /** Whether the current provider supports an automated plan switch (#463). */
+    canSwitchPlan?: boolean;
 }
 
-export default function PricingClient({ monthlyPlans, yearlyPlans, isAuthenticated, subscribePlanId }: PricingClientProps) {
+export default function PricingClient({
+    monthlyPlans,
+    yearlyPlans,
+    isAuthenticated,
+    subscribePlanId,
+    currentPlanId = null,
+    currentProvider = 'manual',
+    canSwitchPlan = false,
+}: PricingClientProps) {
     const [isYearly, setIsYearly] = useState(false);
     const t = useTranslations('pricing');
+    const router = useRouter();
+    const [pending, startTransition] = useTransition();
+    const [busyPlanId, setBusyPlanId] = useState<number | null>(null);
+
+    const handleSwitch = (planId: number) => {
+        setBusyPlanId(planId);
+        startTransition(async () => {
+            try {
+                await changePlan(String(planId));
+                toast.success(t('switchSuccess'));
+                router.refresh();
+            } catch (error) {
+                toast.error(error instanceof Error ? error.message : t('switchError'));
+            } finally {
+                setBusyPlanId(null);
+            }
+        });
+    };
 
     // Get the appropriate plans based on toggle
     const displayPlans = isYearly ? yearlyPlans : monthlyPlans;
@@ -115,6 +150,34 @@ export default function PricingClient({ monthlyPlans, yearlyPlans, isAuthenticat
                                                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
                                                 : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
                                                 }`;
+                                            // Already subscribed: show the current plan, or a one-click
+                                            // switch to another same-provider plan (#463), instead of a
+                                            // fresh checkout that would double-subscribe.
+                                            if (currentPlanId != null) {
+                                                if (plan.plan_id === currentPlanId) {
+                                                    return (
+                                                        <div className="mt-10">
+                                                            <Button disabled className={`${ctaClass} opacity-60`} data-testid="current-plan">
+                                                                {t('currentPlan')}
+                                                            </Button>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (canSwitchPlan && (plan.payment_provider ?? 'manual') === currentProvider) {
+                                                    return (
+                                                        <div className="mt-10">
+                                                            <Button
+                                                                className={ctaClass}
+                                                                onClick={() => handleSwitch(plan.plan_id)}
+                                                                disabled={pending}
+                                                                data-testid={`switch-plan-${plan.plan_id}`}
+                                                            >
+                                                                {busyPlanId === plan.plan_id ? t('switching') : t('switchToThis')}
+                                                            </Button>
+                                                        </div>
+                                                    );
+                                                }
+                                            }
                                             // Free plans (price 0) subscribe in one click instead of
                                             // routing through checkout.
                                             if (Number(plan.price) === 0) {
