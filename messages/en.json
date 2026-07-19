@@ -4116,6 +4116,14 @@
     "issuedBy": "Issued by LMS Platform"
   },
   "checkout": {
+    "conflict": {
+      "title": "You already have an active plan",
+      "descriptionWithPlan": "Your subscription to {planName} is still active. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
+      "description": "You already have an active subscription in this school. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
+      "howToSwitch": "To switch plans, contact your school and ask them to cancel your current plan first.",
+      "viewBilling": "View my billing",
+      "browseCourses": "Browse courses"
+    },
     "success": {
       "title": "You're all set!",
       "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",

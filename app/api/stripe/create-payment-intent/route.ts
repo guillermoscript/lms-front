@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { toCents } from '@/lib/currency'
 import { getPaymentProvider } from '@/lib/payments'
+import {
+  findConflictingSubscription,
+  PARALLEL_SUBSCRIPTION_CODE,
+  PARALLEL_SUBSCRIPTION_MESSAGE,
+} from '@/lib/payments/subscription-guard'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +26,22 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Parallel-subscription guard (#459): block before any Stripe side effects
+    // (customer creation, subscription, PaymentIntent). Same-plan renewal passes.
+    if (planId) {
+      const conflict = await findConflictingSubscription(supabase, {
+        userId: user.id,
+        tenantId,
+        planId: Number(planId),
+      })
+      if (conflict) {
+        return NextResponse.json(
+          { error: PARALLEL_SUBSCRIPTION_MESSAGE, code: PARALLEL_SUBSCRIPTION_CODE },
+          { status: 409 },
+        )
+      }
     }
 
     // Get or create Stripe customer

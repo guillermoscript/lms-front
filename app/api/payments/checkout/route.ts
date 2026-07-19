@@ -26,6 +26,11 @@ import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
+import {
+  findConflictingSubscription,
+  PARALLEL_SUBSCRIPTION_CODE,
+  PARALLEL_SUBSCRIPTION_MESSAGE,
+} from '@/lib/payments/subscription-guard'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
 const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs']
@@ -51,6 +56,24 @@ export async function POST(req: NextRequest) {
       await paymentAuthLimiter.check(10, user.id)
     } catch {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
+    // Parallel-subscription guard (#459): a different plan would create a
+    // second live subscription billing alongside the current one. Blocked
+    // before any pending transaction / provider session exists. Same-plan
+    // checkout (renewal) passes through.
+    if (planId) {
+      const conflict = await findConflictingSubscription(supabase, {
+        userId: user.id,
+        tenantId,
+        planId: Number(planId),
+      })
+      if (conflict) {
+        return NextResponse.json(
+          { error: PARALLEL_SUBSCRIPTION_MESSAGE, code: PARALLEL_SUBSCRIPTION_CODE },
+          { status: 409 },
+        )
+      }
     }
 
     // Resolve price + provider from the plan / product (tenant-scoped).

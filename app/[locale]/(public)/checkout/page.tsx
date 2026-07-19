@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { getSessionUser } from '@/lib/supabase/tenant'
 import { getSolanaSettlementOptions } from "@/app/actions/admin/settings";
+import { findConflictingSubscription } from "@/lib/payments/subscription-guard";
+import { SubscriptionConflictNotice } from "@/components/public/subscription-conflict-notice";
 
 interface SearchParams {
     courseId?: string;
@@ -125,6 +127,28 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             .single();
 
         if (dbPlan) {
+            // Parallel-subscription guard (#459): a live subscription to a
+            // different plan means this checkout would double-bill — show the
+            // blocking notice instead of any payment UI. Same-plan renewal
+            // falls through to the normal form.
+            const conflict = await findConflictingSubscription(supabase, {
+                userId: user.id,
+                tenantId,
+                planId: dbPlan.plan_id,
+            });
+            if (conflict) {
+                return (
+                    <div className="min-h-screen bg-background">
+                        <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
+                            <div className="mb-8 text-center">
+                                <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                            </div>
+                            <SubscriptionConflictNotice currentPlanName={conflict.plan_name} />
+                        </div>
+                    </div>
+                );
+            }
+
             title = dbPlan.plan_name;
             description = dbPlan.description;
             price = parseFloat(dbPlan.price);

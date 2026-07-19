@@ -4109,6 +4109,14 @@
     "issuedBy": "Emitido por LMS Platform"
   },
   "checkout": {
+    "conflict": {
+      "title": "Ya tienes un plan activo",
+      "descriptionWithPlan": "Tu suscripción a {planName} sigue activa. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
+      "description": "Ya tienes una suscripción activa en esta escuela. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
+      "howToSwitch": "Para cambiar de plan, contacta a tu escuela y pide que cancelen tu plan actual primero.",
+      "viewBilling": "Ver mi facturación",
+      "browseCourses": "Explorar cursos"
+    },
     "success": {
       "title": "¡Todo listo!",
       "subtitle": "Tu compra fue exitosa. Ya tienes acceso completo — disfruta el contenido.",
