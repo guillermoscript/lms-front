@@ -14,7 +14,7 @@ export type ProductCreationMode = 'create' | 'edit'
 export type CourseSourceMode = 'new' | 'existing'
 export type PricingMode = 'free' | 'paid'
 export type SaveIntent = 'draft' | 'publish'
-export type ProductCreationPaymentProvider = Extract<PaymentProvider, 'manual' | 'stripe' | 'paypal'>
+export type ProductCreationPaymentProvider = Extract<PaymentProvider, 'manual' | 'stripe' | 'paypal' | 'binance'>
 export type ProductCreationCurrency = 'usd' | 'eur'
 
 export interface ProductCreationCourseInput {

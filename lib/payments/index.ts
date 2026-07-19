@@ -6,6 +6,7 @@
 import { IPaymentProvider, PaymentProvider } from './types'
 import { StripePaymentProvider } from './stripe-provider'
 import { PayPalPaymentProvider } from './paypal-provider'
+import { BinancePayProvider } from './binance-provider'
 import { ManualPaymentProvider } from './manual-provider'
 import { LemonSqueezyProvider } from './lemonsqueezy-provider'
 import { SolanaProvider } from './solana-provider'
@@ -25,17 +26,31 @@ export function getPaymentProvider(
       }
       return new StripePaymentProvider(stripeKey)
 
-    case 'paypal':
+    case 'paypal': {
       const paypalClientId = process.env.PAYPAL_CLIENT_ID
       const paypalSecret = process.env.PAYPAL_CLIENT_SECRET
       if (!paypalClientId || !paypalSecret) {
         throw new Error('PayPal credentials are required')
       }
-      return new PayPalPaymentProvider(paypalClientId, paypalSecret)
+      // PAYPAL_WEBHOOK_ID is optional at construction (only webhook verify
+      // needs it — verifyWebhook fails closed without it). Defaults to sandbox;
+      // set PAYPAL_ENVIRONMENT=live in production.
+      return new PayPalPaymentProvider(
+        paypalClientId,
+        paypalSecret,
+        process.env.PAYPAL_WEBHOOK_ID,
+        process.env.PAYPAL_ENVIRONMENT === 'live' ? 'live' : 'sandbox',
+      )
+    }
 
-    case 'binance':
-      // TODO: Implement Binance Pay provider
-      throw new Error('Binance provider not yet implemented')
+    case 'binance': {
+      const binanceKey = process.env.BINANCE_PAY_API_KEY
+      const binanceSecret = process.env.BINANCE_PAY_API_SECRET
+      if (!binanceKey || !binanceSecret) {
+        throw new Error('BINANCE_PAY_API_KEY and BINANCE_PAY_API_SECRET are required')
+      }
+      return new BinancePayProvider(binanceKey, binanceSecret)
+    }
 
     case 'lemonsqueezy': {
       const lsKey = process.env.LEMONSQUEEZY_API_KEY
@@ -86,6 +101,7 @@ export function getDefaultPaymentProvider(): IPaymentProvider {
 export * from './types'
 export { StripePaymentProvider } from './stripe-provider'
 export { PayPalPaymentProvider } from './paypal-provider'
+export { BinancePayProvider } from './binance-provider'
 export { ManualPaymentProvider } from './manual-provider'
 export { LemonSqueezyProvider } from './lemonsqueezy-provider'
 export { SolanaProvider } from './solana-provider'

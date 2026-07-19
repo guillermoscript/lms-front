@@ -33,7 +33,7 @@ import {
 } from '@/lib/payments/subscription-guard'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
-const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs']
+const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs', 'paypal', 'binance']
 
 export const runtime = 'nodejs'
 
@@ -127,6 +127,15 @@ export async function POST(req: NextRequest) {
     if (providerSlug === 'lemonsqueezy' && !providerPriceId) {
       return NextResponse.json(
         { error: 'Lemon Squeezy plan/product is missing its variant id (provider_price_id)' },
+        { status: 400 },
+      )
+    }
+
+    // PayPal subscriptions bill against a Billing Plan (auto-created with the
+    // plan when PayPal is configured; stored as provider_price_id).
+    if (providerSlug === 'paypal' && mode === 'subscription' && !providerPriceId) {
+      return NextResponse.json(
+        { error: 'PayPal plan is missing its Billing Plan id (provider_price_id)' },
         { status: 400 },
       )
     }
@@ -238,11 +247,20 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Solana: persist the on-chain reference pubkey so the verify endpoint can
-      // locate the transfer/subscribe tx later. (LS creates the subscription
-      // server-side; its id arrives on the webhook, so nothing to store here.)
-      // For solana_subs the reference marks the SUBSCRIBE tx (findReference).
-      if ((providerSlug === 'solana' || providerSlug === 'solana_subs') && session.providerRef) {
+      // Persist the provider's own reference where it is known at creation
+      // time. Solana: the on-chain reference pubkey the verify endpoint locates
+      // the transfer/subscribe tx by (for solana_subs it marks the SUBSCRIBE
+      // tx, findReference). PayPal: the order id (one-time) or the I-…
+      // subscription id (created pre-approval — handle_new_subscription copies
+      // it onto the subscription row on activation). Binance: the prepayId
+      // (needed for refunds). LS stays webhook-driven; nothing to store here.
+      if (
+        (providerSlug === 'solana' ||
+          providerSlug === 'solana_subs' ||
+          providerSlug === 'paypal' ||
+          providerSlug === 'binance') &&
+        session.providerRef
+      ) {
         await supabase
           .from('transactions')
           .update({ provider_subscription_id: session.providerRef })

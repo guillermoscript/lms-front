@@ -141,8 +141,7 @@ export interface ProviderCapabilities {
  * Static capability table, keyed by provider slug. Lets credential-free callers
  * (e.g. the expiry cron) branch on ability WITHOUT instantiating a provider
  * (which requires API keys). Must stay in sync with each provider class's
- * `capabilities`. The unimplemented `binance` slug mirrors a self-managed
- * default so a stray row is cron-expired rather than left active forever.
+ * `capabilities`.
  */
 export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities> = {
   stripe: {
@@ -211,11 +210,15 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     createsCatalog: false,
     supportsPlanChange: false,
   },
+  // Binance Pay: hosted crypto checkout (USDT-denominated). No native
+  // recurring billing — plan purchases are one-time payments whose period WE
+  // manage (selfManagedPeriod: true → the expiry cron lapses unpaid rows),
+  // same model as Solana one-time.
   binance: {
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
-    supportsHostedCheckout: false,
-    supportsRefunds: false,
+    supportsHostedCheckout: true,
+    supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
     createsCatalog: false,
