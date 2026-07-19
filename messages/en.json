@@ -276,7 +276,20 @@
             "error": "Could not revoke the delegation. Please try again."
           },
           "empty": "You don't have an active subscription.",
-          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" }
+          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" },
+          "changePlan": {
+            "button": "Change plan",
+            "title": "Change your plan",
+            "description": "Switch to a different plan. Your current plan is replaced — you won't have two subscriptions at once.",
+            "switch": "Switch",
+            "switching": "Switching…",
+            "prorationNote": "You'll be charged or credited the prorated difference for the rest of this billing period.",
+            "manualNote": "Your remaining paid time carries over to the new plan. Any price difference is arranged with your school.",
+            "noPlans": "There are no other plans to switch to right now.",
+            "free": "Free",
+            "success": "Your plan has been changed.",
+            "error": "We couldn't change your plan. Please try again."
+          }
         },
         "purchases": {
           "sectionTitle": "Purchase History",
@@ -4125,6 +4138,11 @@
     "signUpFree": "Sign Up Free",
     "getStarted": "Get Started",
     "subscribeFree": "Subscribe Free",
+    "currentPlan": "Current plan",
+    "switchToThis": "Switch to this plan",
+    "switching": "Switching…",
+    "switchSuccess": "Your plan has been changed.",
+    "switchError": "We couldn't switch your plan.",
     "subscribing": "Subscribing…",
     "subscribeSuccess": "You're subscribed! Enjoy your plan.",
     "subscribeError": "Couldn't activate the plan. Please try again.",

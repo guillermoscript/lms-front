@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
 import { joinCurrentSchool } from '@/app/actions/join-school';
 import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard';
+import { getPaymentProvider, PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -229,6 +230,161 @@ export async function subscribeFree(planId?: string) {
         console.error("Free subscription failed:", error);
         throw error;
     }
+}
+
+/** Turn a `change_subscription_plan` RPC exception into a friendly message. */
+function mapPlanChangeError(raw: string): string {
+    if (raw.includes('same_plan')) return "You are already on this plan.";
+    if (raw.includes('no_active_subscription')) return "You don't have an active subscription to change.";
+    if (raw.includes('invalid_plan') || raw.includes('cross_tenant_plan')) return "Plan not found.";
+    if (raw.includes('plan_deleted')) return "That plan is no longer available.";
+    return "Could not change your plan. Please try again.";
+}
+
+/**
+ * Switch the student's current subscription to a different plan of the SAME
+ * school + payment provider (supersession — never two live subs; issue #463).
+ *
+ * - Native providers (Stripe / Lemon Squeezy, `supportsPlanChange`): swap the
+ *   item/variant on the SAME provider subscription with proration, then flip our
+ *   DB via `change_subscription_plan`. If the DB step fails, the provider swap is
+ *   reverted so billing and our records stay in sync.
+ * - Self-managed providers (manual / one-time crypto): period-aligned
+ *   supersession, no provider charge — the remaining prepaid period carries to
+ *   the new plan; any price difference is settled offline with the school.
+ * - Native recurring providers with no in-place swap (PayPal / solana_subs): not
+ *   supported automatically (a supersession would strand or double-charge their
+ *   auto-billing) — the student must cancel and re-subscribe.
+ */
+export async function changePlan(newPlanId?: string) {
+    const supabase = await createServerClient();
+    const userId = await getCurrentUserId()
+    if (!userId) {
+        throw new Error("You must be logged in to change your plan.");
+    }
+    const tenantId = await getCurrentTenantId();
+
+    const requestHeaders = await headers();
+    const clientIp = getClientIp({ headers: requestHeaders });
+    try {
+        await Promise.all([
+            freeEnrollmentLimiter.check(30, `user:${userId}`),
+            freeEnrollmentLimiter.check(100, `ip:${clientIp}`),
+        ]);
+    } catch {
+        throw new Error("Too many attempts. Please slow down and try again later.");
+    }
+
+    const numericPlanId = Number(newPlanId);
+    if (!Number.isSafeInteger(numericPlanId) || numericPlanId <= 0) {
+        throw new Error("Invalid plan.");
+    }
+
+    // Target plan: tenant-owned, not deleted.
+    const { data: targetPlan, error: targetErr } = await supabase
+        .from('plans')
+        .select('plan_id, plan_name, payment_provider, provider_price_id, tenant_id, deleted_at')
+        .eq('plan_id', numericPlanId)
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
+        .single();
+    if (targetErr || !targetPlan) {
+        throw new Error("Plan not found.");
+    }
+
+    // Current live subscription.
+    const { data: current } = await supabase
+        .from('subscriptions')
+        .select('subscription_id, plan_id, payment_provider, provider_subscription_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .in('subscription_status', ['active', 'renewed', 'past_due'])
+        .order('created', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (!current) {
+        throw new Error("You don't have an active subscription to change.");
+    }
+    if (current.plan_id === numericPlanId) {
+        throw new Error("You are already on this plan.");
+    }
+
+    const providerSlug = (current.payment_provider || 'manual') as PaymentProvider;
+    // Cross-provider switches are out of scope for the automated flow.
+    if (targetPlan.payment_provider && targetPlan.payment_provider !== providerSlug) {
+        throw new Error("This plan uses a different payment method. Contact your school to switch payment methods.");
+    }
+    const caps = PROVIDER_CAPABILITIES[providerSlug];
+
+    try {
+        if (caps?.supportsPlanChange) {
+            // Native in-place swap (Stripe / Lemon Squeezy).
+            if (!current.provider_subscription_id) {
+                throw new Error("This subscription can't be changed automatically. Contact your school.");
+            }
+            if (!targetPlan.provider_price_id) {
+                throw new Error("The selected plan isn't available for switching yet.");
+            }
+
+            // Old plan's provider price id, kept so we can revert on a DB failure.
+            const { data: currentPlan } = await supabase
+                .from('plans')
+                .select('provider_price_id')
+                .eq('plan_id', current.plan_id)
+                .maybeSingle();
+
+            const provider = getPaymentProvider(providerSlug);
+            if (!provider.updateSubscription) {
+                throw new Error("This payment method doesn't support plan changes.");
+            }
+
+            await provider.updateSubscription(current.provider_subscription_id, {
+                newProviderPriceId: targetPlan.provider_price_id,
+                prorationBehavior: 'create_prorations',
+                metadata: { userId, tenantId, planId: String(numericPlanId), reason: 'plan_change' },
+            });
+
+            const { error: rpcError } = await supabase.rpc('change_subscription_plan', {
+                _new_plan_id: numericPlanId,
+            });
+            if (rpcError) {
+                // Compensate: put the provider subscription back on the old price
+                // so billing and our DB stay consistent.
+                if (currentPlan?.provider_price_id) {
+                    try {
+                        await provider.updateSubscription(current.provider_subscription_id, {
+                            newProviderPriceId: currentPlan.provider_price_id,
+                            prorationBehavior: 'none',
+                        });
+                    } catch (revertErr) {
+                        console.error("changePlan: failed to revert provider swap after DB error", revertErr);
+                    }
+                }
+                throw new Error(mapPlanChangeError(rpcError.message));
+            }
+        } else if (caps && !caps.supportsNativeSubscriptions) {
+            // Self-managed providers (manual / one-time crypto): period-aligned
+            // supersession, no provider charge.
+            const { error: rpcError } = await supabase.rpc('change_subscription_plan', {
+                _new_plan_id: numericPlanId,
+            });
+            if (rpcError) {
+                throw new Error(mapPlanChangeError(rpcError.message));
+            }
+        } else {
+            // Native recurring providers without an in-place swap (PayPal /
+            // solana_subs): a supersession would strand or double-charge them.
+            throw new Error("This subscription can't be switched automatically. Please cancel it and subscribe to the new plan.");
+        }
+    } catch (error) {
+        console.error("Plan change failed:", error);
+        throw error;
+    }
+
+    revalidatePath('/dashboard/student/billing');
+    revalidatePath('/dashboard/student');
+    revalidatePath('/pricing');
+    return { success: true };
 }
 
 export async function enrollFree(courseId?: string) {

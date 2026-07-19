@@ -71,6 +71,23 @@ export interface ProviderSubscription {
   cancelAtPeriodEnd: boolean
 }
 
+/**
+ * Params for moving an existing subscription to a different plan/price in place
+ * (capability-gated by `supportsPlanChange`). The provider swaps the recurring
+ * item/variant on the SAME subscription object — the provider subscription id is
+ * unchanged — and settles the mid-period difference via proration.
+ */
+export interface UpdateSubscriptionParams {
+  /** Provider price/variant id of the TARGET plan (provider_price_id on the plan). */
+  newProviderPriceId: string
+  /**
+   * How to settle the mid-period billing difference. Defaults to the provider's
+   * standard prorated behavior (`create_prorations` on Stripe).
+   */
+  prorationBehavior?: 'create_prorations' | 'none' | 'always_invoice'
+  metadata?: Record<string, string>
+}
+
 // ---------------------------------------------------------------------------
 // Provider-agnostic billing additions (issue #280 / provider-agnostic spike).
 // All ADDITIVE: new concepts so providers with different abilities (Stripe vs
@@ -110,6 +127,14 @@ export interface ProviderCapabilities {
    * The create/update actions branch on THIS, never on provider identity.
    */
   createsCatalog: boolean
+  /**
+   * Provider can move an EXISTING subscription to a different plan/price in place
+   * (native item/variant swap with proration) via `updateSubscription`
+   * (Stripe/LS/Paddle). If false, a plan change is handled app-side as a
+   * supersession (cancel the old sub, activate the new plan) rather than a
+   * provider-native swap. The plan-change flow (#463) branches on THIS.
+   */
+  supportsPlanChange: boolean
 }
 
 /**
@@ -128,6 +153,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
     createsCatalog: true,
+    supportsPlanChange: true,
   },
   paypal: {
     supportsNativeSubscriptions: true,
@@ -137,6 +163,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
     createsCatalog: true,
+    supportsPlanChange: false,
   },
   lemonsqueezy: {
     supportsNativeSubscriptions: true,
@@ -146,6 +173,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: true,
     selfManagedPeriod: false,
     createsCatalog: false,
+    supportsPlanChange: true,
   },
   solana: {
     supportsNativeSubscriptions: false,
@@ -155,6 +183,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
     createsCatalog: false,
+    supportsPlanChange: false,
   },
   // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
   // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
@@ -168,6 +197,9 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
     createsCatalog: false,
+    // On-chain auto-pull is a fixed-amount delegation; changing plan requires a
+    // fresh subscriber-signed delegation, so there is no in-place swap.
+    supportsPlanChange: false,
   },
   manual: {
     supportsNativeSubscriptions: false,
@@ -177,6 +209,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
     createsCatalog: false,
+    supportsPlanChange: false,
   },
   binance: {
     supportsNativeSubscriptions: false,
@@ -186,6 +219,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
     createsCatalog: false,
+    supportsPlanChange: false,
   },
 }
 
@@ -327,6 +361,10 @@ export interface IPaymentProvider {
   createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
   cancelSubscription?(providerSubId: string, immediate: boolean): Promise<void>
   getSubscription?(providerSubId: string): Promise<ProviderSubscription>
+  // Move an existing subscription to a different plan/price in place, with
+  // proration (capability-gated by supportsPlanChange — Stripe/LS). Providers
+  // without a native swap omit this; the plan-change flow supersedes app-side.
+  updateSubscription?(providerSubId: string, params: UpdateSubscriptionParams): Promise<ProviderSubscription>
 
   // Checkout (optional — the creation path that stores provider_subscription_id;
   // providers wire this in Phase 2). Capability-gated by supportsHostedCheckout

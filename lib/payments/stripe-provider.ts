@@ -13,6 +13,7 @@ import {
   UpdateProductParams,
   UpdatePriceParams,
   CreateSubscriptionParams,
+  UpdateSubscriptionParams,
   ProviderSubscription,
   ProviderCapabilities,
   NormalizedBillingEvent,
@@ -34,6 +35,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
     createsCatalog: true,
+    supportsPlanChange: true,
   }
   private stripe: Stripe
 
@@ -280,6 +282,39 @@ export class StripePaymentProvider implements IPaymentProvider {
       return this.mapSubscription(stripeSub)
     } catch (error) {
       throw new Error(`Stripe getSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Move a subscription to a different recurring price in place, with proration.
+   *
+   * Swaps the single billable item on the SAME subscription — the subscription
+   * id is unchanged — so a plan change never produces a second live Stripe
+   * subscription (no double-billing). Stripe settles the mid-period difference
+   * per `proration_behavior` (default `create_prorations`) against the saved
+   * default payment method. Mirrors the platform-billing proration at
+   * lib/payments/platform-plan-change.ts:155.
+   */
+  async updateSubscription(
+    providerSubId: string,
+    params: UpdateSubscriptionParams,
+  ): Promise<ProviderSubscription> {
+    try {
+      const current = await this.stripe.subscriptions.retrieve(providerSubId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const itemId = (current as any).items?.data?.[0]?.id as string | undefined
+      if (!itemId) {
+        throw new Error(`subscription ${providerSubId} has no billable item to swap`)
+      }
+      const updated = await this.stripe.subscriptions.update(providerSubId, {
+        items: [{ id: itemId, price: params.newProviderPriceId }],
+        proration_behavior: params.prorationBehavior ?? 'create_prorations',
+        ...(params.metadata ? { metadata: params.metadata } : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
+      return this.mapSubscription(updated)
+    } catch (error) {
+      throw new Error(`Stripe updateSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
