@@ -19,6 +19,7 @@ import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'crypto'
 import { getSubscriptionState } from '@/lib/payments/solana-subscriptions'
 import { pullSplitForSubscription } from '@/lib/payments/solana-subscription-pull'
+import { decidePullAction } from '@/lib/payments/solana-pull-decision'
 
 export const runtime = 'nodejs'
 
@@ -60,9 +61,11 @@ export async function GET(req: NextRequest) {
   const admin = getSupabaseAdmin()
 
   // Active native-subscription rows, with their on-chain coordinates + amount.
+  // We also pull the cancel fields so the pull/cancel decision (which must never
+  // charge a canceled sub — issue #460) has the full DB state.
   const { data: subs, error } = await admin
     .from('subscriptions')
-    .select('subscription_id, tenant_id, plan_id, provider_metadata, plans(price)')
+    .select('subscription_id, tenant_id, plan_id, provider_metadata, subscription_status, cancel_at_period_end, cancel_at, plans(price)')
     .eq('payment_provider', 'solana_subs')
     .eq('subscription_status', 'active')
 
@@ -88,13 +91,51 @@ export async function GET(req: NextRequest) {
         errors.push(`sub ${sub.subscription_id}: no on-chain account`)
         continue
       }
-      if (state.expiresAtTs !== BigInt(0) && state.expiresAtTs <= BigInt(nowSec)) {
-        // Cancelled and past grace — expire our row (trigger revokes access).
+
+      // Decide: expire / cancel / skip / pull. The gate refuses to charge any
+      // row our DB no longer considers active and finalizes period-end cancels
+      // instead of renewing them (issue #460 — defense in depth so a live
+      // on-chain delegation can never re-bill a canceled subscription).
+      const decision = decidePullAction({
+        row: {
+          subscription_status: sub.subscription_status as string,
+          cancel_at_period_end: (sub as { cancel_at_period_end?: boolean | null }).cancel_at_period_end ?? null,
+          cancel_at: (sub as { cancel_at?: string | null }).cancel_at ?? null,
+        },
+        state,
+        nowSec,
+      })
+
+      if (decision.action === 'expire') {
+        // Cancelled on-chain and past grace — expire our row (trigger revokes access).
         await admin.from('subscriptions').update({ subscription_status: 'expired' }).eq('subscription_id', sub.subscription_id)
         continue
       }
-      const periodEndSec = state.currentPeriodStartTs + state.periodHours * BigInt(3600)
-      if (BigInt(nowSec) < periodEndSec) continue // not due yet
+      if (decision.action === 'cancel') {
+        // Scheduled to cancel at period end and the period has rolled — finalize
+        // to canceled WITHOUT pulling (the trigger revokes access).
+        await admin
+          .from('subscriptions')
+          .update({ subscription_status: 'canceled', canceled_at: new Date().toISOString() })
+          .eq('subscription_id', sub.subscription_id)
+        continue
+      }
+      if (decision.action === 'skip') continue
+
+      // decision.action === 'pull' from here.
+      const periodEndSec = decision.periodEndSec
+
+      // Final guard: re-read the row's live status immediately before charging so
+      // a cancel that landed AFTER the batch query (mid-run) still stops the pull.
+      const { data: fresh } = await admin
+        .from('subscriptions')
+        .select('subscription_status')
+        .eq('subscription_id', sub.subscription_id)
+        .maybeSingle()
+      if (fresh?.subscription_status !== 'active') {
+        errors.push(`sub ${sub.subscription_id}: status changed to ${fresh?.subscription_status ?? 'unknown'} before pull — skipped`)
+        continue
+      }
 
       // Split the per-period amount (school remainder + platform floor).
       const price = Number((sub.plans as { price?: number } | null)?.price ?? 0)

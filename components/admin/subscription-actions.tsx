@@ -51,11 +51,22 @@ export function SubscriptionActions({
       const result = await cancelSubscription(subscriptionId, immediate)
 
       if (result.success) {
-        toast.success(
-          immediate
-            ? t('toasts.cancelImmediate')
-            : t('toasts.cancelAtEnd')
-        )
+        if (result.providerCancelError) {
+          // Canceled in our records, but the provider-side authorization could
+          // not be revoked server-side (e.g. a Solana auto-pull delegation needs
+          // the student's wallet). Warn instead of a clean success so the admin
+          // knows the student must revoke it from their wallet.
+          toast.warning(t('toasts.cancelPartial'), {
+            description: t('toasts.cancelPartialDesc'),
+            duration: 8000,
+          })
+        } else {
+          toast.success(
+            immediate
+              ? t('toasts.cancelImmediate')
+              : t('toasts.cancelAtEnd')
+          )
+        }
         setCancelDialogOpen(false)
         router.refresh()
       } else {
