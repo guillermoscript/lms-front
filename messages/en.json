@@ -283,7 +283,11 @@
           "empty": "No purchases yet.",
           "unknownItem": "Unknown item",
           "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
-          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" }
+          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" },
+          "verifyNow": "Verify now",
+          "verifyConfirmed": "Payment confirmed — access granted.",
+          "verifyPending": "Payment not found on-chain yet. Try again in a moment.",
+          "verifyError": "Could not verify the payment. Please try again."
         },
         "offline": {
           "sectionTitle": "Offline / Manual Payments",

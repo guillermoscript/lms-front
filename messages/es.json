@@ -283,7 +283,11 @@
           "empty": "Aún no tienes compras.",
           "unknownItem": "Elemento desconocido",
           "table": { "item": "Artículo", "provider": "Proveedor", "date": "Fecha", "status": "Estado", "amount": "Monto" },
-          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" }
+          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" },
+          "verifyNow": "Verificar ahora",
+          "verifyConfirmed": "Pago confirmado: acceso otorgado.",
+          "verifyPending": "El pago aún no aparece en la cadena. Inténtalo de nuevo en un momento.",
+          "verifyError": "No se pudo verificar el pago. Inténtalo de nuevo."
         },
         "offline": {
           "sectionTitle": "Pagos offline / manuales",

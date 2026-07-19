@@ -22,6 +22,7 @@ import {
   IconDownload,
   IconInfoCircle,
 } from '@tabler/icons-react'
+import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -385,13 +386,20 @@ export default async function StudentBillingPage() {
                             {formatDate(tx.transaction_date)}
                           </td>
                           <td className="px-4 py-3 align-top">
-                            <Badge
-                              variant="outline"
-                              className={`gap-1 text-xs ${statusMeta.className}`}
-                            >
-                              {statusMeta.icon}
-                              {t(`purchases.status.${tx.status}` as any)}
-                            </Badge>
+                            <div className="flex flex-col items-start gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={`gap-1 text-xs ${statusMeta.className}`}
+                              >
+                                {statusMeta.icon}
+                                {t(`purchases.status.${tx.status}` as any)}
+                              </Badge>
+                              {/* Stranded pending one-time Solana payment: let the
+                                  student re-run on-chain confirmation (#467). */}
+                              {tx.status === 'pending' && tx.payment_provider === 'solana' && (
+                                <VerifyPaymentButton transactionId={tx.transaction_id} />
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
                             {formatCurrency(Number(tx.amount), tx.currency ?? 'USD')}
