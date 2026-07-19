@@ -113,6 +113,14 @@ export async function POST(req: NextRequest) {
 
         if (!tenantId) break
 
+        // Derive the billing interval from the subscription item's price so an
+        // interval switch (monthly <-> yearly) is reflected locally — the
+        // plan-mapped reconciler below treats a same-plan interval change as a
+        // no-op and would otherwise leave platform_subscriptions.interval stale.
+        const priceInterval = subscription.items?.data?.[0]?.price?.recurring?.interval
+        const localInterval =
+          priceInterval === 'year' ? 'yearly' : priceInterval === 'month' ? 'monthly' : undefined
+
         // Update subscription period and status
         await adminClient
           .from('platform_subscriptions')
@@ -120,6 +128,7 @@ export async function POST(req: NextRequest) {
             status: subscription.status === 'active' ? 'active'
               : subscription.status === 'past_due' ? 'past_due'
               : subscription.status,
+            ...(localInterval ? { interval: localInterval } : {}),
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end,

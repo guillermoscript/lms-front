@@ -1770,11 +1770,39 @@
           "upcomingPayment": "Upcoming payment",
           "dueOn": "Due {date}",
           "bankTransfer": "Bank transfer",
-          "cardPayment": "Card payment"
+          "cardPayment": "Card payment",
+          "cancelPlan": "Cancel plan",
+          "cancelConfirmTitle": "Cancel subscription?",
+          "cancelConfirmBody": "Your school keeps {plan} access until {date}, then moves to the Free plan. You can resubscribe anytime.",
+          "cancelConfirmBodyNoDate": "Your school will move to the Free plan at the end of your billing period. You can resubscribe anytime.",
+          "cancelConfirmAction": "Cancel subscription",
+          "cancelKeep": "Keep subscription",
+          "cancelSuccess": "Your subscription will cancel at the end of your billing period",
+          "cancelError": "Failed to cancel subscription"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
           "checkoutFailed": "Failed to start checkout. Please try again."
+        },
+        "changePlan": {
+          "upgradeTitle": "Upgrade to {plan}",
+          "downgradeTitle": "Downgrade to {plan}",
+          "intervalTitle": "Change {plan} billing",
+          "previewIntro": "Review the proration before confirming. Your card on file is charged automatically.",
+          "loadingPreview": "Calculating proration…",
+          "previewUnavailable": "We couldn't load a price preview, but you can still switch — your next invoice will reflect the change.",
+          "prorationDueNow": "Proration on your next invoice",
+          "prorationCredit": "Credit on your next invoice",
+          "nextInvoiceTotal": "Next invoice total",
+          "overLimitTitle": "Over the {plan} plan limits",
+          "overLimitIntro": "Reduce your usage before downgrading:",
+          "violationCourses": "You have {current} active courses — the plan allows {max}. Archive {reduceBy} to continue.",
+          "violationStudents": "You have {current} students — the plan allows {max}. Remove {reduceBy} to continue.",
+          "confirm": "Confirm change",
+          "cancel": "Cancel",
+          "close": "Close",
+          "success": "Plan updated",
+          "error": "Failed to change plan"
         }
       },
       "users": {

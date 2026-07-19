@@ -23,6 +23,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { downgradeBlockedTemplate } from '@/lib/email/templates/downgrade-blocked'
+import { countTenantUsage, computePlanLimitViolations } from '@/lib/billing/plan-limits'
 
 export interface PortalPlanChangeDeps {
   /** Service-role Supabase client (bypasses RLS). */
@@ -96,43 +97,23 @@ export async function applyPortalPlanChange(
   const maxCourses = newPlan.limits?.max_courses ?? -1
   const maxStudents = newPlan.limits?.max_students ?? -1
 
-  let overCourses = false
-  let overStudents = false
-  let courseCount = 0
-  let studentCount = 0
+  // Shared with the pre-flight in-app check (lib/billing/plan-limits.ts) so the
+  // reactive webhook path and the proactive path enforce identical limits.
+  const violations =
+    maxCourses !== -1 || maxStudents !== -1
+      ? computePlanLimitViolations(await countTenantUsage(admin, tenantId), newPlan.limits)
+      : []
 
-  if (maxCourses !== -1 || maxStudents !== -1) {
-    const [coursesRes, studentsRes] = await Promise.all([
-      admin
-        .from('courses')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
-        .neq('status', 'archived'),
-      admin
-        .from('tenant_users')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
-        .eq('role', 'student')
-        .eq('status', 'active'),
-    ])
-    courseCount = coursesRes.count ?? 0
-    studentCount = studentsRes.count ?? 0
-    overCourses = maxCourses !== -1 && courseCount > maxCourses
-    overStudents = maxStudents !== -1 && studentCount > maxStudents
-  }
-
-  if (!overCourses && !overStudents) {
+  if (violations.length === 0) {
     await applyPlanToDb(admin, tenantId, newPlan)
     return { action: 'applied' }
   }
 
-  const reasons: string[] = []
-  if (overCourses) {
-    reasons.push(`${courseCount} active courses exceed the ${newPlan.name || newPlan.slug} limit of ${maxCourses}`)
-  }
-  if (overStudents) {
-    reasons.push(`${studentCount} active students exceed the ${newPlan.name || newPlan.slug} limit of ${maxStudents}`)
-  }
+  const reasons = violations.map((v) =>
+    v.resource === 'courses'
+      ? `${v.current} active courses exceed the ${newPlan.name || newPlan.slug} limit of ${v.max}`
+      : `${v.current} active students exceed the ${newPlan.name || newPlan.slug} limit of ${v.max}`
+  )
 
   const { data: oldPlan } = currentSub?.plan_id
     ? ((await admin
