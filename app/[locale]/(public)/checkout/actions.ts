@@ -6,6 +6,7 @@ import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { headers } from 'next/headers';
 import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
 import { joinCurrentSchool } from '@/app/actions/join-school';
+import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -80,6 +81,16 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
 
             if (planError || !plan) {
                 throw new Error("Plan not found.");
+            }
+
+            // Parallel-subscription guard (#459) — same-plan renewal passes.
+            const conflict = await findConflictingSubscription(supabase, {
+                userId,
+                tenantId,
+                planId: plan.plan_id,
+            });
+            if (conflict) {
+                throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE);
             }
 
             // Create the transaction. The after_transaction_insert trigger
@@ -171,6 +182,18 @@ export async function subscribeFree(planId?: string) {
         }
         if (Number(plan.price) !== 0) {
             throw new Error("This plan is not free. Please use the paid checkout.");
+        }
+
+        // Parallel-subscription guard (#459): even a free plan must not run
+        // alongside a paid one — the paid plan keeps billing while the student
+        // believes they "switched". Same-plan re-activation passes.
+        const conflict = await findConflictingSubscription(supabase, {
+            userId,
+            tenantId,
+            planId: numericPlanId,
+        });
+        if (conflict) {
+            throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE);
         }
 
         // Signup-while-subscribing: join the school first (same as enrollFree).

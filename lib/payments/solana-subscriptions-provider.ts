@@ -120,6 +120,30 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
   // Webhooks — not applicable (confirmation is on-chain via /verify)
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Cancellation — cannot happen server-side
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Revoking the on-chain auto-pull delegation requires the SUBSCRIBER's wallet
+   * signature (the Subscriptions program's `cancel` instruction is signed by the
+   * subscriber). The server only holds the puller/merchant key, so it CANNOT
+   * revoke the delegation on the student's behalf. Throwing here — rather than
+   * silently no-oping — is deliberate: it forces the admin cancel action to
+   * surface the partial failure instead of reporting a clean success while the
+   * delegation is still live and pullable (issue #460).
+   *
+   * Cancelling still neutralizes the money leak: the crank refuses to charge any
+   * row whose DB status is not `active` (see decidePullAction). The student
+   * revokes the delegation itself from the billing page (`/api/payments/solana/
+   * cancel-tx` → wallet sign → `/api/payments/solana/cancel-verify`).
+   */
+  async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<void> {
+    throw new Error(
+      'solana_subs: the on-chain auto-pull delegation cannot be revoked server-side — it requires the subscriber\'s wallet signature. The subscription has been canceled in our records (the crank will not charge it), but the student must revoke the delegation from their wallet on the billing page.',
+    )
+  }
+
   /**
    * No signed inbound webhook. Authenticity comes from the chain: a real
    * subscribe tx carrying our unique reference plus an existing on-chain

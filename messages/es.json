@@ -256,6 +256,25 @@
           "cancelsOn": "Se cancela el",
           "cancelAtPeriodEndNotice": "Esta suscripción no se renovará. El acceso termina el {date}.",
           "cancelNote": "Para cancelar tu suscripción, comunícate con tu institución.",
+          "revoke": {
+            "walletNote": "Esta suscripción cobra automáticamente de tu billetera Solana cada periodo. Revoca la delegación de cobro automático desde tu billetera para detener cargos futuros.",
+            "button": "Revocar cobro automático",
+            "title": "Revocar la delegación de cobro automático",
+            "description": "Esto firma una transacción en la cadena con tu billetera que cancela la autorización de cobro automático. Después de esto, no se podrán realizar más cargos desde tu billetera por esta suscripción.",
+            "walletNote2": "Se te pedirá aprobar una transacción en tu billetera.",
+            "confirm": "Revocar delegación",
+            "cancel": "Mantener suscripción",
+            "working": "Revocando…",
+            "connecting": "Conectando con tu billetera…",
+            "preparing": "Preparando la transacción de cancelación…",
+            "signing": "Aprueba la transacción en tu billetera…",
+            "submitting": "Enviando a la red…",
+            "confirming": "Confirmando en la cadena…",
+            "success": "Delegación de cobro automático revocada. No se realizarán más cargos.",
+            "notConfirmed": "La cancelación no se confirmó en la cadena. Inténtalo de nuevo.",
+            "noWallet": "No se encontró una billetera Solana. Instala Phantom para revocar la delegación.",
+            "error": "No se pudo revocar la delegación. Inténtalo de nuevo."
+          },
           "empty": "No tienes una suscripción activa.",
           "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" }
         },
@@ -264,7 +283,11 @@
           "empty": "Aún no tienes compras.",
           "unknownItem": "Elemento desconocido",
           "table": { "item": "Artículo", "provider": "Proveedor", "date": "Fecha", "status": "Estado", "amount": "Monto" },
-          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" }
+          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" },
+          "verifyNow": "Verificar ahora",
+          "verifyConfirmed": "Pago confirmado: acceso otorgado.",
+          "verifyPending": "El pago aún no aparece en la cadena. Inténtalo de nuevo en un momento.",
+          "verifyError": "No se pudo verificar el pago. Inténtalo de nuevo."
         },
         "offline": {
           "sectionTitle": "Pagos offline / manuales",
@@ -2289,6 +2312,8 @@
         "toasts": {
           "cancelImmediate": "Suscripción cancelada inmediatamente",
           "cancelAtEnd": "La suscripción se cancelará al final del periodo",
+          "cancelPartial": "Cancelada en nuestros registros, pero la delegación de cobro automático en la cadena sigue activa",
+          "cancelPartialDesc": "El estudiante debe revocar la delegación de cobro automático desde su billetera en la página de facturación. Mientras tanto, nuestro proceso de cobro no cargará esta suscripción.",
           "cancelError": "Error al cancelar la suscripción",
           "reactivateSuccess": "Suscripción reactivada con éxito",
           "reactivateError": "Error al reactivar la suscripción",
@@ -4109,6 +4134,14 @@
     "issuedBy": "Emitido por LMS Platform"
   },
   "checkout": {
+    "conflict": {
+      "title": "Ya tienes un plan activo",
+      "descriptionWithPlan": "Tu suscripción a {planName} sigue activa. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
+      "description": "Ya tienes una suscripción activa en esta escuela. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
+      "howToSwitch": "Para cambiar de plan, contacta a tu escuela y pide que cancelen tu plan actual primero.",
+      "viewBilling": "Ver mi facturación",
+      "browseCourses": "Explorar cursos"
+    },
     "success": {
       "title": "¡Todo listo!",
       "subtitle": "Tu compra fue exitosa. Ya tienes acceso completo — disfruta el contenido.",

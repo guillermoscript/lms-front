@@ -256,6 +256,25 @@
           "cancelsOn": "Cancels on",
           "cancelAtPeriodEndNotice": "This subscription will not renew. Access ends on {date}.",
           "cancelNote": "To cancel your subscription, please contact your school.",
+          "revoke": {
+            "walletNote": "This subscription auto-charges your Solana wallet each period. Revoke the auto-pull delegation from your wallet to stop future charges.",
+            "button": "Revoke auto-pull",
+            "title": "Revoke auto-pull delegation",
+            "description": "This signs an on-chain transaction with your wallet that cancels the auto-pull authorization. After this, no further charges can be pulled from your wallet for this subscription.",
+            "walletNote2": "You'll be asked to approve one transaction in your wallet.",
+            "confirm": "Revoke delegation",
+            "cancel": "Keep subscription",
+            "working": "Revoking…",
+            "connecting": "Connecting to your wallet…",
+            "preparing": "Preparing the cancel transaction…",
+            "signing": "Approve the transaction in your wallet…",
+            "submitting": "Submitting to the network…",
+            "confirming": "Confirming on-chain…",
+            "success": "Auto-pull delegation revoked. No further charges will be made.",
+            "notConfirmed": "The cancellation was not confirmed on-chain. Please try again.",
+            "noWallet": "No Solana wallet found. Install Phantom to revoke the delegation.",
+            "error": "Could not revoke the delegation. Please try again."
+          },
           "empty": "You don't have an active subscription.",
           "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" }
         },
@@ -264,7 +283,11 @@
           "empty": "No purchases yet.",
           "unknownItem": "Unknown item",
           "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
-          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" }
+          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" },
+          "verifyNow": "Verify now",
+          "verifyConfirmed": "Payment confirmed — access granted.",
+          "verifyPending": "Payment not found on-chain yet. Try again in a moment.",
+          "verifyError": "Could not verify the payment. Please try again."
         },
         "offline": {
           "sectionTitle": "Offline / Manual Payments",
@@ -2293,6 +2316,8 @@
         "toasts": {
           "cancelImmediate": "Subscription cancelled immediately",
           "cancelAtEnd": "Subscription will cancel at period end",
+          "cancelPartial": "Canceled in our records, but the on-chain auto-pull delegation is still active",
+          "cancelPartialDesc": "The student must revoke the auto-pull delegation from their wallet on the billing page. Our crank will not charge this subscription in the meantime.",
           "cancelError": "Failed to cancel subscription",
           "reactivateSuccess": "Subscription reactivated successfully",
           "reactivateError": "Failed to reactivate subscription",
@@ -4116,6 +4141,14 @@
     "issuedBy": "Issued by LMS Platform"
   },
   "checkout": {
+    "conflict": {
+      "title": "You already have an active plan",
+      "descriptionWithPlan": "Your subscription to {planName} is still active. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
+      "description": "You already have an active subscription in this school. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
+      "howToSwitch": "To switch plans, contact your school and ask them to cancel your current plan first.",
+      "viewBilling": "View my billing",
+      "browseCourses": "Browse courses"
+    },
     "success": {
       "title": "You're all set!",
       "subtitle": "Your purchase was successful. You now have full access — enjoy the content.",

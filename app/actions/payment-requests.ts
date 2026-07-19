@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
+import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard'
 
 export interface PaymentRequestFormData {
   productId?: number
@@ -141,6 +142,18 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
 
     if (!plan) {
       throw new Error('Plan not found')
+    }
+
+    // Parallel-subscription guard (#459): block the manual request up front so
+    // the student gets the warning before any admin back-and-forth. Same-plan
+    // renewal requests pass.
+    const conflict = await findConflictingSubscription(supabase, {
+      userId,
+      tenantId,
+      planId: plan.plan_id,
+    })
+    if (conflict) {
+      throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE)
     }
 
     paymentAmount = parseFloat(plan.price)

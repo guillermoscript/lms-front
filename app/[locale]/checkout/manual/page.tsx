@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { PaymentRequestForm } from '@/components/student/payment-request-form'
 import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
+import { findConflictingSubscription } from '@/lib/payments/subscription-guard'
+import { SubscriptionConflictNotice } from '@/components/public/subscription-conflict-notice'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
 import type { Metadata } from 'next'
 
@@ -63,6 +65,24 @@ export default async function ManualCheckoutPage(props: {
 
     if (plan.payment_provider !== 'manual') {
       redirect(`/checkout?planId=${planId}`)
+    }
+
+    // Parallel-subscription guard (#459): block the manual request flow the
+    // same way the main checkout blocks — a different live plan would bill
+    // alongside this one. Same-plan renewal falls through.
+    const conflict = await findConflictingSubscription(supabase, {
+      userId: user.id,
+      tenantId,
+      planId: plan.plan_id,
+    })
+    if (conflict) {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
+            <SubscriptionConflictNotice currentPlanName={conflict.plan_name} />
+          </div>
+        </div>
+      )
     }
 
     itemName = plan.plan_name

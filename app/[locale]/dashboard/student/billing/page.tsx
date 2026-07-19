@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { RevokeSolanaDelegation } from '@/components/student/revoke-solana-delegation'
 import {
   IconCreditCard,
   IconReceipt,
@@ -21,6 +22,7 @@ import {
   IconDownload,
   IconInfoCircle,
 } from '@tabler/icons-react'
+import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -296,11 +298,23 @@ export default async function StudentBillingPage() {
                   </span>
                 </div>
               )}
-              {/* No self-cancel note */}
-              <div className="flex items-start gap-2 rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
-                <IconInfoCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>{t('subscription.cancelNote')}</span>
-              </div>
+              {/* Solana native subs: the student revokes the on-chain auto-pull
+                  delegation from their own wallet (the server cannot). Other
+                  providers keep the "contact us to cancel" note. */}
+              {activeSubscription.payment_provider === 'solana_subs' ? (
+                <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/50 px-3 py-2">
+                  <span className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <IconWallet className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{t('subscription.revoke.walletNote')}</span>
+                  </span>
+                  <RevokeSolanaDelegation subscriptionId={activeSubscription.subscription_id} />
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 rounded-md bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+                  <IconInfoCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{t('subscription.cancelNote')}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -372,13 +386,20 @@ export default async function StudentBillingPage() {
                             {formatDate(tx.transaction_date)}
                           </td>
                           <td className="px-4 py-3 align-top">
-                            <Badge
-                              variant="outline"
-                              className={`gap-1 text-xs ${statusMeta.className}`}
-                            >
-                              {statusMeta.icon}
-                              {t(`purchases.status.${tx.status}` as any)}
-                            </Badge>
+                            <div className="flex flex-col items-start gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={`gap-1 text-xs ${statusMeta.className}`}
+                              >
+                                {statusMeta.icon}
+                                {t(`purchases.status.${tx.status}` as any)}
+                              </Badge>
+                              {/* Stranded pending one-time Solana payment: let the
+                                  student re-run on-chain confirmation (#467). */}
+                              {tx.status === 'pending' && tx.payment_provider === 'solana' && (
+                                <VerifyPaymentButton transactionId={tx.transaction_id} />
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
                             {formatCurrency(Number(tx.amount), tx.currency ?? 'USD')}

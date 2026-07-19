@@ -5,6 +5,7 @@ import type Stripe from 'stripe'
 import { sendEmail } from '@/lib/email/send'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
 import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 
 function getPlatformWebhookSecret(): string {
   const secret = process.env.STRIPE_PLATFORM_WEBHOOK_SECRET
@@ -138,56 +139,13 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', tenantId)
 
-        // If plan changed via Stripe portal, update plan slug
-        if (subscription.items?.data?.[0]?.price?.id) {
-          const newPriceId = subscription.items.data[0].price.id
-          const { data: newPlan } = await adminClient
-            .from('platform_plans')
-            .select('slug, plan_id, transaction_fee_percent')
-            .or(`stripe_price_id_monthly.eq.${newPriceId},stripe_price_id_yearly.eq.${newPriceId}`)
-            .single()
-
-          if (newPlan) {
-            // Check downgrade limits before applying new plan
-            const limits = (newPlan as any).limits as { max_courses?: number; max_students?: number } | null
-            const maxCourses = limits?.max_courses ?? -1
-            const maxStudents = limits?.max_students ?? -1
-
-            if (maxCourses !== -1 || maxStudents !== -1) {
-              const [coursesRes, studentsRes] = await Promise.all([
-                adminClient.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('status', 'archived'),
-                adminClient.from('tenant_users').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
-              ])
-              const overCourses = maxCourses !== -1 && (coursesRes.count ?? 0) > maxCourses
-              const overStudents = maxStudents !== -1 && (studentsRes.count ?? 0) > maxStudents
-
-              if (overCourses || overStudents) {
-                console.error(`Plan downgrade blocked for tenant ${tenantId}: over course or student limits`)
-                // Don't update the plan — leave Stripe subscription active but don't change DB plan
-                break
-              }
-            }
-
-            await adminClient
-              .from('tenants')
-              .update({ plan: newPlan.slug, updated_at: new Date().toISOString() })
-              .eq('id', tenantId)
-
-            await adminClient
-              .from('platform_subscriptions')
-              .update({ plan_id: newPlan.plan_id, updated_at: new Date().toISOString() })
-              .eq('tenant_id', tenantId)
-
-            await adminClient
-              .from('revenue_splits')
-              .upsert({
-                tenant_id: tenantId,
-                platform_percentage: newPlan.transaction_fee_percent,
-                school_percentage: 100 - newPlan.transaction_fee_percent,
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'tenant_id' })
-          }
-        }
+        // If plan changed via Stripe portal, apply it with downgrade-limit
+        // enforcement (over-limit downgrades are reverted on Stripe and admins
+        // notified — see lib/payments/platform-plan-change.ts).
+        await applyPortalPlanChange(subscription, {
+          admin: adminClient,
+          stripe: getStripe(),
+        })
 
         break
       }

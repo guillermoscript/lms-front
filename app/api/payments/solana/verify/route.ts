@@ -24,7 +24,7 @@ import { Connection, PublicKey, Keypair } from '@solana/web3.js'
 import { getBase58Encoder } from '@solana/kit'
 import { findReference, FindReferenceError } from '@solana/pay'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { verifySplitTransfer } from '@/lib/payments/solana-split'
+import { reconcileSolanaOneTimeTransaction } from '@/lib/payments/solana-reconcile'
 import {
   deriveSubscriptionPda,
   getSubscriptionState,
@@ -112,111 +112,38 @@ export async function POST(req: NextRequest) {
       return await handleSolanaSubsVerify(tx, storedSubscriber ?? subscriber)
     }
 
-    const rpcUrl = process.env.SOLANA_RPC_URL
-    const platformWallet = process.env.SOLANA_PLATFORM_WALLET
-    if (!rpcUrl || !platformWallet) {
-      return NextResponse.json({ error: 'Solana not configured' }, { status: 503 })
-    }
-
+    // Confirm on-chain + flip → successful via the shared reconcile core (the
+    // same logic the /api/cron/solana-reconcile backstop runs, #467).
     const admin = getSupabaseAdmin()
+    const result = await reconcileSolanaOneTimeTransaction(admin, tx)
 
-    // Resolve the same split inputs the /tx endpoint used: school wallet (per
-    // tenant), platform wallet (env), split percent (revenue_splits).
-    const { data: wallet } = await admin
-      .from('tenant_payment_wallets')
-      .select('wallet_address')
-      .eq('tenant_id', tx.tenant_id)
-      .eq('provider', 'solana')
-      .maybeSingle()
-    if (!wallet?.wallet_address) {
-      return NextResponse.json({ error: 'School has not configured a Solana wallet' }, { status: 400 })
-    }
-    const { data: split } = await admin
-      .from('revenue_splits')
-      .select('platform_percentage')
-      .eq('tenant_id', tx.tenant_id)
-      .maybeSingle()
-    const platformPercent = Number(split?.platform_percentage ?? 20)
-
-    // Verify against the settlement LOCKED at checkout (amount + token), so a
-    // native-SOL payment is checked against the exact lamports quoted then — the
-    // SOL/USD rate has moved since. Legacy rows fall back to env + USD amount.
-    let vTotalBase: number | undefined
-    let vSplTokenStr: string | null
-    let vDecimals: number
-    if (tx.settlement_base != null && tx.settlement_currency) {
-      vTotalBase = Number(tx.settlement_base)
-      vSplTokenStr = tx.settlement_mint
-      vDecimals = tx.settlement_currency === 'usdc' ? 6 : 9
-    } else {
-      const usdcMint = process.env.SOLANA_USDC_MINT
-      vSplTokenStr = usdcMint || null
-      vDecimals = usdcMint ? 6 : 9
-    }
-
-    // Confirm BOTH split legs on-chain (custom verification — validateTransfer
-    // only handles a single recipient).
-    let result: { confirmed: boolean; signature?: string }
-    try {
-      result = await verifySplitTransfer({
-        connection: new Connection(rpcUrl, 'confirmed'),
-        reference: new PublicKey(referencePubkey),
-        schoolWallet: new PublicKey(wallet.wallet_address),
-        platformWallet: new PublicKey(platformWallet),
-        amountMajor: vTotalBase == null ? Number(tx.amount) : undefined,
-        totalBase: vTotalBase,
-        platformPercent,
-        splToken: vSplTokenStr ? new PublicKey(vSplTokenStr) : undefined,
-        decimals: vDecimals,
-      })
-    } catch (err) {
-      // Found on-chain but legs don't match (wrong amount/recipient) or RPC error.
-      console.error(`[solana/verify] verifySplitTransfer failed for tx ${transactionId}:`, err)
-      return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
-    }
-
-    if (!result.confirmed) {
-      // Not found on-chain yet — the client should keep polling.
-      return NextResponse.json({ confirmed: false })
-    }
-
-    // Flip → successful (status-guarded for idempotency). We also CONSUME the
-    // on-chain signature via provider_charge_id: the partial-unique index
-    // (transactions_provider_charge_id_unique) guarantees a given signature
-    // backs only one successful transaction, so one payment carrying multiple
-    // reference keys cannot confirm multiple orders (H1). The
-    // after_transaction_update trigger creates the subscription + entitlements.
-    const { data: flipped, error: flipErr } = await admin
-      .from('transactions')
-      .update({ status: 'successful', provider_charge_id: result.signature })
-      .eq('transaction_id', tx.transaction_id)
-      .eq('status', 'pending')
-      .select('transaction_id')
-      .maybeSingle()
-
-    if (flipErr) {
-      // 23505 = this signature already backs another successful transaction —
-      // a replay of one on-chain payment against a second order. Reject it.
-      if ((flipErr as { code?: string }).code === '23505') {
-        console.warn(`[solana/verify] signature ${result.signature} already consumed by another transaction`)
+    switch (result.status) {
+      case 'confirmed':
+        return NextResponse.json(
+          result.alreadyProcessed
+            ? { confirmed: true, alreadyProcessed: true }
+            : { confirmed: true, signature: result.signature },
+        )
+      case 'not_found':
+        // Not found on-chain yet — the client should keep polling.
+        return NextResponse.json({ confirmed: false })
+      case 'validation_error':
+        return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
+      case 'replayed':
         return NextResponse.json(
           { error: 'This on-chain payment was already used for another order' },
           { status: 409 },
         )
-      }
-      console.error(`[solana/verify] failed to flip tx ${transactionId}:`, flipErr)
-      return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
+      case 'config_error':
+        // Missing RPC/platform wallet is a server-config gap (503); a missing
+        // tenant wallet or reference is a bad-request condition (400).
+        return NextResponse.json(
+          { error: result.message },
+          { status: result.message === 'Solana not configured' ? 503 : 400 },
+        )
+      default:
+        return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
     }
-
-    if (!flipped) {
-      // A concurrent/earlier verify already confirmed this transaction (idempotency
-      // guard matched 0 rows). Report success without implying we just did the work.
-      console.log(`[solana/verify] tx ${transactionId} was already confirmed`)
-      return NextResponse.json({ confirmed: true, alreadyProcessed: true })
-    }
-
-    console.log(`[solana/verify] confirmed tx ${transactionId} (sig ${result.signature})`)
-    return NextResponse.json({ confirmed: true, signature: result.signature })
   } catch (error) {
     console.error('[solana/verify] error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
