@@ -25,6 +25,10 @@ export default async function UpgradePage({
   const preselectedInterval =
     intervalParam === 'yearly' || intervalParam === 'monthly' ? intervalParam : undefined
 
+  const sub = status.subscription
+  const activeStripeSub = !!sub && sub.paymentMethod === 'stripe' && sub.status === 'active'
+  const currentInterval: 'monthly' | 'yearly' = sub?.interval === 'yearly' ? 'yearly' : 'monthly'
+
   return (
     <div className="space-y-6 p-6 lg:p-8" data-testid="upgrade-page">
       <AdminBreadcrumb
@@ -46,6 +50,8 @@ export default async function UpgradePage({
         currentPlan={status.plan}
         preselectedPlan={preselectedPlan}
         preselectedInterval={preselectedInterval}
+        activeStripeSub={activeStripeSub}
+        currentInterval={currentInterval}
       />
     </div>
   )

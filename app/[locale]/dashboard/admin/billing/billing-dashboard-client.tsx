@@ -8,8 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ProofUpload } from '@/components/shared/proof-upload'
-import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto, IconClock } from '@tabler/icons-react'
-import { uploadPaymentProof, requestManualRenewal } from '@/app/actions/admin/billing'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto, IconClock, IconLoader2 } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
+import { uploadPaymentProof, requestManualRenewal, cancelSubscription } from '@/app/actions/admin/billing'
 
 interface BillingDashboardClientProps {
   status: {
@@ -55,10 +65,13 @@ interface BillingDashboardClientProps {
 
 export function BillingDashboardClient({ status, paymentRequests }: BillingDashboardClientProps) {
   const router = useRouter()
+  const t = useTranslations('dashboard.admin.billing.overview')
   const [portalLoading, setPortalLoading] = useState(false)
   const [renewalLoading, setRenewalLoading] = useState(false)
   const [switchLoading, setSwitchLoading] = useState(false)
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   const handleManageBilling = async () => {
     setPortalLoading(true)
@@ -100,6 +113,20 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
     }
   }
 
+  const handleCancel = async () => {
+    setCancelLoading(true)
+    try {
+      await cancelSubscription()
+      toast.success(t('cancelSuccess'))
+      setCancelOpen(false)
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message || t('cancelError'))
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
   const handleProofUpload = async (requestId: string, file: File) => {
     setUploadingFor(requestId)
     try {
@@ -128,6 +155,10 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const hasPendingRenewal = paymentRequests.some(
     (r) => (r as any).request_type === 'renewal' && !['confirmed', 'rejected', 'expired'].includes(r.status)
   )
+  const cancelDateStr = (() => {
+    const raw = status.subscription?.currentPeriodEnd || status.billingPeriodEnd
+    return raw ? new Date(raw).toLocaleDateString() : null
+  })()
 
   return (
     <div className="space-y-6">
@@ -141,6 +172,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         usage={status.usage}
         transactionFeePercent={status.transactionFeePercent}
         onManageClick={status.hasStripeCustomer ? handleManageBilling : undefined}
+        onCancelClick={() => setCancelOpen(true)}
       />
 
       {/* Manual Subscription Renewal Section */}
@@ -263,6 +295,26 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
           </Button>
         </div>
       )}
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('cancelConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelDateStr
+                ? t('cancelConfirmBody', { plan: status.planName, date: cancelDateStr })
+                : t('cancelConfirmBodyNoDate', { plan: status.planName })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelLoading}>{t('cancelKeep')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleCancel} disabled={cancelLoading}>
+              {cancelLoading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('cancelConfirmAction')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

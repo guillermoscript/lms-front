@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from './usage-meter'
-import { IconCreditCard, IconCalendar, IconAlertTriangle } from '@tabler/icons-react'
+import { IconCreditCard, IconCalendar, IconAlertTriangle, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
@@ -34,6 +34,7 @@ interface BillingOverviewProps {
   }
   transactionFeePercent: number
   onManageClick?: () => void
+  onCancelClick?: () => void
 }
 
 export function BillingOverview({
@@ -46,6 +47,7 @@ export function BillingOverview({
   usage,
   transactionFeePercent,
   onManageClick,
+  onCancelClick,
 }: BillingOverviewProps) {
   const t = useTranslations('dashboard.admin.billing.overview')
   const isFree = plan === 'free'
@@ -92,6 +94,17 @@ export function BillingOverview({
                   {isFree ? t('upgrade') : t('changePlan')}
                 </Button>
               </Link>
+              {!isFree && onCancelClick && subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCancelClick}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <IconX className="mr-2 h-4 w-4" />
+                  {t('cancelPlan')}
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
