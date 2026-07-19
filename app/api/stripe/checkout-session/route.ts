@@ -3,11 +3,12 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { resolveRequestLocale } from '@/lib/i18n/request-locale'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { planId, interval = 'monthly' } = body
+    const { planId, interval = 'monthly', locale: bodyLocale } = body
 
     if (!planId) {
       return NextResponse.json({ error: 'Missing plan ID' }, { status: 400 })
@@ -116,10 +117,11 @@ export async function POST(req: NextRequest) {
         .eq('id', tenantId)
     }
 
-    // Determine success/cancel URLs
+    // Determine success/cancel URLs (preserve the requester's locale)
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || ''
-    const successUrl = `${origin}/en/dashboard/admin/billing?session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${origin}/en/dashboard/admin/billing/upgrade`
+    const locale = resolveRequestLocale(req, bodyLocale)
+    const successUrl = `${origin}/${locale}/dashboard/admin/billing?session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${origin}/${locale}/dashboard/admin/billing/upgrade`
 
     // Create Stripe Checkout Session (platform billing, NOT Connect)
     const session = await stripe.checkout.sessions.create({

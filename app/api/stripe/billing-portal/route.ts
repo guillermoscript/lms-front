@@ -3,9 +3,18 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { resolveRequestLocale } from '@/lib/i18n/request-locale'
 
 export async function POST(req: NextRequest) {
   try {
+    // Optional JSON body carrying the caller's locale; tolerate an empty body.
+    let bodyLocale: unknown
+    try {
+      bodyLocale = (await req.json())?.locale
+    } catch {
+      bodyLocale = undefined
+    }
+
     const supabase = await createClient()
     const adminClient = await createAdminClient()
     const tenantId = await getCurrentTenantId()
@@ -40,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || ''
-    const returnUrl = `${origin}/en/dashboard/admin/billing`
+    const locale = resolveRequestLocale(req, bodyLocale)
+    const returnUrl = `${origin}/${locale}/dashboard/admin/billing`
 
     const session = await getStripe().billingPortal.sessions.create({
       customer: tenant.stripe_customer_id,

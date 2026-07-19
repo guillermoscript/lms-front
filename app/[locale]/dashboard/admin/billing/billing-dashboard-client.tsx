@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto, IconClock, IconLoader2 } from '@tabler/icons-react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { uploadPaymentProof, requestManualRenewal, cancelSubscription } from '@/app/actions/admin/billing'
 
 interface BillingDashboardClientProps {
@@ -66,6 +66,7 @@ interface BillingDashboardClientProps {
 export function BillingDashboardClient({ status, paymentRequests }: BillingDashboardClientProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.admin.billing.overview')
+  const locale = useLocale()
   const [portalLoading, setPortalLoading] = useState(false)
   const [renewalLoading, setRenewalLoading] = useState(false)
   const [switchLoading, setSwitchLoading] = useState(false)
@@ -76,7 +77,11 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const handleManageBilling = async () => {
     setPortalLoading(true)
     try {
-      const response = await fetch('/api/stripe/billing-portal', { method: 'POST' })
+      const response = await fetch('/api/stripe/billing-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale }),
+      })
       const data = await response.json()
       if (data.url) {
         window.location.href = data.url

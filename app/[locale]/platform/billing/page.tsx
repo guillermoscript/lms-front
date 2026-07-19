@@ -25,7 +25,7 @@ export default async function PlatformBillingPage({
 
   let query = adminClient
     .from('platform_payment_requests')
-    .select('*, platform_plans(name, slug), tenants(name, slug)')
+    .select('*, platform_plans(name, slug, price_monthly, price_yearly), tenants(name, slug)')
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -89,7 +89,18 @@ export default async function PlatformBillingPage({
                 </tr>
               </thead>
               <tbody>
-                {(requests || []).map((req: any) => (
+                {(requests || []).map((req: any) => {
+                  // Item 5: `amount` is the price snapshotted at request time.
+                  // Surface the plan's *current* price so a super admin can see
+                  // if it drifted (e.g. the plan was re-priced before confirm).
+                  const currentPlanPrice =
+                    req.interval === 'yearly'
+                      ? req.platform_plans?.price_yearly
+                      : req.platform_plans?.price_monthly
+                  const priceDrifted =
+                    typeof currentPlanPrice === 'number' &&
+                    Number(currentPlanPrice) !== Number(req.amount)
+                  return (
                   <tr key={req.request_id} className="border-b last:border-0 transition-colors hover:bg-muted/40" data-testid="billing-request-row" data-request-id={req.request_id} data-status={req.status}>
                     <td className="px-4 py-3 font-medium">
                       {req.tenants?.name || req.tenant_id}
@@ -99,6 +110,15 @@ export default async function PlatformBillingPage({
                     </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">
                       {new Intl.NumberFormat('en-US', { style: 'currency', currency: req.currency || 'USD' }).format(req.amount)}
+                      {priceDrifted && (
+                        <span
+                          className="mt-0.5 block text-[10px] font-normal text-amber-600 dark:text-amber-500"
+                          data-testid="price-drift-note"
+                          title="The plan price changed after this request was created."
+                        >
+                          plan now {new Intl.NumberFormat('en-US', { style: 'currency', currency: req.currency || 'USD' }).format(currentPlanPrice)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 capitalize text-muted-foreground">{req.interval}</td>
                     <td className="px-4 py-3">
@@ -125,11 +145,12 @@ export default async function PlatformBillingPage({
                     </td>
                     <td className="px-4 py-3 text-right">
                       {['pending', 'instructions_sent', 'payment_received'].includes(req.status) && (
-                        <BillingActions requestId={req.request_id} />
+                        <BillingActions requestId={req.request_id} status={req.status} />
                       )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
                 {(!requests || requests.length === 0) && (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
