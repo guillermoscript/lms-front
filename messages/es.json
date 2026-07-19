@@ -276,7 +276,20 @@
             "error": "No se pudo revocar la delegación. Inténtalo de nuevo."
           },
           "empty": "No tienes una suscripción activa.",
-          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" }
+          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" },
+          "changePlan": {
+            "button": "Cambiar de plan",
+            "title": "Cambia tu plan",
+            "description": "Cámbiate a un plan diferente. Tu plan actual se reemplaza: no tendrás dos suscripciones a la vez.",
+            "switch": "Cambiar",
+            "switching": "Cambiando…",
+            "prorationNote": "Se te cobrará o abonará la diferencia prorrateada por el resto de este período de facturación.",
+            "manualNote": "El tiempo pagado que te queda se traslada al nuevo plan. Cualquier diferencia de precio se coordina con tu escuela.",
+            "noPlans": "No hay otros planes disponibles para cambiar en este momento.",
+            "free": "Gratis",
+            "success": "Tu plan ha sido cambiado.",
+            "error": "No pudimos cambiar tu plan. Inténtalo de nuevo."
+          }
         },
         "purchases": {
           "sectionTitle": "Historial de compras",
@@ -4118,6 +4131,11 @@
     "signUpFree": "Regístrate Gratis",
     "getStarted": "Comenzar Ahora",
     "subscribeFree": "Suscribirse Gratis",
+    "currentPlan": "Plan actual",
+    "switchToThis": "Cambiar a este plan",
+    "switching": "Cambiando…",
+    "switchSuccess": "Tu plan ha sido cambiado.",
+    "switchError": "No pudimos cambiar tu plan.",
     "subscribing": "Suscribiendo…",
     "subscribeSuccess": "¡Listo! Disfruta tu plan.",
     "subscribeError": "No se pudo activar el plan. Inténtalo de nuevo.",

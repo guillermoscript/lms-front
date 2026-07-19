@@ -21,6 +21,7 @@ import {
   UpdateProductParams,
   UpdatePriceParams,
   ProviderSubscription,
+  UpdateSubscriptionParams,
   ProviderCapabilities,
   NormalizedBillingEvent,
   CreateCheckoutParams,
@@ -47,6 +48,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     isMerchantOfRecord: true,
     selfManagedPeriod: false,
     createsCatalog: false,
+    supportsPlanChange: true,
   }
 
   private readonly apiKey: string
@@ -365,6 +367,64 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attrs: any = json.data.attributes
 
+    const lsStatus: string = attrs.status ?? ''
+    const status: ProviderSubscription['status'] =
+      lsStatus === 'active' || lsStatus === 'on_trial'
+        ? 'active'
+        : lsStatus === 'past_due'
+          ? 'past_due'
+          : 'canceled'
+
+    return {
+      id: String(json.data.id),
+      status,
+      currentPeriodEnd: new Date(attrs.renews_at),
+      cancelAtPeriodEnd: !!attrs.cancelled,
+    }
+  }
+
+  /**
+   * Move a Lemon Squeezy subscription to a different variant (plan) in place.
+   *
+   * `PATCH /v1/subscriptions/{id}` with a new `variant_id` swaps the plan on the
+   * SAME subscription — the id is unchanged — so a plan change never creates a
+   * second live subscription. LS prorates the mid-period difference by default
+   * (we do not set `disable_prorations`). `params.newProviderPriceId` is the
+   * target plan's LS variant id (numeric, stored as text in provider_price_id).
+   */
+  async updateSubscription(
+    providerSubId: string,
+    params: UpdateSubscriptionParams,
+  ): Promise<ProviderSubscription> {
+    const variantId = Number(params.newProviderPriceId)
+    if (!Number.isFinite(variantId)) {
+      throw new Error(
+        `LemonSqueezy updateSubscription: invalid variant id "${params.newProviderPriceId}"`,
+      )
+    }
+
+    const response = await fetch(`${LS_BASE_URL}/v1/subscriptions/${providerSubId}`, {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify({
+        data: {
+          type: 'subscriptions',
+          id: String(providerSubId),
+          attributes: { variant_id: variantId },
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(
+        `LemonSqueezy updateSubscription failed: HTTP ${response.status} — ${text}`,
+      )
+    }
+
+    const json = await response.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const attrs: any = json.data.attributes
     const lsStatus: string = attrs.status ?? ''
     const status: ProviderSubscription['status'] =
       lsStatus === 'active' || lsStatus === 'on_trial'
