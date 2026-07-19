@@ -30,6 +30,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
   const stripeEnabled = settings.stripe_enabled?.value?.enabled ?? true
   const paypalEnabled = settings.paypal_enabled?.value?.enabled ?? false
   const lemonsqueezyEnabled = settings.lemonsqueezy_enabled?.value?.enabled ?? false
+  const binanceEnabled = settings.binance_enabled?.value?.enabled ?? false
   const solanaEnabled = settings.solana_enabled?.value?.enabled ?? false
   const solanaAcceptSol = settings.solana_accept_sol?.value?.enabled ?? false
   const [solanaOn, setSolanaOn] = useState(solanaEnabled)
@@ -47,6 +48,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
         stripe_enabled: { enabled: formData.get('stripe_enabled') === 'on' },
         paypal_enabled: { enabled: formData.get('paypal_enabled') === 'on' },
         lemonsqueezy_enabled: { enabled: formData.get('lemonsqueezy_enabled') === 'on' },
+        binance_enabled: { enabled: formData.get('binance_enabled') === 'on' },
         solana_enabled: { enabled: formData.get('solana_enabled') === 'on' },
         solana_accept_sol: { enabled: formData.get('solana_accept_sol') === 'on' },
         currency: { value: formData.get('currency') as string },
@@ -118,6 +120,21 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             id="lemonsqueezy_enabled"
             name="lemonsqueezy_enabled"
             defaultChecked={lemonsqueezyEnabled}
+          />
+        </div>
+
+        {/* Binance Pay (hosted crypto checkout, USDT-denominated) */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="binance_enabled">{t('payment.binance')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.binanceHint')}
+            </p>
+          </div>
+          <Switch
+            id="binance_enabled"
+            name="binance_enabled"
+            defaultChecked={binanceEnabled}
           />
         </div>
 

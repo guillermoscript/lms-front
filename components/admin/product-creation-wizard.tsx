@@ -180,12 +180,13 @@ export function ProductCreationWizard({
   const [input, setInput] = useState<ProductCreationWizardInput>(() => mergeInput(initialInput))
 
   const readiness = useMemo(() => getProductCreationReadiness(input), [input])
-  // Manual is always sellable; Stripe/PayPal only when the tenant enabled them
-  // in Settings → Payments. Keep the current value visible in edit mode even if
-  // its provider has since been disabled, so the admin can see (and change) it.
+  // Manual is always sellable; Stripe/PayPal/Binance only when the tenant
+  // enabled them in Settings → Payments. Keep the current value visible in edit
+  // mode even if its provider has since been disabled, so the admin can see
+  // (and change) it.
   const availableProviders = useMemo(() => {
     const providers: ProductCreationPaymentProvider[] = ['manual']
-    for (const candidate of ['stripe', 'paypal'] as const) {
+    for (const candidate of ['stripe', 'paypal', 'binance'] as const) {
       if (
         enabledProviders.includes(candidate) ||
         input.pricing.paymentProvider === candidate
@@ -672,6 +673,9 @@ export function ProductCreationWizard({
                         )}
                         {availableProviders.includes('paypal') && (
                           <SelectItem value="paypal">{tProductForm('methodPaypal')}</SelectItem>
+                        )}
+                        {availableProviders.includes('binance') && (
+                          <SelectItem value="binance">{tProductForm('methodBinance')}</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>

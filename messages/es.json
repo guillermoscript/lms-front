@@ -2541,6 +2541,8 @@
             "paypalHint": "Activar el procesamiento de pagos con PayPal",
             "lemonsqueezy": "Lemon Squeezy",
             "lemonsqueezyHint": "Acepta pagos con Lemon Squeezy (comerciante registrado). Pega un ID de variante en cada plan o producto.",
+            "binance": "Binance Pay",
+            "binanceHint": "Activar pagos cripto con Binance Pay (USDT)",
             "solana": "Solana (cripto)",
             "solanaHint": "Acepta pagos cripto con Solana. Configura tu billetera receptora abajo. Cubre pago único y suscripción.",
             "solanaAcceptSol": "Aceptar también SOL nativo",
@@ -2706,7 +2708,8 @@
           "method": "Método de Pago",
           "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
           "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
-          "methodPaypal": "PayPal (Próximamente)",
+          "methodPaypal": "PayPal",
+          "methodBinance": "Binance Pay (Cripto)",
           "methodManualHint": "La facturación se gestiona en la app; los estudiantes coordinan el pago recurrente contigo de forma offline. No requiere credenciales de procesador de pago.",
           "methodStripeHint": "Stripe gestiona la suscripción recurrente y la facturación automáticamente.",
           "price": "Precio",
@@ -2745,6 +2748,7 @@
             "stripe": "Stripe gestiona la suscripción recurrente y la facturación automáticamente.",
             "paypal": "PayPal gestiona la suscripción recurrente automáticamente.",
             "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
+            "binance": "Los estudiantes pagan cada período en cripto (USDT) mediante Binance Pay; la suscripción se renueva cuando vuelven a pagar y caduca si no.",
             "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero.",
             "solana_subs": "Suscripción recurrente on-chain cobrada automáticamente desde la wallet del estudiante. Configura tu wallet de Solana en Ajustes → Pagos primero."
           }
@@ -2848,7 +2852,8 @@
           "method": "Método de Pago",
           "methodManual": "Pago Manual/Offline (Transferencia Bancaria, Factura)",
           "methodStripe": "Stripe (Tarjeta de Crédito, Online)",
-          "methodPaypal": "PayPal (Próximamente)",
+          "methodPaypal": "PayPal",
+          "methodBinance": "Binance Pay (Cripto)",
           "methodManualHint": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
           "methodStripeHint": "Los estudiantes pueden pagar online al instante",
           "connectNudge": "Vender con pagos manuales funciona desde ya. Conecta Stripe para aceptar tarjetas automáticamente:",
@@ -2881,6 +2886,7 @@
             "manual": "Los estudiantes se pondrán en contacto contigo para organizar el pago offline",
             "stripe": "Los estudiantes pueden pagar online al instante",
             "paypal": "Los estudiantes pueden pagar online con PayPal.",
+            "binance": "Los estudiantes pagan en cripto (USDT) mediante el checkout alojado de Binance Pay. Activa Binance Pay en Ajustes → Pagos primero.",
             "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
             "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero."
           }

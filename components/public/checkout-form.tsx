@@ -79,9 +79,13 @@ export function CheckoutForm({
     const router = useRouter();
     const t = useTranslations('checkout');
 
-    // Provider-agnostic checkout (#280 Phase 4/5): Lemon Squeezy = hosted
-    // redirect, Solana = QR + on-chain poll. Other providers use the inline flow.
-    const isRedirectProvider = paymentProvider === 'lemonsqueezy';
+    // Provider-agnostic checkout (#280 Phase 4/5): Lemon Squeezy / PayPal /
+    // Binance Pay = hosted redirect, Solana = QR + on-chain poll. Other
+    // providers use the inline flow.
+    const isRedirectProvider =
+        paymentProvider === 'lemonsqueezy' ||
+        paymentProvider === 'paypal' ||
+        paymentProvider === 'binance';
     // Both one-time Solana ('solana') and native auto-pull subs ('solana_subs')
     // present a Solana Pay QR and poll /verify. The subscriber wallet is captured
     // server-side (subscribe-tx), so the poll body stays { transactionId }.

@@ -24,7 +24,19 @@ export const runtime = 'nodejs'
 // `manual` and `solana` are intentionally excluded: neither has a signed
 // webhook (Solana confirms on-chain via /api/payments/solana/verify), so
 // exposing a route for them would be an unauthenticated mutation surface.
-const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy']
+const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy', 'binance']
+
+/**
+ * Provider-specific ACK body. Binance Pay treats anything other than
+ * `{"returnCode":"SUCCESS"}` as a failed delivery and keeps retrying (then
+ * flags the merchant webhook as failing), so it gets its expected shape.
+ * Transport-level ack only — all billing logic stays provider-agnostic.
+ */
+function ackBody(provider: string, extra: Record<string, unknown> = {}) {
+  return provider === 'binance'
+    ? { returnCode: 'SUCCESS', returnMessage: null, ...extra }
+    : { received: true, ...extra }
+}
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -78,7 +90,7 @@ export async function POST(
   //    stops retrying.
   const event = await p.normalizeWebhookEvent(rawBody)
   if (!event) {
-    return NextResponse.json({ received: true, ignored: true })
+    return NextResponse.json(ackBody(provider, { ignored: true }))
   }
 
   // Idempotency requires a stable, provider-unique event id. A synthesized key
@@ -102,7 +114,7 @@ export async function POST(
     .maybeSingle()
 
   if (existing?.processed_at) {
-    return NextResponse.json({ received: true, duplicate: true })
+    return NextResponse.json(ackBody(provider, { duplicate: true }))
   }
 
   let rowId = existing?.id as string | undefined
@@ -121,7 +133,7 @@ export async function POST(
     if (insertErr) {
       // 23505 = unique violation: a concurrent delivery beat us to it.
       if ((insertErr as { code?: string }).code === '23505') {
-        return NextResponse.json({ received: true, duplicate: true })
+        return NextResponse.json(ackBody(provider, { duplicate: true }))
       }
       console.error(`[webhook/${provider}] failed to persist event:`, insertErr)
       return NextResponse.json({ error: 'Failed to persist event' }, { status: 500 })
@@ -152,5 +164,5 @@ export async function POST(
     console.error(`[webhook/${provider}] failed to mark event ${providerEventId} processed:`, markErr)
   }
 
-  return NextResponse.json({ received: true })
+  return NextResponse.json(ackBody(provider))
 }

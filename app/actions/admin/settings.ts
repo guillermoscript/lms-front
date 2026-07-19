@@ -327,7 +327,7 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
       .from('tenant_settings')
       .select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
-      .in('setting_key', ['stripe_enabled', 'paypal_enabled', 'lemonsqueezy_enabled', 'solana_enabled'])
+      .in('setting_key', ['stripe_enabled', 'paypal_enabled', 'lemonsqueezy_enabled', 'solana_enabled', 'binance_enabled'])
 
     if (error) throw error
 
@@ -348,6 +348,7 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
     if (isOn('paypal_enabled', false)) providers.push('paypal')
     if (isOn('lemonsqueezy_enabled', false)) providers.push('lemonsqueezy')
     if (isOn('solana_enabled', false)) providers.push('solana', 'solana_subs')
+    if (isOn('binance_enabled', false)) providers.push('binance')
 
     return { success: true, data: providers }
   } catch (error) {
