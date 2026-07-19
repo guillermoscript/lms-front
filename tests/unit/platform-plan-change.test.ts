@@ -10,7 +10,7 @@ import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
  */
 
 interface PlanRow {
-  plan_id: number
+  plan_id: string
   slug: string
   name: string | null
   transaction_fee_percent: number
@@ -22,7 +22,7 @@ interface PlanRow {
 interface FakeConfig {
   newPlan?: PlanRow | null
   oldPlan?: PlanRow | null
-  currentSub?: { plan_id: number; interval: string | null } | null
+  currentSub?: { plan_id: string; interval: string | null } | null
   courseCount?: number
   studentCount?: number
   adminUsers?: string[]
@@ -146,8 +146,13 @@ function makeFakeAdmin(cfg: FakeConfig) {
   return { admin: admin as any, calls, sendEmailFn: sendEmailFn as any, makeStripe }
 }
 
+// plan_id is a uuid in the real schema (platform_plans.plan_id) — fixtures
+// use uuid strings so the no-op guard's key equality is exercised as strings.
+const PRO_ID = 'f9318c3a-815d-448d-802e-cf356c2791a4'
+const STARTER_ID = '205e06a0-611f-49b1-b916-5d9be6dcf5ca'
+
 const PRO: PlanRow = {
-  plan_id: 3,
+  plan_id: PRO_ID,
   slug: 'pro',
   name: 'Pro',
   transaction_fee_percent: 2,
@@ -157,7 +162,7 @@ const PRO: PlanRow = {
 }
 
 const STARTER: PlanRow = {
-  plan_id: 2,
+  plan_id: STARTER_ID,
   slug: 'starter',
   name: 'Starter',
   transaction_fee_percent: 5,
@@ -190,7 +195,7 @@ describe('applyPortalPlanChange', () => {
     })
     expect(result.action).toBe('applied')
     expect(calls.updates.find((u) => u.table === 'tenants')?.values.plan).toBe('starter')
-    expect(calls.updates.find((u) => u.table === 'platform_subscriptions')?.values.plan_id).toBe(2)
+    expect(calls.updates.find((u) => u.table === 'platform_subscriptions')?.values.plan_id).toBe(STARTER_ID)
     expect(calls.upserts.find((u) => u.table === 'revenue_splits')?.values.platform_percentage).toBe(5)
     expect(calls.stripeUpdates).toHaveLength(0)
     expect(calls.emails).toHaveLength(0)

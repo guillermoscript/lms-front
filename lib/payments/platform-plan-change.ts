@@ -44,7 +44,7 @@ export interface PortalPlanChangeResult {
 }
 
 interface PlanRow {
-  plan_id: number
+  plan_id: string
   slug: string
   name: string | null
   transaction_fee_percent: number
@@ -85,7 +85,7 @@ export async function applyPortalPlanChange(
     .from('platform_subscriptions')
     .select('plan_id, interval')
     .eq('tenant_id', tenantId)
-    .maybeSingle()) as { data: { plan_id: number; interval: string | null } | null }
+    .maybeSingle()) as { data: { plan_id: string; interval: string | null } | null }
 
   // No-op guard: the incoming price maps to the plan already recorded. This is
   // also what terminates the webhook echo triggered by our own revert below.
