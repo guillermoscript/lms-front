@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type Stripe from 'stripe'
 import { sendEmail } from '@/lib/email/send'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
+import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 
 function getPlatformWebhookSecret(): string {
@@ -156,37 +157,11 @@ export async function POST(req: NextRequest) {
 
         if (!tenantId) break
 
-        // Downgrade to free
-        await adminClient
-          .from('platform_subscriptions')
-          .update({
-            status: 'canceled',
-            canceled_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('tenant_id', tenantId)
+        // Downgrade to free — shared helper reads the free-plan fee from
+        // platform_plans instead of hardcoding the revenue split.
+        const platformFee = await downgradeTenantToFree(adminClient, tenantId)
 
-        await adminClient
-          .from('tenants')
-          .update({
-            plan: 'free',
-            billing_status: 'free',
-            billing_period_end: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', tenantId)
-
-        // Reset revenue split to free plan rate (10%)
-        await adminClient
-          .from('revenue_splits')
-          .upsert({
-            tenant_id: tenantId,
-            platform_percentage: 10,
-            school_percentage: 90,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'tenant_id' })
-
-        console.log(`Subscription canceled, downgraded to free: tenant=${tenantId}`)
+        console.log(`Subscription canceled, downgraded to free: tenant=${tenantId} fee=${platformFee}%`)
         break
       }
 

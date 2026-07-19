@@ -13,6 +13,10 @@
       "schedule": "0 1 * * 1"
     },
     {
+      "path": "/api/cron/expire-platform-subscriptions",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/cron/solana-reconcile",
       "schedule": "*/10 * * * *"
     }
