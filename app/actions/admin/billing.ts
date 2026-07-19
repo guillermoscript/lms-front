@@ -331,6 +331,8 @@ export async function confirmManualPayment(requestId: string) {
       current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),
       grace_period_end: null,
+      // Reset the reminder stamp so the next cycle can remind again.
+      renewal_reminder_sent_at: null,
       updated_at: now.toISOString(),
     }, { onConflict: 'tenant_id' })
 

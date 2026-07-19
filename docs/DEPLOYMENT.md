@@ -267,6 +267,8 @@ Since there's no Vercel cron, set up a system cron on the server:
 0 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/daily-digest
 # Weekly league rollover (Mondays 01:00). pg_cron inside the database also runs it (Mondays 00:05), so this entry is a fallback.
 0 1 * * 1 curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/league-rollover
+# Expire lapsed manual-transfer platform (school billing) subscriptions: reminders, grace, downgrade to free. Replaces the retired pg_cron job.
+0 2 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/expire-platform-subscriptions
 ```
 
 ---

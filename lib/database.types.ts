@@ -4685,6 +4685,7 @@ export type Database = {
           interval: string
           payment_method: string
           plan_id: string
+          renewal_reminder_sent_at: string | null
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -4702,6 +4703,7 @@ export type Database = {
           interval?: string
           payment_method?: string
           plan_id: string
+          renewal_reminder_sent_at?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -4719,6 +4721,7 @@ export type Database = {
           interval?: string
           payment_method?: string
           plan_id?: string
+          renewal_reminder_sent_at?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
