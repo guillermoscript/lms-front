@@ -13,18 +13,33 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { confirmManualPayment } from "@/app/actions/admin/billing"
-import { rejectManualPayment } from "@/app/actions/platform/plans"
+import { rejectManualPayment, sendPaymentInstructions } from "@/app/actions/platform/plans"
 
 interface Props {
   requestId: string
+  status: string
 }
 
-export function BillingActions({ requestId }: Props) {
+export function BillingActions({ requestId, status }: Props) {
   const router = useRouter()
   const [loadingConfirm, setLoadingConfirm] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [reason, setReason] = useState('')
   const [loadingReject, setLoadingReject] = useState(false)
+  const [loadingInstructions, setLoadingInstructions] = useState(false)
+
+  async function handleSendInstructions() {
+    setLoadingInstructions(true)
+    try {
+      await sendPaymentInstructions(requestId)
+      toast.success('Instructions marked as sent — school notified')
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setLoadingInstructions(false)
+    }
+  }
 
   async function handleConfirm() {
     setLoadingConfirm(true)
@@ -60,6 +75,17 @@ export function BillingActions({ requestId }: Props) {
   return (
     <>
       <div className="flex items-center justify-end gap-2">
+        {status === 'pending' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSendInstructions}
+            disabled={loadingInstructions}
+            data-testid="send-instructions-btn"
+          >
+            {loadingInstructions ? 'Sending…' : 'Send instructions'}
+          </Button>
+        )}
         <Button
           size="sm"
           onClick={handleConfirm}

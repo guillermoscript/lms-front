@@ -66,7 +66,7 @@ export function UpgradePageClient({ plans, currentPlan, preselectedPlan, presele
       const response = await fetch('/api/stripe/checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, interval }),
+        body: JSON.stringify({ planId, interval, locale }),
       })
       const data = await response.json()
       if (data.url) {

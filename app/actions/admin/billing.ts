@@ -628,9 +628,19 @@ export async function uploadPaymentProof(requestId: string, formData: FormData) 
 
   const proofUrl = signedUrlData?.signedUrl || urlData.publicUrl
 
+  // Uploading proof advances the request to `payment_received` so a super
+  // admin can see the school has paid — unless it's already been
+  // confirmed/rejected, in which case the status is left untouched.
+  const advanceStatus =
+    request.status === 'pending' || request.status === 'instructions_sent'
+
   await adminClient
     .from('platform_payment_requests')
-    .update({ proof_url: proofUrl, updated_at: new Date().toISOString() })
+    .update({
+      proof_url: proofUrl,
+      ...(advanceStatus ? { status: 'payment_received' } : {}),
+      updated_at: new Date().toISOString(),
+    })
     .eq('request_id', requestId)
 
   revalidatePath('/dashboard/admin/billing')
