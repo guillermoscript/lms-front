@@ -225,7 +225,7 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
   // override.
   const { data: existingSub } = await adminClient
     .from('platform_subscriptions')
-    .select('subscription_id')
+    .select('subscription_id, status, current_period_end')
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
@@ -244,18 +244,44 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
         .eq('tenant_id', tenantId)
     }
   } else if (existingSub) {
-    // Point the existing subscription at the forced plan; preserve its period
-    // and payment method.
+    // Point the existing subscription at the forced plan. Preserve the billing
+    // period only when the sub is on a live paid cycle (active with a future
+    // period end); otherwise — canceled/expired row, or a lapsed period —
+    // reactivating with the stale current_period_end would hand the row
+    // straight to the expire-platform-subscriptions cron (past_due, then
+    // auto-downgrade after grace), silently undoing the override. Clear the
+    // period instead so the override is indefinite, like the insert below.
+    const liveCycle =
+      existingSub.status === 'active' &&
+      existingSub.current_period_end != null &&
+      new Date(existingSub.current_period_end) > new Date()
     await adminClient
       .from('platform_subscriptions')
-      .update({ plan_id: plan.plan_id, status: 'active', updated_at: nowIso })
+      .update({
+        plan_id: plan.plan_id,
+        status: 'active',
+        updated_at: nowIso,
+        ...(liveCycle
+          ? {}
+          : {
+              current_period_end: null,
+              grace_period_end: null,
+              cancel_at_period_end: false,
+              canceled_at: null,
+            }),
+      })
       .eq('tenant_id', tenantId)
   } else {
     // No subscription yet (e.g. tenant was on free): create a manual override
     // row so the paid plan is backed by an active subscription.
-    const periodStart = new Date()
-    const periodEnd = new Date(periodStart)
-    periodEnd.setMonth(periodEnd.getMonth() + 1)
+    //
+    // current_period_end stays NULL on purpose: a super-admin override is
+    // indefinite, not a one-month grant. The expire-platform-subscriptions
+    // cron filters every phase on `.not('current_period_end', 'is', null)`,
+    // so a NULL period end is never reminded, never lapses to past_due, and
+    // never auto-downgrades — the override holds until a super admin changes
+    // it again or the school starts paying (confirmManualPayment then upserts
+    // a real dated cycle over this row).
     await adminClient
       .from('platform_subscriptions')
       .insert({
@@ -264,8 +290,8 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
         status: 'active',
         payment_method: 'manual_transfer',
         interval: 'monthly',
-        current_period_start: periodStart.toISOString(),
-        current_period_end: periodEnd.toISOString(),
+        current_period_start: nowIso,
+        current_period_end: null,
       })
   }
 
