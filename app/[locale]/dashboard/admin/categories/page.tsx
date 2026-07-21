@@ -36,7 +36,7 @@ export default async function AdminCategoriesPage() {
     <div className="min-h-screen bg-background" data-testid="categories-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -56,7 +56,7 @@ export default async function AdminCategoriesPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
         {/* Stats */}
         <div className="mb-6">
           <Card>

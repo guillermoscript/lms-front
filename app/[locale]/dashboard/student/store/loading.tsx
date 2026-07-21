@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function StoreLoading() {
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 container">
       {/* Header */}
       <div className="mb-8">
         <Skeleton className="h-9 w-32" />

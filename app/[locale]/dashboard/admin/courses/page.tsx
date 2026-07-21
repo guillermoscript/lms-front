@@ -69,7 +69,7 @@ export default async function AdminCoursesPage() {
     <div className="min-h-screen bg-background" data-testid="admin-courses-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -83,7 +83,7 @@ export default async function AdminCoursesPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         {/* Stats */}
         <div className="mb-6 grid gap-3 md:grid-cols-3">
           <Card>

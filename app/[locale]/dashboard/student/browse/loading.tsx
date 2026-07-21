@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function BrowseCoursesLoading() {
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 container">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
