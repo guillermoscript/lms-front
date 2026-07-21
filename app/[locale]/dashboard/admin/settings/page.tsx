@@ -2,7 +2,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { getAllSettingsByCategory, getSolanaWallet } from '@/app/actions/admin/settings'
+import { getAllSettingsByCategory, getSolanaWallet, getBinancePersonalStatus } from '@/app/actions/admin/settings'
 import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
+import BinancePersonalForm from '@/components/admin/binance-personal-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
@@ -56,6 +57,10 @@ export default async function SettingsPage({
   // Fetch the tenant's Solana receiving wallet (non-blocking — empty if unset)
   const solanaWallet = await getSolanaWallet().catch(() => null)
   const solanaWalletAddress = solanaWallet?.data?.wallet_address || ''
+
+  // Binance Pay (personal account) status — Pay ID + whether credentials are
+  // stored. Secrets are never fetched (#482).
+  const binancePersonal = await getBinancePersonalStatus().catch(() => null)
 
   // Stripe Connect status for the payment tab card (#434)
   const tenantId = await getCurrentTenantId()
@@ -184,6 +189,23 @@ export default async function SettingsPage({
                 </CardHeader>
                 <CardContent>
                   <SolanaWalletForm initialAddress={solanaWalletAddress} />
+                </CardContent>
+              </Card>
+
+              {/* Binance Pay (personal account) — school's own Pay ID + a
+                  read-only API key/secret, encrypted at rest (#482). */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>{t('sections.binancePersonal.title')}</CardTitle>
+                  <CardDescription>
+                    {t('sections.binancePersonal.description')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BinancePersonalForm
+                    initialPayId={binancePersonal?.payId ?? null}
+                    hasCredentials={binancePersonal?.hasCredentials ?? false}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

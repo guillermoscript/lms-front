@@ -4,7 +4,9 @@ import { getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PaymentRequestsTable } from '@/components/admin/payment-requests-table'
-import { Card, CardContent } from '@/components/ui/card'
+import { BinancePersonalPendingTable } from '@/components/admin/binance-personal-pending-table'
+import { listPendingBinancePersonalTransactions } from '@/app/actions/admin/binance-personal'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
@@ -61,6 +63,9 @@ export default async function PaymentRequestsPage({
     .order('created_at', { ascending: false })
 
   const requests = allRequests || []
+
+  // Pending binance_personal transactions that need manual admin confirmation (#482)
+  const pendingBinancePersonal = await listPendingBinancePersonalTransactions()
 
   // Count by status
   const pendingCount = requests.filter(r => r.status === 'pending').length
@@ -187,6 +192,19 @@ export default async function PaymentRequestsPage({
             <PaymentRequestsTable requests={requests} />
           </TabsContent>
         </Tabs>
+
+        {/* Pending Binance Pay (personal) payments awaiting manual confirmation (#482) */}
+        {pendingBinancePersonal.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('binancePersonal.title')}</CardTitle>
+              <CardDescription>{t('binancePersonal.description')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BinancePersonalPendingTable transactions={pendingBinancePersonal} />
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )

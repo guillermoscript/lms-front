@@ -294,7 +294,13 @@
             "error": "No se pudo revocar la delegación. Inténtalo de nuevo."
           },
           "empty": "No tienes una suscripción activa.",
-          "status": { "active": "Activa", "renewed": "Renovada", "canceled": "Cancelada", "expired": "Vencida", "past_due": "Pago vencido" },
+          "status": {
+            "active": "Activa",
+            "renewed": "Renovada",
+            "canceled": "Cancelada",
+            "expired": "Vencida",
+            "past_due": "Pago vencido"
+          },
           "changePlan": {
             "button": "Cambiar de plan",
             "title": "Cambia tu plan",
@@ -313,8 +319,21 @@
           "sectionTitle": "Historial de compras",
           "empty": "Aún no tienes compras.",
           "unknownItem": "Elemento desconocido",
-          "table": { "item": "Artículo", "provider": "Proveedor", "date": "Fecha", "status": "Estado", "amount": "Monto" },
-          "status": { "successful": "Pagado", "pending": "Pendiente", "failed": "Fallido", "canceled": "Cancelado", "refunded": "Reembolsado", "archived": "Archivado" },
+          "table": {
+            "item": "Artículo",
+            "provider": "Proveedor",
+            "date": "Fecha",
+            "status": "Estado",
+            "amount": "Monto"
+          },
+          "status": {
+            "successful": "Pagado",
+            "pending": "Pendiente",
+            "failed": "Fallido",
+            "canceled": "Cancelado",
+            "refunded": "Reembolsado",
+            "archived": "Archivado"
+          },
           "verifyNow": "Verificar ahora",
           "verifyConfirmed": "Pago confirmado: acceso otorgado.",
           "verifyPending": "El pago aún no aparece en la cadena. Inténtalo de nuevo en un momento.",
@@ -322,13 +341,26 @@
         },
         "offline": {
           "sectionTitle": "Pagos offline / manuales",
-          "table": { "product": "Producto", "date": "Fecha", "status": "Estado", "amount": "Monto", "invoice": "Factura" },
+          "table": {
+            "product": "Producto",
+            "date": "Fecha",
+            "status": "Estado",
+            "amount": "Monto",
+            "invoice": "Factura"
+          },
           "downloadInvoice": "Descargar",
           "downloadInvoiceLabel": "Descargar factura {number}",
           "managePaymentsNote": "¿Necesitas subir comprobante o ver detalles?",
           "managePaymentsLink": "Ir a Pagos"
         },
-        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+        "provider": {
+          "stripe": "Stripe",
+          "solana": "Solana",
+          "solana_subs": "Solana",
+          "manual": "Manual",
+          "paypal": "PayPal",
+          "lemonsqueezy": "Lemon Squeezy"
+        }
       },
       "notifications": {
         "title": "Notificaciones",
@@ -1581,10 +1613,21 @@
           "pendingCount": "Pendientes / en proceso",
           "pendingCountDesc": "Pagos aún no completados"
         },
-        "status": { "paid": "Pagado", "processing": "Procesando", "pending": "Pendiente", "failed": "Fallido" },
+        "status": {
+          "paid": "Pagado",
+          "processing": "Procesando",
+          "pending": "Pendiente",
+          "failed": "Fallido"
+        },
         "table": {
           "title": "Historial de pagos",
-          "headers": { "period": "Período", "amount": "Monto", "status": "Estado", "paidAt": "Pagado el", "stripeRef": "Ref. Stripe" }
+          "headers": {
+            "period": "Período",
+            "amount": "Monto",
+            "status": "Estado",
+            "paidAt": "Pagado el",
+            "stripeRef": "Ref. Stripe"
+          }
         },
         "empty": {
           "title": "Sin pagos aún",
@@ -1596,11 +1639,25 @@
         "description": "Documentos de factura para pagos manuales y fuera de línea.",
         "accessDenied": "Acceso denegado",
         "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
-        "note": { "text": "Las compras con tarjeta y Solana se registran en", "transactionsLink": "Transacciones" },
-        "status": { "paid": "Pagado", "pending": "Pendiente", "cancelled": "Cancelado" },
+        "note": {
+          "text": "Las compras con tarjeta y Solana se registran en",
+          "transactionsLink": "Transacciones"
+        },
+        "status": {
+          "paid": "Pagado",
+          "pending": "Pendiente",
+          "cancelled": "Cancelado"
+        },
         "table": {
           "title": "Registro de facturas",
-          "headers": { "invoiceNumber": "Factura #", "item": "Artículo", "amount": "Monto", "status": "Estado", "date": "Fecha", "actions": "Acciones" },
+          "headers": {
+            "invoiceNumber": "Factura #",
+            "item": "Artículo",
+            "amount": "Monto",
+            "status": "Estado",
+            "date": "Fecha",
+            "actions": "Acciones"
+          },
           "unknownProduct": "Producto desconocido",
           "viewInvoice": "Ver factura"
         },
@@ -1771,13 +1828,13 @@
           "configureSchoolDesc": "Define el nombre y los datos básicos de tu escuela.",
           "configureSchoolTime": "~1 min",
           "brandSchool": "Dale identidad a tu escuela",
-          "brandSchoolDesc": "Elige un tema, colores y tipograf\u00eda. Opcional \u2014 los valores por defecto lucen muy bien.",
+          "brandSchoolDesc": "Elige un tema, colores y tipografía. Opcional — los valores por defecto lucen muy bien.",
           "brandSchoolTime": "~2 min",
           "connectPayments": "Configura cómo recibir pagos",
           "connectPaymentsDesc": "Elige pagos manuales, Stripe u otro proveedor disponible.",
           "connectPaymentsTime": "~2 min",
-          "wizardPrompt": "\u00bfPrefieres una configuraci\u00f3n guiada?",
-          "wizardLink": "Abrir el asistente de configuraci\u00f3n",
+          "wizardPrompt": "¿Prefieres una configuración guiada?",
+          "wizardLink": "Abrir el asistente de configuración",
           "addCourse": "Crea tu primer curso — define un precio y publícalo",
           "addCourseDesc": "Usa la creación rápida para publicar en minutos o genera un borrador con IA.",
           "addCourseTime": "~3 min",
@@ -2178,6 +2235,32 @@
           "confirmations": {
             "enroll": "¿Está seguro de que desea inscribir a este estudiante? Esto le otorgará acceso a los cursos."
           }
+        },
+        "binancePersonal": {
+          "title": "Pagos de Binance Pay (personal) pendientes",
+          "description": "Pagos cuya transferencia no se pudo emparejar automáticamente. Verifica la transferencia en tu app de Binance y confírmala para dar acceso, o cancélala si no llegó ningún pago.",
+          "table": {
+            "headers": {
+              "code": "Código de nota",
+              "student": "Estudiante",
+              "amount": "Monto",
+              "date": "Fecha",
+              "actions": "Acciones"
+            },
+            "unknownStudent": "Estudiante desconocido",
+            "confirm": "Confirmar",
+            "cancel": "Cancelar"
+          },
+          "confirmations": {
+            "confirm": "¿Confirmar este pago? Esto le dará acceso al estudiante. Hazlo solo después de verificar la transferencia en tu app de Binance.",
+            "cancel": "¿Cancelar este pago? Hazlo solo si no llegó ninguna transferencia."
+          },
+          "toasts": {
+            "confirmSuccess": "Pago confirmado. El estudiante ahora tiene acceso.",
+            "confirmError": "No se pudo confirmar el pago.",
+            "cancelSuccess": "Pago cancelado.",
+            "cancelError": "No se pudo cancelar el pago."
+          }
         }
       },
       "analytics": {
@@ -2533,6 +2616,10 @@
           "personalPreferences": {
             "title": "Preferencias personales",
             "description": "Estos ajustes aplican solo a tu cuenta, no a toda la escuela."
+          },
+          "binancePersonal": {
+            "title": "Binance Pay (cuenta personal)",
+            "description": "Configura tu Binance Pay ID y una clave API de solo lectura para que los estudiantes te paguen directamente a través de Binance."
           }
         },
         "form": {
@@ -2602,7 +2689,9 @@
             "approvalHint": "Requerir aprobación del administrador antes de procesar los pagos",
             "manualInstructions": "Instrucciones de Pago Manual / Offline",
             "manualInstructionsPlaceholder": "ej. Transferencia bancaria a la cuenta 1234-5678 (Banco XYZ). Incluye tu correo como referencia y sube el comprobante.",
-            "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo."
+            "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo.",
+            "binancePersonal": "Binance Pay (cuenta personal)",
+            "binancePersonalHint": "Acepta Binance Pay en tu propia cuenta personal usando tu Pay ID y una clave API de solo lectura."
           },
           "branding": {
             "logoUrl": "URL del Logo",
@@ -2640,6 +2729,22 @@
             "saving": "Guardando...",
             "success": "Wallet de Solana guardada",
             "error": "Error al guardar la wallet de Solana"
+          },
+          "binancePersonal": {
+            "keyWarning": "Usa una clave API de SOLO LECTURA con los retiros deshabilitados y restricciones de IP activadas. Nunca pegues una clave que pueda mover fondos.",
+            "payIdLabel": "Binance Pay ID",
+            "payIdPlaceholder": "p. ej. 123456789",
+            "payIdHint": "Tu Binance Pay ID — los estudiantes envían los pagos a esta cuenta.",
+            "apiKeyLabel": "Clave API",
+            "apiKeyPlaceholder": "Clave API de solo lectura",
+            "apiSecretLabel": "Secreto API",
+            "apiSecretPlaceholder": "Secreto API",
+            "unchangedPlaceholder": "••••••••  (sin cambios)",
+            "credentialsSaved": "Credenciales guardadas. Déjalo en blanco para conservarlas o introduce nuevos valores para reemplazarlas.",
+            "success": "Credenciales de Binance Pay guardadas",
+            "error": "No se pudieron guardar las credenciales de Binance Pay",
+            "saving": "Guardando...",
+            "save": "Guardar"
           }
         }
       },
@@ -2793,8 +2898,10 @@
             "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
             "binance": "Los estudiantes pagan cada período en cripto (USDT) mediante Binance Pay; la suscripción se renueva cuando vuelven a pagar y caduca si no.",
             "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero.",
-            "solana_subs": "Suscripción recurrente on-chain cobrada automáticamente desde la wallet del estudiante. Configura tu wallet de Solana en Ajustes → Pagos primero."
-          }
+            "solana_subs": "Suscripción recurrente on-chain cobrada automáticamente desde la wallet del estudiante. Configura tu wallet de Solana en Ajustes → Pagos primero.",
+            "binance_personal": "Los estudiantes pagan cada período transfiriendo USDT a tu ID de Binance Pay con un código en la nota; la suscripción se renueva cuando vuelven a pagar. Configura tu ID de Binance Pay en Ajustes → Pagos primero."
+          },
+          "methodBinancePersonal": "ID de Binance Pay (Transferencia manual de USDT)"
         }
       },
       "products": {
@@ -2931,8 +3038,10 @@
             "paypal": "Los estudiantes pueden pagar online con PayPal.",
             "binance": "Los estudiantes pagan en cripto (USDT) mediante el checkout alojado de Binance Pay. Activa Binance Pay en Ajustes → Pagos primero.",
             "lemonsqueezy": "Lemon Squeezy aloja el checkout y es el comerciante registrado (gestiona impuestos). Crea el producto y la variante en tu panel de Lemon Squeezy y pega el id de variante abajo.",
-            "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero."
-          }
+            "solana": "Los estudiantes pagan en cripto a tu wallet de Solana mediante un código QR. Configura tu wallet en Ajustes → Pagos primero.",
+            "binance_personal": "Los estudiantes transfieren USDT directamente a tu ID de Binance Pay con un código en la nota; consultamos Binance para confirmar cada pago. Configura tu ID de Binance Pay en Ajustes → Pagos primero."
+          },
+          "methodBinancePersonal": "ID de Binance Pay (Transferencia manual de USDT)"
         },
         "actions": {
           "archiveTitle": "Archivar producto",
@@ -4330,7 +4439,18 @@
       "processing": "Procesando...",
       "cardUnavailable": "Los pagos con tarjeta no están disponibles para este artículo por ahora. Usa otro método de pago.",
       "sandboxButton": "Pagar e Inscribirse (Prueba)",
-      "sandboxHint": "Pago de prueba (sandbox) — omite el pago real (solo en desarrollo)."
+      "sandboxHint": "Pago de prueba (sandbox) — omite el pago real (solo en desarrollo).",
+      "binancePersonalInstructions": "Paga con Binance Pay. Continúa para ver el ID de pago de la escuela y el código que debes incluir en la nota de tu transferencia.",
+      "binancePersonalTitle": "Envía USDT por Binance Pay",
+      "binancePersonalPayId": "ID de Binance Pay de la escuela",
+      "binancePersonalCopyPayId": "Copiar ID de pago",
+      "binancePersonalAmount": "Monto a enviar",
+      "binancePersonalCode": "Código de pago",
+      "binancePersonalCopyCode": "Copiar código de pago",
+      "binancePersonalNote": "Incluye este código en la nota de la transferencia para poder identificar tu pago.",
+      "binancePersonalWaiting": "Esperando la confirmación de tu transferencia…",
+      "binancePersonalReview": "Otro pago coincidió con este monto, así que la escuela debe confirmar el tuyo manualmente. Puede tardar un poco más; mantén esta página abierta.",
+      "binancePersonalContinue": "Continuar a las instrucciones de pago"
     },
     "stripe": {
       "preparing": "Preparando el pago seguro…",
@@ -4349,7 +4469,9 @@
       "success": "¡Inscripción exitosa!",
       "paymentSuccess": "¡Pago exitoso! Ya estás inscrito.",
       "requestSent": "¡Solicitud enviada! Revisa tu correo.",
-      "error": "Error: {message}"
+      "error": "Error: {message}",
+      "copied": "Copiado al portapapeles",
+      "copyFailed": "No se pudo copiar. Cópialo manualmente."
     },
     "manual": {
       "title": "Pago Manual",

@@ -31,6 +31,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
   const paypalEnabled = settings.paypal_enabled?.value?.enabled ?? false
   const lemonsqueezyEnabled = settings.lemonsqueezy_enabled?.value?.enabled ?? false
   const binanceEnabled = settings.binance_enabled?.value?.enabled ?? false
+  const binancePersonalEnabled = settings.binance_personal_enabled?.value?.enabled ?? false
   const solanaEnabled = settings.solana_enabled?.value?.enabled ?? false
   const solanaAcceptSol = settings.solana_accept_sol?.value?.enabled ?? false
   const [solanaOn, setSolanaOn] = useState(solanaEnabled)
@@ -49,6 +50,7 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
         paypal_enabled: { enabled: formData.get('paypal_enabled') === 'on' },
         lemonsqueezy_enabled: { enabled: formData.get('lemonsqueezy_enabled') === 'on' },
         binance_enabled: { enabled: formData.get('binance_enabled') === 'on' },
+        binance_personal_enabled: { enabled: formData.get('binance_personal_enabled') === 'on' },
         solana_enabled: { enabled: formData.get('solana_enabled') === 'on' },
         solana_accept_sol: { enabled: formData.get('solana_accept_sol') === 'on' },
         currency: { value: formData.get('currency') as string },
@@ -135,6 +137,21 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
             id="binance_enabled"
             name="binance_enabled"
             defaultChecked={binanceEnabled}
+          />
+        </div>
+
+        {/* Binance Pay — personal account (school's own Pay ID + read-only API key) */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="binance_personal_enabled">{t('payment.binancePersonal')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('payment.binancePersonalHint')}
+            </p>
+          </div>
+          <Switch
+            id="binance_personal_enabled"
+            name="binance_personal_enabled"
+            defaultChecked={binancePersonalEnabled}
           />
         </div>
 

@@ -186,7 +186,7 @@ export function ProductCreationWizard({
   // (and change) it.
   const availableProviders = useMemo(() => {
     const providers: ProductCreationPaymentProvider[] = ['manual']
-    for (const candidate of ['stripe', 'paypal', 'binance'] as const) {
+    for (const candidate of ['stripe', 'paypal', 'binance', 'binance_personal'] as const) {
       if (
         enabledProviders.includes(candidate) ||
         input.pricing.paymentProvider === candidate
@@ -676,6 +676,9 @@ export function ProductCreationWizard({
                         )}
                         {availableProviders.includes('binance') && (
                           <SelectItem value="binance">{tProductForm('methodBinance')}</SelectItem>
+                        )}
+                        {availableProviders.includes('binance_personal') && (
+                          <SelectItem value="binance_personal">{tProductForm('methodBinancePersonal')}</SelectItem>
                         )}
                       </SelectGroup>
                     </SelectContent>

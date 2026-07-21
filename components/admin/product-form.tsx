@@ -157,6 +157,7 @@ export function ProductForm({ mode, initialData, courses, enabledProviders = [] 
             {visibleProviders.has('paypal') && <SelectItem value="paypal">{t('methodPaypal')}</SelectItem>}
             {visibleProviders.has('lemonsqueezy') && <SelectItem value="lemonsqueezy">{t('methodLemonsqueezy')}</SelectItem>}
             {visibleProviders.has('binance') && <SelectItem value="binance">{t('methodBinance')}</SelectItem>}
+            {visibleProviders.has('binance_personal') && <SelectItem value="binance_personal">{t('methodBinancePersonal')}</SelectItem>}
             {visibleProviders.has('solana') && <SelectItem value="solana">{t('methodSolana')}</SelectItem>}
           </SelectContent>
         </Select>

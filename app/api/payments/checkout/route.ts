@@ -33,7 +33,7 @@ import {
 } from '@/lib/payments/subscription-guard'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
-const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs', 'paypal', 'binance']
+const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs', 'paypal', 'binance', 'binance_personal']
 
 export const runtime = 'nodejs'
 
@@ -140,6 +140,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // binance_personal: the "checkout" is a manual transfer to the school's
+    // Binance Pay ID. Resolve it up front (admin client — the wallets table is
+    // RLS'd to admins) so an unconfigured school fails BEFORE a pending
+    // transaction exists.
+    let binancePersonalPayId: string | null = null
+    if (providerSlug === 'binance_personal') {
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const adminClient = createAdminClient()
+      const { data: wallet } = await adminClient
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', 'binance_personal')
+        .maybeSingle()
+      if (!wallet?.wallet_address) {
+        return NextResponse.json(
+          { error: 'This school has not configured Binance Pay (personal)' },
+          { status: 400 },
+        )
+      }
+      binancePersonalPayId = wallet.wallet_address
+    }
+
     // One-time Solana: the student chooses the settlement token (SOL or USDC),
     // both honoring the USD price. USDC is a 1:1 USD stablecoin; native SOL is
     // converted from the USD price at the LIVE rate NOW and LOCKED — the rate
@@ -240,6 +263,7 @@ export async function POST(req: NextRequest) {
         amount,
         currency,
         reference,
+        ...(binancePersonalPayId ? { destinationAccount: binancePersonalPayId } : {}),
         successUrl: `${appUrl}/checkout/success?transactionId=${transaction.transaction_id}`,
         cancelUrl: planId ? `${appUrl}/checkout?planId=${planId}` : `${appUrl}/courses`,
         baseUrl: appUrl,
@@ -277,6 +301,7 @@ export async function POST(req: NextRequest) {
         kind: session.kind,
         url: session.url ?? null,
         clientSecret: session.clientSecret ?? null,
+        instructions: session.instructions ?? null,
         reference,
         transactionId: transaction.transaction_id,
       })
