@@ -248,11 +248,33 @@ export async function dispatchBillingEvent(
       break
     }
 
-    case 'payment.failed':
-      // No transaction state change — the pending row is rolled back by the
-      // checkout route on creation failure, and LS does not deliver a one-time
-      // payment-failed webhook for hosted checkout. Logged for completeness.
-      console.log(`[webhook] payment.failed for ${provider} — no-op in shared dispatcher`)
+    case 'payment.failed': {
+      // A hosted-checkout provider can deliver a terminal failure for an
+      // abandoned order (Binance Pay `PAY_CLOSED` on order expiry). The pending
+      // transaction created at checkout must be cleared, or the partial unique
+      // indexes transactions_unique_product / transactions_unique_plan
+      // (WHERE status IN ('pending','successful')) keep blocking the buyer's
+      // retry purchase forever. Flip the referenced row → failed.
+      //
+      // Idempotent + ordering-safe: the `.eq('status','pending')` guard means a
+      // late PAY_CLOSED that races a PAY_SUCCESS (already flipped → successful)
+      // is a no-op, and a redelivery finds no pending row. Providers that never
+      // send a one-time payment-failed webhook (Lemon Squeezy) never reach here
+      // with a reference, so this is a no-op for them.
+      if (!event.reference) {
+        console.log(`[webhook] payment.failed for ${provider} without reference — no-op`)
+        break
+      }
+      const txnId = Number.parseInt(event.reference, 10)
+      if (Number.isNaN(txnId)) break
+
+      const { error } = await admin
+        .from('transactions')
+        .update({ status: 'failed' })
+        .eq('transaction_id', txnId)
+        .eq('status', 'pending')
+      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
+    }
   }
 }
