@@ -64,7 +64,7 @@ export default async function AdminProductsPage() {
     <div className="min-h-screen bg-background" data-testid="products-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -89,7 +89,7 @@ export default async function AdminProductsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         {/* Non-blocking Connect nudge — manual selling works without it (#438) */}
         {!stripeConnected && (
           <div className="mb-6 flex items-start gap-3 rounded-xl bg-blue-50 p-4 ring-1 ring-blue-200 dark:bg-blue-950/30 dark:ring-blue-800">

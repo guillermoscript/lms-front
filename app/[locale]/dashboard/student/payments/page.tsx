@@ -169,7 +169,7 @@ export default async function StudentPaymentsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl" data-testid="payments-page">
+    <div className="container mx-auto py-8 px-4 container" data-testid="payments-page">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">

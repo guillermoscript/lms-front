@@ -139,7 +139,7 @@ export default async function MonetizationPage() {
   return (
     <div className="min-h-screen bg-background" data-testid="monetization-page">
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -153,7 +153,7 @@ export default async function MonetizationPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         {/* Stripe Connect Status */}
         {isStripeConnected ? (
           <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-5 ring-1 ring-emerald-200 dark:ring-emerald-800">

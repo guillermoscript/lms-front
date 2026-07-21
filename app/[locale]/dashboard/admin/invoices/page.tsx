@@ -121,7 +121,7 @@ export default async function AdminInvoicesPage({
     <div className="min-h-screen bg-background" data-testid="invoices-page">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-4">
             <AdminBreadcrumb
               items={[
@@ -136,7 +136,7 @@ export default async function AdminInvoicesPage({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         {/* Contextual note */}
         <div className="mb-6 flex items-start gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           <IconInfoCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />

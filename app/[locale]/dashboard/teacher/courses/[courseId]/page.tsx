@@ -196,7 +196,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
 
       {/* Header */}
       <header data-tour="course-header" className="border-b bg-card sticky top-0 z-10">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2 min-w-0">
@@ -233,7 +233,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         <Tabs defaultValue="lessons" className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList data-tour="course-tabs" className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">

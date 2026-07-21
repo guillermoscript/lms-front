@@ -113,7 +113,7 @@ export default async function StudentProgressPage() {
       : 0
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl" data-testid="progress-page">
+    <div className="container mx-auto py-8 px-4 container" data-testid="progress-page">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
