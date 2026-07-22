@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
@@ -21,32 +22,33 @@ interface PageProps {
 // Uses the admin client with explicit guards mirroring the anon RLS policy:
 // published preview lesson, published course, current tenant. Read-only:
 // no completion tracking, no checkpoints, no comments, no AI task.
-async function getPreviewLesson(courseId: number, lessonId: number, tenantId: string) {
+// cache() dedupes the generateMetadata + page calls within a request.
+const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenantId: string) => {
     if (!Number.isInteger(courseId) || !Number.isInteger(lessonId)) return null
     const admin = createAdminClient()
 
-    const { data: course } = await admin
-        .from('courses')
-        .select('course_id, title')
-        .eq('course_id', courseId)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'published')
-        .single()
-    if (!course) return null
-
-    const { data: lesson } = await admin
-        .from('lessons')
-        .select('id, title, sequence, description, content, video_url, embed_code')
-        .eq('id', lessonId)
-        .eq('course_id', courseId)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'published')
-        .eq('is_preview', true)
-        .single()
-    if (!lesson) return null
+    const [{ data: course }, { data: lesson }] = await Promise.all([
+        admin
+            .from('courses')
+            .select('course_id, title')
+            .eq('course_id', courseId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'published')
+            .single(),
+        admin
+            .from('lessons')
+            .select('id, title, sequence, description, content, video_url, embed_code')
+            .eq('id', lessonId)
+            .eq('course_id', courseId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'published')
+            .eq('is_preview', true)
+            .single(),
+    ])
+    if (!course || !lesson) return null
 
     return { course, lesson }
-}
+})
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
     const { id, lessonId, locale } = await props.params
@@ -110,6 +112,7 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
                     mdx={await serializeLessonMdx(lesson.content)}
                     videoUrl={lesson.video_url}
                     embedCode={lesson.embed_code}
+                    embedMode="sandboxed"
                 />
 
                 {/* Enroll CTA */}

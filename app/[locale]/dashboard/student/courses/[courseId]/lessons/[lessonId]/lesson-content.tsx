@@ -19,9 +19,16 @@ interface LessonContentProps {
   mdx: SerializeResult | null
   videoUrl: string | null
   embedCode: string | null
+  /**
+   * How to render teacher-authored embed_code HTML. 'trusted' injects it into
+   * the page (enrolled-student views). 'sandboxed' isolates it in an
+   * opaque-origin iframe (no allow-same-origin) — required on public pages
+   * (#426 preview), where the audience is logged-out visitors.
+   */
+  embedMode?: 'trusted' | 'sandboxed'
 }
 
-export function LessonContent({ mdx, videoUrl, embedCode }: LessonContentProps) {
+export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' }: LessonContentProps) {
   const t = useTranslations('components.lessons')
   const tc = useTranslations('components.checkpoints')
   const checkpointsCtx = useCheckpoints()
@@ -102,10 +109,19 @@ export function LessonContent({ mdx, videoUrl, embedCode }: LessonContentProps) 
 
       {/* Custom embed code */}
       {embedCode && !videoEmbedUrl && !useCheckpointPlayer && (
-        <div
-          className="aspect-video w-full overflow-hidden rounded-xl shadow-lg"
-          dangerouslySetInnerHTML={{ __html: embedCode }}
-        />
+        embedMode === 'sandboxed' ? (
+          <iframe
+            srcDoc={`<style>html,body{margin:0;height:100%}</style>${embedCode}`}
+            sandbox="allow-scripts allow-popups"
+            title="Embedded content"
+            className="aspect-video w-full overflow-hidden rounded-xl border-0 shadow-lg"
+          />
+        ) : (
+          <div
+            className="aspect-video w-full overflow-hidden rounded-xl shadow-lg"
+            dangerouslySetInnerHTML={{ __html: embedCode }}
+          />
+        )
       )}
 
       {/* MDX content */}

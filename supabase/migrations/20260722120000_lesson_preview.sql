@@ -31,3 +31,15 @@ CREATE POLICY "Anon can view preview lessons" ON public.lessons
         AND c.tenant_id = lessons.tenant_id
     )
   );
+
+-- Column-level hardening: the policy above grants ROW access, but RLS cannot
+-- mask columns — without this, anon could still read ai_task_instructions
+-- (teacher grading criteria, which may contain answers) on preview lessons.
+-- Caveat: with column grants, anon `select=*` on lessons errors. All public
+-- pages fetch lessons via the admin client and no anon path selects *.
+REVOKE SELECT, INSERT, UPDATE, DELETE ON public.lessons FROM anon;
+GRANT SELECT (
+  id, course_id, tenant_id, title, description, summary, sequence,
+  content, video_url, embed_code, image, status, is_preview, publish_at,
+  created_at, updated_at
+) ON public.lessons TO anon;
