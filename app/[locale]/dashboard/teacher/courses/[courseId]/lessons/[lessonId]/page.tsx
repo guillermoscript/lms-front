@@ -95,6 +95,7 @@ export default async function EditLessonPage({ params }: PageProps) {
           publish_at: lesson.publish_at || null,
           ai_task_description: lesson.ai_task_description || null,
           ai_task_instructions: lesson.ai_task_instructions || null,
+          is_preview: lesson.is_preview ?? null,
           resources: resources || [],
         }}
       />

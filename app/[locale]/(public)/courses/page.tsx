@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
 import { CourseCard } from "@/components/public/course-card";
 import { CourseSearchBar } from "@/components/shared/course-search-bar";
@@ -56,9 +57,6 @@ export default async function CoursesPage({
                 id,
                 full_name,
                 avatar_url
-            ),
-            lessons (
-                id
             )
         `)
         .eq('tenant_id', tenantId)
@@ -80,6 +78,21 @@ export default async function CoursesPage({
     // Fetch product prices for all courses in one query
     const courseIds = courses?.map(c => c.course_id) || [];
     let productMap: Record<number, { price: number; currency: string }> = {};
+
+    // Published-lesson counts via admin client: the anon role can only read
+    // preview lessons (RLS), so a nested select would undercount for visitors.
+    const lessonCountMap: Record<number, number> = {};
+    if (courseIds.length > 0) {
+        const { data: lessonRows } = await createAdminClient()
+            .from('lessons')
+            .select('id, course_id')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'published')
+            .in('course_id', courseIds);
+        for (const row of lessonRows ?? []) {
+            lessonCountMap[row.course_id] = (lessonCountMap[row.course_id] ?? 0) + 1;
+        }
+    }
 
     if (courseIds.length > 0) {
         const { data: productCourses } = await supabase
@@ -111,7 +124,7 @@ export default async function CoursesPage({
             thumbnail_url: course.thumbnail_url,
             category: cat ? (Array.isArray(cat) ? cat[0] : cat) as { id: number; name: string } : null,
             author: auth ? (Array.isArray(auth) ? auth[0] : auth) as { id: string; full_name: string; avatar_url: string | null } : null,
-            lessonCount: (course.lessons as any[])?.length || 0,
+            lessonCount: lessonCountMap[course.course_id] ?? 0,
             price: productMap[course.course_id]?.price ?? null,
             currency: productMap[course.course_id]?.currency ?? null,
         };
