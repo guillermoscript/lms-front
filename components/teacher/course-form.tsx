@@ -35,6 +35,8 @@ interface CourseFormProps {
     thumbnail_url: string | null
     category_id: number | null
     status: 'draft' | 'published' | 'archived'
+    learning_objectives: string[] | null
+    estimated_duration_minutes: number | null
   }
 }
 
@@ -58,6 +60,8 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     thumbnail_url: initialData?.thumbnail_url || '',
     category_id: initialData?.category_id?.toString() || '',
     status: initialData?.status || 'draft',
+    learning_objectives: (initialData?.learning_objectives ?? []).join('\n'),
+    estimated_duration_minutes: initialData?.estimated_duration_minutes?.toString() || '',
   })
 
   // Check course limit on mount for new courses
@@ -101,6 +105,13 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         thumbnail_url: formData.thumbnail_url || null,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         status: formData.status as 'draft' | 'published' | 'archived',
+        learning_objectives: formData.learning_objectives
+          .split('\n')
+          .map((objective) => objective.trim())
+          .filter(Boolean),
+        estimated_duration_minutes: formData.estimated_duration_minutes
+          ? parseInt(formData.estimated_duration_minutes)
+          : null,
       }
 
       if (initialData) {
@@ -202,6 +213,36 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               placeholder={t('descriptionPlaceholder')}
               rows={4}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="learning_objectives">{t('objectivesLabel')}</Label>
+            <Textarea
+              id="learning_objectives"
+              value={formData.learning_objectives}
+              onChange={(e) =>
+                setFormData({ ...formData, learning_objectives: e.target.value })
+              }
+              placeholder={t('objectivesPlaceholder')}
+              rows={5}
+            />
+            <p className="text-xs text-muted-foreground">{t('objectivesHint')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estimated_duration_minutes">{t('durationLabel')}</Label>
+            <Input
+              id="estimated_duration_minutes"
+              type="number"
+              min={1}
+              step={1}
+              value={formData.estimated_duration_minutes}
+              onChange={(e) =>
+                setFormData({ ...formData, estimated_duration_minutes: e.target.value })
+              }
+              placeholder={t('durationPlaceholder')}
+            />
+            <p className="text-xs text-muted-foreground">{t('durationHint')}</p>
           </div>
 
           <div className="space-y-2">
