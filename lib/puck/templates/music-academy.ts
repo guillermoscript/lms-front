@@ -54,6 +54,7 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '18,000', label: 'Students', prefix: '', suffix: '+' },
           { value: '10', label: 'Instruments', prefix: '', suffix: '+' },
@@ -87,6 +88,7 @@ const homeTemplate: PuckTemplate = {
         columns: '4',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Courses',
         subtitle: 'Start with our most popular courses, chosen by thousands of students.',
         maxItems: 6, columns: '3', showPrice: true, showDescription: true,
@@ -160,6 +162,7 @@ const aboutTemplate: PuckTemplate = {
         alignment: 'center', color: '', maxWidth: '768px', fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '18,000', label: 'Students', prefix: '', suffix: '+' },
           { value: '10', label: 'Instruments', prefix: '', suffix: '+' },

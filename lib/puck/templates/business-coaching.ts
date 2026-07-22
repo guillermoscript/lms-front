@@ -60,6 +60,7 @@ const homeTemplate: PuckTemplate = {
         avatarCount: 5,
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
           { value: '40', label: 'Avg. Revenue Growth', prefix: '', suffix: '%' },
@@ -82,6 +83,7 @@ const homeTemplate: PuckTemplate = {
         columns: '3',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Programs & Courses',
         subtitle: 'Self-paced programs to build skills on your schedule.',
         maxItems: 6, columns: '3', showPrice: true, showDescription: true,
@@ -155,6 +157,7 @@ const aboutTemplate: PuckTemplate = {
         alignment: 'center', color: '', maxWidth: '768px', fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
           { value: '$50M', label: 'Client Revenue Added', prefix: '', suffix: '' },
