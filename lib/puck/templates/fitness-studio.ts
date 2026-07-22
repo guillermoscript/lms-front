@@ -54,6 +54,7 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '25,000', label: 'Members', prefix: '', suffix: '+' },
           { value: '600', label: 'Workouts', prefix: '', suffix: '+' },
@@ -86,6 +87,7 @@ const homeTemplate: PuckTemplate = {
         columns: '3',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Programs',
         subtitle: 'Start with our most popular programs, loved by thousands of members.',
         maxItems: 6, columns: '3', showPrice: true, showDescription: true,
@@ -159,6 +161,7 @@ const aboutTemplate: PuckTemplate = {
         alignment: 'center', color: '', maxWidth: '768px', fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '25,000', label: 'Members', prefix: '', suffix: '+' },
           { value: '50', label: 'Countries', prefix: '', suffix: '+' },

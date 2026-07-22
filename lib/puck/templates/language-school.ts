@@ -54,6 +54,7 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '500px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '8,000', label: 'Active Students', prefix: '', suffix: '+' },
           { value: '6', label: 'Languages', prefix: '', suffix: '' },
@@ -86,6 +87,7 @@ const homeTemplate: PuckTemplate = {
         columns: '3',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Courses',
         subtitle: 'Start with our most popular language courses, chosen by thousands of learners.',
         maxItems: 6, columns: '3', showPrice: true, showDescription: true,
@@ -159,6 +161,7 @@ const aboutTemplate: PuckTemplate = {
         alignment: 'center', color: '', maxWidth: '768px', fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '8,000', label: 'Students Worldwide', prefix: '', suffix: '+' },
           { value: '6', label: 'Languages Taught', prefix: '', suffix: '' },

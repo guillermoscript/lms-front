@@ -54,6 +54,7 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '520px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '14,000', label: 'Designers Trained', prefix: '', suffix: '+' },
           { value: '120', label: 'Hands-On Projects', prefix: '', suffix: '+' },
@@ -87,6 +88,7 @@ const homeTemplate: PuckTemplate = {
         columns: '4',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Courses',
         subtitle: 'Start with our most popular courses, chosen by thousands of designers.',
         maxItems: 6, columns: '3', showPrice: true, showDescription: true,
@@ -160,6 +162,7 @@ const aboutTemplate: PuckTemplate = {
         alignment: 'center', color: '', maxWidth: '768px', fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '14,000', label: 'Designers Trained', prefix: '', suffix: '+' },
           { value: '40', label: 'Countries', prefix: '', suffix: '+' },

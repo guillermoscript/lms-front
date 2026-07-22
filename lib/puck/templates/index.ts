@@ -106,6 +106,7 @@ const modernAcademyTemplate: PuckTemplate = {
         columns: '3',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Courses',
         subtitle: 'Explore our most popular courses, chosen by students like you.',
         maxItems: 6,
@@ -180,6 +181,7 @@ const minimalTemplate: PuckTemplate = {
         minHeight: '400px',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Our Courses',
         subtitle: '',
         maxItems: 6,
@@ -255,6 +257,7 @@ const boldCreatorTemplate: PuckTemplate = {
         minHeight: '500px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '5,000', label: 'Students', prefix: '', suffix: '+' },
           { value: '200', label: 'Courses', prefix: '', suffix: '+' },
@@ -264,6 +267,7 @@ const boldCreatorTemplate: PuckTemplate = {
         alignment: 'center',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Featured Courses',
         subtitle: 'Our most popular courses, hand-picked for you.',
         maxItems: 6,
@@ -336,13 +340,13 @@ const courseCatalogTemplate: PuckTemplate = {
         overlayOpacity: 50,
         minHeight: '350px',
       }),
-      c('CourseGrid', {
+      c('CatalogBrowser', {
         title: 'All Courses',
         subtitle: 'Browse our full catalog and find the right fit for your goals.',
-        maxItems: 12,
         columns: '3',
-        showPrice: true,
-        showDescription: true,
+        pageSize: 12,
+        showSearch: true,
+        showPriceFilter: true,
       }),
       c('PricingTable', {
         title: 'Pricing Plans',
@@ -414,6 +418,7 @@ const aboutTemplate: PuckTemplate = {
         fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '10,000', label: 'Students', prefix: '', suffix: '+' },
           { value: '500', label: 'Courses', prefix: '', suffix: '+' },
@@ -632,6 +637,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
         minHeight: '520px',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '12,000', label: 'Students Enrolled', prefix: '', suffix: '+' },
           { value: '95', label: 'Completion Rate', prefix: '', suffix: '%' },
@@ -654,6 +660,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
         columns: '3',
       }),
       c('CourseGrid', {
+        courseIds: [],
         title: 'Popular Courses',
         subtitle: 'Start with our most popular courses, chosen by thousands of students.',
         maxItems: 6,
@@ -764,6 +771,7 @@ const codeSchoolAboutTemplate: PuckTemplate = {
         fontSize: '1.125rem',
       }),
       c('StatsCounter', {
+        useLiveStats: true,
         items: [
           { value: '12,000', label: 'Students Worldwide', prefix: '', suffix: '+' },
           { value: '40', label: 'Countries', prefix: '', suffix: '+' },
@@ -1045,13 +1053,13 @@ const codeSchoolCatalogTemplate: PuckTemplate = {
         ],
         columns: '2',
       }),
-      c('CourseGrid', {
+      c('CatalogBrowser', {
         title: 'All Courses',
         subtitle: 'Browse our complete catalog. New courses added every month.',
-        maxItems: 12,
         columns: '3',
-        showPrice: true,
-        showDescription: true,
+        pageSize: 12,
+        showSearch: true,
+        showPriceFilter: true,
       }),
       c('PricingTable', {
         title: 'Choose Your Plan',
