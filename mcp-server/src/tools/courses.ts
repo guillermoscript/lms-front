@@ -247,12 +247,24 @@ export function registerCourseTools(server: MCPServer) {
     {
       name: "lms_update_course",
       description:
-        "Update course metadata such as title, description, tags, status, or sequential completion mode.",
+        "Update course metadata such as title, description, tags, status, learning objectives, estimated duration, or sequential completion mode.",
       schema: z.object({
         course_id: z.number().describe("The course ID"),
         title: z.string().optional().describe("New title"),
         description: z.string().optional().describe("New description"),
         tags: z.string().optional().describe("New tags (comma-separated)"),
+        learning_objectives: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Learning outcomes shown as \"What you'll learn\" on the public course page. Pass an empty array to clear (hides the section)."
+          ),
+        estimated_duration_minutes: z
+          .number()
+          .optional()
+          .describe(
+            "Estimated total course duration in minutes shown on the public page. Pass 0 to clear (hides the duration)."
+          ),
         status: z
           .enum(["draft", "published", "archived"])
           .optional()
@@ -286,6 +298,16 @@ export function registerCourseTools(server: MCPServer) {
         if (input.description !== undefined) updateData.description = input.description;
         if (input.tags !== undefined)
           updateData.tags = input.tags ? input.tags.split(",").map((t) => t.trim()) : null;
+        if (input.learning_objectives !== undefined)
+          updateData.learning_objectives = input.learning_objectives
+            .map((objective) => objective.trim().slice(0, 300))
+            .filter(Boolean)
+            .slice(0, 20);
+        if (input.estimated_duration_minutes !== undefined)
+          updateData.estimated_duration_minutes =
+            input.estimated_duration_minutes > 0
+              ? Math.round(input.estimated_duration_minutes)
+              : null;
         if (input.status !== undefined) updateData.status = input.status;
         if (input.require_sequential_completion !== undefined)
           updateData.require_sequential_completion = input.require_sequential_completion;

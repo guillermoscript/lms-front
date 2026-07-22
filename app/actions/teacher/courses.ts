@@ -24,6 +24,29 @@ export interface CourseFormData {
   thumbnail_url?: string | null
   category_id?: number | null
   status?: 'draft' | 'published' | 'archived'
+  learning_objectives?: string[] | null
+  estimated_duration_minutes?: number | null
+}
+
+const MAX_OBJECTIVES = 20
+const MAX_OBJECTIVE_LENGTH = 300
+const MAX_DURATION_MINUTES = 60000
+
+// Writes go through the admin client (service role), so sanitize here rather
+// than relying on RLS/constraints alone.
+function sanitizeObjectives(input: string[] | null | undefined): string[] {
+  if (!Array.isArray(input)) return []
+  return input
+    .filter((objective): objective is string => typeof objective === 'string')
+    .map((objective) => objective.trim().slice(0, MAX_OBJECTIVE_LENGTH))
+    .filter(Boolean)
+    .slice(0, MAX_OBJECTIVES)
+}
+
+function sanitizeDuration(minutes: number | null | undefined): number | null {
+  if (typeof minutes !== 'number' || !Number.isFinite(minutes)) return null
+  const rounded = Math.round(minutes)
+  return rounded > 0 ? Math.min(rounded, MAX_DURATION_MINUTES) : null
 }
 
 /**
@@ -153,6 +176,8 @@ export async function createCourse(courseData: CourseFormData) {
       author_id: user.id,
       tenant_id: tenantId,
       status: courseData.status || 'draft',
+      learning_objectives: sanitizeObjectives(courseData.learning_objectives),
+      estimated_duration_minutes: sanitizeDuration(courseData.estimated_duration_minutes),
     })
     .select('course_id')
     .single()
@@ -209,6 +234,8 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
       thumbnail_url: courseData.thumbnail_url || null,
       category_id: courseData.category_id || null,
       status: courseData.status || undefined,
+      learning_objectives: sanitizeObjectives(courseData.learning_objectives),
+      estimated_duration_minutes: sanitizeDuration(courseData.estimated_duration_minutes),
     })
     .eq('course_id', courseId)
     .eq('tenant_id', tenantId)

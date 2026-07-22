@@ -1385,6 +1385,8 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          estimated_duration_minutes: number | null
+          learning_objectives: string[]
           published_at: string | null
           require_sequential_completion: boolean
           status: Database["public"]["Enums"]["status"]
@@ -1402,6 +1404,8 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          estimated_duration_minutes?: number | null
+          learning_objectives?: string[]
           published_at?: string | null
           require_sequential_completion?: boolean
           status?: Database["public"]["Enums"]["status"]
@@ -1419,6 +1423,8 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          estimated_duration_minutes?: number | null
+          learning_objectives?: string[]
           published_at?: string | null
           require_sequential_completion?: boolean
           status?: Database["public"]["Enums"]["status"]

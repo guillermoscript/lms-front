@@ -183,8 +183,11 @@ export default async function CourseDetailsPage(props: {
 
     const lessons: Lesson[] = lessonRows ?? [];
     const totalLessons = lessons.length;
-    const estimatedHours = Math.floor(totalLessons * 10 / 60);
-    const estimatedMinutes = (totalLessons * 10) % 60;
+    // Duration comes only from the teacher-set estimate; hidden when unset (#425)
+    const durationMinutes: number = course.estimated_duration_minutes ?? 0;
+    const hasDuration = durationMinutes > 0;
+    const estimatedHours = Math.floor(durationMinutes / 60);
+    const estimatedMinutes = durationMinutes % 60;
 
     type CourseProduct = { price: number | string; currency: string | null };
     const courseProduct = pickCourseProduct(
@@ -201,11 +204,11 @@ export default async function CourseDetailsPage(props: {
         bio: author.bio || t('sections.instructor.defaultBio')
     } : null;
 
-    // Learning objectives from lesson descriptions
-    const whatYoullLearn = lessons
-        .filter((lesson: Lesson) => lesson.description)
-        .slice(0, 6)
-        .map((lesson: Lesson) => lesson.description);
+    // Teacher-authored objectives only — never derived from lesson content;
+    // an empty list hides the section entirely (#425)
+    const whatYoullLearn: string[] = (course.learning_objectives ?? []).filter(
+        (objective: string) => typeof objective === 'string' && objective.trim().length > 0
+    );
 
     const formattedDate = course.published_at
         ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(course.published_at))
@@ -227,6 +230,8 @@ export default async function CourseDetailsPage(props: {
         isFree,
         averageRating,
         reviewCount,
+        learningObjectives: whatYoullLearn,
+        durationMinutes: hasDuration ? durationMinutes : null,
     });
 
     return (
@@ -289,7 +294,7 @@ export default async function CourseDetailsPage(props: {
                                     <span>{t('hero.lessons', { count: totalLessons })}</span>
                                 </div>
                             )}
-                            {(estimatedHours > 0 || estimatedMinutes > 0) && (
+                            {hasDuration && (
                                 <div className="flex items-center gap-1.5">
                                     <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
                                     <span>{t('hero.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
@@ -332,7 +337,7 @@ export default async function CourseDetailsPage(props: {
                             <section className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
                                 <h2 className="text-2xl font-bold mb-6 text-white text-balance">{t('sections.whatYoullLearn')}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                    {whatYoullLearn.map((item: string | null, i: number) => (
+                                    {whatYoullLearn.map((item: string, i: number) => (
                                         <div key={i} className="flex gap-3">
                                             <div className="mt-0.5 flex-shrink-0">
                                                 <CheckCircle2 className="w-4 h-4 text-cyan-400" aria-hidden="true" />
@@ -351,7 +356,7 @@ export default async function CourseDetailsPage(props: {
                             </div>
                             <div className="text-sm text-zinc-300 mb-4 flex gap-3">
                                 <span>{t('sections.content.lectures', { count: lessons.length })}</span>
-                                {(estimatedHours > 0 || estimatedMinutes > 0) && (
+                                {hasDuration && (
                                     <>
                                         <span aria-hidden="true">&middot;</span>
                                         <span>{t('sections.content.totalLength', { h: estimatedHours, m: estimatedMinutes })}</span>
@@ -565,7 +570,7 @@ export default async function CourseDetailsPage(props: {
                                                     <span>{t('pricing.includes.lessons', { count: totalLessons })}</span>
                                                 </div>
                                             )}
-                                            {(estimatedHours > 0 || estimatedMinutes > 0) && (
+                                            {hasDuration && (
                                                 <div className="flex items-center gap-3 text-sm text-zinc-200">
                                                     <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
                                                     <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>

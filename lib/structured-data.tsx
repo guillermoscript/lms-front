@@ -49,6 +49,10 @@ interface CourseJsonLdInput {
   /** Only emitted when there is at least one review. */
   averageRating?: number | null
   reviewCount?: number
+  /** Teacher-authored learning objectives; emitted as `teaches` when non-empty. */
+  learningObjectives?: string[]
+  /** Teacher-set estimate; emitted as ISO-8601 `timeRequired` when set. */
+  durationMinutes?: number | null
 }
 
 export function courseJsonLd(input: CourseJsonLdInput): JsonLdNode {
@@ -66,6 +70,14 @@ export function courseJsonLd(input: CourseJsonLdInput): JsonLdNode {
   if (input.description) node.description = input.description
   if (input.image) node.image = input.image
   if (input.datePublished) node.datePublished = input.datePublished
+  if (input.learningObjectives && input.learningObjectives.length > 0) {
+    node.teaches = input.learningObjectives
+  }
+  if (input.durationMinutes != null && input.durationMinutes > 0) {
+    const hours = Math.floor(input.durationMinutes / 60)
+    const minutes = input.durationMinutes % 60
+    node.timeRequired = `PT${hours > 0 ? `${hours}H` : ''}${minutes > 0 ? `${minutes}M` : ''}`
+  }
 
   if (input.isFree) {
     node.isAccessibleForFree = true
