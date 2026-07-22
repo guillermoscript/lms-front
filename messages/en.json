@@ -1083,6 +1083,8 @@
         "videoUrlHint": "Paste a YouTube link to embed a video in this lesson.",
         "sequenceLabel": "Display Order",
         "sequenceHint": "Position of this lesson in the course curriculum.",
+        "freePreviewLabel": "Free preview",
+        "freePreviewHint": "Anyone can view this lesson from the public course page — including visitors who aren't enrolled or logged in.",
         "aiTaskTitle": "AI Task",
         "aiTaskDescription": "Add an interactive AI challenge students complete after the lesson.",
         "aiTaskPromptLabel": "Student Challenge",
@@ -4117,7 +4119,8 @@
         "lectures": "{count} lectures",
         "totalLength": "{h}h {m}m total length",
         "allLessons": "All Lessons",
-        "noLessons": "No lessons available yet."
+        "noLessons": "No lessons available yet.",
+        "previewBadge": "Preview"
       },
       "instructor": {
         "title": "Instructor",
@@ -4147,6 +4150,13 @@
         "mobile": "Access on mobile and desktop",
         "certificate": "Certificate of completion"
       }
+    },
+    "preview": {
+      "badge": "Free preview",
+      "notice": "You're viewing a free preview of this course.",
+      "backToCourse": "Back to course",
+      "enrollTitle": "Ready for the full course?",
+      "enrollCta": "View course & enroll"
     }
   },
   "pricing": {

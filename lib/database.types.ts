@@ -3783,6 +3783,7 @@ export type Database = {
           embed_code: string | null
           id: number
           image: string | null
+          is_preview: boolean
           publish_at: string | null
           sequence: number | null
           status: Database["public"]["Enums"]["status"] | null
@@ -3802,6 +3803,7 @@ export type Database = {
           embed_code?: string | null
           id?: never
           image?: string | null
+          is_preview?: boolean
           publish_at?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null
@@ -3821,6 +3823,7 @@ export type Database = {
           embed_code?: string | null
           id?: never
           image?: string | null
+          is_preview?: boolean
           publish_at?: string | null
           sequence?: number | null
           status?: Database["public"]["Enums"]["status"] | null

@@ -3,6 +3,7 @@
 import type { AudioBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { IconVolume } from '@tabler/icons-react'
+import { ExpiringUrlWarning } from './expiring-url-warning'
 
 interface AudioBlockEditorProps {
   block: AudioBlock
@@ -20,6 +21,10 @@ export function AudioBlockEditor({ block, onChange }: AudioBlockEditorProps) {
         value={block.src}
         onChange={(e) => onChange({ src: e.target.value })}
         placeholder="Audio URL (e.g. https://example.com/audio.mp3)"
+      />
+      <ExpiringUrlWarning
+        url={block.src}
+        hint="Usa un enlace permanente (hosting externo)."
       />
       <Input
         value={block.title || ''}

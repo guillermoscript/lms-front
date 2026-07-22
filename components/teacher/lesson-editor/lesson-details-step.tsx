@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import {
   IconFileText,
   IconVideo,
   IconChevronRight,
   IconCalendarEvent,
+  IconEye,
 } from '@tabler/icons-react'
 import { useLessonEditor } from './lesson-editor-context'
 import { VideoCheckpointMarkers } from '../video-checkpoint-markers'
@@ -118,6 +120,27 @@ export function LessonDetailsStep() {
             {t('sequenceHint')}
           </p>
         </div>
+      </div>
+
+      {/* Free preview */}
+      <div className="mb-8">
+        <Label
+          htmlFor="is_preview"
+          className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground"
+        >
+          <IconEye className="h-3.5 w-3.5" />
+          {t('freePreviewLabel')}
+        </Label>
+        <div className="flex items-center gap-3">
+          <Switch
+            id="is_preview"
+            checked={formData.is_preview}
+            onCheckedChange={(checked) => updateField('is_preview', checked)}
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground/70">
+          {t('freePreviewHint')}
+        </p>
       </div>
 
       {/* Publish scheduling */}

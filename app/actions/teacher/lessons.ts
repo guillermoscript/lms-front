@@ -13,6 +13,7 @@ export interface LessonFormData {
   publish_at: string
   ai_task_description: string
   ai_task_instructions: string
+  is_preview: boolean
 }
 
 export async function createLesson(courseId: number, data: LessonFormData) {
@@ -35,6 +36,7 @@ export async function createLesson(courseId: number, data: LessonFormData) {
         sequence: data.sequence,
         status: data.publish ? ('published' as const) : ('draft' as const),
         publish_at: isScheduled ? data.publish_at : null,
+        is_preview: data.is_preview ?? false,
       })
       .select('id')
       .single()
@@ -83,6 +85,7 @@ export async function updateLesson(
         sequence: data.sequence,
         status: data.publish ? ('published' as const) : ('draft' as const),
         publish_at: isScheduled ? data.publish_at : null,
+        is_preview: data.is_preview ?? false,
       })
       .eq('id', lessonId)
       .eq('tenant_id', ctx.tenantId)

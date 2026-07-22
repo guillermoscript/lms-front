@@ -79,6 +79,7 @@ interface Lesson {
     title: string;
     sequence: number;
     description: string | null;
+    is_preview: boolean;
 }
 
 export default async function CourseDetailsPage(props: {
@@ -99,12 +100,6 @@ export default async function CourseDetailsPage(props: {
         .from("courses")
         .select(`
             *,
-            lessons (
-                id,
-                title,
-                sequence,
-                description
-            ),
             category:course_categories (
                 id,
                 name
@@ -118,6 +113,17 @@ export default async function CourseDetailsPage(props: {
     if (error || !course) {
         notFound();
     }
+
+    // Curriculum via admin client: the anon role can only read preview lessons
+    // (RLS), but the public page lists every published lesson's title. Metadata
+    // only — never select content here.
+    const lessonsPromise = createAdminClient()
+        .from('lessons')
+        .select('id, title, sequence, description, is_preview')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'published')
+        .order('sequence', { ascending: true });
 
     const authorPromise = course.author_id
         ? supabase
@@ -161,18 +167,18 @@ export default async function CourseDetailsPage(props: {
         })()
         : Promise.resolve(false);
 
-    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof] = await Promise.all([
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
         planCoveragePromise,
         getCourseSocialProof(courseId, tenantId),
+        lessonsPromise,
     ]);
 
     const { averageRating, reviewCount, studentCount, recentReviews } = socialProof;
 
-    // Sort lessons by sequence
-    const lessons = course.lessons?.sort((a: Lesson, b: Lesson) => a.sequence - b.sequence) || [];
+    const lessons: Lesson[] = lessonRows ?? [];
     const totalLessons = lessons.length;
     const estimatedHours = Math.floor(totalLessons * 10 / 60);
     const estimatedMinutes = (totalLessons * 10) % 60;
@@ -347,13 +353,30 @@ export default async function CourseDetailsPage(props: {
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-4 space-y-1">
                                             {lessons.map((lesson: Lesson, index: number) => (
-                                                <div key={lesson.id} className="flex items-center justify-between p-3 rounded-md hover:bg-zinc-800/50 transition-colors duration-150">
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <span className="text-xs text-zinc-400 font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
-                                                        <BookOpen className="w-4 h-4 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-                                                        <span className="text-sm text-zinc-200 truncate">{lesson.title}</span>
+                                                lesson.is_preview ? (
+                                                    <Link
+                                                        key={lesson.id}
+                                                        href={`/courses/${params.id}/lessons/${lesson.id}`}
+                                                        className="flex items-center justify-between gap-3 p-3 rounded-md hover:bg-zinc-800/50 transition-colors duration-150 group"
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <span className="text-xs text-zinc-400 font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
+                                                            <PlayCircle className="w-4 h-4 text-cyan-400 flex-shrink-0" aria-hidden="true" />
+                                                            <span className="text-sm text-zinc-200 truncate group-hover:text-cyan-400 transition-colors duration-150">{lesson.title}</span>
+                                                        </div>
+                                                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-cyan-400 border border-cyan-500/30 bg-cyan-500/10 rounded-full px-2 py-0.5">
+                                                            {t('sections.content.previewBadge')}
+                                                        </span>
+                                                    </Link>
+                                                ) : (
+                                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-md hover:bg-zinc-800/50 transition-colors duration-150">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <span className="text-xs text-zinc-400 font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
+                                                            <BookOpen className="w-4 h-4 text-zinc-400 flex-shrink-0" aria-hidden="true" />
+                                                            <span className="text-sm text-zinc-200 truncate">{lesson.title}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )
                                             ))}
                                         </AccordionContent>
                                     </AccordionItem>

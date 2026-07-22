@@ -1083,6 +1083,8 @@
         "videoUrlHint": "Pega un enlace de YouTube para insertar un video en esta lección.",
         "sequenceLabel": "Orden de Aparición",
         "sequenceHint": "Posición de esta lección en el plan de estudios.",
+        "freePreviewLabel": "Vista previa gratis",
+        "freePreviewHint": "Cualquier persona puede ver esta lección desde la página pública del curso, incluidos visitantes sin inscripción o sin iniciar sesión.",
         "aiTaskTitle": "Tarea IA",
         "aiTaskDescription": "Añade un desafío interactivo con IA que los estudiantes completen después de la lección.",
         "aiTaskPromptLabel": "Desafío para el Estudiante",
@@ -4110,7 +4112,8 @@
         "lectures": "{count} clases",
         "totalLength": "{h}h {m}m de duración total",
         "allLessons": "Todas las Lecciones",
-        "noLessons": "No hay lecciones disponibles todavía."
+        "noLessons": "No hay lecciones disponibles todavía.",
+        "previewBadge": "Vista previa"
       },
       "instructor": {
         "title": "Instructor",
@@ -4140,6 +4143,13 @@
         "mobile": "Acceso en móvil y escritorio",
         "certificate": "Certificado de finalización"
       }
+    },
+    "preview": {
+      "badge": "Vista previa gratis",
+      "notice": "Estás viendo una vista previa gratuita de este curso.",
+      "backToCourse": "Volver al curso",
+      "enrollTitle": "¿Listo para el curso completo?",
+      "enrollCta": "Ver curso e inscribirse"
     }
   },
   "pricing": {

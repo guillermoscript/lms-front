@@ -3,6 +3,7 @@
 import type { FileDownloadBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { IconFileDownload } from '@tabler/icons-react'
+import { ExpiringUrlWarning } from './expiring-url-warning'
 
 interface FileDownloadBlockEditorProps {
   block: FileDownloadBlock
@@ -20,6 +21,10 @@ export function FileDownloadBlockEditor({ block, onChange }: FileDownloadBlockEd
         value={block.url}
         onChange={(e) => onChange({ url: e.target.value })}
         placeholder="File URL (e.g. https://example.com/document.pdf)"
+      />
+      <ExpiringUrlWarning
+        url={block.url}
+        hint="Adjunta el archivo como recurso de la lección (los enlaces de recursos se regeneran automáticamente)."
       />
       <Input
         value={block.filename}

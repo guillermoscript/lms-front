@@ -27,6 +27,7 @@ export interface LessonEditorProps {
     publish_at: string | null
     ai_task_description: string | null
     ai_task_instructions: string | null
+    is_preview: boolean | null
     resources?: { id: number; file_name: string; file_size: number; mime_type: string }[]
   }
 }
@@ -42,6 +43,7 @@ export interface LessonFormData {
   publish_at: string
   ai_task_description: string
   ai_task_instructions: string
+  is_preview: boolean
 }
 
 export interface StepDefinition {
@@ -121,6 +123,7 @@ export function LessonEditorProvider({
     publish_at: initialData?.publish_at || '',
     ai_task_description: initialData?.ai_task_description || '',
     ai_task_instructions: initialData?.ai_task_instructions || '',
+    is_preview: initialData?.is_preview ?? false,
   })
 
   const updateField = useCallback(
@@ -153,6 +156,7 @@ export function LessonEditorProvider({
         publish_at: formData.publish_at,
         ai_task_description: formData.ai_task_description,
         ai_task_instructions: formData.ai_task_instructions,
+        is_preview: formData.is_preview,
       }
 
       const result = initialData
