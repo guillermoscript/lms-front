@@ -25,7 +25,9 @@ import { getTranslations } from 'next-intl/server';
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import type { Metadata } from 'next';
-import { buildPageMetadata } from '@/lib/seo';
+import { buildPageMetadata, getSeoContext } from '@/lib/seo';
+import { pickCourseProduct } from '@/lib/course-pricing';
+import { JsonLd, courseJsonLd } from '@/lib/structured-data';
 import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
 import { PlanEnrollButton } from '@/components/public/plan-enroll-button';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -83,7 +85,7 @@ interface Lesson {
 }
 
 export default async function CourseDetailsPage(props: {
-    params: Promise<{ id: string }>;
+    params: Promise<{ id: string; locale: string }>;
     searchParams: Promise<{ enroll?: string }>;
 }) {
     const [params, searchParams, t, supabase, userId, tenantId] = await Promise.all([
@@ -167,13 +169,14 @@ export default async function CourseDetailsPage(props: {
         })()
         : Promise.resolve(false);
 
-    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }] = await Promise.all([
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }, seo] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
         planCoveragePromise,
         getCourseSocialProof(courseId, tenantId),
         lessonsPromise,
+        getSeoContext(),
     ]);
 
     const { averageRating, reviewCount, studentCount, recentReviews } = socialProof;
@@ -184,14 +187,9 @@ export default async function CourseDetailsPage(props: {
     const estimatedMinutes = (totalLessons * 10) % 60;
 
     type CourseProduct = { price: number | string; currency: string | null };
-    const linkedProducts = (productCourses ?? [])
-        .map(({ product }) => product as unknown as CourseProduct | null)
-        .filter((product): product is CourseProduct => product !== null);
-    // Deterministic pick: cheapest paid product (catalog cards should agree).
-    const paidProducts = linkedProducts
-        .filter((product) => Number(product.price) > 0)
-        .sort((a, b) => Number(a.price) - Number(b.price));
-    const courseProduct = paidProducts[0] ?? linkedProducts[0];
+    const courseProduct = pickCourseProduct(
+        (productCourses ?? []).map(({ product }) => product as unknown as CourseProduct | null)
+    );
     const isFree = !courseProduct || Number(courseProduct.price) === 0;
     const priceDisplay = isFree
         ? t('pricing.free')
@@ -213,8 +211,27 @@ export default async function CourseDetailsPage(props: {
         ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(course.published_at))
         : null;
 
+    // schema.org Course rich-result markup. Offer mirrors the deterministic
+    // product pick above so the structured price always matches the page.
+    const courseUrl = `${seo.baseUrl}/${params.locale}/courses/${course.course_id}`;
+    const structuredData = courseJsonLd({
+        name: course.title,
+        description: course.description,
+        url: courseUrl,
+        image: course.thumbnail_url,
+        providerName: seo.siteName,
+        providerUrl: seo.baseUrl,
+        datePublished: course.published_at,
+        price: !isFree && courseProduct ? Number(courseProduct.price) : null,
+        currency: !isFree && courseProduct ? courseProduct.currency : null,
+        isFree,
+        averageRating,
+        reviewCount,
+    });
+
     return (
         <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans">
+            <JsonLd data={structuredData} />
             {/* Breadcrumbs */}
             <nav aria-label="Breadcrumb" className="bg-[#18181b]/50 border-b border-zinc-800">
                 <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-sm text-zinc-400">

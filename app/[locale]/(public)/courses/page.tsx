@@ -6,7 +6,9 @@ import { CourseSearchBar } from "@/components/shared/course-search-bar";
 import { Search } from "lucide-react";
 import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
-import { buildPageMetadata } from '@/lib/seo';
+import { buildPageMetadata, getSeoContext } from '@/lib/seo';
+import { pickCourseProduct, type LinkedProduct } from '@/lib/course-pricing';
+import { JsonLd, itemListJsonLd } from '@/lib/structured-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +19,13 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function CoursesPage({
+    params,
     searchParams,
 }: {
+    params: Promise<{ locale: string }>
     searchParams: Promise<{ search?: string; category?: string }>
 }) {
+    const { locale } = await params;
     const { search, category } = await searchParams;
     const t = await getTranslations('coursesCatalog');
     const tSearch = await getTranslations('courseSearch');
@@ -77,7 +82,7 @@ export default async function CoursesPage({
 
     // Fetch product prices for all courses in one query
     const courseIds = courses?.map(c => c.course_id) || [];
-    let productMap: Record<number, { price: number; currency: string }> = {};
+    const productMap: Record<number, { price: number; currency: string | null }> = {};
 
     // Published-lesson counts via admin client: the anon role can only read
     // preview lessons (RLS), so a nested select would undercount for visitors.
@@ -101,12 +106,19 @@ export default async function CoursesPage({
             .in('course_id', courseIds);
 
         if (productCourses) {
+            const productsByCourse: Record<number, LinkedProduct[]> = {};
             for (const pc of productCourses) {
-                const product = pc.product as any;
-                if (product && !productMap[pc.course_id]) {
-                    productMap[pc.course_id] = {
-                        price: parseFloat(product.price),
-                        currency: product.currency
+                const product = pc.product as unknown as LinkedProduct | null;
+                if (product) (productsByCourse[pc.course_id] ??= []).push(product);
+            }
+            // Same deterministic pick as the course detail page (cheapest paid
+            // product), so cards and detail never show different prices.
+            for (const [courseId, products] of Object.entries(productsByCourse)) {
+                const picked = pickCourseProduct(products);
+                if (picked) {
+                    productMap[Number(courseId)] = {
+                        price: Number(picked.price),
+                        currency: picked.currency
                     };
                 }
             }
@@ -132,8 +144,19 @@ export default async function CoursesPage({
 
     const hasActiveFilters = sanitizedSearch || category;
 
+    // ItemList rich-result markup for the unfiltered catalog only — filtered
+    // views are ephemeral search results, not the canonical course list.
+    const { baseUrl } = await getSeoContext();
+    const catalogStructuredData = !hasActiveFilters && enrichedCourses.length > 0
+        ? itemListJsonLd(enrichedCourses.map((course) => ({
+            name: course.title,
+            url: `${baseUrl}/${locale}/courses/${course.course_id}`,
+        })))
+        : null;
+
     return (
         <div className="min-h-screen bg-[#09090b] text-zinc-100">
+            {catalogStructuredData && <JsonLd data={catalogStructuredData} />}
             <div className="container mx-auto py-16 px-4 md:px-8">
                 {/* Header */}
                 <div className="mb-12 space-y-4 max-w-2xl">

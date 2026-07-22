@@ -35,7 +35,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SchoolLandingPage } from "@/components/public/school-landing-page";
 import type { Metadata } from "next";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildPageMetadata, getRequestBaseUrl } from "@/lib/seo";
+import { JsonLd, organizationJsonLd } from "@/lib/structured-data";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 import { getLandingData } from "@/lib/puck/utils/landing-data";
 
@@ -52,8 +53,13 @@ export default async function LandingPage() {
   // Branch to school landing page on subdomains
   const tenantId = await getCurrentTenantId()
   if (tenantId !== DEFAULT_TENANT_ID) {
-    const [tenant, supabase] = await Promise.all([getCurrentTenant(), createClient()])
+    const [tenant, supabase, baseUrl] = await Promise.all([getCurrentTenant(), createClient(), getRequestBaseUrl()])
     if (tenant) {
+      const orgStructuredData = organizationJsonLd({
+        name: tenant.name,
+        url: baseUrl,
+        logo: tenant.logo_url,
+      })
       // Check if tenant has a paid plan with a custom active landing page
       if (PAID_PLANS.includes(tenant.plan)) {
         const adminClient = createAdminClient()
@@ -66,7 +72,12 @@ export default async function LandingPage() {
           .maybeSingle()
         if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
           const landingData = await getLandingData(tenantId)
-          return <PuckPageRenderer data={customPage.puck_data as any} landingData={landingData} />
+          return (
+            <>
+              <JsonLd data={orgStructuredData} />
+              <PuckPageRenderer data={customPage.puck_data as any} landingData={landingData} />
+            </>
+          )
         }
       }
 
@@ -78,7 +89,12 @@ export default async function LandingPage() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(9)
-      return <SchoolLandingPage tenant={tenant} products={products ?? []} />
+      return (
+        <>
+          <JsonLd data={orgStructuredData} />
+          <SchoolLandingPage tenant={tenant} products={products ?? []} />
+        </>
+      )
     }
   }
 
