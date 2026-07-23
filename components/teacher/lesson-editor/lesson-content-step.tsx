@@ -9,6 +9,7 @@ import {
 import { BlockEditor } from '../block-editor'
 import MarkdownEditor from '../markdown-editor'
 import { cn } from '@/lib/utils'
+import { GenerateQuestionsDialog } from './generate-questions-dialog'
 import { useLessonEditor } from './lesson-editor-context'
 
 export function LessonContentStep() {
@@ -33,6 +34,7 @@ export function LessonContentStep() {
         </div>
 
         <div className="flex items-center gap-2">
+          <GenerateQuestionsDialog />
           <span className="text-xs text-muted-foreground/50 mr-1">
             {t('editorMode')}
           </span>
