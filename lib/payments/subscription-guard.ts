@@ -30,6 +30,7 @@ export interface ConflictingSubscription {
   plan_id: number
   plan_name: string | null
   end_date: string | null
+  payment_provider: string | null
 }
 
 /**
@@ -47,7 +48,7 @@ export async function findConflictingSubscription(
 ): Promise<ConflictingSubscription | null> {
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('subscription_id, plan_id, end_date, plan:plans(plan_name)')
+    .select('subscription_id, plan_id, end_date, payment_provider, plan:plans(plan_name)')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .in('subscription_status', BLOCKING_SUBSCRIPTION_STATUSES)
@@ -67,5 +68,6 @@ export async function findConflictingSubscription(
     plan_id: conflict.plan_id,
     plan_name: plan?.plan_name ?? null,
     end_date: conflict.end_date,
+    payment_provider: conflict.payment_provider,
   }
 }

@@ -4260,6 +4260,7 @@
       "descriptionWithPlan": "Tu suscripción a {planName} sigue activa. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
       "description": "Ya tienes una suscripción activa en esta escuela. Suscribirte a otro plan no la reemplazaría — se te cobrarían ambos planes al mismo tiempo.",
       "howToSwitch": "Para cambiar de plan, contacta a tu escuela y pide que cancelen tu plan actual primero.",
+      "howToSwitchSelfService": "Puedes cambiar a este plan tú mismo — no necesitas contactar a tu escuela.",
       "viewBilling": "Ver mi facturación",
       "browseCourses": "Explorar cursos"
     },

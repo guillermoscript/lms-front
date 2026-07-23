@@ -10,6 +10,7 @@ import { getSessionUser } from '@/lib/supabase/tenant'
 import { getSolanaSettlementOptions } from "@/app/actions/admin/settings";
 import { findConflictingSubscription } from "@/lib/payments/subscription-guard";
 import { SubscriptionConflictNotice } from "@/components/public/subscription-conflict-notice";
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types";
 
 interface SearchParams {
     courseId?: string;
@@ -137,13 +138,27 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 planId: dbPlan.plan_id,
             });
             if (conflict) {
+                // Self-service switch (#463): only when the current subscription's
+                // provider supports an automated plan change AND the target plan
+                // uses the same provider — cross-provider switches still need admin
+                // help, so they keep the "contact your school" copy.
+                const currentProvider = (conflict.payment_provider || 'manual') as PaymentProvider;
+                const caps = PROVIDER_CAPABILITIES[currentProvider];
+                const canSwitchPlan =
+                    !!caps &&
+                    (caps.supportsPlanChange || !caps.supportsNativeSubscriptions) &&
+                    (!dbPlan.payment_provider || dbPlan.payment_provider === currentProvider);
                 return (
                     <div className="min-h-screen bg-background">
                         <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
                             <div className="mb-8 text-center">
                                 <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
                             </div>
-                            <SubscriptionConflictNotice currentPlanName={conflict.plan_name} />
+                            <SubscriptionConflictNotice
+                                currentPlanName={conflict.plan_name}
+                                targetPlanId={dbPlan.plan_id}
+                                canSwitchPlan={canSwitchPlan}
+                            />
                         </div>
                     </div>
                 );
