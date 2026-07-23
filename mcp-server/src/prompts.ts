@@ -222,6 +222,49 @@ Steps:
       )
   );
 
+  // ── generate-lesson-questions (Epic #388, #398) ────────────────────────────
+  // Teacher-facing: lesson content → AI-drafted retrieval questions as draft
+  // exercises. MCP parity with the in-app "Generate questions" editor action.
+  // No prompt-level role gate exists (prompts are not filtered by role);
+  // enforcement rides on the tools: lms_get_lesson / lms_create_exercise are
+  // teacher/admin-gated, so a student invoking this prompt cannot save anything.
+  server.prompt(
+    {
+      name: "generate-lesson-questions",
+      description:
+        "Teacher workflow: draft 5-10 retrieval-practice questions from a lesson's content (short-answer/fill-in biased), created as draft exercises linked to the lesson for review — never auto-published.",
+      schema: z.object({
+        lesson_id: z.string().describe("The lesson to generate questions from"),
+        count: z
+          .string()
+          .optional()
+          .describe("How many questions to draft (default 6, max 10)"),
+        focus: z
+          .string()
+          .optional()
+          .describe("Optional concept or section of the lesson to focus on"),
+      }),
+    },
+    async ({ lesson_id, count, focus }) =>
+      text(
+        `Draft ${count ?? "6"} retrieval-practice questions from lesson ${lesson_id}${focus ? `, focused on: ${focus}` : ""}, as draft exercises for my review.
+
+Steps:
+1. Call \`lms_get_lesson\` (lesson_id ${lesson_id}) and read its \`content\` (MDX) and course_id.
+2. Author the questions from that content, following ALL of these rules:
+   - Every question must be answerable from the lesson content alone — never require outside knowledge.
+   - One concept per question; no compound questions.
+   - At least half must be generative recall (short-answer or fill-in-the-blank), not recognition — use multiple choice only where distractors genuinely discriminate, and make distractors plausible.
+   - Write everything in the same language as the lesson content.
+3. Create each question with \`lms_create_exercise\` — do NOT set any status; they land as drafts automatically:
+   - course_id and lesson_id from step 1, a short title, and self-contained instructions containing the question.
+   - exercise_type: "essay" for short-answer, "fill_in_the_blank", or "multiple_choice".
+   - Put grading guidance in exercise_config: evaluation_criteria (what a passing answer must show — concrete and checkable) plus expected_keywords for short-answer; questions[{id, type, prompt, acceptedAnswers|options+correctIndex, explanation}] for fill-in/multiple-choice; passing_score 70.
+4. Summarize what you created: each new exercise ID, title, kind, and difficulty.
+5. Remind me the drafts are invisible to students until I review and publish them in the app — do not publish anything yourself.`
+      )
+  );
+
   // ═══ AI-tutor prompts (Epic #348) — the HOST LLM is the tutor and grader ═══
   // Shared guardrails every tutor prompt embeds:
   const TUTOR_GUARDRAILS = `**Tutor guardrails (always, non-negotiable — teacher boundaries may tighten these, never loosen them):**
