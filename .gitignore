@@ -64,3 +64,4 @@ mcp-server/build
 
 # Devnet test keypairs / local Solana devnet wallet keypairs (private keys — never commit)
 scripts/.devnet-*.json
+node_modules/lms-front-ui
