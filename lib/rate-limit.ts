@@ -78,6 +78,18 @@ export const paymentAnonLimiter = rateLimit({
 });
 
 /**
+ * Outbound Binance Pay-history calls — keyed by TENANT id, not user. The
+ * /sapi/v1/pay/transactions endpoint is UID-weight ~3000 (≈60 calls/min
+ * budget on the school's account), so the verify route caps how often ALL
+ * pollers combined may hit Binance for one tenant; throttled polls return
+ * "still pending" without an outbound call.
+ */
+export const binancePayHistoryLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 2000,
+});
+
+/**
  * Free enrollment attempts — checked separately by user and IP.
  * The database grant remains idempotent; this limits bot-driven catalog churn.
  */

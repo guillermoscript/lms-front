@@ -22,6 +22,7 @@ import {
     IconWallet,
     IconAlertTriangle,
     IconQrcode,
+    IconCopy,
 } from '@tabler/icons-react';
 
 // Minimal shape of the injected Phantom provider we rely on (sign-only flow).
@@ -91,6 +92,10 @@ export function CheckoutForm({
     // server-side (subscribe-tx), so the poll body stays { transactionId }.
     const isQrProvider = paymentProvider === 'solana' || paymentProvider === 'solana_subs';
     const isSolanaSubs = paymentProvider === 'solana_subs';
+    // Binance Pay (personal): the buyer manually transfers USDT to the school's
+    // Pay ID with a note code, then we poll a verify endpoint. No redirect, no
+    // QR-request URL — the checkout returns transfer instructions to display.
+    const isInstructionsProvider = paymentProvider === 'binance_personal';
     // One-time Solana settlement token choice (USDC default; SOL if the school
     // opted in). Both honor the USD price — USDC 1:1, SOL converted at the live
     // rate at checkout. solana_subs is always USDC, so no choice there.
@@ -99,6 +104,16 @@ export function CheckoutForm({
         solCurrencyOpts[0] ?? 'usdc',
     );
     const [solanaQr, setSolanaQr] = useState<string | null>(null);
+    // Binance-personal transfer instructions + QR of the Pay ID string, plus a
+    // flag set when a poll reports a colliding payment awaiting admin review.
+    const [instructions, setInstructions] = useState<{
+        payId: string;
+        amount: number;
+        currency: string;
+        code: string;
+    } | null>(null);
+    const [instructionsQr, setInstructionsQr] = useState<string | null>(null);
+    const [instructionsAmbiguous, setInstructionsAmbiguous] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // In-app desktop wallet ("Pay with Phantom"). The QR is for off-device /
@@ -149,19 +164,37 @@ export function CheckoutForm({
         router.push(`/checkout/success?transactionId=${transactionId}`);
     };
 
+    const copyText = async (value: string) => {
+        try {
+            await navigator.clipboard.writeText(value);
+            toast.success(t('toasts.copied'));
+        } catch {
+            toast.error(t('toasts.copyFailed'));
+        }
+    };
+
     // Poll /verify until the on-chain transfer/subscription is confirmed. The
     // verify endpoint flips the transaction → successful (trigger creates the
     // subscription + entitlements) and, for solana_subs, fires the first charge.
-    const startVerifyPoll = (txId: number, subscriber?: string) => {
+    const startVerifyPoll = (
+        txId: number,
+        subscriber?: string,
+        opts?: { endpoint?: string; interval?: number },
+    ) => {
+        const endpoint = opts?.endpoint ?? '/api/payments/solana/verify';
+        const interval = opts?.interval ?? 3000;
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
             try {
-                const vr = await fetch('/api/payments/solana/verify', {
+                const vr = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ transactionId: txId, subscriber }),
                 });
                 const vd = await vr.json();
+                // Binance-personal: a colliding payment needs school review; surface
+                // it but keep polling (admin resolution flips the tx → successful).
+                if (vd.ambiguous) setInstructionsAmbiguous(true);
                 if (vd.confirmed) {
                     if (pollRef.current) clearInterval(pollRef.current);
                     checkoutDone(txId);
@@ -169,7 +202,7 @@ export function CheckoutForm({
             } catch {
                 /* transient poll error — keep polling */
             }
-        }, 3000);
+        }, interval);
     };
 
     // Create the pending transaction + provider checkout session. Returns the
@@ -186,13 +219,18 @@ export function CheckoutForm({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Checkout failed');
-        return data as { kind: string; url: string | null; transactionId: number };
+        return data as {
+            kind: string;
+            url: string | null;
+            transactionId: number;
+            instructions?: { payId: string; amount: number; currency: string; code: string };
+        };
     };
 
     // Real provider checkout (Lemon Squeezy redirect / Solana QR). Returns true
     // if it handled the flow, false to fall back to the inline/mock path.
     const startProviderCheckout = async (): Promise<boolean> => {
-        if (!isRedirectProvider && !isQrProvider) return false;
+        if (!isRedirectProvider && !isQrProvider && !isInstructionsProvider) return false;
 
         const data = await createCheckoutSession();
 
@@ -208,6 +246,20 @@ export function CheckoutForm({
             const dataUrl = await QRCode.toDataURL(data.url, { width: 240, margin: 1 });
             setSolanaQr(dataUrl);
             startVerifyPoll(data.transactionId);
+            return true;
+        }
+
+        if (data.kind === 'instructions' && data.instructions) {
+            // Binance Pay (personal) — show the school's Pay ID + note code, render
+            // a QR of the Pay ID, and poll the verify endpoint every 10s (Binance
+            // API weight limits a tighter cadence) until the transfer is matched.
+            const dataUrl = await QRCode.toDataURL(data.instructions.payId, { width: 240, margin: 1 });
+            setInstructions(data.instructions);
+            setInstructionsQr(dataUrl);
+            startVerifyPoll(data.transactionId, undefined, {
+                endpoint: '/api/payments/binance-personal/verify',
+                interval: 10000,
+            });
             return true;
         }
 
@@ -309,9 +361,9 @@ export function CheckoutForm({
                 if (paymentMethod === 'card') {
                     // Lemon Squeezy / Solana go through the real provider checkout;
                     // everything else uses the existing inline (mock) enrollment.
-                    if (isRedirectProvider || isQrProvider) {
+                    if (isRedirectProvider || isQrProvider || isInstructionsProvider) {
                         const handled = await startProviderCheckout();
-                        if (handled) return; // redirect leaves the page / QR keeps loading
+                        if (handled) return; // redirect leaves the page / QR or instructions keep loading
                     }
                     const result = await enrollUser(courseId, planId, 'mock_test');
                     toast.success(t('toasts.paymentSuccess'));
@@ -409,18 +461,87 @@ export function CheckoutForm({
         );
     }
 
-    // ─── Provider checkout (Lemon Squeezy redirect / Solana QR + Phantom) ───
-    if (isRedirectProvider || isQrProvider) {
+    // ─── Provider checkout (Lemon Squeezy redirect / Solana QR + Phantom /
+    //     Binance-personal transfer instructions) ───
+    if (isRedirectProvider || isQrProvider || isInstructionsProvider) {
         // Subscriptions require the in-app wallet (two signed txs); a QR can't.
         const subsNeedsWallet = isSolanaSubs && !phantomAvailable;
-        const showActions = !solanaQr && !phantomBusy;
+        const showActions = !solanaQr && !instructions && !phantomBusy;
 
         return (
             <div className="rounded-xl border border-border bg-card">
                 {orderSummary}
 
                 <div className="px-6 py-6 sm:px-8">
-                    {solanaQr ? (
+                    {instructions ? (
+                        <div className="flex flex-col items-center gap-4 text-center">
+                            <p className="text-sm font-medium">{t('payment.binancePersonalTitle')}</p>
+                            {instructionsQr && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                    src={instructionsQr}
+                                    alt="Binance Pay ID QR"
+                                    width={240}
+                                    height={240}
+                                    className="rounded-lg border border-border"
+                                />
+                            )}
+                            <div className="w-full space-y-3 text-left">
+                                {/* School Pay ID */}
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">{t('payment.binancePersonalPayId')}</p>
+                                    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                                        <span className="truncate font-mono text-sm">{instructions.payId}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 shrink-0"
+                                            aria-label={t('payment.binancePersonalCopyPayId')}
+                                            onClick={() => copyText(instructions.payId)}
+                                        >
+                                            <IconCopy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                {/* Exact amount */}
+                                <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                                    <span className="text-xs font-medium text-muted-foreground">{t('payment.binancePersonalAmount')}</span>
+                                    <span className="font-semibold tabular-nums">
+                                        {instructions.amount} {instructions.currency}
+                                    </span>
+                                </div>
+                                {/* Note code — prominent + copyable */}
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">{t('payment.binancePersonalCode')}</p>
+                                    <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5">
+                                        <span className="truncate font-mono text-base font-bold tracking-wide text-foreground">{instructions.code}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 shrink-0"
+                                            aria-label={t('payment.binancePersonalCopyCode')}
+                                            onClick={() => copyText(instructions.code)}
+                                        >
+                                            <IconCopy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed text-muted-foreground">{t('payment.binancePersonalNote')}</p>
+                                </div>
+                            </div>
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                                {t('payment.binancePersonalWaiting')}
+                            </p>
+                            {instructionsAmbiguous && (
+                                <p className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                                    <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                    {t('payment.binancePersonalReview')}
+                                </p>
+                            )}
+                        </div>
+                    ) : solanaQr ? (
                         <div className="flex flex-col items-center gap-3 text-center">
                             <p className="text-sm font-medium">{t('payment.solanaScan')}</p>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -445,7 +566,11 @@ export function CheckoutForm({
                     ) : (
                         <div className="space-y-3">
                             <p className="rounded-lg bg-muted/50 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                                {isQrProvider ? t('payment.solanaInstructions') : t('payment.redirectInstructions')}
+                                {isInstructionsProvider
+                                    ? t('payment.binancePersonalInstructions')
+                                    : isQrProvider
+                                      ? t('payment.solanaInstructions')
+                                      : t('payment.redirectInstructions')}
                             </p>
                             {/* One-time Solana: choose settlement token when the school offers both. */}
                             {paymentProvider === 'solana' && solCurrencyOpts.length > 1 && (
@@ -527,7 +652,11 @@ export function CheckoutForm({
                             /* Lemon Squeezy redirect, or one-time Solana via QR. */
                             <Button className="w-full" onClick={handleEnroll} disabled={isPending}>
                                 {isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isPending ? t('payment.processing') : t('payment.button')}
+                                {isPending
+                                    ? t('payment.processing')
+                                    : isInstructionsProvider
+                                      ? t('payment.binancePersonalContinue')
+                                      : t('payment.button')}
                             </Button>
                         )}
                         <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">

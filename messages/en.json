@@ -294,7 +294,13 @@
             "error": "Could not revoke the delegation. Please try again."
           },
           "empty": "You don't have an active subscription.",
-          "status": { "active": "Active", "renewed": "Renewed", "canceled": "Canceled", "expired": "Expired", "past_due": "Past due" },
+          "status": {
+            "active": "Active",
+            "renewed": "Renewed",
+            "canceled": "Canceled",
+            "expired": "Expired",
+            "past_due": "Past due"
+          },
           "changePlan": {
             "button": "Change plan",
             "title": "Change your plan",
@@ -313,8 +319,21 @@
           "sectionTitle": "Purchase History",
           "empty": "No purchases yet.",
           "unknownItem": "Unknown item",
-          "table": { "item": "Item", "provider": "Provider", "date": "Date", "status": "Status", "amount": "Amount" },
-          "status": { "successful": "Paid", "pending": "Pending", "failed": "Failed", "canceled": "Canceled", "refunded": "Refunded", "archived": "Archived" },
+          "table": {
+            "item": "Item",
+            "provider": "Provider",
+            "date": "Date",
+            "status": "Status",
+            "amount": "Amount"
+          },
+          "status": {
+            "successful": "Paid",
+            "pending": "Pending",
+            "failed": "Failed",
+            "canceled": "Canceled",
+            "refunded": "Refunded",
+            "archived": "Archived"
+          },
           "verifyNow": "Verify now",
           "verifyConfirmed": "Payment confirmed — access granted.",
           "verifyPending": "Payment not found on-chain yet. Try again in a moment.",
@@ -322,13 +341,26 @@
         },
         "offline": {
           "sectionTitle": "Offline / Manual Payments",
-          "table": { "product": "Product", "date": "Date", "status": "Status", "amount": "Amount", "invoice": "Invoice" },
+          "table": {
+            "product": "Product",
+            "date": "Date",
+            "status": "Status",
+            "amount": "Amount",
+            "invoice": "Invoice"
+          },
           "downloadInvoice": "Download",
           "downloadInvoiceLabel": "Download invoice {number}",
           "managePaymentsNote": "Need to upload proof or check details?",
           "managePaymentsLink": "Go to Payments"
         },
-        "provider": { "stripe": "Stripe", "solana": "Solana", "solana_subs": "Solana", "manual": "Manual", "paypal": "PayPal", "lemonsqueezy": "Lemon Squeezy" }
+        "provider": {
+          "stripe": "Stripe",
+          "solana": "Solana",
+          "solana_subs": "Solana",
+          "manual": "Manual",
+          "paypal": "PayPal",
+          "lemonsqueezy": "Lemon Squeezy"
+        }
       },
       "notifications": {
         "title": "Notifications",
@@ -1581,10 +1613,21 @@
           "pendingCount": "Pending / processing",
           "pendingCountDesc": "Payouts not yet completed"
         },
-        "status": { "paid": "Paid", "processing": "Processing", "pending": "Pending", "failed": "Failed" },
+        "status": {
+          "paid": "Paid",
+          "processing": "Processing",
+          "pending": "Pending",
+          "failed": "Failed"
+        },
         "table": {
           "title": "Payout history",
-          "headers": { "period": "Period", "amount": "Amount", "status": "Status", "paidAt": "Paid at", "stripeRef": "Stripe ref" }
+          "headers": {
+            "period": "Period",
+            "amount": "Amount",
+            "status": "Status",
+            "paidAt": "Paid at",
+            "stripeRef": "Stripe ref"
+          }
         },
         "empty": {
           "title": "No payouts yet",
@@ -1596,11 +1639,25 @@
         "description": "Invoice documents for offline and manual payments.",
         "accessDenied": "Access denied",
         "accessDeniedDesc": "You must be a school admin to view this page.",
-        "note": { "text": "Card and Solana purchases are tracked under", "transactionsLink": "Transactions" },
-        "status": { "paid": "Paid", "pending": "Pending", "cancelled": "Cancelled" },
+        "note": {
+          "text": "Card and Solana purchases are tracked under",
+          "transactionsLink": "Transactions"
+        },
+        "status": {
+          "paid": "Paid",
+          "pending": "Pending",
+          "cancelled": "Cancelled"
+        },
         "table": {
           "title": "Invoice registry",
-          "headers": { "invoiceNumber": "Invoice #", "item": "Item", "amount": "Amount", "status": "Status", "date": "Date", "actions": "Actions" },
+          "headers": {
+            "invoiceNumber": "Invoice #",
+            "item": "Item",
+            "amount": "Amount",
+            "status": "Status",
+            "date": "Date",
+            "actions": "Actions"
+          },
           "unknownProduct": "Unknown product",
           "viewInvoice": "View invoice"
         },
@@ -1771,7 +1828,7 @@
           "configureSchoolDesc": "Set your school name and basic details.",
           "configureSchoolTime": "~1 min",
           "brandSchool": "Brand your school",
-          "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional \u2014 the defaults look great.",
+          "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional — the defaults look great.",
           "brandSchoolTime": "~2 min",
           "connectPayments": "Set up how you get paid",
           "connectPaymentsDesc": "Choose manual payments, Stripe, or another available provider.",
@@ -2182,6 +2239,32 @@
           "confirmations": {
             "enroll": "Are you sure you want to enroll this student? This will grant them access to the courses."
           }
+        },
+        "binancePersonal": {
+          "title": "Pending Binance Pay (personal) payments",
+          "description": "Payments where the buyer's transfer couldn't be matched automatically. Verify the transfer in your Binance app, then confirm to grant access — or cancel if no payment arrived.",
+          "table": {
+            "headers": {
+              "code": "Note code",
+              "student": "Student",
+              "amount": "Amount",
+              "date": "Date",
+              "actions": "Actions"
+            },
+            "unknownStudent": "Unknown student",
+            "confirm": "Confirm",
+            "cancel": "Cancel"
+          },
+          "confirmations": {
+            "confirm": "Confirm this payment? This will grant the student access. Only do this after verifying the transfer in your Binance app.",
+            "cancel": "Cancel this payment? Do this only if no transfer arrived."
+          },
+          "toasts": {
+            "confirmSuccess": "Payment confirmed. The student now has access.",
+            "confirmError": "Failed to confirm payment.",
+            "cancelSuccess": "Payment canceled.",
+            "cancelError": "Failed to cancel payment."
+          }
         }
       },
       "analytics": {
@@ -2537,6 +2620,10 @@
           "personalPreferences": {
             "title": "Personal preferences",
             "description": "These settings apply only to your account, not the whole school."
+          },
+          "binancePersonal": {
+            "title": "Binance Pay (personal account)",
+            "description": "Configure your Binance Pay ID and a read-only API key so students can pay you directly through Binance."
           }
         },
         "form": {
@@ -2606,7 +2693,9 @@
             "approvalHint": "Require admin approval before processing payments",
             "manualInstructions": "Manual / Offline Payment Instructions",
             "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
-            "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide."
+            "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide.",
+            "binancePersonal": "Binance Pay (personal account)",
+            "binancePersonalHint": "Accept Binance Pay on your own personal account using your Pay ID and a read-only API key."
           },
           "branding": {
             "logoUrl": "Logo URL",
@@ -2644,6 +2733,22 @@
             "saving": "Saving...",
             "success": "Solana wallet saved",
             "error": "Failed to save Solana wallet"
+          },
+          "binancePersonal": {
+            "keyWarning": "Use a READ-ONLY API key with withdrawals disabled and IP restrictions enabled. Never paste a key that can move funds.",
+            "payIdLabel": "Binance Pay ID",
+            "payIdPlaceholder": "e.g. 123456789",
+            "payIdHint": "Your Binance Pay ID — students send payments to this account.",
+            "apiKeyLabel": "API Key",
+            "apiKeyPlaceholder": "Read-only API key",
+            "apiSecretLabel": "API Secret",
+            "apiSecretPlaceholder": "API secret",
+            "unchangedPlaceholder": "••••••••  (unchanged)",
+            "credentialsSaved": "Credentials saved. Leave blank to keep them, or enter new values to replace.",
+            "success": "Binance Pay credentials saved",
+            "error": "Failed to save Binance Pay credentials",
+            "saving": "Saving...",
+            "save": "Save"
           }
         }
       },
@@ -2972,8 +3077,10 @@
             "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
             "binance": "Students pay each period in crypto (USDT) via Binance Pay; the subscription renews when they pay again and lapses otherwise.",
             "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first.",
-            "solana_subs": "On-chain recurring subscription auto-charged from the student wallet. Set your Solana wallet in Settings → Payment first."
-          }
+            "solana_subs": "On-chain recurring subscription auto-charged from the student wallet. Set your Solana wallet in Settings → Payment first.",
+            "binance_personal": "Students pay each period by transferring USDT to your Binance Pay ID with a note code; the subscription renews when they pay again. Set your Binance Pay ID in Settings → Payment first."
+          },
+          "methodBinancePersonal": "Binance Pay ID (Manual USDT Transfer)"
         }
       },
       "products": {
@@ -3110,8 +3217,10 @@
             "paypal": "Students can pay online with PayPal.",
             "binance": "Students pay in crypto (USDT) via Binance Pay's hosted checkout. Enable Binance Pay in Settings → Payment first.",
             "lemonsqueezy": "Lemon Squeezy hosts checkout and is the merchant of record (handles tax). Create the product and variant in your Lemon Squeezy dashboard, then paste the variant id below.",
-            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first."
-          }
+            "solana": "Students pay in crypto to your Solana wallet via a QR code. Set your wallet in Settings → Payment first.",
+            "binance_personal": "Students transfer USDT directly to your Binance Pay ID with a note code; we poll Binance to confirm each payment. Set your Binance Pay ID in Settings → Payment first."
+          },
+          "methodBinancePersonal": "Binance Pay ID (Manual USDT Transfer)"
         },
         "actions": {
           "archiveTitle": "Archive product",
@@ -4337,7 +4446,18 @@
       "processing": "Processing...",
       "cardUnavailable": "Card payments aren't available for this item right now. Please use another payment method.",
       "sandboxButton": "Pay & Enroll (Test)",
-      "sandboxHint": "Sandbox test checkout — skips real payment (development only)."
+      "sandboxHint": "Sandbox test checkout — skips real payment (development only).",
+      "binancePersonalInstructions": "Pay with Binance Pay. Continue to see the school's Pay ID and the code you must include in your transfer note.",
+      "binancePersonalTitle": "Send USDT via Binance Pay",
+      "binancePersonalPayId": "School Binance Pay ID",
+      "binancePersonalCopyPayId": "Copy Pay ID",
+      "binancePersonalAmount": "Amount to send",
+      "binancePersonalCode": "Payment code",
+      "binancePersonalCopyCode": "Copy payment code",
+      "binancePersonalNote": "Include this code in the transfer note so we can match your payment.",
+      "binancePersonalWaiting": "Waiting for your transfer to be confirmed…",
+      "binancePersonalReview": "Another payment matched this amount, so the school needs to confirm yours manually. This can take a little longer — keep this page open.",
+      "binancePersonalContinue": "Continue to payment instructions"
     },
     "stripe": {
       "preparing": "Preparing secure payment…",
@@ -4356,7 +4476,9 @@
       "success": "Successfully enrolled!",
       "paymentSuccess": "Payment successful! You are now enrolled.",
       "requestSent": "Payment request sent! Check your email for instructions.",
-      "error": "Error: {message}"
+      "error": "Error: {message}",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Couldn't copy. Please copy it manually."
     },
     "manual": {
       "title": "Manual Payment Checkout",

@@ -35,6 +35,7 @@ const supportedPaymentProviders = new Set<ProductCreationPaymentProvider>([
   'stripe',
   'paypal',
   'binance',
+  'binance_personal',
 ])
 
 function getSupportedPaymentProvider(value: string | null): ProductCreationPaymentProvider {

@@ -3,7 +3,7 @@
  * Defines interfaces for multiple payment providers (Stripe, PayPal, Binance, etc.)
  */
 
-export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'manual' | 'lemonsqueezy' | 'solana' | 'solana_subs'
+export type PaymentProvider = 'stripe' | 'paypal' | 'binance' | 'binance_personal' | 'manual' | 'lemonsqueezy' | 'solana' | 'solana_subs'
 
 export type Currency = 'usd' | 'eur' | 'btc' | 'eth' | 'usdt'
 
@@ -224,6 +224,22 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     createsCatalog: false,
     supportsPlanChange: false,
   },
+  // Binance Pay on a PERSONAL (non-merchant, no-KYB) account. No hosted
+  // checkout and no webhooks: the buyer transfers manually to the school's
+  // Pay ID and we confirm by polling the account's read-only Pay history
+  // (GET /sapi/v1/pay/transactions) — same poll-confirmed model as Solana
+  // one-time. Refunds are manual transfers (personal accounts have no refund
+  // API).
+  binance_personal: {
+    supportsNativeSubscriptions: false,
+    emitsRenewalWebhooks: false,
+    supportsHostedCheckout: false,
+    supportsRefunds: false,
+    isMerchantOfRecord: false,
+    selfManagedPeriod: true,
+    createsCatalog: false,
+    supportsPlanChange: false,
+  },
 }
 
 /** Params for starting a payment (the missing "start a payment" abstraction). */
@@ -269,9 +285,12 @@ export interface CheckoutSession {
    * - 'redirect'      → send the buyer to `url` (LS, MercadoPago, PayPal)
    * - 'client_secret' → confirm client-side (Stripe PaymentIntent / Elements)
    * - 'qr'            → render `url` as a QR / payment request (Solana Pay)
+   * - 'instructions'  → show `instructions` (manual transfer to a receiving
+   *                     account + note code) and poll a verify endpoint
+   *                     (binance_personal)
    * - 'offline'       → no online step; a payment_request row drives it (cash)
    */
-  kind: 'redirect' | 'client_secret' | 'qr' | 'offline'
+  kind: 'redirect' | 'client_secret' | 'qr' | 'instructions' | 'offline'
   url?: string
   clientSecret?: string
   /** Our correlation id (echo of CreateCheckoutParams.reference). */
@@ -279,6 +298,16 @@ export interface CheckoutSession {
   /** Provider's own session/intent id, if any. */
   providerRef?: string
   expiresAt?: Date
+  /** Manual-transfer display payload (kind: 'instructions'). */
+  instructions?: {
+    /** Receiving account the buyer transfers to (e.g. Binance Pay ID). */
+    payId: string
+    /** Exact amount to send, in `currency`. */
+    amount: number
+    currency: string
+    /** Code the buyer must put in the transfer note (= our transaction id). */
+    code: string
+  }
 }
 
 /** Params for ensuring a stored customer (card-on-file providers only). */

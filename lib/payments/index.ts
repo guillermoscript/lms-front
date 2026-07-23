@@ -7,6 +7,7 @@ import { IPaymentProvider, PaymentProvider } from './types'
 import { StripePaymentProvider } from './stripe-provider'
 import { PayPalPaymentProvider } from './paypal-provider'
 import { BinancePayProvider } from './binance-provider'
+import { BinancePersonalProvider } from './binance-personal-provider'
 import { ManualPaymentProvider } from './manual-provider'
 import { LemonSqueezyProvider } from './lemonsqueezy-provider'
 import { SolanaProvider } from './solana-provider'
@@ -51,6 +52,14 @@ export function getPaymentProvider(
       }
       return new BinancePayProvider(binanceKey, binanceSecret)
     }
+
+    case 'binance_personal':
+      // Per-TENANT credentials (the school's own read-only API key, decrypted
+      // from tenant_payment_wallets.credentials) — read in the verify +
+      // reconcile-cron routes, not here. Checkout never calls Binance: the
+      // "session" is a set of manual-transfer instructions, with the school's
+      // Pay ID resolved by the checkout route into destinationAccount.
+      return new BinancePersonalProvider()
 
     case 'lemonsqueezy': {
       const lsKey = process.env.LEMONSQUEEZY_API_KEY
@@ -102,6 +111,7 @@ export * from './types'
 export { StripePaymentProvider } from './stripe-provider'
 export { PayPalPaymentProvider } from './paypal-provider'
 export { BinancePayProvider } from './binance-provider'
+export { BinancePersonalProvider } from './binance-personal-provider'
 export { ManualPaymentProvider } from './manual-provider'
 export { LemonSqueezyProvider } from './lemonsqueezy-provider'
 export { SolanaProvider } from './solana-provider'
