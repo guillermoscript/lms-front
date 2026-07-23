@@ -35,7 +35,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
       const categoryPrefixes: Record<string, string[]> = {
         general: ['site_name', 'site_description', 'contact_email', 'support_email', 'timezone', 'maintenance_mode'],
         email: ['smtp_', 'email_'],
-        payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval', 'manual_payment_instructions'],
+        payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'binance_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval', 'manual_payment_instructions'],
         enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled'],
       }
       const keys = categoryPrefixes[category]
@@ -440,7 +440,7 @@ export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
       smtp_host: 'email', smtp_port: 'email', smtp_username: 'email', smtp_password: 'email',
       smtp_from_email: 'email', smtp_from_name: 'email', email_notifications: 'email',
       stripe_enabled: 'payment', paypal_enabled: 'payment',
-      lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', currency: 'payment',
+      lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', binance_enabled: 'payment', currency: 'payment',
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
       manual_payment_instructions: 'payment',
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
