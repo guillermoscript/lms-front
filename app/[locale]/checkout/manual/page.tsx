@@ -6,6 +6,7 @@ import { PaymentRequestForm } from '@/components/student/payment-request-form'
 import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { findConflictingSubscription } from '@/lib/payments/subscription-guard'
 import { SubscriptionConflictNotice } from '@/components/public/subscription-conflict-notice'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
 import type { Metadata } from 'next'
 
@@ -76,10 +77,22 @@ export default async function ManualCheckoutPage(props: {
       planId: plan.plan_id,
     })
     if (conflict) {
+      // Self-service switch (#463): this route only ever checks out a
+      // 'manual' plan (non-manual plans redirect above), so the only gate is
+      // whether the current subscription is also on 'manual' — cross-provider
+      // switches still need admin help.
+      const currentProvider = (conflict.payment_provider || 'manual') as PaymentProvider
+      const caps = PROVIDER_CAPABILITIES[currentProvider]
+      const canSwitchPlan =
+        !!caps && (caps.supportsPlanChange || !caps.supportsNativeSubscriptions) && currentProvider === 'manual'
       return (
         <div className="min-h-screen bg-background">
           <div className="mx-auto max-w-xl px-4 py-12 sm:py-20">
-            <SubscriptionConflictNotice currentPlanName={conflict.plan_name} />
+            <SubscriptionConflictNotice
+              currentPlanName={conflict.plan_name}
+              targetPlanId={plan.plan_id}
+              canSwitchPlan={canSwitchPlan}
+            />
           </div>
         </div>
       )

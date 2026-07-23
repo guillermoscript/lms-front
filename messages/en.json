@@ -4267,6 +4267,7 @@
       "descriptionWithPlan": "Your subscription to {planName} is still active. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
       "description": "You already have an active subscription in this school. Subscribing to another plan would not replace it — you would be billed for both plans at the same time.",
       "howToSwitch": "To switch plans, contact your school and ask them to cancel your current plan first.",
+      "howToSwitchSelfService": "You can switch to this plan yourself — no need to contact your school.",
       "viewBilling": "View my billing",
       "browseCourses": "Browse courses"
     },
