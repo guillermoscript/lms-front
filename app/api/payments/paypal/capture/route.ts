@@ -38,14 +38,18 @@ function getSupabaseAdmin() {
   return createClient(url, serviceKey)
 }
 
-/** Resolve this request's own origin (tenant subdomain aware, like checkout). */
+/**
+ * Resolve this request's own origin (tenant subdomain aware, like checkout).
+ *
+ * req.nextUrl.origin does NOT reflect the incoming Host header in dev — it
+ * resolves to the Next.js dev server's own bind address regardless of which
+ * tenant subdomain the request came in on (confirmed live via #479). Trust
+ * the Host header instead, same pattern as app/api/stripe/connect/route.ts.
+ */
 function requestOrigin(req: NextRequest): string {
-  const forwardedHost = req.headers.get('x-forwarded-host')
-  return process.env.NODE_ENV === 'development'
-    ? req.nextUrl.origin
-    : forwardedHost
-      ? `https://${forwardedHost}`
-      : req.nextUrl.origin
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
+  const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+  return `${proto}://${host}`
 }
 
 /** Follow `next` only when it points back at our own origin. */

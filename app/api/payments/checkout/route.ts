@@ -215,13 +215,19 @@ export async function POST(req: NextRequest) {
     // global NEXT_PUBLIC_APP_URL — this route is hit on the school's subdomain,
     // and Solana Pay tx-request links must round-trip back to that same host
     // (a QR built with the wrong tenant's origin fails for every other tenant).
-    const forwardedHost = req.headers.get('x-forwarded-host')
-    const appUrl =
-      process.env.NODE_ENV === 'development'
-        ? req.nextUrl.origin
-        : forwardedHost
-          ? `https://${forwardedHost}`
-          : req.nextUrl.origin
+    //
+    // req.nextUrl.origin does NOT reflect the incoming Host header in dev — it
+    // resolves to the Next.js dev server's own bind address (localhost:PORT)
+    // regardless of which tenant subdomain the request actually came in on.
+    // Confirmed live via #479: a PayPal checkout on code-academy.lvh.me built
+    // its return_url from req.nextUrl.origin, sending the buyer back to
+    // localhost:3000/checkout/success after approval — a different origin than
+    // their session cookie, which bounced them to /auth/login despite the
+    // purchase having succeeded. Trust the Host header instead, same pattern
+    // as app/api/stripe/connect/route.ts.
+    const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
+    const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+    const appUrl = `${proto}://${host}`
 
     try {
       const provider = getPaymentProvider(providerSlug as PaymentProvider)
