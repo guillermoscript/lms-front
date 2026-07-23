@@ -4922,6 +4922,12 @@
     }
   },
   "exercises": {
+    "workspace": {
+      "label": "Exercise workspace",
+      "task": "Task",
+      "aiChat": "AI chat",
+      "instructions": "Instructions"
+    },
     "artifact": {
       "typeLabel": "Interactive Exercise",
       "evaluating": "Evaluating your submission...",

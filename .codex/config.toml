@@ -1,0 +1,20 @@
+[mcp_servers.dokploy-mcp]
+command = "npx"
+args = [
+    "-y",
+    "@dokploy/mcp",
+]
+
+[mcp_servers.dokploy-mcp.env]
+DOKPLOY_URL = "https://dokploy.guille.tech/api"
+DOKPLOY_API_KEY = "claude_BFyYbrTRHbZMizJREGcnMgNPhBkenVeydnTtqnBIpCVgBUmzSUjpnyvYItWbXAhZ"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+
+[mcp_servers.supabase]
+url = "http://localhost:54321/mcp"
+
+[mcp_servers.supabase-cloud]
+url = "https://mcp.supabase.com/mcp?project_ref=tcqqnjfwmbfwcyhafbbt&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cstorage"

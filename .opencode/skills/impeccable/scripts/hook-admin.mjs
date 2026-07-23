@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `/impeccable hooks <on|off|status|reset>` — manage the design hook runtime
+ * The Impeccable hooks command manages the design hook runtime
  * via the `hook` key and shared detector ignores via the `detector` key in
  * .impeccable/config.json / .impeccable/config.local.json.
  *
@@ -21,6 +21,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { IMPECCABLE_COMMAND } from './lib/provider.mjs';
 
 import {
   getConfigPath,
@@ -75,7 +76,6 @@ const HOOK_MANIFEST_TARGETS = [
     skillRel: '.agents/skills/impeccable',
     destRel: '.codex/hooks.json',
     manifest: () => ({
-      description: 'Impeccable design detector: runs after Edit/Write/apply_patch on UI files and surfaces findings as system reminders.',
       hooks: {
         PostToolUse: [
           {
@@ -83,7 +83,7 @@ const HOOK_MANIFEST_TARGETS = [
             hooks: [
               {
                 type: 'command',
-                command: 'node "$(git rev-parse --show-toplevel)/.agents/skills/impeccable/scripts/hook.mjs"',
+                command: 'node ".agents/skills/impeccable/scripts/hook.mjs"',
                 timeout: TIMEOUT_SECONDS,
                 statusMessage: STATUS_MESSAGE,
               },
@@ -104,6 +104,28 @@ const HOOK_MANIFEST_TARGETS = [
           {
             command: 'node ".cursor/skills/impeccable/scripts/hook-before-edit.mjs"',
             timeout: TIMEOUT_SECONDS,
+          },
+        ],
+      },
+    }),
+  },
+  {
+    // GitHub Copilot reads repo-level hooks from `.github/hooks/*.json`. The same
+    // manifest is honored by the CLI (once committed to the default branch) and
+    // the cloud/app agent. Schema differs: lowercase `postToolUse`, flat entries,
+    // `bash`/`timeoutSec`, and a `matcher` regex against the `edit`/`create` tools.
+    provider: '.github',
+    skillRel: '.github/skills/impeccable',
+    destRel: '.github/hooks/impeccable.json',
+    manifest: () => ({
+      version: 1,
+      hooks: {
+        postToolUse: [
+          {
+            type: 'command',
+            matcher: 'edit|create|apply_patch',
+            bash: 'node "$(git rev-parse --show-toplevel)/.github/skills/impeccable/scripts/hook.mjs"',
+            timeoutSec: TIMEOUT_SECONDS,
           },
         ],
       },
@@ -163,7 +185,7 @@ function writeHookConfig(cwd, hookConfig, opts = {}) {
   const existing = existingRaw && typeof existingRaw === 'object' && !Array.isArray(existingRaw) ? existingRaw : {};
   const existingHook = stripDetectorKeys(hookSection(existing));
   // Merge over the existing hook object so fields the merge helpers don't manage
-  // (consent, quiet, auditLog) survive a `/impeccable hooks` edit.
+  // (consent, quiet, auditLog) survive an Impeccable hooks edit.
   const next = { ...existing, hook: { ...existingHook, ...hookConfig } };
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(next, null, 2) + '\n');
@@ -400,7 +422,10 @@ function valueHasImpeccableHookMarker(value) {
 
 function stripImpeccableHookEntry(entry) {
   if (!entry || typeof entry !== 'object') return entry;
-  if (valueHasImpeccableHookMarker(entry.command) || valueHasImpeccableHookMarker(entry.args)) {
+  // `command`/`args`: Claude/Codex/Cursor. `bash`/`powershell`: GitHub Copilot's
+  // flat entry shape, where the marker lives under the shell-command keys.
+  if (valueHasImpeccableHookMarker(entry.command) || valueHasImpeccableHookMarker(entry.args)
+    || valueHasImpeccableHookMarker(entry.bash) || valueHasImpeccableHookMarker(entry.powershell)) {
     return null;
   }
   if (!Array.isArray(entry.hooks)) return entry;
@@ -489,9 +514,9 @@ function parseIgnoreRuleArgs(args) {
 function addIgnoreRule(cwd, args) {
   const parsed = parseIgnoreRuleArgs(args);
   const rule = parsed.rule;
-  if (!rule) throw new Error('Pass a rule id, e.g. /impeccable hooks ignore-rule side-tab');
+  if (!rule) throw new Error(`Pass a rule id, e.g. ${IMPECCABLE_COMMAND} hooks ignore-rule side-tab`);
   if (rule === 'overused-font' && !parsed.allValues) {
-    throw new Error('overused-font is value-specific by default. Use /impeccable hooks ignore-value overused-font <font> for a confirmed font, or /impeccable hooks ignore-rule overused-font --all-values only when the user asked to ignore overused fonts generally.');
+    throw new Error(`overused-font is value-specific by default. Use ${IMPECCABLE_COMMAND} hooks ignore-value overused-font <font> for a confirmed font, or ${IMPECCABLE_COMMAND} hooks ignore-rule overused-font --all-values only when the user asked to ignore overused fonts generally.`);
   }
   const config = mergeDetectorConfig(readRawDetectorConfig(cwd));
   if (!config.ignoreRules.includes(rule)) config.ignoreRules.push(rule);
@@ -500,7 +525,7 @@ function addIgnoreRule(cwd, args) {
 }
 
 function addIgnoreFile(cwd, glob) {
-  if (!glob) throw new Error('Pass a glob, e.g. /impeccable hooks ignore-file "src/legacy/**"');
+  if (!glob) throw new Error(`Pass a glob, e.g. ${IMPECCABLE_COMMAND} hooks ignore-file "src/legacy/**"`);
   const config = mergeDetectorConfig(readRawDetectorConfig(cwd));
   if (!config.ignoreFiles.includes(glob)) config.ignoreFiles.push(glob);
   writeDetectorConfig(cwd, config);
@@ -545,7 +570,7 @@ function parseIgnoreValueArgs(args) {
 function addIgnoreValue(cwd, args) {
   const parsed = parseIgnoreValueArgs(args);
   if (!parsed.rule || !parsed.value) {
-    throw new Error('Pass a rule id and value, e.g. /impeccable hooks ignore-value overused-font Inter');
+    throw new Error(`Pass a rule id and value, e.g. ${IMPECCABLE_COMMAND} hooks ignore-value overused-font Inter`);
   }
 
   if (parsed.shared && parsed.local) {
