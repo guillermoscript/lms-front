@@ -16,12 +16,18 @@ export const metadata: Metadata = {
 
 async function PlatformSidebarWithCount() {
   const adminClient = createAdminClient()
-  const { count: pendingCount } = await adminClient
-    .from('platform_payment_requests')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending')
+  const [{ count: pendingCount }, { count: atRiskCount }] = await Promise.all([
+    adminClient
+      .from('platform_payment_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    adminClient
+      .from('tenants')
+      .select('*', { count: 'exact', head: true })
+      .eq('billing_status', 'past_due'),
+  ])
 
-  return <PlatformSidebar pendingBillingCount={pendingCount ?? 0} />
+  return <PlatformSidebar pendingBillingCount={pendingCount ?? 0} atRiskCount={atRiskCount ?? 0} />
 }
 
 export default async function PlatformLayout({

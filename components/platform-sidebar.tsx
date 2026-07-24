@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  IconAlertTriangle,
   IconBuildingStore,
   IconChartBar,
   IconCreditCard,
@@ -32,9 +33,10 @@ import { createClient } from "@/lib/supabase/client"
 
 interface PlatformSidebarProps extends React.ComponentProps<typeof Sidebar> {
   pendingBillingCount?: number
+  atRiskCount?: number
 }
 
-export function PlatformSidebar({ pendingBillingCount = 0, ...props }: PlatformSidebarProps) {
+export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...props }: PlatformSidebarProps) {
   const pathname = usePathname()
   const supabase = createClient()
 
@@ -48,6 +50,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, ...props }: PlatformS
     { title: "Tenants", href: "/platform/tenants", icon: IconSchool },
     { title: "Revenue", href: "/platform/revenue", icon: IconReportMoney },
     { title: "Billing", href: "/platform/billing", icon: IconCreditCard, badge: pendingBillingCount },
+    { title: "Billing Health", href: "/platform/billing-health", icon: IconAlertTriangle, badge: atRiskCount },
     { title: "Plans", href: "/platform/plans", icon: IconBuildingStore },
     // Referrals hidden until the backing schema is built — see issue tracking it.
   ]
