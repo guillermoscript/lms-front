@@ -20,12 +20,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getPaymentProvider } from '@/lib/payments'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
+import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -203,6 +205,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Snapshot the tenant's CURRENT revenue split onto this transaction (#496)
+    // so a later plan change doesn't retroactively reprice it in the payouts
+    // computation — revenue_splits is super-admin-only under RLS, so this
+    // needs the admin client even though the rest of this route uses the
+    // user-scoped one.
+    const adminClientForSplit = createAdminClient()
+    const { data: revenueSplit } = await adminClientForSplit
+      .from('revenue_splits')
+      .select('school_percentage')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    const schoolPercentageSnapshot = revenueSplit?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE
+
     // 1. Pending transaction — our correlation id (transaction_id) round-trips
     //    back on the webhook (LS) or the verify endpoint (Solana).
     const { data: transaction, error: txError } = await supabase
@@ -216,6 +231,7 @@ export async function POST(req: NextRequest) {
         currency,
         status: 'pending',
         payment_provider: providerSlug,
+        school_percentage_snapshot: schoolPercentageSnapshot,
         ...(settlement
           ? {
               settlement_currency: settlement.currency,

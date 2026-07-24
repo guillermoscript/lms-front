@@ -6,7 +6,7 @@ import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
-import { computeOwedBalances, type TenantOwed } from '@/lib/payments/payouts-owed'
+import { computeOwedBalances, DEFAULT_SCHOOL_PERCENTAGE, type TenantOwed } from '@/lib/payments/payouts-owed'
 
 async function verifySuperAdmin() {
   const supabase = await createClient()
@@ -20,8 +20,6 @@ const PLATFORM_SETTLED_PROVIDERS = (Object.keys(PROVIDER_CAPABILITIES) as Paymen
   (provider) => PROVIDER_CAPABILITIES[provider].settlesToPlatformAccount
 )
 
-const DEFAULT_SCHOOL_PERCENTAGE = 80
-
 export async function getPayoutsOwed(): Promise<TenantOwed[]> {
   await verifySuperAdmin()
   const admin = createAdminClient()
@@ -31,7 +29,7 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     admin.from('revenue_splits').select('tenant_id, school_percentage'),
     admin
       .from('transactions')
-      .select('tenant_id, payment_provider, amount')
+      .select('tenant_id, payment_provider, amount, school_percentage_snapshot')
       .eq('status', 'successful')
       .in('payment_provider', PLATFORM_SETTLED_PROVIDERS),
     admin.from('payouts').select('tenant_id, amount').eq('payout_method', 'manual').eq('status', 'paid'),
@@ -49,7 +47,12 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     })),
     (txns || [])
       .filter((t) => t.tenant_id && t.payment_provider && t.amount != null)
-      .map((t) => ({ tenantId: t.tenant_id as string, paymentProvider: t.payment_provider as string, amount: t.amount as number })),
+      .map((t) => ({
+        tenantId: t.tenant_id as string,
+        paymentProvider: t.payment_provider as string,
+        amount: t.amount as number,
+        schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
+      })),
     (paid || []).map((p) => ({ tenantId: p.tenant_id, amount: p.amount }))
   )
 }
