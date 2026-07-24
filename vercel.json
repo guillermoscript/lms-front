@@ -17,6 +17,10 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/enforce-plan-limits",
+      "schedule": "0 3 * * *"
+    },
+    {
       "path": "/api/cron/solana-reconcile",
       "schedule": "*/10 * * * *"
     },

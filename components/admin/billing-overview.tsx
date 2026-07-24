@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from './usage-meter'
+import { LimitReachedBanner } from '@/components/shared/limit-reached-banner'
 import { IconCreditCard, IconCalendar, IconAlertTriangle, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
@@ -33,6 +34,7 @@ interface BillingOverviewProps {
     students: { current: number; limit: number }
   }
   transactionFeePercent: number
+  accessCutoffAt: string | null
   onManageClick?: () => void
   onCancelClick?: () => void
 }
@@ -46,6 +48,7 @@ export function BillingOverview({
   upcomingPayment,
   usage,
   transactionFeePercent,
+  accessCutoffAt,
   onManageClick,
   onCancelClick,
 }: BillingOverviewProps) {
@@ -202,16 +205,32 @@ export function BillingOverview({
 
           <section aria-label={`${t('currentPlan')} usage`} className="border-t pt-5">
             <div className="grid gap-5 md:grid-cols-2">
-            <UsageMeter
-              label={t('courses')}
-              current={usage.courses.current}
-              limit={usage.courses.limit}
-            />
-            <UsageMeter
-              label={t('students')}
-              current={usage.students.current}
-              limit={usage.students.limit}
-            />
+            <div className="space-y-3">
+              <UsageMeter
+                label={t('courses')}
+                current={usage.courses.current}
+                limit={usage.courses.limit}
+              />
+              <LimitReachedBanner
+                resource="courses"
+                current={usage.courses.current}
+                limit={usage.courses.limit}
+                cutoffAt={accessCutoffAt}
+              />
+            </div>
+            <div className="space-y-3">
+              <UsageMeter
+                label={t('students')}
+                current={usage.students.current}
+                limit={usage.students.limit}
+              />
+              <LimitReachedBanner
+                resource="students"
+                current={usage.students.current}
+                limit={usage.students.limit}
+                cutoffAt={accessCutoffAt}
+              />
+            </div>
             </div>
           </section>
         </CardContent>

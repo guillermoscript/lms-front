@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { classifyPlanChange } from '@/lib/billing/plan-change'
+import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 import { revalidatePath } from 'next/cache'
 
 async function verifyAdminAccess() {
@@ -39,7 +40,7 @@ export async function getSubscriptionStatus() {
   const [tenantResult, subscriptionResult, coursesCount, studentsCount] = await Promise.all([
     adminClient
       .from('tenants')
-      .select('plan, billing_status, billing_period_end, billing_email, stripe_customer_id')
+      .select('plan, billing_status, billing_period_end, billing_email, stripe_customer_id, access_cutoff_at')
       .eq('id', tenantId)
       .single(),
     adminClient
@@ -83,6 +84,7 @@ export async function getSubscriptionStatus() {
     billingPeriodEnd: tenant?.billing_period_end,
     billingEmail: tenant?.billing_email,
     hasStripeCustomer: !!tenant?.stripe_customer_id,
+    accessCutoffAt: tenant?.access_cutoff_at ?? null,
     subscription: subscription ? {
       status: subscription.status,
       paymentMethod: subscription.payment_method,
@@ -356,6 +358,10 @@ export async function confirmManualPayment(requestId: string) {
       updated_at: now.toISOString(),
     }, { onConflict: 'tenant_id' })
 
+  // Activation already passed the pre-flight limit check above, so this
+  // clears any cutoff scheduled from a prior over-limit period.
+  await reconcileAccessCutoff(adminClient, request.tenant_id)
+
   return { success: true }
 }
 
@@ -528,6 +534,10 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
       },
       { onConflict: 'tenant_id' }
     )
+
+  // Pre-flight check above already confirmed the new plan's limits are met,
+  // so this clears any cutoff scheduled from a prior over-limit period.
+  await reconcileAccessCutoff(adminClient, tenantId)
 
   revalidatePath('/dashboard/admin/billing')
   return { success: true, plan: ctx.plan.slug }

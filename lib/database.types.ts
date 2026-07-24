@@ -5771,6 +5771,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          access_cutoff_at: string | null
           billing_email: string | null
           billing_period_end: string | null
           billing_status: string | null
@@ -5792,6 +5793,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          access_cutoff_at?: string | null
           billing_email?: string | null
           billing_period_end?: string | null
           billing_status?: string | null
@@ -5813,6 +5815,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          access_cutoff_at?: string | null
           billing_email?: string | null
           billing_period_end?: string | null
           billing_status?: string | null

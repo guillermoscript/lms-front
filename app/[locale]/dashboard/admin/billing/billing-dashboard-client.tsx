@@ -50,6 +50,7 @@ interface BillingDashboardClientProps {
     }
     features: Record<string, unknown>
     transactionFeePercent: number
+    accessCutoffAt: string | null
   }
   paymentRequests: Array<{
     request_id: string
@@ -59,6 +60,7 @@ interface BillingDashboardClientProps {
     interval: string
     created_at: string
     proof_url?: string | null
+    request_type?: string
     platform_plans: { name: string; slug: string } | null
   }>
 }
@@ -99,8 +101,8 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       await requestManualRenewal()
       toast.success('Renewal request submitted')
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to submit renewal request')
     } finally {
       setRenewalLoading(false)
     }
@@ -125,8 +127,8 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       toast.success(t('cancelSuccess'))
       setCancelOpen(false)
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message || t('cancelError'))
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('cancelError'))
     } finally {
       setCancelLoading(false)
     }
@@ -140,8 +142,8 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       await uploadPaymentProof(requestId, formData)
       toast.success('Proof uploaded successfully')
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to upload proof')
       throw e // re-throw so ProofUpload shows error state
     } finally {
       setUploadingFor(null)
@@ -158,7 +160,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const daysUntilEnd = periodEnd ? Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
   const showRenewalSection = isManualSub && daysUntilEnd !== null && daysUntilEnd <= 30
   const hasPendingRenewal = paymentRequests.some(
-    (r) => (r as any).request_type === 'renewal' && !['confirmed', 'rejected', 'expired'].includes(r.status)
+    (r) => r.request_type === 'renewal' && !['confirmed', 'rejected', 'expired'].includes(r.status)
   )
   const cancelDateStr = (() => {
     const raw = status.subscription?.currentPeriodEnd || status.billingPeriodEnd
@@ -176,6 +178,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         upcomingPayment={status.upcomingPayment}
         usage={status.usage}
         transactionFeePercent={status.transactionFeePercent}
+        accessCutoffAt={status.accessCutoffAt}
         onManageClick={status.hasStripeCustomer ? handleManageBilling : undefined}
         onCancelClick={() => setCancelOpen(true)}
       />
