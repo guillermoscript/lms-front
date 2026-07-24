@@ -33,7 +33,7 @@ export function downgradeBlockedTemplate(data: DowngradeBlockedData): {
   <p>${
     reverted
       ? `To downgrade to ${data.newPlanName}, first reduce your usage below its limits, then change your plan again from the billing page.`
-      : `Until this is resolved, parts of your school may be restricted by the ${data.newPlanName} plan limits.`
+      : `If this isn't resolved within 14 days, all students at your school will lose access to all courses until usage is brought back within the ${data.newPlanName} plan's limits or you upgrade.`
   }</p>
   <p style="text-align:center;margin:32px 0">
     <a href="${data.billingUrl}" style="background:#d97706;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">
