@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { ExamTaker } from './exam-taker'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { hasCourseAccess } from '@/lib/services/course-access'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -19,11 +19,7 @@ export default async function TakeExamPage({ params }: PageProps) {
   }
 
   // Verify access (entitlements model)
-  const hasAccess = await hasCourseAccess(supabase, userId, parseInt(courseId))
-
-  if (!hasAccess) {
-    redirect('/dashboard/student')
-  }
+  await requireCourseAccess(supabase, userId, parseInt(courseId))
 
   // Check if user already submitted this exam
   const { data: existingSubmission } = await supabase

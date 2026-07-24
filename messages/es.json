@@ -362,6 +362,14 @@
           "lemonsqueezy": "Lemon Squeezy"
         }
       },
+      "accessSuspended": {
+        "title": "El acceso de tu escuela está suspendido",
+        "description": "{school} superó los límites de su plan, por lo que el acceso al contenido de los cursos está pausado para toda la escuela. Tu inscripción no se ve afectada: no has perdido nada y el acceso vuelve en cuanto la escuela lo resuelva.",
+        "whatNowTitle": "Qué sucede ahora",
+        "whatNowBody": "Los administradores de tu escuela ya fueron notificados por correo. El acceso se restablece automáticamente en cuanto suban de plan o reduzcan el uso por debajo del límite.",
+        "since": "El acceso está pausado desde el {date}.",
+        "backToDashboard": "Volver al panel"
+      },
       "notifications": {
         "title": "Notificaciones",
         "description": "Mantente al día con la actividad de tu escuela.",

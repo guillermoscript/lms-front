@@ -6,6 +6,7 @@ import { IconCertificate, IconProgress } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -19,6 +20,10 @@ export default async function ExamsPage({ params }: PageProps) {
 
   const userId = await getCurrentUserId()
   if (!userId) redirect('/auth/login')
+
+  // Entitlement gate (#509) — this list exposes the course's exams along with
+  // the student's own graded answers and feedback.
+  await requireCourseAccess(supabase, userId, parseInt(courseId))
 
   // Consolidated query
   const { data: exams, error } = await supabase

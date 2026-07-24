@@ -646,10 +646,14 @@ export function registerStudentTools(server: MCPServer) {
         const tenantId = session.getTenantId();
         const nowIso = new Date().toISOString();
 
+        // No nested lessons(count) here: content RLS (#509) hides lesson rows
+        // of courses the caller has no entitlement for, which is the whole
+        // catalog — a nested count would report 0 for every unbought course.
+        // get_published_lesson_counts is SECURITY DEFINER and returns counts only.
         let coursesQuery = supabase
           .from("courses")
           .select(
-            "course_id, title, description, thumbnail_url, tags, created_at, lessons(count)",
+            "course_id, title, description, thumbnail_url, tags, created_at",
             { count: "exact" }
           )
           .eq("tenant_id", tenantId)
@@ -716,13 +720,30 @@ export function registerStudentTools(server: MCPServer) {
           );
         }
 
+        const catalogCourseIds = (coursesRes.data ?? []).map(
+          (c) => c.course_id as number
+        );
+        const lessonCounts = new Map<number, number>();
+        if (catalogCourseIds.length > 0) {
+          const { data: countRows } = await supabase.rpc(
+            "get_published_lesson_counts",
+            { _course_ids: catalogCourseIds }
+          );
+          for (const row of (countRows ?? []) as Array<{
+            course_id: number;
+            lesson_count: number;
+          }>) {
+            lessonCounts.set(row.course_id, Number(row.lesson_count));
+          }
+        }
+
         const courses = (coursesRes.data ?? []).map((c) => ({
           id: c.course_id,
           title: c.title,
           description: c.description,
           thumbnail_url: c.thumbnail_url,
           tags: c.tags,
-          lesson_count: (c.lessons as unknown as Array<{ count: number }>)?.[0]?.count ?? 0,
+          lesson_count: lessonCounts.get(c.course_id as number) ?? 0,
           enrolled: enrolledSet.has(c.course_id),
           has_access: accessible.has(c.course_id) || enrolledSet.has(c.course_id),
           covered_by_plan: planCovered.has(c.course_id),

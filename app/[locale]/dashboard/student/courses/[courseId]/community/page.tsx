@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { hasCourseAccess } from '@/lib/services/course-access'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
@@ -28,20 +28,15 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
 
   const adminClient = createAdminClient()
 
-  // Verify access (entitlements model) and fetch course in parallel
-  const [hasAccess, { data: course }] = await Promise.all([
-    hasCourseAccess(adminClient, userId, numericCourseId),
-    adminClient
-      .from('courses')
-      .select('course_id, title')
-      .eq('course_id', numericCourseId)
-      .eq('tenant_id', tenantId)
-      .single(),
-  ])
+  // Verify access (entitlements model) before reading anything about the course
+  await requireCourseAccess(adminClient, userId, numericCourseId)
 
-  if (!hasAccess) {
-    redirect('/dashboard/student')
-  }
+  const { data: course } = await adminClient
+    .from('courses')
+    .select('course_id, title')
+    .eq('course_id', numericCourseId)
+    .eq('tenant_id', tenantId)
+    .single()
 
   if (!course) {
     notFound()

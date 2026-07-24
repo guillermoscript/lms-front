@@ -362,6 +362,14 @@
           "lemonsqueezy": "Lemon Squeezy"
         }
       },
+      "accessSuspended": {
+        "title": "Your school's access is suspended",
+        "description": "{school} is over its plan limits, so access to course content is paused for everyone at the school. Your enrollment is unaffected — nothing has been lost, and access returns as soon as the school resolves it.",
+        "whatNowTitle": "What happens now",
+        "whatNowBody": "Your school's administrators have been notified by email. Access is restored automatically once they upgrade the plan or reduce usage back under the limit.",
+        "since": "Access has been paused since {date}.",
+        "backToDashboard": "Back to dashboard"
+      },
       "notifications": {
         "title": "Notifications",
         "description": "Stay up to date with activity across your school.",
