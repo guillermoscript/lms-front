@@ -1604,7 +1604,7 @@
       "welcome": "Manage your LMS platform",
       "payouts": {
         "title": "Payouts",
-        "description": "Stripe Connect disbursements to your school account.",
+        "description": "Disbursements to your school account, whether via Stripe Connect or recorded manually by the platform.",
         "accessDenied": "Access denied",
         "accessDeniedDesc": "You must be a school admin to view this page.",
         "stats": {
@@ -1619,19 +1619,24 @@
           "pending": "Pending",
           "failed": "Failed"
         },
+        "method": {
+          "manual": "Manual",
+          "stripeConnect": "Stripe Connect"
+        },
         "table": {
           "title": "Payout history",
           "headers": {
             "period": "Period",
             "amount": "Amount",
             "status": "Status",
+            "method": "Method",
             "paidAt": "Paid at",
             "stripeRef": "Stripe ref"
           }
         },
         "empty": {
           "title": "No payouts yet",
-          "description": "Payouts appear here once Stripe Connect disburses funds to your connected bank account. Make sure your Stripe account is fully verified."
+          "description": "Payouts appear here once Stripe Connect disburses funds to your connected bank account, or once the platform records a manual payout."
         }
       },
       "invoices": {
