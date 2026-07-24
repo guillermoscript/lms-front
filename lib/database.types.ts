@@ -4397,10 +4397,13 @@ export type Database = {
           currency: string | null
           failed_at: string | null
           failure_reason: string | null
+          note: string | null
           paid_at: string | null
           payout_id: number
-          period_end: string
-          period_start: string
+          payout_method: string
+          period_end: string | null
+          period_start: string | null
+          recorded_by: string | null
           status: string
           stripe_metadata: Json | null
           stripe_payout_id: string | null
@@ -4412,10 +4415,13 @@ export type Database = {
           currency?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          note?: string | null
           paid_at?: string | null
           payout_id?: number
-          period_end: string
-          period_start: string
+          payout_method?: string
+          period_end?: string | null
+          period_start?: string | null
+          recorded_by?: string | null
           status?: string
           stripe_metadata?: Json | null
           stripe_payout_id?: string | null
@@ -4427,10 +4433,13 @@ export type Database = {
           currency?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          note?: string | null
           paid_at?: string | null
           payout_id?: number
-          period_end?: string
-          period_start?: string
+          payout_method?: string
+          period_end?: string | null
+          period_start?: string | null
+          recorded_by?: string | null
           status?: string
           stripe_metadata?: Json | null
           stripe_payout_id?: string | null
@@ -5911,6 +5920,7 @@ export type Database = {
           provider_charge_id: string | null
           provider_metadata: Json | null
           provider_subscription_id: string | null
+          school_percentage_snapshot: number | null
           settlement_base: number | null
           settlement_currency: string | null
           settlement_mint: string | null
@@ -5932,6 +5942,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
@@ -5953,6 +5964,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
