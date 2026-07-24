@@ -1,4 +1,5 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
+import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -57,6 +58,10 @@ export async function downgradeTenantToFree(
       school_percentage: 100 - platformFee,
       updated_at: now,
     }, { onConflict: 'tenant_id' })
+
+  // Schedule (or leave alone) an access cutoff if the tenant now exceeds the
+  // free plan's limits — see lib/billing/access-cutoff.ts (issue #494).
+  await reconcileAccessCutoff(adminClient, tenantId)
 
   return platformFee
 }

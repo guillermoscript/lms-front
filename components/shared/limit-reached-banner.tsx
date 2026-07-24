@@ -11,9 +11,10 @@ interface LimitReachedBannerProps {
   current: number
   limit: number          // -1 = unlimited
   className?: string
+  cutoffAt?: string | null
 }
 
-export function LimitReachedBanner({ resource, current, limit, className }: LimitReachedBannerProps) {
+export function LimitReachedBanner({ resource, current, limit, className, cutoffAt }: LimitReachedBannerProps) {
   const [dismissed, setDismissed] = useState(false)
 
   if (dismissed || limit === -1) return null
@@ -33,12 +34,19 @@ export function LimitReachedBanner({ resource, current, limit, className }: Limi
       className
     )}>
       <IconAlertTriangle className="h-5 w-5 shrink-0" />
-      <p className="flex-1 text-sm">
-        {isAtLimit
-          ? `You've reached your ${resource} limit (${limit}). Upgrade your plan to add more.`
-          : `You're using ${current} of ${limit} ${resource}. Consider upgrading for more capacity.`
-        }
-      </p>
+      <div className="flex-1 text-sm">
+        <p>
+          {isAtLimit
+            ? `You've reached your ${resource} limit (${limit}). Upgrade your plan to add more.`
+            : `You're using ${current} of ${limit} ${resource}. Consider upgrading for more capacity.`
+          }
+        </p>
+        {cutoffAt && (
+          <p className="font-semibold">
+            If this is not resolved by {new Date(cutoffAt).toLocaleDateString(undefined, { dateStyle: 'long' })}, all students will lose access to all courses.
+          </p>
+        )}
+      </div>
       <Link href="/dashboard/admin/billing/upgrade">
         <Button variant={isAtLimit ? 'destructive' : 'outline'} size="sm">
           Upgrade

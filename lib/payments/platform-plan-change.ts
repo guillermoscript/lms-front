@@ -24,6 +24,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { downgradeBlockedTemplate } from '@/lib/email/templates/downgrade-blocked'
 import { countTenantUsage, computePlanLimitViolations } from '@/lib/billing/plan-limits'
+import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 
 export interface PortalPlanChangeDeps {
   /** Service-role Supabase client (bypasses RLS). */
@@ -106,6 +107,8 @@ export async function applyPortalPlanChange(
 
   if (violations.length === 0) {
     await applyPlanToDb(admin, tenantId, newPlan)
+    // Clears any cutoff scheduled from a prior over-limit period.
+    await reconcileAccessCutoff(admin, tenantId)
     return { action: 'applied' }
   }
 
@@ -155,6 +158,8 @@ export async function applyPortalPlanChange(
   }
 
   await applyPlanToDb(admin, tenantId, newPlan)
+  // Schedules a cutoff if the tenant is still over the new plan's limits.
+  await reconcileAccessCutoff(admin, tenantId, { sendEmailFn })
   await notifyAdmins(admin, sendEmailFn, {
     tenantId,
     outcome: 'applied_over_limit',

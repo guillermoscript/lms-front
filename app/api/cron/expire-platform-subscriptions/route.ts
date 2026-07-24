@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email/send'
 import { renewalReminderTemplate } from '@/lib/email/templates/renewal-reminder'
 import { planDowngradedTemplate } from '@/lib/email/templates/plan-downgraded'
 import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 
 export const runtime = 'nodejs'
 
@@ -39,26 +40,6 @@ function getSupabaseAdmin(): SupabaseClient {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) throw new Error('Supabase env vars not set')
   return createClient(url, serviceKey)
-}
-
-/**
- * Resolve the active admin emails for a tenant. profiles has no email column,
- * so emails come from the auth admin API keyed by tenant_users membership.
- */
-async function getTenantAdminEmails(supabase: SupabaseClient, tenantId: string): Promise<string[]> {
-  const { data: adminUsers } = await supabase
-    .from('tenant_users')
-    .select('user_id')
-    .eq('tenant_id', tenantId)
-    .eq('role', 'admin')
-    .eq('status', 'active')
-
-  const emails: string[] = []
-  for (const admin of adminUsers || []) {
-    const { data: authUser } = await supabase.auth.admin.getUserById(admin.user_id)
-    if (authUser?.user?.email) emails.push(authUser.user.email)
-  }
-  return emails
 }
 
 // Email sends must never abort a transition; failures are logged and swallowed.

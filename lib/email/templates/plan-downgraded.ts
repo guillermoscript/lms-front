@@ -13,7 +13,7 @@ export function planDowngradedTemplate(data: PlanDowngradedData): { subject: str
   <h2 style="color:#dc2626">Plan Downgraded</h2>
   <p>Hi,</p>
   <p>We didn't receive a renewal payment for the <strong>${data.planName}</strong> plan on ${data.schoolName} before the grace period ended, so your school has been moved to the <strong>free</strong> plan.</p>
-  <p>Your courses and data are safe, but free-plan limits now apply and your platform transaction fee has changed accordingly.</p>
+  <p>Your courses and data are unaffected immediately, but free-plan limits now apply and your platform transaction fee has changed accordingly. If your current usage exceeds the free plan's limits, you'll receive a separate notice with a firm deadline before student access is restricted.</p>
   <p>You can upgrade again at any time from the billing dashboard.</p>
   <p style="text-align:center;margin:32px 0">
     <a href="${data.billingUrl}" style="background:#7c3aed;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">

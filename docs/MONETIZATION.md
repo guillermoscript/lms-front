@@ -232,6 +232,17 @@ function MyComponent() {
 
 `app/actions/teacher/courses.ts` reads `platform_plans.limits.max_courses` from the database (not hardcoded). Returns `approaching: true` with `nextPlan` and `nextPlanPrice` when at 80%+ usage.
 
+The two sections above are **creation-time soft caps only** — they block a *new* student from joining or a *new* course from being created once a tenant is at its limit. Neither one does anything about students/courses that already exist when a tenant ends up over its plan's limit (e.g. after a downgrade, or by organically outgrowing its plan with no plan-change event). That gap was issue #494; it's closed by the mechanism below.
+
+### Post-Downgrade Access Enforcement (issue #494)
+
+`lib/billing/access-cutoff.ts` is the single place that decides and schedules `tenants.access_cutoff_at`:
+
+- Whenever a tenant's usage is checked, `countTenantUsage`/`computePlanLimitViolations` (`lib/billing/plan-limits.ts`) compare current course/active-student counts against the tenant's **current** plan limits. If either is over limit and no cutoff is already scheduled, `reconcileAccessCutoff()` schedules `access_cutoff_at` `ACCESS_CUTOFF_GRACE_DAYS` (14 days) out and emails the tenant's admins immediately via `accessCutoffWarningTemplate` (`lib/email/templates/access-cutoff-warning.ts`), naming the exact cutoff date and which limit(s) are exceeded. If usage drops back under the limit, the next reconciliation clears the scheduled cutoff automatically.
+- `reconcileAccessCutoff()` is called from every plan-state transition: `downgradeTenantToFree()` (both the Stripe `customer.subscription.deleted` webhook and the manual-transfer expiry cron), `changePlan()` and `confirmManualPayment()` in `app/actions/admin/billing.ts`, `applyPortalPlanChange()` (`lib/payments/platform-plan-change.ts`), and a daily cron `app/api/cron/enforce-plan-limits/route.ts` that sweeps every tenant to catch organic over-limit growth with no associated plan-change event.
+- Enforcement itself is in the database: once `access_cutoff_at` passes while the tenant is still over its plan's limits, `has_course_access()` (SQL function, migration `supabase/migrations/20260724130000_access_cutoff_enforcement.sql`) starts returning `false` for every student in that tenant — cutting off access tenant-wide, everywhere that function (or its TS counterpart `hasCourseAccess()`) gates access: lessons, exams, exercises, certificates, AI tutor chat. Access is restored automatically as soon as usage is back under the limit or the tenant upgrades.
+- This is a deliberate decision, not an oversight: with no production users yet, real enforcement was shipped directly rather than grandfathering pre-existing over-limit usage.
+
 ---
 
 ## Currency Support
