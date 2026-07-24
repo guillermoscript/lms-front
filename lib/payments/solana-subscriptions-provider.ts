@@ -53,6 +53,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false,
   }
 
   /**

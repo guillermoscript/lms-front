@@ -49,6 +49,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    settlesToPlatformAccount: true,
   }
 
   private readonly apiKey: string

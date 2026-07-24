@@ -52,6 +52,7 @@ export class SolanaProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false,
   }
 
   private readonly rpcUrl: string

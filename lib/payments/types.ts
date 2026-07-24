@@ -135,6 +135,13 @@ export interface ProviderCapabilities {
    * provider-native swap. The plan-change flow (#463) branches on THIS.
    */
   supportsPlanChange: boolean
+  /**
+   * Provider settles 100% of every sale into the PLATFORM's own account —
+   * no per-tenant connected account (unlike Stripe Connect) and no on-chain
+   * split (unlike Solana). The school's share must be paid out manually
+   * (see `lib/payments/payouts-owed.ts`) rather than arriving automatically.
+   */
+  settlesToPlatformAccount: boolean
 }
 
 /**
@@ -153,6 +160,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: true,
+    settlesToPlatformAccount: false, // school's own Connect account
   },
   paypal: {
     supportsNativeSubscriptions: true,
@@ -163,6 +171,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    settlesToPlatformAccount: true, // one global PAYPAL_CLIENT_ID/SECRET — no per-tenant merchant onboarding
   },
   lemonsqueezy: {
     supportsNativeSubscriptions: true,
@@ -173,6 +182,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    settlesToPlatformAccount: true, // one global LS store — Merchant of Record, single platform-owned account
   },
   solana: {
     supportsNativeSubscriptions: false,
@@ -183,6 +193,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false, // split on-chain in one tx (lib/payments/solana-split.ts)
   },
   // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
   // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
@@ -199,6 +210,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // On-chain auto-pull is a fixed-amount delegation; changing plan requires a
     // fresh subscriber-signed delegation, so there is no in-place swap.
     supportsPlanChange: false,
+    settlesToPlatformAccount: false, // split on-chain per pull (lib/payments/solana-subscription-pull.ts)
   },
   manual: {
     supportsNativeSubscriptions: false,
@@ -209,6 +221,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false, // bank transfer straight to the school's own account
   },
   // Binance Pay: hosted crypto checkout (USDT-denominated). No native
   // recurring billing — plan purchases are one-time payments whose period WE
@@ -223,6 +236,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: true, // one global BINANCE_PAY_API_KEY/SECRET merchant account — no sub-merchant split
   },
   // Binance Pay on a PERSONAL (non-merchant, no-KYB) account. No hosted
   // checkout and no webhooks: the buyer transfers manually to the school's
@@ -239,6 +253,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false, // per-tenant Pay ID — straight to the school's own account
   },
 }
 
@@ -360,7 +375,7 @@ export interface PaymentProviderConfig {
   apiKey: string
   webhookSecret?: string
   environment?: 'test' | 'production'
-  additionalConfig?: Record<string, any>
+  additionalConfig?: Record<string, unknown>
 }
 
 /**
