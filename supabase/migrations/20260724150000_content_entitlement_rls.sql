@@ -47,6 +47,10 @@ $function$;
 COMMENT ON FUNCTION public.is_tenant_staff() IS
   'True when the caller is an active teacher or admin of the tenant in their JWT. Used by content RLS policies to let staff read courses they hold no entitlement for.';
 
+-- Functions in `public` carry a default PUBLIC execute grant, which would
+-- expose this over PostgREST to `anon` too. It only ever reports on the
+-- caller (false for anon), but least privilege keeps it off the REST surface.
+REVOKE EXECUTE ON FUNCTION public.is_tenant_staff() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_tenant_staff() TO authenticated;
 
 -- lessons ---------------------------------------------------------------
@@ -134,4 +138,7 @@ $function$;
 COMMENT ON FUNCTION public.get_published_lesson_counts(integer[]) IS
   'Published-lesson counts for catalog listings. SECURITY DEFINER so a prospective buyer sees a real count for courses whose lesson rows content RLS hides from them (#509). Returns counts only — never lesson content.';
 
-GRANT EXECUTE ON FUNCTION public.get_published_lesson_counts(integer[]) TO authenticated, anon;
+-- Authenticated only: the public catalog pages read lesson metadata through
+-- the service-role client, so anon never needs this.
+REVOKE EXECUTE ON FUNCTION public.get_published_lesson_counts(integer[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_published_lesson_counts(integer[]) TO authenticated;
