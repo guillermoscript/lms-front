@@ -99,6 +99,7 @@ export class BinancePersonalProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false,
   }
 
   private readonly apiKey?: string

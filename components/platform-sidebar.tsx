@@ -14,6 +14,7 @@ import {
   IconSchool,
   IconSettings,
   IconUsers,
+  IconWallet,
 } from "@tabler/icons-react"
 import {
   Sidebar,
@@ -49,6 +50,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
     { title: "Overview", href: "/platform", icon: IconChartBar },
     { title: "Tenants", href: "/platform/tenants", icon: IconSchool },
     { title: "Revenue", href: "/platform/revenue", icon: IconReportMoney },
+    { title: "Payouts", href: "/platform/payouts", icon: IconWallet },
     { title: "Billing", href: "/platform/billing", icon: IconCreditCard, badge: pendingBillingCount },
     { title: "Billing Health", href: "/platform/billing-health", icon: IconAlertTriangle, badge: atRiskCount },
     { title: "Plans", href: "/platform/plans", icon: IconBuildingStore },

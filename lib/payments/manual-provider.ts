@@ -30,6 +30,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    settlesToPlatformAccount: false,
   }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {

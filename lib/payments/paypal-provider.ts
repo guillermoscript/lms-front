@@ -84,6 +84,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    settlesToPlatformAccount: true,
   }
 
   private readonly clientId: string
