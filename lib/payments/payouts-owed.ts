@@ -23,6 +23,14 @@
  * EUR sales owes two separate numbers, never one meaningless summed total.
  * `transactions.currency` and `payouts.currency` are trusted as given; this
  * module does no currency conversion, only grouping.
+ *
+ * Refunds/chargebacks (issue #498): a transaction can flip from `successful`
+ * to `refunded` after its payout was already recorded. Callers pass refunded
+ * transactions through alongside successful ones (tagged via `status`); this
+ * module scales each refund by the same split percentage a sale would've
+ * used and surfaces it as a distinct `clawback` figure, subtracted from
+ * `netOwed` on the next cycle rather than silently vanishing from
+ * `grossCollected`/`grossOwed` with no trace.
  */
 
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */
@@ -38,12 +46,14 @@ export interface TenantOwedInput {
 export interface PlatformSettledTxn {
   tenantId: string
   paymentProvider: string
-  /** Successful transaction amount, major units, in `currency`. */
+  /** Transaction amount, major units, in `currency` — always positive regardless of `status`. */
   amount: number
   /** transactions.currency (e.g. 'usd', 'eur'). */
   currency: string
   /** revenue_splits.school_percentage in effect when this transaction was created (0–100), or null for pre-#496 rows. */
   schoolPercentageSnapshot: number | null
+  /** 'successful' contributes to grossCollected/grossOwed as normal; 'refunded' contributes its scaled amount to `clawback` instead (issue #498). */
+  status: 'successful' | 'refunded'
 }
 
 export interface ManualPayoutRecord {
@@ -61,7 +71,9 @@ export interface CurrencyBalance {
   grossOwed: number
   /** Sum of manual payouts already recorded as paid in this currency. */
   alreadyPaid: number
-  /** max(grossOwed - alreadyPaid, 0) — what's currently owed in this currency. */
+  /** Sum over refunded transactions of amount × (that transaction's snapshotted split, or the tenant's current split) — money already paid out for sales that later got refunded (issue #498). */
+  clawback: number
+  /** max(grossOwed - alreadyPaid - clawback, 0) — what's currently owed in this currency. */
   netOwed: number
   /** Per-provider breakdown of grossCollected in this currency. */
   byProvider: Record<string, number>
@@ -83,7 +95,7 @@ export function computeOwedBalances(
   const schoolPercentageByTenant = new Map(tenants.map((t) => [t.tenantId, t.schoolPercentage]))
 
   // tenantId -> currency -> partial balance
-  const byTenantCurrency = new Map<string, Map<string, { grossCollected: number; grossOwed: number; byProvider: Record<string, number> }>>()
+  const byTenantCurrency = new Map<string, Map<string, { grossCollected: number; grossOwed: number; clawback: number; byProvider: Record<string, number> }>>()
 
   function bucket(tenantId: string, currency: string) {
     let byCurrency = byTenantCurrency.get(tenantId)
@@ -93,7 +105,7 @@ export function computeOwedBalances(
     }
     let entry = byCurrency.get(currency)
     if (!entry) {
-      entry = { grossCollected: 0, grossOwed: 0, byProvider: {} }
+      entry = { grossCollected: 0, grossOwed: 0, clawback: 0, byProvider: {} }
       byCurrency.set(currency, entry)
     }
     return entry
@@ -101,9 +113,14 @@ export function computeOwedBalances(
 
   for (const txn of txns) {
     const entry = bucket(txn.tenantId, txn.currency)
-    entry.grossCollected += txn.amount
     const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
-    entry.grossOwed += (txn.amount * effectivePercentage) / 100
+    const scaledAmount = (txn.amount * effectivePercentage) / 100
+    if (txn.status === 'refunded') {
+      entry.clawback += scaledAmount
+      continue
+    }
+    entry.grossCollected += txn.amount
+    entry.grossOwed += scaledAmount
     entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + txn.amount
   }
 
@@ -129,13 +146,15 @@ export function computeOwedBalances(
       const entry = collected.get(currency)
       const grossCollected = entry?.grossCollected ?? 0
       const grossOwed = entry?.grossOwed ?? 0
+      const clawback = entry?.clawback ?? 0
       const alreadyPaid = paid.get(currency) ?? 0
-      const netOwed = Math.max(grossOwed - alreadyPaid, 0)
+      const netOwed = Math.max(grossOwed - alreadyPaid - clawback, 0)
       return {
         currency,
         grossCollected,
         grossOwed,
         alreadyPaid,
+        clawback,
         netOwed,
         byProvider: entry?.byProvider ?? {},
       }

@@ -29,8 +29,8 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     admin.from('revenue_splits').select('tenant_id, school_percentage'),
     admin
       .from('transactions')
-      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot')
-      .eq('status', 'successful')
+      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status')
+      .in('status', ['successful', 'refunded'])
       .in('payment_provider', PLATFORM_SETTLED_PROVIDERS),
     admin.from('payouts').select('tenant_id, amount, currency').eq('payout_method', 'manual').eq('status', 'paid'),
   ])
@@ -53,6 +53,7 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
         amount: t.amount as number,
         currency: t.currency || 'usd',
         schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
+        status: t.status as 'successful' | 'refunded',
       })),
     (paid || []).map((p) => ({ tenantId: p.tenant_id, amount: p.amount, currency: p.currency || 'usd' }))
   )

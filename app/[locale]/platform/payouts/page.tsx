@@ -41,10 +41,12 @@ export default async function PlatformPayoutsPage() {
     currency: string
     grossCollected: number
     alreadyPaid: number
+    clawback: number
     netOwed: number
     byProvider: Record<string, number>
   }
   const rows: Row[] = []
+  const totalClawbackByCurrency: Record<string, number> = {}
 
   for (const tenant of owed) {
     let tenantHasOwed = false
@@ -52,6 +54,9 @@ export default async function PlatformPayoutsPage() {
       totalOwedByCurrency[balance.currency] = (totalOwedByCurrency[balance.currency] ?? 0) + balance.netOwed
       totalCollectedByCurrency[balance.currency] = (totalCollectedByCurrency[balance.currency] ?? 0) + balance.grossCollected
       totalPaidOutByCurrency[balance.currency] = (totalPaidOutByCurrency[balance.currency] ?? 0) + balance.alreadyPaid
+      if (balance.clawback > 0) {
+        totalClawbackByCurrency[balance.currency] = (totalClawbackByCurrency[balance.currency] ?? 0) + balance.clawback
+      }
       if (balance.netOwed > 0) tenantHasOwed = true
       rows.push({
         tenantId: tenant.tenantId,
@@ -60,12 +65,14 @@ export default async function PlatformPayoutsPage() {
         currency: balance.currency,
         grossCollected: balance.grossCollected,
         alreadyPaid: balance.alreadyPaid,
+        clawback: balance.clawback,
         netOwed: balance.netOwed,
         byProvider: balance.byProvider,
       })
     }
     if (tenantHasOwed) schoolsOwed++
   }
+  const hasClawbacks = Object.values(totalClawbackByCurrency).some((amount) => amount > 0)
 
   const metricCards = [
     {
@@ -127,6 +134,17 @@ export default async function PlatformPayoutsPage() {
         ))}
       </div>
 
+      {hasClawbacks && (
+        <div
+          className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+          data-testid="payouts-clawback-banner"
+        >
+          <span className="font-medium">Refund clawback: {formatByCurrency(totalClawbackByCurrency)}.</span>{' '}
+          Some already-paid-out transactions were later refunded — this amount reduces what&apos;s
+          currently owed rather than being paid again.
+        </div>
+      )}
+
       <Card data-testid="payouts-by-tenant">
         <CardHeader>
           <CardTitle>By school</CardTitle>
@@ -145,6 +163,7 @@ export default async function PlatformPayoutsPage() {
                     <th className="pb-2 text-right font-medium">Collected</th>
                     <th className="pb-2 text-right font-medium">School %</th>
                     <th className="pb-2 text-right font-medium">Paid so far</th>
+                    <th className="pb-2 text-right font-medium">Clawback</th>
                     <th className="pb-2 text-right font-medium">Owed</th>
                     <th className="pb-2 text-right font-medium"></th>
                   </tr>
@@ -165,6 +184,15 @@ export default async function PlatformPayoutsPage() {
                       </td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
                         {money(r.alreadyPaid, r.currency)}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">
+                        {r.clawback > 0 ? (
+                          <span className="font-medium text-red-600 dark:text-red-400">
+                            −{money(r.clawback, r.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
                         {money(r.netOwed, r.currency)}
