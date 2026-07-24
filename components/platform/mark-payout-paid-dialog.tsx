@@ -20,9 +20,10 @@ interface Props {
   tenantId: string
   tenantName: string
   netOwed: number
+  currency: string
 }
 
-export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed }: Props) {
+export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState(netOwed.toFixed(2))
@@ -37,8 +38,8 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed }: Props) {
     }
     setLoading(true)
     try {
-      await markPayoutPaid(tenantId, parsed, note.trim() || undefined)
-      toast.success(`Recorded $${parsed.toFixed(2)} paid to ${tenantName}`)
+      await markPayoutPaid(tenantId, parsed, currency, note.trim() || undefined)
+      toast.success(`Recorded ${parsed.toFixed(2)} ${currency.toUpperCase()} paid to ${tenantName}`)
       setOpen(false)
       setNote('')
       router.refresh()
@@ -68,7 +69,7 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed }: Props) {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="payout-amount">Amount paid (USD)</Label>
+              <Label htmlFor="payout-amount">Amount paid ({currency.toUpperCase()})</Label>
               <Input
                 id="payout-amount"
                 type="number"

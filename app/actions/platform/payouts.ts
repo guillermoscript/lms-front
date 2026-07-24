@@ -29,10 +29,10 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     admin.from('revenue_splits').select('tenant_id, school_percentage'),
     admin
       .from('transactions')
-      .select('tenant_id, payment_provider, amount, school_percentage_snapshot')
+      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot')
       .eq('status', 'successful')
       .in('payment_provider', PLATFORM_SETTLED_PROVIDERS),
-    admin.from('payouts').select('tenant_id, amount').eq('payout_method', 'manual').eq('status', 'paid'),
+    admin.from('payouts').select('tenant_id, amount, currency').eq('payout_method', 'manual').eq('status', 'paid'),
   ])
 
   const schoolPercentageByTenant = new Map(
@@ -51,13 +51,14 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
         tenantId: t.tenant_id as string,
         paymentProvider: t.payment_provider as string,
         amount: t.amount as number,
+        currency: t.currency || 'usd',
         schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
       })),
-    (paid || []).map((p) => ({ tenantId: p.tenant_id, amount: p.amount }))
+    (paid || []).map((p) => ({ tenantId: p.tenant_id, amount: p.amount, currency: p.currency || 'usd' }))
   )
 }
 
-export async function markPayoutPaid(tenantId: string, amount: number, note?: string) {
+export async function markPayoutPaid(tenantId: string, amount: number, currency: string, note?: string) {
   const userId = await verifySuperAdmin()
   if (!(amount > 0)) throw new Error('Amount must be positive')
 
@@ -65,7 +66,7 @@ export async function markPayoutPaid(tenantId: string, amount: number, note?: st
   const { error } = await admin.from('payouts').insert({
     tenant_id: tenantId,
     amount,
-    currency: 'usd',
+    currency,
     status: 'paid',
     payout_method: 'manual',
     paid_at: new Date().toISOString(),

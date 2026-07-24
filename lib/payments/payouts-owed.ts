@@ -18,6 +18,11 @@
  * snapshot column (`schoolPercentageSnapshot: null`) fall back to the
  * tenant's current `schoolPercentage` — the same behavior this module had
  * before #496, so old data isn't retroactively wrong either way.
+ *
+ * Balances are grouped PER CURRENCY (issue #497) — a tenant with both USD and
+ * EUR sales owes two separate numbers, never one meaningless summed total.
+ * `transactions.currency` and `payouts.currency` are trusted as given; this
+ * module does no currency conversion, only grouping.
  */
 
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */
@@ -33,8 +38,10 @@ export interface TenantOwedInput {
 export interface PlatformSettledTxn {
   tenantId: string
   paymentProvider: string
-  /** Successful transaction amount, major units. */
+  /** Successful transaction amount, major units, in `currency`. */
   amount: number
+  /** transactions.currency (e.g. 'usd', 'eur'). */
+  currency: string
   /** revenue_splits.school_percentage in effect when this transaction was created (0–100), or null for pre-#496 rows. */
   schoolPercentageSnapshot: number | null
 }
@@ -42,22 +49,30 @@ export interface PlatformSettledTxn {
 export interface ManualPayoutRecord {
   tenantId: string
   amount: number
+  /** payouts.currency — the currency this payout was actually recorded in. */
+  currency: string
+}
+
+export interface CurrencyBalance {
+  currency: string
+  /** Sum of platform-settled transaction amounts in this currency (100% of what was collected). */
+  grossCollected: number
+  /** Sum over this currency's transactions of amount × (that transaction's snapshotted split, or the tenant's current split if unsnapshotted). */
+  grossOwed: number
+  /** Sum of manual payouts already recorded as paid in this currency. */
+  alreadyPaid: number
+  /** max(grossOwed - alreadyPaid, 0) — what's currently owed in this currency. */
+  netOwed: number
+  /** Per-provider breakdown of grossCollected in this currency. */
+  byProvider: Record<string, number>
 }
 
 export interface TenantOwed {
   tenantId: string
   tenantName: string
   schoolPercentage: number
-  /** Sum of platform-settled transaction amounts (100% of what was collected). */
-  grossCollected: number
-  /** Sum over transactions of amount × (that transaction's snapshotted split, or the tenant's current split if unsnapshotted) — the school's all-time share. */
-  grossOwed: number
-  /** Sum of manual payouts already recorded as paid for this tenant. */
-  alreadyPaid: number
-  /** max(grossOwed - alreadyPaid, 0) — what's currently owed. */
-  netOwed: number
-  /** Per-provider breakdown of grossCollected. */
-  byProvider: Record<string, number>
+  /** One entry per currency this tenant has platform-settled activity or payouts in. Never summed across currencies. */
+  balances: CurrencyBalance[]
 }
 
 export function computeOwedBalances(
@@ -67,39 +82,70 @@ export function computeOwedBalances(
 ): TenantOwed[] {
   const schoolPercentageByTenant = new Map(tenants.map((t) => [t.tenantId, t.schoolPercentage]))
 
-  const collectedByTenant = new Map<string, number>()
-  const owedByTenant = new Map<string, number>()
-  const byProviderByTenant = new Map<string, Record<string, number>>()
-  for (const txn of txns) {
-    collectedByTenant.set(txn.tenantId, (collectedByTenant.get(txn.tenantId) ?? 0) + txn.amount)
+  // tenantId -> currency -> partial balance
+  const byTenantCurrency = new Map<string, Map<string, { grossCollected: number; grossOwed: number; byProvider: Record<string, number> }>>()
 
-    const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
-    owedByTenant.set(txn.tenantId, (owedByTenant.get(txn.tenantId) ?? 0) + (txn.amount * effectivePercentage) / 100)
-
-    const byProvider = byProviderByTenant.get(txn.tenantId) ?? {}
-    byProvider[txn.paymentProvider] = (byProvider[txn.paymentProvider] ?? 0) + txn.amount
-    byProviderByTenant.set(txn.tenantId, byProvider)
+  function bucket(tenantId: string, currency: string) {
+    let byCurrency = byTenantCurrency.get(tenantId)
+    if (!byCurrency) {
+      byCurrency = new Map()
+      byTenantCurrency.set(tenantId, byCurrency)
+    }
+    let entry = byCurrency.get(currency)
+    if (!entry) {
+      entry = { grossCollected: 0, grossOwed: 0, byProvider: {} }
+      byCurrency.set(currency, entry)
+    }
+    return entry
   }
 
-  const paidByTenant = new Map<string, number>()
+  for (const txn of txns) {
+    const entry = bucket(txn.tenantId, txn.currency)
+    entry.grossCollected += txn.amount
+    const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
+    entry.grossOwed += (txn.amount * effectivePercentage) / 100
+    entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + txn.amount
+  }
+
+  const paidByTenantCurrency = new Map<string, Map<string, number>>()
   for (const payout of paidPayouts) {
-    paidByTenant.set(payout.tenantId, (paidByTenant.get(payout.tenantId) ?? 0) + payout.amount)
+    let byCurrency = paidByTenantCurrency.get(payout.tenantId)
+    if (!byCurrency) {
+      byCurrency = new Map()
+      paidByTenantCurrency.set(payout.tenantId, byCurrency)
+    }
+    byCurrency.set(payout.currency, (byCurrency.get(payout.currency) ?? 0) + payout.amount)
   }
 
   return tenants.map((tenant) => {
-    const grossCollected = collectedByTenant.get(tenant.tenantId) ?? 0
-    const grossOwed = owedByTenant.get(tenant.tenantId) ?? 0
-    const alreadyPaid = paidByTenant.get(tenant.tenantId) ?? 0
-    const netOwed = Math.max(grossOwed - alreadyPaid, 0)
+    const collected = byTenantCurrency.get(tenant.tenantId) ?? new Map()
+    const paid = paidByTenantCurrency.get(tenant.tenantId) ?? new Map()
+
+    // A currency can appear only in payouts (fully paid off, no outstanding
+    // transactions left in this grouping) — union both key sets so it's not dropped.
+    const currencies = new Set<string>([...collected.keys(), ...paid.keys()])
+
+    const balances: CurrencyBalance[] = Array.from(currencies).map((currency) => {
+      const entry = collected.get(currency)
+      const grossCollected = entry?.grossCollected ?? 0
+      const grossOwed = entry?.grossOwed ?? 0
+      const alreadyPaid = paid.get(currency) ?? 0
+      const netOwed = Math.max(grossOwed - alreadyPaid, 0)
+      return {
+        currency,
+        grossCollected,
+        grossOwed,
+        alreadyPaid,
+        netOwed,
+        byProvider: entry?.byProvider ?? {},
+      }
+    })
+
     return {
       tenantId: tenant.tenantId,
       tenantName: tenant.tenantName,
       schoolPercentage: tenant.schoolPercentage,
-      grossCollected,
-      grossOwed,
-      alreadyPaid,
-      netOwed,
-      byProvider: byProviderByTenant.get(tenant.tenantId) ?? {},
+      balances,
     }
   })
 }
