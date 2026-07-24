@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.0.2 (a4e00ff)"
   }
   public: {
     Tables: {
@@ -3796,6 +3776,7 @@ export type Database = {
           summary: string | null
           tenant_id: string
           title: string | null
+          transcript: Json | null
           updated_at: string | null
           video_url: string | null
         }
@@ -3816,6 +3797,7 @@ export type Database = {
           summary?: string | null
           tenant_id?: string
           title?: string | null
+          transcript?: Json | null
           updated_at?: string | null
           video_url?: string | null
         }
@@ -3836,6 +3818,7 @@ export type Database = {
           summary?: string | null
           tenant_id?: string
           title?: string | null
+          transcript?: Json | null
           updated_at?: string | null
           video_url?: string | null
         }
@@ -4397,10 +4380,13 @@ export type Database = {
           currency: string | null
           failed_at: string | null
           failure_reason: string | null
+          note: string | null
           paid_at: string | null
           payout_id: number
-          period_end: string
-          period_start: string
+          payout_method: string
+          period_end: string | null
+          period_start: string | null
+          recorded_by: string | null
           status: string
           stripe_metadata: Json | null
           stripe_payout_id: string | null
@@ -4412,10 +4398,13 @@ export type Database = {
           currency?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          note?: string | null
           paid_at?: string | null
           payout_id?: number
-          period_end: string
-          period_start: string
+          payout_method?: string
+          period_end?: string | null
+          period_start?: string | null
+          recorded_by?: string | null
           status?: string
           stripe_metadata?: Json | null
           stripe_payout_id?: string | null
@@ -4427,10 +4416,13 @@ export type Database = {
           currency?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          note?: string | null
           paid_at?: string | null
           payout_id?: number
-          period_end?: string
-          period_start?: string
+          payout_method?: string
+          period_end?: string | null
+          period_start?: string | null
+          recorded_by?: string | null
           status?: string
           stripe_metadata?: Json | null
           stripe_payout_id?: string | null
@@ -5454,6 +5446,7 @@ export type Database = {
           start_date: string
           subscription_id: number
           subscription_status: Database["public"]["Enums"]["subscription_status"]
+          superseded_by: number | null
           tenant_id: string
           transaction_id: number
           trial_end: string | null
@@ -5476,6 +5469,7 @@ export type Database = {
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          superseded_by?: number | null
           tenant_id?: string
           transaction_id: number
           trial_end?: string | null
@@ -5498,6 +5492,7 @@ export type Database = {
           start_date?: string
           subscription_id?: number
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          superseded_by?: number | null
           tenant_id?: string
           transaction_id?: number
           trial_end?: string | null
@@ -5511,6 +5506,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "subscriptions_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["subscription_id"]
           },
           {
             foreignKeyName: "subscriptions_tenant_id_fkey"
@@ -5911,6 +5913,7 @@ export type Database = {
           provider_charge_id: string | null
           provider_metadata: Json | null
           provider_subscription_id: string | null
+          school_percentage_snapshot: number | null
           settlement_base: number | null
           settlement_currency: string | null
           settlement_mint: string | null
@@ -5932,6 +5935,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
@@ -5953,6 +5957,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
@@ -6062,6 +6067,27 @@ export type Database = {
           id?: number
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_ui_state: {
+        Row: {
+          key: string
+          updated_at: string
+          user_id: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          user_id: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          user_id?: string
+          value?: Json
         }
         Relationships: []
       }
@@ -6259,6 +6285,38 @@ export type Database = {
         Args: { _plan_id: number; _user_id: string }
         Returns: undefined
       }
+      change_subscription_plan: {
+        Args: { _new_plan_id: number }
+        Returns: {
+          cancel_at: string
+          cancel_at_period_end: boolean | null
+          canceled_at: string | null
+          created: string
+          current_period_end: string
+          current_period_start: string
+          end_date: string
+          ended_at: string | null
+          payment_provider: string
+          plan_id: number
+          provider_metadata: Json | null
+          provider_subscription_id: string | null
+          start_date: string
+          subscription_id: number
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          superseded_by: number | null
+          tenant_id: string
+          transaction_id: number
+          trial_end: string | null
+          trial_start: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_and_issue_certificate: {
         Args: { p_course_id: number; p_user_id: string }
         Returns: Json
@@ -6373,7 +6431,6 @@ export type Database = {
         Args: { _plan_id: number; _user_id: string }
         Returns: undefined
       }
-      handle_manual_subscription_expiry: { Args: never; Returns: undefined }
       handle_new_subscription: {
         Args: {
           _plan_id: number
@@ -6676,9 +6733,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       ai_sender_type: [
@@ -6740,4 +6794,3 @@ export const Constants = {
     },
   },
 } as const
-
