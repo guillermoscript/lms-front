@@ -64,7 +64,9 @@ export default async function AdminPayoutsPage({
   // Fetch payouts for this tenant
   const { data: payouts } = await supabase
     .from('payouts')
-    .select('payout_id, amount, currency, status, period_start, period_end, stripe_payout_id, paid_at, failure_reason, created_at')
+    .select(
+      'payout_id, amount, currency, status, period_start, period_end, stripe_payout_id, paid_at, failure_reason, created_at, note, payout_method'
+    )
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
@@ -203,6 +205,9 @@ export default async function AdminPayoutsPage({
                       {t('table.headers.status')}
                     </TableHead>
                     <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('table.headers.method')}
+                    </TableHead>
+                    <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('table.headers.paidAt')}
                     </TableHead>
                     <TableHead className="text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -235,6 +240,12 @@ export default async function AdminPayoutsPage({
                             <p className="mt-0.5 text-[10px] text-destructive">{payout.failure_reason}</p>
                           )}
                         </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {payout.payout_method === 'manual' ? t('method.manual') : t('method.stripeConnect')}
+                          {payout.note && (
+                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground/70">{payout.note}</p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs tabular-nums text-muted-foreground">
                           {payout.paid_at
                             ? format(new Date(payout.paid_at), 'MMM d, yyyy HH:mm', { locale: dateLocale })
@@ -255,7 +266,7 @@ export default async function AdminPayoutsPage({
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="py-12 text-center">
+                      <TableCell colSpan={6} className="py-12 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                             <IconBuildingBank className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />

@@ -59,9 +59,29 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
   )
 }
 
-export async function markPayoutPaid(tenantId: string, amount: number, currency: string, note?: string) {
+// A payout more than 10% off the currently owed balance is flagged for confirmation
+// (catches typos like an extra zero) without ever hard-blocking a legitimate rounded
+// or ahead-of-schedule payment.
+const MISMATCH_THRESHOLD_PCT = 0.1
+
+export async function markPayoutPaid(
+  tenantId: string,
+  amount: number,
+  currency: string,
+  note?: string,
+  confirmMismatch = false,
+): Promise<{ status: 'ok' } | { status: 'warning'; netOwed: number }> {
   const userId = await verifySuperAdmin()
   if (!(amount > 0)) throw new Error('Amount must be positive')
+
+  if (!confirmMismatch) {
+    const owed = await getPayoutsOwed()
+    const netOwed =
+      owed.find((o) => o.tenantId === tenantId)?.balances.find((b) => b.currency === currency)?.netOwed ?? 0
+    if (Math.abs(amount - netOwed) > netOwed * MISMATCH_THRESHOLD_PCT) {
+      return { status: 'warning', netOwed }
+    }
+  }
 
   const admin = createAdminClient()
   const { error } = await admin.from('payouts').insert({
@@ -77,4 +97,6 @@ export async function markPayoutPaid(tenantId: string, amount: number, currency:
   if (error) throw new Error(error.message)
 
   revalidatePath('/platform/payouts')
+  revalidatePath('/dashboard/admin/payouts')
+  return { status: 'ok' }
 }

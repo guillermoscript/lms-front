@@ -1604,7 +1604,7 @@
       "welcome": "Gestiona tu plataforma LMS",
       "payouts": {
         "title": "Pagos recibidos",
-        "description": "Desembolsos de Stripe Connect a la cuenta de tu escuela.",
+        "description": "Desembolsos a la cuenta de tu escuela, ya sea vía Stripe Connect o registrados manualmente por la plataforma.",
         "accessDenied": "Acceso denegado",
         "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
         "stats": {
@@ -1619,19 +1619,24 @@
           "pending": "Pendiente",
           "failed": "Fallido"
         },
+        "method": {
+          "manual": "Manual",
+          "stripeConnect": "Stripe Connect"
+        },
         "table": {
           "title": "Historial de pagos",
           "headers": {
             "period": "Período",
             "amount": "Monto",
             "status": "Estado",
+            "method": "Método",
             "paidAt": "Pagado el",
             "stripeRef": "Ref. Stripe"
           }
         },
         "empty": {
           "title": "Sin pagos aún",
-          "description": "Los pagos aparecerán aquí una vez que Stripe Connect transfiera los fondos a tu cuenta bancaria. Asegúrate de que tu cuenta Stripe esté completamente verificada."
+          "description": "Los pagos aparecerán aquí una vez que Stripe Connect transfiera los fondos a tu cuenta bancaria, o cuando la plataforma registre un pago manual."
         }
       },
       "invoices": {
