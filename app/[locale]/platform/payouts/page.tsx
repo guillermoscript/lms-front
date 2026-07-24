@@ -7,8 +7,15 @@ import {
   IconWalletOff,
 } from '@tabler/icons-react'
 
-const usd = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n ?? 0)
+const money = (n: number, currency: string) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(n ?? 0)
+
+/** Renders one line per currency — amounts in different currencies are never summed into one number (#497). */
+function formatByCurrency(byCurrency: Record<string, number>) {
+  const entries = Object.entries(byCurrency).filter(([, amount]) => amount !== 0)
+  if (entries.length === 0) return money(0, 'usd')
+  return entries.map(([currency, amount]) => money(amount, currency)).join(' · ')
+}
 
 const PROVIDER_LABEL: Record<string, string> = {
   paypal: 'PayPal',
@@ -19,15 +26,51 @@ const PROVIDER_LABEL: Record<string, string> = {
 export default async function PlatformPayoutsPage() {
   const owed = await getPayoutsOwed()
 
-  const totalOwed = owed.reduce((sum, t) => sum + t.netOwed, 0)
-  const totalCollected = owed.reduce((sum, t) => sum + t.grossCollected, 0)
-  const totalPaidOut = owed.reduce((sum, t) => sum + t.alreadyPaid, 0)
-  const schoolsOwed = owed.filter((t) => t.netOwed > 0).length
+  // Per-currency totals across all tenants — kept separate, never summed together.
+  const totalOwedByCurrency: Record<string, number> = {}
+  const totalCollectedByCurrency: Record<string, number> = {}
+  const totalPaidOutByCurrency: Record<string, number> = {}
+  let schoolsOwed = 0
+
+  // One row per (tenant, currency) balance — a tenant with both USD and EUR
+  // sales gets two rows, not one summed row.
+  type Row = {
+    tenantId: string
+    tenantName: string
+    schoolPercentage: number
+    currency: string
+    grossCollected: number
+    alreadyPaid: number
+    netOwed: number
+    byProvider: Record<string, number>
+  }
+  const rows: Row[] = []
+
+  for (const tenant of owed) {
+    let tenantHasOwed = false
+    for (const balance of tenant.balances) {
+      totalOwedByCurrency[balance.currency] = (totalOwedByCurrency[balance.currency] ?? 0) + balance.netOwed
+      totalCollectedByCurrency[balance.currency] = (totalCollectedByCurrency[balance.currency] ?? 0) + balance.grossCollected
+      totalPaidOutByCurrency[balance.currency] = (totalPaidOutByCurrency[balance.currency] ?? 0) + balance.alreadyPaid
+      if (balance.netOwed > 0) tenantHasOwed = true
+      rows.push({
+        tenantId: tenant.tenantId,
+        tenantName: tenant.tenantName,
+        schoolPercentage: tenant.schoolPercentage,
+        currency: balance.currency,
+        grossCollected: balance.grossCollected,
+        alreadyPaid: balance.alreadyPaid,
+        netOwed: balance.netOwed,
+        byProvider: balance.byProvider,
+      })
+    }
+    if (tenantHasOwed) schoolsOwed++
+  }
 
   const metricCards = [
     {
       title: 'Currently Owed',
-      value: usd(totalOwed),
+      value: formatByCurrency(totalOwedByCurrency),
       sub: `${schoolsOwed} school${schoolsOwed === 1 ? '' : 's'} awaiting payout`,
       icon: IconWalletOff,
       bg: 'bg-amber-50 dark:bg-amber-950/40',
@@ -35,7 +78,7 @@ export default async function PlatformPayoutsPage() {
     },
     {
       title: 'Collected (single-account providers)',
-      value: usd(totalCollected),
+      value: formatByCurrency(totalCollectedByCurrency),
       sub: 'PayPal, Binance Pay, Lemon Squeezy — 100% lands in your account',
       icon: IconCoin,
       bg: 'bg-blue-50 dark:bg-blue-950/40',
@@ -43,7 +86,7 @@ export default async function PlatformPayoutsPage() {
     },
     {
       title: 'Paid Out (all time)',
-      value: usd(totalPaidOut),
+      value: formatByCurrency(totalPaidOutByCurrency),
       sub: 'Manually recorded payouts to schools',
       icon: IconReportMoney,
       bg: 'bg-emerald-50 dark:bg-emerald-950/40',
@@ -89,14 +132,15 @@ export default async function PlatformPayoutsPage() {
           <CardTitle>By school</CardTitle>
         </CardHeader>
         <CardContent>
-          {owed.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No schools yet.</p>
+          {rows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No platform-settled sales yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">School</th>
+                    <th className="pb-2 font-medium">Currency</th>
                     <th className="pb-2 font-medium">Providers</th>
                     <th className="pb-2 text-right font-medium">Collected</th>
                     <th className="pb-2 text-right font-medium">School %</th>
@@ -106,29 +150,31 @@ export default async function PlatformPayoutsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {owed.map((t) => (
-                    <tr key={t.tenantId} className="border-b last:border-0">
-                      <td className="py-2.5 font-medium">{t.tenantName}</td>
+                  {rows.map((r) => (
+                    <tr key={`${r.tenantId}-${r.currency}`} className="border-b last:border-0">
+                      <td className="py-2.5 font-medium">{r.tenantName}</td>
+                      <td className="py-2.5 uppercase text-muted-foreground">{r.currency}</td>
                       <td className="py-2.5 text-muted-foreground">
-                        {Object.keys(t.byProvider).length === 0
+                        {Object.keys(r.byProvider).length === 0
                           ? '—'
-                          : Object.keys(t.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
+                          : Object.keys(r.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{usd(t.grossCollected)}</td>
+                      <td className="py-2.5 text-right tabular-nums">{money(r.grossCollected, r.currency)}</td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                        {t.schoolPercentage}%
+                        {r.schoolPercentage}%
                       </td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                        {usd(t.alreadyPaid)}
+                        {money(r.alreadyPaid, r.currency)}
                       </td>
                       <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
-                        {usd(t.netOwed)}
+                        {money(r.netOwed, r.currency)}
                       </td>
                       <td className="py-2.5 text-right">
                         <MarkPayoutPaidDialog
-                          tenantId={t.tenantId}
-                          tenantName={t.tenantName}
-                          netOwed={t.netOwed}
+                          tenantId={r.tenantId}
+                          tenantName={r.tenantName}
+                          netOwed={r.netOwed}
+                          currency={r.currency}
                         />
                       </td>
                     </tr>
@@ -144,7 +190,8 @@ export default async function PlatformPayoutsPage() {
         Stripe and Solana sales already split automatically and never appear here. Binance Pay
         (personal account) and manual/offline sales settle straight to the school and also never
         appear here — only PayPal, Binance Pay (merchant), and Lemon Squeezy do, since those settle
-        100% into your account today.
+        100% into your account today. Amounts in different currencies are shown and paid out
+        separately — they&apos;re never added together into one number.
       </p>
     </main>
   )
