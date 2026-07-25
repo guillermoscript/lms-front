@@ -555,9 +555,18 @@ Payment transactions. Tenant-scoped.
 | `provider_metadata` | JSONB | |
 | `stripe_payment_intent_id` | TEXT | Stripe-specific, kept for history |
 | `school_percentage_snapshot` | NUMERIC | Revenue split frozen at purchase time — database-owned, never caller-supplied |
-| `settlement_currency` / `settlement_base` / `settlement_mint` / `settlement_sol_usd` | | Crypto settlement detail (Solana) |
+| `settlement_currency` / `settlement_base` / `settlement_mint` / `settlement_sol_usd` | | Crypto settlement detail (Solana) — server-owned; `settlement_base` is the figure the on-chain payment is verified against |
 
 **Status is `'successful'`** (NOT `'succeeded'`).
+
+**Writes are server-only.** `authenticated` holds no INSERT grant (#538) and only a
+three-column UPDATE grant — `status`, `provider_subscription_id`,
+`stripe_payment_intent_id` (#528). Every insert goes through a service-role client
+(the two checkout routes, the webhooks, the reconcilers, `payment-requests.ts`) or the
+SECURITY DEFINER `grant_free_subscription()`. A user-scoped insert fails with
+`permission denied for table transactions` — that is deliberate: the row's `amount` and
+settlement figures decide what the buyer owes, so they are derived from
+`products`/`plans` on the server, never accepted from the caller.
 
 **Three unique indexes, not one** — a purchase is either product-shaped or plan-shaped, never both:
 

@@ -219,8 +219,8 @@ export async function POST(req: NextRequest) {
     // columns) and a student-supplied value must not survive. This write is kept
     // deliberately: it computes the identical number, and it keeps the rollback
     // migration a safe lever — drop the trigger and this path still snapshots.
-    const adminClientForSplit = createAdminClient()
-    const { data: revenueSplit } = await adminClientForSplit
+    const adminClient = createAdminClient()
+    const { data: revenueSplit } = await adminClient
       .from('revenue_splits')
       .select('school_percentage')
       .eq('tenant_id', tenantId)
@@ -229,7 +229,25 @@ export async function POST(req: NextRequest) {
 
     // 1. Pending transaction — our correlation id (transaction_id) round-trips
     //    back on the webhook (LS) or the verify endpoint (Solana).
-    const { data: transaction, error: txError } = await supabase
+    //
+    // The ADMIN client, since #538. The settlement_* figures below are what the
+    // on-chain payment is later verified against (lib/payments/solana-reconcile.ts
+    // → verifySplitTransfer({ totalBase })), and this used to be the reason
+    // `authenticated` had to keep an INSERT grant on `transactions` — which meant a
+    // student could POST their own pending row claiming it owed 1 lamport for a $49
+    // product, pay that, and be enrolled. Writing here on the service-role client
+    // let 20260725180000 revoke the grant outright, so `amount`, `currency`,
+    // `payment_provider` and all four settlement columns are now server-owned.
+    //
+    // Per CLAUDE.md that shifts the tenant check to us, and it is already in place:
+    // `user.id` comes from the verified session, `tenantId` from the x-tenant-id
+    // header proxy.ts sets, and every field below is derived from the tenant-scoped
+    // `plans` / `products` read above on the USER-scoped client — so a caller still
+    // cannot reference another tenant's catalogue or price. The live SOL/USD quote
+    // (getSolUsdPrice) never crosses the client boundary in either direction, which
+    // is why this is an admin-client write and not a SECURITY DEFINER RPC: an RPC
+    // would have to accept that rate as a caller-supplied parameter.
+    const { data: transaction, error: txError } = await adminClient
       .from('transactions')
       .insert({
         user_id: user.id,
