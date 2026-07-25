@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { formatByCurrency, formatMoney, sumByCurrency } from '@/lib/payments/format-money'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -72,18 +73,12 @@ export default async function AdminPayoutsPage({
 
   const rows = payouts || []
 
-  // Summary calculations
-  const totalPaid = rows
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + (p.amount || 0), 0)
+  // Summary calculations. Paid payouts are totalled per currency and rendered as
+  // one figure each — a school selling in USD and EUR reads two figures, not
+  // their sum in dollars (#531, same invariant #497 fixed on the platform page).
+  const totalPaidByCurrency = sumByCurrency(rows.filter((p) => p.status === 'paid'))
 
   const pendingCount = rows.filter((p) => p.status === 'pending' || p.status === 'processing').length
-
-  const fmt = (amount: number, currency: string) =>
-    new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: (currency || 'USD').toUpperCase(),
-    }).format(amount)
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -149,8 +144,11 @@ export default async function AdminPayoutsPage({
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                     {t('stats.totalPaid')}
                   </p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
-                    {fmt(totalPaid, 'USD')}
+                  <p
+                    className="mt-2 text-2xl font-bold tracking-tight tabular-nums break-words"
+                    data-testid="total-paid-value"
+                  >
+                    {formatByCurrency(totalPaidByCurrency, locale)}
                   </p>
                   <p className="mt-1 text-[11px] text-muted-foreground/70">
                     {t('stats.totalPaidDesc')}
@@ -232,7 +230,7 @@ export default async function AdminPayoutsPage({
                             : '—'}
                         </TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">
-                          {fmt(payout.amount || 0, payout.currency || 'USD')}
+                          {formatMoney(payout.amount, payout.currency, locale)}
                         </TableCell>
                         <TableCell>
                           {statusBadge(payout.status || '')}
