@@ -3,16 +3,32 @@ import { computeBillingHealth } from '@/lib/billing/billing-health'
 
 const NOW = new Date('2026-07-24T00:00:00.000Z')
 
+const sub = (overrides: {
+  tenantId: string
+  status?: string | null
+  paymentMethod?: string | null
+  currentPeriodEnd?: string | null
+  gracePeriodEnd?: string | null
+  updatedAt?: string | null
+}) => ({
+  status: 'past_due',
+  paymentMethod: null,
+  currentPeriodEnd: null,
+  gracePeriodEnd: null,
+  updatedAt: null,
+  ...overrides,
+})
+
 describe('computeBillingHealth', () => {
   it('manual_transfer with grace time remaining computes a positive countdown', () => {
     const result = computeBillingHealth(
-      [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null }],
-      [{
+      [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
+      [sub({
         tenantId: 't1',
         paymentMethod: 'manual_transfer',
         currentPeriodEnd: '2026-07-17T00:00:00.000Z',
         gracePeriodEnd: '2026-07-27T00:00:00.000Z',
-      }],
+      })],
       NOW,
     )
     expect(result[0].daysUntilDowngrade).toBe(3)
@@ -23,13 +39,13 @@ describe('computeBillingHealth', () => {
 
   it('manual_transfer with grace already expired still reports a (negative/zero) countdown, not a crash', () => {
     const result = computeBillingHealth(
-      [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null }],
-      [{
+      [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
+      [sub({
         tenantId: 't1',
         paymentMethod: 'manual_transfer',
         currentPeriodEnd: '2026-07-01T00:00:00.000Z',
         gracePeriodEnd: '2026-07-08T00:00:00.000Z',
-      }],
+      })],
       NOW,
     )
     expect(result[0].daysUntilDowngrade).toBeLessThanOrEqual(0)
@@ -38,13 +54,13 @@ describe('computeBillingHealth', () => {
 
   it('stripe past_due reports an estimate with no fabricated countdown', () => {
     const result = computeBillingHealth(
-      [{ tenantId: 't2', tenantName: 'School B', plan: 'pro', accessCutoffAt: null }],
-      [{
+      [{ tenantId: 't2', tenantName: 'School B', plan: 'pro', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
+      [sub({
         tenantId: 't2',
         paymentMethod: 'stripe',
         currentPeriodEnd: '2026-07-20T00:00:00.000Z',
         gracePeriodEnd: null,
-      }],
+      })],
       NOW,
     )
     expect(result[0].isEstimate).toBe(true)
@@ -55,7 +71,7 @@ describe('computeBillingHealth', () => {
 
   it('past_due tenant with no subscription row surfaces with nulls, not a throw', () => {
     const result = computeBillingHealth(
-      [{ tenantId: 't3', tenantName: 'School C', plan: 'free', accessCutoffAt: null }],
+      [{ tenantId: 't3', tenantName: 'School C', plan: 'free', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
       [],
       NOW,
     )
@@ -68,14 +84,14 @@ describe('computeBillingHealth', () => {
   it('sorts soonest downgrade first, with estimates/nulls last', () => {
     const result = computeBillingHealth(
       [
-        { tenantId: 'stripe-tenant', tenantName: 'Stripe School', plan: 'pro', accessCutoffAt: null },
-        { tenantId: 'far', tenantName: 'Far School', plan: 'starter', accessCutoffAt: null },
-        { tenantId: 'soon', tenantName: 'Soon School', plan: 'starter', accessCutoffAt: null },
+        { tenantId: 'stripe-tenant', tenantName: 'Stripe School', plan: 'pro', accessCutoffAt: null, reasons: ['tenant_past_due'] },
+        { tenantId: 'far', tenantName: 'Far School', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] },
+        { tenantId: 'soon', tenantName: 'Soon School', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] },
       ],
       [
-        { tenantId: 'stripe-tenant', paymentMethod: 'stripe', currentPeriodEnd: null, gracePeriodEnd: null },
-        { tenantId: 'far', paymentMethod: 'manual_transfer', currentPeriodEnd: null, gracePeriodEnd: '2026-08-10T00:00:00.000Z' },
-        { tenantId: 'soon', paymentMethod: 'manual_transfer', currentPeriodEnd: null, gracePeriodEnd: '2026-07-25T00:00:00.000Z' },
+        sub({ tenantId: 'stripe-tenant', paymentMethod: 'stripe' }),
+        sub({ tenantId: 'far', paymentMethod: 'manual_transfer', gracePeriodEnd: '2026-08-10T00:00:00.000Z' }),
+        sub({ tenantId: 'soon', paymentMethod: 'manual_transfer', gracePeriodEnd: '2026-07-25T00:00:00.000Z' }),
       ],
       NOW,
     )
@@ -84,10 +100,117 @@ describe('computeBillingHealth', () => {
 
   it('passes through access_cutoff_at unchanged', () => {
     const result = computeBillingHealth(
-      [{ tenantId: 't1', tenantName: 'School A', plan: 'free', accessCutoffAt: '2026-08-01T00:00:00.000Z' }],
+      [{ tenantId: 't1', tenantName: 'School A', plan: 'free', accessCutoffAt: '2026-08-01T00:00:00.000Z', reasons: ['tenant_past_due'] }],
       [],
       NOW,
     )
     expect(result[0].accessCutoffAt).toBe('2026-08-01T00:00:00.000Z')
+  })
+
+  // #514 §1 — a tenant whose subscription went past due without
+  // `tenants.billing_status` being synced used to be invisible here.
+  it('surfaces a subscription-only past-due tenant and labels the reason', () => {
+    const result = computeBillingHealth(
+      [{ tenantId: 't4', tenantName: 'Drifted School', plan: 'pro', accessCutoffAt: null, reasons: ['subscription_past_due'] }],
+      [sub({
+        tenantId: 't4',
+        paymentMethod: 'manual_transfer',
+        currentPeriodEnd: '2026-07-10T00:00:00.000Z',
+        gracePeriodEnd: '2026-07-30T00:00:00.000Z',
+      })],
+      NOW,
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0].reasons).toEqual(['subscription_past_due'])
+    expect(result[0].daysUntilDowngrade).toBe(6)
+  })
+
+  // #514 §2 — an over-limit tenant with healthy billing has a cutoff scheduled
+  // but no subscription problem; it must still be listed.
+  it('surfaces a cutoff-only tenant with healthy billing', () => {
+    const result = computeBillingHealth(
+      [{ tenantId: 't5', tenantName: 'Over Limit School', plan: 'starter', accessCutoffAt: '2026-08-07T00:00:00.000Z', reasons: ['access_cutoff_scheduled'] }],
+      [sub({ tenantId: 't5', status: 'active', paymentMethod: 'manual_transfer', gracePeriodEnd: null })],
+      NOW,
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0].reasons).toEqual(['access_cutoff_scheduled'])
+    expect(result[0].accessCutoffAt).toBe('2026-08-07T00:00:00.000Z')
+    // No grace deadline on an active subscription, so no fabricated countdown.
+    expect(result[0].daysUntilDowngrade).toBeNull()
+  })
+
+  it('keeps every reason a tenant qualified under, in a stable order', () => {
+    const result = computeBillingHealth(
+      [{
+        tenantId: 't6',
+        tenantName: 'Doubly At-Risk School',
+        plan: 'starter',
+        accessCutoffAt: '2026-08-01T00:00:00.000Z',
+        // Deliberately out of canonical order.
+        reasons: ['access_cutoff_scheduled', 'subscription_past_due', 'tenant_past_due'],
+      }],
+      [],
+      NOW,
+    )
+    expect(result[0].reasons).toEqual([
+      'tenant_past_due',
+      'subscription_past_due',
+      'access_cutoff_scheduled',
+    ])
+  })
+
+  // #514 §3 — unreachable while `platform_subscriptions` carries
+  // UNIQUE (tenant_id), but the ranking must not depend on result order.
+  it('picks the current subscription row over a stale one regardless of input order', () => {
+    const stale = sub({
+      tenantId: 't7',
+      status: 'canceled',
+      paymentMethod: 'stripe',
+      currentPeriodEnd: '2026-01-01T00:00:00.000Z',
+      gracePeriodEnd: null,
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    })
+    const current = sub({
+      tenantId: 't7',
+      status: 'past_due',
+      paymentMethod: 'manual_transfer',
+      currentPeriodEnd: '2026-07-15T00:00:00.000Z',
+      gracePeriodEnd: '2026-07-29T00:00:00.000Z',
+      updatedAt: '2026-07-15T00:00:00.000Z',
+    })
+    const tenants = [{ tenantId: 't7', tenantName: 'Multi-row School', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due' as const] }]
+
+    for (const subs of [[stale, current], [current, stale]]) {
+      const result = computeBillingHealth(tenants, subs, NOW)
+      expect(result[0].paymentMethod).toBe('manual_transfer')
+      expect(result[0].graceEndsAt).toBe('2026-07-29T00:00:00.000Z')
+      expect(result[0].daysUntilDowngrade).toBe(5)
+      expect(result[0].isEstimate).toBe(false)
+    }
+  })
+
+  it('breaks a same-status tie on updated_at, newest wins', () => {
+    const older = sub({
+      tenantId: 't8',
+      status: 'past_due',
+      paymentMethod: 'stripe',
+      gracePeriodEnd: null,
+      updatedAt: '2026-06-01T00:00:00.000Z',
+    })
+    const newer = sub({
+      tenantId: 't8',
+      status: 'past_due',
+      paymentMethod: 'manual_transfer',
+      gracePeriodEnd: '2026-07-28T00:00:00.000Z',
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    })
+    const tenants = [{ tenantId: 't8', tenantName: 'Tie School', plan: 'pro', accessCutoffAt: null, reasons: ['tenant_past_due' as const] }]
+
+    for (const subs of [[older, newer], [newer, older]]) {
+      const result = computeBillingHealth(tenants, subs, NOW)
+      expect(result[0].paymentMethod).toBe('manual_transfer')
+      expect(result[0].daysUntilDowngrade).toBe(4)
+    }
   })
 })
