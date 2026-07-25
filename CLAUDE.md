@@ -109,6 +109,7 @@ Also supported (`products.payment_provider`): `paypal`, `lemonsqueezy`, `solana`
 - `enroll_user()` RPC loops through ALL courses for a product (a product can map to multiple courses via `product_courses`) and writes to `entitlements`
 - **Subscriptions grant access, not auto-enrollment** — students self-enroll via `/dashboard/student/browse` (`useEnrollment()` hook); `plan_courses` defines which courses a plan covers
 - Transactions have two partial unique indexes (not one): `(user_id, product_id) WHERE plan_id IS NULL AND status IN ('pending','successful')` and `(user_id, plan_id) WHERE product_id IS NULL AND status IN (...)`, plus `transactions_provider_charge_id_unique` for Solana idempotency
+- **`transactions` is server-write-only.** `authenticated` has no INSERT grant (#538) and an UPDATE grant on only `status`, `provider_subscription_id`, `stripe_payment_intent_id` (#528) — every insert uses `createAdminClient()` or a SECURITY DEFINER function. `amount` and the `settlement_*` columns decide what the buyer owes (`settlement_base` is what the on-chain Solana payment is verified against), so they are derived from `products`/`plans` server-side, never taken from the request. A user-scoped insert fails with `permission denied for table transactions` — by design, not a bug to re-grant around
 
 ### Routing & i18n
 

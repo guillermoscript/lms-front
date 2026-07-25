@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { toCents } from '@/lib/currency'
 import { getPaymentProvider } from '@/lib/payments'
@@ -135,8 +136,16 @@ export async function POST(req: NextRequest) {
     const platformPercentage = split?.platform_percentage || 20
     const platformFee = Math.round((amount * platformPercentage) / 100)
 
-    // Create transaction record (pending)
-    const { data: transaction, error: txError } = await supabase
+    // Create transaction record (pending).
+    //
+    // The ADMIN client, since #538: `authenticated` no longer holds an INSERT grant
+    // on `transactions` (20260725180000), because that grant let a student POST a
+    // pending row that under-quoted what it owed. Per CLAUDE.md the tenant check
+    // moves to us and is already in place — `user.id` comes from the verified
+    // session, `tenantId` from the x-tenant-id header, and `amount` / `currency`
+    // are derived from the tenant-scoped `plans` / `products` read above on the
+    // user-scoped client, so a caller cannot reference another tenant's catalogue.
+    const { data: transaction, error: txError } = await createAdminClient()
       .from('transactions')
       .insert({
         user_id: user.id,
