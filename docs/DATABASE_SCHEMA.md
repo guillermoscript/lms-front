@@ -456,6 +456,8 @@ Written by `enroll_user()` and `handle_new_subscription()`. Read via `has_course
 
 > The old `product_id` / `subscription_id` columns and their "one or the other" CHECK constraint were **dropped** in the entitlements migration. If you find code or docs referencing them, they are out of date. Students on a subscription self-enroll from `/dashboard/student/browse` (`useEnrollment()` hook); subscriptions grant access but do not auto-enroll.
 
+> **Never gate on the presence of an enrollment row** (issue #532). Nothing revokes one — refunds revoke *entitlements* and `tenants.access_cutoff_at` is read only inside `has_course_access()` — so a row survives every revocation path, and until migration `20260725160000` any tenant member could insert one for any course in their tenant. The INSERT policy now also requires `has_course_access()`; legitimate writers (`enroll_user()`, `self_enroll_subscription_course()`, `grant_free_entitlement()`, `issue_certificate_if_eligible()`) are all `SECURITY DEFINER` and unaffected.
+
 #### `products`
 Purchasable course bundles. Tenant-scoped.
 

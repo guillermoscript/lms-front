@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { generateObject } from 'ai'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { AI_MODELS } from '@/lib/ai/config'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
 import {
@@ -92,18 +93,28 @@ export async function POST(
     return Response.json({ error: 'Checkpoint not found' }, { status: 404 })
   }
 
-  // Active enrollment required — mirrors the RLS insert policy so failures
-  // surface as a clear 403 instead of an opaque insert error.
-  const { data: enrollment } = await adminClient
-    .from('enrollments')
-    .select('enrollment_id')
-    .eq('user_id', user.id)
-    .eq('course_id', exercise.course_id)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle()
-  if (!enrollment) {
-    return Response.json({ error: 'Not enrolled in this course' }, { status: 403 })
+  // Course access required (issue #532). This route reads through the admin
+  // client, so #509's RLS backstop on content never applies here — the gate
+  // has to be explicit. It must be `entitlements`, not `enrollments`: an
+  // enrollment row is a progress record that nothing revokes and that a
+  // tenant member can issue for themselves, so it grants no access on its own.
+  const accessState = await resolveCourseAccessState(
+    adminClient,
+    user.id,
+    exercise.course_id
+  )
+  if (accessState !== 'granted') {
+    return Response.json(
+      {
+        error:
+          accessState === 'suspended'
+            ? "Your school's access is currently suspended"
+            : 'You do not have access to this course',
+        accessDenied: true,
+        accessSuspended: accessState === 'suspended',
+      },
+      { status: 403 }
+    )
   }
 
   const config = exercise.exercise_config ?? {}

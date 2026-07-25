@@ -21,9 +21,28 @@ interface CheckpointExerciseRendererProps {
   checkpoint: LessonCheckpointClientData
 }
 
-type AttemptResponse =
-  | { ok: true; data: CheckpointAttemptResult }
-  | { ok: false; status: number; notCompleted?: boolean; error?: string }
+type AttemptFailure = {
+  ok: false
+  status: number
+  notCompleted?: boolean
+  accessDenied?: boolean
+  accessSuspended?: boolean
+  error?: string
+}
+
+type AttemptResponse = { ok: true; data: CheckpointAttemptResult } | AttemptFailure
+
+/**
+ * The route's access refusals (issue #532) carry flags rather than only a
+ * message, so the student reads translated copy instead of the server's raw
+ * English — and a school-wide suspension reads differently from "you never
+ * bought this course", which is the distinction #494 exists to make.
+ */
+function attemptErrorKey(res: AttemptFailure): 'accessSuspended' | 'accessDenied' | null {
+  if (res.accessSuspended) return 'accessSuspended'
+  if (res.accessDenied) return 'accessDenied'
+  return null
+}
 
 async function postAttempt(checkpointId: number, body: unknown): Promise<AttemptResponse> {
   try {
@@ -38,6 +57,8 @@ async function postAttempt(checkpointId: number, body: unknown): Promise<Attempt
         ok: false,
         status: res.status,
         notCompleted: payload?.notCompleted === true,
+        accessDenied: payload?.accessDenied === true,
+        accessSuspended: payload?.accessSuspended === true,
         error: typeof payload?.error === 'string' ? payload.error : undefined,
       }
     }
@@ -120,7 +141,8 @@ function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
     const res = await postAttempt(checkpoint.id, { kind: 'answers', answers: payload })
     setSubmitting(false)
     if (!res.ok) {
-      setError(res.error ?? t('genericError'))
+      const errorKey = attemptErrorKey(res)
+      setError(errorKey ? t(errorKey) : (res.error ?? t('genericError')))
       return
     }
     setResult(res.data)
@@ -257,7 +279,8 @@ function TextCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
     const res = await postAttempt(checkpoint.id, { kind: 'text', text })
     setSubmitting(false)
     if (!res.ok) {
-      setError(res.error ?? t('genericError'))
+      const errorKey = attemptErrorKey(res)
+      setError(errorKey ? t(errorKey) : (res.error ?? t('genericError')))
       return
     }
     setResult(res.data)
@@ -346,7 +369,8 @@ function ExternalCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps)
         setNotCompleted(true)
         return
       }
-      setError(res.error ?? t('genericError'))
+      const errorKey = attemptErrorKey(res)
+      setError(errorKey ? t(errorKey) : (res.error ?? t('genericError')))
       return
     }
     setResult(res.data)

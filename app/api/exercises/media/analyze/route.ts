@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { hasCourseAccess } from '@/lib/services/course-access'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
 import { getPipeline } from '@/lib/speech/registry'
 import type { ExerciseContext } from '@/lib/speech/types'
@@ -7,6 +8,22 @@ import type { ExerciseContext } from '@/lib/speech/types'
 export const maxDuration = 120
 
 const STORAGE_BUCKET = 'exercise-media'
+
+/** The `exercises(...)` join on the submission row. */
+type JoinedExercise = {
+  id: number
+  title: string | null
+  instructions: string | null
+  course_id: number
+  tenant_id: string
+  exercise_config: {
+    passing_score?: number
+    topic_prompt?: string
+    rubric?: ExerciseContext['rubric']
+    stt_provider?: string
+    ai_coach?: string
+  } | null
+}
 
 export async function POST(req: Request) {
   // 1. Auth — cookie session (web) or Bearer token (mobile), server-verified
@@ -44,8 +61,10 @@ export async function POST(req: Request) {
     return new Response('Submission not found', { status: 404 })
   }
 
+  const exercise = submission.exercises as unknown as JoinedExercise | null
+
   // 5. Status guard — only pending submissions can be analyzed (prevents re-triggering)
-  const passingScore = ((submission.exercises as any)?.exercise_config as any)?.passing_score ?? 70
+  const passingScore = exercise?.exercise_config?.passing_score ?? 70
   if (submission.status === 'completed') {
     return Response.json({ already_completed: true, evaluation: submission.ai_evaluation, passed: true, passingScore })
   }
@@ -57,9 +76,16 @@ export async function POST(req: Request) {
   }
 
   // 6. Verify exercise tenant matches (defense in depth)
-  const exercise = submission.exercises as any
   if (!exercise || exercise.tenant_id !== tenantId) {
     return new Response('Exercise not found', { status: 404 })
+  }
+
+  // 6b. Course access (issue #532). Ownership of the submission is not access:
+  // this route runs on the admin client and spends AI credits, and an
+  // entitlement can be revoked — or the tenant's access cutoff can pass —
+  // between the gated upload and this call.
+  if (!(await hasCourseAccess(adminClient, user.id, exercise.course_id))) {
+    return new Response('You do not have access to this course', { status: 403 })
   }
 
   // 7. Atomically set processing (prevents concurrent analysis of same submission)
@@ -149,7 +175,7 @@ export async function POST(req: Request) {
     }
 
     return Response.json({ evaluation, passed, passingScore })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Speech pipeline error:', err)
 
     await adminClient
@@ -157,6 +183,7 @@ export async function POST(req: Request) {
       .update({ status: 'failed' })
       .eq('id', submissionId)
 
-    return new Response(err.message ?? 'Analysis failed', { status: 500 })
+    const message = err instanceof Error ? err.message : 'Analysis failed'
+    return new Response(message, { status: 500 })
   }
 }

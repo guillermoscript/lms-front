@@ -3735,6 +3735,8 @@
       "retry": "Intentar de nuevo",
       "review": "Editar y reenviar",
       "genericError": "Algo salió mal. Inténtalo de nuevo.",
+      "accessDenied": "No tienes acceso a este curso.",
+      "accessSuspended": "El acceso de tu escuela está suspendido en este momento. Tu progreso está a salvo: pide a la administración de tu escuela que lo restablezca.",
       "aiUnavailable": "Tu respuesta fue registrada, pero la retroalimentación con IA no está disponible en este momento.",
       "externalPrompt": "Este checkpoint se completa en su página de ejercicio. Abre el ejercicio, termínalo allí y luego sincroniza tu resultado aquí.",
       "externalLinkLabel": "Abrir ejercicio",
