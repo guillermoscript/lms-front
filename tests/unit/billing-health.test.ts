@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { computeBillingHealth } from '@/lib/billing/billing-health'
+import {
+  computeBillingHealth,
+  mergeAtRiskTenants,
+  type AtRiskTenantRow,
+} from '@/lib/billing/billing-health'
 
 const NOW = new Date('2026-07-24T00:00:00.000Z')
 
@@ -212,5 +216,170 @@ describe('computeBillingHealth', () => {
       expect(result[0].paymentMethod).toBe('manual_transfer')
       expect(result[0].daysUntilDowngrade).toBe(4)
     }
+  })
+
+  // The union in #514 admits tenants whose billing is fine. `downgradeTenantToFree()`
+  // sets status='canceled' but never clears grace_period_end, then schedules the very
+  // cutoff that lists the tenant here — so this row shape is the common one, not exotic.
+  it('does not report a downgrade countdown for a cutoff-only tenant carrying a stale grace stamp', () => {
+    const result = computeBillingHealth(
+      [{
+        tenantId: 't9',
+        tenantName: 'Lapsed School',
+        plan: 'free',
+        accessCutoffAt: '2026-08-07T00:00:00.000Z',
+        reasons: ['access_cutoff_scheduled'],
+      }],
+      [sub({
+        tenantId: 't9',
+        status: 'canceled',
+        paymentMethod: 'manual_transfer',
+        currentPeriodEnd: '2026-06-01T00:00:00.000Z',
+        gracePeriodEnd: '2026-06-08T00:00:00.000Z',
+        updatedAt: '2026-06-08T00:00:00.000Z',
+      })],
+      NOW,
+    )
+    expect(result[0].daysUntilDowngrade).toBeNull()
+    expect(result[0].graceEndsAt).toBeNull()
+    // "Past due since" must stay empty for a tenant that is not past due.
+    expect(result[0].pastDueSince).toBeNull()
+    // No downgrade pending, so nothing to estimate — not Stripe dunning.
+    expect(result[0].isEstimate).toBe(false)
+  })
+
+  it('keeps a live past-due school above an already-downgraded cutoff-only one', () => {
+    const result = computeBillingHealth(
+      [
+        {
+          tenantId: 'lapsed',
+          tenantName: 'Lapsed School',
+          plan: 'free',
+          accessCutoffAt: '2026-08-07T00:00:00.000Z',
+          reasons: ['access_cutoff_scheduled'],
+        },
+        {
+          tenantId: 'live',
+          tenantName: 'Live School',
+          plan: 'starter',
+          accessCutoffAt: null,
+          reasons: ['tenant_past_due'],
+        },
+      ],
+      [
+        sub({
+          tenantId: 'lapsed',
+          status: 'canceled',
+          paymentMethod: 'manual_transfer',
+          gracePeriodEnd: '2026-06-08T00:00:00.000Z',
+        }),
+        sub({
+          tenantId: 'live',
+          paymentMethod: 'manual_transfer',
+          gracePeriodEnd: '2026-07-30T00:00:00.000Z',
+        }),
+      ],
+      NOW,
+    )
+    expect(result.map((r) => r.tenantId)).toEqual(['live', 'lapsed'])
+  })
+
+  it('orders the no-countdown tail by soonest cutoff, then by name', () => {
+    const cutoffOnly = (tenantId: string, tenantName: string, accessCutoffAt: string | null) => ({
+      tenantId,
+      tenantName,
+      plan: 'free',
+      accessCutoffAt,
+      reasons: ['access_cutoff_scheduled' as const],
+    })
+    const result = computeBillingHealth(
+      [
+        cutoffOnly('none', 'Zeta School', null),
+        cutoffOnly('late', 'Later School', '2026-09-01T00:00:00.000Z'),
+        cutoffOnly('soon', 'Sooner School', '2026-07-26T00:00:00.000Z'),
+      ],
+      [],
+      NOW,
+    )
+    expect(result.map((r) => r.tenantId)).toEqual(['soon', 'late', 'none'])
+  })
+
+  it('marks a cutoff already in the past as active, a future one as not', () => {
+    const result = computeBillingHealth(
+      [
+        { tenantId: 'past', tenantName: 'Paused School', plan: 'free', accessCutoffAt: '2026-07-01T00:00:00.000Z', reasons: ['access_cutoff_scheduled'] },
+        { tenantId: 'future', tenantName: 'Warned School', plan: 'free', accessCutoffAt: '2026-08-01T00:00:00.000Z', reasons: ['access_cutoff_scheduled'] },
+      ],
+      [],
+      NOW,
+    )
+    const byId = new Map(result.map((r) => [r.tenantId, r]))
+    expect(byId.get('past')!.accessCutoffActive).toBe(true)
+    expect(byId.get('future')!.accessCutoffActive).toBe(false)
+  })
+})
+
+describe('mergeAtRiskTenants', () => {
+  const row = (tenantId: string, accessCutoffAt: string | null = null): AtRiskTenantRow => ({
+    tenantId,
+    tenantName: `School ${tenantId}`,
+    plan: 'starter',
+    accessCutoffAt,
+  })
+
+  it('unions the three populations without duplicating a tenant', () => {
+    const merged = mergeAtRiskTenants({
+      pastDueTenants: [row('a'), row('shared')],
+      cutoffTenants: [row('shared', '2026-08-01T00:00:00.000Z'), row('c', '2026-08-02T00:00:00.000Z')],
+      subscriptionPastDueTenantIds: ['shared', 'd'],
+      extraTenants: [row('d')],
+    })
+    expect(merged.map((t) => t.tenantId).sort()).toEqual(['a', 'c', 'd', 'shared'])
+  })
+
+  it('accumulates every reason a tenant qualified under, in canonical order', () => {
+    const [tenant] = mergeAtRiskTenants({
+      pastDueTenants: [row('x')],
+      cutoffTenants: [row('x', '2026-08-01T00:00:00.000Z')],
+      subscriptionPastDueTenantIds: ['x'],
+      extraTenants: [],
+    })
+    expect(tenant.reasons).toEqual([
+      'tenant_past_due',
+      'subscription_past_due',
+      'access_cutoff_scheduled',
+    ])
+  })
+
+  it('surfaces a subscription-only tenant from the extra fetch', () => {
+    const merged = mergeAtRiskTenants({
+      pastDueTenants: [],
+      cutoffTenants: [],
+      subscriptionPastDueTenantIds: ['drifted'],
+      extraTenants: [row('drifted')],
+    })
+    expect(merged).toHaveLength(1)
+    expect(merged[0].reasons).toEqual(['subscription_past_due'])
+  })
+
+  it('drops a subscription whose tenant row could not be read', () => {
+    const merged = mergeAtRiskTenants({
+      pastDueTenants: [row('a')],
+      cutoffTenants: [],
+      subscriptionPastDueTenantIds: ['a', 'vanished'],
+      extraTenants: [],
+    })
+    expect(merged.map((t) => t.tenantId)).toEqual(['a'])
+  })
+
+  it('does not let the cutoff read overwrite a past-due tenant row', () => {
+    const merged = mergeAtRiskTenants({
+      pastDueTenants: [row('a')],
+      cutoffTenants: [{ ...row('a', '2026-08-01T00:00:00.000Z'), tenantName: 'School a' }],
+      subscriptionPastDueTenantIds: [],
+      extraTenants: [],
+    })
+    expect(merged[0].accessCutoffAt).toBe('2026-08-01T00:00:00.000Z')
+    expect(merged[0].reasons).toEqual(['tenant_past_due', 'access_cutoff_scheduled'])
   })
 })

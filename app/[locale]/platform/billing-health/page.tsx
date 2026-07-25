@@ -16,24 +16,40 @@ const REASON_LABELS: Record<AtRiskReason, string> = {
   access_cutoff_scheduled: 'Cutoff scheduled',
 }
 
+function reasonLabel(reason: AtRiskReason, cutoffActive: boolean): string {
+  // A cutoff date in the past means access is already paused, not pending.
+  if (reason === 'access_cutoff_scheduled' && cutoffActive) return 'Access paused'
+  return REASON_LABELS[reason]
+}
+
 export default async function PlatformBillingHealthPage() {
   const atRisk = await getAtRiskTenants()
 
   // The metric cards deliberately keep counting past-due tenants only, so the
   // numbers do not silently change meaning now that #514 also lists tenants
   // that are merely over their plan limits. Cutoffs get their own card.
-  const pastDue = atRisk.filter(
-    (t) => t.reasons.includes('tenant_past_due') || t.reasons.includes('subscription_past_due'),
-  )
-  const manualTransfer = pastDue.filter((t) => t.paymentMethod === 'manual_transfer')
-  const stripeDunning = pastDue.filter((t) => t.paymentMethod !== 'manual_transfer')
-  const cutoffScheduled = atRisk.filter((t) => t.reasons.includes('access_cutoff_scheduled'))
-  const urgent = manualTransfer.filter((t) => t.daysUntilDowngrade !== null && t.daysUntilDowngrade <= 3)
+  // Counted in one pass — five chained .filter() calls over the same list was
+  // five allocations for four numbers.
+  const counts = { pastDue: 0, manualTransfer: 0, stripeDunning: 0, cutoffScheduled: 0, urgent: 0 }
+  for (const t of atRisk) {
+    const isPastDue =
+      t.reasons.includes('tenant_past_due') || t.reasons.includes('subscription_past_due')
+    if (isPastDue) {
+      counts.pastDue++
+      if (t.paymentMethod === 'manual_transfer') {
+        counts.manualTransfer++
+        if (t.daysUntilDowngrade !== null && t.daysUntilDowngrade <= 3) counts.urgent++
+      } else {
+        counts.stripeDunning++
+      }
+    }
+    if (t.reasons.includes('access_cutoff_scheduled')) counts.cutoffScheduled++
+  }
 
   const metricCards = [
     {
       title: 'Past-Due Schools',
-      value: String(pastDue.length),
+      value: String(counts.pastDue),
       sub: 'Total schools currently behind on payment',
       icon: IconAlertTriangle,
       bg: 'bg-red-50 dark:bg-red-950/40',
@@ -41,15 +57,18 @@ export default async function PlatformBillingHealthPage() {
     },
     {
       title: 'Manual-Transfer Grace Running',
-      value: String(manualTransfer.length),
-      sub: urgent.length > 0 ? `${urgent.length} downgrading within 3 days` : 'None expiring imminently',
+      value: String(counts.manualTransfer),
+      sub:
+        counts.urgent > 0
+          ? `${counts.urgent} downgrading within 3 days`
+          : 'None expiring imminently',
       icon: IconClockPause,
       bg: 'bg-amber-50 dark:bg-amber-950/40',
       iconColor: 'text-amber-600 dark:text-amber-400',
     },
     {
       title: 'Stripe Dunning In Progress',
-      value: String(stripeDunning.length),
+      value: String(counts.stripeDunning),
       sub: 'Downgrade timing controlled by Stripe, not this app',
       icon: IconCreditCardOff,
       bg: 'bg-blue-50 dark:bg-blue-950/40',
@@ -57,7 +76,7 @@ export default async function PlatformBillingHealthPage() {
     },
     {
       title: 'Access Cutoff Scheduled',
-      value: String(cutoffScheduled.length),
+      value: String(counts.cutoffScheduled),
       sub: 'Over plan limits — access pauses on the cutoff date',
       icon: IconLockExclamation,
       bg: 'bg-purple-50 dark:bg-purple-950/40',
@@ -130,7 +149,7 @@ export default async function PlatformBillingHealthPage() {
                         <div className="flex flex-wrap gap-1">
                           {t.reasons.map((reason) => (
                             <Badge key={reason} variant="secondary" className="text-[10px] font-normal">
-                              {REASON_LABELS[reason]}
+                              {reasonLabel(reason, t.accessCutoffActive)}
                             </Badge>
                           ))}
                         </div>
