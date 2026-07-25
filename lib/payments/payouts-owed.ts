@@ -68,6 +68,11 @@
  * `grossOwed - alreadyPaid` starts in the hole and absorbs the excess with no
  * operator action. `overpaid` exists so that recovery is visible while it
  * happens rather than looking like an unexplained zero balance.
+ *
+ * Carry-forward only recovers anything for a school that keeps selling. A
+ * dormant or departed school's overpayment sits here indefinitely, and so does
+ * one caused by a mis-keyed payout row; both have to be settled outside the
+ * platform. The UI says so rather than promising the balance resolves itself.
  */
 
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */

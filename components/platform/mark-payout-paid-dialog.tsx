@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,6 +26,7 @@ interface Props {
 
 export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }: Props) {
   const router = useRouter()
+  const t = useTranslations('platform.payouts.dialog')
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState(netOwed.toFixed(2))
   const [note, setNote] = useState('')
@@ -39,7 +41,7 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
   async function handleConfirm() {
     const parsed = Number(amount)
     if (!(parsed > 0)) {
-      toast.error('Enter a positive amount')
+      toast.error(t('errors.positiveAmount'))
       return
     }
     setLoading(true)
@@ -56,12 +58,16 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
         setMismatch({ netOwed: result.netOwed })
         return
       }
-      toast.success(`Recorded ${parsed.toFixed(2)} ${currency.toUpperCase()} paid to ${tenantName}`)
+      toast.success(t('success', {
+        amount: parsed.toFixed(2),
+        currency: currency.toUpperCase(),
+        school: tenantName,
+      }))
       setOpen(false)
       resetForm()
       router.refresh()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to record payout')
+      toast.error(e instanceof Error ? e.message : t('errors.failed'))
     } finally {
       setLoading(false)
     }
@@ -76,7 +82,7 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
         disabled={netOwed <= 0}
         data-testid="mark-paid-btn"
       >
-        Mark as Paid
+        {t('trigger')}
       </Button>
 
       <Dialog
@@ -88,11 +94,11 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
       >
         <DialogContent data-testid="mark-paid-dialog">
           <DialogHeader>
-            <DialogTitle>Record payout to {tenantName}</DialogTitle>
+            <DialogTitle>{t('title', { school: tenantName })}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="payout-amount">Amount paid ({currency.toUpperCase()})</Label>
+              <Label htmlFor="payout-amount">{t('amountLabel', { currency: currency.toUpperCase() })}</Label>
               <Input
                 id="payout-amount"
                 type="number"
@@ -110,10 +116,10 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="payout-note">Note (optional)</Label>
+              <Label htmlFor="payout-note">{t('noteLabel')}</Label>
               <Textarea
                 id="payout-note"
-                placeholder="e.g. wire reference, date sent…"
+                placeholder={t('notePlaceholder')}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
@@ -125,18 +131,21 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
                 className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
                 data-testid="mark-paid-mismatch-warning"
               >
-                <p className="font-medium">Amount differs from suggested payout</p>
+                <p className="font-medium">{t('mismatchTitle')}</p>
                 <p className="mt-1 text-xs">
-                  Suggested (net owed): {mismatch.netOwed.toFixed(2)} {currency.toUpperCase()} — entered:{' '}
-                  {Number(amount).toFixed(2)} {currency.toUpperCase()}. Confirm you want to record this amount.
+                  {t('mismatchBody', {
+                    suggested: mismatch.netOwed.toFixed(2),
+                    entered: Number(amount).toFixed(2),
+                    currency: currency.toUpperCase(),
+                  })}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t('cancel')}</Button>
             <Button onClick={handleConfirm} disabled={loading} data-testid="confirm-mark-paid-btn">
-              {loading ? 'Recording…' : mismatch ? 'Confirm anyway' : 'Record Payout'}
+              {loading ? t('recording') : mismatch ? t('confirmAnyway') : t('submit')}
             </Button>
           </DialogFooter>
         </DialogContent>
