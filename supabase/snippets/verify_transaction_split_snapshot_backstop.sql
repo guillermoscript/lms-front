@@ -1,15 +1,27 @@
 -- Verification for 20260725110000_transaction_split_snapshot_backstop.sql (#512).
 --
+-- ⚠ LOCAL DATABASE ONLY. Run it against `supabase db reset`, never against cloud
+-- or production. Cases 4 and 7 need a row that genuinely starts with a NULL
+-- snapshot, which means `ALTER TABLE transactions DISABLE TRIGGER` — that takes a
+-- lock which blocks concurrent INSERT/UPDATE on the live payments table for as
+-- long as the script holds it, requires table ownership (it will not run as
+-- `service_role`), and leaves the trigger disabled for other sessions if the
+-- script dies with the transaction still open. The closing ROLLBACK protects the
+-- DATA, not availability.
+--
 -- The repo's vitest suite runs `environment: 'node'` with no database, so the
--- trigger cannot be covered there. Run this against a database that has the
--- migration applied; every SELECT below prints PASS or FAIL. It rolls itself
--- back, so it is safe to run against a populated environment.
+-- trigger's behaviour cannot be covered there; tests/unit/transaction-split-
+-- snapshot-backstop.test.ts only guards the fallback constant against drift.
+-- This file is the actual behavioural coverage. Every SELECT prints PASS or FAIL.
+--
+--   npm run db:reset
+--   docker exec -i supabase_db_lms-front psql -U postgres -d postgres \
+--     < supabase/snippets/verify_transaction_split_snapshot_backstop.sql
 --
 -- transactions.user_id is NOT NULL and references auth.users, so this borrows an
--- existing user rather than creating one. It also fires the pre-existing AFTER
--- INSERT/UPDATE trigger `after_transaction_insert` / `after_transaction_update`
--- (trigger_manage_transactions) — harmless here since the rows carry neither
--- product_id nor plan_id, and the whole thing is rolled back regardless.
+-- existing user rather than creating one. Inserts also fire the pre-existing AFTER
+-- triggers (trigger_manage_transactions) — harmless here, since that function
+-- branches only on product_id / plan_id and these rows carry neither.
 
 BEGIN;
 
@@ -42,13 +54,15 @@ RETURNING
     ELSE 'FAIL 1: got ' || COALESCE(school_percentage_snapshot::text, 'NULL') || ', expected 70'
   END AS result;
 
--- 2. An explicit app-layer snapshot is never overwritten.
+-- 2. THE TAMPER CASE. A caller-supplied snapshot is IGNORED, not honoured —
+--    `transactions` RLS restricts which rows a user may write, not which columns,
+--    so this value can come from a student inflating their school's balance.
 INSERT INTO transactions (user_id, tenant_id, amount, currency, status, payment_method, school_percentage_snapshot)
-SELECT id, '00000000-0000-0000-0000-0000000005a1', 100, 'usd', 'successful', 'mock', 55 FROM _snapshot_test_user
+SELECT id, '00000000-0000-0000-0000-0000000005a1', 100, 'usd', 'successful', 'mock', 100 FROM _snapshot_test_user
 RETURNING
-  CASE WHEN school_percentage_snapshot = 55
-    THEN 'PASS 2: explicit snapshot preserved (55)'
-    ELSE 'FAIL 2: got ' || COALESCE(school_percentage_snapshot::text, 'NULL') || ', expected 55'
+  CASE WHEN school_percentage_snapshot = 70
+    THEN 'PASS 2: client-supplied snapshot (100) overridden with the real split (70)'
+    ELSE 'FAIL 2: got ' || COALESCE(school_percentage_snapshot::text, 'NULL') || ', expected 70'
   END AS result;
 
 -- 3. A tenant with no revenue_splits row falls back to 80
@@ -61,34 +75,35 @@ RETURNING
     ELSE 'FAIL 3: got ' || COALESCE(school_percentage_snapshot::text, 'NULL') || ', expected 80'
   END AS result;
 
--- 4. THE CASE A BEFORE INSERT TRIGGER WOULD MISS: a row that starts with a NULL
---    snapshot and is later turned into a platform-settled transaction by the
---    webhook activation path (webhook-dispatch.ts sets status + payment_provider
---    on an existing row).
---    The trigger is temporarily disabled for the insert so the row genuinely
---    starts NULL, reproducing a pre-migration row.
-ALTER TABLE transactions DISABLE TRIGGER before_transaction_split_snapshot;
+-- Two rows that genuinely start NULL, reproducing pre-migration history.
+-- See the LOCAL-ONLY warning at the top before running this anywhere shared.
+ALTER TABLE transactions DISABLE TRIGGER before_transaction_split_snapshot_insert;
 INSERT INTO transactions (transaction_id, user_id, tenant_id, amount, currency, status, payment_method)
 SELECT -512001, id, '00000000-0000-0000-0000-0000000005a1', 100, 'usd', 'pending', 'mock' FROM _snapshot_test_user;
-ALTER TABLE transactions ENABLE TRIGGER before_transaction_split_snapshot;
+INSERT INTO transactions (transaction_id, user_id, tenant_id, amount, currency, status, payment_method)
+SELECT -512002, id, '00000000-0000-0000-0000-0000000005a1', 100, 'usd', 'successful', 'mock' FROM _snapshot_test_user;
+ALTER TABLE transactions ENABLE TRIGGER before_transaction_split_snapshot_insert;
 
-SELECT CASE WHEN school_percentage_snapshot IS NULL
-  THEN 'SETUP 4: row starts with NULL snapshot, as intended'
-  ELSE 'SETUP 4 BROKEN: expected NULL, got ' || school_percentage_snapshot::text
+SELECT CASE WHEN COUNT(*) FILTER (WHERE school_percentage_snapshot IS NULL) = 2
+  THEN 'SETUP: both legacy rows start with a NULL snapshot, as intended'
+  ELSE 'SETUP BROKEN: expected 2 NULL snapshots, got ' || COUNT(*) FILTER (WHERE school_percentage_snapshot IS NULL)::text
 END AS result
-FROM transactions WHERE transaction_id = -512001;
+FROM transactions WHERE transaction_id IN (-512001, -512002);
 
+-- 4. THE CASE A BEFORE INSERT TRIGGER WOULD MISS: a legacy NULL row turned into a
+--    platform-settled transaction by the webhook activation path
+--    (webhook-dispatch.ts sets status + payment_provider on an existing row).
 UPDATE transactions
 SET status = 'successful', payment_provider = 'paypal'
 WHERE transaction_id = -512001
 RETURNING
   CASE WHEN school_percentage_snapshot = 70
-    THEN 'PASS 4: webhook UPDATE filled the snapshot (70) — the BEFORE INSERT gap'
+    THEN 'PASS 4: provider activation filled the snapshot (70) — the BEFORE INSERT gap'
     ELSE 'FAIL 4: got ' || COALESCE(school_percentage_snapshot::text, 'NULL') || ', expected 70'
   END AS result;
 
--- 5. A later UPDATE must NOT re-stamp an existing snapshot, even if the tenant's
---    split has since changed. Re-stamping would be the #496 bug.
+-- 5. A later UPDATE must NOT re-stamp an existing snapshot, even once the tenant's
+--    split has changed. Re-stamping would be the #496 bug.
 UPDATE revenue_splits SET school_percentage = 90, platform_percentage = 10
 WHERE tenant_id = '00000000-0000-0000-0000-0000000005a1';
 
@@ -98,6 +113,30 @@ RETURNING
   CASE WHEN school_percentage_snapshot = 70
     THEN 'PASS 5: existing snapshot untouched by a later update (still 70, split now 90)'
     ELSE 'FAIL 5: snapshot was re-stamped to ' || COALESCE(school_percentage_snapshot::text, 'NULL')
+  END AS result;
+
+-- 6. Tampering with an ALREADY-SNAPSHOTTED row is reverted, not accepted.
+UPDATE transactions SET school_percentage_snapshot = 100
+WHERE transaction_id = -512001
+RETURNING
+  CASE WHEN school_percentage_snapshot = 70
+    THEN 'PASS 6: update tampering with an existing snapshot reverted to 70'
+    ELSE 'FAIL 6: snapshot became ' || COALESCE(school_percentage_snapshot::text, 'NULL')
+  END AS result;
+
+-- 7. A legacy NULL row is NOT lazily backfilled by an incidental update — neither
+--    by an ordinary status change nor by a caller trying to set the value. Doing
+--    so would stamp TODAY's split (now 90) onto a historical sale, one row at a
+--    time, which is the repricing #496 removed.
+UPDATE transactions SET status = 'archived'
+WHERE transaction_id = -512002;
+
+UPDATE transactions SET school_percentage_snapshot = 100
+WHERE transaction_id = -512002
+RETURNING
+  CASE WHEN school_percentage_snapshot IS NULL
+    THEN 'PASS 7: legacy NULL row still NULL after an incidental update and a tamper attempt'
+    ELSE 'FAIL 7: snapshot became ' || school_percentage_snapshot::text || ' (expected NULL)'
   END AS result;
 
 ROLLBACK;
