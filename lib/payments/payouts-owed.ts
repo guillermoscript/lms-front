@@ -14,10 +14,21 @@
  * snapshotted at insert time in `app/api/payments/checkout/route.ts` — see
  * issue #496), not the tenant's current split applied retroactively to the
  * whole sum. A plan change (which rewrites `revenue_splits`) therefore only
- * affects transactions created after the change. Transactions predating the
- * snapshot column (`schoolPercentageSnapshot: null`) fall back to the
- * tenant's current `schoolPercentage` — the same behavior this module had
- * before #496, so old data isn't retroactively wrong either way.
+ * affects transactions created after the change.
+ *
+ * That snapshot is also enforced in the database (issue #512): a
+ * BEFORE INSERT OR UPDATE trigger on `transactions` fills it from
+ * `revenue_splits` whenever a caller omits it, so a transaction-insert path
+ * that forgets — or a webhook that sets `payment_provider` on an existing row
+ * post-insert — cannot silently fall back to the current-split behaviour.
+ * The trigger never overwrites a non-NULL snapshot, so the app-layer write
+ * stays authoritative and history is never re-stamped.
+ *
+ * Transactions predating the snapshot column (`schoolPercentageSnapshot:
+ * null`) still fall back to the tenant's current `schoolPercentage` — the
+ * same behavior this module had before #496, so old data isn't retroactively
+ * wrong either way. They were deliberately not backfilled: stamping today's
+ * split onto history would manufacture the very repricing #496 removed.
  *
  * Balances are grouped PER CURRENCY (issue #497) — a tenant with both USD and
  * EUR sales owes two separate numbers, never one meaningless summed total.
