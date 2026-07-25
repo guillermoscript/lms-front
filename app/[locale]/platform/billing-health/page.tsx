@@ -1,4 +1,5 @@
 import { getAtRiskTenants } from '@/app/actions/platform/billing-health'
+import type { AtRiskReason } from '@/lib/billing/billing-health'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
@@ -6,19 +7,33 @@ import {
   IconAlertTriangle,
   IconClockPause,
   IconCreditCardOff,
+  IconLockExclamation,
 } from '@tabler/icons-react'
+
+const REASON_LABELS: Record<AtRiskReason, string> = {
+  tenant_past_due: 'Past due',
+  subscription_past_due: 'Subscription past due',
+  access_cutoff_scheduled: 'Cutoff scheduled',
+}
 
 export default async function PlatformBillingHealthPage() {
   const atRisk = await getAtRiskTenants()
 
-  const manualTransfer = atRisk.filter((t) => t.paymentMethod === 'manual_transfer')
-  const stripeDunning = atRisk.filter((t) => t.paymentMethod !== 'manual_transfer')
+  // The metric cards deliberately keep counting past-due tenants only, so the
+  // numbers do not silently change meaning now that #514 also lists tenants
+  // that are merely over their plan limits. Cutoffs get their own card.
+  const pastDue = atRisk.filter(
+    (t) => t.reasons.includes('tenant_past_due') || t.reasons.includes('subscription_past_due'),
+  )
+  const manualTransfer = pastDue.filter((t) => t.paymentMethod === 'manual_transfer')
+  const stripeDunning = pastDue.filter((t) => t.paymentMethod !== 'manual_transfer')
+  const cutoffScheduled = atRisk.filter((t) => t.reasons.includes('access_cutoff_scheduled'))
   const urgent = manualTransfer.filter((t) => t.daysUntilDowngrade !== null && t.daysUntilDowngrade <= 3)
 
   const metricCards = [
     {
       title: 'Past-Due Schools',
-      value: String(atRisk.length),
+      value: String(pastDue.length),
       sub: 'Total schools currently behind on payment',
       icon: IconAlertTriangle,
       bg: 'bg-red-50 dark:bg-red-950/40',
@@ -40,6 +55,14 @@ export default async function PlatformBillingHealthPage() {
       bg: 'bg-blue-50 dark:bg-blue-950/40',
       iconColor: 'text-blue-600 dark:text-blue-400',
     },
+    {
+      title: 'Access Cutoff Scheduled',
+      value: String(cutoffScheduled.length),
+      sub: 'Over plan limits — access pauses on the cutoff date',
+      icon: IconLockExclamation,
+      bg: 'bg-purple-50 dark:bg-purple-950/40',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+    },
   ]
 
   return (
@@ -47,11 +70,12 @@ export default async function PlatformBillingHealthPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Billing Health</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Schools currently past-due, with their grace-period countdown to automatic downgrade.
+          Schools that are past-due or over their plan limits, with their countdown to automatic
+          downgrade or access cutoff.
         </p>
       </div>
 
-      <div className="mb-8 grid gap-3 sm:grid-cols-3" data-testid="billing-health-metrics">
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="billing-health-metrics">
         {metricCards.map((card) => (
           <Card key={card.title} className="relative overflow-hidden">
             <CardContent className="p-5">
@@ -80,7 +104,9 @@ export default async function PlatformBillingHealthPage() {
         </CardHeader>
         <CardContent>
           {atRisk.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No schools currently past-due.</p>
+            <p className="text-muted-foreground text-sm">
+              No schools are past-due or over their plan limits.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -88,6 +114,7 @@ export default async function PlatformBillingHealthPage() {
                   <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                     <th className="pb-2 font-medium">School</th>
                     <th className="pb-2 font-medium">Plan</th>
+                    <th className="pb-2 font-medium">Reason</th>
                     <th className="pb-2 font-medium">Payment method</th>
                     <th className="pb-2 font-medium">Past due since</th>
                     <th className="pb-2 font-medium">Downgrades in</th>
@@ -99,6 +126,15 @@ export default async function PlatformBillingHealthPage() {
                     <tr key={t.tenantId} className="border-b last:border-0" data-testid="at-risk-row" data-tenant-id={t.tenantId}>
                       <td className="py-2.5 font-medium">{t.tenantName}</td>
                       <td className="py-2.5 capitalize text-muted-foreground">{t.plan || '—'}</td>
+                      <td className="py-2.5" data-testid="at-risk-reasons" data-reasons={t.reasons.join(' ')}>
+                        <div className="flex flex-wrap gap-1">
+                          {t.reasons.map((reason) => (
+                            <Badge key={reason} variant="secondary" className="text-[10px] font-normal">
+                              {REASON_LABELS[reason]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
                       <td className="py-2.5 text-muted-foreground">
                         {t.paymentMethod === 'manual_transfer' ? 'Manual transfer' : t.paymentMethod === 'stripe' ? 'Stripe' : '—'}
                       </td>
