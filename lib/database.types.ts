@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_cutoff_notifications: {
+        Row: {
+          cutoff_at: string
+          id: string
+          recipient_count: number
+          sent_at: string
+          stage: string
+          tenant_id: string
+        }
+        Insert: {
+          cutoff_at: string
+          id?: string
+          recipient_count?: number
+          sent_at?: string
+          stage: string
+          tenant_id: string
+        }
+        Update: {
+          cutoff_at?: string
+          id?: string
+          recipient_count?: number
+          sent_at?: string
+          stage?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_cutoff_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aristotle_messages: {
         Row: {
           content: string
@@ -6421,6 +6456,13 @@ export type Database = {
         Returns: Json
       }
       get_platform_stats: { Args: never; Returns: Json }
+      get_published_lesson_counts: {
+        Args: { _course_ids: number[] }
+        Returns: {
+          course_id: number
+          lesson_count: number
+        }[]
+      }
       get_tenant_id: { Args: never; Returns: string }
       get_tenant_role: { Args: never; Returns: string }
       grant_free_entitlement: {
@@ -6455,6 +6497,7 @@ export type Database = {
         }[]
       }
       is_super_admin: { Args: never; Returns: boolean }
+      is_tenant_staff: { Args: never; Returns: boolean }
       issue_certificate_if_eligible: {
         Args: { p_course_id: number; p_user_id: string }
         Returns: Json
