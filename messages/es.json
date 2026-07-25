@@ -4609,6 +4609,65 @@
     "bankTransfer": "Pagar por transferencia bancaria",
     "unlimited": "Ilimitado"
   },
+  "platform": {
+    "payouts": {
+      "title": "Pagos a escuelas",
+      "description": "PayPal, Binance Pay y Lemon Squeezy no dividen el pago automáticamente: el 100% de cada venta llega a tu cuenta. Esto es lo que le debes devolver a cada escuela, según su reparto de ingresos.",
+      "metrics": {
+        "owed": "Pendiente por pagar",
+        "owedSub": "{count, plural, =1 {# escuela esperando su pago} other {# escuelas esperando su pago}}",
+        "collected": "Cobrado (proveedores de cuenta única)",
+        "collectedSub": "PayPal, Binance Pay, Lemon Squeezy — el 100% llega a tu cuenta",
+        "paidOut": "Pagado (histórico)",
+        "paidOutSub": "Pagos a escuelas registrados manualmente"
+      },
+      "clawbackBanner": {
+        "label": "Reembolsos ya pagados: {total}.",
+        "body": "Esa parte de lo que ya pagaste correspondía a ventas que después fueron reembolsadas. Ya está descontada de los saldos de abajo, así que no la cobres de nuevo: no hay nada más que hacer aquí."
+      },
+      "overpaidBanner": {
+        "label": "Pagado de más: {total}.",
+        "body": "A estas escuelas se les pagó más de lo que se les debía. El excedente se descuenta automáticamente de su próximo pago, así que su saldo queda en 0 hasta que nuevas ventas lo compensen. Si una escuela ya no tiene ventas, hay que recuperarlo fuera de la plataforma.",
+        "refundOverlap": "Parte de esto puede ser el reembolso indicado arriba y no un pago de más aparte: una venta reembolsada deja de contar como deuda, pero su pago sigue registrado."
+      },
+      "table": {
+        "title": "Por escuela",
+        "empty": "Todavía no hay ventas liquidadas por la plataforma.",
+        "headers": {
+          "school": "Escuela",
+          "currency": "Moneda",
+          "providers": "Proveedores",
+          "collected": "Cobrado",
+          "schoolShare": "% escuela",
+          "paidSoFar": "Pagado hasta ahora",
+          "refunded": "Del cual reembolsado",
+          "owed": "Se debe",
+          "overpaid": "Pagado de más"
+        },
+        "clawbackHint": "Parte de lo ya pagado que correspondía a ventas luego reembolsadas. Ya está reflejado en «Se debe».",
+        "overpaidHint": "Pagado por encima de lo que se debía. Se descuenta del próximo pago automáticamente, mientras la escuela siga vendiendo."
+      },
+      "footnote": "Las ventas por Stripe y Solana ya se dividen automáticamente y nunca aparecen aquí. Binance Pay (cuenta personal) y las ventas manuales u offline se liquidan directo a la escuela y tampoco aparecen aquí: solo PayPal, Binance Pay (comercio) y Lemon Squeezy, porque hoy esas liquidan el 100% en tu cuenta. Los montos en distintas monedas se muestran y se pagan por separado: nunca se suman en un solo número.",
+      "dialog": {
+        "trigger": "Marcar como pagado",
+        "title": "Registrar pago a {school}",
+        "amountLabel": "Monto pagado ({currency})",
+        "noteLabel": "Nota (opcional)",
+        "notePlaceholder": "p. ej. referencia de transferencia, fecha de envío…",
+        "mismatchTitle": "El monto no coincide con el pago sugerido",
+        "mismatchBody": "Sugerido (saldo pendiente): {suggested} {currency} — ingresado: {entered} {currency}. Confirma que quieres registrar este monto.",
+        "cancel": "Cancelar",
+        "submit": "Registrar pago",
+        "confirmAnyway": "Confirmar de todos modos",
+        "recording": "Registrando…",
+        "success": "Se registraron {amount} {currency} pagados a {school}",
+        "errors": {
+          "positiveAmount": "Ingresa un monto positivo",
+          "failed": "No se pudo registrar el pago"
+        }
+      }
+    }
+  },
   "platformPricing": {
     "title": "Precios simples y transparentes",
     "description": "Comienza gratis y escala a medida que creces. Sin costos ocultos, sin contratos a largo plazo. Actualiza o baja de plan cuando quieras.",

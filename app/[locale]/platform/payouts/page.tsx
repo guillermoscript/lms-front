@@ -1,20 +1,28 @@
+import type { ComponentType } from 'react'
+import { getTranslations } from 'next-intl/server'
 import { getPayoutsOwed } from '@/app/actions/platform/payouts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarkPayoutPaidDialog } from '@/components/platform/mark-payout-paid-dialog'
 import {
+  IconArrowBackUp,
   IconCoin,
+  IconReceiptRefund,
   IconReportMoney,
   IconWalletOff,
 } from '@tabler/icons-react'
 
-const money = (n: number, currency: string) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(n ?? 0)
+/**
+ * Formatted in the reader's locale; the currency code always comes from the row
+ * itself — balances are grouped per currency and never converted (#497).
+ */
+const money = (n: number, currency: string, locale: string) =>
+  new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).format(n ?? 0)
 
 /** Renders one line per currency — amounts in different currencies are never summed into one number (#497). */
-function formatByCurrency(byCurrency: Record<string, number>) {
+function formatByCurrency(byCurrency: Record<string, number>, locale: string) {
   const entries = Object.entries(byCurrency).filter(([, amount]) => amount !== 0)
-  if (entries.length === 0) return money(0, 'usd')
-  return entries.map(([currency, amount]) => money(amount, currency)).join(' · ')
+  if (entries.length === 0) return money(0, 'usd', locale)
+  return entries.map(([currency, amount]) => money(amount, currency, locale)).join(' · ')
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -23,7 +31,89 @@ const PROVIDER_LABEL: Record<string, string> = {
   lemonsqueezy: 'Lemon Squeezy',
 }
 
-export default async function PlatformPayoutsPage() {
+interface ReportedAmountProps {
+  amount: number
+  formatted: string
+  hint: string
+}
+
+/**
+ * Shared shape of the two reporting-only money columns ("Of which refunded" and
+ * "Overpaid"). Both name a figure that `Owed` already accounts for, both need an
+ * explanation attached, and neither is ever negative — so they render the same
+ * way and differ only in wording, icon and tone.
+ *
+ * The icon is not decoration: colour alone can't separate these two columns for
+ * a colour-blind operator (WCAG 1.4.1), and they sit in a table of otherwise
+ * neutral numbers.
+ */
+function ReportedAmountCell({
+  amount,
+  formatted,
+  hint,
+  className,
+  icon: Icon,
+  testId,
+}: ReportedAmountProps & {
+  className: string
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>
+  testId: string
+}) {
+  return (
+    <td className="py-2.5 text-right tabular-nums" data-testid={testId}>
+      {amount > 0 ? (
+        <span
+          className={`inline-flex items-center justify-end gap-1 font-medium ${className}`}
+          title={hint}
+        >
+          <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          {formatted}
+        </span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </td>
+  )
+}
+
+/**
+ * The slice of "Paid so far" that covered sales since refunded. Not a deduction
+ * column: "Owed" already accounts for it (#511), so it carries no minus sign.
+ */
+function ClawbackCell(props: ReportedAmountProps) {
+  return (
+    <ReportedAmountCell
+      {...props}
+      className="text-red-600 dark:text-red-400"
+      icon={IconReceiptRefund}
+      testId="payout-clawback-cell"
+    />
+  )
+}
+
+/**
+ * Paid past the outstanding balance (#516). Recovered by carry-forward, not by a
+ * reverse payout row — `payouts.amount` is CHECK (amount > 0) — so it shrinks on
+ * its own as new sales land, but only for a school that keeps selling.
+ */
+function OverpaidCell(props: ReportedAmountProps) {
+  return (
+    <ReportedAmountCell
+      {...props}
+      className="text-sky-600 dark:text-sky-400"
+      icon={IconArrowBackUp}
+      testId="payout-overpaid-cell"
+    />
+  )
+}
+
+export default async function PlatformPayoutsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  const t = await getTranslations('platform.payouts')
   const owed = await getPayoutsOwed()
 
   // Per-currency totals across all tenants — kept separate, never summed together.
@@ -43,10 +133,12 @@ export default async function PlatformPayoutsPage() {
     alreadyPaid: number
     clawback: number
     netOwed: number
+    overpaid: number
     byProvider: Record<string, number>
   }
   const rows: Row[] = []
   const totalClawbackByCurrency: Record<string, number> = {}
+  const totalOverpaidByCurrency: Record<string, number> = {}
 
   for (const tenant of owed) {
     let tenantHasOwed = false
@@ -56,6 +148,9 @@ export default async function PlatformPayoutsPage() {
       totalPaidOutByCurrency[balance.currency] = (totalPaidOutByCurrency[balance.currency] ?? 0) + balance.alreadyPaid
       if (balance.clawback > 0) {
         totalClawbackByCurrency[balance.currency] = (totalClawbackByCurrency[balance.currency] ?? 0) + balance.clawback
+      }
+      if (balance.overpaid > 0) {
+        totalOverpaidByCurrency[balance.currency] = (totalOverpaidByCurrency[balance.currency] ?? 0) + balance.overpaid
       }
       if (balance.netOwed > 0) tenantHasOwed = true
       rows.push({
@@ -67,34 +162,36 @@ export default async function PlatformPayoutsPage() {
         alreadyPaid: balance.alreadyPaid,
         clawback: balance.clawback,
         netOwed: balance.netOwed,
+        overpaid: balance.overpaid,
         byProvider: balance.byProvider,
       })
     }
     if (tenantHasOwed) schoolsOwed++
   }
   const hasClawbacks = Object.values(totalClawbackByCurrency).some((amount) => amount > 0)
+  const hasOverpayments = Object.values(totalOverpaidByCurrency).some((amount) => amount > 0)
 
   const metricCards = [
     {
-      title: 'Currently Owed',
-      value: formatByCurrency(totalOwedByCurrency),
-      sub: `${schoolsOwed} school${schoolsOwed === 1 ? '' : 's'} awaiting payout`,
+      title: t('metrics.owed'),
+      value: formatByCurrency(totalOwedByCurrency, locale),
+      sub: t('metrics.owedSub', { count: schoolsOwed }),
       icon: IconWalletOff,
       bg: 'bg-amber-50 dark:bg-amber-950/40',
       iconColor: 'text-amber-600 dark:text-amber-400',
     },
     {
-      title: 'Collected (single-account providers)',
-      value: formatByCurrency(totalCollectedByCurrency),
-      sub: 'PayPal, Binance Pay, Lemon Squeezy — 100% lands in your account',
+      title: t('metrics.collected'),
+      value: formatByCurrency(totalCollectedByCurrency, locale),
+      sub: t('metrics.collectedSub'),
       icon: IconCoin,
       bg: 'bg-blue-50 dark:bg-blue-950/40',
       iconColor: 'text-blue-600 dark:text-blue-400',
     },
     {
-      title: 'Paid Out (all time)',
-      value: formatByCurrency(totalPaidOutByCurrency),
-      sub: 'Manually recorded payouts to schools',
+      title: t('metrics.paidOut'),
+      value: formatByCurrency(totalPaidOutByCurrency, locale),
+      sub: t('metrics.paidOutSub'),
       icon: IconReportMoney,
       bg: 'bg-emerald-50 dark:bg-emerald-950/40',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
@@ -104,11 +201,8 @@ export default async function PlatformPayoutsPage() {
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-payouts">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Payouts</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          PayPal, Binance Pay, and Lemon Squeezy don&apos;t split automatically — 100% of every sale
-          lands in your account. This is what you owe each school back, based on their revenue split.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t('description')}</p>
       </div>
 
       <div className="mb-8 grid gap-3 sm:grid-cols-3" data-testid="payouts-metrics">
@@ -139,33 +233,51 @@ export default async function PlatformPayoutsPage() {
           className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
           data-testid="payouts-clawback-banner"
         >
-          <span className="font-medium">Refund clawback: {formatByCurrency(totalClawbackByCurrency)}.</span>{' '}
-          That much of what you already paid out was for sales that have since been refunded. It is
-          already netted out of the balances below, so don&apos;t collect it again — nothing extra to
-          do here.
+          <span className="font-medium">
+            {t('clawbackBanner.label', { total: formatByCurrency(totalClawbackByCurrency, locale) })}
+          </span>{' '}
+          {t('clawbackBanner.body')}
+        </div>
+      )}
+
+      {hasOverpayments && (
+        <div
+          className="mb-6 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300"
+          data-testid="payouts-overpaid-banner"
+        >
+          <span className="font-medium">
+            {t('overpaidBanner.label', { total: formatByCurrency(totalOverpaidByCurrency, locale) })}
+          </span>{' '}
+          {t('overpaidBanner.body')}
+          {/* Both banners can be describing the same money: a refund drops the
+              sale out of `grossOwed`, which turns an already-recorded payout
+              into an overpayment. Say so, rather than letting the two figures
+              read as two separate problems. */}
+          {hasClawbacks ? <> {t('overpaidBanner.refundOverlap')}</> : null}
         </div>
       )}
 
       <Card data-testid="payouts-by-tenant">
         <CardHeader>
-          <CardTitle>By school</CardTitle>
+          <CardTitle>{t('table.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No platform-settled sales yet.</p>
+            <p className="text-muted-foreground text-sm">{t('table.empty')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="pb-2 font-medium">School</th>
-                    <th className="pb-2 font-medium">Currency</th>
-                    <th className="pb-2 font-medium">Providers</th>
-                    <th className="pb-2 text-right font-medium">Collected</th>
-                    <th className="pb-2 text-right font-medium">School %</th>
-                    <th className="pb-2 text-right font-medium">Paid so far</th>
-                    <th className="pb-2 text-right font-medium">Of which refunded</th>
-                    <th className="pb-2 text-right font-medium">Owed</th>
+                    <th className="pb-2 font-medium">{t('table.headers.school')}</th>
+                    <th className="pb-2 font-medium">{t('table.headers.currency')}</th>
+                    <th className="pb-2 font-medium">{t('table.headers.providers')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.collected')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.schoolShare')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.paidSoFar')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.refunded')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.owed')}</th>
+                    <th className="pb-2 text-right font-medium">{t('table.headers.overpaid')}</th>
                     <th className="pb-2 text-right font-medium"></th>
                   </tr>
                 </thead>
@@ -179,31 +291,26 @@ export default async function PlatformPayoutsPage() {
                           ? '—'
                           : Object.keys(r.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{money(r.grossCollected, r.currency)}</td>
+                      <td className="py-2.5 text-right tabular-nums">{money(r.grossCollected, r.currency, locale)}</td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
                         {r.schoolPercentage}%
                       </td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                        {money(r.alreadyPaid, r.currency)}
+                        {money(r.alreadyPaid, r.currency, locale)}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">
-                        {r.clawback > 0 ? (
-                          // Not a deduction column: this is the slice of "Paid so far"
-                          // that covered sales later refunded. "Owed" already accounts
-                          // for it (#511), so it carries no minus sign.
-                          <span
-                            className="font-medium text-red-600 dark:text-red-400"
-                            title="Part of what was already paid out, for sales later refunded. Already reflected in Owed."
-                          >
-                            {money(r.clawback, r.currency)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
+                      <ClawbackCell
+                        amount={r.clawback}
+                        formatted={money(r.clawback, r.currency, locale)}
+                        hint={t('table.clawbackHint')}
+                      />
                       <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
-                        {money(r.netOwed, r.currency)}
+                        {money(r.netOwed, r.currency, locale)}
                       </td>
+                      <OverpaidCell
+                        amount={r.overpaid}
+                        formatted={money(r.overpaid, r.currency, locale)}
+                        hint={t('table.overpaidHint')}
+                      />
                       <td className="py-2.5 text-right">
                         <MarkPayoutPaidDialog
                           tenantId={r.tenantId}
@@ -221,13 +328,7 @@ export default async function PlatformPayoutsPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-6 text-[11px] text-muted-foreground/70">
-        Stripe and Solana sales already split automatically and never appear here. Binance Pay
-        (personal account) and manual/offline sales settle straight to the school and also never
-        appear here — only PayPal, Binance Pay (merchant), and Lemon Squeezy do, since those settle
-        100% into your account today. Amounts in different currencies are shown and paid out
-        separately — they&apos;re never added together into one number.
-      </p>
+      <p className="mt-6 text-[11px] text-muted-foreground/70">{t('footnote')}</p>
     </main>
   )
 }

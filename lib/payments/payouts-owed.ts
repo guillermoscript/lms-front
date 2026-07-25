@@ -79,8 +79,23 @@
  *
  * `netOwed` keeps its `Math.max(…, 0)` floor, so a school overpaid beyond its
  * outstanding balance reads 0 rather than a negative — only a payout row moves
- * money, and this view never invents a reverse one. The unrecovered remainder
- * in that situation is visible through `clawback`.
+ * money, and this view never invents a reverse one.
+ *
+ * #516: that floor also hid the overpayment's size. `overpaid` reports it
+ * explicitly — `alreadyPaid - grossOwed` when positive, else 0 — while
+ * `netOwed` keeps the floor its consumers (metric cards, the mismatch guard,
+ * the school-facing view) rely on. Nothing recovers an overpayment as a
+ * reverse entry: `payouts.amount` carries `CHECK (amount > 0)`, so a negative
+ * adjusting row cannot be written at all. It is recovered by carry-forward
+ * instead — `alreadyPaid` is an all-time sum, so the next cycle's
+ * `grossOwed - alreadyPaid` starts in the hole and absorbs the excess with no
+ * operator action. `overpaid` exists so that recovery is visible while it
+ * happens rather than looking like an unexplained zero balance.
+ *
+ * Carry-forward only recovers anything for a school that keeps selling. A
+ * dormant or departed school's overpayment sits here indefinitely, and so does
+ * one caused by a mis-keyed payout row; both have to be settled outside the
+ * platform. The UI says so rather than promising the balance resolves itself.
  */
 
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */
@@ -146,6 +161,13 @@ export interface CurrencyBalance {
   clawback: number
   /** max(grossOwed - alreadyPaid, 0) — what's currently owed in this currency. */
   netOwed: number
+  /**
+   * max(alreadyPaid - grossOwed, 0) — how far past the outstanding balance this
+   * school has been paid in this currency (issue #516). Mutually exclusive with
+   * `netOwed`: at most one of the two is ever non-zero. Carried forward, not
+   * clawed back — it shrinks on its own as new sales land.
+   */
+  overpaid: number
   /** Per-provider breakdown of grossCollected in this currency. */
   byProvider: Record<string, number>
 }
@@ -261,6 +283,9 @@ export function computeOwedBalances(
       // overpayment nets out on its own. Subtracting it again double-counted the
       // refund (issue #511).
       const netOwed = Math.max(grossOwed - alreadyPaid, 0)
+      // The same difference in the other direction, reported rather than
+      // clamped away (issue #516).
+      const overpaid = Math.max(alreadyPaid - grossOwed, 0)
       return {
         currency,
         grossCollected,
@@ -268,6 +293,7 @@ export function computeOwedBalances(
         alreadyPaid,
         clawback,
         netOwed,
+        overpaid,
         byProvider: entry?.byProvider ?? {},
       }
     })

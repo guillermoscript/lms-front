@@ -4616,6 +4616,65 @@
     "bankTransfer": "Pay via bank transfer",
     "unlimited": "Unlimited"
   },
+  "platform": {
+    "payouts": {
+      "title": "Payouts",
+      "description": "PayPal, Binance Pay, and Lemon Squeezy don’t split automatically — 100% of every sale lands in your account. This is what you owe each school back, based on their revenue split.",
+      "metrics": {
+        "owed": "Currently Owed",
+        "owedSub": "{count, plural, =1 {# school awaiting payout} other {# schools awaiting payout}}",
+        "collected": "Collected (single-account providers)",
+        "collectedSub": "PayPal, Binance Pay, Lemon Squeezy — 100% lands in your account",
+        "paidOut": "Paid Out (all time)",
+        "paidOutSub": "Manually recorded payouts to schools"
+      },
+      "clawbackBanner": {
+        "label": "Refund clawback: {total}.",
+        "body": "That much of what you already paid out was for sales that have since been refunded. It is already netted out of the balances below, so don’t collect it again — nothing extra to do here."
+      },
+      "overpaidBanner": {
+        "label": "Overpaid: {total}.",
+        "body": "These schools have been paid more than they were owed. The excess is deducted from their next payout automatically, so their balance stays at 0 until new sales catch up. If a school has no further sales, it has to be recovered outside the platform.",
+        "refundOverlap": "Part of this can be the refund clawback above rather than a separate overpayment: a refunded sale drops out of what is owed while its payout stays recorded."
+      },
+      "table": {
+        "title": "By school",
+        "empty": "No platform-settled sales yet.",
+        "headers": {
+          "school": "School",
+          "currency": "Currency",
+          "providers": "Providers",
+          "collected": "Collected",
+          "schoolShare": "School %",
+          "paidSoFar": "Paid so far",
+          "refunded": "Of which refunded",
+          "owed": "Owed",
+          "overpaid": "Overpaid"
+        },
+        "clawbackHint": "Part of what was already paid out, for sales later refunded. Already reflected in Owed.",
+        "overpaidHint": "Paid beyond what was owed. Deducted from the next payout automatically, as long as the school keeps selling."
+      },
+      "footnote": "Stripe and Solana sales already split automatically and never appear here. Binance Pay (personal account) and manual/offline sales settle straight to the school and also never appear here — only PayPal, Binance Pay (merchant), and Lemon Squeezy do, since those settle 100% into your account today. Amounts in different currencies are shown and paid out separately — they’re never added together into one number.",
+      "dialog": {
+        "trigger": "Mark as Paid",
+        "title": "Record payout to {school}",
+        "amountLabel": "Amount paid ({currency})",
+        "noteLabel": "Note (optional)",
+        "notePlaceholder": "e.g. wire reference, date sent…",
+        "mismatchTitle": "Amount differs from suggested payout",
+        "mismatchBody": "Suggested (net owed): {suggested} {currency} — entered: {entered} {currency}. Confirm you want to record this amount.",
+        "cancel": "Cancel",
+        "submit": "Record Payout",
+        "confirmAnyway": "Confirm anyway",
+        "recording": "Recording…",
+        "success": "Recorded {amount} {currency} paid to {school}",
+        "errors": {
+          "positiveAmount": "Enter a positive amount",
+          "failed": "Failed to record payout"
+        }
+      }
+    }
+  },
   "platformPricing": {
     "title": "Simple, transparent pricing",
     "description": "Start free and scale as you grow. No hidden fees, no long-term contracts. Upgrade or downgrade anytime.",
