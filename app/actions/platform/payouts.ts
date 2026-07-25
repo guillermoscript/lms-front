@@ -29,10 +29,14 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     admin.from('revenue_splits').select('tenant_id, school_percentage'),
     admin
       .from('transactions')
-      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status')
+      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status, transaction_date')
       .in('status', ['successful', 'refunded'])
       .in('payment_provider', PLATFORM_SETTLED_PROVIDERS),
-    admin.from('payouts').select('tenant_id, amount, currency').eq('payout_method', 'manual').eq('status', 'paid'),
+    admin
+      .from('payouts')
+      .select('tenant_id, amount, currency, period_end, paid_at, created_at')
+      .eq('payout_method', 'manual')
+      .eq('status', 'paid'),
   ])
 
   const schoolPercentageByTenant = new Map(
@@ -54,8 +58,17 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
         currency: t.currency || 'usd',
         schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
         status: t.status as 'successful' | 'refunded',
+        transactionDate: t.transaction_date as string | null,
       })),
-    (paid || []).map((p) => ({ tenantId: p.tenant_id, amount: p.amount, currency: p.currency || 'usd' }))
+    // `period_end` is the exact "covered through" when a payout recorded a period;
+    // manually recorded ones leave it null today, so fall back to when the money
+    // actually moved (issue #511).
+    (paid || []).map((p) => ({
+      tenantId: p.tenant_id,
+      amount: p.amount,
+      currency: p.currency || 'usd',
+      coveredThrough: p.period_end ?? p.paid_at ?? p.created_at,
+    }))
   )
 }
 
