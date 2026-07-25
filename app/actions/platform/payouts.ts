@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { computeOwedBalances, DEFAULT_SCHOOL_PERCENTAGE, type TenantOwed } from '@/lib/payments/payouts-owed'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 async function verifySuperAdmin() {
   const supabase = await createClient()
@@ -24,32 +25,57 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
   await verifySuperAdmin()
   const admin = createAdminClient()
 
-  const [{ data: tenants }, { data: splits }, { data: txns }, { data: paid }] = await Promise.all([
-    admin.from('tenants').select('id, name'),
-    admin.from('revenue_splits').select('tenant_id, school_percentage'),
-    admin
-      .from('transactions')
-      .select('tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status, transaction_date')
-      .in('status', ['successful', 'refunded'])
-      .in('payment_provider', PLATFORM_SETTLED_PROVIDERS),
-    admin
-      .from('payouts')
-      .select('tenant_id, amount, currency, period_end, paid_at, created_at')
-      .eq('payout_method', 'manual')
-      .eq('status', 'paid'),
+  // Every read here is a whole-relation sweep whose rows are then summed, so a
+  // PostgREST row cap would misstate the balance instead of failing (issue
+  // #533): a short `transactions` read underpays the school, a short `payouts`
+  // read overpays it. `fetchAllRows` pages and then verifies the row count it
+  // collected against the server's own — hence `{ count: 'exact' }` and the
+  // primary-key `.order()` on each of the four.
+  const [tenants, splits, txns, paid] = await Promise.all([
+    fetchAllRows('tenants', (from, to) =>
+      admin.from('tenants').select('id, name', { count: 'exact' }).order('id').range(from, to)
+    ),
+    fetchAllRows('revenue_splits', (from, to) =>
+      admin
+        .from('revenue_splits')
+        .select('tenant_id, school_percentage', { count: 'exact' })
+        .order('split_id')
+        .range(from, to)
+    ),
+    fetchAllRows('transactions', (from, to) =>
+      admin
+        .from('transactions')
+        .select(
+          'tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status, transaction_date',
+          { count: 'exact' }
+        )
+        .in('status', ['successful', 'refunded'])
+        .in('payment_provider', PLATFORM_SETTLED_PROVIDERS)
+        .order('transaction_id')
+        .range(from, to)
+    ),
+    fetchAllRows('payouts', (from, to) =>
+      admin
+        .from('payouts')
+        .select('tenant_id, amount, currency, period_end, paid_at, created_at', { count: 'exact' })
+        .eq('payout_method', 'manual')
+        .eq('status', 'paid')
+        .order('payout_id')
+        .range(from, to)
+    ),
   ])
 
   const schoolPercentageByTenant = new Map(
-    (splits || []).map((s) => [s.tenant_id, s.school_percentage as number])
+    splits.map((s) => [s.tenant_id, s.school_percentage as number])
   )
 
   return computeOwedBalances(
-    (tenants || []).map((t) => ({
+    tenants.map((t) => ({
       tenantId: t.id,
       tenantName: t.name,
       schoolPercentage: schoolPercentageByTenant.get(t.id) ?? DEFAULT_SCHOOL_PERCENTAGE,
     })),
-    (txns || [])
+    txns
       .filter((t) => t.tenant_id && t.payment_provider && t.amount != null)
       .map((t) => ({
         tenantId: t.tenant_id as string,
@@ -63,7 +89,7 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
     // `period_end` is the exact "covered through" when a payout recorded a period;
     // manually recorded ones leave it null today, so fall back to when the money
     // actually moved (issue #511).
-    (paid || []).map((p) => ({
+    paid.map((p) => ({
       tenantId: p.tenant_id,
       amount: p.amount,
       currency: p.currency || 'usd',
