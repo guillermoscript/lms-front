@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { headers } from 'next/headers';
@@ -26,6 +27,16 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
     }
     const tenantId = await getCurrentTenantId();
 
+    // Since #528 the transactions INSERT policy pins `status = 'pending'` for the
+    // user-scoped client, because a student could otherwise POST a 'successful'
+    // row straight to PostgREST and let the after_transaction_insert trigger hand
+    // them the course. This action legitimately needs to write 'successful', so
+    // the two inserts below use the admin client. Per CLAUDE.md, that shifts the
+    // tenant check to us: `userId` comes from the session, and the product/plan
+    // lookups that follow are tenant-scoped reads on the USER-scoped client, so a
+    // caller can only reach rows their own tenant owns.
+    const adminClient = createAdminClient();
+
     try {
         if (courseId) {
             // Get product for this course (pick first match, scoped to tenant)
@@ -49,7 +60,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
             // Create the transaction. The after_transaction_insert trigger
             // enrolls the user (entitlements + enrollment record) — no explicit
             // RPC call here, the trigger is the single enrollment path.
-            const { data: transaction, error: txError } = await supabase
+            const { data: transaction, error: txError } = await adminClient
                 .from('transactions')
                 .insert({
                     user_id: userId,
@@ -97,7 +108,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
             // Create the transaction. The after_transaction_insert trigger
             // creates the subscription + entitlements (or extends an existing
             // subscription on renewal).
-            const { data: transaction, error: txError } = await supabase
+            const { data: transaction, error: txError } = await adminClient
                 .from('transactions')
                 .insert({
                     user_id: userId,
