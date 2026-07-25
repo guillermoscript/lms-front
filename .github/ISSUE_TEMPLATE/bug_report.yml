@@ -1,0 +1,47 @@
+name: Bug report
+description: Something is broken
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Log in as owner@e2etest.com on lvh.me:3000
+        2. Go to /dashboard/admin/...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role you were signed in as
+      options: [student, teacher, admin, super admin, not signed in]
+    validations:
+      required: true
+  - type: input
+    id: tenant
+    attributes:
+      label: Tenant / URL
+      description: Which subdomain, and the page URL.
+      placeholder: code-academy.lvh.me:3000/en/dashboard/student
+  - type: dropdown
+    id: env
+    attributes:
+      label: Environment
+      options: [local dev, self-hosted, hosted instance]
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / server errors
+      description: Browser console, terminal output, or Supabase logs. Screenshots welcome.
+      render: shell

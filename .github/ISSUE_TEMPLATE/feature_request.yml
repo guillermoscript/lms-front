@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose something new
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't you do today? Who is blocked — a student, a teacher, a school admin, a self-hoster?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - courses / lessons
+        - exams / grading
+        - payments / billing
+        - multi-tenancy / onboarding
+        - gamification
+        - AI tutor / MCP server
+        - community spaces
+        - i18n / translations
+        - admin dashboard
+        - other
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be willing to work on this

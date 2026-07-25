@@ -1,8 +1,31 @@
 # LMS Platform
 
-A multi-tenant SaaS Learning Management System. Schools run on subdomains (`school.platform.com`). Educators create and sell courses; students enroll and learn.
+**Open-source, multi-tenant LMS for creators and schools.** Every school gets its own subdomain (`school.platform.com`), its own branding, and its own students. Educators build courses and sell them; students enroll, learn, take exams, and earn verifiable certificates.
 
-**Stack:** Next.js 16 · React 19 · TypeScript · Supabase · Shadcn UI · Tailwind CSS v4 · Stripe Connect · next-intl (en/es)
+[![CI](https://github.com/guillermoscript/lms-front/actions/workflows/ci.yml/badge.svg)](https://github.com/guillermoscript/lms-front/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**Live instance:** [preciopana.com](https://preciopana.com) · **Setup:** [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) · **Contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+
+**Stack:** Next.js 16 · React 19 · TypeScript · Supabase (Postgres + Auth + RLS) · Shadcn UI (base-mira) · Tailwind CSS v4 · Stripe Connect · next-intl (en/es)
+
+## What's in it
+
+| | |
+|--|--|
+| **Multi-tenancy** | Subdomain-per-school, tenant theming, per-tenant roles — one deployment, many schools. Isolation is enforced in Postgres with Row Level Security, not in application code. |
+| **Courses** | Block-editor lessons with rich MDX components, exercises, checkpoints, exams with AI-assisted grading, progress tracking, FSRS spaced repetition. |
+| **Payments** | Stripe Connect (platform fee + revenue split), PayPal, Lemon Squeezy, Solana, Binance, and manual/offline receipts for markets where cards fail. Provider-agnostic contract — adding one is a single module. |
+| **Monetization** | One-off products, subscriptions, plan-based feature gating, payouts, invoices, revenue dashboard. Separate platform billing for schools paying you. |
+| **AI tutor** | An MCP server (`mcp-server/`) exposing the LMS as tools + interactive widgets: drill practice, weak-topic remediation, exam readiness, ask-a-teacher. Works from any MCP client, auth'd via Supabase OAuth 2.1 with RLS intact. |
+| **Engagement** | XP, levels, streaks, achievements, challenges, weekly leagues, coin store, certificates with public verification, community spaces with polls and moderation. |
+| **Creator tools** | AI landing-page generation, drag-and-drop page builder, guided onboarding, guided tours. |
+| **i18n** | Full English + Spanish across the app, built for LATAM and English-speaking markets. |
+
+Self-host it, fork it for your own school, or use it as a reference for multi-tenant Supabase + Next.js patterns. MIT licensed.
 
 ## Prerequisites
 
@@ -15,7 +38,7 @@ A multi-tenant SaaS Learning Management System. Schools run on subdomains (`scho
 
 1. **Clone and install**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/guillermoscript/lms-front.git
    cd lms-front
    npm install
    ```
@@ -85,3 +108,20 @@ A multi-tenant SaaS Learning Management System. Schools run on subdomains (`scho
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — complete DB schema
 - [`docs/AUTH.md`](docs/AUTH.md) — authentication flows
 - [`docs/MONETIZATION.md`](docs/MONETIZATION.md) — billing and payments
+- [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the MCP server and AI tutor tooling
+
+More in [`docs/`](docs/) — deployment, i18n, gamification, community spaces, the landing-page builder.
+
+## Contributing
+
+Contributions are welcome — bug reports, translations, docs fixes, new payment providers, features.
+
+- Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and what reviewers look for
+- Browse [`good first issue`](https://github.com/guillermoscript/lms-front/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [`help wanted`](https://github.com/guillermoscript/lms-front/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+- Questions and ideas: [Discussions](https://github.com/guillermoscript/lms-front/discussions)
+- Found a vulnerability? [`SECURITY.md`](SECURITY.md) — please report it privately
+- By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md)
+
+## License
+
+[MIT](LICENSE) — free to self-host, fork, and build a business on.
