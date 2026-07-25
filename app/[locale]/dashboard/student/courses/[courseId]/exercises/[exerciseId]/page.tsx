@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-access-guard'
 import { getTranslations } from 'next-intl/server'
 import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
@@ -77,6 +78,11 @@ export default async function ExercisePage({ params }: PageProps) {
     const userId = await getCurrentUserId()
     if (!userId) redirect('/auth/login')
 
+    // Entitlement gate (#509). Runs before the content query so an unentitled
+    // student never causes the exercise config or files to be read at all.
+    const numericCourseId = parseInt(courseId)
+    await requireCourseAccess(supabase, userId, numericCourseId)
+
     const { data: exercise, error: exerciseError } = await supabase
         .from('exercises')
         .select(`
@@ -99,6 +105,10 @@ export default async function ExercisePage({ params }: PageProps) {
         console.error('Error fetching exercise:', exerciseError)
         notFound()
     }
+
+    // The exercise is looked up by id alone, so the gate above is only as good
+    // as the URL's courseId actually owning it (#509).
+    requireRowInCourse(exercise.course_id, numericCourseId)
 
     // Non-external checkpoint exercises are answered inside the lesson flow —
     // block direct access and send the student to the lesson instead. External

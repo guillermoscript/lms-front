@@ -26,7 +26,7 @@ const AristotleStudySection = dynamic(
 )
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { hasCourseAccess } from '@/lib/services/course-access'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
@@ -45,20 +45,15 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify access (entitlements model) + fetch course in parallel
-  const [hasAccess, { data: course, error }] = await Promise.all([
-    hasCourseAccess(supabase, userId, numericCourseId),
-    supabase
-      .from('courses')
-      .select('course_id, title, description, thumbnail_url, author_id')
-      .eq('course_id', numericCourseId)
-      .eq('tenant_id', tenantId)
-      .single(),
-  ])
+  // Verify access (entitlements model) before reading anything about the course
+  await requireCourseAccess(supabase, userId, numericCourseId)
 
-  if (!hasAccess) {
-    redirect('/dashboard/student')
-  }
+  const { data: course, error } = await supabase
+    .from('courses')
+    .select('course_id, title, description, thumbnail_url, author_id')
+    .eq('course_id', numericCourseId)
+    .eq('tenant_id', tenantId)
+    .single()
 
   if (error || !course) {
     console.error('Error fetching course:', error)

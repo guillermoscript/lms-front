@@ -12,6 +12,7 @@ import {
   IconTrophy,
 } from '@tabler/icons-react'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -25,6 +26,10 @@ export default async function ExamReviewPage({ params }: PageProps) {
   if (!userId) {
     redirect('/auth/login')
   }
+
+  // Entitlement gate (#509). Own-submission scoping below already blocks other
+  // students' work; this is what makes a tenant access cutoff apply here too.
+  await requireCourseAccess(supabase, userId, parseInt(courseId))
 
   // Get exam details
   const { data: exam } = await supabase

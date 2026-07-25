@@ -5,6 +5,7 @@ import ExerciseCard from '@/components/exercises/exercise-card'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
@@ -19,6 +20,9 @@ export default async function ExercisesListPage({ params }: PageProps) {
 
     const userId = await getCurrentUserId()
     if (!userId) redirect('/auth/login')
+
+    // Entitlement gate (#509) — this list exposes every exercise in the course.
+    await requireCourseAccess(supabase, userId, parseInt(courseId))
 
     // Fetch course title separately for breadcrumb reliability
     const { data: courseData } = await supabase

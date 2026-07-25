@@ -33,6 +33,7 @@ import { LessonScrollArea } from '@/components/student/lesson-scroll-area'
 import { AnimatedSection } from '@/components/student/animated-section'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-access-guard'
 import { loadLessonCheckpoints } from '@/lib/checkpoints/load'
 import { CheckpointsProvider } from '@/components/lesson/checkpoints/checkpoints-provider'
 
@@ -50,6 +51,11 @@ export default async function LessonPage({ params }: PageProps) {
   if (!userId) {
     redirect('/auth/login')
   }
+
+  // Entitlement gate (#509). Runs before the content query so an unentitled
+  // student never causes the lesson body to be read at all.
+  const numericCourseId = parseInt(courseId)
+  await requireCourseAccess(supabase, userId, numericCourseId)
 
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
@@ -80,6 +86,10 @@ export default async function LessonPage({ params }: PageProps) {
   if (lessonError || !lessonData) {
     notFound()
   }
+
+  // The lesson is looked up by id alone, so the gate above is only as good as
+  // the URL's courseId actually owning it (#509).
+  requireRowInCourse(lessonData.course_id, numericCourseId)
 
   const lesson = lessonData;
   const course = lessonData.courses as unknown as { title: string; require_sequential_completion: boolean | null };

@@ -33,6 +33,45 @@ export async function hasCourseAccess(
 }
 
 /**
+ * Why access was granted or refused.
+ *
+ * `has_course_access()` collapses every refusal into a bare `false`, so a
+ * school past its `tenants.access_cutoff_at` (issue #494) is indistinguishable
+ * from a student who simply never bought the course. Telling those apart is
+ * what lets the UI say "your school's access is suspended" instead of quietly
+ * bouncing a paying student back to the dashboard.
+ */
+export type CourseAccessState = 'granted' | 'suspended' | 'denied'
+
+/**
+ * Access gate with a reason. Costs one extra query only on the refusal path.
+ *
+ * An active, unexpired entitlement that `has_course_access()` still refuses
+ * can only have been refused by the tenant-wide access cutoff — that is the
+ * one condition the RPC checks and this query doesn't.
+ */
+export async function resolveCourseAccessState(
+  supabase: SupabaseClient,
+  userId: string,
+  courseId: number,
+): Promise<CourseAccessState> {
+  if (await hasCourseAccess(supabase, userId, courseId)) return 'granted'
+
+  const nowIso = new Date().toISOString()
+  const { data } = await supabase
+    .from('entitlements')
+    .select('entitlement_id, expires_at')
+    .eq('user_id', userId)
+    .eq('course_id', courseId)
+    .eq('status', 'active')
+
+  const rows = (data ?? []) as Array<{ expires_at: string | null }>
+  const hasLiveEntitlement = rows.some((r) => !r.expires_at || r.expires_at > nowIso)
+
+  return hasLiveEntitlement ? 'suspended' : 'denied'
+}
+
+/**
  * Full access detail (type, expiry, all sources) for one user + course.
  */
 export async function fetchCourseAccess(
