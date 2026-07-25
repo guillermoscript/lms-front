@@ -300,9 +300,12 @@ export class LemonSqueezyProvider implements IPaymentProvider {
           raw: payload,
         }
 
-      // One-time order refund. Maps to `refund.succeeded`; the shared dispatcher
-      // flips the transaction → refunded and revokes the product entitlements
-      // (subscription refunds are handled by subscription_cancelled/expired).
+      // Order refund. Maps to `refund.succeeded`; the shared dispatcher flips the
+      // transaction → refunded so payouts stop counting it, and additionally
+      // revokes entitlements when the order was a one-time product. LS also
+      // raises `order_refunded` for a subscription's first order, and the
+      // dispatcher records the money for those too (#515) — subscription ACCESS
+      // stays owned by subscription_cancelled/expired.
       case 'order_refunded':
         return {
           type: 'refund.succeeded',
