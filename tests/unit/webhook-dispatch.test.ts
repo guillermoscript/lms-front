@@ -259,7 +259,7 @@ describe('dispatchBillingEvent', () => {
     expect(calls.updates.find((u) => u.table === 'transactions')).toBeUndefined()
   })
 
-  it('refund.succeeded → no writes', async () => {
+  it('refund.succeeded without a reference → no writes', async () => {
     const { admin, calls } = makeFakeAdmin()
     await dispatchBillingEvent(event('refund.succeeded', { providerPaymentId: 'pi_1' }), {
       provider: PROVIDER,
@@ -267,6 +267,59 @@ describe('dispatchBillingEvent', () => {
     })
     expect(calls.updates).toHaveLength(0)
     expect(calls.rpc).toHaveLength(0)
+  })
+
+  it('refund.succeeded on a product purchase → flips tx to refunded AND revokes the product entitlements', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', { user_id: 'u1', product_id: 7, plan_id: null })
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toMatchObject({ status: 'refunded' })
+    expect(calls.updates.find((u) => u.table === 'entitlements')?.values).toMatchObject({ status: 'revoked' })
+  })
+
+  it('refund.succeeded on a SUBSCRIPTION purchase → flips tx to refunded so payouts claw it back (#515)', async () => {
+    // Regression for #515: a plan row (product_id null, plan_id set) used to exit
+    // the handler untouched, so `getPayoutsOwed()` kept counting a refunded
+    // subscription payment inside `grossOwed` and the school was paid its share
+    // of money the platform had already given back.
+    const { admin, calls } = makeFakeAdmin('successful', { user_id: 'u1', product_id: null, plan_id: 3 })
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toMatchObject({ status: 'refunded' })
+    // Subscription ACCESS stays owned by subscription.canceled/expired — this
+    // handler must not revoke entitlements for a plan row.
+    expect(calls.updates.find((u) => u.table === 'entitlements')).toBeUndefined()
+  })
+
+  it('refund.succeeded on an already-refunded tx → no writes (idempotent redelivery)', async () => {
+    const { admin, calls } = makeFakeAdmin('refunded', { user_id: 'u1', product_id: null, plan_id: 3 })
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates).toHaveLength(0)
+  })
+
+  it('refund.succeeded on a tx with neither product_id nor plan_id → no writes', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', { user_id: 'u1', product_id: null, plan_id: null })
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates).toHaveLength(0)
+  })
+
+  it('refund.succeeded with no matching transaction row → no writes', async () => {
+    const { admin, calls } = makeFakeAdmin(null)
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates).toHaveLength(0)
   })
 
   it('payment.failed with reference → flips the abandoned pending tx to failed (frees retry, #479)', async () => {

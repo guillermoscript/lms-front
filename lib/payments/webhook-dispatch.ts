@@ -212,12 +212,29 @@ export async function dispatchBillingEvent(
     }
 
     case 'refund.succeeded': {
-      // One-time order refund (Lemon Squeezy `order_refunded`). Mirrors the
-      // Stripe Connect route's charge.refunded product path: flip → refunded and
-      // EXPLICITLY revoke the product entitlements — no trigger does this for
-      // products (trigger_manage_transactions only acts on successful/failed).
-      // Subscription refunds are owned by subscription.canceled/expired, so skip
-      // when plan_id is set. Status-guarded for idempotency.
+      // A refund on a completed purchase — one-time product OR subscription
+      // (Lemon Squeezy `order_refunded`, PayPal `PAYMENT.CAPTURE.REFUNDED`,
+      // Binance `PAY_REFUND`/`REFUND_SUCCESS`). Two separate decisions here,
+      // which used to be conflated into a single product-only guard (#515):
+      //
+      //   1. RECORD THE MONEY. `transactions.status` → 'refunded' for both kinds.
+      //      This is what `getPayoutsOwed()` reads: `computeOwedBalances` leaves
+      //      refunded sales out of `grossOwed`, so the school is no longer owed
+      //      a share of money the platform gave back. Skipping this for plan
+      //      rows meant a refunded subscription was never clawed back on the
+      //      platform-settled providers (#498 follow-up). The legacy Stripe
+      //      Connect route already flips both kinds (`charge.refunded`).
+      //
+      //   2. REVOKE ACCESS. Products only, unchanged. No trigger revokes product
+      //      entitlements (trigger_manage_transactions acts on
+      //      successful/failed), so it is done explicitly here. Subscription
+      //      access stays owned by subscription.canceled/expired, which write
+      //      `subscriptions.subscription_status` and let the DB trigger cascade.
+      //
+      // Flipping a plan row to 'refunded' is inert in the DB — the trigger
+      // matches neither branch — and drops the row out of the partial unique
+      // index transactions_unique_plan, which frees the buyer to re-subscribe
+      // to that plan later. Status-guarded for idempotency on redelivery.
       if (!event.reference) break
       const txnId = Number.parseInt(event.reference, 10)
       if (Number.isNaN(txnId)) break
@@ -228,8 +245,9 @@ export async function dispatchBillingEvent(
         .eq('transaction_id', txnId)
         .maybeSingle()
 
-      // Only act on a completed one-time product purchase.
-      if (!tx || tx.plan_id || !tx.product_id || tx.status !== 'successful') break
+      // Only act on a completed purchase of one of the two kinds.
+      if (!tx || tx.status !== 'successful') break
+      if (!tx.product_id && !tx.plan_id) break
 
       const { error: refErr } = await admin
         .from('transactions')
@@ -238,13 +256,15 @@ export async function dispatchBillingEvent(
         .eq('status', 'successful')
       if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
 
-      const { error: entErr } = await admin
-        .from('entitlements')
-        .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-        .eq('user_id', tx.user_id)
-        .eq('source_type', 'product')
-        .eq('source_id', tx.product_id)
-      if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
+      if (tx.product_id) {
+        const { error: entErr } = await admin
+          .from('entitlements')
+          .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+          .eq('user_id', tx.user_id)
+          .eq('source_type', 'product')
+          .eq('source_id', tx.product_id)
+        if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
+      }
       break
     }
 
