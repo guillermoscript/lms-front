@@ -215,12 +215,35 @@ Events: checkout.session.completed, invoice.payment_failed, customer.subscriptio
 ```
 → Copy the signing secret to `STRIPE_PLATFORM_WEBHOOK_SECRET`
 
-### 4d. Configure Vercel Cron
+### 4d. Configure the cron scheduler
 
-The `vercel.json` file already configures a daily cron job that expires lapsed
-school subscriptions. Vercel runs this automatically on Pro+ plans.
+The app has seven scheduled jobs under `/api/cron/*` — student and school
+subscription expiry, the daily digest, weekly league rollover, plan-limit
+enforcement, and two payment reconcilers. They are declared in `vercel.json`, but
+**that file only does anything on Vercel.** On any other host (this project
+deploys to Dokploy) something has to call the routes or none of them ever run,
+and the failures are silent: no cutoffs get scheduled, no lapsed subscriptions
+expire, no digests go out.
 
-The cron calls `/api/cron/expire-subscriptions` with your `CRON_SECRET` header.
+The repo ships `.github/workflows/cron.yml` to cover this. Set two repository
+settings under **Settings → Secrets and variables → Actions**:
+
+- Secret `CRON_SECRET` — same value as the `CRON_SECRET` env var on your host
+- Variable `CRON_BASE_URL` — your production origin, e.g. `https://yourdomain.com`
+
+Then confirm it works end to end:
+
+```bash
+gh workflow run cron.yml -f route=enforce-plan-limits
+gh run watch
+```
+
+A `200` with a JSON body means the chain is wired correctly. A `401` means the
+`CRON_SECRET` in Actions doesn't match the one on your host.
+
+If you'd rather not depend on GitHub Actions, `docs/DEPLOYMENT.md` §3.5 documents
+a Dokploy scheduled task and a host crontab as alternatives — **use only one of
+the three**, or every job fires more than once.
 
 ---
 

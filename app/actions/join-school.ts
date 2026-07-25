@@ -6,6 +6,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { joinedSchoolTemplate } from '@/lib/email/templates/joined-school'
+import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 
 /**
  * Join the current tenant as a student
@@ -130,6 +131,18 @@ export async function joinCurrentSchool() {
     console.error('Failed to join school:', error)
     return { success: false, error: 'Failed to join school. Please try again.' }
   }
+
+  // The membership row now exists, so the tenant's student count has changed —
+  // reconcile the access cutoff at the moment usage moves rather than waiting up
+  // to 24h for the nightly sweep (issue #513). The pre-flight check above blocks
+  // at `>=` while `computePlanLimitViolations` flags at `>`, so a legitimate join
+  // stops *at* the limit and normally produces no violation; this call exists to
+  // catch the cases where the two independent limit computations drift (the
+  // hardcoded 50-student fallback above vs. `platform_plans.limits`), and to
+  // clear a stale cutoff once a tenant drops back under its limit.
+  // Non-blocking, via the shared wrapper: reconciliation must never fail a join
+  // that already succeeded.
+  await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   // Create gamification profile for this tenant (ignore if already exists)
   const { error: gamificationError } = await adminClient
