@@ -1,64 +1,67 @@
-# LMS V2 Documentation
+# Documentation
 
-Welcome to the LMS V2 documentation! This documentation is designed to help developers and AI agents understand the project architecture, database schema, and development workflow.
+Index of the `docs/` folder. Every link here points at a file that exists — if you find a dead link or a stale claim, fix it in the same PR.
 
-## 📚 Documentation Structure
+## Start here
 
-### For Getting Started
-- **[Project Overview](./PROJECT_OVERVIEW.md)** - High-level project goals and architecture
-- **[Getting Started](./GETTING_STARTED.md)** - Setup guide for new developers
-- **[Development Workflow](./DEVELOPMENT_WORKFLOW.md)** - Day-to-day development practices
+| Doc | What it covers |
+|--|--|
+| [GETTING_STARTED.md](./GETTING_STARTED.md) | **Run the project**: install, `.env.local`, Supabase, seed data, dev server, tests, troubleshooting |
+| [../CLAUDE.md](../CLAUDE.md) | Condensed architecture reference + the known-pitfalls list. The single most useful page for a new contributor |
+| [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) | High-level goals and architecture |
+| [DEVELOPMENT_WORKFLOW.md](./DEVELOPMENT_WORKFLOW.md) | Day-to-day practices, branching, PRs |
 
-### Technical Reference
-- **[Database Schema](./DATABASE_SCHEMA.md)** - Complete database structure and relationships
-- **[Authentication & Authorization](./AUTH.md)** - How auth and role-based access works
-- **[API Routes](./API_ROUTES.md)** - API endpoints and their purposes
-- **[RLS Policies](./RLS_POLICIES.md)** - Row Level Security implementation (TODO)
+## Technical reference
 
-### Feature Documentation
-- **[Student Dashboard](./features/STUDENT_DASHBOARD.md)** - Student experience and features (TODO)
-- **[Teacher Dashboard](./features/TEACHER_DASHBOARD.md)** - Teacher tools and workflows (TODO)
-- **[Admin Dashboard](./features/ADMIN_DASHBOARD.md)** - Admin capabilities (TODO)
-- **[AI Integration](./features/AI_INTEGRATION.md)** - How AI is used in the platform (TODO)
+| Doc | What it covers |
+|--|--|
+| [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | Tables, columns, enums, RPCs, RLS patterns — plus how to verify it against the live DB |
+| [MIGRATIONS.md](./MIGRATIONS.md) | Writing and applying migrations |
+| [AUTH.md](./AUTH.md) | Auth flows, JWT hook, role resolution |
+| [API_REFERENCE.md](./API_REFERENCE.md) | API routes and their purposes |
+| [ENV_VARIABLES.md](./ENV_VARIABLES.md) | Environment variables in detail |
+| [I18N_GUIDE.md](./I18N_GUIDE.md) | Adding translatable copy (en/es) |
+| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and fixes |
 
-### For AI Agents
-- **[AI Agent Guide](./AI_AGENT_GUIDE.md)** - Special instructions for AI assistants working on this codebase
-- **[Common Tasks](./COMMON_TASKS.md)** - Frequent development tasks and how to accomplish them
-- **[Troubleshooting](./TROUBLESHOOTING.md)** - Common issues and solutions
+## Features
 
-## 🎯 Quick Links
+| Doc | What it covers |
+|--|--|
+| [MONETIZATION.md](./MONETIZATION.md) | School billing, feature gating, LATAM payments, revenue dashboard |
+| [PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md](./PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md) | The payment-provider contract (Stripe, PayPal, Lemon Squeezy, Solana, Binance) |
+| [MANUAL_PAYMENT_SYSTEM.md](./MANUAL_PAYMENT_SYSTEM.md) | Offline / bank-transfer payment flow |
+| [GAMIFICATION.md](./GAMIFICATION.md) | XP, levels, streaks, achievements, store, leagues |
+| [COMMUNITY_SPACES.md](./COMMUNITY_SPACES.md) | Community feed, comments, reactions, polls, moderation |
+| [LANDING_PAGE_BUILDER.md](./LANDING_PAGE_BUILDER.md) · [AI_LANDING_PAGE_GENERATION.md](./AI_LANDING_PAGE_GENERATION.md) | Puck visual editor and the AI page generator |
+| [AI_INTEGRATION.md](./AI_INTEGRATION.md) | AI tutor, grading, and exercise evaluation |
+| [GUIDED_TOURS.md](./GUIDED_TOURS.md) | Onboarding tours (driver.js) |
+| [MDX_COMPONENTS.md](./MDX_COMPONENTS.md) | Lesson content blocks |
+| [PLATFORM_ADMIN.md](./PLATFORM_ADMIN.md) · [PLATFORM_SETTINGS_GUIDE.md](./PLATFORM_SETTINGS_GUIDE.md) | Super-admin panel |
+| [MCP_SETUP.md](./MCP_SETUP.md) | MCP server for AI agents |
 
-### Need to...
-- **Add a new table?** → See [Database Schema](./DATABASE_SCHEMA.md#adding-new-tables)
-- **Create a new dashboard page?** → See [Development Workflow](./DEVELOPMENT_WORKFLOW.md#creating-pages)
-- **Add RLS policies?** → See [RLS Policies](./RLS_POLICIES.md)
-- **Integrate AI features?** → See [AI Integration](./features/AI_INTEGRATION.md)
-- **Debug auth issues?** → See [Authentication](./AUTH.md#troubleshooting)
+## Operations
 
-## 🏗️ Project Status
+| Doc | What it covers |
+|--|--|
+| [OPERATIONS_GUIDE.md](./OPERATIONS_GUIDE.md) | Running the platform |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) · [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) | Deploying |
+| [CLOUDFLARE_WILDCARD_SETUP.md](./CLOUDFLARE_WILDCARD_SETUP.md) | Wildcard DNS for tenant subdomains |
 
-**Current Phase**: Phase 5 Complete
-- ✅ Phase 1: Fresh Next.js 16 + Shadcn UI (Lyra theme)
-- ✅ Phase 2: Complete database schema (pulled from cloud)
-- ✅ Phase 3: Authentication with role-based routing
-- ✅ Phase 4: Basic Stripe payment integration
-- ✅ Phase 5: Student Dashboard (complete with lessons, exams, progress tracking)
-- 🔄 Phase 6: Teacher Dashboard (next priority)
-- ⏳ Phase 7-11: Admin, Features, i18n, AI Docs, Testing
+## For AI agents
 
-See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for latest completion details.
+| Doc | What it covers |
+|--|--|
+| [AI_AGENT_GUIDE.md](./AI_AGENT_GUIDE.md) | Patterns and conventions for AI assistants |
+| [COMMON_TASKS.md](./COMMON_TASKS.md) | Frequent development tasks, step by step |
 
-## 🤝 Contributing
+## Need to…
 
-When contributing to this project:
-1. Read the [Development Workflow](./DEVELOPMENT_WORKFLOW.md)
-2. Understand the [Database Schema](./DATABASE_SCHEMA.md)
-3. Follow the established patterns (see [AI Agent Guide](./AI_AGENT_GUIDE.md))
-4. Test thoroughly before committing
+- **Run the project for the first time?** → [GETTING_STARTED.md](./GETTING_STARTED.md)
+- **Add a table or migration?** → [DATABASE_SCHEMA.md § Adding New Tables](./DATABASE_SCHEMA.md#adding-new-tables) and [MIGRATIONS.md](./MIGRATIONS.md)
+- **Check a column name?** → Grep `lib/database.types.ts` (generated, always correct), then [DATABASE_SCHEMA.md § Verifying this document](./DATABASE_SCHEMA.md#verifying-this-document)
+- **Debug auth or roles?** → [AUTH.md](./AUTH.md), then the pitfalls list in [../CLAUDE.md](../CLAUDE.md)
+- **Add a payment provider?** → [PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md](./PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md)
 
-## 📞 Support
+## A note on the rest of this folder
 
-For questions or issues:
-- Check [Troubleshooting](./TROUBLESHOOTING.md)
-- Review the relevant feature documentation
-- Consult the [AI Agent Guide](./AI_AGENT_GUIDE.md) for AI-specific help
+`docs/` also contains dated implementation summaries, test reports, audits and phase write-ups (`PHASE_*`, `*_SUMMARY.md`, `*_REPORT.md`, `FEBRUARY_2026_*`, `ENTITLEMENTS_MIGRATION_PLAN.md`, `ACTUAL_SCHEMA.md`, …). Those are **historical records of a moment in time**, not maintained references — several describe schema that has since changed. Use them for context on *why* something was done; never as the current source of truth. `docs/adr/` holds architecture decision records, `docs/plans/` and `docs/refactor-plans/` hold planning documents.

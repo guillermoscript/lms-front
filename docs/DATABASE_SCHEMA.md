@@ -2,37 +2,50 @@
 
 ## Overview
 
-The LMS database is built on PostgreSQL 15 via Supabase. It consists of **65+ tables** organized into logical domains:
+The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migration it has **116 tables** in the `public` schema, organized into logical domains:
 
-- **User Management**: `profiles` (global), `user_roles`, `roles`, `permissions`
-- **Multi-Tenancy**: `tenants`, `tenant_users`, `tenant_settings`, `tenant_invitations`, `super_admins`
-- **Course Content**: `courses`, `lessons`, `exercises`, `exams`, `exam_questions`, `question_options`, `lesson_resources`, `lessons_ai_tasks`, `lessons_ai_task_messages`, `prompt_templates`
-- **Enrollment & Progress**: `enrollments`, `subscriptions`, `lesson_completions`, `exam_submissions`, `exercise_completions`
-- **Commerce**: `products`, `product_courses`, `plans`, `transactions`, `payment_requests`
-- **Platform Billing**: `platform_plans`, `platform_subscriptions`, `platform_payment_requests`
+- **User Management**: `profiles` (global), `user_roles`, `roles`, `permissions`, `role_permissions`
+- **Multi-Tenancy**: `tenants`, `tenant_users`, `tenant_settings`, `tenant_invitations`, `super_admins`, `system_settings`
+- **Course Content**: `courses`, `course_categories`, `lessons`, `lesson_resources`, `lesson_checkpoints`, `lesson_checkpoint_attempts`, `exercises`, `exams`, `exam_questions`, `question_options`, `content_versions`, `lessons_ai_tasks`, `lessons_ai_task_messages`, `prompt_templates`
+- **Access Control**: **`entitlements`** — the source of truth for course access
+- **Progress**: `enrollments` (progress record only), `lesson_completions`, `lesson_passed`, `lesson_views`, `exam_submissions`, `exam_answers`, `exam_scores`, `exam_question_scores`, `exercise_completions`, `exercise_evaluations`
+- **Commerce**: `products`, `product_courses`, `product_post_registration_steps`, `plans`, `plan_courses`, `transactions`, `subscriptions`, `payment_requests`, `webhook_events`, `tenant_payment_wallets`
+- **Platform Billing**: `platform_plans`, `platform_subscriptions`, `platform_payment_requests`, `access_cutoff_notifications`
 - **Revenue**: `revenue_splits`, `payouts`, `invoices`
-- **Gamification**: 12 tables (`gamification_profiles`, `gamification_xp_transactions`, `gamification_levels`, `gamification_achievements`, `gamification_user_achievements`, `gamification_store_items`, `gamification_redemptions`, `gamification_user_rewards`, `gamification_leaderboard_cache`, `gamification_challenge_participants`, `gamification_daily_caps`, `gamification_challenges`)
-- **Certificates**: `certificates`, `certificate_templates`
-- **AI Tutoring**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`
+- **Gamification**: 10 `gamification_*` tables plus leagues (`league_tiers`, `league_memberships`)
+- **Adaptive Practice (FSRS/Elo)**: `review_cards`, `practice_attempts`, `student_topic_ratings`, `study_goals`
+- **Certificates**: `certificates`, `certificate_templates`, `certificate_shares`, `certificate_verification_log`, `issuer_keys`
+- **AI Tutoring**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`, `exam_ai_configs`
 - **Landing Pages**: `landing_pages`, `landing_page_templates`
-- **Social**: `messages`, `chats`, `lesson_comments`, `reviews`
+- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`
+- **Social / Messaging**: `messages`, `chats`, `chat_conversations`, `chat_messages`, `lesson_comments`, `comments`, `comment_reactions`, `comment_flags`, `reviews`, `item_ratings`
 - **Support**: `tickets`, `ticket_messages`
-- **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`
-- **API/MCP**: `mcp_api_tokens`
-- **Media**: `exercise_media_submissions`
+- **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`, `device_push_tokens`
+- **API/MCP**: `mcp_api_tokens`, `mcp_audit_log`
+- **Media**: `exercise_media_submissions`, `exercise_files`, `exercise_code_student_submissions`
+- **Legacy / unused**: `assignments`, `submissions`, `grades` — present but not wired into current flows
+
+For the exact current list, don't trust this page — ask the database (see [Verifying this document](#verifying-this-document)).
 
 ### Conventions & Pitfalls
 
-- **Primary keys use `_id` suffix**: `product_id`, `course_id`, `enrollment_id`, `transaction_id`, `submission_id`, `request_id`, `exam_id`, `question_id`, `option_id`, `score_id`
-- **`profiles` is GLOBAL** — no `tenant_id` column. Same for `gamification_levels`.
-- **`lesson_completions` uses `user_id`** (NOT `student_id`)
-- **`exam_submissions` order column is `submission_date`** (NOT `submitted_at`)
+- **Primary keys use `_id` suffix**: `product_id`, `course_id`, `enrollment_id`, `transaction_id`, `submission_id`, `request_id`, `exam_id`, `question_id`, `option_id`, `score_id`. Exceptions: `lessons`, `exercises` and `lesson_completions` use a bare `id`.
+- **Access lives in `entitlements`, not `enrollments`** (since migration `20260516150000`). `enrollments` is a learning-progress record only; its `product_id`/`subscription_id` columns and their CHECK constraint were **dropped**.
+- **`profiles` is GLOBAL** — no `tenant_id`. Same for `gamification_levels`, `platform_plans`, `plan_courses`, and ~50 child tables (full list under [Tables without `tenant_id`](#tables-without-tenant_id)). Adding `.eq('tenant_id', …)` to a table that lacks the column **errors the entire query**.
+- **`lesson_completions` uses `user_id`** (NOT `student_id`), and has no `tenant_id`.
+- **`exercise_completions` uses `user_id`** (NOT `student_id`), and has no `tenant_id`.
+- **`exam_submissions` uses `student_id`**, and its order column is `submission_date` (NOT `submitted_at`).
+- **Exam child tables have no `tenant_id`**: `exam_questions`, `exam_answers`, `exam_scores`, `exam_question_scores`, `question_options`. Isolation comes from RLS through the parent exam/submission.
+- **`exams` has no `passing_score` and no `allow_retake`** — use 70 as the default threshold and assume retakes are allowed.
+- **`exam_questions` has no `sequence` column** — questions come back in insertion order.
 - **Transaction status is `'successful'`** (NOT `'succeeded'`). Full enum: `pending`, `successful`, `failed`, `archived`, `canceled`, `refunded`
 - **`product_courses` can have multiple rows per course** — a single course can belong to many products. **NEVER use `.single()`** on this table.
-- **Enrollment status** uses enum `enrollement_status`: `'active'` | `'disabled'` (note the typo in the enum name is intentional/legacy)
-- **Enrollments CHECK constraint**: requires either `product_id` OR `subscription_id` (not both, not neither)
+- **Enrollment status** uses enum `enrollement_status`: `'active'` | `'disabled'` (the typo in the enum name is legacy — keep it)
+- **`subscriptions` status column is `subscription_status`**, not `status`; the provider id is `provider_subscription_id`, not `stripe_subscription_id`.
 - **`certificates` has TWO FKs to `profiles`** (`user_id`, `revoked_by`) — must use FK hint: `profiles!certificates_user_id_fkey(...)`
 - **`profiles` has NO `email` column** — get emails via `createAdminClient().auth.admin.getUserById()`
+- **`courses` has no `slug`** — route by `course_id`.
+- **`gamification_profiles` has no `coins` column** — balance = `floor(total_xp / 10) - total_coins_spent`.
 
 ---
 
@@ -47,10 +60,18 @@ The LMS database is built on PostgreSQL 15 via Supabase. It consists of **65+ ta
 |--------|------|-------|
 | `id` | UUID PK | References `auth.users(id)` |
 | `full_name` | TEXT | |
+| `username` | TEXT | |
 | `avatar_url` | TEXT | |
+| `website` | TEXT | |
 | `bio` | TEXT | |
+| `currency_id` | | |
+| `stripe_customer_id` | TEXT | Student payments (Connect). Note a legacy `stripeCustomerID` column also exists |
+| `data_person` | JSONB | |
+| `onboarding_completed` | BOOLEAN | |
+| `deactivated_at` | TIMESTAMPTZ | |
 | `created_at` | TIMESTAMPTZ | |
-| `updated_at` | TIMESTAMPTZ | |
+
+**No `email` column** and **no `updated_at`**. Emails come from `createAdminClient().auth.admin.getUserById()`.
 
 #### `user_roles`
 Assigns global roles to users. Default role `student` assigned on signup.
@@ -87,6 +108,8 @@ School/organization records.
 | `billing_email` | VARCHAR(255) | |
 | `billing_period_end` | TIMESTAMPTZ | |
 | `billing_status` | VARCHAR(50) | `free`, `active`, `past_due`, `canceled` |
+| `access_cutoff_at` | TIMESTAMPTZ | When an unpaid school's content access is suspended |
+| `stripe_charges_enabled` / `stripe_payouts_enabled` / `stripe_details_submitted` | BOOLEAN | Stripe Connect onboarding state |
 
 #### `tenant_users`
 Many-to-many user-tenant relationships. **Authoritative source for per-tenant roles.**
@@ -157,10 +180,13 @@ Course catalog. Tenant-scoped.
 | `category_id` | INTEGER FK → course_categories | |
 | `status` | VARCHAR(50) | `draft`, `published`, `archived` |
 | `require_sequential_completion` | BOOLEAN | Default `false` |
-| `created_at` | TIMESTAMPTZ | |
-| `updated_at` | TIMESTAMPTZ | |
+| `learning_objectives` | TEXT[] | **`text[]`, not JSONB** |
+| `estimated_duration_minutes` | INTEGER | |
+| `tags` | | |
+| `published_at` / `archived_at` / `deleted_at` | TIMESTAMPTZ | Soft lifecycle — filter `deleted_at IS NULL` |
+| `created_at` / `updated_at` | TIMESTAMPTZ | |
 
-No `slug` column — use `course_id` for routing.
+No `slug` column — use `course_id` for routing. `author_id` has **two** FKs (`courses_author_id_fkey` → `auth.users`, `courses_author_profile_fkey` → `profiles`), so joins to `profiles` need an explicit FK hint.
 
 #### `course_categories`
 Course categorization. Tenant-scoped.
@@ -190,8 +216,14 @@ Course lessons. Tenant-scoped.
 | `sequence` | INTEGER | Order within course |
 | `status` | VARCHAR(50) | `draft`, `published` |
 | `publish_at` | TIMESTAMPTZ | Scheduled publishing |
-| `created_at` | TIMESTAMPTZ | |
-| `updated_at` | TIMESTAMPTZ | |
+| `is_preview` | BOOLEAN | Viewable without access (public preview) |
+| `description` / `summary` / `image` | | |
+| `embed_code` | TEXT | Alternative to `video_url` |
+| `transcript` | TEXT | Video transcript (YouTube captions) |
+| `ai_task_description` / `ai_task_instructions` | TEXT | Inline AI task; richer config lives in `lessons_ai_tasks` |
+| `created_at` / `updated_at` | TIMESTAMPTZ | |
+
+PK is a bare `id`, **not** `lesson_id` — XP triggers joining `lessons` on `l.lesson_id` is a known past bug.
 
 `UNIQUE(course_id, sequence)`
 
@@ -254,29 +286,34 @@ Practice exercises within lessons. Tenant-scoped.
 | `description` | TEXT | |
 | `exercise_type` | `exercise_type` enum | See values below |
 | `exercise_config` | JSONB | Type-specific configuration |
-| `initial_code` | TEXT | For code exercises |
-| `solution_code` | TEXT | |
-| `test_cases` | JSONB | |
+| `instructions` | TEXT | Student-facing prompt |
+| `system_prompt` | TEXT | For AI-evaluated exercises |
+| `difficulty_level` | `difficulty_level` | `easy`, `medium`, `hard` |
+| `time_limit` | INTEGER | |
+| `course_id` | INTEGER FK → courses | Denormalized alongside `lesson_id` |
+| `active_file` / `visible_files` | | Sandpack code-exercise setup |
+| `template_id` / `template_variables` | | Built from a `prompt_templates` row |
+| `created_by` | UUID | |
 | `status` | VARCHAR(50) | |
-| `created_at` | TIMESTAMPTZ | |
-| `updated_at` | TIMESTAMPTZ | |
+| `created_at` / `updated_at` | TIMESTAMPTZ | |
+
+There are no `initial_code`, `solution_code` or `test_cases` columns — code-exercise setup lives in `exercise_config` / `active_file` / `visible_files`.
 
 **`exercise_type` enum values:** `quiz`, `coding_challenge`, `essay`, `multiple_choice`, `true_false`, `fill_in_the_blank`, `discussion`, `audio_evaluation`, `video_evaluation`, `real_time_conversation`, `artifact`
 
 #### `exercise_completions`
-Student exercise submissions.
+Records that a student finished an exercise. **Uses `user_id`, and has NO `tenant_id`** — filtering by `tenant_id` errors the query.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | SERIAL PK | |
 | `exercise_id` | INTEGER FK → exercises | |
-| `student_id` | UUID FK → profiles | |
-| `submission` | TEXT | |
-| `is_correct` | BOOLEAN | |
-| `ai_feedback` | TEXT | |
+| `user_id` | UUID FK → auth.users | **NOT `student_id`** |
+| `completed_by` | UUID | Who marked it complete (self or teacher) |
+| `score` | NUMERIC | |
 | `completed_at` | TIMESTAMPTZ | |
 
-`UNIQUE(exercise_id, student_id)`
+The submission content and AI feedback live in `exercise_evaluations` / `exercise_code_student_submissions` / `exercise_media_submissions`, not here.
 
 #### `exercise_messages`
 AI chat for exercise help.
@@ -329,6 +366,7 @@ Course assessments. Tenant-scoped.
 | `updated_at` | TIMESTAMPTZ | |
 
 #### `exam_questions`
+**No `tenant_id`, no `sequence`, no `created_at`.** Filter by `exam_id` only — isolation comes from RLS on the parent exam.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -337,8 +375,13 @@ Course assessments. Tenant-scoped.
 | `question_text` | TEXT | |
 | `question_type` | VARCHAR(50) | `multiple_choice`, `true_false`, `free_text` |
 | `points` | INTEGER | Default 1 |
-| `sequence` | INTEGER | |
-| `created_at` | TIMESTAMPTZ | |
+| `correct_answer` | TEXT | |
+| `ai_grading_criteria` | TEXT | Guidance for AI grading |
+| `grading_rubric` | JSONB | |
+| `expected_keywords` | TEXT[] | |
+| `max_length` | INTEGER | For free-text answers |
+
+Sibling child tables — also **without `tenant_id`**: `question_options`, `exam_answers`, `exam_scores`, `exam_question_scores`.
 
 #### `question_options`
 Options for multiple choice/true-false questions.
@@ -363,8 +406,11 @@ Student exam submissions. **Order column is `submission_date`** (NOT `submitted_
 | `submission_date` | TIMESTAMPTZ | **NOT `submitted_at`** |
 | `ai_data` | JSONB | AI feedback per question |
 | `score` | NUMERIC | |
+| `feedback` | TEXT | Overall feedback |
 | `evaluated_at` | TIMESTAMPTZ | |
-| `is_reviewed` | BOOLEAN | |
+| `review_status` | VARCHAR | **NOT `is_reviewed`** |
+| `requires_attention` | BOOLEAN | Flags low-confidence AI grades for a human |
+| `ai_model_used` / `ai_processing_time_ms` / `ai_confidence_score` | | Grading telemetry |
 
 Processed by `create_exam_submission()` and `save_exam_feedback()` RPCs.
 
@@ -372,23 +418,43 @@ Processed by `create_exam_submission()` and `save_exam_feedback()` RPCs.
 
 ### Enrollment & Commerce
 
+#### `entitlements`
+**The source of truth for course access.** Polymorphic: one row per (user, course, source). Tenant-scoped. Introduced by migration `20260516150000`.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `entitlement_id` | BIGINT PK | GENERATED ALWAYS AS IDENTITY |
+| `user_id` | UUID FK → auth.users | NOT NULL |
+| `course_id` | INTEGER FK → courses(course_id) | NOT NULL |
+| `tenant_id` | UUID FK → tenants | NOT NULL |
+| `source_type` | `entitlement_source` | `product`, `subscription`, `free`, `admin_grant` |
+| `source_id` | INTEGER | The product/plan id — NULL for `free` and `admin_grant` |
+| `status` | `entitlement_status` | `active`, `revoked`, `expired` (there is **no** `canceled`) |
+| `granted_at` | TIMESTAMPTZ | NOT NULL, default `now()` |
+| `expires_at` | TIMESTAMPTZ | NULL = no expiry |
+| `revoked_at` | TIMESTAMPTZ | |
+
+`UNIQUE(user_id, course_id, source_type, source_id) NULLS NOT DISTINCT` — so a user can hold access to the same course from a product *and* a subscription simultaneously without collision.
+
+**CHECK `entitlements_source_id_shape`**: `source_id` must be NOT NULL for `product`/`subscription`, and NULL for `free`/`admin_grant`.
+
+Written by `enroll_user()` and `handle_new_subscription()`. Read via `has_course_access(_user_id uuid, _course_id integer)` — note the second arg is `integer`, so cast `::int` when calling from SQL.
+
 #### `enrollments`
-Student course enrollments. Tenant-scoped.
+**Learning-progress record only** — it does *not* grant access. Tenant-scoped.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `enrollment_id` | INTEGER PK | |
+| `user_id` | UUID FK → auth.users | NOT NULL |
+| `course_id` | INTEGER FK → courses(course_id) | NOT NULL |
 | `tenant_id` | UUID FK → tenants | NOT NULL |
-| `user_id` | UUID FK → profiles | |
-| `course_id` | INTEGER FK → courses(course_id) | |
-| `product_id` | INTEGER FK → products | |
-| `subscription_id` | INTEGER FK → subscriptions | |
 | `status` | `enrollement_status` | `active`, `disabled` |
 | `enrollment_date` | TIMESTAMPTZ | |
 
-**CHECK constraint**: `(product_id IS NOT NULL AND subscription_id IS NULL) OR (product_id IS NULL AND subscription_id IS NOT NULL)`
+`UNIQUE(user_id, course_id)`
 
-Auto-created by `enroll_user()` RPC.
+> The old `product_id` / `subscription_id` columns and their "one or the other" CHECK constraint were **dropped** in the entitlements migration. If you find code or docs referencing them, they are out of date. Students on a subscription self-enroll from `/dashboard/student/browse` (`useEnrollment()` hook); subscriptions grant access but do not auto-enroll.
 
 #### `products`
 Purchasable course bundles. Tenant-scoped.
@@ -400,9 +466,11 @@ Purchasable course bundles. Tenant-scoped.
 | `name` | VARCHAR(255) | |
 | `description` | TEXT | |
 | `price` | NUMERIC | |
-| `stripe_product_id` | TEXT | |
-| `stripe_price_id` | TEXT | |
-| `payment_provider` | VARCHAR(50) | `stripe`, `manual`, `paypal` |
+| `currency` | `currency_type` | `usd`, `eur`, `mxn`, `cop`, `clp`, `pen`, `ars`, `brl` |
+| `image` | TEXT | |
+| `payment_provider` | VARCHAR(50) | `stripe`, `manual`, `paypal`, `lemonsqueezy`, `solana`, `solana_subs`, `binance`, `binance_personal` |
+| `provider_product_id` | TEXT | **NOT `stripe_product_id`** — provider-agnostic |
+| `provider_price_id` | TEXT | **NOT `stripe_price_id`** |
 | `status` | VARCHAR(50) | |
 | `created_at` | TIMESTAMPTZ | |
 
@@ -419,35 +487,50 @@ Links products to courses. Tenant-scoped. **A course can belong to multiple prod
 `UNIQUE(product_id, course_id)`
 
 #### `plans`
-Subscription plans (school-level). Tenant-scoped.
+Subscription plans sold by a school to its students. Tenant-scoped. **Column names differ from `products` — there is no `name`, no `interval`, no `status`.**
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `plan_id` | SERIAL PK | |
 | `tenant_id` | UUID FK → tenants | NOT NULL |
-| `name` | VARCHAR(255) | |
+| `plan_name` | VARCHAR(100) | **NOT `name`** |
 | `description` | TEXT | |
-| `price` | NUMERIC | |
-| `interval` | VARCHAR(50) | `month`, `year` |
-| `stripe_product_id` | TEXT | |
-| `stripe_price_id` | TEXT | |
-| `status` | VARCHAR(50) | |
+| `price` | NUMERIC(10,2) | NOT NULL |
+| `duration_in_days` | INTEGER | **NOT `interval`** — CHECK > 0 (e.g. 30, 365) |
+| `currency` | `currency_type` | `usd`, `eur`, `mxn`, `cop`, `clp`, `pen`, `ars`, `brl` |
+| `features` | TEXT | |
+| `thumbnail` | TEXT | |
+| `payment_provider` | VARCHAR(20) | `stripe`, `manual`, `paypal`, `lemonsqueezy`, `solana`, `solana_subs`, `binance`, `binance_personal` |
+| `provider_product_id` | TEXT | Provider-agnostic (**not** `stripe_product_id`) |
+| `provider_price_id` | TEXT | |
+| `deleted_at` | TIMESTAMPTZ | Soft delete — filter it out |
 | `created_at` | TIMESTAMPTZ | |
 
+#### `plan_courses`
+Which courses a plan covers. **No `tenant_id`** — scope through the parent plan.
+
 #### `subscriptions`
-User subscriptions to plans. Tenant-scoped.
+Student subscriptions to a school's plans. Tenant-scoped.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `subscription_id` | SERIAL PK | |
 | `tenant_id` | UUID FK → tenants | NOT NULL |
-| `user_id` | UUID FK → profiles | |
+| `user_id` | UUID FK → auth.users | |
 | `plan_id` | INTEGER FK → plans | |
-| `status` | VARCHAR(50) | `active`, `cancelled`, `expired` |
-| `start_date` | TIMESTAMPTZ | |
-| `end_date` | TIMESTAMPTZ | |
-| `stripe_subscription_id` | TEXT | |
-| `created_at` | TIMESTAMPTZ | |
+| `subscription_status` | VARCHAR | **NOT `status`** |
+| `transaction_id` | INTEGER FK → transactions | The purchase that created it |
+| `start_date` / `end_date` | TIMESTAMPTZ | |
+| `current_period_start` / `current_period_end` | TIMESTAMPTZ | |
+| `trial_start` / `trial_end` | TIMESTAMPTZ | |
+| `cancel_at` | TIMESTAMPTZ | NOT NULL — must be advanced on renewal, or reactivation breaks |
+| `cancel_at_period_end` | BOOLEAN | Student self-cancel flow |
+| `canceled_at` / `ended_at` | TIMESTAMPTZ | |
+| `superseded_by` | INTEGER | Set on plan change — points at the replacement subscription |
+| `payment_provider` | VARCHAR | |
+| `provider_subscription_id` | TEXT | **NOT `stripe_subscription_id`** |
+| `provider_metadata` | JSONB | |
+| `created` | TIMESTAMPTZ | **NOT `created_at`** |
 
 #### `transactions`
 Payment transactions. Tenant-scoped.
@@ -463,11 +546,29 @@ Payment transactions. Tenant-scoped.
 | `transaction_date` | TIMESTAMPTZ | |
 | `payment_method` | VARCHAR(50) | |
 | `status` | `transaction_status` | `pending`, `successful`, `failed`, `archived`, `canceled`, `refunded` |
-| `currency` | `currency_type` | `usd`, `eur` |
+| `currency` | `currency_type` | `usd`, `eur`, `mxn`, `cop`, `clp`, `pen`, `ars`, `brl` |
+| `payment_provider` | VARCHAR | |
+| `provider_charge_id` | TEXT | Idempotency key for webhooks / on-chain confirms |
+| `provider_subscription_id` | TEXT | |
+| `provider_metadata` | JSONB | |
+| `stripe_payment_intent_id` | TEXT | Stripe-specific, kept for history |
+| `school_percentage_snapshot` | NUMERIC | Revenue split frozen at purchase time — database-owned, never caller-supplied |
+| `settlement_currency` / `settlement_base` / `settlement_mint` / `settlement_sol_usd` | | Crypto settlement detail (Solana) |
 
 **Status is `'successful'`** (NOT `'succeeded'`).
 
-Partial unique index: `(user_id, product_id, plan_id) WHERE status IN ('pending', 'successful')` — allows retries after failed payments.
+**Three unique indexes, not one** — a purchase is either product-shaped or plan-shaped, never both:
+
+```sql
+transactions_unique_product  UNIQUE (user_id, product_id)
+  WHERE plan_id IS NULL AND status IN ('pending','successful')
+transactions_unique_plan     UNIQUE (user_id, plan_id)
+  WHERE product_id IS NULL AND status IN ('pending','successful')
+transactions_provider_charge_id_unique  UNIQUE (payment_provider, provider_charge_id)
+  WHERE provider_charge_id IS NOT NULL AND status = 'successful'   -- webhook/Solana idempotency
+```
+
+Failed payments fall outside the predicate, so retries are allowed.
 
 #### `payment_requests`
 Manual/offline payment requests. Tenant-scoped.
@@ -640,12 +741,12 @@ Storage bucket: `landing-page-assets` (public, 5MB limit, images only).
 
 ### Gamification
 
-12 tables, all prefixed `gamification_`. Tenant-scoped (via migration) except `gamification_levels` which is **global**.
+**10** tables prefixed `gamification_`. Tenant-scoped except `gamification_levels`, which is **global**.
 
 | Table | Purpose |
 |-------|---------|
 | `gamification_levels` | **GLOBAL** — level thresholds and titles |
-| `gamification_profiles` | Per-user XP, level, streaks. `UNIQUE(user_id)` |
+| `gamification_profiles` | Per-user XP, level, streaks. Created lazily by `award_xp()` on first award. **No `coins` column** — balance = `floor(total_xp/10) - total_coins_spent` |
 | `gamification_xp_transactions` | XP earn/spend log |
 | `gamification_achievements` | Achievement definitions (bronze → diamond tiers) |
 | `gamification_user_achievements` | Earned achievements per user |
@@ -654,8 +755,10 @@ Storage bucket: `landing-page-assets` (public, 5MB limit, images only).
 | `gamification_user_rewards` | Active rewards (e.g., double XP) |
 | `gamification_leaderboard_cache` | Cached leaderboard rankings |
 | `gamification_challenge_participants` | Challenge participation |
-| `gamification_daily_caps` | Daily XP caps |
-| `gamification_challenges` | Challenge definitions |
+
+> `gamification_daily_caps` and `gamification_challenges` were documented here previously but **do not exist** in the database — don't query them.
+
+Weekly leagues live in separate tables: `league_tiers` (global tier definitions) and `league_memberships` (per-user, per-week standings). See [GAMIFICATION.md](./GAMIFICATION.md).
 
 ---
 
@@ -742,37 +845,42 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 
 | Function | Purpose |
 |----------|---------|
-| `enroll_user(_user_id UUID, _product_id INTEGER)` | Enrolls user in ALL courses linked to product (loops via `product_courses`) |
-| `handle_new_subscription(_user_id UUID, _plan_id INTEGER)` | Creates subscription and enrolls in plan courses |
+| `enroll_user(_user_id uuid, _product_id integer)` | Grants entitlements for **ALL** courses linked to the product (FOR loop over `product_courses`) |
+| `handle_new_subscription(_user_id uuid, _plan_id integer, _transaction_id integer, _start_date timestamptz)` | Creates the subscription and writes entitlements for the plan's courses. Trigger-invoked — note the 4th arg |
+| `has_course_access(_user_id uuid, _course_id integer)` | Access check against `entitlements`. Second arg is `integer` — cast `::int` when calling from SQL. Has no staff branch: teachers/admins are not implicitly granted access by this function |
 | `trigger_manage_transactions()` | **Trigger** on transaction status → `'successful'`: calls `enroll_user()` or `handle_new_subscription()` |
 
 ### Exams
 
 | Function | Purpose |
 |----------|---------|
-| `create_exam_submission(student_id, exam_id, answers)` | Creates exam submission, returns `submission_id` |
-| `save_exam_feedback(submission_id, exam_id, student_id, answers, overall_feedback, score)` | Saves AI feedback to submission |
+| `create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)` | Creates exam submission, returns `submission_id` |
+| `save_exam_feedback(p_submission_id integer, p_exam_id integer, p_student_id uuid, p_answers jsonb, p_overall_feedback text, p_score numeric, p_question_feedback jsonb, p_ai_model varchar, p_processing_time_ms integer)` | Saves AI feedback. **All params are `p_`-prefixed and there are nine of them** |
 
 ### Gamification
 
 | Function | Purpose |
 |----------|---------|
-| `award_xp(_user_id, _action_type, _xp_amount, _reference_id, _reference_type)` | Awards XP, updates streaks, levels up |
+| `award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)` | Awards XP, updates streaks, levels up. Creates the gamification profile lazily via UPSERT |
+| `award_xp(…, _tenant_id uuid)` | Overload — same, scoped to an explicit tenant. Trigger functions call this one |
 
 ### Certificates
 
 | Function | Purpose |
 |----------|---------|
-| `check_and_issue_certificate()` | `SECURITY DEFINER` — checks completion and issues certificate |
-| `calculate_course_completion()` | `SECURITY DEFINER` — calculates % completion for a course |
+| `issue_certificate_if_eligible(p_user_id uuid, p_course_id integer)` | `SECURITY DEFINER` — the auto-issue path. **Template-gated**: with no active `certificate_templates` row for the course, nothing is issued (this is why 100% completion can produce no certificate) |
+| `check_and_issue_certificate(p_user_id uuid, p_course_id integer)` | `SECURITY DEFINER` — checks completion and issues |
+| `calculate_course_completion(p_user_id uuid, p_course_id integer)` | `SECURITY DEFINER` — % completion for a course |
 
 ### Platform
 
 | Function | Purpose |
 |----------|---------|
-| `get_plan_features(_tenant_id UUID)` | Returns `{plan, plan_name, features, limits, transaction_fee_percent}` for feature gating |
-| `get_platform_stats()` | Returns aggregate platform statistics for super admin dashboard |
-| `validate_mcp_api_token(token_input TEXT)` | Validates API token, returns user info |
+| `get_plan_features(_tenant_id uuid)` | Returns `{plan, plan_name, features, limits, transaction_fee_percent}` for feature gating — single source of truth |
+| `get_gamification_features(_tenant_id uuid)` | Gamification feature flags; reads `platform_plans.features` the same way |
+| `get_tenant_id()` | Resolves the caller's tenant inside RLS policies (JWT claim → anon header → NULL). Fails closed |
+| `get_platform_stats()` | Aggregate platform statistics for the super admin dashboard |
+| `validate_mcp_api_token(token_input text)` | Validates an API token, returns user info |
 
 ---
 
@@ -849,8 +957,69 @@ const supabase = createAdminClient()
 
 ## Adding New Tables
 
-1. Create migration: `supabase migration new add_table_name`
-2. Write SQL with `tenant_id` column (if tenant-scoped)
-3. Add RLS policies
-4. Apply: `supabase db push`
-5. Update types: `supabase gen types typescript --local > types/database.ts`
+1. Create the migration: `supabase migration new add_table_name`
+2. Write the SQL, including a `tenant_id UUID NOT NULL REFERENCES tenants(id)` column if the table is tenant-scoped
+3. `ALTER TABLE … ENABLE ROW LEVEL SECURITY` **and** add policies — in the same migration
+4. Verify from scratch locally: `npm run db:reset`
+5. Regenerate types: `npm run db:types` → writes `lib/database.types.ts`. Commit it with the migration
+6. Apply to cloud: `npm run db:push`
+
+> Permissive RLS policies **OR** together — adding a second policy widens access, it never narrows it. To tighten an existing policy you must `DROP POLICY` then `CREATE POLICY`.
+
+---
+
+## Tables without `tenant_id`
+
+Adding `.eq('tenant_id', …)` to any of these **errors the whole query** — a common cause of blank pages. Isolation for the child tables comes from RLS through their parent row.
+
+`aristotle_messages`, `assignments`, `certificate_shares`, `certificate_verification_log`, `chats`, `comment_flags`, `comment_reactions`, `comments`, `community_poll_options`, `content_versions`, `device_push_tokens`, `exam_ai_configs`, `exam_answers`, `exam_question_scores`, `exam_questions`, `exam_scores`, `exam_views`, `exercise_code_student_submissions`, `exercise_completions`, `exercise_files`, `exercise_messages`, `gamification_levels`, `grades`, `issuer_keys`, `landing_page_templates`, `league_tiers`, `lesson_comments`, `lesson_completions`, `lesson_passed`, `lesson_views`, `lessons_ai_task_messages`, `lessons_ai_tasks`, `mcp_api_tokens`, `mcp_audit_log`, `messages`, `notification_preferences`, `permissions`, `plan_courses`, `platform_plans`, `profiles`, `question_options`, `reviews`, `role_permissions`, `roles`, `submissions`, `super_admins`, `system_settings`, `teacher_preview_sessions`, `tenants`, `ticket_messages`, `tickets`, `user_notifications`, `user_roles`, `user_ui_state`, `webhook_events`
+
+Regenerate that list any time:
+
+```sql
+SELECT t.table_name FROM information_schema.tables t
+WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
+                  WHERE c.table_schema = 'public' AND c.table_name = t.table_name
+                    AND c.column_name = 'tenant_id')
+ORDER BY 1;
+```
+
+---
+
+## Verifying this document
+
+This page is hand-maintained and **will** drift — the schema is 116 tables across 168 migrations. Treat it as orientation, and confirm anything load-bearing against the database itself. The authoritative artifacts, in order:
+
+1. **`lib/database.types.ts`** — generated, always correct if regenerated. Grep it first.
+2. **The live database** — introspect it directly.
+3. **This document** — curated context and pitfalls that the generated types can't express.
+
+```bash
+# Is the committed type file in sync? (empty diff = yes; the only expected
+# difference is the __InternalSupabase header that --linked adds)
+npx supabase gen types typescript --local --schema public > /tmp/types.ts
+diff /tmp/types.ts lib/database.types.ts
+
+# Regenerate the committed file from the linked cloud project
+npm run db:types
+
+# Introspect the local database (no psql binary needed)
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres -c "\d courses"
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres \
+  -c "SELECT column_name, data_type FROM information_schema.columns
+      WHERE table_name = 'subscriptions' ORDER BY ordinal_position;"
+
+# Every enum and its values
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres \
+  -c "SELECT t.typname, string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder)
+      FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid GROUP BY 1 ORDER BY 1;"
+
+# Exact RPC signatures before calling one
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres \
+  -c "SELECT p.proname, pg_get_function_identity_arguments(p.oid) FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public'
+      AND p.proname = 'award_xp';"
+```
+
+If you find this page wrong, fix it in the same PR — that is how it stays useful.

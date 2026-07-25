@@ -121,7 +121,7 @@ CRON_SECRET=any-random-secret
 supabase db push
 ```
 
-This creates all 65+ tables, RLS policies, indexes, RPCs, and triggers.
+This creates all 116 tables, RLS policies, indexes, RPCs, and triggers.
 
 ### 2e. Deploy Supabase Edge Functions (for AI + gamification)
 
