@@ -3890,6 +3890,8 @@
       "retry": "Try again",
       "review": "Edit and resubmit",
       "genericError": "Something went wrong. Please try again.",
+      "accessDenied": "You don't have access to this course.",
+      "accessSuspended": "Your school's access is currently suspended. Your progress is safe — ask your school administrator to restore access.",
       "aiUnavailable": "Your answer was recorded, but AI feedback is unavailable right now.",
       "externalPrompt": "This checkpoint is completed through its exercise page. Open the exercise, finish it there, then sync your result here.",
       "externalLinkLabel": "Open exercise",
