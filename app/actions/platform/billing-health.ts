@@ -5,8 +5,10 @@ import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import {
   computeBillingHealth,
-  type AtRiskReason,
+  mergeAtRiskTenants,
   type AtRiskTenant,
+  type AtRiskTenantRow,
+  type PastDueSubscriptionInput,
 } from '@/lib/billing/billing-health'
 
 async function verifySuperAdmin() {
@@ -14,6 +16,46 @@ async function verifySuperAdmin() {
   if (!userId) throw new Error('Not authenticated')
   if (!(await isSuperAdmin())) throw new Error('Super admin only')
   return userId
+}
+
+const TENANT_SELECT = 'id, name, plan, access_cutoff_at'
+const SUBSCRIPTION_SELECT =
+  'tenant_id, status, payment_method, current_period_end, grace_period_end, updated_at'
+
+/**
+ * Mapped through helpers rather than an `as` cast so a drifting select list
+ * fails `tsc` here instead of rendering blanks in production.
+ */
+function toTenantRow(row: {
+  id: string
+  name: string
+  plan: string | null
+  access_cutoff_at: string | null
+}): AtRiskTenantRow {
+  return {
+    tenantId: row.id,
+    tenantName: row.name,
+    plan: row.plan,
+    accessCutoffAt: row.access_cutoff_at,
+  }
+}
+
+function toSubscriptionInput(row: {
+  tenant_id: string
+  status: string | null
+  payment_method: string | null
+  current_period_end: string | null
+  grace_period_end: string | null
+  updated_at: string | null
+}): PastDueSubscriptionInput {
+  return {
+    tenantId: row.tenant_id,
+    status: row.status,
+    paymentMethod: row.payment_method,
+    currentPeriodEnd: row.current_period_end,
+    gracePeriodEnd: row.grace_period_end,
+    updatedAt: row.updated_at,
+  }
 }
 
 /**
@@ -27,6 +69,17 @@ async function verifySuperAdmin() {
  *     tenant may be paying perfectly well and simply be over its plan limits)
  *
  * Each contributes a reason, so the UI can keep the three cases apart.
+ *
+ * Two round-trips, not four. The past-due subscription read takes the full
+ * column set, so the rows belonging to subscription-only tenants are already
+ * in hand; that makes the follow-up `tenants` fetch for those ids independent
+ * of the subscription fetch for the tenants we already know about, and the two
+ * go out together. Feeding both subscription lists to `computeBillingHealth`
+ * is safe because it ranks duplicate rows rather than taking the last one.
+ *
+ * The auth check deliberately stays *before* the reads and is never folded
+ * into the `Promise.all` — a non-super-admin caller must not cause tenant
+ * billing data to be read at all.
  */
 export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
   await verifySuperAdmin()
@@ -37,81 +90,45 @@ export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
     { data: pastDueSubscriptions },
     { data: cutoffTenants },
   ] = await Promise.all([
-    admin
-      .from('tenants')
-      .select('id, name, plan, access_cutoff_at')
-      .eq('billing_status', 'past_due'),
-    admin
-      .from('platform_subscriptions')
-      .select('tenant_id')
-      .eq('status', 'past_due'),
-    admin
-      .from('tenants')
-      .select('id, name, plan, access_cutoff_at')
-      .not('access_cutoff_at', 'is', null),
+    admin.from('tenants').select(TENANT_SELECT).eq('billing_status', 'past_due'),
+    admin.from('platform_subscriptions').select(SUBSCRIPTION_SELECT).eq('status', 'past_due'),
+    admin.from('tenants').select(TENANT_SELECT).not('access_cutoff_at', 'is', null),
   ])
 
-  const reasonsByTenant = new Map<string, Set<AtRiskReason>>()
-  const addReason = (tenantId: string, reason: AtRiskReason) => {
-    const existing = reasonsByTenant.get(tenantId)
-    if (existing) existing.add(reason)
-    else reasonsByTenant.set(tenantId, new Set([reason]))
-  }
+  const pastDueTenantRows = (pastDueTenants ?? []).map(toTenantRow)
+  const cutoffTenantRows = (cutoffTenants ?? []).map(toTenantRow)
+  const pastDueSubscriptionRows = (pastDueSubscriptions ?? []).map(toSubscriptionInput)
 
-  type TenantRow = { id: string; name: string; plan: string | null; access_cutoff_at: string | null }
-  const tenantById = new Map<string, TenantRow>()
+  const knownTenantIds = new Set([
+    ...pastDueTenantRows.map((t) => t.tenantId),
+    ...cutoffTenantRows.map((t) => t.tenantId),
+  ])
+  const subscriptionPastDueTenantIds = [
+    ...new Set(pastDueSubscriptionRows.map((s) => s.tenantId)),
+  ]
+  // Subscription-only past-due tenants appear in neither read above.
+  const missingTenantIds = subscriptionPastDueTenantIds.filter((id) => !knownTenantIds.has(id))
 
-  for (const tenant of (pastDueTenants || []) as TenantRow[]) {
-    tenantById.set(tenant.id, tenant)
-    addReason(tenant.id, 'tenant_past_due')
-  }
-  for (const tenant of (cutoffTenants || []) as TenantRow[]) {
-    tenantById.set(tenant.id, tenant)
-    addReason(tenant.id, 'access_cutoff_scheduled')
-  }
-
-  // Subscription-only past-due tenants have no row yet from either read above.
-  const subscriptionPastDueIds = [...new Set((pastDueSubscriptions || []).map((s) => s.tenant_id))]
-  for (const tenantId of subscriptionPastDueIds) {
-    addReason(tenantId, 'subscription_past_due')
-  }
-  const missingTenantIds = subscriptionPastDueIds.filter((id) => !tenantById.has(id))
-
-  if (missingTenantIds.length) {
-    const { data: extraTenants } = await admin
-      .from('tenants')
-      .select('id, name, plan, access_cutoff_at')
-      .in('id', missingTenantIds)
-    for (const tenant of (extraTenants || []) as TenantRow[]) {
-      tenantById.set(tenant.id, tenant)
-    }
-  }
-
-  const tenantIds = [...tenantById.keys()]
-
-  const { data: subscriptions } = tenantIds.length
-    ? await admin
-        .from('platform_subscriptions')
-        .select('tenant_id, status, payment_method, current_period_end, grace_period_end, updated_at')
-        .in('tenant_id', tenantIds)
-    : { data: [] }
+  const [{ data: extraTenants }, { data: knownSubscriptions }] = await Promise.all([
+    missingTenantIds.length
+      ? admin.from('tenants').select(TENANT_SELECT).in('id', missingTenantIds)
+      : Promise.resolve({ data: [] as never[] }),
+    knownTenantIds.size
+      ? admin
+          .from('platform_subscriptions')
+          .select(SUBSCRIPTION_SELECT)
+          .in('tenant_id', [...knownTenantIds])
+      : Promise.resolve({ data: [] as never[] }),
+  ])
 
   return computeBillingHealth(
-    [...tenantById.values()].map((t) => ({
-      tenantId: t.id,
-      tenantName: t.name,
-      plan: t.plan,
-      accessCutoffAt: t.access_cutoff_at,
-      reasons: [...(reasonsByTenant.get(t.id) ?? [])],
-    })),
-    (subscriptions || []).map((s) => ({
-      tenantId: s.tenant_id,
-      status: s.status,
-      paymentMethod: s.payment_method,
-      currentPeriodEnd: s.current_period_end,
-      gracePeriodEnd: s.grace_period_end,
-      updatedAt: s.updated_at,
-    })),
+    mergeAtRiskTenants({
+      pastDueTenants: pastDueTenantRows,
+      cutoffTenants: cutoffTenantRows,
+      subscriptionPastDueTenantIds,
+      extraTenants: (extraTenants ?? []).map(toTenantRow),
+    }),
+    [...pastDueSubscriptionRows, ...(knownSubscriptions ?? []).map(toSubscriptionInput)],
     new Date(),
   )
 }
