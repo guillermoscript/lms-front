@@ -21,6 +21,7 @@ describe('computeOwedBalances', () => {
         alreadyPaid: 0,
         clawback: 0,
         netOwed: 80,
+        overpaid: 0,
         byProvider: { paypal: 100 },
       },
     ])
@@ -92,6 +93,74 @@ describe('computeOwedBalances', () => {
       [{ tenantId: 't1', amount: 500, currency: 'usd', coveredThrough: null }],
     )
     expect(balanceFor(result, 't1', 'usd')!.netOwed).toBe(0)
+  })
+
+  // #516: the floor above is correct, but it used to be the whole story — the
+  // size of the overpayment was nowhere on screen.
+  it('reports the overpayment while netOwed stays floored at 0', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 500, currency: 'usd', coveredThrough: null }],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.netOwed).toBe(0)
+    expect(usd.overpaid).toBe(420) // 500 paid against 80 owed
+  })
+
+  it('reports no overpayment when the balance is exactly settled or still owed', () => {
+    const settled = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: null }],
+    )
+    expect(balanceFor(settled, 't1', 'usd')).toMatchObject({ netOwed: 0, overpaid: 0 })
+
+    const underpaid = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 30, currency: 'usd', coveredThrough: null }],
+    )
+    expect(balanceFor(underpaid, 't1', 'usd')).toMatchObject({ netOwed: 50, overpaid: 0 })
+  })
+
+  it('keeps an overpayment inside its own currency', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'eur', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null },
+      ],
+      [{ tenantId: 't1', amount: 300, currency: 'usd', coveredThrough: null }],
+    )
+    expect(balanceFor(result, 't1', 'usd')).toMatchObject({ netOwed: 0, overpaid: 220 })
+    // The EUR side is untouched by the USD overpayment — never cross-subsidised.
+    expect(balanceFor(result, 't1', 'eur')).toMatchObject({ netOwed: 80, overpaid: 0 })
+  })
+
+  // The recovery mechanism the issue asked for: no reverse payout row exists
+  // (`payouts.amount` is CHECK (amount > 0)), so the excess is absorbed by the
+  // next cycle's arithmetic on its own.
+  it('carries an overpayment forward against later sales instead of clawing it back', () => {
+    const txns = [
+      { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful' as const, transactionDate: null },
+    ]
+    const payouts = [{ tenantId: 't1', amount: 200, currency: 'usd', coveredThrough: null }]
+    const tenants = [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }]
+
+    expect(balanceFor(computeOwedBalances(tenants, txns, payouts), 't1', 'usd'))
+      .toMatchObject({ netOwed: 0, overpaid: 120 })
+
+    // A later 100 sale earns another 80 — the overpayment shrinks by exactly that
+    // much and nothing is owed yet.
+    const withLaterSale = [...txns, { ...txns[0] }]
+    expect(balanceFor(computeOwedBalances(tenants, withLaterSale, payouts), 't1', 'usd'))
+      .toMatchObject({ netOwed: 0, overpaid: 40 })
+
+    // Once enough sales land, the balance crosses back into owed territory.
+    const withThreeSales = [...withLaterSale, { ...txns[0] }]
+    expect(balanceFor(computeOwedBalances(tenants, withThreeSales, payouts), 't1', 'usd'))
+      .toMatchObject({ netOwed: 40, overpaid: 0 })
   })
 
   it('tenant with zero platform-settled transactions has no balances', () => {

@@ -44,6 +44,13 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
     }
     setLoading(true)
     try {
+      // `mismatch !== null` is only ever true for the exact amount the warning
+      // was raised against: the amount input clears `mismatch` on every change
+      // (see its onChange below). Editing the amount after a warning therefore
+      // re-submits with `confirmMismatch: false` and the guard in
+      // `markPayoutPaid` re-runs on the new value. Keep those two in step — an
+      // isolated read of this line looks bypass-prone, which is what #516 §2
+      // reported.
       const result = await markPayoutPaid(tenantId, parsed, currency, note.trim() || undefined, mismatch !== null)
       if (result.status === 'warning') {
         setMismatch({ netOwed: result.netOwed })
@@ -94,6 +101,9 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
                 value={amount}
                 onChange={(e) => {
                   setAmount(e.target.value)
+                  // Each distinct amount must be re-validated by the server
+                  // guard; dropping this would let a second typo through on
+                  // retry (#516 §2).
                   setMismatch(null)
                 }}
                 data-testid="mark-paid-amount-input"

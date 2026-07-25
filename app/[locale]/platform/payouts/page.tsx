@@ -43,10 +43,12 @@ export default async function PlatformPayoutsPage() {
     alreadyPaid: number
     clawback: number
     netOwed: number
+    overpaid: number
     byProvider: Record<string, number>
   }
   const rows: Row[] = []
   const totalClawbackByCurrency: Record<string, number> = {}
+  const totalOverpaidByCurrency: Record<string, number> = {}
 
   for (const tenant of owed) {
     let tenantHasOwed = false
@@ -56,6 +58,9 @@ export default async function PlatformPayoutsPage() {
       totalPaidOutByCurrency[balance.currency] = (totalPaidOutByCurrency[balance.currency] ?? 0) + balance.alreadyPaid
       if (balance.clawback > 0) {
         totalClawbackByCurrency[balance.currency] = (totalClawbackByCurrency[balance.currency] ?? 0) + balance.clawback
+      }
+      if (balance.overpaid > 0) {
+        totalOverpaidByCurrency[balance.currency] = (totalOverpaidByCurrency[balance.currency] ?? 0) + balance.overpaid
       }
       if (balance.netOwed > 0) tenantHasOwed = true
       rows.push({
@@ -67,12 +72,14 @@ export default async function PlatformPayoutsPage() {
         alreadyPaid: balance.alreadyPaid,
         clawback: balance.clawback,
         netOwed: balance.netOwed,
+        overpaid: balance.overpaid,
         byProvider: balance.byProvider,
       })
     }
     if (tenantHasOwed) schoolsOwed++
   }
   const hasClawbacks = Object.values(totalClawbackByCurrency).some((amount) => amount > 0)
+  const hasOverpayments = Object.values(totalOverpaidByCurrency).some((amount) => amount > 0)
 
   const metricCards = [
     {
@@ -146,6 +153,18 @@ export default async function PlatformPayoutsPage() {
         </div>
       )}
 
+      {hasOverpayments && (
+        <div
+          className="mb-6 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-900 dark:border-purple-900/50 dark:bg-purple-950/30 dark:text-purple-300"
+          data-testid="payouts-overpaid-banner"
+        >
+          <span className="font-medium">Overpaid: {formatByCurrency(totalOverpaidByCurrency)}.</span>{' '}
+          Those schools have been paid more than they were owed. It recovers itself — the excess is
+          deducted from their next payout automatically, so their balance stays at 0 until new sales
+          catch up. Nothing to collect, and nothing to record here.
+        </div>
+      )}
+
       <Card data-testid="payouts-by-tenant">
         <CardHeader>
           <CardTitle>By school</CardTitle>
@@ -166,6 +185,7 @@ export default async function PlatformPayoutsPage() {
                     <th className="pb-2 text-right font-medium">Paid so far</th>
                     <th className="pb-2 text-right font-medium">Of which refunded</th>
                     <th className="pb-2 text-right font-medium">Owed</th>
+                    <th className="pb-2 text-right font-medium">Overpaid</th>
                     <th className="pb-2 text-right font-medium"></th>
                   </tr>
                 </thead>
@@ -203,6 +223,22 @@ export default async function PlatformPayoutsPage() {
                       </td>
                       <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
                         {money(r.netOwed, r.currency)}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums" data-testid="payout-overpaid-cell">
+                        {r.overpaid > 0 ? (
+                          // Carried forward, not collected: `alreadyPaid` is an all-time
+                          // sum, so this shrinks on its own as new sales land. There is
+                          // no reverse payout row to write — `payouts.amount` is
+                          // CHECK (amount > 0).
+                          <span
+                            className="font-medium text-purple-600 dark:text-purple-400"
+                            title="Paid beyond what was owed. Deducted from the next payout automatically."
+                          >
+                            {money(r.overpaid, r.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="py-2.5 text-right">
                         <MarkPayoutPaidDialog
