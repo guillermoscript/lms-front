@@ -1,392 +1,401 @@
 # Getting Started
 
-## 🚀 Quick Start (5 minutes)
+Everything a new developer needs to get this project running locally: install, environment, database, seed data, dev server, and tests.
 
-### Prerequisites
-- Node.js 20+ installed
-- npm or yarn
-- Docker (required for local Supabase — install from [docker.com](https://www.docker.com/get-started))
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (`npm install -g supabase`)
-- Git
+Target: a working app with real data in ~10 minutes.
 
-### 1. Clone & Install
+---
+
+## 1. What you are running
+
+A **multi-tenant SaaS LMS**. One Next.js app serves many schools ("tenants"), each on its own subdomain (`code-academy.lvh.me:3000`). Data is isolated per tenant by Postgres **RLS**, so components query Supabase directly instead of going through an API layer.
+
+Five things worth knowing before the first run:
+
+| | |
+|--|--|
+| **Middleware** | `proxy.ts` is the **only** middleware file. It resolves the tenant from the subdomain, injects `x-tenant-id` / `x-user-id` headers, and enforces role routing. Never create `middleware.ts`. |
+| **Tenancy** | The subdomain *is* the tenant. `lvh.me:3000` → Default School, `code-academy.lvh.me:3000` → Code Academy Pro. |
+| **Roles** | `student` / `teacher` / `admin`, stored per tenant in `tenant_users` (authoritative), mirrored into the JWT by `custom_access_token_hook()`. |
+| **Routes** | Everything lives under `app/[locale]/…` where locale is `en` or `es`. |
+| **Data access** | Reads = direct RLS queries. Server actions (`app/actions/`) only for multi-step mutations, service-role work, and external APIs (Stripe, email). |
+
+Full architecture reference: [`CLAUDE.md`](../CLAUDE.md) · [`docs/PROJECT_OVERVIEW.md`](./PROJECT_OVERVIEW.md)
+
+---
+
+## 2. Prerequisites
+
+| Tool | Version | Notes |
+|--|--|--|
+| Node.js | 20+ (26 works) | Next 16 / React 19 |
+| npm | 10+ | The repo uses npm **workspaces** (`packages/*`) — don't swap to pnpm/yarn |
+| Docker Desktop | running | Required by local Supabase |
+| Supabase CLI | 2.80+ | `brew install supabase/tap/supabase` or `npm i -g supabase` |
+| Stripe CLI | optional | Only to test webhooks locally |
+
+Verify:
 
 ```bash
-git clone <repository-url>
+node --version && npm --version && docker --version && supabase --version
+```
+
+---
+
+## 3. Install
+
+```bash
+git clone <repo-url>
 cd lms-front
 npm install
 ```
 
-### 2. Environment Setup
+`npm install` also links the `@lms/core` workspace in `packages/core` (shared logic with the sibling Expo app). The `mcp-server/` sub-project has its **own** `package.json` and is only needed if you work on MCP — see §10.
 
-Copy `.env.example` from the project root and fill in your values:
+---
+
+## 4. Environment (`.env.local`)
 
 ```bash
 cp .env.example .env.local
 ```
 
-The minimum required vars to run locally:
-- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` — anon/publishable key
-- `SUPABASE_SERVICE_ROLE_KEY` — service role key (bypasses RLS, server-only)
-- `NEXT_PUBLIC_PLATFORM_DOMAIN` — use `lvh.me` for local dev (resolves all subdomains to 127.0.0.1)
+`.env.example` is fully annotated with Required / Optional / Has-Default per variable. For a **local Supabase** setup, these four are all you need:
 
-See `.env.example` for the full list of variables with Required/Optional tags. Get your Supabase keys from:
-1. Go to [Supabase Dashboard](https://app.supabase.com)
-2. Select your project
-3. Settings → API
-4. Copy "Project URL" and "anon public" key
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=<Publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<Secret key>
+NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000
+```
 
-### 3. Run Development Server
+Get the two keys from the **🔑 Authentication Keys** table printed by `supabase status` (step 5) — or by `supabase start` on first boot. They are the standard local-only dev keys: identical on every machine and worthless outside your laptop, but still don't paste them into anything that gets committed.
+
+Recommended extras for local work:
+
+```bash
+NEXT_PUBLIC_APP_URL=http://lvh.me:3000
+CRON_SECRET=local-dev-secret      # without it, every /api/cron/* request is rejected
+```
+
+Everything else (Stripe, OpenAI, Mailgun, PayPal, Solana, Binance, Lemon Squeezy, Langfuse) is optional — the app boots without them and only the corresponding feature is unavailable.
+
+> **Never commit `.env.local`.** It is gitignored. `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely and is server-only.
+
+---
+
+## 5. Start the database
+
+```bash
+supabase start      # boots Postgres, Auth, Storage, Studio in Docker (first run pulls images, a few minutes)
+npm run db:reset    # = supabase db reset — applies all 168 migrations, then runs supabase/seed.sql
+```
+
+`supabase status` should then print:
+
+| Service | URL |
+|--|--|
+| API | http://127.0.0.1:54321 |
+| Database | postgresql://postgres:postgres@127.0.0.1:54322/postgres |
+| Studio (table editor / SQL) | http://127.0.0.1:54323 |
+| Mailpit (outgoing email inbox) | http://127.0.0.1:54324 |
+
+**`npm run db:reset` is the command you will use most.** It drops the local database, replays every migration in `supabase/migrations/`, then loads the seed. It is destructive to local data only — never point it at cloud.
+
+There is no psql binary requirement; to run SQL from the terminal use:
+
+```bash
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres -c "select * from tenants;"
+```
+
+---
+
+## 6. Run the app
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Then open **`http://lvh.me:3000`** — **not** `localhost:3000`.
 
-### 4. Use Seed Test Accounts
+`lvh.me` is a public DNS name where `*.lvh.me` resolves to `127.0.0.1`. Tenant resolution reads the subdomain, so on `localhost` no tenant resolves, every authenticated request falls back to the default tenant, and you get bounced to `/join-school`. Use `lvh.me` for everything, always.
 
-After running `supabase db reset`, the database is seeded with these ready-to-use accounts:
+| URL | What you get |
+|--|--|
+| http://lvh.me:3000 | Default School (free plan — all upgrade gates active) |
+| http://code-academy.lvh.me:3000 | Code Academy Pro (enterprise plan — everything unlocked) |
+| http://lvh.me:3000/es | Spanish locale (every route is `/en/…` or `/es/…`) |
 
-- `student@e2etest.com` / `password123` — student (Default School)
-- `owner@e2etest.com` / `password123` — admin (Default School)
-- `creator@codeacademy.com` / `password123` — teacher (Code Academy, subdomain: `code-academy.lvh.me:3000`)
-- `alice@student.com` / `password123` — student (Code Academy)
+Alternative for API clients: send an `x-tenant-slug: code-academy` header instead of using a subdomain.
 
-## 🔧 Development Setup Options
+---
 
-### Option 1: Cloud Supabase (Recommended)
+## 7. Log in — seeded test accounts
 
-**Pros**:
-- No local setup required
-- Shared database with team
-- Production-like environment
-- Automatic backups
+All passwords are `password123`. Log in on the subdomain that matches the account's tenant, otherwise you'll be sent to `/join-school`.
 
-**Cons**:
-- Requires internet connection
-- Shared state (can conflict with team)
+| Email | Tenant | Role | Log in at |
+|--|--|--|--|
+| `student@e2etest.com` | Default School | student | http://lvh.me:3000 |
+| `owner@e2etest.com` | Default School | admin **+ super admin** | http://lvh.me:3000 |
+| `creator@codeacademy.com` | Code Academy Pro | admin | http://code-academy.lvh.me:3000 |
+| `alice@student.com` | Code Academy Pro | student | http://code-academy.lvh.me:3000 |
 
-**Setup**: Already done if you followed Quick Start!
+`owner@e2etest.com` also has a `super_admins` row, so it can reach the platform panel at `/platform/*` (super-admin routing is independent of tenant role).
 
-### Option 2: Local Supabase
+Email confirmation is **disabled** locally (`enable_confirmations = false`), so a fresh signup at `/auth/sign-up` logs straight in. Any mail the app does send lands in Mailpit at http://127.0.0.1:54324.
 
-**Pros**:
-- Works offline
-- Isolated development environment
-- Fast queries (no network latency)
+> These passwords are local-dev only, seeded by `db:reset`. Never use them anywhere deployed.
 
-**Cons**:
-- Requires Docker
-- More complex setup
-- Need to sync schema changes
+---
 
-**Setup**:
+## 8. What the seed actually gives you
 
-```bash
-# Install Supabase CLI
-npm install -g supabase
+`supabase/seed.sql` (~69 KB) is reset-safe — every insert uses `ON CONFLICT DO NOTHING / DO UPDATE`, so re-running it never duplicates rows.
 
-# Start local Supabase
-supabase start
+**Platform plans** — all five (`free`, `starter`, `pro`, `business`, `enterprise`) with their real feature flags and limits. The seed *overwrites* what the billing migration inserted, so it is the source of truth locally.
 
-# Apply migrations
-supabase db push
+**Tenants** — deliberately two, on opposite ends of the plan range so you can exercise both sides of feature gating without changing any data:
 
-# Update .env.local with local URLs
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=<from supabase start output>
-```
+| Slug | Name | ID | Plan |
+|--|--|--|--|
+| `default` | Default School | `00000000-0000-0000-0000-000000000001` | `free` — gates locked, upgrade nudges visible |
+| `code-academy` | Code Academy Pro | `00000000-0000-0000-0000-000000000002` | `enterprise` — every feature unlocked |
 
-### Local Multi-Tenant Testing (Subdomains)
+**Courses**
 
-To test multi-tenant subdomain routing locally, use `lvh.me` — a free wildcard DNS that resolves `*.lvh.me` to `127.0.0.1`.
+| ID | Tenant | Title | Status |
+|--|--|--|--|
+| 1001 | default | Introduction to Testing | published |
+| 1002 | default | Web Development Basics | published |
+| 2001 | code-academy | Python for Beginners | published |
+| 2002 | code-academy | Data Analysis with Pandas | published |
 
-```bash
-# In .env.local, set:
-NEXT_PUBLIC_PLATFORM_DOMAIN=lvh.me:3000
-```
+Course **2001** is the fully-built one: a complete lesson set with AI tasks, 7 exercises, and a final exam. Use it whenever you need realistic content. Certificates auto-issue only for courses that have an active `certificate_templates` row — seeded for 2001 and 9999 only.
 
-Then access:
-- `http://lvh.me:3000` — Platform root (Default School)
-- `http://your-school.lvh.me:3000` — Tenant subdomain
+**Commerce**
 
-You can also use the `x-tenant-slug` header as a dev override (e.g., via browser extensions or API clients).
+| Products | Tenant | Price | Provider |
+|--|--|--|--|
+| 1001 Testing Fundamentals Package | default | $29 | stripe |
+| 1002 Web Dev Starter | default | $0 | manual |
+| 2001 Python Mastery Bundle | code-academy | $49 | stripe |
+| 2002 Code Academy Pro Monthly | code-academy | $19 | stripe |
 
-See `MULTI_TENANT_TESTING_REPORT.md` for full testing details.
+| Subscription plans | Tenant | Price | Duration |
+|--|--|--|--|
+| 2001 Code Academy Pro Monthly | code-academy | $19 | 30 days |
+| 2002 Code Academy Pro Annual | code-academy | $190 | 365 days |
 
-## Project Structure
+`alice@student.com` starts with an **active subscription** to plan 2001, and `student@e2etest.com` starts enrolled in Default School courses — so subscription-gated and progress UI both have data on first load.
 
-```
-lms-front/
-├── app/
-│   ├── [locale]/                 # All routes wrapped in locale (en, es)
-│   │   ├── (public)/            # Public pages (homepage, courses, etc.)
-│   │   ├── auth/                # Auth pages (login, signup, etc.)
-│   │   ├── dashboard/
-│   │   │   ├── admin/          # Admin dashboard (25+ pages)
-│   │   │   ├── student/        # Student dashboard (16+ pages)
-│   │   │   └── teacher/        # Teacher dashboard (30+ pages)
-│   │   ├── platform/            # Super admin panel
-│   │   ├── create-school/       # School creation flow
-│   │   ├── join-school/         # Join school via invitation
-│   │   └── onboarding/         # Post-signup onboarding
-│   ├── actions/
-│   │   ├── admin/               # Admin server actions (billing, categories, courses, invitations, landing-pages, etc.)
-│   │   ├── teacher/             # Teacher server actions
-│   │   └── platform/            # Platform super admin actions
-│   └── api/
-│       ├── auth/                # Auth callbacks
-│       ├── chat/                # AI chat endpoints (aristotle, exercises, lesson-task)
-│       ├── exercises/           # Exercise evaluation (artifact, media)
-│       ├── stripe/              # Payment webhooks & endpoints
-│       ├── certificates/        # Certificate verification & generation
-│       ├── teacher/             # Teacher tools (grading, preview, templates)
-│       ├── cron/                # Scheduled tasks
-│       └── mcp/                 # MCP protocol endpoint
-│
-├── components/
-│   ├── admin/                    # Admin components (landing-page/, invite-user, etc.)
-│   ├── aristotle/                # AI tutor panel
-│   ├── exercises/                # Exercise UIs (artifact, audio, code, essay)
-│   ├── gamification/             # Leaderboard, achievements, store
-│   ├── lesson/                   # Lesson content blocks (22 types)
-│   ├── onboarding/               # Onboarding wizard
-│   ├── student/                  # Student-specific components
-│   ├── teacher/                  # Teacher tools (block-editor/, exercise-builder)
-│   ├── tenant/                   # Tenant management (create-school, css-vars)
-│   ├── tours/                    # Guided tours (driver.js)
-│   ├── ui/                       # Shadcn UI primitives (base-mira)
-│   └── shared/                   # Shared components (feature-gate, onboarding-checklist)
-│
-├── lib/
-│   ├── ai/                       # AI config, prompts (aristotle, grading)
-│   ├── puck/                     # Landing page builder (config, components/, templates/)
-│   ├── supabase/                 # DB clients (server, client, admin, tenant, proxy)
-│   │   ├── client.ts            # Browser client
-│   │   ├── server.ts            # Server client
-│   │   ├── admin.ts             # Admin client (bypass RLS)
-│   │   ├── proxy.ts             # Session update for middleware
-│   │   ├── tenant.ts            # getCurrentTenantId()
-│   │   └── get-user-role.ts     # Role utilities (reads tenant_users)
-│   ├── hooks/                    # React hooks (usePlanFeatures, useEnrollment)
-│   ├── plans/                    # Feature gating (features.ts)
-│   ├── payments/                 # Stripe integration
-│   ├── email/                    # Email templates
-│   ├── speech/                   # Speech evaluation
-│   ├── exercises/                # Exercise engine
-│   ├── certificates/             # Certificate logic
-│   ├── themes/                   # Theme presets
-│   └── services/                 # Business logic services
-│
-├── mcp-server/                   # MCP server for AI agent integration
-├── messages/                     # i18n messages (en.json, es.json)
-├── supabase/                     # Supabase config
-│   ├── migrations/              # Database migrations (63+ files)
-│   └── config.toml              # Local Supabase config
-├── tests/                        # Playwright E2E tests
-│
-├── proxy.ts                      # THE ONLY middleware file (tenant + i18n + auth)
-├── .env.local                    # Environment variables (DO NOT COMMIT!)
-├── package.json                  # Dependencies
-└── tsconfig.json                # TypeScript config
-```
+Also seeded: course categories, gamification levels + achievements + a profile per student, tenant branding settings for Code Academy, and a platform subscription row.
 
-**Important:** `proxy.ts` is the single middleware file for the entire application. Do NOT create a `middleware.ts` file — it will conflict with `proxy.ts`.
+### Why the seed inserts auth users by hand
 
-## 🧪 Verify Setup
+`handle_new_user()` is an `on auth.users` trigger — **it does not fire on direct SQL inserts**. So the seed manually writes `auth.users`, `auth.identities`, `profiles`, `user_roles`, and `tenant_users` for each account. If you add a test user via SQL, you must do the same (use `NULL` for `phone`, `''` for nullable strings), or that user will have no profile and no role.
 
-### 1. Check Database Connection
+### Re-seeding
 
 ```bash
-# If using local Supabase
-supabase status
-
-# Should show:
-# - API URL: http://127.0.0.1:54321
-# - DB URL: postgresql://postgres:postgres@localhost:54322/postgres
+npm run db:reset     # nuke + migrations + seed  (the normal move)
 ```
 
-### 2. Test Auth Flow
-
-1. Visit http://localhost:3000/auth/sign-up
-2. Create account
-3. Check email (or check local mailpit at http://localhost:54324 if using local Supabase)
-4. Confirm email
-5. Should redirect to `/dashboard/student`
-
-### 3. Check Database
+To load *only* the seed onto an existing local DB:
 
 ```bash
-# Using Supabase CLI
-supabase db diff
-
-# Should show: "No schema changes detected"
-
-# Or check Studio
-# Local: http://localhost:54323
-# Cloud: https://app.supabase.com
+docker exec -i supabase_db_lms-front psql -U postgres -d postgres < supabase/seed.sql
 ```
 
-## 🎨 Adding Shadcn Components
+`supabase/seed-prod.sql` is a much smaller production bootstrap (plans + default tenant, no test users) — do not run it locally.
+
+---
+
+## 9. Everyday commands
 
 ```bash
-# List available components
-npx shadcn@latest add
+# App
+npm run dev            # dev server (open lvh.me:3000)
+npm run build          # production build — also the real typecheck + lint gate
+npm run start          # serve the production build
+npm run lint           # ESLint
+npm run typecheck      # tsc --noEmit
 
-# Add specific component
-npx shadcn@latest add button
-npx shadcn@latest add card
-npx shadcn@latest add form
+# Database
+supabase start / stop / status
+npm run db:reset               # local: migrations + seed  (destructive, local only)
+supabase migration new <name>  # create supabase/migrations/<ts>_<name>.sql
+npm run db:push                # apply pending migrations to the LINKED CLOUD project
+npm run db:types               # regenerate lib/database.types.ts from the linked project
 
-# Components are added to components/ui/
+# Tests
+npm run test:unit                  # vitest, tests/unit/**
+npx vitest run -t "name"           # single unit test
+npx playwright test                # E2E, tests/playwright/**  (needs the dev server up)
+npx playwright test -g "name"      # single E2E test
+npx playwright test --ui           # interactive runner
 ```
 
-## 🗄️ Database Management
+### Migration workflow
 
-### View Schema
+1. `supabase migration new add_my_thing` → edit the generated SQL.
+2. `npm run db:reset` → verify it applies cleanly **from scratch** and the seed still loads.
+3. `npm run db:types` → commit the regenerated `lib/database.types.ts` alongside the migration.
+4. Cloud gets it via `npm run db:push` (or the deploy pipeline) — never edit cloud schema by hand.
+
+Any new tenant-scoped table needs RLS enabled plus policies in the same migration. See [`docs/MIGRATIONS.md`](./MIGRATIONS.md).
+
+---
+
+## 10. Testing
+
+### Unit (Vitest)
+
+Pure logic — payments, plan limits, webhooks, splits. No database, no browser.
 
 ```bash
-# Dump current schema
-supabase db dump --local
-
-# Or use Studio
-# Local: http://localhost:54323
-# Cloud: https://app.supabase.com → Table Editor
+npm run test:unit
 ```
 
-### Create Migration
+### E2E (Playwright)
+
+`tests/playwright/` holds ~34 specs covering tenant isolation, auth security, payments, enrollment, gamification, community, i18n, and the platform panel.
+
+Three rules, all of which cost people an afternoon when ignored:
+
+1. **Start the dev server first.** The Playwright config has no `webServer` — it will not boot the app for you.
+2. **Use `lvh.me`, never `localhost`** (`baseURL` already defaults to `http://lvh.me:3000`). On localhost every authenticated test bounces to `/join-school`.
+3. **Run serially locally** — the config already sets `workers: 1` outside CI. Parallel workers trip the GoTrue sign-in rate limit and cascade into auth timeouts.
 
 ```bash
-# Create new migration file
-supabase migration new add_my_feature
-
-# Edit the generated file in supabase/migrations/
-
-# Apply migration
-supabase db push
+npm run db:reset            # tests assume seed state
+npm run dev                 # terminal 1
+npx playwright test         # terminal 2
+npx playwright test --project=mobile     # Pixel 5 viewport
+npx playwright test --project=human --headed   # 500ms slow-mo, for watching/debugging
 ```
 
-### Reset Database (Local Only)
+First run needs browsers: `npx playwright install chromium`.
+
+Test credentials live in `tests/playwright/utils/constants.ts` (note: the `teacher` key there maps to `owner@e2etest.com`, which actually resolves to **admin**).
+
+---
+
+## 11. Optional services
+
+### Stripe webhooks
+
+Two independent integrations — student→school payments (Connect) and school→platform billing:
 
 ```bash
-supabase db reset
+stripe listen --forward-to lvh.me:3000/api/stripe/webhook           # → STRIPE_WEBHOOK_SECRET
+stripe listen --forward-to lvh.me:3000/api/stripe/platform-webhook  # → STRIPE_PLATFORM_WEBHOOK_SECRET
 ```
 
-⚠️ **Warning**: This deletes ALL local data!
+Each `stripe listen` prints its own signing secret; they are different values, don't cross them.
 
-## Managing Roles
+### Cron endpoints
 
-The `tenant_users` table is the **authoritative source** for user roles within a tenant. The `user_roles` table stores global roles but `tenant_users.role` is what `getUserRole()` checks first.
+`/api/cron/*` (subscription expiry, plan-limit enforcement, daily digest, league rollover, Solana pull/reconcile) are protected by `CRON_SECRET`. Trigger one manually:
 
-### Change Your Role (for testing)
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://lvh.me:3000/api/cron/expire-subscriptions
+```
 
-**Via SQL Editor** (Supabase Studio):
+### MCP server
 
+`mcp-server/` is a separate app (mcp-use + Supabase OAuth) exposing LMS tools to AI agents.
+
+```bash
+cd mcp-server && cp .env.example .env && npm install
+PORT=3001 npm run dev     # inspector at http://localhost:3001/inspector
+```
+
+It defaults to **port 3000 and will fight the Next dev server** — give it 3001 as above and set `MCP_SERVER_URL=http://localhost:3001` in the root `.env.local`. Read the `mcp-apps-builder` skill before changing anything in there. Details: [`docs/MCP_SETUP.md`](./MCP_SETUP.md).
+
+### Cloud Supabase instead of local
+
+Works, but you share state with the team and `db:reset` is not available to you.
+
+```bash
+supabase login
+supabase link --project-ref <ref>
+# .env.local: point NEXT_PUBLIC_SUPABASE_URL / keys at the cloud project (Dashboard → Settings → API)
+npm run db:push     # apply local migrations to cloud
+```
+
+---
+
+## 12. Troubleshooting
+
+**Everything redirects me to `/join-school`.**
+You're on `localhost`. Use `http://lvh.me:3000`. If you're already on `lvh.me`, the account has no `tenant_users` row for that subdomain's tenant — log in on the right subdomain (§7).
+
+**Port 3000 already in use.**
+Usually a stray `mcp-server` (it defaults to 3000). Kill it, or run Next elsewhere: `PORT=3005 npm run dev` — and note that `supabase/config.toml` sets `site_url = "http://localhost:3005"`, so auth-email redirect links target 3005. If you run on 3000 and need password-reset/magic links to work, change `site_url` to `http://lvh.me:3000` and `supabase stop && supabase start`.
+
+**`supabase start` hangs or fails.** Docker Desktop isn't running, or containers are stale:
+```bash
+supabase stop --no-backup && docker ps -a | grep supabase   # remove leftovers, then supabase start
+```
+
+**I changed a role and the UI didn't notice.**
+JWT claims are stale. Call `supabase.auth.refreshSession()` (always required after a tenant switch), or log out and back in. `getUserRole()` reads `tenant_users` first, so update that table — not `user_roles`:
 ```sql
--- Set your role within a specific tenant (authoritative source)
--- Roles: 'student', 'teacher', 'admin'
-UPDATE tenant_users
-SET role = 'teacher'
-WHERE user_id = auth.uid()
-  AND tenant_id = '00000000-0000-0000-0000-000000000001';
-
--- If no tenant_users row exists, insert one
 INSERT INTO tenant_users (user_id, tenant_id, role)
-VALUES (auth.uid(), '00000000-0000-0000-0000-000000000001', 'teacher')
+VALUES ('<user-uuid>', '00000000-0000-0000-0000-000000000001', 'teacher')
 ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = 'teacher';
-
--- Global role (fallback only — tenant_users takes priority)
-INSERT INTO user_roles (user_id, role)
-VALUES (auth.uid(), 'teacher')
-ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-**Refresh your session** to see the new role — call `supabase.auth.refreshSession()` or log out and back in to get updated JWT claims.
+**A query returns nothing / errors on `tenant_id`.**
+Some tables have no `tenant_id` and filtering by it errors the whole query: `profiles`, `gamification_levels`, `lesson_completions`, `exercise_completions`, and every exam child table (`exam_questions`, `exam_answers`, `exam_question_scores`, `exam_scores`). Full list of these traps: the "Known Pitfalls" section of [`CLAUDE.md`](../CLAUDE.md).
 
-## 📝 Common Commands
-
+**Module not found / stale build.**
 ```bash
-# Development
-npm run dev              # Start dev server
-npm run build           # Build for production
-npm run start           # Start production server
-
-# Database (Supabase CLI)
-supabase start          # Start local Supabase
-supabase stop           # Stop local Supabase
-supabase status         # Check status
-supabase db push        # Apply migrations
-supabase db pull        # Pull from cloud to local
-supabase db diff        # Show schema differences
-supabase db reset       # Reset local database
-
-# Code Quality
-npm run lint            # Run ESLint
+rm -rf node_modules .next && npm install
 ```
 
-## 🐛 Troubleshooting
+**Course shows 0% progress or "no certificate at 100%".**
+Progress queries must filter by `user_id`; certificates only auto-issue when the course has an active `certificate_templates` row (seeded for 2001/9999 only).
 
-### "Module not found" errors
+More: [`docs/TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)
 
-```bash
-# Clear cache and reinstall
-rm -rf node_modules .next package-lock.json
-npm install
+---
+
+## 13. Project layout
+
+```
+app/
+  [locale]/            all routes — (public), auth/, dashboard/{student,teacher,admin}/, platform/, onboarding/
+  actions/             server actions — admin/, teacher/, platform/, payment-requests.ts, join-school.ts
+  api/                 stripe/, cron/, chat/, certificates/, mcp/, teacher/, exercises/
+components/            ui/ (shadcn base-mira), lesson/, teacher/, student/, admin/, gamification/, aristotle/
+lib/
+  supabase/            server.ts · client.ts · admin.ts · proxy.ts · tenant.ts · get-user-role.ts
+  plans/ payments/ ai/ puck/ certificates/ services/
+packages/core/         @lms/core — logic shared with the Expo app
+supabase/
+  migrations/          168 files, applied in filename order
+  seed.sql             local dev + E2E seed        seed-prod.sql = production bootstrap
+  config.toml          local stack config (ports, auth, JWT hook)
+mcp-server/            standalone MCP server (own package.json)
+tests/                 unit/ (vitest) · playwright/ (E2E) · demos/
+messages/              en.json · es.json (next-intl)
+proxy.ts               THE middleware — tenant + auth + role routing. Do not add middleware.ts.
 ```
 
-### Database connection issues
+---
 
-```bash
-# Check if Supabase is running
-supabase status
+## 14. Where to go next
 
-# Restart Supabase
-supabase stop
-supabase start
+| Read this | For |
+|--|--|
+| [`CLAUDE.md`](../CLAUDE.md) | Architecture reference + the known-pitfalls list. Read it before your first PR. |
+| [`docs/DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) | 65+ tables and their relationships |
+| [`docs/AUTH.md`](./AUTH.md) | Auth flows, JWT hook, role resolution |
+| [`docs/MONETIZATION.md`](./MONETIZATION.md) | School billing, student payments, feature gating |
+| [`docs/DEVELOPMENT_WORKFLOW.md`](./DEVELOPMENT_WORKFLOW.md) | Branching, PRs, review expectations |
+| [`docs/MIGRATIONS.md`](./MIGRATIONS.md) | Writing migrations and RLS policies |
+| [`docs/I18N_GUIDE.md`](./I18N_GUIDE.md) | Adding translatable copy (en/es) |
 
-# Check .env.local has correct URLs
-cat .env.local
-```
-
-### Auth not working
-
-1. Check environment variables are set
-2. Verify Supabase project is accessible
-3. Check browser console for errors
-4. Try incognito mode (clear cookies)
-
-### Page shows "Unauthorized"
-
-1. Check if you're logged in: `/auth/login`
-2. Verify your role: Check `tenant_users` table (authoritative) and `user_roles` table (fallback)
-3. Check `proxy.ts` is working (this is the only middleware file — not `middleware.ts`)
-4. Verify RLS policies allow access
-5. After changing roles, call `supabase.auth.refreshSession()` to update JWT claims
-
-## 📚 Next Steps
-
-1. **Explore the codebase**:
-   - Check out `app/dashboard/student/page.tsx`
-   - Look at `lib/supabase/` utilities
-   - Browse `components/ui/` Shadcn components
-
-2. **Read the docs**:
-   - [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) - Understand the architecture
-   - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) - Learn the data model
-   - [AUTH.md](./AUTH.md) - Understand authentication
-
-3. **Start building**:
-   - Pick a task from [PROGRESS.md](../PROGRESS.md)
-   - Read [DEVELOPMENT_WORKFLOW.md](./DEVELOPMENT_WORKFLOW.md)
-   - Follow patterns in [AI_AGENT_GUIDE.md](./AI_AGENT_GUIDE.md)
-
-## 🤝 Getting Help
-
-- **Documentation**: Check `docs/` folder
-- **Code Examples**: Search codebase for similar features
-- **Database Questions**: See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)
-- **Auth Questions**: See [AUTH.md](./AUTH.md)
-
-Happy coding! 🚀
+**Before every PR:** `npm run build` passes · every tenant-scoped query filters `tenant_id` · tested as each affected role · loading + error states handled. Branch naming: `<type>/<slug>-<issueNumber>`, e.g. `fix/binance-settings-category-479`.
