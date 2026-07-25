@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { getPayoutsOwed } from '@/app/actions/platform/payouts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarkPayoutPaidDialog } from '@/components/platform/mark-payout-paid-dialog'
+import { formatByCurrency, formatMoney } from '@/lib/payments/format-money'
 import {
   IconArrowBackUp,
   IconCoin,
@@ -11,19 +12,9 @@ import {
   IconWalletOff,
 } from '@tabler/icons-react'
 
-/**
- * Formatted in the reader's locale; the currency code always comes from the row
- * itself — balances are grouped per currency and never converted (#497).
- */
-const money = (n: number, currency: string, locale: string) =>
-  new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).format(n ?? 0)
-
-/** Renders one line per currency — amounts in different currencies are never summed into one number (#497). */
-function formatByCurrency(byCurrency: Record<string, number>, locale: string) {
-  const entries = Object.entries(byCurrency).filter(([, amount]) => amount !== 0)
-  if (entries.length === 0) return money(0, 'usd', locale)
-  return entries.map(([currency, amount]) => money(amount, currency, locale)).join(' · ')
-}
+// `formatMoney` / `formatByCurrency` live in lib/payments/format-money.ts — the
+// no-cross-currency-sums rule this page established in #497 is shared with the
+// school-facing payout history rather than re-derived there (#531).
 
 const PROVIDER_LABEL: Record<string, string> = {
   paypal: 'PayPal',
@@ -291,24 +282,24 @@ export default async function PlatformPayoutsPage({
                           ? '—'
                           : Object.keys(r.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{money(r.grossCollected, r.currency, locale)}</td>
+                      <td className="py-2.5 text-right tabular-nums">{formatMoney(r.grossCollected, r.currency, locale)}</td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
                         {r.schoolPercentage}%
                       </td>
                       <td className="py-2.5 text-right tabular-nums text-muted-foreground">
-                        {money(r.alreadyPaid, r.currency, locale)}
+                        {formatMoney(r.alreadyPaid, r.currency, locale)}
                       </td>
                       <ClawbackCell
                         amount={r.clawback}
-                        formatted={money(r.clawback, r.currency, locale)}
+                        formatted={formatMoney(r.clawback, r.currency, locale)}
                         hint={t('table.clawbackHint')}
                       />
                       <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
-                        {money(r.netOwed, r.currency, locale)}
+                        {formatMoney(r.netOwed, r.currency, locale)}
                       </td>
                       <OverpaidCell
                         amount={r.overpaid}
-                        formatted={money(r.overpaid, r.currency, locale)}
+                        formatted={formatMoney(r.overpaid, r.currency, locale)}
                         hint={t('table.overpaidHint')}
                       />
                       <td className="py-2.5 text-right">
