@@ -3545,6 +3545,15 @@
       "resendSuccess": "Correo de confirmación enviado. Revisa tu bandeja.",
       "dismiss": "Descartar"
     },
+    "accessCutoffBanner": {
+      "activeTitle": "El acceso a los cursos está pausado para toda tu escuela.",
+      "scheduledTitle": "El acceso a los cursos se detiene para toda tu escuela en {days} días.",
+      "scheduledTitleImminent": "El acceso a los cursos se detiene para toda tu escuela mañana.",
+      "activeBody": "Desde el {date}, todos los estudiantes perdieron el acceso a los cursos porque la escuela superó los límites de su plan. Las inscripciones y las compras están intactas: el acceso vuelve para todos en cuanto mejores el plan o reduzcas el uso.",
+      "scheduledBody": "El {date}, todos los estudiantes perderán el acceso a los cursos si el uso no vuelve a estar dentro de los límites de tu plan. No se elimina nada, pero ningún estudiante podrá abrir un curso.",
+      "manageBilling": "Gestionar facturación",
+      "restoreAccess": "Restaurar acceso"
+    },
     "connectClaude": {
       "title": "Conectar Claude",
       "description": "Agrega el LMS como conector personalizado — sin tokens, inicias sesión con tu cuenta del LMS.",

@@ -3700,6 +3700,15 @@
       "resendSuccess": "Confirmation email sent. Check your inbox.",
       "dismiss": "Dismiss"
     },
+    "accessCutoffBanner": {
+      "activeTitle": "Course access is paused for your whole school.",
+      "scheduledTitle": "Course access stops for your whole school in {days} days.",
+      "scheduledTitleImminent": "Course access stops for your whole school tomorrow.",
+      "activeBody": "Since {date}, every student has lost access to all courses because the school is over its plan limits. Enrollments and purchases are intact — access returns for everyone as soon as you upgrade or reduce usage.",
+      "scheduledBody": "On {date}, every student will lose access to all courses unless usage is back within your plan's limits. Nothing is deleted, but no student will be able to open a course.",
+      "manageBilling": "Manage billing",
+      "restoreAccess": "Restore access"
+    },
     "connectClaude": {
       "title": "Connect Claude",
       "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",

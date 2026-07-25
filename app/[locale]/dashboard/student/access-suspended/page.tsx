@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,7 +14,10 @@ import Link from 'next/link'
  * real cause and points at the person who can fix it.
  */
 export default async function AccessSuspendedPage() {
-  const t = await getTranslations('dashboard.student.accessSuspended')
+  const [t, locale] = await Promise.all([
+    getTranslations('dashboard.student.accessSuspended'),
+    getLocale(),
+  ])
 
   const userId = await getCurrentUserId()
   if (!userId) redirect('/auth/login')
@@ -56,7 +59,9 @@ export default async function AccessSuspendedPage() {
           <p className="text-muted-foreground text-sm text-pretty">{t('whatNowBody')}</p>
           <p className="text-muted-foreground text-sm">
             {t('since', {
-              date: new Date(cutoffAt).toLocaleDateString(undefined, { dateStyle: 'long' }),
+              // Explicit locale — `undefined` on the server resolves to the
+              // Node process locale, not the request's (#517).
+              date: new Date(cutoffAt).toLocaleDateString(locale, { dateStyle: 'long' }),
             })}
           </p>
         </CardContent>
