@@ -29,7 +29,7 @@ A multi-tenant SaaS Learning Management System. Schools operate as independent t
 | UI | Shadcn UI (base-mira variant), Tailwind CSS v4 |
 | Icons | Tabler Icons, Lucide React |
 | Fonts | Noto Sans (body), Geist Sans/Mono (UI/code) |
-| Database | Supabase (PostgreSQL 15, 65+ tables) |
+| Database | Supabase (PostgreSQL 15, 116 tables) |
 | Auth | Supabase Auth with JWT custom claims |
 | Storage | Supabase Storage |
 | AI | Vercel AI SDK with OpenAI (gpt-5-mini) |
@@ -120,7 +120,7 @@ Manual/offline payment flow: student submits payment request, admin confirms, sy
 
 ## Database
 
-65+ tables organized into key groups:
+116 tables organized into key groups:
 
 | Group | Key Tables |
 |-------|-----------|
@@ -143,7 +143,7 @@ All tenant-scoped tables use RLS. Direct queries with explicit `tenant_id` filte
 | Phase | Scope | Highlights |
 |-------|-------|-----------|
 | 1 | Foundation | Next.js 16, Supabase, Shadcn UI (base-mira), Tailwind CSS v4 |
-| 2 | Database | 65+ tables, RLS policies, database functions and RPCs |
+| 2 | Database | 116 tables, RLS policies, database functions and RPCs |
 | 3 | Core LMS | Auth, enrollment, lessons, exams, progress tracking |
 | 4 | AI Integration | Vercel AI SDK with OpenAI (gpt-5-mini), Aristotle AI Tutor, exam grading |
 | 5 | Gamification | 12 tables: XP, levels, streaks, achievements, leaderboard, point store |

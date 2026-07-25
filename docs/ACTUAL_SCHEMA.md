@@ -1,6 +1,17 @@
 # Actual Database Schema Reference
 
-This file contains the **actual** column names from the live database (discovered 2026-02-08).
+> ## ⚠️ OUT OF DATE — do not trust this file
+>
+> This was a snapshot of the live database taken **2026-02-08**. The schema has changed since; parts of this page are now wrong. Known example: the `enrollments` section below still lists `product_id` / `subscription_id` and their CHECK constraint, all of which were **dropped** when access moved to the `entitlements` table (migration `20260516150000`).
+>
+> Current sources of truth, in order:
+> 1. **`lib/database.types.ts`** — generated from the database, always correct
+> 2. **The live database** — see [DATABASE_SCHEMA.md § Verifying this document](./DATABASE_SCHEMA.md#verifying-this-document)
+> 3. **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)** — curated and maintained
+>
+> Kept only as a historical record of what the schema looked like in February 2026.
+
+This file contains the column names discovered in the live database on 2026-02-08.
 
 ## Core Tables
 

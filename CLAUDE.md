@@ -116,17 +116,18 @@ All routes live under `app/[locale]/` (`[locale]` is always `/en/` or `/es/`). P
 
 ### Database Schema Essentials
 
-65+ tables. Key groups: multi-tenancy (`tenants`, `tenant_users`, `tenant_settings`, `super_admins`) · users (`profiles` — global, no tenant_id) · content (`courses`, `lessons`, `exercises`, `exams`, `exam_questions`) · progress (`enrollments` — progress only, `lesson_completions`, `exam_submissions`) · commerce (`products`, `plans`, `transactions`, `subscriptions`, `payment_requests`, `entitlements` — course-access source of truth) · revenue (`revenue_splits`, `payouts`, `invoices`) · platform billing (`platform_plans`, `platform_subscriptions`, `platform_payment_requests`) · gamification (12 tables incl. `gamification_profiles`, `xp_transactions`, `achievements`, `challenges`) · certificates · notifications.
+116 tables. Key groups: multi-tenancy (`tenants`, `tenant_users`, `tenant_settings`, `super_admins`) · users (`profiles` — global, no tenant_id) · content (`courses`, `lessons`, `exercises`, `exams`, `exam_questions`) · progress (`enrollments` — progress only, `lesson_completions`, `exam_submissions`) · commerce (`products`, `plans`, `transactions`, `subscriptions`, `payment_requests`, `entitlements` — course-access source of truth) · revenue (`revenue_splits`, `payouts`, `invoices`) · platform billing (`platform_plans`, `platform_subscriptions`, `platform_payment_requests`) · gamification (10 `gamification_*` tables incl. `gamification_profiles`, `gamification_xp_transactions`, `gamification_achievements`; plus leagues in `league_tiers`/`league_memberships`) · certificates · notifications.
 
 `profiles` and `gamification_levels` are global (no `tenant_id`).
 
 **Key RPCs:**
 ```typescript
 supabase.rpc('enroll_user', { _user_id, _product_id })
-supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id })  // trigger-invoked; writes to entitlements
-supabase.rpc('award_xp', { p_user_id, p_action_type, p_reference_id })
+supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id, _start_date })  // trigger-invoked; writes to entitlements
+supabase.rpc('has_course_access', { _user_id, _course_id })  // access check; _course_id is integer — cast ::int from SQL
+supabase.rpc('award_xp', { _user_id, _action_type, _xp_amount, _reference_id, _reference_type })  // overload adds _tenant_id
 supabase.rpc('create_exam_submission', { p_student_id, p_exam_id, p_answers })
-supabase.rpc('save_exam_feedback', { submission_id, exam_id, student_id, answers, overall_feedback, score })
+supabase.rpc('save_exam_feedback', { p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms })
 supabase.rpc('get_plan_features', { _tenant_id })
 ```
 
@@ -151,16 +152,14 @@ NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com 
 
 ## Testing
 
-E2E tests in `tests/playwright/`, four files by priority:
-- `multi-tenant-isolation.spec.ts` — P0, 8 tests
-- `authentication-security.spec.ts` — P0, 6 tests
-- `payment-security.spec.ts` — P0, 7 tests
-- `comprehensive-security-audit.spec.ts` — P1/P2, 26 tests
+E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth security, payment flows, enrollment, entitlements, gamification, community, i18n, platform panel, plan change, teacher/admin CRUD). Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `payment-flows.spec.ts`, `evaluations-security.spec.ts`.
+
+The Playwright config has no `webServer` — start `npm run dev` yourself first, use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
 
 Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
 - `student@e2etest.com` / `password123` — student (Default School)
-- `owner@e2etest.com` / `password123` — admin (Default School)
-- `creator@codeacademy.com` / `password123` — teacher (Code Academy, subdomain `code-academy.lvh.me:3000`)
+- `owner@e2etest.com` / `password123` — admin (Default School) **+ super admin** (`/platform/*`)
+- `creator@codeacademy.com` / `password123` — **admin** (Code Academy, subdomain `code-academy.lvh.me:3000`)
 - `alice@student.com` / `password123` — student (Code Academy)
 
 Pre-commit checklist: `npm run build` · tenant filter on every query · tested with all relevant roles · loading + error states handled.
@@ -174,7 +173,11 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - **`profiles` has no `email`** — get emails via `createAdminClient().auth.admin.getUserById()`.
 - **`exam_submissions` order column** is `submission_date`, not `submitted_at`.
 - **Transaction status** is `'successful'`, not `'succeeded'`.
-- Exam child tables (`exam_questions`, `exam_answers`, `exam_question_scores`, `exam_scores`) have **no `tenant_id`** — filter by exam_id/submission_id only; adding `.eq('tenant_id', …)` errors the whole query.
+- Exam child tables (`exam_questions`, `exam_answers`, `exam_question_scores`, `exam_scores`, `question_options`) have **no `tenant_id`** — filter by exam_id/submission_id only; adding `.eq('tenant_id', …)` errors the whole query. `exam_questions` also has **no `sequence`**.
+- **`exercise_completions` uses `user_id`**, not `student_id`, and stores only `score` + `completed_at` — submissions/feedback live in `exercise_evaluations` and the `exercise_*_submissions` tables.
+- **`subscriptions` uses `subscription_status`** (not `status`), `provider_subscription_id` (not `stripe_subscription_id`), and `created` (not `created_at`).
+- **`plans` uses `plan_name` and `duration_in_days`** — there is no `name`, no `interval`, no `status`. Soft-deleted via `deleted_at`.
+- **`transactions` has three unique indexes**, product-shaped and plan-shaped kept separate plus `(payment_provider, provider_charge_id)` for webhook idempotency — see `docs/DATABASE_SCHEMA.md`.
 - **Creating test users via SQL** won't fire `handle_new_user()` — manually insert `profiles`, `user_roles`, `auth.identities`. Use `NULL` for `phone`, `''` for nullable strings.
 - **`proxy.ts` is the only middleware** — do not create `middleware.ts` (conflict).
 - **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`.

@@ -302,26 +302,32 @@ lessons, exercises, exams (tenant-scoped)
 
 ### Key Functions to Know
 
-1. **`enroll_user(_user_id, _product_id)`**
-   - Enrolls user in ALL courses linked to product (loops through `product_courses`)
-   - Sets `status = 'active'` and inherits `tenant_id` from product
+Signatures below are the real ones — verify with `pg_get_function_identity_arguments` before calling (see [DATABASE_SCHEMA.md § Verifying this document](./DATABASE_SCHEMA.md#verifying-this-document)).
+
+1. **`enroll_user(_user_id uuid, _product_id integer)`**
+   - Grants access to ALL courses linked to the product (loops through `product_courses`)
+   - Writes to **`entitlements`** — the source of truth for access — inheriting `tenant_id` from the product
    - Called automatically on successful payment
 
-2. **`get_plan_features(_tenant_id)`**
+2. **`has_course_access(_user_id uuid, _course_id integer)`**
+   - The access check. Second arg is `integer` — cast `::int` from SQL
+   - No staff branch: teachers/admins are not implicitly granted access here
+
+3. **`get_plan_features(_tenant_id uuid)`**
    - Returns plan info, features (JSONB), and limits for the tenant
    - Single source of truth for feature gating
    - `SECURITY DEFINER` — works regardless of caller's RLS context
 
-3. **`create_exam_submission(student_id, exam_id, answers)`**
-   - Creates exam submission
-   - Returns submission ID
+4. **`create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)`**
+   - Creates exam submission, returns `submission_id`
 
-4. **`save_exam_feedback(submission_id, ...)`**
-   - Saves AI feedback to exam
-   - Updates score and marks as reviewed
+5. **`save_exam_feedback(p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms)`**
+   - Saves AI feedback to the exam and updates the score
+   - Nine params, all `p_`-prefixed
 
-5. **`award_xp(p_user_id, p_action_type, p_reference_id)`**
-   - Awards XP for gamification actions
+6. **`award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)`**
+   - Awards XP for gamification actions; creates the gamification profile lazily
+   - An overload takes a trailing `_tenant_id uuid` — trigger functions call that one
 
 ### Querying with Relations
 
@@ -377,7 +383,7 @@ If query returns empty when it shouldn't:
 4. Verify user has required enrollment/role
 5. Test with `createAdminClient()` to bypass RLS (temporarily, for debugging only)
 
-**RLS is enabled on ALL tenant-scoped tables** (65+ tables). Standard policy pattern:
+**RLS is enabled on ALL tenant-scoped tables** (116 tables in `public`, 61 of them carrying a `tenant_id`). Standard policy pattern:
 - SELECT: users who are members of the tenant (checked via `tenant_users`)
 - INSERT/UPDATE/DELETE: users with `teacher` or `admin` role in the tenant
 - Special cases: students can INSERT own `enrollments`, `lesson_completions`, `exam_submissions`
