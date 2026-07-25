@@ -207,9 +207,18 @@ export async function POST(req: NextRequest) {
 
     // Snapshot the tenant's CURRENT revenue split onto this transaction (#496)
     // so a later plan change doesn't retroactively reprice it in the payouts
-    // computation — revenue_splits is super-admin-only under RLS, so this
-    // needs the admin client even though the rest of this route uses the
-    // user-scoped one.
+    // computation. The admin client is belt-and-braces, not a requirement: this
+    // comment used to say revenue_splits is "super-admin-only under RLS", which
+    // is wrong — the SELECT policy is `tenant_id = get_tenant_id() OR
+    // is_super_admin()`, so the user-scoped client could read it too (#512).
+    //
+    // Since #512 the DATABASE owns this column: the BEFORE INSERT trigger in
+    // 20260725110000_transaction_split_snapshot_backstop.sql recomputes it from
+    // the same table and ignores whatever we send, because the column is
+    // writable by any authenticated client (transactions RLS restricts rows, not
+    // columns) and a student-supplied value must not survive. This write is kept
+    // deliberately: it computes the identical number, and it keeps the rollback
+    // migration a safe lever — drop the trigger and this path still snapshots.
     const adminClientForSplit = createAdminClient()
     const { data: revenueSplit } = await adminClientForSplit
       .from('revenue_splits')

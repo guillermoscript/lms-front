@@ -14,10 +14,33 @@
  * snapshotted at insert time in `app/api/payments/checkout/route.ts` — see
  * issue #496), not the tenant's current split applied retroactively to the
  * whole sum. A plan change (which rewrites `revenue_splits`) therefore only
- * affects transactions created after the change. Transactions predating the
- * snapshot column (`schoolPercentageSnapshot: null`) fall back to the
- * tenant's current `schoolPercentage` — the same behavior this module had
- * before #496, so old data isn't retroactively wrong either way.
+ * affects transactions created after the change.
+ *
+ * Since issue #512 that snapshot is OWNED BY THE DATABASE, not by the caller.
+ * `20260725110000_transaction_split_snapshot_backstop.sql` computes it from
+ * `revenue_splits` on INSERT and freezes it on UPDATE, so:
+ *
+ *   - a transaction-insert path that forgets it (four of the five do) can't
+ *     silently fall back to the current-split behaviour;
+ *   - a webhook that sets `payment_provider` on an existing row post-insert
+ *     (`lib/payments/webhook-dispatch.ts`) can't either;
+ *   - and no client can supply the number. `transactions` grants ALL to
+ *     `authenticated` and its RLS policies restrict which ROWS a user may
+ *     write, never which columns — so without the trigger a student could set
+ *     `school_percentage_snapshot: 100` on their own transaction and inflate
+ *     `grossOwed` below.
+ *
+ * The value never changes once written, so history is never re-stamped —
+ * re-stamping would be the #496 bug, not a fix for it.
+ *
+ * Transactions predating the snapshot column (`schoolPercentageSnapshot:
+ * null`) still fall back to the tenant's current `schoolPercentage` — the
+ * same behavior this module had before #496, so old data isn't retroactively
+ * wrong either way. They were deliberately not backfilled: stamping today's
+ * split onto history would manufacture the very repricing #496 removed. Such
+ * a row is snapshotted in exactly one situation — a provider activating it
+ * (its `payment_provider` changing), the one moment at which today's split is
+ * the honest answer for it.
  *
  * Balances are grouped PER CURRENCY (issue #497) — a tenant with both USD and
  * EUR sales owes two separate numbers, never one meaningless summed total.
