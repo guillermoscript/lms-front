@@ -9,7 +9,7 @@ describe('computeOwedBalances', () => {
   it('single tenant, single provider, single currency, nothing paid yet', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
       [],
     )
     expect(result).toHaveLength(1)
@@ -30,9 +30,9 @@ describe('computeOwedBalances', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 50, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'binance', amount: 25, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 50, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
+        { tenantId: 't1', paymentProvider: 'binance', amount: 25, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
       ],
       [],
     )
@@ -46,8 +46,8 @@ describe('computeOwedBalances', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 80, currency: 'eur', schoolPercentageSnapshot: null , status: 'successful' },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 80, currency: 'eur', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
       ],
       [],
     )
@@ -64,8 +64,8 @@ describe('computeOwedBalances', () => {
   it('subtracts already-paid manual payouts from the gross owed, in the matching currency only', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
-      [{ tenantId: 't1', amount: 30, currency: 'usd' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 30, currency: 'usd', coveredThrough: null }],
     )
     const usd = balanceFor(result, 't1', 'usd')!
     expect(usd.grossOwed).toBe(80)
@@ -76,8 +76,8 @@ describe('computeOwedBalances', () => {
   it('#497: a EUR payout does not reduce what is owed in USD', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
-      [{ tenantId: 't1', amount: 30, currency: 'eur' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 30, currency: 'eur', coveredThrough: null }],
     )
     const usd = balanceFor(result, 't1', 'usd')!
     expect(usd.netOwed).toBe(80) // unaffected by the EUR payout
@@ -88,8 +88,8 @@ describe('computeOwedBalances', () => {
   it('floors netOwed at 0 when payouts exceed what was owed (overpay/rounding)', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
-      [{ tenantId: 't1', amount: 500, currency: 'usd' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 500, currency: 'usd', coveredThrough: null }],
     )
     expect(balanceFor(result, 't1', 'usd')!.netOwed).toBe(0)
   })
@@ -106,7 +106,7 @@ describe('computeOwedBalances', () => {
   it('boundary schoolPercentage=0 → platform keeps everything, nothing owed', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 0 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
       [],
     )
     expect(balanceFor(result, 't1', 'usd')!.netOwed).toBe(0)
@@ -115,7 +115,7 @@ describe('computeOwedBalances', () => {
   it('boundary schoolPercentage=100 → school is owed the full amount collected', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 100 }],
-      [{ tenantId: 't1', paymentProvider: 'lemonsqueezy', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'lemonsqueezy', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
       [],
     )
     expect(balanceFor(result, 't1', 'usd')!.netOwed).toBe(100)
@@ -128,10 +128,10 @@ describe('computeOwedBalances', () => {
         { tenantId: 't2', tenantName: 'School B', schoolPercentage: 90 },
       ],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
-        { tenantId: 't2', paymentProvider: 'paypal', amount: 200, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
+        { tenantId: 't2', paymentProvider: 'paypal', amount: 200, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
       ],
-      [{ tenantId: 't1', amount: 10, currency: 'usd' }],
+      [{ tenantId: 't1', amount: 10, currency: 'usd', coveredThrough: null }],
     )
     expect(balanceFor(result, 't1', 'usd')!.netOwed).toBe(70) // 100*0.8 - 10
     expect(balanceFor(result, 't2', 'usd')!.netOwed).toBe(180) // 200*0.9, unaffected by t1's payout
@@ -143,7 +143,7 @@ describe('computeOwedBalances', () => {
         { tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 },
         { tenantId: 't2', tenantName: 'School B', schoolPercentage: 80 },
       ],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
       [],
     )
     expect(result).toHaveLength(2)
@@ -153,7 +153,7 @@ describe('computeOwedBalances', () => {
   it('#496: a plan change after a sale does not retroactively reprice it — uses the snapshotted split, not the current one', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 90 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 10000, currency: 'usd', schoolPercentageSnapshot: 100 , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 10000, currency: 'usd', schoolPercentageSnapshot: 100 , status: 'successful', transactionDate: null }],
       [],
     )
     expect(balanceFor(result, 't1', 'usd')!.grossOwed).toBe(10000)
@@ -162,7 +162,7 @@ describe('computeOwedBalances', () => {
   it('#496: transactions predating the snapshot column fall back to the tenant\'s current split', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null }],
       [],
     )
     expect(balanceFor(result, 't1', 'usd')!.grossOwed).toBe(80)
@@ -172,8 +172,8 @@ describe('computeOwedBalances', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 90 }],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: 80 , status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful' },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: 80 , status: 'successful', transactionDate: null },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null , status: 'successful', transactionDate: null },
       ],
       [],
     )
@@ -182,62 +182,167 @@ describe('computeOwedBalances', () => {
     expect(usd.grossOwed).toBe(80 + 90) // 100*0.8 + 100*0.9
   })
 
-  it('#498: a transaction refunded after being paid out reduces what is owed on the next cycle via a visible clawback', () => {
+  // #511: the four #498 cases below used to assert the double-subtraction as
+  // intended behavior. Refunded sales now leave `grossOwed` and nothing else —
+  // `clawback` is reporting-only and never a term in `netOwed`.
+  //
+  // Fixed dates so the "was this refund plausibly paid out?" comparison is
+  // deterministic. A refund counts toward `clawback` only when a payout in the
+  // same currency settled up to a point at or after the sale.
+  const SOLD_AT = '2026-01-10T00:00:00.000Z'
+  const PAID_AFTER_SALE = '2026-02-01T00:00:00.000Z'
+  const PAID_BEFORE_SALE = '2026-01-01T00:00:00.000Z'
+
+  it('#511: a refund already paid out is netted via alreadyPaid, not subtracted a second time as clawback', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded' },
+        // Asymmetric on purpose: the answer sits far from 0, so the Math.max floor
+        // cannot mask a sign error the way it did in the old 100/100/80 fixture.
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 1000, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: SOLD_AT },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT },
       ],
-      [{ tenantId: 't1', amount: 80, currency: 'usd' }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: PAID_AFTER_SALE }],
     )
     const usd = balanceFor(result, 't1', 'usd')!
     // Only the still-successful sale counts toward gross collected/owed.
-    expect(usd.grossCollected).toBe(100)
-    expect(usd.grossOwed).toBe(80)
+    expect(usd.grossCollected).toBe(1000)
+    expect(usd.grossOwed).toBe(800)
     expect(usd.alreadyPaid).toBe(80)
-    // The refunded sale's scaled share is a distinct, visible clawback — not silently netted away.
+    // Visible, because a payout plausibly covered the refunded sale...
     expect(usd.clawback).toBe(80) // 100 * 0.8
-    expect(usd.netOwed).toBe(0) // max(80 - 80 - 80, 0)
+    // ...but reporting only: 80% of net sales, minus what was already paid.
+    expect(usd.netOwed).toBe(720) // was 640 before #511
   })
 
-  it('#498: clawback is not silently absorbed — it is reported separately from grossOwed/alreadyPaid', () => {
+  it('#511: a refund that was never paid out does not reduce the balance at all', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded' }],
+      [
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 1000, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: SOLD_AT },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT },
+      ],
+      [], // nothing was ever paid out, so there is nothing to claw back
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.clawback).toBe(0)
+    expect(usd.netOwed).toBe(800) // was 720 before #511
+  })
+
+  it('#511: a refunded sale made after the last payout is not clawed back', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 500, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: SOLD_AT },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT },
+      ],
+      // Settled up to BEFORE the refunded sale even happened — it cannot have paid for it.
+      [{ tenantId: 't1', amount: 120, currency: 'usd', coveredThrough: PAID_BEFORE_SALE }],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.clawback).toBe(0)
+    expect(usd.netOwed).toBe(280) // 500*0.8 - 120
+  })
+
+  it('#511: a payout in another currency cannot make a refund count as clawed back', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT }],
+      [{ tenantId: 't1', amount: 80, currency: 'eur', coveredThrough: PAID_AFTER_SALE }],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(0)
+  })
+
+  it('#511: an undated refund is not clawed back — an unjustifiable clawback is worse than a missing one', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: null }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: PAID_AFTER_SALE }],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(0)
+  })
+
+  it('#511: a payout with no recorded date covers nothing', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: null }],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(0)
+  })
+
+  it('#511: the LATEST payout date bounds the clawback window, not the first one', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT }],
+      [
+        { tenantId: 't1', amount: 40, currency: 'usd', coveredThrough: PAID_BEFORE_SALE },
+        { tenantId: 't1', amount: 40, currency: 'usd', coveredThrough: PAID_AFTER_SALE },
+      ],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(80)
+  })
+
+  it('#511: mixed offset formats compare by instant, not lexicographically', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      // '+00:00' sorts before 'Z' as a string but is the LATER instant here.
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: '2026-01-10T00:00:00+00:00' }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: '2026-01-09T00:00:00.000Z' }],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(0)
+  })
+
+  it('#498/#511: a refunded sale is excluded from grossCollected/grossOwed but still yields a balance row', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT }],
       [],
     )
     const usd = balanceFor(result, 't1', 'usd')!
     expect(usd.grossCollected).toBe(0) // refunded sale never counted as collected
     expect(usd.grossOwed).toBe(0)
-    expect(usd.clawback).toBe(80) // still visible, even with nothing else outstanding
     expect(usd.netOwed).toBe(0)
+    expect(usd.byProvider).toEqual({}) // byProvider mirrors grossCollected
   })
 
-  it('#498: a refund in one currency does not clawback a balance owed in another currency', () => {
+  it('#498: a refund in one currency does not affect a balance owed in another currency', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
       [
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful' },
-        { tenantId: 't1', paymentProvider: 'paypal', amount: 50, currency: 'eur', schoolPercentageSnapshot: null, status: 'refunded' },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: SOLD_AT },
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 50, currency: 'eur', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT },
       ],
-      [],
+      [{ tenantId: 't1', amount: 40, currency: 'eur', coveredThrough: PAID_AFTER_SALE }],
     )
     const usd = balanceFor(result, 't1', 'usd')!
     const eur = balanceFor(result, 't1', 'eur')!
     expect(usd.clawback).toBe(0)
     expect(usd.netOwed).toBe(80) // unaffected by the EUR refund
     expect(eur.clawback).toBe(40) // 50 * 0.8
-    expect(eur.netOwed).toBe(0)
+    expect(eur.netOwed).toBe(0) // nothing successful in EUR; the 40 paid is not re-owed
   })
 
   it('#498: refund uses the transaction\'s own snapshotted split, same as a normal sale would', () => {
     const result = computeOwedBalances(
       [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 50 }],
-      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: 90, status: 'refunded' }],
-      [],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: 90, status: 'refunded', transactionDate: SOLD_AT }],
+      [{ tenantId: 't1', amount: 90, currency: 'usd', coveredThrough: PAID_AFTER_SALE }],
     )
     // Uses the 90% split in effect when the original sale happened, not the tenant's current 50%.
     expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(90)
+  })
+
+  it('#511: a fully refunded, fully paid-out school reads 0 owed, with the unrecovered share visible as clawback', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 250, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: SOLD_AT }],
+      [{ tenantId: 't1', amount: 200, currency: 'usd', coveredThrough: PAID_AFTER_SALE }],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    // The floor holds: this view never invents a negative balance...
+    expect(usd.netOwed).toBe(0)
+    // ...so clawback is the only place the 200 still to recover shows up.
+    expect(usd.clawback).toBe(200) // 250 * 0.8
   })
 })

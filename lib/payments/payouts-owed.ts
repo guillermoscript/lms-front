@@ -24,13 +24,40 @@
  * `transactions.currency` and `payouts.currency` are trusted as given; this
  * module does no currency conversion, only grouping.
  *
- * Refunds/chargebacks (issue #498): a transaction can flip from `successful`
- * to `refunded` after its payout was already recorded. Callers pass refunded
- * transactions through alongside successful ones (tagged via `status`); this
- * module scales each refund by the same split percentage a sale would've
- * used and surfaces it as a distinct `clawback` figure, subtracted from
- * `netOwed` on the next cycle rather than silently vanishing from
- * `grossCollected`/`grossOwed` with no trace.
+ * Refunds/chargebacks (issues #498, #511): a transaction can flip from
+ * `successful` to `refunded` after its payout was already recorded. Callers
+ * pass refunded transactions through alongside successful ones (tagged via
+ * `status`), and refunded sales are simply left out of
+ * `grossCollected`/`grossOwed`.
+ *
+ * That exclusion is the ONLY place a refund moves `netOwed`, and it is
+ * sufficient on its own: `alreadyPaid` is the all-time sum of recorded
+ * payouts, so it still contains whatever was paid out for a sale that later
+ * flipped to `refunded`. Dropping the sale from `grossOwed` while leaving its
+ * payout inside `alreadyPaid` recovers the overpayment automatically —
+ * 1000 successful plus a refunded 100 at an 80% split with 80 already paid
+ * gives `800 - 80 = 720`, the correct figure. Subtracting the refund a second
+ * time as a `clawback` term (as this module did before #511) understated the
+ * balance and also penalised refunds that had never been paid out at all.
+ *
+ * `clawback` therefore survives as a REPORTING-ONLY figure and is not part of
+ * the `netOwed` arithmetic. It answers "how much of what we already paid this
+ * school was for sales that have since been refunded?", so an operator can
+ * see why a balance dropped. Because it is already netted out of `netOwed` via
+ * `alreadyPaid`, it must never be collected a second time.
+ *
+ * A refund only counts toward `clawback` when a payout plausibly covered it:
+ * its `transactionDate` must fall at or before the latest `coveredThrough` of
+ * that tenant's payouts IN THE SAME CURRENCY. This is a heuristic — the module
+ * has no record of which transactions a given payout settled — so it can
+ * overstate `clawback` when a payout deliberately skipped a sale. That
+ * inaccuracy cannot move `netOwed`; making it exact needs real payout-to-
+ * transaction linkage on `payouts`.
+ *
+ * `netOwed` keeps its `Math.max(…, 0)` floor, so a school overpaid beyond its
+ * outstanding balance reads 0 rather than a negative — only a payout row moves
+ * money, and this view never invents a reverse one. The unrecovered remainder
+ * in that situation is visible through `clawback`.
  */
 
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */
@@ -52,8 +79,15 @@ export interface PlatformSettledTxn {
   currency: string
   /** revenue_splits.school_percentage in effect when this transaction was created (0–100), or null for pre-#496 rows. */
   schoolPercentageSnapshot: number | null
-  /** 'successful' contributes to grossCollected/grossOwed as normal; 'refunded' contributes its scaled amount to `clawback` instead (issue #498). */
+  /** 'successful' contributes to grossCollected/grossOwed as normal; 'refunded' is left out of both (issues #498, #511). */
   status: 'successful' | 'refunded'
+  /**
+   * `transactions.transaction_date` (ISO 8601) — that table has no `created_at`.
+   * Only read for refunded rows, to decide whether a payout plausibly covered
+   * this sale before it was refunded (issue #511). Null means "unknown", which
+   * is treated as not covered rather than assumed covered.
+   */
+  transactionDate: string | null
 }
 
 export interface ManualPayoutRecord {
@@ -61,6 +95,14 @@ export interface ManualPayoutRecord {
   amount: number
   /** payouts.currency — the currency this payout was actually recorded in. */
   currency: string
+  /**
+   * The point in time this payout is understood to settle up to (ISO 8601) —
+   * `payouts.period_end` when the payout recorded one, else `paid_at`, else
+   * `created_at`. Refunded sales dated at or before it are counted as having
+   * been paid out already (issue #511). Null means "unknown", and covers
+   * nothing.
+   */
+  coveredThrough: string | null
 }
 
 export interface CurrencyBalance {
@@ -71,9 +113,15 @@ export interface CurrencyBalance {
   grossOwed: number
   /** Sum of manual payouts already recorded as paid in this currency. */
   alreadyPaid: number
-  /** Sum over refunded transactions of amount × (that transaction's snapshotted split, or the tenant's current split) — money already paid out for sales that later got refunded (issue #498). */
+  /**
+   * REPORTING ONLY — not a term in `netOwed` (issue #511). Sum, over refunded
+   * transactions a payout plausibly covered, of amount × (that transaction's
+   * snapshotted split, or the tenant's current split): how much of what was
+   * already paid to this school was for sales that have since been refunded.
+   * `alreadyPaid` already accounts for it, so it must not be recovered again.
+   */
   clawback: number
-  /** max(grossOwed - alreadyPaid - clawback, 0) — what's currently owed in this currency. */
+  /** max(grossOwed - alreadyPaid, 0) — what's currently owed in this currency. */
   netOwed: number
   /** Per-provider breakdown of grossCollected in this currency. */
   byProvider: Record<string, number>
@@ -111,20 +159,11 @@ export function computeOwedBalances(
     return entry
   }
 
-  for (const txn of txns) {
-    const entry = bucket(txn.tenantId, txn.currency)
-    const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
-    const scaledAmount = (txn.amount * effectivePercentage) / 100
-    if (txn.status === 'refunded') {
-      entry.clawback += scaledAmount
-      continue
-    }
-    entry.grossCollected += txn.amount
-    entry.grossOwed += scaledAmount
-    entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + txn.amount
-  }
-
   const paidByTenantCurrency = new Map<string, Map<string, number>>()
+  // tenantId -> currency -> latest `coveredThrough` across that currency's payouts.
+  // Payouts are cumulative and all-time, so the latest one bounds everything any
+  // payout could have settled.
+  const coveredThroughByTenantCurrency = new Map<string, Map<string, number>>()
   for (const payout of paidPayouts) {
     let byCurrency = paidByTenantCurrency.get(payout.tenantId)
     if (!byCurrency) {
@@ -132,6 +171,52 @@ export function computeOwedBalances(
       paidByTenantCurrency.set(payout.tenantId, byCurrency)
     }
     byCurrency.set(payout.currency, (byCurrency.get(payout.currency) ?? 0) + payout.amount)
+
+    if (payout.coveredThrough) {
+      // Parsed rather than string-compared: `paid_at` and `period_end` reach us
+      // as whatever offset format their source used ('…Z' vs '…+00:00'), which
+      // lexicographic comparison gets wrong across formats.
+      const covered = Date.parse(payout.coveredThrough)
+      if (Number.isNaN(covered)) continue
+      let coveredByCurrency = coveredThroughByTenantCurrency.get(payout.tenantId)
+      if (!coveredByCurrency) {
+        coveredByCurrency = new Map()
+        coveredThroughByTenantCurrency.set(payout.tenantId, coveredByCurrency)
+      }
+      const previous = coveredByCurrency.get(payout.currency)
+      if (previous == null || covered > previous) {
+        coveredByCurrency.set(payout.currency, covered)
+      }
+    }
+  }
+
+  /**
+   * True when a payout in the same tenant AND currency settled up to a point at
+   * or after this sale, so its share plausibly went out before the refund. A
+   * missing date on either side answers false — an unjustifiable clawback is
+   * worse than a missing one (issue #511).
+   */
+  function wasPlausiblyPaidOut(txn: PlatformSettledTxn) {
+    if (!txn.transactionDate) return false
+    const soldAt = Date.parse(txn.transactionDate)
+    if (Number.isNaN(soldAt)) return false
+    const coveredThrough = coveredThroughByTenantCurrency.get(txn.tenantId)?.get(txn.currency)
+    return coveredThrough != null && soldAt <= coveredThrough
+  }
+
+  for (const txn of txns) {
+    const entry = bucket(txn.tenantId, txn.currency)
+    const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
+    const scaledAmount = (txn.amount * effectivePercentage) / 100
+    if (txn.status === 'refunded') {
+      // Reporting only. Leaving the sale out of grossOwed below is what actually
+      // corrects the balance; this just names the amount for the operator.
+      if (wasPlausiblyPaidOut(txn)) entry.clawback += scaledAmount
+      continue
+    }
+    entry.grossCollected += txn.amount
+    entry.grossOwed += scaledAmount
+    entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + txn.amount
   }
 
   return tenants.map((tenant) => {
@@ -148,7 +233,11 @@ export function computeOwedBalances(
       const grossOwed = entry?.grossOwed ?? 0
       const clawback = entry?.clawback ?? 0
       const alreadyPaid = paid.get(currency) ?? 0
-      const netOwed = Math.max(grossOwed - alreadyPaid - clawback, 0)
+      // `clawback` is deliberately absent here — refunded sales are already out
+      // of `grossOwed`, and their payouts are still inside `alreadyPaid`, so the
+      // overpayment nets out on its own. Subtracting it again double-counted the
+      // refund (issue #511).
+      const netOwed = Math.max(grossOwed - alreadyPaid, 0)
       return {
         currency,
         grossCollected,

@@ -140,8 +140,9 @@ export default async function PlatformPayoutsPage() {
           data-testid="payouts-clawback-banner"
         >
           <span className="font-medium">Refund clawback: {formatByCurrency(totalClawbackByCurrency)}.</span>{' '}
-          Some already-paid-out transactions were later refunded — this amount reduces what&apos;s
-          currently owed rather than being paid again.
+          That much of what you already paid out was for sales that have since been refunded. It is
+          already netted out of the balances below, so don&apos;t collect it again — nothing extra to
+          do here.
         </div>
       )}
 
@@ -163,7 +164,7 @@ export default async function PlatformPayoutsPage() {
                     <th className="pb-2 text-right font-medium">Collected</th>
                     <th className="pb-2 text-right font-medium">School %</th>
                     <th className="pb-2 text-right font-medium">Paid so far</th>
-                    <th className="pb-2 text-right font-medium">Clawback</th>
+                    <th className="pb-2 text-right font-medium">Of which refunded</th>
                     <th className="pb-2 text-right font-medium">Owed</th>
                     <th className="pb-2 text-right font-medium"></th>
                   </tr>
@@ -187,8 +188,14 @@ export default async function PlatformPayoutsPage() {
                       </td>
                       <td className="py-2.5 text-right tabular-nums">
                         {r.clawback > 0 ? (
-                          <span className="font-medium text-red-600 dark:text-red-400">
-                            −{money(r.clawback, r.currency)}
+                          // Not a deduction column: this is the slice of "Paid so far"
+                          // that covered sales later refunded. "Owed" already accounts
+                          // for it (#511), so it carries no minus sign.
+                          <span
+                            className="font-medium text-red-600 dark:text-red-400"
+                            title="Part of what was already paid out, for sales later refunded. Already reflected in Owed."
+                          >
+                            {money(r.clawback, r.currency)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
