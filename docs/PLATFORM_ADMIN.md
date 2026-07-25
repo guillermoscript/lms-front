@@ -70,6 +70,31 @@ const adminClient = createAdminClient()
 
 **Important gotcha:** PostgREST FK embedding (`table(related_col)`) silently fails with the admin client for some FK relationships. Always fetch related records in a separate query using `.in('id', ids)`.
 
+### Platform-wide sweeps must be paged (issue #533)
+
+PostgREST caps every response at the project's configured API **"Max rows"**. `supabase/config.toml` sets `max_rows = 1000` for the local stack; the cloud project has no `pgrst.db_max_rows` role override, so it runs on Supabase's hosted default, also **1000**. A capped response is an ordinary `200` with fewer rows in it — there is no error, no flag, and nothing downstream can tell it apart from a complete result.
+
+That makes it lethal for platform pages, which read whole cross-tenant relations and then do arithmetic over them. `getPayoutsOwed()` used to read `transactions` and `payouts` unbounded: past 1000 rows it would have underpaid or overpaid schools by however much fell off the end, confidently and silently.
+
+So: **any read whose rows are summed, counted, or iterated for side effects must use `fetchAllRows()`** (`lib/supabase/fetch-all-rows.ts`) rather than a bare `.select()`.
+
+```ts
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+
+const rows = await fetchAllRows('transactions', (from, to) =>
+  admin
+    .from('transactions')
+    .select('tenant_id, amount', { count: 'exact' })   // required — the completeness check compares against it
+    .eq('status', 'successful')
+    .order('transaction_id')                            // required — a unique key, or pages overlap/skip
+    .range(from, to)
+)
+```
+
+It pages until the relation is exhausted, shrinks its page size to whatever the server actually returns (so it is correct for any cap without knowing the number), and throws — naming the relation and both counts — if it ends up with fewer rows than the server said exist. A wrong total is worse than a failed page, so it fails.
+
+Reads that are already bounded (`.limit()`, `.single()`, a tenant-scoped page query) don't need it, and neither do aggregations done in SQL: `get_platform_stats()` and `get_platform_revenue()` sum inside Postgres and return one row, which is immune by construction and remains the better option for a large relation.
+
 ---
 
 ## Feature Areas

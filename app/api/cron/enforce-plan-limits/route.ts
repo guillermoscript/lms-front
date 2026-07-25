@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const runtime = 'nodejs'
 
@@ -46,7 +47,24 @@ export async function GET(req: NextRequest) {
 
   const supabase = getSupabaseAdmin()
 
-  const { data: tenants } = await supabase.from('tenants').select('id')
+  // Paged and verified rather than read in one shot (issue #533). A PostgREST
+  // row cap would truncate this list into a plain short array, and since the
+  // sweep's only job is to visit EVERY tenant, the tail would simply stop being
+  // reconciled with nothing in the response to say so — silently disabling the
+  // organic-growth trigger this cron exists to be. An incomplete read now fails
+  // the run loudly so the scheduler surfaces it.
+  let tenants: { id: string }[]
+  try {
+    tenants = await fetchAllRows<{ id: string }>('tenants', (from, to) =>
+      supabase.from('tenants').select('id', { count: 'exact' }).order('id').range(from, to)
+    )
+  } catch (err) {
+    console.error('enforce-plan-limits: could not read the tenant list', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to read tenants' },
+      { status: 500 }
+    )
+  }
 
   const result = {
     scheduled: 0,
@@ -59,7 +77,7 @@ export async function GET(req: NextRequest) {
     notifyFailures: 0,
   }
 
-  for (const tenant of tenants || []) {
+  for (const tenant of tenants) {
     try {
       const decision = await reconcileAccessCutoff(supabase, tenant.id, { notifyDueStages: true })
       if (decision.action === 'schedule') result.scheduled++
