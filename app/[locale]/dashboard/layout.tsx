@@ -8,6 +8,7 @@ import { UserNav } from "@/components/user-nav"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { GamificationHeaderCard } from "@/components/gamification/gamification-header-card"
 import { VerifyEmailBanner } from "@/components/shared/verify-email-banner"
+import { AccessCutoffBanner } from "@/components/shared/access-cutoff-banner"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -43,6 +44,10 @@ export default async function DashboardLayout({
                 {user?.email && !user.email_confirmed_at && (
                     <VerifyEmailBanner email={user.email} />
                 )}
+                {/* #517: admins are the only ones who can act on a plan-limit
+                    cutoff, and before this they only saw it if they happened to
+                    open the billing page. */}
+                {role === 'admin' && <AccessCutoffBanner />}
                 <div className="flex flex-1 flex-col">
                     {children}
                 </div>

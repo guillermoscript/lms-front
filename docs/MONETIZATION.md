@@ -246,6 +246,39 @@ The two sections above are **creation-time soft caps only** — they block a *ne
   - **Page/route gates**: `requireCourseAccess()` (`lib/services/course-access-guard.ts`) on every student course route — course detail, lessons, exercises (list + detail), exams (list, taker, result, review), community — plus `hasCourseAccess()` in the certificate, AI tutor and exercise-submission APIs. A refusal caused by the tenant cutoff (rather than by a missing entitlement) sends the student to `/dashboard/student/access-suspended`, which explains that the school is over its limits and that their enrollment is intact.
 - This is a deliberate decision, not an oversight: with no production users yet, real enforcement was shipped directly rather than grandfathering pre-existing over-limit usage.
 
+#### Blast radius — the cutoff is tenant-wide and all-or-nothing (issue #517)
+
+This is the single most important property of the mechanism and the easiest one to misread from the description above, so it is stated here explicitly.
+
+`has_course_access()` gates on `t.access_cutoff_at IS NULL OR t.access_cutoff_at > now()` with **no per-student predicate**. Once the cutoff passes, access is denied for **every student in the tenant, across every course**, regardless of who or what caused the tenant to go over its limit:
+
+- A free-plan school (50-student limit) that enrols its 51st student loses course access for **all 51** — not for the one student over the line, and not only for new enrolments.
+- A school over its *course* limit also loses **student** access; the two limits share one cutoff.
+- Restoration is equally all-or-nothing: the moment usage is back under the limit or the plan is upgraded, access returns for everyone at once. There is no partial or staged restoration.
+
+What the cutoff does **not** touch:
+
+- `enrollments`, `entitlements`, `transactions` and progress records are untouched — nothing is deleted, revoked or refunded. The cutoff is a gate in front of the data, not a mutation of it.
+- Teachers, admins and course authors keep access, via the `is_tenant_staff()` / author escape hatches in the RLS policies — so a school can still fix its content while cut off.
+- Published preview lessons (`is_preview`) stay public, so the school's funnel keeps working.
+- Other tenants are unaffected; `access_cutoff_at` lives on the `tenants` row.
+
+**Why all-or-nothing.** #493 §1.1 offered two options — "read-only mode past N days over limit" or "a hard student-count cutoff" — and the hard cutoff is the one that shipped. Narrowing it to only the students over the limit (e.g. the most recently enrolled) was considered and rejected: it would make one student's access depend on the join order of their peers, produce a support burden that is impossible to explain to the student affected, and require a per-student ordering rule inside a `STABLE SECURITY DEFINER` function on the hot path of every content read. The blunt version is legible to the school admin — who is the person who can actually fix it — and is reversible in one action. If per-student narrowing is ever revisited it should be its own issue, not a change smuggled into the enforcement function.
+
+#### Notification ladder (issue #517)
+
+Because the blast radius is this wide, the school has to be told more than once. #494 sent exactly one email at scheduling time — a design consequence of `decideAccessCutoffAction()` returning `'schedule'` only once per cutoff — with no retry if it failed and no message on the day access actually stopped.
+
+- **Ladder:** `scheduled` (immediately, T-14) → `reminder_7d` → `reminder_1d` → `enforced` (the first sweep after access actually stops). `accessCutoffWarningTemplate({ stage, ... })` gives each rung its own subject and copy; the `enforced` notice is written in the past tense.
+- **Ledger:** `access_cutoff_notifications` (migration `20260725100000_access_cutoff_notifications.sql`), one row per `(tenant_id, cutoff_at, stage)` under a unique constraint. Keyed on `cutoff_at` as well as tenant, so a cleared-then-rescheduled cutoff correctly starts a fresh ladder for its new deadline. Service-role only: RLS is enabled with no policies.
+- **Retry:** a ledger row is written **only** when at least one admin address actually received the mail. A rung nobody received stays unrecorded and is therefore still due on the next daily sweep. `dueCutoffNotificationStage()` returns at most one rung — always the most urgent reached-but-unsent one — so an undelivered early rung is superseded rather than queued behind an urgent one (no "you have 7 days" landing beside "access is now paused").
+- **Where it runs:** `app/api/cron/enforce-plan-limits/route.ts` passes `notifyDueStages: true`. No new cron entry was added — the sweep that already visits every tenant daily is exactly the cadence the ladder needs. Its response reports `notified` (per stage) and `notifyFailures`, so a failing mail provider is visible in the cron log instead of silent. Event-driven call sites (join-school, course creation, plan changes) do **not** pass the flag, so user-facing actions never pay email latency for a reminder the cron will send anyway.
+
+#### In-app signals (issue #517)
+
+- **Tenant admins**: `<AccessCutoffBanner />` (`components/shared/access-cutoff-banner.tsx`) renders in the dashboard shell (`app/[locale]/dashboard/layout.tsx`) for `role === 'admin'`, on every admin page rather than only on billing. Two states — scheduled (days remaining) and active (access paused) — both naming the school-wide blast radius in the same words as the email. Deliberately **not** dismissible: a dismissed countdown to losing all student access is indistinguishable from no countdown. Backed by `describeAccessCutoff()` / `getAccessCutoffNotice()` (`lib/billing/access-cutoff-notice.ts`), a single indexed single-row read gated to admins.
+- **Students**: `/dashboard/student/access-suspended` (shipped in #509, above) is the specific "your school's account needs attention" state — it names the school's plan limits as the cause and states that the enrolment is intact.
+
 ---
 
 ## Currency Support

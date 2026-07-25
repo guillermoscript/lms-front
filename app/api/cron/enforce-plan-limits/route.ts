@@ -16,6 +16,17 @@ export const runtime = 'nodejs'
  * `tenants.access_cutoff_at` against its current plan/usage, regardless of
  * plan (a free-plan tenant needs this as much as a paid one).
  *
+ * It is also the only thing that runs repeatedly while a cutoff is pending,
+ * which makes it the right home for the #517 reminder ladder: `notifyDueStages`
+ * tells the reconciler to send whichever rung (T-7, T-1, or the day access
+ * actually stops) is due and not yet in the `access_cutoff_notifications`
+ * ledger. That is why no separate cron entry was added — the sweep that
+ * already visits every tenant daily is exactly the cadence the ladder needs.
+ *
+ * `notified` / `notifyFailures` in the response make send health visible:
+ * before #517 a failing mail provider left the schedule in place and said
+ * nothing, so the school's first signal was students losing access.
+ *
  * Secured by CRON_SECRET env var (set the same value in the cron scheduler).
  */
 
@@ -37,14 +48,28 @@ export async function GET(req: NextRequest) {
 
   const { data: tenants } = await supabase.from('tenants').select('id')
 
-  const result = { scheduled: 0, cleared: 0, none: 0, errors: 0 }
+  const result = {
+    scheduled: 0,
+    cleared: 0,
+    none: 0,
+    errors: 0,
+    /** Reminder-ladder rungs delivered this run, keyed by stage (#517). */
+    notified: {} as Record<string, number>,
+    /** Tenants where a rung was due but nobody received it; retried tomorrow. */
+    notifyFailures: 0,
+  }
 
   for (const tenant of tenants || []) {
     try {
-      const decision = await reconcileAccessCutoff(supabase, tenant.id)
+      const decision = await reconcileAccessCutoff(supabase, tenant.id, { notifyDueStages: true })
       if (decision.action === 'schedule') result.scheduled++
       else if (decision.action === 'clear') result.cleared++
       else result.none++
+
+      if (decision.notifiedStage) {
+        result.notified[decision.notifiedStage] = (result.notified[decision.notifiedStage] ?? 0) + 1
+      }
+      if (decision.notifyFailed) result.notifyFailures++
     } catch (err) {
       console.error('enforce-plan-limits: reconcile failed for tenant', tenant.id, err)
       result.errors++
