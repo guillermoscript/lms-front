@@ -51,6 +51,24 @@ interface BinancePassThrough {
   productId?: string
 }
 
+/**
+ * Binance settles our orders in a 1:1 USD stablecoin while the transaction row
+ * carries the product's fiat currency ('usd'), so a refund webhook reporting
+ * 'USDT' describes the same unit of account as a transaction reading 'usd'.
+ * Mapping the peg here keeps that knowledge with the provider that has it and
+ * lets `dispatchBillingEvent` compare currencies strictly (issue #547).
+ *
+ * Anything not on this list is passed through lowercased rather than guessed
+ * at — an unrecognised ticker SHOULD read as a mismatch downstream and fall
+ * back to a full refund.
+ */
+const USD_PEGGED_TICKERS = new Set(['usdt', 'usdc', 'busd', 'fdusd', 'tusd'])
+
+export function normalizeBinanceCurrency(raw: string): string {
+  const lower = String(raw).toLowerCase()
+  return USD_PEGGED_TICKERS.has(lower) ? 'usd' : lower
+}
+
 export class BinancePayProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'binance'
 
@@ -68,6 +86,7 @@ export class BinancePayProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }
 
@@ -317,11 +336,30 @@ export class BinancePayProvider implements IPaymentProvider {
     }
 
     if (bizType === 'PAY_REFUND' && bizStatus === 'REFUND_SUCCESS') {
+      // Binance states amounts as decimals in major units of the order's
+      // currency — no scaling, unlike Lemon Squeezy's cents. The refund
+      // notification nests the figure under `refundInfo`; older/flatter
+      // payloads put it at the top level, and `totalFee` (the ORDER total) is
+      // the last resort, which equals the refund only when it is a full one —
+      // the same answer the dispatcher's absent-amount fallback would give.
+      const refundInfo = data.refundInfo ?? {}
+      const rawAmount =
+        refundInfo.refundedAmount ?? data.refundedAmount ?? refundInfo.refundAmount ?? data.refundAmount
+      const value = Number.parseFloat(String(rawAmount ?? ''))
+      // Binance denominates our orders in USDT (see createCheckout), while the
+      // transaction row they settle carries the product's fiat currency, 'usd'.
+      // That peg is 1:1 and it is this mapper's job to know it — the dispatcher
+      // compares currencies strictly and would otherwise discard every Binance
+      // refund amount as a mismatch, silently reverting §1 for this provider.
+      const rawCurrency: string | undefined = refundInfo.currency ?? data.currency
+      const currency = rawCurrency ? normalizeBinanceCurrency(rawCurrency) : undefined
       return {
         type: 'refund.succeeded',
         providerEventId,
         providerPaymentId: bizId,
         reference,
+        ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+        ...(currency ? { currency: String(currency).toLowerCase() } : {}),
         raw: payload,
       }
     }

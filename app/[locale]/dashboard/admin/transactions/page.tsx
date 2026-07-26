@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
 
 function getInitials(name: string): string {
   return name
@@ -72,10 +73,13 @@ export default async function AdminTransactionsPage({
   const usersMap = new Map((users || []).map((u) => [u.id, u]))
 
   // Calculate totals
+  // Net of refunds (#547): a partially refunded sale keeps status 'successful'
+  // and records the slice, so `amount` alone overstates what was kept.
+  // `pendingAmount` below needs no such treatment — a pending sale has no refund.
   const totalRevenue =
     transactions
       ?.filter((t) => t.status === 'successful')
-      .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+      .reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0) || 0
 
   const pendingAmount =
     transactions

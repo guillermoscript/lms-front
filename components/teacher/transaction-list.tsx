@@ -17,7 +17,7 @@ interface Transaction {
   amount: string
   status: string
   payment_provider: string
-  created_at: string
+  transaction_date: string
 }
 
 interface TransactionListProps {
@@ -66,7 +66,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
             {transactions.map((transaction, index) => (
               <TableRow key={index}>
                 <TableCell>
-                  {new Date(transaction.created_at).toLocaleDateString(undefined, {
+                  {new Date(transaction.transaction_date).toLocaleDateString(undefined, {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',

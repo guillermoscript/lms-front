@@ -77,9 +77,24 @@
  * inaccuracy cannot move `netOwed`; making it exact needs real payout-to-
  * transaction linkage on `payouts`.
  *
- * `netOwed` keeps its `Math.max(…, 0)` floor, so a school overpaid beyond its
- * outstanding balance reads 0 rather than a negative — only a payout row moves
- * money, and this view never invents a reverse one.
+ * `netOwed` keeps its floor at 0, so a school overpaid beyond its outstanding
+ * balance reads 0 rather than a negative — only a payout row moves money, and
+ * this view never invents a reverse one.
+ *
+ * Issue #547 made that floor a half-cent threshold rather than a comparison
+ * against 0, and rounds each transaction's share to whole cents before summing.
+ * Unrounded, one $49.99 sale at 80% owes `39.992`; the operator pays the
+ * `39.99` the dialog offers (`payouts.amount` is `NUMERIC(10,2)` — whole cents
+ * are all that can be recorded), and the school is left owed `0.002` forever,
+ * rendered as `$0.00` on a row whose Mark-as-paid button never stops inviting a
+ * second payment. Any `.99` price at any non-trivial split does this, and the
+ * residue compounds each cycle. `roundMoney` and `MONEY_EPSILON` below are the
+ * two halves of the fix, and every consumer of `netOwed` must compare against
+ * the latter rather than against 0.
+ *
+ * Also since #547, a refund is not all-or-nothing: a `successful` row carrying
+ * a non-zero `refundedAmount` contributes `amount - refundedAmount`, so a
+ * partial refund removes only what was actually given back.
  *
  * #516: that floor also hid the overpayment's size. `overpaid` reports it
  * explicitly — `alreadyPaid - grossOwed` when positive, else 0 — while
@@ -101,6 +116,69 @@
 /** Used when a tenant has no `revenue_splits` row yet (shouldn't normally happen, but keeps callers from dividing by an absent value). */
 export const DEFAULT_SCHOOL_PERCENTAGE = 80
 
+/**
+ * Half a cent — the width of the gap between a balance that is settled and one
+ * that merely rounds to `$0.00` on screen (issue #547).
+ *
+ * `payouts.amount` is `NUMERIC(10,2)`, so an operator can only ever pay whole
+ * cents, while an unrounded share (a $49.99 sale at 80% = `39.992`) is not one.
+ * The difference parked `0.002` as a permanent balance on a row rendering
+ * `$0.00` whose Mark-as-paid button stayed enabled forever. Every consumer of
+ * `netOwed` compares against THIS, never against 0.
+ */
+export const MONEY_EPSILON = 0.005
+
+/**
+ * Round to the currency's minor unit, half away from zero.
+ *
+ * Applied to each transaction's share BEFORE accumulating, not to the total:
+ * the total is what an operator pays in whole cents, so the residue has to be
+ * resolved per row or it re-accumulates every cycle.
+ *
+ * `Math.round` is half-UP, which on the school's share means a tie (…5 at the
+ * third decimal) goes to the school. That is the deliberate direction: the
+ * platform computes this number and must not round systematically in its own
+ * favour. The `Number.EPSILON` nudge keeps values like `1.005` — stored as
+ * 1.00499999999999989 in binary float — from rounding DOWN and quietly
+ * reversing that choice.
+ */
+export function roundMoney(value: number): number {
+  const scaled = value * 100
+  return Math.round(scaled + (scaled >= 0 ? Number.EPSILON : -Number.EPSILON) * Math.abs(scaled)) / 100
+}
+
+/**
+ * A payout more than 10% off the currently owed balance is flagged for
+ * confirmation (it catches a mistyped extra zero) without ever hard-blocking a
+ * legitimate rounded or ahead-of-schedule payment.
+ */
+export const MISMATCH_THRESHOLD_PCT = 0.1
+
+/**
+ * True when a payout is far enough from the outstanding balance to be worth a
+ * second look.
+ *
+ * Lives here rather than beside `markPayoutPaid` for two reasons: a `'use
+ * server'` module may only export async functions, and the boundary needs
+ * direct coverage (#547). At `netOwed === 0` the tolerance is 0, so ANY
+ * positive amount is challenged — the right behaviour (a school owed nothing
+ * should not be paid without a deliberate confirmation), but one that was
+ * previously reachable only through the whole server action and had no test at
+ * all.
+ */
+export function isPayoutMismatch(amount: number, netOwed: number): boolean {
+  return Math.abs(amount - netOwed) > netOwed * MISMATCH_THRESHOLD_PCT
+}
+
+/**
+ * What the platform actually kept from a sale: the amount minus anything
+ * refunded (issue #547). Floors at 0 so an over-reported refund can never
+ * invert a sale into a negative.
+ */
+export function netOfRefunds(amount: number, refundedAmount: number | null | undefined): number {
+  return Math.max(amount - (refundedAmount ?? 0), 0)
+}
+
 export interface TenantOwedInput {
   tenantId: string
   tenantName: string
@@ -115,9 +193,19 @@ export interface PlatformSettledTxn {
   amount: number
   /** transactions.currency (e.g. 'usd', 'eur'). */
   currency: string
+  /**
+   * `transactions.refunded_amount` — how much of `amount` has been given back,
+   * in the same currency and major units (issue #547). Null/absent = nothing.
+   *
+   * A PARTIAL refund arrives here as a `successful` row with this set, and only
+   * the refunded slice leaves `grossCollected`/`grossOwed`. Before #547 every
+   * refund flipped the row to `refunded` wholesale, so a $10 goodwill refund on
+   * a $100 sale dropped all $100 — under-paying the school $72 at an 80% split.
+   */
+  refundedAmount?: number | null
   /** revenue_splits.school_percentage in effect when this transaction was created (0–100), or null for pre-#496 rows. */
   schoolPercentageSnapshot: number | null
-  /** 'successful' contributes to grossCollected/grossOwed as normal; 'refunded' is left out of both (issues #498, #511). */
+  /** 'successful' contributes (net of `refundedAmount`) to grossCollected/grossOwed; 'refunded' — a FULL refund — is left out of both (issues #498, #511, #547). */
   status: 'successful' | 'refunded'
   /**
    * `transactions.transaction_date` (ISO 8601) — that table has no `created_at`.
@@ -159,10 +247,10 @@ export interface CurrencyBalance {
    * `alreadyPaid` already accounts for it, so it must not be recovered again.
    */
   clawback: number
-  /** max(grossOwed - alreadyPaid, 0) — what's currently owed in this currency. */
+  /** grossOwed - alreadyPaid, floored to 0 below half a cent (`MONEY_EPSILON`) — what's currently owed in this currency. */
   netOwed: number
   /**
-   * max(alreadyPaid - grossOwed, 0) — how far past the outstanding balance this
+   * alreadyPaid - grossOwed, floored to 0 below half a cent — how far past the outstanding balance this
    * school has been paid in this currency (issue #516). Mutually exclusive with
    * `netOwed`: at most one of the two is ever non-zero. Carried forward, not
    * clawed back — it shrinks on its own as new sales land.
@@ -252,16 +340,25 @@ export function computeOwedBalances(
   for (const txn of txns) {
     const entry = bucket(txn.tenantId, txn.currency)
     const effectivePercentage = txn.schoolPercentageSnapshot ?? schoolPercentageByTenant.get(txn.tenantId) ?? 0
-    const scaledAmount = (txn.amount * effectivePercentage) / 100
+    // Partial refunds reduce the sale rather than erasing it (#547). A fully
+    // refunded row reaches the branch below and leaves entirely, as before.
+    const kept = netOfRefunds(txn.amount, txn.refundedAmount)
+    // Rounded PER TRANSACTION, before accumulating — see `roundMoney`.
+    const scaledAmount = roundMoney((kept * effectivePercentage) / 100)
     if (txn.status === 'refunded') {
       // Reporting only. Leaving the sale out of grossOwed below is what actually
-      // corrects the balance; this just names the amount for the operator.
-      if (wasPlausiblyPaidOut(txn)) entry.clawback += scaledAmount
+      // corrects the balance; this just names the amount for the operator. Uses
+      // the FULL sale: a row that reached 'refunded' has `refunded_amount` equal
+      // to `amount`, so `kept` is 0 and the operator would be told a payout for
+      // a refunded sale was worth nothing.
+      if (wasPlausiblyPaidOut(txn)) {
+        entry.clawback += roundMoney((txn.amount * effectivePercentage) / 100)
+      }
       continue
     }
-    entry.grossCollected += txn.amount
+    entry.grossCollected += kept
     entry.grossOwed += scaledAmount
-    entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + txn.amount
+    entry.byProvider[txn.paymentProvider] = (entry.byProvider[txn.paymentProvider] ?? 0) + kept
   }
 
   return tenants.map((tenant) => {
@@ -274,18 +371,24 @@ export function computeOwedBalances(
 
     const balances: CurrencyBalance[] = Array.from(currencies).map((currency) => {
       const entry = collected.get(currency)
-      const grossCollected = entry?.grossCollected ?? 0
-      const grossOwed = entry?.grossOwed ?? 0
-      const clawback = entry?.clawback ?? 0
-      const alreadyPaid = paid.get(currency) ?? 0
+      // Re-rounded on the way out: each term is a sum of already-rounded cents,
+      // but float addition still leaves dust (0.1 + 0.2 = 0.30000000000000004).
+      const grossCollected = roundMoney(entry?.grossCollected ?? 0)
+      const grossOwed = roundMoney(entry?.grossOwed ?? 0)
+      const clawback = roundMoney(entry?.clawback ?? 0)
+      const alreadyPaid = roundMoney(paid.get(currency) ?? 0)
+      const difference = roundMoney(grossOwed - alreadyPaid)
       // `clawback` is deliberately absent here — refunded sales are already out
       // of `grossOwed`, and their payouts are still inside `alreadyPaid`, so the
       // overpayment nets out on its own. Subtracting it again double-counted the
       // refund (issue #511).
-      const netOwed = Math.max(grossOwed - alreadyPaid, 0)
+      //
+      // Settled below half a cent reads as settled (issue #547): a residue no
+      // operator can pay must not leave a row permanently actionable.
+      const netOwed = difference > MONEY_EPSILON ? difference : 0
       // The same difference in the other direction, reported rather than
       // clamped away (issue #516).
-      const overpaid = Math.max(alreadyPaid - grossOwed, 0)
+      const overpaid = -difference > MONEY_EPSILON ? -difference : 0
       return {
         currency,
         grossCollected,
@@ -294,7 +397,9 @@ export function computeOwedBalances(
         clawback,
         netOwed,
         overpaid,
-        byProvider: entry?.byProvider ?? {},
+        byProvider: Object.fromEntries(
+          Object.entries(entry?.byProvider ?? {}).map(([provider, total]) => [provider, roundMoney(Number(total))]),
+        ),
       }
     })
 

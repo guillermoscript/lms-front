@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { nanoid } from "nanoid"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { markPayoutPaid } from "@/app/actions/platform/payouts"
+import { MONEY_EPSILON } from "@/lib/payments/payouts-owed"
 
 interface Props {
   tenantId: string
@@ -32,10 +34,19 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [mismatch, setMismatch] = useState<{ netOwed: number } | null>(null)
+  // One key per dialog OPEN, replayed by every retry of this submission — a
+  // double-click, a reload, a second tab, a second super admin on the same row
+  // and a server-action retry all resolve to the same `payouts` row (#547).
+  // `nanoid`, not `crypto.randomUUID`: the latter is undefined outside a secure
+  // context, and this app is served over plain HTTP in local development.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => nanoid())
 
   function resetForm() {
     setNote('')
     setMismatch(null)
+    // The next open is a genuinely new payout and must be able to record a
+    // second row for the same amount.
+    setIdempotencyKey(nanoid())
   }
 
   async function handleConfirm() {
@@ -53,7 +64,14 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
       // `markPayoutPaid` re-runs on the new value. Keep those two in step — an
       // isolated read of this line looks bypass-prone, which is what #516 §2
       // reported.
-      const result = await markPayoutPaid(tenantId, parsed, currency, note.trim() || undefined, mismatch !== null)
+      const result = await markPayoutPaid(
+        tenantId,
+        parsed,
+        currency,
+        note.trim() || undefined,
+        mismatch !== null,
+        idempotencyKey,
+      )
       if (result.status === 'warning') {
         setMismatch({ netOwed: result.netOwed })
         return
@@ -79,7 +97,11 @@ export function MarkPayoutPaidDialog({ tenantId, tenantName, netOwed, currency }
         size="sm"
         variant="outline"
         onClick={() => setOpen(true)}
-        disabled={netOwed <= 0}
+        // Compared against half a cent, not 0: an unrounded residue like
+        // `0.002` renders as `$0.00` while leaving this button enabled forever,
+        // inviting a payment no operator can actually make (#547). Same
+        // threshold the balance itself is floored with.
+        disabled={netOwed < MONEY_EPSILON}
         data-testid="mark-paid-btn"
       >
         {t('trigger')}

@@ -4413,6 +4413,7 @@ export type Database = {
           amount: number
           created_at: string | null
           currency: string | null
+          idempotency_key: string | null
           failed_at: string | null
           failure_reason: string | null
           note: string | null
@@ -4431,6 +4432,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           currency?: string | null
+          idempotency_key?: string | null
           failed_at?: string | null
           failure_reason?: string | null
           note?: string | null
@@ -4449,6 +4451,7 @@ export type Database = {
           amount?: number
           created_at?: string | null
           currency?: string | null
+          idempotency_key?: string | null
           failed_at?: string | null
           failure_reason?: string | null
           note?: string | null
@@ -5951,6 +5954,7 @@ export type Database = {
           provider_charge_id: string | null
           provider_metadata: Json | null
           provider_subscription_id: string | null
+          refunded_amount: number
           school_percentage_snapshot: number | null
           settlement_base: number | null
           settlement_currency: string | null
@@ -5973,6 +5977,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          refunded_amount?: number
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
@@ -5995,6 +6000,7 @@ export type Database = {
           provider_charge_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
+          refunded_amount?: number
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null

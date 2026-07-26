@@ -17,6 +17,39 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NormalizedBillingEvent } from './types'
 
+/**
+ * The amount a `refund.succeeded` event gave back, in major units of the
+ * transaction's own currency (issue #547).
+ *
+ * Two fallbacks, both deliberately landing on "the whole sale" — the behaviour
+ * that predates #547, so an unexpected payload degrades to the status quo
+ * rather than to a silently under-recorded refund:
+ *
+ *   - **No amount.** The provider didn't say, so we can't claim it was partial.
+ *   - **Currency disagreement.** The figure is in a different unit of account.
+ *     It is discarded rather than converted: this module has no rates, and a
+ *     mis-scaled number here moves real money in a payout. Provider-specific
+ *     equivalences (Binance's USD-pegged stablecoins) are resolved in that
+ *     provider's own mapper, so anything still mismatched here is genuine.
+ */
+function refundedSlice(
+  event: { amount?: number; currency?: string },
+  txCurrency: string | null | undefined,
+  saleAmount: number,
+  txnId: number,
+): number {
+  if (event.amount == null || !Number.isFinite(event.amount) || event.amount <= 0) return saleAmount
+  const eventCurrency = event.currency?.toLowerCase()
+  const rowCurrency = txCurrency?.toLowerCase()
+  if (eventCurrency && rowCurrency && eventCurrency !== rowCurrency) {
+    console.error(
+      `[webhook] refund for transaction ${txnId} reported in ${eventCurrency} but the sale is in ${rowCurrency} — ignoring the amount and treating it as a FULL refund`,
+    )
+    return saleAmount
+  }
+  return event.amount
+}
+
 export interface DispatchContext {
   /** Provider slug — used as the payment_provider match key. */
   provider: string
@@ -226,15 +259,17 @@ export async function dispatchBillingEvent(
       // Binance `PAY_REFUND`/`REFUND_SUCCESS`). Two separate decisions here,
       // which used to be conflated into a single product-only guard (#515):
       //
-      //   1. RECORD THE MONEY. `transactions.status` → 'refunded' for both kinds.
-      //      This is what `getPayoutsOwed()` reads: `computeOwedBalances` leaves
-      //      refunded sales out of `grossOwed`, so the school is no longer owed
-      //      a share of money the platform gave back. Skipping this for plan
-      //      rows meant a refunded subscription was never clawed back on the
+      //   1. RECORD THE MONEY, to the cent. `refunded_amount` accumulates the
+      //      refunded slice for both kinds; `status` → 'refunded' only once the
+      //      whole sale is back. This is what `getPayoutsOwed()` reads:
+      //      `computeOwedBalances` scales (amount − refunded_amount), so the
+      //      school stops being owed a share of exactly the money the platform
+      //      gave back — no more, no less (#547). Skipping this for plan rows
+      //      meant a refunded subscription was never clawed back on the
       //      platform-settled providers (#498 follow-up). The legacy Stripe
       //      Connect route already flips both kinds (`charge.refunded`).
       //
-      //   2. REVOKE ACCESS. Products only, unchanged. No trigger revokes product
+      //   2. REVOKE ACCESS — on a FULL refund only (#547). Products only. No trigger revokes product
       //      entitlements (trigger_manage_transactions acts on
       //      successful/failed), so it is done explicitly here. Subscription
       //      access stays owned by subscription.canceled/expired, which write
@@ -250,7 +285,7 @@ export async function dispatchBillingEvent(
 
       const { data: tx } = await admin
         .from('transactions')
-        .select('transaction_id, status, user_id, plan_id, product_id')
+        .select('transaction_id, status, user_id, plan_id, product_id, amount, currency, refunded_amount')
         .eq('transaction_id', txnId)
         .maybeSingle()
 
@@ -258,14 +293,38 @@ export async function dispatchBillingEvent(
       if (!tx || tx.status !== 'successful') break
       if (!tx.product_id && !tx.plan_id) break
 
+      // How much of the sale this refund actually gave back (#547). All three
+      // platform-settled providers support partial refunds, and treating every
+      // one as total removed the WHOLE sale from `grossOwed` — under-paying the
+      // school for money it was still owed — and revoked course access from a
+      // student who had only been refunded a slice.
+      const saleAmount = Number(tx.amount ?? 0)
+      const priorRefunded = Number(tx.refunded_amount ?? 0)
+      const slice = refundedSlice(event, tx.currency, saleAmount, txnId)
+      // Clamped: a provider that over-reports (or a second event replaying a
+      // cumulative total) can only ever reach a full refund, never a negative
+      // balance owed.
+      const newRefunded = Math.min(priorRefunded + slice, saleAmount)
+      // A cent of tolerance: NUMERIC(10,2) money compared with float arithmetic.
+      const isFullRefund = newRefunded >= saleAmount - 0.005
+
       const { error: refErr } = await admin
         .from('transactions')
-        .update({ status: 'refunded' })
+        .update({
+          // A partial refund keeps the row 'successful' and records the slice —
+          // the same shape the legacy Stripe route has always used
+          // (app/api/stripe/webhook/route.ts, `isFullRefund`). Readers subtract
+          // `refunded_amount` from `amount`.
+          status: isFullRefund ? 'refunded' : 'successful',
+          refunded_amount: newRefunded,
+        })
         .eq('transaction_id', txnId)
         .eq('status', 'successful')
       if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
 
-      if (tx.product_id) {
+      // Access follows the FULL refund only. A student refunded $10 of a $100
+      // course keeps the course.
+      if (tx.product_id && isFullRefund) {
         const { error: entErr } = await admin
           .from('entitlements')
           .update({ status: 'revoked', revoked_at: new Date().toISOString() })

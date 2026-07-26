@@ -23,6 +23,7 @@ import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
 
 export default async function AdminDashboardPage({
   params,
@@ -79,9 +80,9 @@ export default async function AdminDashboardPage({
       .eq('subscription_status', 'active'),
     supabase
       .from('transactions')
-      .select('transaction_id, amount, status, created_at, user_id')
+      .select('transaction_id, amount, status, transaction_date, user_id')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
+      .order('transaction_date', { ascending: false })
       .limit(5),
     supabase
       .from('tenant_users')
@@ -120,7 +121,7 @@ export default async function AdminDashboardPage({
     { count: studentCount },
     { data: onboardingSettings },
   ] = await Promise.all([
-    supabase.from('transactions').select('amount')
+    supabase.from('transactions').select('amount, refunded_amount')
       .eq('tenant_id', tenantId).eq('status', 'successful'),
     adminClient.from('tenants').select('plan, stripe_account_id')
       .eq('id', tenantId).single(),
@@ -131,8 +132,11 @@ export default async function AdminDashboardPage({
       .in('setting_key', ['site_name', 'theme_preset', 'logo_url', 'manual_payment_instructions']),
   ])
 
+  // Net of refunds (#547). A PARTIALLY refunded sale stays 'successful' and
+  // carries the slice in `refunded_amount`, so summing `amount` alone would
+  // count money the school gave back. Only a FULL refund leaves this filter.
   const totalRevenue =
-    successfulTransactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+    successfulTransactions?.reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0) || 0
 
   // platformPlan depends on tenant.plan -- must be sequential
   const planSlug = tenant?.plan || 'free'
@@ -417,7 +421,7 @@ export default async function AdminDashboardPage({
                         {transaction.user?.full_name || t('recentActivity.unknown')}
                       </p>
                       <p className="truncate text-[11px] text-muted-foreground tabular-nums">
-                        {new Date(transaction.created_at).toLocaleDateString()}
+                        {new Date(transaction.transaction_date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="ml-4 text-right">

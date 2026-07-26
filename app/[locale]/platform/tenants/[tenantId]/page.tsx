@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { TenantActionsMenu } from '../tenant-actions-menu'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
 
 export default async function TenantDetailPage({
   params,
@@ -44,9 +45,9 @@ export default async function TenantDetailPage({
       .eq('tenant_id', tenantId),
     adminClient
       .from('transactions')
-      .select('transaction_id, amount, status, created_at')
+      .select('transaction_id, amount, refunded_amount, status, transaction_date')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
+      .order('transaction_date', { ascending: false })
       .limit(20),
     adminClient
       .from('tenant_users')
@@ -63,7 +64,8 @@ export default async function TenantDetailPage({
 
   const monthlyRevenue = (recentTransactions || [])
     .filter(t => t.status === 'successful')
-    .reduce((sum, t) => sum + (t.amount || 0), 0)
+    // Net of refunds (#547) — a partially refunded sale is still 'successful'.
+    .reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0)
 
   // Fetch profiles for admin users separately (more reliable than FK embedding)
   const adminUserIds = (adminUsers || []).map(u => u.user_id)
@@ -209,7 +211,7 @@ export default async function TenantDetailPage({
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {format(new Date(t.created_at), 'MMM d, yyyy')}
+                        {format(new Date(t.transaction_date), 'MMM d, yyyy')}
                       </td>
                     </tr>
                   ))}

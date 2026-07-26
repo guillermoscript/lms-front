@@ -84,6 +84,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }
 
@@ -601,11 +602,20 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       case 'PAYMENT.CAPTURE.REFUNDED': {
         // Refund resources echo the capture's custom_id.
         const { reference } = decodePayPalCustomId(resource.custom_id)
+        // PayPal states refund money as a decimal STRING in major units
+        // ('10.00' = ten dollars), so it needs parsing but no scaling. Carrying
+        // it is what lets a partial refund subtract only its own slice instead
+        // of erasing the whole sale (#547); omitting it on a malformed payload
+        // leaves the dispatcher on its full-refund fallback.
+        const value = Number.parseFloat(resource.amount?.value)
+        const currency: string | undefined = resource.amount?.currency_code
         return {
           type: 'refund.succeeded',
           providerEventId,
           providerPaymentId: resource.id,
           reference,
+          ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+          ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
       }
