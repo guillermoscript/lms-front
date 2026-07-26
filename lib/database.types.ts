@@ -4793,6 +4793,7 @@ export type Database = {
           mode: string
           questions: Json
           score: number
+          session_id: string
           source: string
           source_exercise_id: number | null
           tenant_id: string
@@ -4810,6 +4811,7 @@ export type Database = {
           mode?: string
           questions: Json
           score: number
+          session_id?: string
           source?: string
           source_exercise_id?: number | null
           tenant_id: string
@@ -4827,6 +4829,7 @@ export type Database = {
           mode?: string
           questions?: Json
           score?: number
+          session_id?: string
           source?: string
           source_exercise_id?: number | null
           tenant_id?: string
@@ -6521,6 +6524,10 @@ export type Database = {
         Returns: undefined
       }
       publish_scheduled_lessons: { Args: never; Returns: undefined }
+      redeem_store_item: {
+        Args: { _item_id: string; _tenant_id: string; _user_id: string }
+        Returns: Json
+      }
       refresh_leaderboard_cache: { Args: never; Returns: undefined }
       register_push_token: {
         Args: { _device_name?: string; _platform: string; _token: string }

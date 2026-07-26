@@ -6,6 +6,11 @@
  * all handled in SQL. pg_cron ('league-weekly-rollover', Mondays 00:05) is the
  * primary scheduler — this route is a manual trigger + Dokploy/Vercel fallback.
  *
+ * Missed ticks need no special handling and no _week_start argument: since
+ * issue #549 the rollover resolves the previous week from the data and
+ * finalizes every still-unfinalized week, so simply running it late is the
+ * catch-up path. It used to reset every student to Bronze in that situation.
+ *
  * Secured by CRON_SECRET (Bearer token).
  */
 
