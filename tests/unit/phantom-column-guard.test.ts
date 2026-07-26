@@ -79,6 +79,18 @@ function columnsOf(table: string): Set<string> {
   return columns
 }
 
+/**
+ * Source with comments removed.
+ *
+ * Load-bearing, not cosmetic: both guards below ask "does this file mention X",
+ * and the fix for X naturally leaves prose *about* X in a comment right next to
+ * the code. Matching raw text therefore lets a file explain the bug it still
+ * has — which is exactly what happened while writing these, twice.
+ */
+function withoutComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
+
 interface Reference {
   file: string
   table: string
@@ -184,12 +196,62 @@ describe('applies_to_providers stays retired (#547 §3)', () => {
         // explanatory comments) is fine too; only a READ reopens the divergence,
         // so comments are stripped before matching.
         if (file.endsWith('database.types.ts')) continue
-        const source = readFileSync(file, 'utf8')
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
-        if (source.includes('applies_to_providers')) offenders.push(file)
+        if (withoutComments(readFileSync(file, 'utf8')).includes('applies_to_providers')) offenders.push(file)
       }
     }
     expect(offenders).toEqual([])
+  })
+})
+
+/**
+ * An accumulator line — `sum + t.amount`, `sum + Number(t.amount)`,
+ * `sum + netOfRefunds(t.amount, …)`. Matched per line rather than from
+ * `reduce(` onwards, because the callback's own `(sum, t) =>` closes a paren
+ * and a naive `[^)]*` scan stops dead at it (which it did, silently passing).
+ */
+const SUMS_AMOUNT = /\bsum\s*\+[^\n]*\bamount\b/
+
+describe('refund-aware money sums (#547 §1)', () => {
+  /**
+   * A partial refund leaves the row `status = 'successful'` and records the
+   * slice in `refunded_amount`. Every place that SUMS `transactions.amount`
+   * must therefore subtract it, or it reports money the school gave back.
+   *
+   * This one is a guard against the fix itself: before #547 a refund of any
+   * size flipped the row to `refunded`, so a `status = 'successful'` sum was
+   * complete by construction and no caller had to think about it. Making
+   * partial refunds representable is what put that assumption in reach — and
+   * three totals (the admin dashboard card, the admin transactions list, the
+   * platform tenant-detail page) were still relying on it, found only by
+   * grepping for it after the fact.
+   */
+  it('every file that sums transactions.amount also accounts for refunds', () => {
+    const offenders: string[] = []
+    for (const root of ROOTS) {
+      for (const file of sourceFiles(root)) {
+        const source = withoutComments(readFileSync(file, 'utf8'))
+        if (!/\.from\(\s*['"`]transactions['"`]\s*\)/.test(source)) continue
+        // A reduce that accumulates an `amount` — the shape every one of these
+        // totals takes.
+        if (!SUMS_AMOUNT.test(source)) continue
+        if (source.includes('refunded_amount') || source.includes('netOfRefunds')) continue
+        offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('is not vacuous — it recognises the totals it is meant to police', () => {
+    // If the regex stops matching, the test above passes forever on an empty
+    // set. Pin that the known money-summing readers are actually being seen.
+    const seen: string[] = []
+    for (const root of ROOTS) {
+      for (const file of sourceFiles(root)) {
+        const source = withoutComments(readFileSync(file, 'utf8'))
+        if (!/\.from\(\s*['"`]transactions['"`]\s*\)/.test(source)) continue
+        if (SUMS_AMOUNT.test(source)) seen.push(file)
+      }
+    }
+    expect(seen.length).toBeGreaterThanOrEqual(3)
   })
 })
