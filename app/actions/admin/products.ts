@@ -391,7 +391,9 @@ export async function updateProduct(
 
 /**
  * Saves the guided admin offering flow.
- * Free offerings persist only a course. Paid offerings persist course + product + product_courses + post-registration steps.
+ * Both modes persist course + product + product_courses + post-registration steps.
+ * Free offerings differ only in the product they get: price 0 on the `manual`
+ * provider, with no external catalog objects to create.
  */
 export async function saveProductCreationWizard(
   input: ProductCreationWizardInput
@@ -440,9 +442,14 @@ export async function saveProductCreationWizard(
 
     const productId = input.productId ?? null
 
-    // ---- FREE: no payment provider work, single-tx RPC handles cleanup ------
+    // ---- FREE: a real $0 product, no payment provider work -------------------
+    // A free offering still persists course + product + product_courses, so it
+    // is listable and editable like any other. The RPC pins price 0 and the
+    // `manual` provider, and every consumer treats a 0-price product as free
+    // (enrollFree only rejects a *non-zero* linked product; the public checkout
+    // only takes the paid path for price > 0), so it can never be charged for.
     if (input.pricing.mode === 'free') {
-      // The RPC soft-archives the product row but cannot touch the external
+      // The RPC clears the provider columns but cannot touch the external
       // provider, so archive its objects here first (no-op for manual).
       if (productId) {
         const { data: productToArchive } = await adminClient
@@ -476,20 +483,24 @@ export async function saveProductCreationWizard(
           _course: coursePayload,
           _pricing_mode: 'free',
           _product_id: productId,
-          _product: null,
-          _steps: null,
+          // Only the display currency is honoured for a free offering — the RPC
+          // fixes price/provider itself so no caller can smuggle in a price.
+          _product: { currency: input.pricing.currency ?? 'usd' },
+          _steps: buildPostRegistrationStepRows(input.postRegistrationSteps),
         }
       )
 
       if (rpcError) throw new Error(rpcError.message)
+
+      const freeResult = rpcResult as { course_id: number; product_id: number }
 
       revalidateOfferingPaths()
 
       return {
         success: true,
         data: {
-          courseId: (rpcResult as { course_id: number }).course_id,
-          productId: null,
+          courseId: freeResult.course_id,
+          productId: freeResult.product_id,
           pricingMode: 'free',
           published: input.intent === 'publish',
         },

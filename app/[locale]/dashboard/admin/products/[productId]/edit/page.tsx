@@ -132,12 +132,17 @@ export default async function EditProductPage({ params }: PageProps) {
       thumbnailUrl: linkedCourse?.thumbnail_url || product.image || '',
       categoryId: linkedCourse?.category_id || null,
     },
-    pricing: {
-      mode: 'paid',
-      price: Number(product.price),
-      currency: product.currency === 'eur' ? 'eur' : 'usd',
-      paymentProvider: getSupportedPaymentProvider(product.payment_provider),
-    },
+    // A 0-price product IS the free offering (see save_product_creation_wizard),
+    // so the editor must reopen on "free" — hardcoding 'paid' here re-published
+    // it as a paid offering with a price of 0.
+    pricing: Number(product.price) === 0
+      ? { mode: 'free', currency: product.currency === 'eur' ? 'eur' : 'usd' }
+      : {
+          mode: 'paid',
+          price: Number(product.price),
+          currency: product.currency === 'eur' ? 'eur' : 'usd',
+          paymentProvider: getSupportedPaymentProvider(product.payment_provider),
+        },
     postRegistrationSteps: ((postRegistrationSteps || []) as PostRegistrationRow[]).map((step, index) => ({
       id: step.id,
       type: step.type,

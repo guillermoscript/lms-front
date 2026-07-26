@@ -188,13 +188,19 @@ export default async function AdminProductsPage() {
                       {product.description || t('card.noDescription')}
                     </p>
                     <div className="mb-4">
-                      <p className="text-2xl font-bold tracking-tight tabular-nums">
-                        {product.currency === 'usd' ? '$' : '€'}
-                        {product.price.toFixed(2)}
-                      </p>
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {product.currency}
-                      </p>
+                      {Number(product.price) === 0 ? (
+                        <p className="text-2xl font-bold tracking-tight">{t('card.free')}</p>
+                      ) : (
+                        <>
+                          <p className="text-2xl font-bold tracking-tight tabular-nums">
+                            {product.currency === 'usd' ? '$' : '€'}
+                            {product.price.toFixed(2)}
+                          </p>
+                          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                            {product.currency}
+                          </p>
+                        </>
+                      )}
                     </div>
 
                     {/* Course List */}

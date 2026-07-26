@@ -3116,6 +3116,7 @@
         "card": {
           "course": "course",
           "courses": "courses",
+          "free": "Free",
           "noDescription": "No description",
           "includedCourses": "Included Courses:",
           "more": "+{count} more",
