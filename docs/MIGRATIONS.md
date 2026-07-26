@@ -18,6 +18,86 @@ Edit the generated file with your SQL. Always make migrations **idempotent** whe
 
 ## Applying Migrations
 
+### The rule: cloud changes go through `supabase db push`
+
+**Never apply a migration to cloud with the MCP `apply_migration` tool, the SQL
+editor, or a raw Management API call unless you also stamp it with the version
+from its filename.** This is not style preference — it is what keeps drift
+detectable.
+
+`supabase_migrations.schema_migrations` is the only record of what cloud has
+run. `supabase db push` stamps each migration with **the timestamp from its
+filename**. Every ad-hoc path stamps a **fresh** timestamp instead. Once the
+ledger holds a stamp that matches no file in `supabase/migrations/`, the
+question "what is missing from cloud?" stops having a usable answer: the
+re-stamped migrations show up as *pending* (false positives), and a genuinely
+missing migration is indistinguishable from them.
+
+That is not hypothetical. It is how issue #541 happened:
+
+| Repo file | Cloud stamp before #541 |
+|---|---|
+| `20260721120000_add_binance_personal_provider` | `20260725213441` |
+| `20260725110000_transaction_split_snapshot_backstop` | `20260725213508` |
+| `20260725160000_entitlement_gated_enrollment_inserts` | `20260725213610` |
+| `20260725170000_transactions_column_hardening` | `20260725192946` |
+| `20260725180000_transactions_insert_lockdown` | **never applied** |
+
+Four migrations were applied through `apply_migration` and re-stamped. The
+fifth — the `transactions` INSERT lockdown from #538, a `severity:critical`
+payments fix — was never applied at all, and hid among the four false
+positives for a day. Diffing the repo against the ledger reported all five as
+pending, so the real gap looked like more of the same noise.
+
+If you do have to apply SQL out of band, **immediately** repair the stamp:
+
+```bash
+# Preferred — the CLI's purpose-built command for this
+supabase migration repair --status applied <VERSION_FROM_FILENAME>
+supabase migration repair --status reverted <WRONG_FRESH_STAMP>
+```
+
+Then run `npm run verify:cloud` (below) and confirm it is clean before moving on.
+
+### Verifying cloud matches this repo
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... npm run verify:cloud
+```
+
+Queries the **live** database and exits non-zero on drift. It asserts both
+halves of the problem above:
+
+- **Ledger integrity** — every repo migration is stamped on cloud under its own
+  filename, and cloud carries no stamp that matches no file.
+- **Payment invariants** (#512 / #528 / #538) — `authenticated` and `anon` hold
+  no INSERT on `transactions`, no column-level INSERT grant survives,
+  `service_role` still has INSERT, the `authenticated` UPDATE grant is exactly
+  `(status, provider_subscription_id, stripe_payment_intent_id)`, the INSERT
+  policy pins `status` plus all four `settlement_*` columns to NULL, and both
+  `before_transaction_split_snapshot_*` triggers exist and are enabled.
+
+It reads catalog state, not migration text, so it also catches a *later*
+migration re-widening something — including a schema dump re-applying the
+original `GRANT ALL ON TABLE transactions TO authenticated`.
+
+**Run it from `master`, after merging.** The two ledger checks compare cloud
+against the migrations in your *current checkout*. On a feature branch, any
+migration another in-flight branch has already applied to cloud shows up as an
+orphan, and any migration on your branch not yet applied shows up as pending —
+neither is real drift. The payment-invariant checks are branch-independent and
+meaningful anywhere.
+
+The token is a [personal access token](https://supabase.com/dashboard/account/tokens).
+It uses the Management API over HTTPS rather than a Postgres connection because
+port 5432 is blocked on some networks this project is developed from — the same
+reason Option 2 below exists.
+
+> Unit tests cannot do this job. `tests/unit/verify-cloud-schema.test.ts` and
+> `tests/unit/transaction-split-snapshot-backstop.test.ts` prove the *rules* are
+> right; neither opens a database connection. A green `npm run test:unit` says
+> nothing about whether a migration was ever applied. Only `verify:cloud` does.
+
 ### Option 1: Supabase CLI (preferred)
 
 ```bash
@@ -30,7 +110,10 @@ This connects via the Supabase connection pooler and applies all pending migrati
 
 ### Option 2: Management API (fallback)
 
-When the CLI can't connect, push migrations via the Supabase Management API:
+When the CLI can't connect, push migrations via the Supabase Management API.
+**This is the path that creates drift** — the `INSERT INTO schema_migrations`
+line below is not optional bookkeeping, it is the entire reason this fallback is
+safe to use:
 
 ```bash
 # 1. Get your access token (stored in macOS keychain by the CLI)
@@ -91,16 +174,22 @@ process.stdout.write(JSON.stringify({query: 'SELECT version, name FROM supabase_
 
 ### What's pending locally?
 
-Compare local files against remote records:
-
 ```bash
-# Local migration versions
-ls supabase/migrations/*.sql | sed 's|.*/||' | sed 's/_.*//'
-
-# Remote versions (use one of the methods above)
+SUPABASE_ACCESS_TOKEN=sbp_... npm run verify:cloud
 ```
 
-Any local version not in the remote list needs to be applied.
+Use this rather than eyeballing a diff. The manual comparison —
+
+```bash
+ls supabase/migrations/*.sql | sed 's|.*/||' | sed 's/_.*//'
+```
+
+— is only trustworthy when the ledger is clean. If any migration was ever
+applied out of band, a local version missing from the remote list means *either*
+"never applied" *or* "applied under a different stamp", and nothing in the diff
+tells you which. `verify:cloud` reports the two cases separately (`not on cloud`
+vs `orphan stamps`) and additionally checks that the payment invariants actually
+hold, which no filename comparison can do.
 
 ## Running the Production Seed
 
@@ -158,14 +247,25 @@ DELETE FROM courses WHERE author_id NOT IN (SELECT id FROM profiles);
 
 ### Migration version mismatch
 
-If the remote `schema_migrations` table has different version numbers than local filenames (e.g. migrations were applied via dashboard with auto-generated timestamps):
+If the remote `schema_migrations` table has different version numbers than local filenames (e.g. migrations were applied via dashboard or `apply_migration` with auto-generated timestamps), prefer the CLI's purpose-built command:
+
+```bash
+supabase migration repair --status applied   <LOCAL_VERSION>
+supabase migration repair --status reverted  <REMOTE_VERSION>
+```
+
+If the CLI cannot reach the pooler, the equivalent write is:
 
 ```sql
--- Update the remote record to match the local filename
+-- Re-stamp the remote record to match the local filename.
+-- Verify FIRST that the DDL really is live (query the grants/policies/triggers
+-- it created) — this only repairs the ledger, it does not apply anything.
 UPDATE supabase_migrations.schema_migrations
 SET version = '<LOCAL_VERSION>'
 WHERE version = '<REMOTE_VERSION>' AND name = '<NAME>';
 ```
+
+Confirm with `npm run verify:cloud` afterwards.
 
 ### Prepared statement errors (port 6543)
 

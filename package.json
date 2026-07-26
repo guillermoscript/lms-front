@@ -17,6 +17,7 @@
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked --schema public > lib/database.types.ts",
+    "verify:cloud": "tsx scripts/verify-cloud-schema.ts",
     "mcp:build": "cd mcp-server && npm run build",
     "backup-course": "tsx scripts/backup-english-course.ts",
     "restore-course": "tsx scripts/restore-english-course.ts",
