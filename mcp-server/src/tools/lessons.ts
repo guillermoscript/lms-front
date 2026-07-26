@@ -131,7 +131,7 @@ export function registerLessonTools(server: MCPServer) {
           supabase
             .from("lessons")
             .select(
-              "id, title, description, content, sequence, status, video_url, publish_at, course_id, created_at, updated_at"
+              "id, title, description, content, sequence, status, video_url, embed_code, publish_at, course_id, created_at, updated_at"
             )
             .eq("id", lesson_id)
             .single(),
@@ -151,6 +151,7 @@ export function registerLessonTools(server: MCPServer) {
             title: data.title as string,
             description: data.description as string | null,
             video_url: data.video_url as string | null,
+            embed_code: data.embed_code as string | null,
             content: data.content as string | null,
             status: data.status as string,
             sequence: data.sequence as number,
