@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import {
   computeBillingHealth,
   mergeAtRiskTenants,
@@ -85,19 +87,42 @@ export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
   await verifySuperAdmin()
   const admin = createAdminClient()
 
-  const [
-    { data: pastDueTenants },
-    { data: pastDueSubscriptions },
-    { data: cutoffTenants },
-  ] = await Promise.all([
-    admin.from('tenants').select(TENANT_SELECT).eq('billing_status', 'past_due'),
-    admin.from('platform_subscriptions').select(SUBSCRIPTION_SELECT).eq('status', 'past_due'),
-    admin.from('tenants').select(TENANT_SELECT).not('access_cutoff_at', 'is', null),
+  // All five reads are paged and count-verified (#548). This dashboard exists
+  // to make sure no at-risk school goes unnoticed, so a read silently capped
+  // at the API row limit defeats its entire purpose: the missing school looks
+  // exactly like a healthy one. Each is ordered by its primary key — `tenants`
+  // and `platform_subscriptions` have no natural sort here, and an unordered
+  // `.range()` window is not a stable page.
+  const [pastDueTenants, pastDueSubscriptions, cutoffTenants] = await Promise.all([
+    fetchAllRows('tenants:past_due', (from, to) =>
+      admin
+        .from('tenants')
+        .select(TENANT_SELECT, { count: 'exact' })
+        .eq('billing_status', 'past_due')
+        .order('id')
+        .range(from, to)
+    ),
+    fetchAllRows('platform_subscriptions:past_due', (from, to) =>
+      admin
+        .from('platform_subscriptions')
+        .select(SUBSCRIPTION_SELECT, { count: 'exact' })
+        .eq('status', 'past_due')
+        .order('subscription_id')
+        .range(from, to)
+    ),
+    fetchAllRows('tenants:access_cutoff', (from, to) =>
+      admin
+        .from('tenants')
+        .select(TENANT_SELECT, { count: 'exact' })
+        .not('access_cutoff_at', 'is', null)
+        .order('id')
+        .range(from, to)
+    ),
   ])
 
-  const pastDueTenantRows = (pastDueTenants ?? []).map(toTenantRow)
-  const cutoffTenantRows = (cutoffTenants ?? []).map(toTenantRow)
-  const pastDueSubscriptionRows = (pastDueSubscriptions ?? []).map(toSubscriptionInput)
+  const pastDueTenantRows = pastDueTenants.map(toTenantRow)
+  const cutoffTenantRows = cutoffTenants.map(toTenantRow)
+  const pastDueSubscriptionRows = pastDueSubscriptions.map(toSubscriptionInput)
 
   const knownTenantIds = new Set([
     ...pastDueTenantRows.map((t) => t.tenantId),
@@ -109,16 +134,21 @@ export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
   // Subscription-only past-due tenants appear in neither read above.
   const missingTenantIds = subscriptionPastDueTenantIds.filter((id) => !knownTenantIds.has(id))
 
-  const [{ data: extraTenants }, { data: knownSubscriptions }] = await Promise.all([
-    missingTenantIds.length
-      ? admin.from('tenants').select(TENANT_SELECT).in('id', missingTenantIds)
-      : Promise.resolve({ data: [] as never[] }),
-    knownTenantIds.size
-      ? admin
-          .from('platform_subscriptions')
-          .select(SUBSCRIPTION_SELECT)
-          .in('tenant_id', [...knownTenantIds])
-      : Promise.resolve({ data: [] as never[] }),
+  // Both follow-ups look up by id list, which grows with the reads above — so
+  // they are chunked as well as paged: past a few hundred ids the `.in()` URL
+  // is the thing that breaks, before any row cap is reached.
+  const [extraTenants, knownSubscriptions] = await Promise.all([
+    fetchAllRowsIn('tenants:subscription_only', missingTenantIds, (chunk, from, to) =>
+      admin.from('tenants').select(TENANT_SELECT, { count: 'exact' }).in('id', chunk).order('id').range(from, to)
+    ),
+    fetchAllRowsIn('platform_subscriptions:known', [...knownTenantIds], (chunk, from, to) =>
+      admin
+        .from('platform_subscriptions')
+        .select(SUBSCRIPTION_SELECT, { count: 'exact' })
+        .in('tenant_id', chunk)
+        .order('subscription_id')
+        .range(from, to)
+    ),
   ])
 
   return computeBillingHealth(
@@ -126,9 +156,9 @@ export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
       pastDueTenants: pastDueTenantRows,
       cutoffTenants: cutoffTenantRows,
       subscriptionPastDueTenantIds,
-      extraTenants: (extraTenants ?? []).map(toTenantRow),
+      extraTenants: extraTenants.map(toTenantRow),
     }),
-    [...pastDueSubscriptionRows, ...(knownSubscriptions ?? []).map(toSubscriptionInput)],
+    [...pastDueSubscriptionRows, ...knownSubscriptions.map(toSubscriptionInput)],
     new Date(),
   )
 }

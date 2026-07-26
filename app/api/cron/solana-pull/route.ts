@@ -20,6 +20,7 @@ import { timingSafeEqual } from 'crypto'
 import { getSubscriptionState } from '@/lib/payments/solana-subscriptions'
 import { pullSplitForSubscription } from '@/lib/payments/solana-subscription-pull'
 import { decidePullAction } from '@/lib/payments/solana-pull-decision'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const runtime = 'nodejs'
 
@@ -43,6 +44,24 @@ interface SolanaSubMeta {
   mint: string
 }
 
+/** One row of the crank's work queue, as selected below. */
+interface SolanaSubRow {
+  subscription_id: string
+  tenant_id: string
+  plan_id: number | null
+  provider_metadata: unknown
+  subscription_status: string | null
+  cancel_at_period_end: boolean | null
+  cancel_at: string | null
+  /**
+   * The embedded `plans(price)`. Left `unknown`: the untyped service-role
+   * client types every embed as an array, while a to-one embed arrives as an
+   * object at runtime — the read site below narrows it with the same cast it
+   * always used.
+   */
+  plans: unknown
+}
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const provided = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -63,17 +82,32 @@ export async function GET(req: NextRequest) {
   // Active native-subscription rows, with their on-chain coordinates + amount.
   // We also pull the cancel fields so the pull/cancel decision (which must never
   // charge a canceled sub — issue #460) has the full DB state.
-  const { data: subs, error } = await admin
-    .from('subscriptions')
-    .select('subscription_id, tenant_id, plan_id, provider_metadata, subscription_status, cancel_at_period_end, cancel_at, plans(price)')
-    .eq('payment_provider', 'solana_subs')
-    .eq('subscription_status', 'active')
-
-  if (error) {
-    console.error('[solana-pull] query error', error)
+  //
+  // Paged and count-verified (#548). This read IS the crank's work queue, and
+  // the crank is the only thing that ever charges a native Solana
+  // subscription: a row silently dropped at the API cap is a period that never
+  // gets billed, for a subscriber whose access we keep extending. Ordered by
+  // primary key so the pages are stable. `fetchAllRows` throws on an
+  // incomplete read, so a short queue can no longer look like a finished one.
+  let subs: SolanaSubRow[]
+  try {
+    subs = await fetchAllRows<SolanaSubRow>('subscriptions', (from, to) =>
+      admin
+        .from('subscriptions')
+        .select(
+          'subscription_id, tenant_id, plan_id, provider_metadata, subscription_status, cancel_at_period_end, cancel_at, plans(price)',
+          { count: 'exact' },
+        )
+        .eq('payment_provider', 'solana_subs')
+        .eq('subscription_status', 'active')
+        .order('subscription_id')
+        .range(from, to),
+    )
+  } catch (err) {
+    console.error('[solana-pull] query error', err)
     return NextResponse.json({ error: 'Query failed' }, { status: 500 })
   }
-  if (!subs?.length) return NextResponse.json({ pulled: 0 })
+  if (!subs.length) return NextResponse.json({ pulled: 0 })
 
   const nowSec = Math.floor(Date.now() / 1000)
   let pulled = 0

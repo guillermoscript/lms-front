@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -23,12 +24,23 @@ export default async function RevenuePage() {
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher.revenue')
 
-  // Parallelize all 4 independent queries
-  const [{ data: tenant }, { data: split }, { data: transactions }, { data: payouts }] = await Promise.all([
+  // Parallelize all 4 independent queries.
+  //
+  // The transaction read is paged and count-verified (#548) — every figure on
+  // this page is a sum over it, so truncation at the API row cap would quietly
+  // understate the school's revenue rather than fail. `created_at` is not
+  // unique; `transaction_id` breaks ties so the paging windows are stable.
+  // The payout read is already bounded by `.limit(10)`.
+  const [{ data: tenant }, { data: split }, transactions, { data: payouts }] = await Promise.all([
     supabase.from('tenants').select('name, stripe_account_id').eq('id', tenantId).single(),
     supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
-    supabase.from('transactions').select('amount, status, payment_provider, created_at')
-      .eq('tenant_id', tenantId).eq('status', 'successful').order('created_at', { ascending: false }),
+    fetchAllRows('transactions', (from, to) =>
+      supabase.from('transactions').select('amount, status, payment_provider, created_at', { count: 'exact' })
+        .eq('tenant_id', tenantId).eq('status', 'successful')
+        .order('created_at', { ascending: false })
+        .order('transaction_id', { ascending: false })
+        .range(from, to)
+    ),
     supabase.from('payouts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(10),
   ])
 
@@ -114,6 +126,10 @@ export default async function RevenuePage() {
               <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
                 {t('stripeNotConnected.description')}
               </p>
+              {/* Stays a plain anchor: /api/stripe/connect is a route handler that
+                  mints a Stripe onboarding link and redirects. next/link would
+                  prefetch it and fire that side effect on hover. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/api/stripe/connect"
                 className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 h-8 px-4 transition-colors"

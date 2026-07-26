@@ -15,6 +15,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { dailyDigestEmailTemplate, streakNudgeEmailTemplate } from '@/lib/email/templates/daily-digest'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 
 export type DigestLocale = 'en' | 'es'
 export type DigestKind = 'daily_digest' | 'streak_nudge'
@@ -38,7 +40,7 @@ export const DIGEST_STREAK_MIN = 3
 /** Minimum streak that earns the evening nudge (the Duolingo mechanic). */
 export const NUDGE_STREAK_MIN = 7
 
-interface CandidateRow {
+export interface CandidateRow {
   tenant_id: string
   user_id: string
   email: string | null
@@ -215,6 +217,64 @@ export function pickTemplate(
 }
 
 /**
+ * Candidates requested per RPC call. Below the 1000 row cap so a page is never
+ * clamped in the common case — but nothing here depends on that, see below.
+ */
+export const DIGEST_CANDIDATE_PAGE_SIZE = 500
+
+/** Runaway guard, mirroring `fetchAllRows`'s. Covers 1,000,000 candidates. */
+const MAX_CANDIDATE_PAGES = 2000
+
+/**
+ * Read every digest candidate, across every tenant (#548).
+ *
+ * `get_daily_digest_candidates` is a SETOF function, so PostgREST caps its
+ * result exactly as it caps a table read and hands back the truncated set as a
+ * plain 200. Before the function was ordered and given a cursor, one
+ * unparameterised call past 1000 candidates meant the cron processed an
+ * arbitrary subset — a different one each run — and no student, admin or log
+ * line could tell.
+ *
+ * The stop condition is an EMPTY page, never a short one. A page shorter than
+ * `pageSize` is ambiguous: it is the end of the set, or it is the server's row
+ * cap clamping us below what we asked for. Reading "short" as "done" is the
+ * original bug in a new place. Termination is instead guaranteed by the
+ * cursor, which advances strictly on every non-empty page.
+ *
+ * @throws if a page errors or the set outlasts `MAX_CANDIDATE_PAGES`.
+ */
+export async function fetchDigestCandidates(
+  admin: SupabaseClient,
+  pageSize: number = DIGEST_CANDIDATE_PAGE_SIZE
+): Promise<CandidateRow[]> {
+  const rows: CandidateRow[] = []
+  let afterTenantId: string | null = null
+  let afterUserId: string | null = null
+
+  for (let page = 0; page < MAX_CANDIDATE_PAGES; page++) {
+    const { data, error } = await admin.rpc('get_daily_digest_candidates', {
+      _after_tenant_id: afterTenantId,
+      _after_user_id: afterUserId,
+      _limit: pageSize,
+    })
+    if (error) throw new Error(error.message)
+
+    const batch = (data ?? []) as CandidateRow[]
+    if (batch.length === 0) return rows
+    rows.push(...batch)
+
+    const last = batch[batch.length - 1]
+    afterTenantId = last.tenant_id
+    afterUserId = last.user_id
+  }
+
+  throw new Error(
+    `get_daily_digest_candidates: still returning rows after ${MAX_CANDIDATE_PAGES} pages ` +
+      `(${rows.length} candidates); refusing to loop further.`
+  )
+}
+
+/**
  * Run one hourly tick. Idempotent per (user, kind, tenant-local day): re-runs
  * and cron retries within the same day never double-send.
  */
@@ -229,12 +289,13 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
     errors: [],
   }
 
-  const { data: candidates, error: candErr } = await admin.rpc('get_daily_digest_candidates')
-  if (candErr) {
-    result.errors.push(`candidates query failed: ${candErr.message}`)
+  let rows: CandidateRow[]
+  try {
+    rows = await fetchDigestCandidates(admin)
+  } catch (err) {
+    result.errors.push(`candidates query failed: ${err instanceof Error ? err.message : String(err)}`)
     return result
   }
-  const rows = (candidates ?? []) as CandidateRow[]
   if (rows.length === 0) return result
 
   const byTenant = new Map<string, CandidateRow[]>()
@@ -246,12 +307,40 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
   const tenantIds = [...byTenant.keys()]
   result.tenantsConsidered = tenantIds.length
 
-  const [{ data: tenants }, { data: settingRows }] = await Promise.all([
-    admin.from('tenants').select('id, name, slug').in('id', tenantIds),
-    admin.from('tenant_settings').select('tenant_id, setting_value').eq('setting_key', 'daily_digest').in('tenant_id', tenantIds),
-  ])
-  const tenantById = new Map((tenants ?? []).map((t) => [t.id as string, t as { id: string; name: string; slug: string | null }]))
-  const settingsByTenant = new Map((settingRows ?? []).map((s) => [s.tenant_id as string, s.setting_value]))
+  // Chunked and paged (#548). `tenantIds` is as long as the candidate set is
+  // wide, so both the `.in()` URL and the response can overflow. A tenant
+  // missing from either read is skipped below (`if (!tenant) continue`) — that
+  // is correct for a tenant that genuinely does not exist and silently wrong
+  // for one the read merely dropped, so this must be complete or fail loudly.
+  let tenants: Array<{ id: string; name: string; slug: string | null }>
+  let settingRows: Array<{ tenant_id: string; setting_value: unknown }>
+  try {
+    ;[tenants, settingRows] = await Promise.all([
+      fetchAllRowsIn<{ id: string; name: string; slug: string | null }, string>(
+        'tenants',
+        tenantIds,
+        (chunk, from, to) =>
+          admin.from('tenants').select('id, name, slug', { count: 'exact' }).in('id', chunk).order('id').range(from, to)
+      ),
+      fetchAllRowsIn<{ tenant_id: string; setting_value: unknown }, string>(
+        'tenant_settings',
+        tenantIds,
+        (chunk, from, to) =>
+          admin
+            .from('tenant_settings')
+            .select('tenant_id, setting_value', { count: 'exact' })
+            .eq('setting_key', 'daily_digest')
+            .in('tenant_id', chunk)
+            .order('id')
+            .range(from, to)
+      ),
+    ])
+  } catch (err) {
+    result.errors.push(`tenant lookup failed: ${err instanceof Error ? err.message : String(err)}`)
+    return result
+  }
+  const tenantById = new Map(tenants.map((t) => [t.id, t]))
+  const settingsByTenant = new Map(settingRows.map((s) => [s.tenant_id, s.setting_value]))
 
   for (const tenantId of tenantIds) {
     const tenant = tenantById.get(tenantId)
@@ -278,12 +367,36 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
       .in('name', [`daily_digest_${settings.locale}`, `streak_nudge_${settings.locale}`])
       .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
 
+    // Chunked and paged (#548), and — unlike before — a failure here aborts the
+    // tenant instead of falling through with an empty map.
+    //
+    // This is the read whose truncation is not a wrong number but wrong
+    // behaviour: `resolveChannels(undefined)` treats a missing row as the
+    // schema default `{ inApp: true, email: true }`, so every student the read
+    // dropped gets emailed — including the ones who went and turned email off.
+    // "Read fewer preferences" must never be able to mean "send more email".
     const userIds = allCandidates.map((c) => c.user_id)
-    const { data: prefRows } = await admin
-      .from('notification_preferences')
-      .select('user_id, in_app_enabled, email_enabled, email_frequency')
-      .in('user_id', userIds)
-    const prefsByUser = new Map(((prefRows ?? []) as PreferencesRow[]).map((p) => [p.user_id, p]))
+    let prefRows: PreferencesRow[]
+    try {
+      prefRows = await fetchAllRowsIn<PreferencesRow, string>(
+        'notification_preferences',
+        userIds,
+        (chunk, from, to) =>
+          admin
+            .from('notification_preferences')
+            .select('user_id, in_app_enabled, email_enabled, email_frequency', { count: 'exact' })
+            .in('user_id', chunk)
+            .order('id')
+            .range(from, to)
+      )
+    } catch (err) {
+      result.errors.push(
+        `tenant ${tenantId}: preferences read failed, skipping tenant rather than risk emailing opted-out students: ` +
+          `${err instanceof Error ? err.message : String(err)}`
+      )
+      continue
+    }
+    const prefsByUser = new Map(prefRows.map((p) => [p.user_id, p]))
 
     for (const kind of kinds) {
       const recipients = allCandidates.filter((c) =>
@@ -296,17 +409,32 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
       if (recipients.length === 0) continue
 
       // Idempotency: users already notified (this kind, this tenant-local day).
-      const { data: sentRows, error: sentErr } = await admin
-        .from('notifications')
-        .select('target_user_ids')
-        .eq('tenant_id', tenantId)
-        .eq('metadata->>kind', kind)
-        .eq('metadata->>date', dateStr)
-      if (sentErr) {
-        result.errors.push(`tenant ${tenantId} ${kind}: idempotency check failed: ${sentErr.message}`)
+      //
+      // Paged and count-verified (#548). One notification row is written per
+      // recipient, so this read is the same size as yesterday's send — in a
+      // tenant past the row cap it truncated, and every recipient missing from
+      // `alreadySent` was sent to again. That turns the module's documented
+      // "re-runs and cron retries never double-send" guarantee into its
+      // opposite precisely when a retry happens. Ordered by primary key.
+      let sentRows: Array<{ target_user_ids: string[] | null }>
+      try {
+        sentRows = await fetchAllRows<{ target_user_ids: string[] | null }>('notifications', (from, to) =>
+          admin
+            .from('notifications')
+            .select('target_user_ids', { count: 'exact' })
+            .eq('tenant_id', tenantId)
+            .eq('metadata->>kind', kind)
+            .eq('metadata->>date', dateStr)
+            .order('id')
+            .range(from, to)
+        )
+      } catch (err) {
+        result.errors.push(
+          `tenant ${tenantId} ${kind}: idempotency check failed: ${err instanceof Error ? err.message : String(err)}`
+        )
         continue
       }
-      const alreadySent = new Set((sentRows ?? []).flatMap((r) => (r.target_user_ids ?? []) as string[]))
+      const alreadySent = new Set(sentRows.flatMap((r) => r.target_user_ids ?? []))
 
       for (const candidate of recipients) {
         if (alreadySent.has(candidate.user_id)) {

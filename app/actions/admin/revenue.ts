@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
@@ -29,14 +31,26 @@ export async function getRevenueOverview() {
   const { tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
-  // Get all successful transactions for this tenant
-  const { data: transactions } = await adminClient
-    .from('transactions')
-    .select('amount, currency, transaction_date, product_id, plan_id, stripe_payment_intent_id')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'successful')
+  // Get all successful transactions for this tenant. Paged and count-verified
+  // (#548): everything this action returns — total revenue, platform fees,
+  // per-product breakdown, the monthly trend — is a sum over this list, so a
+  // read truncated at the API row cap would report a confidently wrong number
+  // instead of an error. Ordered by the primary key so the paging windows
+  // neither overlap nor skip.
+  const transactions = await fetchAllRows('transactions', (from, to) =>
+    adminClient
+      .from('transactions')
+      .select(
+        'amount, currency, transaction_date, product_id, plan_id, stripe_payment_intent_id',
+        { count: 'exact' }
+      )
+      .eq('tenant_id', tenantId)
+      .eq('status', 'successful')
+      .order('transaction_id')
+      .range(from, to)
+  )
 
-  if (!transactions || transactions.length === 0) {
+  if (transactions.length === 0) {
     return {
       totalRevenue: 0,
       platformFees: 0,
@@ -79,16 +93,20 @@ export async function getRevenueOverview() {
     revenueByProduct[key] = (revenueByProduct[key] || 0) + Number(tx.amount)
   }
 
-  // Get product names
+  // Get product names. The id list is as long as the transaction set is
+  // varied, so it is chunked as well as paged (#548) — an over-long `.in()`
+  // fails on the request side, before any of the response paging matters.
   const productIds = [...new Set(transactions.map(t => t.product_id).filter(Boolean))]
-  const { data: products } = productIds.length > 0
-    ? await adminClient
-        .from('products')
-        .select('product_id, name')
-        .in('product_id', productIds)
-    : { data: [] }
+  const products = await fetchAllRowsIn('products', productIds, (chunk, from, to) =>
+    adminClient
+      .from('products')
+      .select('product_id, name', { count: 'exact' })
+      .in('product_id', chunk)
+      .order('product_id')
+      .range(from, to)
+  )
 
-  const productMap = new Map((products || []).map(p => [p.product_id, p.name]))
+  const productMap = new Map(products.map(p => [p.product_id, p.name]))
 
   const revenueByCourse = Object.entries(revenueByProduct).map(([id, amount]) => ({
     id: Number(id),
