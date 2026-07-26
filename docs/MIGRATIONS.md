@@ -81,6 +81,13 @@ It reads catalog state, not migration text, so it also catches a *later*
 migration re-widening something — including a schema dump re-applying the
 original `GRANT ALL ON TABLE transactions TO authenticated`.
 
+**Run it from `master`, after merging.** The two ledger checks compare cloud
+against the migrations in your *current checkout*. On a feature branch, any
+migration another in-flight branch has already applied to cloud shows up as an
+orphan, and any migration on your branch not yet applied shows up as pending —
+neither is real drift. The payment-invariant checks are branch-independent and
+meaningful anywhere.
+
 The token is a [personal access token](https://supabase.com/dashboard/account/tokens).
 It uses the Management API over HTTPS rather than a Postgres connection because
 port 5432 is blocked on some networks this project is developed from — the same

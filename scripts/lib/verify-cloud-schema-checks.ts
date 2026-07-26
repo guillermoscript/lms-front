@@ -90,11 +90,20 @@ export function evaluateChecks(facts: CloudFacts): Check[] {
 
   // An orphan stamp is the failure mode that hid #538: it matches no file, so it
   // pads the ledger and makes the pending list above untrustworthy.
+  //
+  // RUN THIS FROM `master`, AFTER MERGING. Both lists compare the ledger against
+  // the migrations present on the CURRENT checkout, so on a feature branch every
+  // migration another in-flight branch has already applied to cloud reads as an
+  // orphan, and every migration on this branch not yet applied reads as pending.
+  // Neither is drift. The detail line below says so rather than leaving someone
+  // to rediscover it and conclude the check is noisy.
   add(
     'cloud carries no migration stamp that matches no repo file',
     orphans.length === 0,
     orphans.length
-      ? `orphan stamps (applied ad hoc, not via db push): ${orphans.join(', ')}`
+      ? `orphan stamps (applied ad hoc, not via db push — or applied by an ` +
+        `in-flight branch this checkout does not have; re-check on master): ` +
+        orphans.join(', ')
       : 'ledger matches repo filenames exactly'
   )
 
