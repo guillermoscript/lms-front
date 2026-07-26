@@ -835,3 +835,41 @@ export async function requestManualRenewal() {
   revalidatePath('/dashboard/admin/billing')
   return { requestId: request.request_id }
 }
+
+/**
+ * Re-evaluate this school's usage against its plan and apply the result
+ * immediately (issue #550).
+ *
+ * Every other `reconcileAccessCutoff` call site is a plan-change event, and the
+ * cutoff notice asks for a *usage* change. The usage-side actions now reconcile
+ * on their own, but they can only cover the paths that run inside this app —
+ * a course archived by a direct SQL fix, a membership changed by a super admin,
+ * or simply a reconcile that failed and was swallowed leaves a stale cutoff
+ * with nothing to clear it. Making it an explicit button means recovery never
+ * depends on `/api/cron/*` being scheduled at all (#513), which is the whole
+ * reason this issue exists.
+ *
+ * Reports the outcome rather than just succeeding, so an admin who is still
+ * over the limit learns that from the same click instead of from silence.
+ */
+export async function recheckPlanLimits() {
+  await verifyAdminAccess()
+  const tenantId = await getCurrentTenantId()
+  const adminClient = createAdminClient()
+
+  const decision = await reconcileAccessCutoff(adminClient, tenantId)
+
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('access_cutoff_at')
+    .eq('id', tenantId)
+    .maybeSingle()
+
+  revalidatePath('/dashboard/admin/billing')
+  revalidatePath('/dashboard/admin')
+
+  return {
+    cleared: decision.action === 'clear',
+    accessCutoffAt: (tenant?.access_cutoff_at as string | null) ?? null,
+  }
+}

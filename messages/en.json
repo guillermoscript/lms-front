@@ -1927,7 +1927,14 @@
           "cancelError": "Failed to cancel subscription",
           "reactivatePlan": "Reactivate plan",
           "reactivateSuccess": "Your subscription will continue — the scheduled cancellation was removed",
-          "reactivateError": "Failed to reactivate subscription"
+          "reactivateError": "Failed to reactivate subscription",
+          "recheck": "Re-check limits",
+          "recheckLoading": "Checking…",
+          "recheckDescription": "Already archived courses or removed members? Re-check now to restore access without waiting for the daily review.",
+          "recheckCleared": "Access restored — your school is back within its plan limits.",
+          "recheckStillOverLimit": "Still over the plan limit. Reduce usage further or upgrade to restore access.",
+          "recheckNoCutoff": "Limits re-checked — no access restriction is scheduled.",
+          "recheckError": "Failed to re-check limits"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
@@ -2033,7 +2040,9 @@
             "reactivateSuccess": "{name} has been reactivated",
             "reactivateError": "Failed to reactivate user",
             "rolesSuccess": "Roles updated for {name}",
-            "rolesError": "Failed to update roles"
+            "rolesError": "Failed to update roles",
+            "removeSuccess": "{name} has been removed from this school",
+            "removeError": "Failed to remove member"
           },
           "dialogs": {
             "deactivate": {
@@ -2064,8 +2073,14 @@
               "save": "Save Changes",
               "saving": "Saving..."
             },
-            "cancel": "Cancel"
-          }
+            "cancel": "Cancel",
+            "remove": {
+              "title": "Remove from School",
+              "description": "Are you sure you want to remove {name} from this school? They lose access to its courses and stop counting toward your plan's student limit. They can re-join later using the school's join link.",
+              "confirm": "Remove"
+            }
+          },
+          "removeFromSchool": "Remove from School"
         },
         "invite": {
           "button": "Invite User",

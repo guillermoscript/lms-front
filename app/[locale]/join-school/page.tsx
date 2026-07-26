@@ -34,7 +34,7 @@ export default async function JoinSchoolPage() {
           <CardHeader>
             <CardTitle className="text-red-900">School Not Found</CardTitle>
             <CardDescription className="text-red-700">
-              The school you're trying to join doesn't exist or is no longer available.
+              The school you&apos;re trying to join doesn&apos;t exist or is no longer available.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -47,13 +47,19 @@ export default async function JoinSchoolPage() {
     )
   }
 
-  // Check if user is already a member of this tenant
+  // Check if user is already a member of this tenant. Only an ACTIVE row
+  // counts (#550): a member removed by an admin keeps their row with
+  // `status = 'removed'`, and gating on mere existence would show them
+  // "You're Already a Member!" on the very page they were redirected to in
+  // order to re-join, with no way forward. `joinCurrentSchool()` applies the
+  // same rule and reinstates the row through the normal student-limit check.
   const { data: membership } = await supabase
     .from('tenant_users')
     .select('*')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
-    .single()
+    .eq('status', 'active')
+    .maybeSingle()
 
   if (membership) {
     return (
@@ -62,10 +68,10 @@ export default async function JoinSchoolPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-6 w-6 text-green-600" />
-              <CardTitle className="text-green-900">You're Already a Member!</CardTitle>
+              <CardTitle className="text-green-900">You&apos;re Already a Member!</CardTitle>
             </div>
             <CardDescription className="text-green-700">
-              You're already enrolled in {tenant.name}
+              You&apos;re already enrolled in {tenant.name}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -86,11 +92,14 @@ export default async function JoinSchoolPage() {
     )
   }
 
-  // Get user's other school memberships
+  // Get user's other school memberships — active ones only, for the same
+  // reason as above: a school the user was removed from is not somewhere they
+  // can still switch back into.
   const { data: otherMemberships } = await supabase
     .from('tenant_users')
     .select('tenant_id, tenants(name, slug)')
     .eq('user_id', userId)
+    .eq('status', 'active')
     .neq('tenant_id', tenantId)
 
   return (
@@ -111,16 +120,25 @@ export default async function JoinSchoolPage() {
         <Card className="mb-6 border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="text-sm text-blue-900">
-              You're already a member of:
+              You&apos;re already a member of:
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              {otherMemberships.map((membership: any) => (
-                <li key={membership.tenant_id} className="text-sm text-blue-800">
-                  • {membership.tenants?.name || 'Unknown School'}
-                </li>
-              ))}
+              {otherMemberships.map((membership) => {
+                // The generated types model this to-one embed as an array while
+                // PostgREST returns a bare object; the `any` this replaces was
+                // hiding the mismatch rather than resolving it. Handle both so
+                // the row renders whichever shape actually arrives.
+                const school = Array.isArray(membership.tenants)
+                  ? membership.tenants[0]
+                  : membership.tenants
+                return (
+                  <li key={membership.tenant_id} className="text-sm text-blue-800">
+                    • {school?.name || 'Unknown School'}
+                  </li>
+                )
+              })}
             </ul>
             <p className="text-xs text-blue-700 mt-3">
               You can switch between schools anytime from your dashboard.

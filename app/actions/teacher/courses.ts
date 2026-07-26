@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
+import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 
 export interface CourseFormData {
   title: string
@@ -275,6 +276,13 @@ export async function archiveCourse(courseId: number) {
 
   if (error) throw new Error('Failed to archive course')
 
+  // Archiving is the remediation the cutoff email asks for by name ("N active
+  // courses exceed the X plan's limit of M"), and `countTenantUsage` excludes
+  // archived courses — so this is the moment the school may have come back
+  // under its limit. Reconciling here is what makes compliance take effect
+  // immediately instead of at the next daily sweep, or never (#550, #513).
+  await reconcileAccessCutoffSafely(adminClient, tenantId)
+
   revalidatePath('/dashboard/teacher/courses')
   revalidatePath(`/dashboard/teacher/courses/${courseId}`)
   return { success: true }
@@ -349,6 +357,9 @@ export async function deleteCourse(courseId: number) {
     console.error('Failed to delete course:', error)
     throw new Error('Failed to delete course')
   }
+
+  // Same reason as `archiveCourse` above — deletion drops the course count too.
+  await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   revalidatePath('/dashboard/teacher/courses')
   return { success: true }

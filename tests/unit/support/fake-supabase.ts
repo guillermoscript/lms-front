@@ -25,6 +25,17 @@ export interface FakeSupabaseOptions {
   conflictKeys?: Record<string, string>
   /** Emails to hand back from `auth.admin.getUserById`. */
   userEmail?: (id: string) => string | null
+  /**
+   * Make a write fail the way PostgREST does — `{ data: null, error }` rather
+   * than a throw (#550). Needed because the interesting access-cutoff bug is a
+   * ledger upsert that errors while the surrounding code reports success, and
+   * the most common cause is RLS silently refusing the write, which never
+   * throws. Return `null` to let the write proceed normally.
+   */
+  failWrites?: (
+    table: string,
+    op: 'insert' | 'update' | 'upsert'
+  ) => { code: string; message: string } | null
 }
 
 type Predicate = (row: Row) => boolean
@@ -90,6 +101,13 @@ export function createFakeSupabase(db: Db, opts: FakeSupabaseOptions = {}) {
 
     function settle(): { data: unknown; error: unknown; count?: number } {
       if (pending) {
+        const failure = opts.failWrites?.(table, pending.op)
+        if (failure) {
+          // Rejected before it lands, so the table is left untouched — exactly
+          // what an RLS refusal looks like to the caller.
+          pending = null
+          return { data: null, error: failure }
+        }
         const rows = applyWrite()
         return { data: embed(cols, rows), error: null }
       }

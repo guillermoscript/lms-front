@@ -19,21 +19,31 @@ export async function joinCurrentSchool() {
   }
 
   const tenantId = await getCurrentTenantId()
+  const adminClient = await createAdminClient()
 
-  // Check if user is already a member
-  const { data: existingMembership } = await supabase
+  // Read the membership with the admin client, not the caller's RLS client
+  // (#550): a removed member's own row may be invisible to them, and a false
+  // "no membership" here would fall through to an INSERT that dies on the
+  // `tenant_users_unique` constraint with an opaque error. `status` matters as
+  // much as existence now that `removeTenantMember` can set it to `removed`.
+  const { data: existingMembership } = await adminClient
     .from('tenant_users')
-    .select('id')
+    .select('id, role, status')
     .eq('user_id', user.id)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
-  if (existingMembership) {
+  if (existingMembership?.status === 'active') {
     return { success: false, error: 'You are already a member of this school' }
   }
 
+  // A non-active row means the user was removed and is re-joining. That is a
+  // reinstatement, not a new membership — but it consumes a seat exactly like
+  // a new one, so it goes through the same limit pre-check below rather than
+  // around it.
+  const isReinstatement = !!existingMembership
+
   // Check student limit before allowing join
-  const adminClient = await createAdminClient()
   const { data: tenant } = await adminClient
     .from('tenants')
     .select('plan')
@@ -66,9 +76,13 @@ export async function joinCurrentSchool() {
     }
   }
 
-  // Check for pending invitation to determine role
+  // Check for pending invitation to determine role. A reinstated member keeps
+  // the role they held unless a fresh invitation reassigns it.
   const userEmail = user.email?.toLowerCase()
-  let assignedRole: 'student' | 'teacher' = 'student'
+  let assignedRole: 'student' | 'teacher' =
+    (existingMembership?.role as 'student' | 'teacher' | undefined) === 'teacher'
+      ? 'teacher'
+      : 'student'
 
   if (userEmail) {
     const { data: invitation } = await adminClient
@@ -94,15 +108,23 @@ export async function joinCurrentSchool() {
   }
 
   // Add user to tenant (use admin client to bypass RLS — user's JWT has their
-  // current tenant_id, not the one they're joining, so RLS would block the insert)
-  const { error } = await adminClient
-    .from('tenant_users')
-    .insert({
-      tenant_id: tenantId,
-      user_id: user.id,
-      role: assignedRole,
-      status: 'active',
-    })
+  // current tenant_id, not the one they're joining, so RLS would block the insert).
+  // A reinstatement updates the surviving row instead, which is why the unique
+  // (tenant_id, user_id) constraint is never in play on either path. Note that a
+  // removed *admin* comes back as a student or teacher, never an admin: rejoining
+  // a school is not a way to restore privilege you were stripped of.
+  const { error } = isReinstatement
+    ? await adminClient
+        .from('tenant_users')
+        .update({ role: assignedRole, status: 'active' })
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+    : await adminClient.from('tenant_users').insert({
+        tenant_id: tenantId,
+        user_id: user.id,
+        role: assignedRole,
+        status: 'active',
+      })
 
   if (error) {
     console.error('Failed to join school:', error)
