@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   IconAlertCircle,
   IconAlertTriangle,
@@ -523,39 +523,27 @@ export function Vocabulary({
 
 // ── Steps ────────────────────────────────────────────────────────────────────
 
-/**
- * The app numbers steps with a module-level counter; a context keeps the
- * numbering correct when several <Steps> blocks render in one lesson.
- */
-const StepNumber = createContext<{ next: () => number } | null>(null);
-
 export function Steps({ children }: Record<string, any>) {
-  const counter = useRef(0);
-  counter.current = 0;
-  const value = useMemo(() => ({ next: () => (counter.current += 1) }), []);
-
   return (
-    <StepNumber.Provider value={value}>
-      <div className="my-6 ml-4 space-y-6 border-l-2 border-zinc-200 pl-6 dark:border-zinc-700">
-        {children}
-      </div>
-    </StepNumber.Provider>
+    <div className="my-6 ml-4 space-y-6 border-l-2 border-zinc-200 pl-6 dark:border-zinc-700">
+      {children}
+    </div>
   );
 }
 
+/**
+ * `number` is assigned by the renderer from the step's position inside <Steps>.
+ * The app derives it from a module-level counter bumped during render, which
+ * double-counts under React's development double-invoke (steps come out 1, 3,
+ * 5…) — position is the only stable source.
+ */
 export function Step({ title, number, children }: Record<string, any>) {
-  const context = useContext(StepNumber);
-  const explicit = num(number);
-  // useMemo keeps the assigned number stable across re-renders of this step.
-  const assigned = useMemo(
-    () => explicit ?? context?.next() ?? 1,
-    [explicit, context]
-  );
+  const assigned = num(number);
 
   return (
     <div className="relative">
       <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-violet-600 bg-white text-[13px] font-bold text-violet-600 dark:border-violet-400 dark:bg-zinc-950 dark:text-violet-400">
-        {assigned}
+        {assigned ?? "•"}
       </div>
       <div className="pt-0.5">
         {title && (

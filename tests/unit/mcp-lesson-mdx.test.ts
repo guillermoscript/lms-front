@@ -126,9 +126,24 @@ describe('LessonBody', () => {
     expect(html).toContain('Row level security')
   })
 
-  it('numbers steps in order', () => {
-    const numbers = [...html.matchAll(/border-violet-600[^>]*>(\d+)</g)].map((m) => m[1])
-    expect(numbers).toEqual(['1', '2'])
+  it('numbers steps by position, not by a counter bumped while rendering', () => {
+    const stepped = [
+      '<Steps>',
+      '  <Step title="One">a</Step>',
+      '  <Step title="Two">b</Step>',
+      '  <Step title="Three">c</Step>',
+      '</Steps>',
+    ].join('\n')
+    const numbersIn = (markup: string) =>
+      [...markup.matchAll(/border-violet-600[^>]*>(\d+)</g)].map((m) => m[1])
+
+    // Rendering the same content twice must not drift: a counter incremented
+    // during render double-counts under React's development double-invoke and
+    // produces 1, 3, 5 in the browser.
+    const first = render(createElement(LessonBody, { content: stepped }))
+    const second = render(createElement(LessonBody, { content: stepped }))
+    expect(numbersIn(first)).toEqual(['1', '2', '3'])
+    expect(numbersIn(second)).toEqual(['1', '2', '3'])
   })
 
   it('embeds video by provider URL', () => {

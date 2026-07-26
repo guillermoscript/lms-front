@@ -86,9 +86,18 @@ const HEADINGS: Record<number, string> = {
   6: "mt-3 mb-2 text-[13px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100",
 };
 
-function renderChildren(node: MdNode): ReactNode[] {
+/**
+ * Walk state. `steps` numbers <Step> elements by the order the walk reaches
+ * them: authored steps land at varying depths (indented ones parse as inline
+ * JSX inside a paragraph), and a counter bumped inside a React component would
+ * double-count under React's development double-invoke. The walk runs once per
+ * render call, so its numbering is stable.
+ */
+type WalkContext = { steps?: { count: number } };
+
+function renderChildren(node: MdNode, ctx: WalkContext): ReactNode[] {
   return (node.children ?? []).map((child, index) => (
-    <Fragment key={index}>{renderNode(child)}</Fragment>
+    <Fragment key={index}>{renderNode(child, ctx)}</Fragment>
   ));
 }
 
@@ -98,20 +107,20 @@ function filenameFromMeta(meta: unknown): string | undefined {
   return meta.match(/title="([^"]*)"/)?.[1];
 }
 
-function renderNode(node: MdNode): ReactNode {
+function renderNode(node: MdNode, ctx: WalkContext): ReactNode {
   switch (node.type) {
     case "root":
-      return <>{renderChildren(node)}</>;
+      return <>{renderChildren(node, ctx)}</>;
 
     case "paragraph":
-      return <p className={BLOCK}>{renderChildren(node)}</p>;
+      return <p className={BLOCK}>{renderChildren(node, ctx)}</p>;
 
     case "heading": {
       const depth = Math.min(Math.max(Number(node.depth) || 1, 1), 6);
       // The lesson title owns <h1> in the widget chrome, so authored headings
       // shift down one level — same demotion the plain-markdown renderer does.
       const Tag = `h${Math.min(depth + 1, 6)}` as "h2";
-      return <Tag className={HEADINGS[depth]}>{renderChildren(node)}</Tag>;
+      return <Tag className={HEADINGS[depth]}>{renderChildren(node, ctx)}</Tag>;
     }
 
     case "text":
@@ -120,15 +129,15 @@ function renderNode(node: MdNode): ReactNode {
     case "strong":
       return (
         <strong className="font-bold text-zinc-900 dark:text-zinc-100">
-          {renderChildren(node)}
+          {renderChildren(node, ctx)}
         </strong>
       );
 
     case "emphasis":
-      return <em>{renderChildren(node)}</em>;
+      return <em>{renderChildren(node, ctx)}</em>;
 
     case "delete":
-      return <del>{renderChildren(node)}</del>;
+      return <del>{renderChildren(node, ctx)}</del>;
 
     case "break":
       return <br />;
@@ -146,7 +155,7 @@ function renderNode(node: MdNode): ReactNode {
     case "blockquote":
       return (
         <blockquote className="mb-3 border-l-2 border-zinc-300 py-1 pl-4 text-zinc-600 italic dark:border-zinc-600 dark:text-zinc-400 [&>p:last-child]:mb-0">
-          {renderChildren(node)}
+          {renderChildren(node, ctx)}
         </blockquote>
       );
 
@@ -157,7 +166,7 @@ function renderNode(node: MdNode): ReactNode {
           className={`${BLOCK} ${node.ordered ? "list-decimal" : "list-disc"} pl-6`}
           start={typeof node.start === "number" && node.start !== 1 ? node.start : undefined}
         >
-          {renderChildren(node)}
+          {renderChildren(node, ctx)}
         </Tag>
       );
     }
@@ -168,7 +177,7 @@ function renderNode(node: MdNode): ReactNode {
           {typeof node.checked === "boolean" && (
             <input type="checkbox" checked={node.checked} readOnly className="mr-2 align-middle" />
           )}
-          {renderChildren(node)}
+          {renderChildren(node, ctx)}
         </li>
       );
 
@@ -181,7 +190,7 @@ function renderNode(node: MdNode): ReactNode {
           title={typeof node.title === "string" ? node.title : undefined}
           className="font-medium text-violet-700 underline decoration-violet-400 underline-offset-2 dark:text-violet-400"
         >
-          {renderChildren(node)}
+          {renderChildren(node, ctx)}
         </a>
       );
 
@@ -214,7 +223,7 @@ function renderNode(node: MdNode): ReactNode {
                       style={{ textAlign: (align[index] as any) ?? "left" }}
                       className="border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                     >
-                      {renderChildren(cell)}
+                      {renderChildren(cell, ctx)}
                     </th>
                   ))}
                 </tr>
@@ -229,7 +238,7 @@ function renderNode(node: MdNode): ReactNode {
                       style={{ textAlign: (align[cellIndex] as any) ?? "left" }}
                       className="border border-zinc-200 px-3 py-1.5 text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
                     >
-                      {renderChildren(cell)}
+                      {renderChildren(cell, ctx)}
                     </td>
                   ))}
                 </tr>
@@ -243,11 +252,21 @@ function renderNode(node: MdNode): ReactNode {
     case "mdxJsxFlowElement":
     case "mdxJsxTextElement": {
       // A nameless element is an MDX fragment (<>…</>).
-      if (!node.name) return <>{renderChildren(node)}</>;
+      if (!node.name) return <>{renderChildren(node, ctx)}</>;
+
+      // <Steps> opens a numbering scope; each <Step> the walk reaches inside it
+      // takes the next number, wherever it sits in the tree.
+      const scoped: WalkContext =
+        node.name === "Steps" ? { ...ctx, steps: { count: 0 } } : ctx;
 
       const Component = LESSON_COMPONENTS[node.name];
       const props = attributesToProps(node);
-      const children = (node.children ?? []).length > 0 ? renderChildren(node) : undefined;
+      if (node.name === "Step" && scoped.steps && props.number === undefined) {
+        scoped.steps.count += 1;
+        props.number = scoped.steps.count;
+      }
+      const children =
+        (node.children ?? []).length > 0 ? renderChildren(node, scoped) : undefined;
 
       if (Component) {
         // CodeBlock reads its body as a string, not as rendered nodes.
@@ -270,7 +289,7 @@ function renderNode(node: MdNode): ReactNode {
       return null;
 
     default:
-      return node.children ? <>{renderChildren(node)}</> : null;
+      return node.children ? <>{renderChildren(node, ctx)}</> : null;
   }
 }
 
@@ -309,7 +328,7 @@ export function LessonMdxContent({ content }: { content: string }) {
 
   return (
     <div className="max-w-[72ch] break-words">
-      <RenderBoundary fallback={fallback}>{renderNode(tree)}</RenderBoundary>
+      <RenderBoundary fallback={fallback}>{renderNode(tree, {})}</RenderBoundary>
     </div>
   );
 }
