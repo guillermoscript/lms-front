@@ -25,6 +25,8 @@
     "dev": "mcp-use dev",
     "start": "mcp-use start",
     "deploy": "mcp-use deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "mcp-use generate-types || exit 0"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { MCPServer } from "mcp-use/server";
 import { widget, text } from "mcp-use/server";
@@ -242,7 +243,7 @@ type InterleaveTopicStat = {
 };
 
 /** Pure pool computation over practice_attempts rows (newest-first or any order). */
-function computeInterleavingPool(
+export function computeInterleavingPool(
   rows: Array<{ topic: string; score: number; created_at: string }>
 ): Map<string, InterleaveTopicStat> {
   const cutoff = new Date(
@@ -269,6 +270,19 @@ function computeInterleavingPool(
     });
   }
   return pool;
+}
+
+/**
+ * Topics that have NOT cleared the mastery gate. Shared by lms_practice_quiz
+ * (which gates the rendered session) and lms_record_practice_attempt (which
+ * gates the stored one) so the two can never drift apart — before #549 only the
+ * first had a gate at all, and the second was the documented path.
+ */
+export function blockedInterleavingTopics(
+  topics: Iterable<string>,
+  pool: Map<string, InterleaveTopicStat>
+): string[] {
+  return [...topics].filter((t) => !(pool.get(t)?.ready ?? false));
 }
 
 /** Fetch the caller's interleaving pool, optionally scoped to a course. */
@@ -756,9 +770,7 @@ export function registerPracticeTools(server: MCPServer) {
               "mode='mixed' needs questions tagged with ≥2 distinct topics (set each question's 'topic'). For one topic, run a focused quiz instead."
             );
           const pool = await fetchInterleavingPool(session, courseId);
-          const blocked = [...questionTopics].filter(
-            (t) => !(pool.get(t)?.ready ?? false)
-          );
+          const blocked = blockedInterleavingTopics(questionTopics, pool);
           if (blocked.length > 0)
             return errorResult(
               `Mixed session rejected — these topics haven't passed the interleaving mastery gate yet: ${blocked
@@ -797,7 +809,7 @@ export function registerPracticeTools(server: MCPServer) {
     {
       name: "lms_record_practice_attempt",
       description:
-        "Persist a finished practice-quiz attempt for the caller (practice storage only — never real grades). The practice-player widget calls this automatically for fully closed quizzes; call it yourself after grading free_text answers or a chat/voice drill round. Mixed (interleaved) attempts are split into one stored row per topic — pass mode='mixed' and make sure each question object carries its 'topic' so attribution per topic survives.",
+        "Persist a finished practice-quiz attempt for the caller (practice storage only — never real grades). The practice-player widget calls this automatically for fully closed quizzes; call it yourself after grading free_text answers or a chat/voice drill round. Mixed (interleaved) attempts are split into one stored row per topic — pass mode='mixed' and make sure each question object carries its 'topic' so attribution per topic survives. mode='mixed' is subject to the same interleaving mastery gate as lms_practice_quiz: it is rejected if any topic is not yet interleaving-ready or the teacher disabled interleaving for the course. Recording a mixed session as focused to dodge the gate is not acceptable — run focused practice on the blocked topics instead.",
       schema: z.object({
         topic: z.string().min(1).describe("What was practiced (session label for mixed sessions)"),
         mode: z
@@ -873,6 +885,37 @@ export function registerPracticeTools(server: MCPServer) {
         const distinctTopics = new Set(questionTopic.values());
         const isMixed = input.mode === "mixed" && distinctTopics.size > 1;
 
+        // Mastery gate (#393) — enforced HERE as well as in lms_practice_quiz
+        // (#549 §5). This tool used to accept mode='mixed' with arbitrary
+        // per-question topics and no gate and no kill-switch check, and its own
+        // description tells the model to call it directly for free-text and
+        // chat/voice drills, so the bypass WAS the documented path. The rows it
+        // writes are the same rows fetchInterleavingPool() reads back to decide
+        // readiness, so an ungated session certified its own topics. Both checks
+        // run before the insert, so a session can never self-certify.
+        if (isMixed) {
+          if (!(await isInterleavingEnabled(session, courseId)))
+            return errorResult(
+              "Interleaved practice is disabled for this course by the teacher. Record this round as focused single-topic practice instead (omit 'mode')."
+            );
+          const pool = await fetchInterleavingPool(session, courseId);
+          const blocked = blockedInterleavingTopics(distinctTopics, pool);
+          if (blocked.length > 0)
+            return errorResult(
+              `Mixed attempt rejected — these topics haven't passed the interleaving mastery gate yet: ${blocked
+                .map((t) => `"${t}"`)
+                .join(
+                  ", "
+                )}. A topic becomes interleaving-ready after ${INTERLEAVE_GATE_MIN_ATTEMPTS} practice attempts scoring ≥${INTERLEAVE_GATE_SCORE} in the last ${INTERLEAVE_GATE_WINDOW_DAYS} days. Record focused single-topic practice on the blocked topic(s) first (always allowed), then mix. Do NOT relabel questions to dodge the gate.`
+            );
+        }
+
+        // One session id shared by every per-topic slice, so the XP trigger can
+        // award once per session instead of once per stored row — a 3-topic
+        // mixed session used to pay 45 XP and burn 3 of the 10 daily slots
+        // against 15 XP for the same work done focused (#549 §5).
+        const sessionId = randomUUID();
+
         const baseRow = {
           user_id: session.getUserId(),
           tenant_id: session.getTenantId(),
@@ -880,6 +923,7 @@ export function registerPracticeTools(server: MCPServer) {
           lesson_id: input.lesson_id ?? null,
           source_exercise_id: input.source_exercise_id ?? null,
           source: "mcp-tutor",
+          session_id: sessionId,
         };
 
         type TopicSlice = {
@@ -946,6 +990,7 @@ export function registerPracticeTools(server: MCPServer) {
         return ok(
           {
             attempt_ids: (data ?? []).map((row) => row.id),
+            session_id: sessionId,
             mode: isMixed ? "mixed" : "focused",
             per_topic: (data ?? []).map((row) => ({
               topic: row.topic,
@@ -955,7 +1000,7 @@ export function registerPracticeTools(server: MCPServer) {
             correct_count: input.correct_count,
             total_questions: input.total_questions,
           },
-          `Practice attempt recorded (${input.correct_count}/${input.total_questions}, score ${input.score})${isMixed ? ` — mixed session split into ${slices.length} per-topic rows` : ""}. XP is awarded automatically.${isMixed ? " Mixed-session accuracy runs lower by design; do NOT lower difficulty because of it — only sustained mastery signals may." : ""}${input.correct_count < input.total_questions ? " Before explaining the missed items, ask the student ONE short question about their reasoning on a miss and tailor the explanation to their answer (one nudge max, skippable)." : ""}`
+          `Practice attempt recorded (${input.correct_count}/${input.total_questions}, score ${input.score})${isMixed ? ` — mixed session split into ${slices.length} per-topic rows` : ""}. XP is awarded automatically, once per session (a mixed session earns the same as the equivalent focused one — splitting by topic does not multiply it).${isMixed ? " Mixed-session accuracy runs lower by design; do NOT lower difficulty because of it — only sustained mastery signals may." : ""}${input.correct_count < input.total_questions ? " Before explaining the missed items, ask the student ONE short question about their reasoning on a miss and tailor the explanation to their answer (one nudge max, skippable)." : ""}`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

@@ -6,12 +6,12 @@ import {
   isStreakAtRisk,
   localDateStr,
   localHour,
+  localYesterday,
   pickTemplate,
   renderTemplate,
   resolveChannels,
   resolveDigestSettings,
   tenantBaseUrl,
-  utcYesterday,
 } from '@/lib/notifications/daily-digest'
 
 /**
@@ -92,31 +92,89 @@ describe('localDateStr', () => {
   })
 })
 
-describe('utcYesterday + isStreakAtRisk', () => {
+describe('localYesterday + isStreakAtRisk (UTC baseline)', () => {
+  // These cases predate #549 and were originally written against UTC via the
+  // removed `utcYesterday`. Passing 'UTC' as the 5th arg to isStreakAtRisk
+  // preserves their exact original intent.
   const now = new Date('2026-07-14T12:00:00Z')
 
   it('true when last_activity_date is UTC yesterday and streak >= min', () => {
-    expect(isStreakAtRisk('2026-07-13', 7, now, 7)).toBe(true)
+    expect(isStreakAtRisk('2026-07-13', 7, now, 7, 'UTC')).toBe(true)
   })
 
   it('false when last_activity_date is today', () => {
-    expect(isStreakAtRisk('2026-07-14', 7, now, 7)).toBe(false)
+    expect(isStreakAtRisk('2026-07-14', 7, now, 7, 'UTC')).toBe(false)
   })
 
   it('false when last_activity_date is two days ago', () => {
-    expect(isStreakAtRisk('2026-07-12', 7, now, 7)).toBe(false)
+    expect(isStreakAtRisk('2026-07-12', 7, now, 7, 'UTC')).toBe(false)
   })
 
   it('false when streak is below min even if the date matches', () => {
-    expect(isStreakAtRisk('2026-07-13', 2, now, 7)).toBe(false)
+    expect(isStreakAtRisk('2026-07-13', 2, now, 7, 'UTC')).toBe(false)
   })
 
   it('false when last_activity_date is null', () => {
-    expect(isStreakAtRisk(null, 7, now, 7)).toBe(false)
+    expect(isStreakAtRisk(null, 7, now, 7, 'UTC')).toBe(false)
   })
 
-  it('utcYesterday returns YYYY-MM-DD 24h before now', () => {
-    expect(utcYesterday(now)).toBe('2026-07-13')
+  it('localYesterday(now, "UTC") returns YYYY-MM-DD 24h before now', () => {
+    expect(localYesterday(now, 'UTC')).toBe('2026-07-13')
+  })
+})
+
+describe('LATAM regression (issue #549 §3): nudge fires past UTC midnight', () => {
+  // Bogota is UTC-5 with no DST. A 20:00-local nudge (nudgeHour = 20) fires at
+  // 01:00 UTC on the *next* UTC calendar day. Before #549, isStreakAtRisk
+  // compared last_activity_date against UTC-yesterday (via the removed
+  // utcYesterday), which is off by one day for any tenant west of UTC once
+  // nudgeHour + |utc_offset| >= 24 — exactly this case (20 + 5 = 25).
+  //
+  // now = 2026-03-11T01:00:00Z == 2026-03-10 20:00 in America/Bogota.
+  const now = new Date('2026-03-11T01:00:00Z')
+
+  it('a student who practised the same Bogota-local day (2026-03-10) is NOT at risk', () => {
+    // Under the old UTC-yesterday comparison this returned true: UTC-yesterday
+    // of 2026-03-11T01:00:00Z is 2026-03-10, which incorrectly matched
+    // last_activity_date and told the student their streak was ending hours
+    // after they had already secured it.
+    expect(isStreakAtRisk('2026-03-10', 10, now, 7, 'America/Bogota')).toBe(false)
+  })
+
+  it('a student who skipped the Bogota-local day (last active 2026-03-09) IS at risk', () => {
+    // Under the old UTC-yesterday comparison this returned false: '2026-03-09'
+    // never matched UTC-yesterday ('2026-03-10'), so the student who actually
+    // needed the nudge — the one who skipped the local day — was silently
+    // skipped.
+    expect(isStreakAtRisk('2026-03-09', 10, now, 7, 'America/Bogota')).toBe(true)
+  })
+
+  it('demonstrates the exact off-by-one-day: Bogota-yesterday vs UTC-yesterday diverge at this instant', () => {
+    expect(localYesterday(now, 'America/Bogota')).toBe('2026-03-09')
+    expect(localYesterday(now, 'UTC')).toBe('2026-03-10')
+  })
+})
+
+describe('localYesterday DST correctness', () => {
+  // localYesterday deliberately takes the local calendar date first and steps
+  // back one calendar day on that date alone, rather than subtracting 24h
+  // from the instant and re-projecting into the timezone. The latter is wrong
+  // near a DST transition.
+  //
+  // US spring-forward 2026: America/New_York jumps from 2:00 EST to 3:00 EDT
+  // at 2026-03-08T07:00:00Z (clocks skip 2:00-3:00 local).
+  //
+  // now = 2026-03-09T04:30:00Z == 2026-03-09 00:30 EDT (UTC-4, post-transition).
+  // The correct "yesterday" is the calendar date 2026-03-08.
+  //
+  // A naive now-minus-24h approach would compute 2026-03-08T04:30:00Z, which
+  // is BEFORE that day's 07:00Z transition and therefore still EST (UTC-5):
+  // 04:30 - 5h = 2026-03-07T23:30 local, i.e. it would wrongly land on
+  // 2026-03-07 — one calendar day too far back, because the 24h subtraction
+  // silently ate the extra hour DST added back on March 9.
+  it('returns the correct previous calendar date across a spring-forward transition', () => {
+    const now = new Date('2026-03-09T04:30:00Z')
+    expect(localYesterday(now, 'America/New_York')).toBe('2026-03-08')
   })
 })
 

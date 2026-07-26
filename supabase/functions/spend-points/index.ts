@@ -1,28 +1,37 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-function getTenantIdFromJwt(authHeader: string): string | null {
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Store redemption.
+ *
+ * Auth and the plan feature gate happen here; the mutation itself is one call
+ * to the redeem_store_item() RPC, which runs under a SELECT ... FOR UPDATE on
+ * the caller's gamification_profiles row (migration 20260726140400, issue #549
+ * §6).
+ *
+ * This function previously did the work inline as three separate
+ * read-modify-write cycles — total_coins_spent, streak_freezes_available, and a
+ * count-then-insert for the max_per_user cap — with no transaction. Because the
+ * coin balance is derived (floor(total_xp / 10) - total_coins_spent), a lost
+ * update meant the student kept the item AND the coins, and two parallel
+ * purchases cost one item's price. Do not reintroduce mutations here: the RPC
+ * is the only writer, so the lock actually covers everything it needs to.
+ */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Missing authorization" }, 401);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -34,10 +43,7 @@ Deno.serve(async (req) => {
     });
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Unauthorized" }, 401);
     }
 
     const tenantId = getTenantIdFromJwt(authHeader) || "00000000-0000-0000-0000-000000000001";
@@ -46,169 +52,48 @@ Deno.serve(async (req) => {
     // Check if store feature is enabled for this tenant's plan
     const { data: features } = await admin.rpc("get_gamification_features", { _tenant_id: tenantId });
     if (!features?.store) {
-      return new Response(JSON.stringify({ error: "Store is not available on your plan", feature_locked: true }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Store is not available on your plan", feature_locked: true }, 403);
     }
 
     const { item_id } = await req.json();
     if (!item_id) {
-      return new Response(JSON.stringify({ error: "item_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "item_id is required" }, 400);
     }
 
-    // Get store item (global or tenant-specific)
-    const { data: item, error: itemError } = await admin
-      .from("gamification_store_items")
-      .select("*")
-      .eq("id", item_id)
-      .eq("is_available", true)
-      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
-      .single();
+    // The whole redemption, atomically. `user.id` comes from the verified JWT
+    // above — the RPC is service-role only and trusts its caller for that.
+    const { data: result, error: rpcError } = await admin.rpc("redeem_store_item", {
+      _user_id: user.id,
+      _tenant_id: tenantId,
+      _item_id: item_id,
+    });
 
-    if (itemError || !item) {
-      return new Response(JSON.stringify({ error: "Item not found or inactive" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (rpcError) {
+      return json({ error: "Failed to process redemption", detail: rpcError.message }, 500);
     }
 
-    // Get user profile (tenant-scoped)
-    const { data: profile, error: profileError } = await admin
-      .from("gamification_profiles")
-      .select("total_xp, total_coins_spent")
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId)
-      .single();
-
-    if (profileError || !profile) {
-      return new Response(JSON.stringify({ error: "Gamification profile not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Calculate available coins
-    const availableCoins = Math.floor(profile.total_xp / 10) - profile.total_coins_spent;
-
-    if (availableCoins < item.price_coins) {
-      return new Response(
-        JSON.stringify({
-          error: "Insufficient coins",
-          available: availableCoins,
-          required: item.price_coins,
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    if (!result?.ok) {
+      const notFound = result?.code === "item_not_found" || result?.code === "no_profile";
+      return json(
+        {
+          error: result?.error ?? "Redemption failed",
+          code: result?.code ?? "unknown",
+          // Preserved from the previous shape so existing clients keep working.
+          ...(result?.code === "insufficient_coins"
+            ? { available: result.available, required: result.required }
+            : {}),
+        },
+        notFound ? 404 : 400
       );
     }
 
-    // Check max_per_user limit (tenant-scoped).
-    // For streak_freeze the cap is PER CALENDAR MONTH (issue #394: streak
-    // saver is capped per month); all other items keep a lifetime cap.
-    if (item.max_per_user !== null) {
-      const isMonthlyCap = item.slug === "streak_freeze";
-
-      let query = admin
-        .from("gamification_redemptions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
-        .eq("item_id", item_id);
-
-      if (isMonthlyCap) {
-        const now = new Date();
-        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-        query = query.gte("redeemed_at", monthStart);
-      }
-
-      const { count } = await query;
-
-      if ((count || 0) >= item.max_per_user) {
-        return new Response(
-          JSON.stringify({
-            error: isMonthlyCap
-              ? "Monthly redemption limit reached for this item"
-              : "Maximum redemptions reached for this item",
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Create redemption record (tenant-scoped)
-    const { error: redemptionError } = await admin
-      .from("gamification_redemptions")
-      .insert({
-        user_id: user.id,
-        item_id: item_id,
-        coins_spent: item.price_coins,
-        tenant_id: tenantId,
-      });
-
-    if (redemptionError) {
-      return new Response(JSON.stringify({ error: "Failed to process redemption" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Update total_coins_spent (tenant-scoped)
-    await admin
-      .from("gamification_profiles")
-      .update({ total_coins_spent: profile.total_coins_spent + item.price_coins, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
-
-    // Special handling for streak_freeze
-    if (item.slug === "streak_freeze") {
-      const { data: currentProfile } = await admin
-        .from("gamification_profiles")
-        .select("streak_freezes_available")
-        .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
-        .single();
-
-      await admin
-        .from("gamification_profiles")
-        .update({
-          streak_freezes_available: Math.min((currentProfile?.streak_freezes_available || 0) + 1, 5),
-        })
-        .eq("user_id", user.id)
-        .eq("tenant_id", tenantId);
-    }
-
-    // Create user reward record for applicable items (tenant-scoped)
-    if (["double_xp_1h", "hint_token", "early_access"].includes(item.slug)) {
-      const expiresAt = item.slug === "double_xp_1h"
-        ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-        : item.slug === "early_access"
-        ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        : null;
-
-      await admin.from("gamification_user_rewards").insert({
-        user_id: user.id,
-        reward_type: item.slug,
-        reward_data: { item_id: item.id, item_name: item.name },
-        expires_at: expiresAt,
-        is_active: true,
-        tenant_id: tenantId,
-      });
-    }
-
-    const coinsRemaining = availableCoins - item.price_coins;
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        item: { id: item.id, name: item.name, slug: item.slug },
-        coins_spent: item.price_coins,
-        coins_remaining: coinsRemaining,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({
+      success: true,
+      item: result.item,
+      coins_spent: result.coins_spent,
+      coins_remaining: result.coins_remaining,
+      streak_freezes_available: result.streak_freezes_available,
+    });
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
@@ -216,3 +101,13 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+function getTenantIdFromJwt(authHeader: string): string | null {
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.tenant_id || payload.app_metadata?.tenant_id || null;
+  } catch {
+    return null;
+  }
+}

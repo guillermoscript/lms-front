@@ -107,15 +107,45 @@ export function localDateStr(now: Date, timezone: string): string {
   }
 }
 
-/** UTC yesterday as YYYY-MM-DD — matches award_xp()'s CURRENT_DATE streak math. */
-export function utcYesterday(now: Date): string {
-  const d = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  return d.toISOString().slice(0, 10)
+/**
+ * YYYY-MM-DD for the day before `now` in the given IANA timezone.
+ *
+ * Takes the local calendar date first, then steps back one calendar day on that
+ * date alone. Subtracting 24h from the instant would land on the wrong date
+ * across a DST transition.
+ */
+export function localYesterday(now: Date, timezone: string): string {
+  const [y, m, d] = localDateStr(now, timezone).split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10)
 }
 
-/** Streak survives only if the student acts today: last activity was exactly yesterday. */
-export function isStreakAtRisk(lastActivityDate: string | null, streak: number, now: Date, min: number): boolean {
-  return streak >= min && lastActivityDate === utcYesterday(now)
+/**
+ * Streak survives only if the student acts today: last activity was exactly
+ * yesterday *in the tenant's timezone*.
+ *
+ * This compared against UTC yesterday until issue #549. Everything else about
+ * the send is tenant-local — `localHour` decides whether to send at all, and
+ * `localDateStr` keys idempotency — so at UTC-5 (Bogotá, Lima) the 20:00 nudge
+ * runs at 01:00 UTC the *next* UTC day, and a student who practised that same
+ * local afternoon was told their streak was ending hours after they had secured
+ * it, while the students who actually skipped the local day were silently
+ * skipped. It misfired whenever `nudgeHour + |utc_offset| >= 24`.
+ *
+ * Known residual: `last_activity_date` is still written by award_xp() from
+ * CURRENT_DATE, i.e. the UTC day, so a student whose only activity fell in the
+ * local evening after the UTC day rolled over is still measured against the
+ * wrong day. Fixing that means changing award_xp()'s day boundary, which would
+ * shift every existing streak — a deliberate migration, not a side effect of
+ * this one (issue #549 §3).
+ */
+export function isStreakAtRisk(
+  lastActivityDate: string | null,
+  streak: number,
+  now: Date,
+  min: number,
+  timezone: string
+): boolean {
+  return streak >= min && lastActivityDate === localYesterday(now, timezone)
 }
 
 const SUMMARY_COPY = {
@@ -290,8 +320,8 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
         kind === 'daily_digest'
           ? c.due_cards > 0 ||
             c.goals_pending > 0 ||
-            isStreakAtRisk(c.last_activity_date, c.current_streak, now, DIGEST_STREAK_MIN)
-          : isStreakAtRisk(c.last_activity_date, c.current_streak, now, NUDGE_STREAK_MIN)
+            isStreakAtRisk(c.last_activity_date, c.current_streak, now, DIGEST_STREAK_MIN, settings.timezone)
+          : isStreakAtRisk(c.last_activity_date, c.current_streak, now, NUDGE_STREAK_MIN, settings.timezone)
       )
       if (recipients.length === 0) continue
 
@@ -321,7 +351,8 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
             candidate.last_activity_date,
             candidate.current_streak,
             now,
-            kind === 'daily_digest' ? DIGEST_STREAK_MIN : NUDGE_STREAK_MIN
+            kind === 'daily_digest' ? DIGEST_STREAK_MIN : NUDGE_STREAK_MIN,
+            settings.timezone
           )
           const summary = buildSummary(
             {
