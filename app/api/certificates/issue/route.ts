@@ -8,10 +8,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { sendEmail } from '@/lib/email/send'
 import { certificateIssuedTemplate } from '@/lib/email/templates/certificate-issued'
 
 export const dynamic = 'force-dynamic'
+
+/** Shape of `check_and_issue_certificate`'s jsonb return (it is typed `Json`). */
+type CertificateCompletion = {
+  totalLessons?: number | null
+  completedLessons?: number | null
+  completionPercentage?: number | null
+}
+type CertificateEligibility = {
+  success?: boolean
+  eligible?: boolean
+  certificateId?: string
+  reason?: string
+  completion?: CertificateCompletion
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +79,26 @@ export async function POST(request: NextRequest) {
       // Verify teacher owns this course (unless admin)
       if (tenantUser?.role !== 'admin' && course.author_id !== user.id) {
         return NextResponse.json({ error: 'Not authorized for this course' }, { status: 403 })
+      }
+    } else {
+      // Self-serve issuance (#543). Eligibility below falls through to a raw
+      // `lesson_completions` count, so without this the school's credential is
+      // mintable by anyone who can write completions — and until this change
+      // that was any authenticated user, for any lesson id. `entitlements` is
+      // the source of truth; an `enrollments` row is not an access grant.
+      const accessState = await resolveCourseAccessState(supabase, user.id, Number(courseId))
+      if (accessState !== 'granted') {
+        return NextResponse.json(
+          {
+            error:
+              accessState === 'suspended'
+                ? "Your school's access is currently suspended"
+                : 'You do not have access to this course',
+            accessDenied: true,
+            accessSuspended: accessState === 'suspended',
+          },
+          { status: 403 }
+        )
       }
     }
 
@@ -157,13 +192,13 @@ async function simplifiedIssuance(
   issuedBy?: string,
 ) {
   // Check eligibility via RPC (or fallback to lesson count)
-  let completionData: any = {}
+  let completionData: CertificateCompletion = {}
 
   try {
     const { data: eligibility } = await supabase
       .rpc('check_and_issue_certificate', { p_user_id: userId, p_course_id: courseId })
 
-    const result = eligibility as any
+    const result = eligibility as CertificateEligibility | null
     if (result && !result.success && !result.eligible && !result.certificateId) {
       return NextResponse.json({
         success: false,
@@ -357,10 +392,11 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error
 
+      const eligibility = data as CertificateEligibility | null
       return NextResponse.json({
-        eligible: (data as any)?.eligible || false,
-        completion: (data as any)?.completion,
-        reason: (data as any)?.reason,
+        eligible: eligibility?.eligible || false,
+        completion: eligibility?.completion,
+        reason: eligibility?.reason,
       })
     } catch {
       // Fallback: simple completion check
