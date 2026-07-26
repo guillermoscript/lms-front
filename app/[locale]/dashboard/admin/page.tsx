@@ -79,9 +79,9 @@ export default async function AdminDashboardPage({
       .eq('subscription_status', 'active'),
     supabase
       .from('transactions')
-      .select('transaction_id, amount, status, created_at, user_id')
+      .select('transaction_id, amount, status, transaction_date, user_id')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
+      .order('transaction_date', { ascending: false })
       .limit(5),
     supabase
       .from('tenant_users')
@@ -417,7 +417,7 @@ export default async function AdminDashboardPage({
                         {transaction.user?.full_name || t('recentActivity.unknown')}
                       </p>
                       <p className="truncate text-[11px] text-muted-foreground tabular-nums">
-                        {new Date(transaction.created_at).toLocaleDateString()}
+                        {new Date(transaction.transaction_date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="ml-4 text-right">

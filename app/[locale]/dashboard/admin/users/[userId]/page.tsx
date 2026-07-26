@@ -78,7 +78,7 @@ export default async function UserDetailPage({ params }: PageProps) {
       .order('enrolled_at', { ascending: false }),
     supabase.from('transactions').select('*')
       .eq('user_id', userId).eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false }).limit(10),
+      .order('transaction_date', { ascending: false }).limit(10),
     supabase.from('lesson_completions').select(`
       completed_at,
       lesson:lessons (
@@ -329,7 +329,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                             {new Intl.NumberFormat(locale, { style: 'currency', currency: transaction.currency?.toUpperCase() || 'USD' }).format(transaction.amount)}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.created_at), 'P', { locale: dateLocale })}
+                            {format(new Date(transaction.transaction_date), 'P', { locale: dateLocale })}
                           </p>
                         </div>
                         <Badge
