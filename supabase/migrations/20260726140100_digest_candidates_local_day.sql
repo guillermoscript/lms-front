@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Daily digest candidates: stop pre-filtering streak risk on the UTC day
--- Issue #549 §3 (epic #540). Fixes 20260714150000_daily_digest.
+-- Issue #549 §3 (epic #540).
 --
 -- The streak-at-risk branch tested `gp.last_activity_date = CURRENT_DATE - 1`,
 -- i.e. UTC yesterday, while the send decision and the idempotency key in
@@ -20,11 +20,24 @@
 -- isStreakAtRisk(), which does know the timezone. Rows that turn out not to be
 -- at risk are dropped there before anything is sent.
 --
+-- IMPORTANT — this replaces the KEYSET-PAGINATED signature introduced by
+-- 20260726140000_daily_digest_candidates_pagination.sql (issue #548), not the
+-- original zero-argument one. #548 and #549 were developed in parallel and this
+-- file originally re-created the zero-arg function, which would have (a) added
+-- back the overload #548 deliberately dropped — a zero-arg call against both
+-- candidates is ambiguous and PostgREST answers 300 — and (b) left the
+-- three-argument definition the cron actually calls still carrying the UTC bug,
+-- making this fix inert. The pagination logic below is carried over verbatim.
+--
 -- award_xp()'s own day boundary is deliberately NOT changed here: it would
 -- shift every existing streak. See the note on isStreakAtRisk().
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION public.get_daily_digest_candidates()
+CREATE OR REPLACE FUNCTION public.get_daily_digest_candidates(
+    _after_tenant_id uuid DEFAULT NULL,
+    _after_user_id uuid DEFAULT NULL,
+    _limit integer DEFAULT 500
+)
 RETURNS TABLE (
     tenant_id uuid,
     user_id uuid,
@@ -76,14 +89,23 @@ AS $$
         COALESCE(rc.due_count, 0) > 0
         OR COALESCE(sg.pending_count, 0) > 0
         -- Superset of "streak at risk" across all tenant timezones; the exact
-        -- local-day comparison happens in isStreakAtRisk().
+        -- local-day comparison happens in isStreakAtRisk(). Was
+        -- `= CURRENT_DATE - 1` (issue #549 §3).
         OR (COALESCE(gp.current_streak, 0) >= 3
             AND gp.last_activity_date >= CURRENT_DATE - 2)
-      );
+      )
+      -- Keyset cursor from issue #548, carried over unchanged.
+      AND (
+        _after_tenant_id IS NULL
+        OR (tu.tenant_id, tu.user_id)
+             > (_after_tenant_id, COALESCE(_after_user_id, '00000000-0000-0000-0000-000000000000'::uuid))
+      )
+    ORDER BY tu.tenant_id, tu.user_id
+    LIMIT LEAST(GREATEST(COALESCE(_limit, 500), 1), 1000);
 $$;
 
 -- Service-role only: the function reads auth.users and crosses tenants.
-REVOKE ALL ON FUNCTION public.get_daily_digest_candidates() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_daily_digest_candidates() FROM anon;
-REVOKE ALL ON FUNCTION public.get_daily_digest_candidates() FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.get_daily_digest_candidates() TO service_role;
+REVOKE ALL ON FUNCTION public.get_daily_digest_candidates(uuid, uuid, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_daily_digest_candidates(uuid, uuid, integer) FROM anon;
+REVOKE ALL ON FUNCTION public.get_daily_digest_candidates(uuid, uuid, integer) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.get_daily_digest_candidates(uuid, uuid, integer) TO service_role;
