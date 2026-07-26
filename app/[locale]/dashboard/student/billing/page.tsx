@@ -51,7 +51,19 @@ interface Subscription {
   cancel_at_period_end: boolean | null
   plan_id: number
   payment_provider: string
+  provider_subscription_id: string | null
 }
+
+/**
+ * Statuses whose subscription is the student's LIVE one — the row this page
+ * renders and offers cancel / switch controls for.
+ *
+ * `past_due` belongs here (#545). It used to be excluded, so a student mid
+ * dunning got the "no subscription" empty state: neither ChangePlanDialog nor
+ * ManageSubscription mounted and they could neither cancel nor switch while
+ * still being billed, even though both server actions accept the status.
+ */
+const LIVE_SUBSCRIPTION_STATUSES: SubscriptionStatus[] = ['active', 'renewed', 'past_due']
 
 interface PaymentRequest {
   request_id: number
@@ -197,7 +209,7 @@ export default async function StudentBillingPage() {
   // ── 2. Subscriptions ────────────────────────────────────────────────────────
   const { data: rawSubs } = await supabase
     .from('subscriptions')
-    .select('subscription_id, subscription_status, current_period_end, end_date, cancel_at_period_end, plan_id, payment_provider')
+    .select('subscription_id, subscription_status, current_period_end, end_date, cancel_at_period_end, plan_id, payment_provider, provider_subscription_id')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .order('created', { ascending: false })
@@ -235,9 +247,10 @@ export default async function StudentBillingPage() {
   }
 
   // Derived
-  const activeSubscription = subscriptions.find(
-    (s) => s.subscription_status === 'active' || s.subscription_status === 'renewed'
+  const activeSubscription = subscriptions.find((s) =>
+    LIVE_SUBSCRIPTION_STATUSES.includes(s.subscription_status)
   )
+  const isPastDue = activeSubscription?.subscription_status === 'past_due'
 
   // ── Plan-change (switch) support ────────────────────────────────────────────
   // Switchable when the provider does an in-place swap (Stripe/LS) OR is
@@ -250,14 +263,44 @@ export default async function StudentBillingPage() {
     !!activeCaps &&
     (activeCaps.supportsPlanChange || !activeCaps.supportsNativeSubscriptions)
 
+  // Does this subscription settle a price difference by itself? Only an
+  // in-place provider swap with proration does (Stripe / Lemon Squeezy, and
+  // only when we actually hold a provider subscription to swap). Mirrors
+  // `_settles_natively` in change_subscription_plan.
+  const settlesNatively =
+    !!activeCaps?.supportsPlanChange && !!activeSubscription?.provider_subscription_id
+
   let switchablePlans: SwitchablePlan[] = []
-  if (canSwitchPlan) {
-    const { data: rawPlans } = await supabase
-      .from('plans')
-      .select('plan_id, plan_name, price, payment_provider')
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null)
-    switchablePlans = (rawPlans ?? []) as SwitchablePlan[]
+  if (canSwitchPlan && activeSubscription) {
+    const [{ data: rawPlans }, { data: currentPlanRow }] = await Promise.all([
+      supabase
+        .from('plans')
+        .select('plan_id, plan_name, price, payment_provider')
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null),
+      supabase.from('plans').select('price').eq('plan_id', activeSubscription.plan_id).maybeSingle(),
+    ])
+    const allPlans = (rawPlans ?? []) as SwitchablePlan[]
+
+    // Price gate, server-side (#545). This list used to be every non-deleted
+    // tenant plan, so a student on a one-click FREE plan could pick the
+    // school's paid bank-transfer plan and walk away with its entitlements —
+    // no transaction, no payment_requests row, nothing for an admin to
+    // reconcile. Anything that does not settle natively may only move to a
+    // plan costing the same or less; the RPC refuses the rest with
+    // `upgrade_requires_payment` regardless of what the UI offers.
+    //
+    // The current plan is read WITHOUT the `deleted_at` filter on purpose: a
+    // school can soft-delete a plan students are still subscribed to, and the
+    // gate needs its real price. Students can read those rows — "Students can
+    // view active plans" (20260330200000) is permissive on `tenant_id` alone,
+    // so it ORs past the `deleted_at IS NULL` policy. If the row is genuinely
+    // gone the price reads 0 and the list collapses to free-only, which fails
+    // closed rather than opening the gate.
+    const currentPrice = Number(currentPlanRow?.price ?? 0)
+    switchablePlans = settlesNatively
+      ? allPlans
+      : allPlans.filter((p) => Number(p.price) <= currentPrice)
   }
 
   return (
@@ -298,13 +341,24 @@ export default async function StudentBillingPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
+              {/* Dunning notice (#545): a past_due subscription still bills and
+                  still grants access during the provider's retry window, so say
+                  so instead of rendering it as if nothing were wrong. */}
+              {isPastDue && (
+                <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
+                  <IconAlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{t('subscription.pastDueNotice')}</span>
+                </div>
+              )}
               {/* Renewal / expiry date */}
               {(activeSubscription.current_period_end ?? activeSubscription.end_date) && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     {activeSubscription.cancel_at_period_end
                       ? t('subscription.cancelsOn')
-                      : t('subscription.renewsOn')}
+                      : isPastDue
+                        ? t('subscription.paymentDueSince')
+                        : t('subscription.renewsOn')}
                   </span>
                   <span className="font-medium tabular-nums">
                     {formatDate(activeSubscription.current_period_end ?? activeSubscription.end_date)}
@@ -340,7 +394,7 @@ export default async function StudentBillingPage() {
                     <ChangePlanDialog
                       currentPlanId={activeSubscription.plan_id}
                       currentProvider={activeProvider}
-                      isNativeSwap={!!activeCaps?.supportsPlanChange}
+                      isNativeSwap={settlesNatively}
                       plans={switchablePlans}
                     />
                   )}

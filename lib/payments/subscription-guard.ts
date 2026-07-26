@@ -15,8 +15,19 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-/** Statuses that mean "this subscription still bills / grants access". */
-export const BLOCKING_SUBSCRIPTION_STATUSES = ['active', 'past_due']
+/**
+ * Statuses that mean "this subscription still bills / grants access".
+ *
+ * `renewed` belongs here (#545): it grants access and keeps billing exactly
+ * like `active`, and six other places treat it as live — including
+ * `change_subscription_plan`'s own supersession SELECT. Omitting it let a
+ * student holding a `renewed` subscription pass this guard AND the DB backstop
+ * in `handle_new_subscription`, and check out a second plan — the parallel
+ * double-billing #459 exists to prevent. Rows carry that status if they were
+ * renewed before `20260516140000` stopped writing it, i.e. the long-lived
+ * paying subscribers.
+ */
+export const BLOCKING_SUBSCRIPTION_STATUSES = ['active', 'renewed', 'past_due']
 
 /** English fallback shown when an API path is hit directly; the checkout pages
  * render a translated notice before the user ever reaches these routes. */

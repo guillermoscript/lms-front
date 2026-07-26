@@ -72,14 +72,28 @@ function event(type: BillingEventType, extra: Partial<NormalizedBillingEvent> = 
 const PROVIDER = 'lemonsqueezy'
 
 describe('dispatchBillingEvent', () => {
-  it('past_due → no subscriptions write and no rpc (log-only)', async () => {
+  // The dispatcher used to log past_due and drop it, on a stale comment
+  // claiming the enum had no such value —
+  // 20260530140000_add_past_due_subscription_status.sql added it, so a student
+  // mid-dunning looked healthy everywhere (#545).
+  it('past_due → writes subscription_status="past_due" (access untouched)', async () => {
     const { admin, calls } = makeFakeAdmin()
     await dispatchBillingEvent(event('subscription.past_due', { providerSubscriptionId: 'sub_1' }), {
       provider: PROVIDER,
       admin,
     })
-    expect(calls.updates).toHaveLength(0)
+    expect(calls.updates).toHaveLength(1)
+    expect(calls.updates[0].table).toBe('subscriptions')
+    expect(calls.updates[0].values).toEqual({ subscription_status: 'past_due' })
+    // No ended_at / entitlement change — handle_subscription_status_change
+    // matches neither branch for past_due, so access rides out the retry window.
     expect(calls.rpc).toHaveLength(0)
+  })
+
+  it('past_due without a provider subscription id → no write', async () => {
+    const { admin, calls } = makeFakeAdmin()
+    await dispatchBillingEvent(event('subscription.past_due'), { provider: PROVIDER, admin })
+    expect(calls.updates).toHaveLength(0)
     expect(calls.from).toHaveLength(0)
   })
 

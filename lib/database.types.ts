@@ -5466,8 +5466,8 @@ export type Database = {
       }
       subscriptions: {
         Row: {
-          cancel_at: string
-          cancel_at_period_end: boolean | null
+          cancel_at: string | null
+          cancel_at_period_end: boolean
           canceled_at: string | null
           created: string
           current_period_end: string
@@ -5489,8 +5489,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cancel_at?: string
-          cancel_at_period_end?: boolean | null
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean
           canceled_at?: string | null
           created?: string
           current_period_end?: string
@@ -5512,8 +5512,8 @@ export type Database = {
           user_id: string
         }
         Update: {
-          cancel_at?: string
-          cancel_at_period_end?: boolean | null
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean
           canceled_at?: string | null
           created?: string
           current_period_end?: string
@@ -6323,8 +6323,8 @@ export type Database = {
       change_subscription_plan: {
         Args: { _new_plan_id: number }
         Returns: {
-          cancel_at: string
-          cancel_at_period_end: boolean | null
+          cancel_at: string | null
+          cancel_at_period_end: boolean
           canceled_at: string | null
           created: string
           current_period_end: string

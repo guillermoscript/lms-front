@@ -62,9 +62,17 @@ export async function cancelSubscription(
       }
     }
 
+    // A period-end cancel keeps whatever live status the row already had —
+    // cancelling must never IMPROVE it (#545). Writing 'active' unconditionally
+    // erased a `past_due` delinquency from billing health and the admin views
+    // the moment anyone scheduled a cancel. Only the legacy `renewed` status is
+    // normalized to 'active'; nothing writes it any more.
+    const liveStatus =
+      subscription.subscription_status === 'renewed' ? 'active' : subscription.subscription_status
+
     const updates: any = {
-      // Use 'canceled' (correct enum value) for immediate; keep 'active' for period-end
-      subscription_status: immediate ? 'canceled' : 'active',
+      // Use 'canceled' (correct enum value) for immediate; keep the live status for period-end
+      subscription_status: immediate ? 'canceled' : liveStatus,
       canceled_at: new Date().toISOString(),
     }
 
@@ -160,18 +168,16 @@ export async function reactivateSubscription(subscriptionId: number) {
       }
     }
 
-    // Reactivate the subscription. NB: `cancel_at` is NOT NULL in the schema —
-    // setting it to null here would fail the update (a latent bug that silently
-    // broke admin reactivate). Clearing `cancel_at_period_end` un-schedules the
-    // subscription-expiry crons, but the Solana auto-pull crank
-    // (lib/payments/solana-pull-decision.ts) reads `cancel_at` on its own, so we
-    // push it forward to the live period end instead of leaving a past value that
-    // would re-cancel the row. `canceled_at` is cleared.
+    // Reactivate the subscription. `cancel_at` is cleared WITH the flag: since
+    // #545 it is nullable and the CHECK
+    // `subscriptions_cancel_at_requires_schedule` rejects a cancel date that
+    // outlives its schedule, so a leftover date can no longer be read as a live
+    // cancel by the Solana auto-pull crank. `canceled_at` is cleared too.
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
         cancel_at_period_end: false,
-        cancel_at: subscription.current_period_end || subscription.end_date,
+        cancel_at: null,
         canceled_at: null,
       })
       .eq('subscription_id', subscriptionId)

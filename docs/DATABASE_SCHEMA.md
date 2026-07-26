@@ -525,8 +525,8 @@ Student subscriptions to a school's plans. Tenant-scoped.
 | `start_date` / `end_date` | TIMESTAMPTZ | |
 | `current_period_start` / `current_period_end` | TIMESTAMPTZ | |
 | `trial_start` / `trial_end` | TIMESTAMPTZ | |
-| `cancel_at` | TIMESTAMPTZ | NOT NULL — must be advanced on renewal, or reactivation breaks |
-| `cancel_at_period_end` | BOOLEAN | Student self-cancel flow |
+| `cancel_at` | TIMESTAMPTZ | NULLABLE. When the subscription terminates, or NULL when no cancel is scheduled — informational, never a signal. CHECK `subscriptions_cancel_at_requires_schedule`: non-NULL only while `cancel_at_period_end` (#545) |
+| `cancel_at_period_end` | BOOLEAN | NOT NULL DEFAULT false. **The single source of truth for "a cancel is scheduled"** — read by the Solana crank, the expiry crons and the billing UI. It used to be OR'd with `cancel_at <= now()`, and since `cancel_at` defaulted to `now()` on every INSERT, that canceled every `solana_subs` subscription at its first rollover (#545) |
 | `canceled_at` / `ended_at` | TIMESTAMPTZ | |
 | `superseded_by` | INTEGER | Set on plan change — points at the replacement subscription |
 | `payment_provider` | VARCHAR | |

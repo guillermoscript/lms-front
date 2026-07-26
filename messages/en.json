@@ -255,6 +255,8 @@
           "renewsOn": "Renews on",
           "cancelsOn": "Cancels on",
           "cancelAtPeriodEndNotice": "This subscription will not renew. Access ends on {date}.",
+          "pastDueNotice": "Your last payment didn't go through. You still have access while we retry — please update your payment method or contact your school to keep your subscription.",
+          "paymentDueSince": "Payment due since",
           "cancelNote": "To cancel your subscription, please contact your school.",
           "manage": {
             "cancelHint": "You can cancel anytime — you keep access until your billing period ends.",

@@ -1,0 +1,14 @@
+-- Rollback for 20260726120200_change_subscription_plan_hardening.sql (#545).
+--
+-- NOT APPLIED BY DEFAULT. Re-applying the previous definition restores all four
+-- defects: the `cancel_at = NULL` write (harmless only while 20260726120000 is
+-- still applied — with the schema rolled back too it fails every A → B → A
+-- switch with 23502), no advisory lock, no price authority (a free plan can be
+-- switched to a paid one and receive its entitlements with no transaction), and
+-- a silently discarded pending cancel that desyncs Stripe.
+--
+-- Restore it with:
+--   psql < supabase/migrations/20260719170000_change_subscription_plan.sql
+--
+-- The previous body lives in that file unchanged; this rollback intentionally
+-- does NOT inline a copy, so the two can never drift.

@@ -1,0 +1,14 @@
+-- Rollback for 20260726120100_handle_new_subscription_state_machine.sql (#545).
+--
+-- NOT APPLIED BY DEFAULT. Re-applies the previous definition verbatim, which:
+--   * drops `renewed` from the #459 parallel-subscription backstop, so a
+--     `renewed` subscriber can create a second live subscription and be billed
+--     for both (pair this with reverting BLOCKING_SUBSCRIPTION_STATUSES);
+--   * stops clearing a pending cancel on renewal, so re-purchasing a plan that
+--     is scheduled to cancel still tears it down at period end.
+--
+-- Re-run the shipped migration to restore it:
+--   psql < supabase/migrations/20260719120000_guard_parallel_subscriptions.sql
+--
+-- The previous body lives in that file unchanged; this rollback intentionally
+-- does NOT inline a copy, so the two can never drift.

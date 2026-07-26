@@ -14,8 +14,26 @@
 /** The subscription-row fields the decision depends on. */
 export interface PullDecisionRow {
   subscription_status: string
+  /**
+   * The ONLY signal that a cancel is scheduled (issue #545). Everything else
+   * about the cancel — including when it takes effect — is derived from the
+   * period, never from a stored date.
+   */
   cancel_at_period_end: boolean | null
-  /** ISO timestamp the row is scheduled to cancel at (period-end cancel). */
+  /**
+   * When the row is scheduled to terminate, or null when no cancel is
+   * scheduled. Reported in the decision's `reason`, and DELIBERATELY not part
+   * of the decision itself.
+   *
+   * This column used to be `NOT NULL DEFAULT now()` with no writer setting it
+   * at creation, so every subscription was born with a cancel date in the past
+   * and this function's old `cancelDue` branch canceled every `solana_subs`
+   * subscription at its first rollover instead of renewing it (#545 bug 1).
+   * `20260726120000_subscription_cancel_at_contract.sql` made the column
+   * nullable and pinned `cancel_at IS NULL OR cancel_at_period_end`, but the
+   * crank does not depend on that repair having reached any given database:
+   * a stale or garbage `cancel_at` can no longer cost a school a renewal.
+   */
   cancel_at: string | null
 }
 
@@ -79,11 +97,19 @@ export function decidePullAction(params: {
   // Without this the crank would renew a subscription the admin already
   // canceled (the money leak in #460 — the on-chain delegation is still live,
   // so a pull would succeed and re-bill the student).
-  const cancelDue = row.cancel_at
-    ? BigInt(Math.floor(new Date(row.cancel_at).getTime() / 1000)) <= now
-    : false
-  if (row.cancel_at_period_end || cancelDue) {
-    return { action: 'cancel', reason: 'scheduled to cancel at period end' }
+  //
+  // `cancel_at_period_end` is the whole test (#545). It used to be OR'd with a
+  // `cancel_at <= now` check, and because `cancel_at` defaulted to now() on
+  // every INSERT that OR was always true at the first rollover — no
+  // `solana_subs` subscription could ever renew. A cancel date is a
+  // consequence of the schedule, not evidence of one.
+  if (row.cancel_at_period_end === true) {
+    return {
+      action: 'cancel',
+      reason: row.cancel_at
+        ? `scheduled to cancel at period end (${row.cancel_at})`
+        : 'scheduled to cancel at period end',
+    }
   }
 
   // (5) Genuinely active and due — charge it.
