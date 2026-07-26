@@ -168,15 +168,16 @@ CREATE POLICY practice_attempts_students_insert_own_rows
         AND tu.tenant_id = practice_attempts.tenant_id
         AND tu.status = 'active'
     )
-    -- Topic-only drills carry no course. When one is named, it must be a
-    -- course the caller can reach — the same gate that let them read the
-    -- exercise the drill was generated from.
-    AND (
-      course_id IS NULL
-      OR (SELECT public.is_tenant_staff())
-      OR public.has_course_access((SELECT auth.uid()), course_id::integer)
-    )
   );
+
+-- Deliberately NOT gated on `course_id`. It is an optional, model-supplied
+-- label on the MCP tool ("Related course, if any" —
+-- mcp-server/src/tools/practice.ts), not a value derived from anything the
+-- server verified, so an access predicate on it would turn a mislabelled
+-- drill into a hard write failure. It also guards little: the cross-tenant
+-- attack this policy exists to stop is closed by the membership check above,
+-- and `course_id` only scopes `item_ratings` anchors WITHIN the caller's own
+-- tenant.
 
 REVOKE UPDATE, DELETE ON public.practice_attempts FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.practice_attempts FROM anon;
@@ -208,10 +209,9 @@ ALTER TABLE public.practice_attempts
 
 COMMENT ON TABLE public.practice_attempts IS
   'AI-tutor drill history. Append-only for `authenticated` (#543): INSERT '
-  'requires active membership of the named tenant and access to the named '
-  'course, and score/count columns are range-checked, because two SECURITY '
-  'DEFINER triggers write tenant-shared Elo anchors and gamification rows '
-  'from this row.';
+  'requires active membership of the named tenant, and score/count columns '
+  'are range-checked, because two SECURITY DEFINER triggers write '
+  'tenant-shared Elo anchors and gamification rows from this row.';
 
 -- ---------------------------------------------------------------------------
 -- 5. lesson_checkpoints SELECT — the last `enrollments` join in the feature.
