@@ -36,6 +36,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: true,
+    bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false,
   }
   private stripe: Stripe

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
 import type { NormalizedBillingEvent, BillingEventType } from '@/lib/payments/types'
 
@@ -357,5 +357,131 @@ describe('dispatchBillingEvent', () => {
     })
     expect(calls.updates).toHaveLength(0)
     expect(calls.rpc).toHaveLength(0)
+  })
+
+  // -------------------------------------------------------------------------
+  // #547 §1 — a refund is not all-or-nothing.
+  //
+  // Every platform-settled provider supports partial refunds, but the dispatcher
+  // recorded only a binary status. `computeOwedBalances` then dropped the WHOLE
+  // sale out of `grossOwed`: a $10 goodwill refund on a $100 PayPal sale removed
+  // $100 from what the school was owed — $72 of under-payment at an 80% split —
+  // and revoked the student's course access outright.
+  //
+  // `event.amount` is always MAJOR units of `event.currency`, normalized by each
+  // provider's own mapper (see refund-amount-mapping.test.ts).
+  // -------------------------------------------------------------------------
+
+  const SALE = { user_id: 'u1', product_id: 7, plan_id: null, amount: 100, currency: 'usd', refunded_amount: 0 }
+
+  it('#547: a PARTIAL refund records the slice, keeps the row successful, and does NOT revoke access', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', SALE)
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 10, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'successful',
+      refunded_amount: 10,
+    })
+    // The student was refunded a tenth of the course, not removed from it.
+    expect(calls.updates.find((u) => u.table === 'entitlements')).toBeUndefined()
+  })
+
+  it('#547: a FULL refund flips the row and revokes access, as before', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', SALE)
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 100, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'refunded',
+      refunded_amount: 100,
+    })
+    expect(calls.updates.find((u) => u.table === 'entitlements')?.values).toMatchObject({ status: 'revoked' })
+  })
+
+  it('#547: a second partial refund ACCUMULATES onto the first', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', { ...SALE, refunded_amount: 10 })
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 15, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'successful',
+      refunded_amount: 25,
+    })
+    expect(calls.updates.find((u) => u.table === 'entitlements')).toBeUndefined()
+  })
+
+  it('#547: partial refunds that together reach the sale total become a FULL refund', async () => {
+    const { admin, calls } = makeFakeAdmin('successful', { ...SALE, refunded_amount: 60 })
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 40, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'refunded',
+      refunded_amount: 100,
+    })
+    expect(calls.updates.find((u) => u.table === 'entitlements')?.values).toMatchObject({ status: 'revoked' })
+  })
+
+  it('#547: an over-reported refund is CLAMPED to the sale, never past it', async () => {
+    // A provider replaying a cumulative total, or plain bad data, must not be
+    // able to drive `refunded_amount` above `amount` — that would make the sale
+    // read as negative revenue everywhere it is summed.
+    const { admin, calls } = makeFakeAdmin('successful', { ...SALE, refunded_amount: 90 })
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 50, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'refunded',
+      refunded_amount: 100,
+    })
+  })
+
+  it('#547: NO amount on the event → treated as a FULL refund (the pre-#547 behaviour)', async () => {
+    // The conservative direction when the provider did not tell us: we cannot
+    // claim a refund was partial without evidence.
+    const { admin, calls } = makeFakeAdmin('successful', SALE)
+    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER,
+      admin,
+    })
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'refunded',
+      refunded_amount: 100,
+    })
+    expect(calls.updates.find((u) => u.table === 'entitlements')?.values).toMatchObject({ status: 'revoked' })
+  })
+
+  it('#547: an amount in a DIFFERENT currency is discarded, not converted', async () => {
+    // A figure in another unit of account applied to a balance moves real money.
+    // The dispatcher has no rates and must not invent one; provider-specific
+    // equivalences (Binance USDT ↔ usd) are resolved in that provider's mapper.
+    const errors: unknown[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args) => { errors.push(args) })
+    const { admin, calls } = makeFakeAdmin('successful', SALE)
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 10, currency: 'eur' }),
+      { provider: PROVIDER, admin },
+    )
+    spy.mockRestore()
+    expect(calls.updates.find((u) => u.table === 'transactions')?.values).toEqual({
+      status: 'refunded',
+      refunded_amount: 100,
+    })
+    expect(errors).toHaveLength(1)
+  })
+
+  it('#547: a fully refunded row is still idempotent on redelivery', async () => {
+    const { admin, calls } = makeFakeAdmin('refunded', SALE)
+    await dispatchBillingEvent(
+      event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1', amount: 10, currency: 'usd' }),
+      { provider: PROVIDER, admin },
+    )
+    expect(calls.updates).toHaveLength(0)
   })
 })

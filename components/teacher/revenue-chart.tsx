@@ -7,7 +7,7 @@ import { IconChartBar } from '@tabler/icons-react'
 
 interface Transaction {
   amount: string
-  created_at: string
+  transaction_date: string
 }
 
 interface RevenueChartProps {
@@ -22,7 +22,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     const grouped: { [key: string]: number } = {}
 
     transactions.forEach((transaction) => {
-      const date = new Date(transaction.created_at)
+      const date = new Date(transaction.transaction_date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
       if (!grouped[monthKey]) {

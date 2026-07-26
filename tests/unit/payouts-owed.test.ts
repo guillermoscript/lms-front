@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeOwedBalances } from '@/lib/payments/payouts-owed'
+import { computeOwedBalances, isPayoutMismatch, roundMoney } from '@/lib/payments/payouts-owed'
 
 function balanceFor(result: ReturnType<typeof computeOwedBalances>, tenantId: string, currency: string) {
   return result.find((r) => r.tenantId === tenantId)?.balances.find((b) => b.currency === currency)
@@ -413,5 +413,154 @@ describe('computeOwedBalances', () => {
     expect(usd.netOwed).toBe(0)
     // ...so clawback is the only place the 200 still to recover shows up.
     expect(usd.clawback).toBe(200) // 250 * 0.8
+  })
+
+  // ---------------------------------------------------------------------------
+  // #547 §4 — rounding residue.
+  //
+  // All 31 cases above use round amounts at round percentages, which is exactly
+  // why the residue was invisible: every product of the two lands on a whole
+  // cent. Real catalogues are full of `.99` prices.
+  // ---------------------------------------------------------------------------
+
+  it('#547: a $49.99 sale at 80%, paid in full, settles at EXACTLY 0', () => {
+    // Unrounded this is 39.992. The dialog pre-fills `netOwed.toFixed(2)` and
+    // `payouts.amount` is NUMERIC(10,2), so 39.99 is the most an operator can
+    // ever pay — leaving 0.002 owed forever, rendered as "$0.00" on a row whose
+    // Mark-as-paid button stayed enabled.
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 49.99, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [{ tenantId: 't1', amount: 39.99, currency: 'usd', coveredThrough: null }],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.grossOwed).toBe(39.99)
+    expect(usd.netOwed).toBe(0)
+    expect(usd.overpaid).toBe(0)
+  })
+
+  it('#547: 33.33 at 70% rounds to whole cents per transaction', () => {
+    // 23.331 → 23.33, and three of them sum to 69.99 rather than 69.993.
+    const txn = { tenantId: 't1', paymentProvider: 'binance', amount: 33.33, currency: 'usd', schoolPercentageSnapshot: 70, status: 'successful' as const, transactionDate: null }
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [txn, txn, txn],
+      [],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.grossOwed).toBe(69.99)
+    expect(usd.grossCollected).toBe(99.99)
+  })
+
+  it('#547: residue accumulated across many fractional sales never reappears', () => {
+    const txns = Array.from({ length: 25 }, () => ({
+      tenantId: 't1', paymentProvider: 'paypal', amount: 19.99, currency: 'usd',
+      schoolPercentageSnapshot: 80, status: 'successful' as const, transactionDate: null,
+    }))
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      txns,
+      [],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.grossOwed).toBe(399.75) // 25 × 15.99, not 25 × 15.992
+    // Paying exactly what the operator is shown clears the balance completely.
+    const settled = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      txns,
+      [{ tenantId: 't1', amount: 399.75, currency: 'usd', coveredThrough: null }],
+    )
+    expect(balanceFor(settled, 't1', 'usd')!.netOwed).toBe(0)
+  })
+
+  it('#547: roundMoney is half-UP, so a tie favours the school, not the platform', () => {
+    expect(roundMoney(1.005)).toBe(1.01)
+    expect(roundMoney(39.992)).toBe(39.99)
+    expect(roundMoney(0.1 + 0.2)).toBe(0.3)
+  })
+
+  // ---------------------------------------------------------------------------
+  // #547 §1 — partial refunds, from the payout side.
+  // ---------------------------------------------------------------------------
+
+  it('#547: a partial refund reduces grossOwed by the refunded SLICE, not by the whole sale', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, refundedAmount: 10, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    // The platform kept 90 and owes 80% of it. Before #547 the row flipped to
+    // 'refunded' wholesale and the school was owed 0 — a $72 under-payment.
+    expect(usd.grossCollected).toBe(90)
+    expect(usd.grossOwed).toBe(72)
+    expect(usd.netOwed).toBe(72)
+    expect(usd.byProvider).toEqual({ paypal: 90 })
+  })
+
+  it('#547: a FULL refund still leaves grossOwed entirely (unchanged from #511)', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, refundedAmount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: null }],
+      [],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.grossCollected).toBe(0)
+    expect(usd.grossOwed).toBe(0)
+  })
+
+  it('#547: clawback on a fully refunded sale reports the FULL share, not the zero remainder', () => {
+    // A row that reached 'refunded' has refunded_amount == amount, so scaling
+    // the net would tell the operator a payout for a refunded sale was worth
+    // nothing. Clawback answers "how much of what we already paid was for this".
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 250, refundedAmount: 250, currency: 'usd', schoolPercentageSnapshot: null, status: 'refunded', transactionDate: '2026-01-01T00:00:00Z' }],
+      [{ tenantId: 't1', amount: 200, currency: 'usd', coveredThrough: '2026-02-01T00:00:00Z' }],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.clawback).toBe(200)
+  })
+
+  it('#547: a partially refunded sale is NOT clawed back — it is still a live sale', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, refundedAmount: 10, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: '2026-01-01T00:00:00Z' }],
+      [{ tenantId: 't1', amount: 80, currency: 'usd', coveredThrough: '2026-02-01T00:00:00Z' }],
+    )
+    const usd = balanceFor(result, 't1', 'usd')!
+    expect(usd.clawback).toBe(0)
+    // 72 owed, 80 already paid → 8 overpaid, recovered by carry-forward (#516).
+    expect(usd.netOwed).toBe(0)
+    expect(usd.overpaid).toBe(8)
+  })
+
+  it('#547: a missing refundedAmount behaves exactly as 0 (every pre-migration row)', () => {
+    const result = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: 'School A', schoolPercentage: 80 }],
+      [{ tenantId: 't1', paymentProvider: 'paypal', amount: 100, currency: 'usd', schoolPercentageSnapshot: null, status: 'successful', transactionDate: null }],
+      [],
+    )
+    expect(balanceFor(result, 't1', 'usd')!.grossOwed).toBe(80)
+  })
+})
+
+describe('isPayoutMismatch (#547 — the boundary markPayoutPaid had no coverage for)', () => {
+  it('challenges ANY positive payout when nothing is owed', () => {
+    // netOwed === 0 makes the tolerance 0, so every amount is a mismatch. That
+    // is deliberate: a school owed nothing must not be paid without an explicit
+    // confirmation. The residue fix makes this state reachable at all — before
+    // it, a settled balance sat at 0.002 rather than 0.
+    expect(isPayoutMismatch(0.01, 0)).toBe(true)
+    expect(isPayoutMismatch(1000, 0)).toBe(true)
+  })
+
+  it('accepts an exact payout, and one inside the 10% tolerance', () => {
+    expect(isPayoutMismatch(39.99, 39.99)).toBe(false)
+    expect(isPayoutMismatch(40, 39.99)).toBe(false)
+    expect(isPayoutMismatch(36, 39.99)).toBe(false) // ~10% low
+  })
+
+  it('challenges a mistyped extra zero', () => {
+    expect(isPayoutMismatch(399.9, 39.99)).toBe(true)
   })
 })

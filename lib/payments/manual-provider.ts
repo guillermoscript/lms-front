@@ -30,6 +30,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
   }
 

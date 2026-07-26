@@ -49,6 +49,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }
 
@@ -306,14 +307,25 @@ export class LemonSqueezyProvider implements IPaymentProvider {
       // raises `order_refunded` for a subscription's first order, and the
       // dispatcher records the money for those too (#515) — subscription ACCESS
       // stays owned by subscription_cancelled/expired.
-      case 'order_refunded':
+      case 'order_refunded': {
+        // LS states every money field in CENTS. Converting here (rather than in
+        // the dispatcher) is what keeps `NormalizedBillingEvent.amount` a single
+        // unit across providers — PayPal and Binance already speak major units.
+        // Without the amount, a $10 refund on a $100 order used to erase the
+        // whole sale from what the school was owed (#547).
+        const refundedCents = payload.data?.attributes?.refunded_amount
+        const value = typeof refundedCents === 'number' ? refundedCents / 100 : Number.NaN
+        const currency: string | undefined = payload.data?.attributes?.currency
         return {
           type: 'refund.succeeded',
           providerEventId, // order_refunded:<orderId>:<updatedAt>
           providerPaymentId: subId,
           reference,
+          ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+          ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
+      }
 
       default:
         return null

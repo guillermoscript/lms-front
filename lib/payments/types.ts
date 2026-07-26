@@ -136,6 +136,29 @@ export interface ProviderCapabilities {
    */
   supportsPlanChange: boolean
   /**
+   * The platform takes its cut (`revenue_splits.platform_percentage`) on sales
+   * through this provider.
+   *
+   * True wherever a platform account is actually in the money path: Stripe
+   * (`application_fee_amount` on the Connect charge), the platform-settled trio
+   * (PayPal / Lemon Squeezy / Binance — the platform holds 100% and pays the
+   * school out manually), and Solana (split on-chain from `revenue_splits`).
+   *
+   * False for `manual` and `binance_personal`, where the buyer pays the school's
+   * own account directly and the platform never touches the money, so there is
+   * no mechanism by which it could take a fee.
+   *
+   * This replaces `revenue_splits.applies_to_providers` (issue #547), which
+   * stored the labels 'stripe'/'manual' rather than provider slugs — so a
+   * PayPal sale fell outside it and was charged 0% by the school-facing revenue
+   * screens while `getPayoutsOwed` applied the full split to the same row. Two
+   * shipped screens differing by the entire platform fee. Whether a fee is taken
+   * is a property of the PROVIDER, not of the tenant; it now lives here only.
+   * `supabase/migrations/20260727130000_*.sql` mirrors this list in SQL for
+   * `get_platform_revenue` — the two must stay in step.
+   */
+  bearsPlatformFee: boolean
+  /**
    * Provider settles 100% of every sale into the PLATFORM's own account —
    * no per-tenant connected account (unlike Stripe Connect) and no on-chain
    * split (unlike Solana). The school's share must be paid out manually
@@ -160,6 +183,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: true,
+    bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false, // school's own Connect account
   },
   paypal: {
@@ -171,6 +195,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global PAYPAL_CLIENT_ID/SECRET — no per-tenant merchant onboarding
   },
   lemonsqueezy: {
@@ -182,6 +207,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global LS store — Merchant of Record, single platform-owned account
   },
   solana: {
@@ -193,6 +219,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false, // split on-chain in one tx (lib/payments/solana-split.ts)
   },
   // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
@@ -210,6 +237,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // On-chain auto-pull is a fixed-amount delegation; changing plan requires a
     // fresh subscriber-signed delegation, so there is no in-place swap.
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false, // split on-chain per pull (lib/payments/solana-subscription-pull.ts)
   },
   manual: {
@@ -221,6 +249,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // bank transfer straight to the school's own account
   },
   // Binance Pay: hosted crypto checkout (USDT-denominated). No native
@@ -236,6 +265,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global BINANCE_PAY_API_KEY/SECRET merchant account — no sub-merchant split
   },
   // Binance Pay on a PERSONAL (non-merchant, no-KYB) account. No hosted
@@ -253,6 +283,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // per-tenant Pay ID — straight to the school's own account
   },
 }
@@ -360,6 +391,25 @@ export interface NormalizedBillingEvent {
   metadata?: Record<string, string>
   /** New period end for renewal events (push-renewal providers). */
   periodEnd?: Date
+  /**
+   * Money moved by this event, in MAJOR units (dollars, not cents) of
+   * `currency` — normalized by the provider's own `normalizeWebhookEvent`, so
+   * `dispatchBillingEvent` never has to know a provider's unit conventions
+   * (Lemon Squeezy reports cents, PayPal decimal strings, Binance decimals).
+   *
+   * Set on `refund.succeeded`, where it is the amount of THIS refund — not the
+   * running total, which the dispatcher accumulates itself. ABSENT means "the
+   * provider did not tell us", which the dispatcher reads as a FULL refund: the
+   * behaviour before issue #547, and the conservative direction when the figure
+   * is unknown.
+   */
+  amount?: number
+  /**
+   * ISO currency of `amount`, lowercase (e.g. 'usd'). The dispatcher discards
+   * `amount` when this disagrees with the transaction's own currency rather than
+   * converting — a wrong-currency figure applied to a balance moves real money.
+   */
+  currency?: string
   /** Original payload, preserved for the webhook_events audit row. */
   raw: unknown
 }

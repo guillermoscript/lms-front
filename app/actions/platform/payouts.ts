@@ -6,7 +6,7 @@ import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
-import { computeOwedBalances, DEFAULT_SCHOOL_PERCENTAGE, type TenantOwed } from '@/lib/payments/payouts-owed'
+import { computeOwedBalances, DEFAULT_SCHOOL_PERCENTAGE, isPayoutMismatch, type TenantOwed } from '@/lib/payments/payouts-owed'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 async function verifySuperAdmin() {
@@ -46,7 +46,7 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
       admin
         .from('transactions')
         .select(
-          'tenant_id, payment_provider, amount, currency, school_percentage_snapshot, status, transaction_date',
+          'tenant_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date',
           { count: 'exact' }
         )
         .in('status', ['successful', 'refunded'])
@@ -81,6 +81,8 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
         tenantId: t.tenant_id as string,
         paymentProvider: t.payment_provider as string,
         amount: t.amount as number,
+        // Partial refunds shrink the sale instead of erasing it (#547).
+        refundedAmount: t.refunded_amount as number | null,
         currency: t.currency || 'usd',
         schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
         status: t.status as 'successful' | 'refunded',
@@ -98,17 +100,25 @@ export async function getPayoutsOwed(): Promise<TenantOwed[]> {
   )
 }
 
-// A payout more than 10% off the currently owed balance is flagged for confirmation
-// (catches typos like an extra zero) without ever hard-blocking a legitimate rounded
-// or ahead-of-schedule payment.
-const MISMATCH_THRESHOLD_PCT = 0.1
-
+/**
+ * Record a manual payout.
+ *
+ * `idempotencyKey` is minted once per Mark-as-paid dialog OPEN and replayed on
+ * every retry of that same submission, so a double-click, a reload, a second
+ * tab, a second super admin on the same row and a server-action retry all
+ * collapse to one `payouts` row (#547). Before it, the table's only uniqueness
+ * was `UNIQUE (tenant_id, period_start, period_end)` — and manual rows leave
+ * both period columns NULL, which Postgres treats as distinct, so the
+ * constraint never fired. A duplicate wire could not even be corrected
+ * afterwards: `CHECK (amount > 0)` forbids a compensating negative row.
+ */
 export async function markPayoutPaid(
   tenantId: string,
   amount: number,
   currency: string,
   note?: string,
   confirmMismatch = false,
+  idempotencyKey?: string,
 ): Promise<{ status: 'ok' } | { status: 'warning'; netOwed: number }> {
   const userId = await verifySuperAdmin()
   if (!(amount > 0)) throw new Error('Amount must be positive')
@@ -117,7 +127,7 @@ export async function markPayoutPaid(
     const owed = await getPayoutsOwed()
     const netOwed =
       owed.find((o) => o.tenantId === tenantId)?.balances.find((b) => b.currency === currency)?.netOwed ?? 0
-    if (Math.abs(amount - netOwed) > netOwed * MISMATCH_THRESHOLD_PCT) {
+    if (isPayoutMismatch(amount, netOwed)) {
       return { status: 'warning', netOwed }
     }
   }
@@ -132,8 +142,19 @@ export async function markPayoutPaid(
     paid_at: new Date().toISOString(),
     recorded_by: userId,
     note: note || null,
+    idempotency_key: idempotencyKey || null,
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // 23505 = unique_violation on idx_payouts_manual_idempotency: this exact
+    // submission is already recorded. The operator asked for one payout and got
+    // one payout, so this is success, not an error to show them.
+    if (error.code === '23505') {
+      revalidatePath('/platform/payouts')
+      revalidatePath('/dashboard/admin/payouts')
+      return { status: 'ok' }
+    }
+    throw new Error(error.message)
+  }
 
   revalidatePath('/platform/payouts')
   revalidatePath('/dashboard/admin/payouts')

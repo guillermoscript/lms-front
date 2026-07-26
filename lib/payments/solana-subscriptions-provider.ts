@@ -53,6 +53,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: false,
+    bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false,
   }
 

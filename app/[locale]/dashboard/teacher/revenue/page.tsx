@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { computeRevenueTotals } from '@/lib/payments/revenue-share'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -28,36 +29,60 @@ export default async function RevenuePage() {
   //
   // The transaction read is paged and count-verified (#548) — every figure on
   // this page is a sum over it, so truncation at the API row cap would quietly
-  // understate the school's revenue rather than fail. `created_at` is not
+  // understate the school's revenue rather than fail. `transaction_date` is not
   // unique; `transaction_id` breaks ties so the paging windows are stable.
   // The payout read is already bounded by `.limit(10)`.
+  //
+  // The column is `transaction_date`. This page asked for `created_at`, which
+  // `transactions` does not have — PostgREST rejects the whole request, so
+  // since #548 moved the read onto `fetchAllRows` (which throws on a page
+  // error) this page did not render at all (#547 §2). `payouts.created_at`
+  // below is a different table and does exist.
   const [{ data: tenant }, { data: split }, transactions, { data: payouts }] = await Promise.all([
     supabase.from('tenants').select('name, stripe_account_id').eq('id', tenantId).single(),
     supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
     fetchAllRows('transactions', (from, to) =>
-      supabase.from('transactions').select('amount, status, payment_provider, created_at', { count: 'exact' })
+      supabase.from('transactions')
+        .select('amount, refunded_amount, status, payment_provider, school_percentage_snapshot, stripe_payment_intent_id, transaction_date', { count: 'exact' })
         .eq('tenant_id', tenantId).eq('status', 'successful')
-        .order('created_at', { ascending: false })
+        .order('transaction_date', { ascending: false })
         .order('transaction_id', { ascending: false })
         .range(from, to)
     ),
     supabase.from('payouts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(10),
   ])
 
-  // Calculate revenue metrics
-  const totalRevenue = transactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0
-  const platformFee = totalRevenue * ((split?.platform_percentage || 20) / 100)
-  const schoolRevenue = totalRevenue - platformFee
+  // Calculate revenue metrics. The fee is charged per transaction, only on
+  // providers through which the platform is actually in the money path, and at
+  // the split snapshotted on each row — the same arithmetic `getPayoutsOwed()`
+  // runs, so this page and /platform/payouts reconcile (#547 §3). The flat
+  // `totalRevenue × platform_percentage` it replaced charged a fee on manual
+  // sales the platform never touched, and used today's split on old sales.
+  const revenueRows = (transactions ?? []).map((t) => ({
+    amount: parseFloat(t.amount),
+    refundedAmount: t.refunded_amount as number | null,
+    paymentProvider: t.payment_provider as string | null,
+    stripePaymentIntentId: t.stripe_payment_intent_id as string | null,
+    schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
+  }))
+  const { grossRevenue: totalRevenue, platformFees: platformFee, netRevenue: schoolRevenue } =
+    computeRevenueTotals(revenueRows, split?.school_percentage ?? 80)
 
   // Get recent transactions (last 30 days)
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
   const recentTransactions = transactions?.filter(
-    t => new Date(t.created_at) >= thirtyDaysAgo
+    t => new Date(t.transaction_date) >= thirtyDaysAgo
   ) || []
 
-  const recentRevenue = recentTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0)
+  const recentRevenue = computeRevenueTotals(
+    recentTransactions.map((t) => ({
+      amount: parseFloat(t.amount),
+      refundedAmount: t.refunded_amount as number | null,
+    })),
+    split?.school_percentage ?? 80,
+  ).grossRevenue
 
   // Calculate pending payout
   const pendingPayout = payouts?.find(p => p.status === 'pending')?.amount || 0

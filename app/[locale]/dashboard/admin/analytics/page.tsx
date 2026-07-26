@@ -13,6 +13,7 @@ import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
 
 interface SearchParams {
   period?: string
@@ -56,7 +57,7 @@ export default async function AnalyticsPage({
 
   // Parallelize all independent data queries
   const [
-    { data: transactions },
+    { data: transactions, error: transactionsError },
     { data: tenantUserIds },
     { count: totalUsers },
     { count: totalEnrollments },
@@ -66,9 +67,13 @@ export default async function AnalyticsPage({
     { data: enrollmentsWithProgress },
     { data: coursesWithEnrollments },
   ] = await Promise.all([
-    supabase.from('transactions').select('amount, status, created_at')
+    // The column is `transaction_date`; `transactions` has no `created_at`.
+    // Asking for one made PostgREST reject the whole request, and because the
+    // error was never read this page rendered $0.00 revenue and a count of 0 on
+    // every load, for every school, permanently and silently (#547 §2).
+    supabase.from('transactions').select('amount, refunded_amount, status, transaction_date')
       .eq('tenant_id', tenantId).eq('status', 'successful')
-      .gte('created_at', startDate.toISOString()).order('created_at', { ascending: true }),
+      .gte('transaction_date', startDate.toISOString()).order('transaction_date', { ascending: true }),
     supabase.from('tenant_users').select('user_id, created_at')
       .eq('tenant_id', tenantId).eq('status', 'active')
       .gte('created_at', startDate.toISOString()).order('created_at', { ascending: true }),
@@ -99,18 +104,29 @@ export default async function AnalyticsPage({
     `).eq('tenant_id', tenantId).eq('status', 'published'),
   ])
 
+  // Fail loudly rather than rendering zeros. Every revenue figure below is a sum
+  // over `transactions`, so a rejected query is indistinguishable from a school
+  // that has never sold anything — which is exactly how the `created_at` bug
+  // above stayed invisible (#547 §2).
+  if (transactionsError) {
+    throw new Error(`Analytics revenue query failed: ${transactionsError.message}`)
+  }
+
   // Group revenue by date
   const revenueByDate = new Map<string, { revenue: number; transactions: number }>()
   let totalRevenue = 0
 
   transactions?.forEach((t) => {
-    const date = format(new Date(t.created_at), 'MMM d', { locale: dateLocale })
+    const date = format(new Date(t.transaction_date), 'MMM d', { locale: dateLocale })
     const existing = revenueByDate.get(date) || { revenue: 0, transactions: 0 }
+    // Net of any refunded slice (#547) — a partially refunded sale is still
+    // `successful`, so counting it in full would overstate revenue.
+    const kept = netOfRefunds(t.amount || 0, t.refunded_amount)
     revenueByDate.set(date, {
-      revenue: existing.revenue + (t.amount || 0),
+      revenue: existing.revenue + kept,
       transactions: existing.transactions + 1,
     })
-    totalRevenue += t.amount || 0
+    totalRevenue += kept
   })
 
   const revenueData = Array.from(revenueByDate.entries()).map(([date, data]) => ({

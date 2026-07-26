@@ -229,7 +229,15 @@ export async function POST(req: NextRequest) {
 
           await getSupabaseAdmin()
             .from('transactions')
-            .update({ status: newStatus })
+            .update({
+              status: newStatus,
+              // Persist the slice as well (#547). Stripe Connect sits outside
+              // the manual-payout math, but the school-facing revenue screens
+              // read this column for every provider — without it a partially
+              // refunded Stripe sale still counted in full toward the school's
+              // revenue. `amount_refunded` is cumulative and in minor units.
+              refunded_amount: charge.amount_refunded / 100,
+            })
             .eq('transaction_id', transaction.transaction_id)
             .eq('status', 'successful')
 
