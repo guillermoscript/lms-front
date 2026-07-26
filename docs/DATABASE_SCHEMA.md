@@ -555,9 +555,14 @@ Payment transactions. Tenant-scoped.
 | `provider_metadata` | JSONB | |
 | `stripe_payment_intent_id` | TEXT | Stripe-specific, kept for history |
 | `school_percentage_snapshot` | NUMERIC | Revenue split frozen at purchase time — database-owned, never caller-supplied |
+| `refunded_amount` | NUMERIC(10,2) | Cumulative amount refunded, in MAJOR units of this row's own `currency`. 0 = never refunded (#547) |
 | `settlement_currency` / `settlement_base` / `settlement_mint` / `settlement_sol_usd` | | Crypto settlement detail (Solana) — server-owned; `settlement_base` is the figure the on-chain payment is verified against |
 
 **Status is `'successful'`** (NOT `'succeeded'`).
+
+**A refund is not all-or-nothing (#547).** A PARTIAL refund leaves `status = 'successful'` and records the slice in `refunded_amount`; only a FULL refund sets `refunded_amount = amount` and flips `status` to `'refunded'`. **Anything that sums money must use `amount - refunded_amount`**, or it counts money the platform gave back — `netOfRefunds()` in `lib/payments/payouts-owed.ts` is the shared helper, and `tests/unit/phantom-column-guard.test.ts` fails the build if a new reader forgets. Access is revoked only on a full refund.
+
+**There is no `created_at` on this table — it is `transaction_date`.** Querying the former makes PostgREST reject the whole request with 42703; five shipped screens did this and rendered `$0.00` or an empty list rather than an error (#547 §2). Ordering by it is enough to trigger it — the column need not be selected.
 
 **Writes are server-only.** `authenticated` holds no INSERT grant (#538) and only a
 three-column UPDATE grant — `status`, `provider_subscription_id`,
@@ -602,6 +607,8 @@ Platform/school revenue split configuration per tenant.
 
 #### `payouts`
 Payout records to schools.
+
+`payout_method` is `'stripe_connect'` (automated Connect payout) or `'manual'` (admin-recorded wire for the platform-settled providers). `UNIQUE (tenant_id, period_start, period_end)` does **not** constrain manual rows — both period columns are nullable for that path and Postgres treats NULLs as distinct — so manual payouts carry `idempotency_key TEXT`, minted once per Mark-as-paid dialog open and enforced by the partial unique index `idx_payouts_manual_idempotency` (#547). `markPayoutPaid` treats the resulting `23505` as success. `CHECK (amount > 0)` forbids a compensating negative row, which is why a duplicate could not be corrected after the fact.
 
 #### `invoices`
 Invoice records.
