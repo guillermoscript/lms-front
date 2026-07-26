@@ -77,6 +77,7 @@ export function ManageSubscription({
         variant="outline"
         size="sm"
         className="gap-1.5"
+        data-testid="resume-subscription-button"
         onClick={handleReactivate}
         disabled={pending}
       >
@@ -92,6 +93,7 @@ export function ManageSubscription({
         variant="outline"
         size="sm"
         className="gap-1.5 text-destructive"
+        data-testid="cancel-subscription-button"
         onClick={() => setOpen(true)}
       >
         <IconX className="h-3.5 w-3.5" />

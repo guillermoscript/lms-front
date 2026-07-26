@@ -9,12 +9,9 @@
  * Subscriptions are matched by (provider_subscription_id, payment_provider).
  * Writing `subscription_status` fires the DB trigger
  * `handle_subscription_status_change`, which disables linked enrollments on
- * canceled/expired and re-enables them on a return to active.
- *
- * IMPORTANT: the `subscription_status` enum is
- * ('active','canceled','expired','renewed') — there is NO 'past_due'. past_due
- * events are logged only (access continues during the provider's retry window)
- * rather than written to an invalid enum value.
+ * canceled/expired and re-enables them on a return to active. It matches
+ * neither branch for `past_due`, so recording a dunning subscription leaves
+ * access untouched — which is what we want during the provider's retry window.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -149,11 +146,23 @@ export async function dispatchBillingEvent(
       break
     }
 
-    case 'subscription.past_due':
-      // No 'past_due' enum value; log only. Access continues during the
-      // provider's retry window — a later canceled/expired event ends it.
-      console.log(`[webhook] past_due for ${provider} sub ${subId ?? 'unknown'} — no status change`)
+    case 'subscription.past_due': {
+      // `past_due` HAS been a valid enum value since
+      // 20260530140000_add_past_due_subscription_status.sql; this branch used
+      // to log and drop the event on a stale "the enum has no past_due"
+      // comment, so a student mid-dunning looked perfectly healthy to billing
+      // health, the admin subscription list and the student's own billing page
+      // (#545). Record it: access continues (the status-change trigger ignores
+      // past_due) and a later renewed/canceled/expired event moves it on.
+      if (!subId) break
+      const { error } = await admin
+        .from('subscriptions')
+        .update({ subscription_status: 'past_due' })
+        .eq('provider_subscription_id', subId)
+        .eq('payment_provider', provider)
+      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
+    }
 
     case 'payment.succeeded': {
       // One-time purchase confirmation for hosted-checkout / Merchant-of-Record

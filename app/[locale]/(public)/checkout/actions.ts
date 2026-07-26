@@ -249,7 +249,31 @@ function mapPlanChangeError(raw: string): string {
     if (raw.includes('no_active_subscription')) return "You don't have an active subscription to change.";
     if (raw.includes('invalid_plan') || raw.includes('cross_tenant_plan')) return "Plan not found.";
     if (raw.includes('plan_deleted')) return "That plan is no longer available.";
+    if (raw.includes('upgrade_requires_payment')) {
+        return "This plan costs more than your current one. Contact your school to arrange the payment for the upgrade.";
+    }
+    // 23502 (not-null) / 23514 (check) on the subscriptions cancel columns. The
+    // #545 schema change should make these unreachable; before it, the
+    // reactivate branch of the RPC wrote NULL into a NOT NULL `cancel_at` and
+    // every switch back to a previously-held plan died here behind the generic
+    // message below, with no clue for the student or the logs.
+    if (raw.includes('23502') || raw.includes('23514') || raw.includes('cancel_at')) {
+        return "We couldn't switch your plan because of a problem on our side. Please contact your school.";
+    }
     return "Could not change your plan. Please try again.";
+}
+
+/**
+ * RPC errors raised BEFORE the function writes anything, where our DB is
+ * already in the state the caller wanted (or never had a subscription to
+ * change). Compensating a native provider swap on one of these actively breaks
+ * the pairing: on a double-click, call A swaps the provider to plan B and
+ * commits the DB; call B swaps to B again, gets `same_plan`, and a blind revert
+ * would put the provider back on plan A's price with `proration_behavior:
+ * 'none'` — DB on B, billing A, no error the student ever sees (#545).
+ */
+function isNoOpPlanChangeError(raw: string): boolean {
+    return raw.includes('same_plan') || raw.includes('no_active_subscription');
 }
 
 /**
@@ -360,8 +384,12 @@ export async function changePlan(newPlanId?: string) {
             });
             if (rpcError) {
                 // Compensate: put the provider subscription back on the old price
-                // so billing and our DB stay consistent.
-                if (currentPlan?.provider_price_id) {
+                // so billing and our DB stay consistent — but only when the RPC
+                // genuinely failed to apply the switch. `same_plan` /
+                // `no_active_subscription` mean our DB is already where the
+                // student wanted it (or never had a subscription to move), so a
+                // revert would DESYNC the provider rather than restore it.
+                if (currentPlan?.provider_price_id && !isNoOpPlanChangeError(rpcError.message)) {
                     try {
                         await provider.updateSubscription(current.provider_subscription_id, {
                             newProviderPriceId: currentPlan.provider_price_id,

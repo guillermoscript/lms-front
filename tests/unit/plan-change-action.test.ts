@@ -139,6 +139,43 @@ describe('changePlan — native providers (Stripe / Lemon Squeezy)', () => {
       prorationBehavior: 'none',
     }))
   })
+
+  // #545: the compensating revert used to fire on ANY rpcError, including the
+  // two the RPC raises before writing anything. On a double-click that meant:
+  // call A swaps Stripe to plan B and commits the DB; call B swaps to B again,
+  // gets `same_plan`, and reverts Stripe to plan A's price with
+  // proration_behavior 'none' — DB on B, Stripe billing A, and the only thing
+  // the student sees is "You are already on this plan."
+  for (const benign of ['same_plan', 'no_active_subscription']) {
+    it(`does NOT revert the provider swap on ${benign} (DB already where the student wanted it)`, async () => {
+      state.targetPlan = { plan_id: 2, payment_provider: 'stripe', provider_price_id: 'price_new', tenant_id: 't1', deleted_at: null }
+      state.current = { subscription_id: 10, plan_id: 1, payment_provider: 'stripe', provider_subscription_id: 'sub_x' }
+      state.currentPlan = { provider_price_id: 'price_old' }
+      state.rpcError = { message: `${benign}: raised by change_subscription_plan` }
+
+      await expect(changePlan('2')).rejects.toThrow()
+      // Only the forward swap — the provider stays on the new plan's price.
+      expect(state.updateSub).toHaveBeenCalledTimes(1)
+      expect(state.updateSub.mock.calls[0][1]).toEqual(expect.objectContaining({
+        newProviderPriceId: 'price_new',
+      }))
+    })
+  }
+
+  it('surfaces upgrade_requires_payment as an actionable message, without reverting blindly', async () => {
+    state.targetPlan = { plan_id: 2, payment_provider: 'stripe', provider_price_id: 'price_new', tenant_id: 't1', deleted_at: null }
+    state.current = { subscription_id: 10, plan_id: 1, payment_provider: 'stripe', provider_subscription_id: 'sub_x' }
+    state.currentPlan = { provider_price_id: 'price_old' }
+    state.rpcError = { message: 'upgrade_requires_payment' }
+
+    // The switch genuinely did not apply, so the provider IS put back.
+    await expect(changePlan('2')).rejects.toThrow(/costs more than your current one/)
+    expect(state.updateSub).toHaveBeenCalledTimes(2)
+    expect(state.updateSub.mock.calls[1][1]).toEqual(expect.objectContaining({
+      newProviderPriceId: 'price_old',
+      prorationBehavior: 'none',
+    }))
+  })
 })
 
 describe('changePlan — self-managed providers (manual)', () => {

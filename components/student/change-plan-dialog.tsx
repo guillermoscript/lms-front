@@ -55,6 +55,12 @@ export function ChangePlanDialog({
 
   // Only plans on the same provider (a cross-provider switch needs a new
   // checkout), excluding the plan the student is already on.
+  //
+  // `plans` is ALREADY price-gated by the billing page (#545) — a subscription
+  // whose provider does not settle the difference itself is handed only
+  // same-or-cheaper plans, so an unpaid upgrade is never on offer. This filter
+  // is presentation only; `change_subscription_plan` enforces the price rule
+  // server-side no matter what reaches this list.
   const switchable = plans.filter(
     (p) => p.plan_id !== currentPlanId && (p.payment_provider ?? 'manual') === currentProvider,
   )

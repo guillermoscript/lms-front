@@ -75,15 +75,26 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
       }
     }
 
-    // Schedule the cancel in our DB. Status stays 'active' so access continues to
-    // period end; the cron / webhook flips it to expired when the period lapses.
+    // Schedule the cancel in our DB. The status stays live so access continues
+    // to period end; the cron / webhook flips it to expired when the period
+    // lapses.
+    //
+    // Cancelling must never IMPROVE a status (#545). This used to write
+    // 'active' unconditionally, so a student mid-dunning who cancelled had
+    // their `past_due` row rewritten as healthy and the delinquency vanished
+    // from billing health and the admin views. Only the legacy `renewed`
+    // status is normalized — it means the same thing as `active` and nothing
+    // else writes it any more.
+    const nextStatus =
+      subscription.subscription_status === 'renewed' ? 'active' : subscription.subscription_status
+
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
         cancel_at_period_end: true,
         cancel_at: subscription.current_period_end || subscription.end_date,
         canceled_at: new Date().toISOString(),
-        subscription_status: 'active',
+        subscription_status: nextStatus,
       })
       .eq('subscription_id', subscriptionId)
       .eq('tenant_id', tenantId)
@@ -155,17 +166,15 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
       }
     }
 
-    // NB: `cancel_at` is NOT NULL in the schema — never set it to null here or the
-    // update is rejected. Clearing `cancel_at_period_end` un-schedules the
-    // subscription-expiry crons, but the Solana auto-pull crank
-    // (lib/payments/solana-pull-decision.ts) reads `cancel_at` on its own, so we
-    // push it forward to the live period end instead of leaving a past value that
-    // could re-cancel the row. `canceled_at` is cleared.
+    // Un-schedule the cancel. `cancel_at` is cleared WITH the flag: since #545
+    // it is nullable and the CHECK `subscriptions_cancel_at_requires_schedule`
+    // rejects a cancel date that outlives its schedule, so a leftover date can
+    // no longer be read as a live cancel by the Solana auto-pull crank.
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
         cancel_at_period_end: false,
-        cancel_at: subscription.current_period_end || subscription.end_date,
+        cancel_at: null,
         canceled_at: null,
       })
       .eq('subscription_id', subscriptionId)
