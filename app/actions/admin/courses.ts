@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 
 /**
  * Approves a course (moves from draft to published)
@@ -132,9 +133,16 @@ export async function archiveCourse(
       })
     }
 
+    // This is the *admin* archive path, distinct from `archiveCourse` in
+    // `app/actions/teacher/courses.ts` — the admin course-status screen calls
+    // this one. Both drop the active course count, so both must reconcile, or
+    // the recovery loop stays open on whichever half was missed (#550).
+    await reconcileAccessCutoffSafely(adminClient, tenantId)
+
     revalidatePath('/dashboard/admin/courses')
     revalidatePath(`/dashboard/teacher/courses/${courseId}`)
     revalidatePath('/dashboard/student')
+    revalidatePath('/dashboard/admin/billing')
 
     return { success: true }
   } catch (error) {
@@ -199,9 +207,16 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
       })
     }
 
+    // Restoring *raises* the active course count, so it can put the school
+    // back over its limit. Reconciling here schedules the cutoff at the moment
+    // the admin causes it, with the full 14-day grace period, rather than
+    // whenever a sweep next happens to notice.
+    await reconcileAccessCutoffSafely(adminClient, tenantId)
+
     revalidatePath('/dashboard/admin/courses')
     revalidatePath(`/dashboard/teacher/courses/${courseId}`)
     revalidatePath('/dashboard/student')
+    revalidatePath('/dashboard/admin/billing')
 
     return { success: true }
   } catch (error) {
