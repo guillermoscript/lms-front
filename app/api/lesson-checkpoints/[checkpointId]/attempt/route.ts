@@ -52,7 +52,9 @@ export async function POST(
 ) {
   const auth = await getApiAuthContext(req)
   if (!auth) return new Response('Unauthorized', { status: 401 })
-  const { supabase, user, tenantId } = auth
+  // No user-scoped client here: every table this route touches is read or
+  // written with the admin client behind the explicit gate below (#543).
+  const { user, tenantId } = auth
 
   const checkpointId = Number.parseInt((await params).checkpointId, 10)
   if (!Number.isInteger(checkpointId) || checkpointId <= 0) {
@@ -282,16 +284,19 @@ export async function POST(
     evaluator_type: evaluatorType,
   }
 
-  // Insert with the caller's RLS client so DB policies are the last word.
+  // Server-write-only (#543): `authenticated` holds no INSERT grant on this
+  // table, because every column above is a grading output. The caller's RLS
+  // client cannot be the last word on a row it is not allowed to author — the
+  // access gate is resolveCourseAccessState() at the top of this route (#535).
   let attemptNumber = (count ?? 0) + 1
-  let { data: attempt, error: insertError } = await supabase
+  let { data: attempt, error: insertError } = await adminClient
     .from('lesson_checkpoint_attempts')
     .insert({ ...baseRow, attempt_number: attemptNumber })
     .select('id, attempt_number')
     .single()
   if (insertError?.code === '23505') {
     attemptNumber += 1
-    ;({ data: attempt, error: insertError } = await supabase
+    ;({ data: attempt, error: insertError } = await adminClient
       .from('lesson_checkpoint_attempts')
       .insert({ ...baseRow, attempt_number: attemptNumber })
       .select('id, attempt_number')

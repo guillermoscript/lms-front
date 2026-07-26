@@ -16,7 +16,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent } from './utils/auth'
-import { BASE } from './utils/constants'
+import { ACCOUNTS, BASE } from './utils/constants'
 
 const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001'
 const STUDENT_ID = 'a1000000-0000-0000-0000-000000000001'
@@ -190,6 +190,126 @@ test.describe('checkpoint attempt access gate (#532)', () => {
       expect(body.accessSuspended).toBe(true)
     } finally {
       await admin.from('tenants').update({ access_cutoff_at: null }).eq('id', DEFAULT_TENANT)
+    }
+  })
+})
+
+/**
+ * #543 — the gate above decides WHETHER an attempt may be recorded; these
+ * decide WHO gets to fill it in. Every column on `lesson_checkpoint_attempts`
+ * except the identity ones is a grading output, and the route's own comment
+ * used to claim "DB policies are the last word" while no policy mentioned
+ * `score`, `passed`, `completed` or `evaluator_type`. The table is now
+ * server-write-only (20260726110000).
+ */
+test.describe('checkpoint attempts are server-written (#543)', () => {
+  test('a student cannot write an attempt directly', async () => {
+    const client = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: ACCOUNTS.student.email,
+      password: ACCOUNTS.student.password,
+    })
+    expect(signInError).toBeNull()
+
+    // A self-declared pass on a required checkpoint: this is what unlocked
+    // lesson progression, and what billed the tenant's AI allowance when
+    // tagged evaluator_type 'ai'.
+    const { error } = await client.from('lesson_checkpoint_attempts').insert({
+      tenant_id: DEFAULT_TENANT,
+      user_id: STUDENT_ID,
+      course_id: COURSE_ID,
+      lesson_id: LESSON_ID,
+      checkpoint_id: checkpointId,
+      exercise_id: exerciseId,
+      attempt_number: 999,
+      placement_source: 'inline',
+      response: {},
+      evaluation: {},
+      score: 100,
+      passed: true,
+      completed: true,
+      evaluator_type: 'ai',
+    })
+    expect(error, 'the INSERT grant must be revoked for authenticated').not.toBeNull()
+    expect(error!.code).toBe('42501')
+
+    const { count } = await getAdmin()
+      .from('lesson_checkpoint_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('checkpoint_id', checkpointId)
+      .eq('attempt_number', 999)
+    expect(count).toBe(0)
+  })
+
+  test('the stored score and passed flag are the grader\'s, not the caller\'s', async ({
+    page,
+  }) => {
+    await loginAsStudent(page, BASE)
+    const res = await page.request.post(
+      `${BASE}/api/lesson-checkpoints/${checkpointId}/attempt`,
+      // 'Hammer' — deliberately wrong (correctIndex is 1).
+      { data: { kind: 'answers', answers: [{ questionId: 'q1', value: 0 }] } }
+    )
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect(body.passed).toBe(false)
+
+    const { data: row } = await getAdmin()
+      .from('lesson_checkpoint_attempts')
+      .select('score, passed, evaluator_type')
+      .eq('checkpoint_id', checkpointId)
+      .eq('user_id', STUDENT_ID)
+      .order('attempt_number', { ascending: false })
+      .limit(1)
+      .single()
+    expect(row!.passed).toBe(false)
+    expect(Number(row!.score)).toBe(Number(body.score))
+    expect(row!.evaluator_type).toBe('deterministic')
+  })
+
+  test('a refunded student reads no checkpoints at all', async () => {
+    const admin = getAdmin()
+    const client = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: ACCOUNTS.student.email,
+      password: ACCOUNTS.student.password,
+    })
+    expect(signInError).toBeNull()
+
+    // Sanity: with access, the checkpoint is visible.
+    const { data: visible } = await client
+      .from('lesson_checkpoints')
+      .select('id')
+      .eq('id', checkpointId)
+    expect(visible?.length).toBe(1)
+
+    // The SELECT policy used to join `enrollments`, which a refund never
+    // touches — so the refunded student kept reading every enabled checkpoint.
+    await admin
+      .from('entitlements')
+      .update({ status: 'revoked' })
+      .eq('user_id', STUDENT_ID)
+      .eq('course_id', COURSE_ID)
+    try {
+      const { data: hidden } = await client
+        .from('lesson_checkpoints')
+        .select('id')
+        .eq('id', checkpointId)
+      expect(hidden?.length).toBe(0)
+    } finally {
+      await admin
+        .from('entitlements')
+        .update({ status: 'active', revoked_at: null })
+        .eq('user_id', STUDENT_ID)
+        .eq('course_id', COURSE_ID)
     }
   })
 })
