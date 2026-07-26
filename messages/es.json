@@ -2937,6 +2937,7 @@
         "card": {
           "course": "curso",
           "courses": "cursos",
+          "free": "Gratis",
           "noDescription": "Sin descripción",
           "includedCourses": "Cursos Incluidos:",
           "more": "+{count} más",

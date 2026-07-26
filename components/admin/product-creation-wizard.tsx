@@ -277,7 +277,7 @@ export function ProductCreationWizard({
       ...current,
       pricing:
         mode === 'free'
-          ? { mode: 'free' }
+          ? { mode: 'free', currency: current.pricing.currency }
           : {
               mode: 'paid',
               price: current.pricing.price || 0,
@@ -581,7 +581,7 @@ export function ProductCreationWizard({
                   <RadioGroupItem value="free" disabled={isSaving} />
                   <FieldContent>
                     <span className="text-sm font-medium">Free</span>
-                    <FieldDescription>Publish the course without creating a product row.</FieldDescription>
+                    <FieldDescription>Create a $0 product students enroll in with one click.</FieldDescription>
                   </FieldContent>
                 </Field>
               </FieldLabel>
@@ -747,7 +747,7 @@ export function ProductCreationWizard({
                 <dd className="mt-1 text-xs text-muted-foreground">
                   {input.pricing.mode === 'paid'
                     ? input.pricing.paymentProvider || 'No provider'
-                    : 'No product created'}
+                    : 'No payment required'}
                 </dd>
               </div>
               <div className="bg-card p-3">

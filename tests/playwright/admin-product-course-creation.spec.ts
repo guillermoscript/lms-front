@@ -2,7 +2,11 @@ import { expect, type Page, test } from '@playwright/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 
-const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+// /products/new renders the one-screen quick create; the multi-step wizard
+// these helpers drive lives behind ?advanced=1.
+const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new?advanced=1`
+const quickCreatePath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+const productsPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products`
 
 function uniqueTitle(prefix: string) {
   return `${prefix} ${Date.now()}`
@@ -95,15 +99,16 @@ async function chooseExistingCourse(page: Page) {
 }
 
 async function choosePricing(page: Page, mode: 'free' | 'paid') {
-  await byTestIdOrRole(
-    page,
-    mode === 'free' ? 'pricing-mode-free' : 'pricing-mode-paid',
-    'button',
-    mode === 'free' ? /free/i : /paid/i
-  )
-    .or(page.getByRole('radio', { name: mode === 'free' ? /free/i : /paid/i }))
-    .first()
-    .click()
+  // Click the base-ui radio itself, not its wrapping FieldLabel — a label click
+  // does not reliably toggle it under Playwright, which silently left the wizard
+  // on the default (free) mode and starved the paid-only fields.
+  const option = page.getByTestId(mode === 'free' ? 'pricing-mode-free' : 'pricing-mode-paid')
+  await expect(option).toBeVisible({ timeout: 10_000 })
+  await option.getByRole('radio').first().click()
+
+  if (mode === 'paid') {
+    await expect(page.getByTestId('product-creation-price')).toBeVisible({ timeout: 10_000 })
+  }
 }
 
 async function fillPaidPricing(page: Page, price: string, provider = /manual|offline/i) {
@@ -150,21 +155,22 @@ async function fillPaidPricing(page: Page, price: string, provider = /manual|off
 }
 
 async function addPostRegistrationStep(page: Page) {
-  const addStepButton = page
-    .getByTestId('post-registration-add-step')
-    .or(page.getByRole('button', { name: /add.*step|add.*instruction/i }))
-    .first()
+  // Strictly the testid: an /add.*instruction/i name fallback matches the step-4
+  // nav button ("After purchase — Add paid-only instructions") first, which just
+  // navigates and never appends a step row.
+  const addStepButton = page.getByTestId('post-registration-add-step')
 
   if (!(await addStepButton.isVisible({ timeout: 3_000 }).catch(() => false))) {
     return
   }
 
-  await addStepButton.click()
-  await page
-    .getByTestId('post-registration-step-title')
-    .or(page.getByLabel(/step title|instruction title|title/i))
-    .last()
-    .fill('Join the onboarding channel')
+  // base-ui buttons often ignore Playwright's synthesized click; dispatch a real
+  // DOM click so the step row is actually appended.
+  await addStepButton.evaluate((element) => (element as HTMLElement).click())
+
+  const stepTitle = page.getByTestId('post-registration-step-title').last()
+  await expect(stepTitle).toBeVisible({ timeout: 10_000 })
+  await stepTitle.fill('Join the onboarding channel')
 
   const urlInput = page
     .getByTestId('post-registration-step-url')
@@ -178,17 +184,23 @@ async function addPostRegistrationStep(page: Page) {
 }
 
 async function publishWizard(page: Page) {
-  const publishButton = page
-    .getByTestId('product-creation-publish')
-    .or(page.getByRole('button', { name: /publish/i }))
-    .first()
+  // Strictly the testid: a name-based /publish/i fallback also matches the
+  // step-5 nav button ("Review — check readiness and choose draft or publish"),
+  // so it used to jump steps instead of publishing, and the old success
+  // assertion then matched that same wording and passed without saving anything.
+  const publishButton = page.getByTestId('product-creation-publish')
+
+  // Publish only renders on the review step — advance if we are not there yet.
+  for (let step = 0; step < 4; step++) {
+    if (await publishButton.isVisible({ timeout: 1_000 }).catch(() => false)) break
+    await clickNext(page)
+  }
 
   await expect(publishButton).toBeEnabled({ timeout: 10_000 })
   await publishButton.click()
 
-  await expect(
-    page.getByText(/published|created|saved/i).or(page.getByTestId('products-page')).first()
-  ).toBeVisible({ timeout: 15_000 })
+  // A save redirects to the products list; anything else means it did not save.
+  await expect(page.getByTestId('products-page')).toBeVisible({ timeout: 20_000 })
 }
 
 test.describe('Admin Product/Course Creation Wizard', () => {
@@ -210,7 +222,29 @@ test.describe('Admin Product/Course Creation Wizard', () => {
 
     await publishWizard(page)
 
-    await expect(page.getByText(title)).toBeVisible({ timeout: 15_000 })
+    // A free offering is a real product (price 0), so it must appear on the
+    // products list the wizard redirects to — it used to persist only a course,
+    // leaving this page empty and the offering with no edit route.
+    await page.goto(productsPath, { timeout: 30_000 })
+    await expect(
+      page.getByTestId('products-page').getByText(title).first()
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/^(Free|Gratis)$/).first()).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('quick create publishes a free offering that shows up as a product', async ({ page }) => {
+    const title = uniqueTitle('E2E Quick Free Offering')
+
+    await page.goto(quickCreatePath, { timeout: 30_000 })
+    await page.locator('#quick-title').fill(title)
+
+    // 'free' is the default pricing mode — publish straight away.
+    await page.getByRole('button', { name: /publish|publicar/i }).first().click()
+
+    await expect(
+      page.getByTestId('products-page').getByText(title).first()
+    ).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/^(Free|Gratis)$/).first()).toBeVisible({ timeout: 10_000 })
   })
 
   test('creates a paid offering for a new course with manual payment instructions', async ({
@@ -229,8 +263,13 @@ test.describe('Admin Product/Course Creation Wizard', () => {
     await clickNext(page)
     await publishWizard(page)
 
-    await expect(page.getByText(title)).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText(/manual|offline/i)).toBeVisible({ timeout: 10_000 })
+    // The product card repeats the title (name + linked-course list), so scope
+    // to the first match rather than tripping strict mode.
+    await expect(
+      page.getByTestId('products-page').getByText(title).first()
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/manual|offline/i).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('$99.00').first()).toBeVisible({ timeout: 10_000 })
   })
 
   test('creates a paid offering from an existing tenant course', async ({ page }) => {
