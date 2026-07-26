@@ -7,7 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { z } from "zod";
-import { Markdown } from "../shared/markdown";
+import { LessonBody } from "../shared/lesson";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
 
@@ -129,37 +129,16 @@ export default function LessonViewer() {
             </div>
           ) : (
             <>
-              {/* Video link */}
-              {lesson.video_url && (
-                <div className="mb-5 flex items-center gap-2.5 rounded-[10px] border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900 dark:bg-sky-950">
-                  <span className="text-xl">▶️</span>
-                  <div className="min-w-0">
-                    <div className="mb-0.5 text-xs font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
-                      Video lesson
-                    </div>
-                    <a
-                      href={lesson.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[13px] font-medium break-all text-sky-700 no-underline dark:text-sky-400"
-                    >
-                      {lesson.video_url}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Content */}
-              {lesson.content ? (
-                <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-                  <Markdown content={lesson.content} dark={dark} fontSize={14} />
-                </div>
-              ) : (
-                <div className="mb-5 rounded-xl border border-zinc-200 bg-white p-8 text-center text-[13px] text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500">
-                  No written content for this lesson
-                  {lesson.video_url ? " — watch the video above." : "."}
-                </div>
-              )}
+              {/* Video, custom embed and MDX content — same order and the same
+                  component set the course page renders. */}
+              <div className="mb-5">
+                <LessonBody
+                  content={lesson.content}
+                  videoUrl={lesson.video_url}
+                  embedCode={lesson.embed_code}
+                  emptyMessage="No written content for this lesson."
+                />
+              </div>
 
               {/* Error from mark-complete */}
               {isError && (
