@@ -1924,7 +1924,10 @@
           "cancelConfirmAction": "Cancel subscription",
           "cancelKeep": "Keep subscription",
           "cancelSuccess": "Your subscription will cancel at the end of your billing period",
-          "cancelError": "Failed to cancel subscription"
+          "cancelError": "Failed to cancel subscription",
+          "reactivatePlan": "Reactivate plan",
+          "reactivateSuccess": "Your subscription will continue — the scheduled cancellation was removed",
+          "reactivateError": "Failed to reactivate subscription"
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",

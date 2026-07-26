@@ -190,8 +190,23 @@ export async function sendPaymentInstructions(requestId: string) {
   return { success: true }
 }
 
+/**
+ * Super admin: force a tenant onto a plan without any payment.
+ *
+ * This never calls Stripe, so a tenant with a live Stripe subscription keeps
+ * paying for the plan it actually bought while enjoying the comped one. The
+ * override is stamped on the subscription row (#546 §3) so
+ * `applyPortalPlanChange` can recognise the deliberate divergence and leave the
+ * Stripe subscription alone — without the stamp the next
+ * `customer.subscription.updated` read Stripe's real (unchanged) price as a
+ * downgrade, found the tenant over the real plan's limits (the reason it was
+ * comped) and "reverted" Stripe onto the comped plan's price, billing the
+ * school for its own comp.
+ *
+ * Exits: `confirmManualPayment`, `changePlan`, or `clearTenantPlanOverride`.
+ */
 export async function forceTenantPlanChange(tenantId: string, planSlug: string) {
-  await verifySuperAdmin()
+  const superAdminId = await verifySuperAdmin()
   const adminClient = createAdminClient()
 
   const { data: plan } = await adminClient
@@ -239,6 +254,8 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
           plan_id: plan.plan_id,
           status: 'canceled',
           canceled_at: nowIso,
+          plan_override_by: superAdminId,
+          plan_override_at: nowIso,
           updated_at: nowIso,
         })
         .eq('tenant_id', tenantId)
@@ -260,6 +277,8 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
       .update({
         plan_id: plan.plan_id,
         status: 'active',
+        plan_override_by: superAdminId,
+        plan_override_at: nowIso,
         updated_at: nowIso,
         ...(liveCycle
           ? {}
@@ -292,9 +311,39 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
         interval: 'monthly',
         current_period_start: nowIso,
         current_period_end: null,
+        plan_override_by: superAdminId,
+        plan_override_at: nowIso,
       })
   }
 
+  revalidatePath('/platform/tenants')
+  return { success: true }
+}
+
+/**
+ * Super admin: end a plan override so portal-driven Stripe changes sync again
+ * (#546 §3). The marker's explicit exit — without one, a comped tenant would be
+ * frozen out of `applyPortalPlanChange` forever, which is the failure mode the
+ * issue flags as the risk of adding the marker at all.
+ *
+ * The tenant keeps whatever plan it is on; only the "ignore portal changes"
+ * behaviour is lifted, so the next `customer.subscription.updated` reconciles
+ * the DB back onto whatever Stripe is actually charging.
+ */
+export async function clearTenantPlanOverride(tenantId: string) {
+  await verifySuperAdmin()
+  const adminClient = createAdminClient()
+
+  const { error } = await adminClient
+    .from('platform_subscriptions')
+    .update({
+      plan_override_by: null,
+      plan_override_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('tenant_id', tenantId)
+
+  if (error) throw new Error(`Failed to clear plan override: ${error.message}`)
   revalidatePath('/platform/tenants')
   return { success: true }
 }

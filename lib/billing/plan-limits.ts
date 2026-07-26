@@ -68,6 +68,49 @@ export async function countTenantUsage(
   }
 }
 
+export interface TenantPlanLimits {
+  /** The tenant's current plan slug (`free` when the tenant row has none). */
+  planSlug: string
+  planName: string | null
+  limits: PlanLimits
+}
+
+/**
+ * Resolve the limits governing a tenant RIGHT NOW, from `platform_plans` and
+ * nothing else (issue #546 §5).
+ *
+ * Deliberately no `is_active` filter: retiring a plan must not silently change
+ * what its existing subscribers are allowed to do. A missing plan row yields
+ * `limits: null`, which `computePlanLimitViolations` reads as unlimited — the
+ * same fail-open every other caller in this module uses, and the reason the old
+ * hardcoded `PLAN_LIMITS_FALLBACK` map in `app/actions/teacher/courses.ts`
+ * could be deleted instead of duplicated here.
+ */
+export async function getTenantPlanLimits(
+  admin: SupabaseClient,
+  tenantId: string
+): Promise<TenantPlanLimits> {
+  const { data: tenant } = await admin
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .maybeSingle()
+
+  const planSlug = (tenant?.plan as string | null) || 'free'
+
+  const { data: plan } = await admin
+    .from('platform_plans')
+    .select('name, limits')
+    .eq('slug', planSlug)
+    .maybeSingle()
+
+  return {
+    planSlug,
+    planName: (plan?.name as string | null) ?? null,
+    limits: (plan?.limits as PlanLimits) ?? null,
+  }
+}
+
 /**
  * Pure comparison of usage against a plan's limits. `-1` (or a missing key)
  * means unlimited and never produces a violation.

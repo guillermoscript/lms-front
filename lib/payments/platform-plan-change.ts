@@ -85,14 +85,28 @@ export async function applyPortalPlanChange(
 
   const { data: currentSub } = (await admin
     .from('platform_subscriptions')
-    .select('plan_id, interval')
+    .select('plan_id, interval, plan_override_at')
     .eq('tenant_id', tenantId)
-    .maybeSingle()) as { data: { plan_id: string; interval: string | null } | null }
+    .maybeSingle()) as {
+    data: { plan_id: string; interval: string | null; plan_override_at: string | null } | null
+  }
 
   // No-op guard: the incoming price maps to the plan already recorded. This is
   // also what terminates the webhook echo triggered by our own revert below.
   if (currentSub?.plan_id === newPlan.plan_id) {
     return { action: 'noop' }
+  }
+
+  // Override guard (#546 §3). A super admin has deliberately put this tenant on
+  // a plan Stripe knows nothing about, so Stripe's price and our plan_id are
+  // SUPPOSED to disagree. Reconciling here would read the comp as a portal
+  // downgrade and — because the tenant is typically over the real plan's limits,
+  // which is why it was comped — push the subscription onto the comped plan's
+  // price, billing the school for its own comp. A super admin lifts this with
+  // clearTenantPlanOverride, and a real payment (confirmManualPayment /
+  // changePlan) clears it automatically.
+  if (currentSub?.plan_override_at) {
+    return { action: 'ignored', reason: 'tenant plan is under a super-admin override' }
   }
 
   const maxCourses = newPlan.limits?.max_courses ?? -1

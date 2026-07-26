@@ -1924,7 +1924,10 @@
           "cancelConfirmAction": "Cancelar suscripción",
           "cancelKeep": "Mantener suscripción",
           "cancelSuccess": "Tu suscripción se cancelará al final de tu período de facturación",
-          "cancelError": "Error al cancelar la suscripción"
+          "cancelError": "Error al cancelar la suscripción",
+          "reactivatePlan": "Reactivar plan",
+          "reactivateSuccess": "Tu suscripción continuará: se eliminó la cancelación programada",
+          "reactivateError": "No se pudo reactivar la suscripción"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
