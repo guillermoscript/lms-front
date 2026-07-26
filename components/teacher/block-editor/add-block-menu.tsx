@@ -91,6 +91,10 @@ interface AddBlockMenuProps {
   position?: 'top' | 'inline' | 'between'
 }
 
+// The palette is taller than the room most triggers leave on screen; PopoverContent
+// caps itself at `--available-height` and scrolls, so all 23 blocks stay reachable.
+const PALETTE_POPOVER_CLASS = 'w-[360px] p-3'
+
 export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProps) {
   const [open, setOpen] = useState(false)
 
@@ -111,7 +115,7 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
             <IconPlus className="h-3 w-3" />
           </PopoverTrigger>
         </div>
-        <PopoverContent align="center" side="bottom" className="w-[340px] p-3" sideOffset={4}>
+        <PopoverContent align="center" side="bottom" className={PALETTE_POPOVER_CLASS} sideOffset={4}>
           <BlockPalette onSelect={handleSelect} />
         </PopoverContent>
       </Popover>
@@ -128,7 +132,7 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
           <IconPlus className="h-4 w-4" />
           Añadir bloque
         </PopoverTrigger>
-        <PopoverContent align="center" side="bottom" className="w-[340px] p-3" sideOffset={4}>
+        <PopoverContent align="center" side="bottom" className={PALETTE_POPOVER_CLASS} sideOffset={4}>
           <BlockPalette onSelect={handleSelect} />
         </PopoverContent>
       </Popover>
@@ -144,7 +148,7 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
       >
         <IconPlus className="h-4 w-4" />
       </PopoverTrigger>
-      <PopoverContent align="end" side="bottom" className="w-[340px] p-3" sideOffset={4}>
+      <PopoverContent align="end" side="bottom" className={PALETTE_POPOVER_CLASS} sideOffset={4}>
         <BlockPalette onSelect={handleSelect} />
       </PopoverContent>
     </Popover>
@@ -159,7 +163,7 @@ function BlockPalette({ onSelect }: { onSelect: (type: BlockType) => void }) {
     <div className="space-y-3">
       {BLOCK_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+          <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             {group.label}
           </p>
           <div className="grid grid-cols-3 gap-1.5">
@@ -181,7 +185,7 @@ function BlockPalette({ onSelect }: { onSelect: (type: BlockType) => void }) {
                   <div className={cn('flex h-8 w-8 items-center justify-center rounded-md', iconData.bg)}>
                     <Icon className={cn('h-4 w-4', iconData.color)} />
                   </div>
-                  <span className="text-[11px] font-medium leading-tight text-muted-foreground group-hover:text-foreground">
+                  <span className="text-xs font-medium leading-tight text-foreground/80 group-hover:text-foreground">
                     {meta?.label || type}
                   </span>
                 </button>
