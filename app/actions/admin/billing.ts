@@ -3,9 +3,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
+import { checkPlanLimits, countTenantUsage, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { classifyPlanChange } from '@/lib/billing/plan-change'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import {
+  OPEN_REQUEST_STATUSES,
+  isRequestOpen,
+  requestExpiresAt,
+} from '@/lib/billing/payment-request-ttl'
 import { revalidatePath } from 'next/cache'
 
 async function verifyAdminAccess() {
@@ -30,14 +35,42 @@ async function verifyAdminAccess() {
 }
 
 /**
+ * Is there an open (pending and not lapsed) platform payment request for this
+ * tenant? One helper for both duplicate guards so a renewal can never be
+ * created alongside a pending upgrade — the combination that used to disable
+ * both guards permanently, because each returned `PGRST116 / data: null` from
+ * `.single()` once two rows matched.
+ */
+async function hasOpenPaymentRequest(
+  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
+  tenantId: string,
+): Promise<boolean> {
+  const { data } = await adminClient
+    .from('platform_payment_requests')
+    .select('request_id, status, expires_at')
+    .eq('tenant_id', tenantId)
+    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  return ((data as { status: string; expires_at: string | null }[] | null) || []).some((r) =>
+    isRequestOpen(r)
+  )
+}
+
+/**
  * Get current subscription status and usage statistics
  */
 export async function getSubscriptionStatus() {
   const { tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
-  // Fetch tenant, subscription, plan, and usage in parallel
-  const [tenantResult, subscriptionResult, coursesCount, studentsCount] = await Promise.all([
+  // Fetch tenant, subscription, plan, and usage in parallel.
+  // Usage goes through countTenantUsage (#546 §5) so the number an admin reads
+  // here is the same number the downgrade pre-flight and course-creation
+  // enforcement compare against — it used to count archived courses that
+  // neither of those did.
+  const [tenantResult, subscriptionResult, usage] = await Promise.all([
     adminClient
       .from('tenants')
       .select('plan, billing_status, billing_period_end, billing_email, stripe_customer_id, access_cutoff_at')
@@ -48,16 +81,7 @@ export async function getSubscriptionStatus() {
       .select('*, platform_plans(*)')
       .eq('tenant_id', tenantId)
       .single(),
-    adminClient
-      .from('courses')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    adminClient
-      .from('tenant_users')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('role', 'student')
-      .eq('status', 'active'),
+    countTenantUsage(adminClient, tenantId),
   ])
 
   const tenant = tenantResult.data
@@ -102,11 +126,11 @@ export async function getSubscriptionStatus() {
     } : null,
     usage: {
       courses: {
-        current: coursesCount.count || 0,
+        current: usage.courses,
         limit: limits.max_courses,
       },
       students: {
-        current: studentsCount.count || 0,
+        current: usage.students,
         limit: limits.max_students,
       },
     },
@@ -182,15 +206,12 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
     throw new Error(formatPlanLimitError(limitCheck) || 'Plan limits exceeded')
   }
 
-  // Check for existing pending request
-  const { data: existingRequest } = await adminClient
-    .from('platform_payment_requests')
-    .select('request_id')
-    .eq('tenant_id', tenantId)
-    .in('status', ['pending', 'instructions_sent', 'payment_received'])
-    .single()
-
-  if (existingRequest) {
+  // Check for an existing open request. Bounded list + array check, never
+  // `.single()` (#546 §2): with two or more matching rows `.single()` returns
+  // PGRST116 and `data: null`, so the guard PASSED and the table grew unbounded
+  // per tenant. Lapsed requests are ignored so a stale row cannot lock a school
+  // out of paying.
+  if (await hasOpenPaymentRequest(adminClient, tenantId)) {
     throw new Error('You already have a pending plan change request. Please wait for it to be processed.')
   }
 
@@ -207,6 +228,7 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
       request_type: requestType,
       bank_reference: bankReference || null,
       notes: notes || null,
+      expires_at: requestExpiresAt(),
     })
     .select('request_id')
     .single()
@@ -334,6 +356,18 @@ export async function confirmManualPayment(requestId: string) {
       grace_period_end: null,
       // Reset the reminder stamp so the next cycle can remind again.
       renewal_reminder_sent_at: null,
+      // A confirmed payment is an un-cancel (#546 §1). PostgREST's ON CONFLICT
+      // DO UPDATE only touches the columns supplied here, so omitting these two
+      // left a stale `cancel_at_period_end = true` on the row: the school paid
+      // for a full period and was then silently dropped to free at the end of
+      // it by the cron's cancel phase, with no reminder and no grace window
+      // (phases 1 and 2 both filter on `cancel_at_period_end = false`).
+      cancel_at_period_end: false,
+      canceled_at: null,
+      // A real payment supersedes any super-admin comp (#546 §3) — this is one
+      // of the override's exits, so portal changes start syncing again.
+      plan_override_by: null,
+      plan_override_at: null,
       updated_at: now.toISOString(),
     }, { onConflict: 'tenant_id' })
 
@@ -503,6 +537,11 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
   await ctx.stripe.subscriptions.update(ctx.subId, {
     items: [{ id: ctx.itemId, price: ctx.targetPriceId }],
     proration_behavior: 'create_prorations',
+    // Paying for a different plan un-cancels (#546 §1). `resolvePlatformPlanChange`
+    // accepts a still-`active` subscription, which a cancel-at-period-end sub is
+    // right up to its last day — without this the school changes plan, is billed,
+    // and is still dropped to free at period end.
+    cancel_at_period_end: false,
     metadata: {
       tenant_id: tenantId,
       plan_id: ctx.plan.plan_id,
@@ -517,7 +556,18 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
   const now = new Date().toISOString()
   await adminClient
     .from('platform_subscriptions')
-    .update({ plan_id: ctx.plan.plan_id, interval, updated_at: now })
+    .update({
+      plan_id: ctx.plan.plan_id,
+      interval,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      // An admin-initiated, Stripe-backed change supersedes a super-admin comp
+      // (#546 §3): Stripe and the DB now agree again, so the reconciler should
+      // resume applying portal changes for this tenant.
+      plan_override_by: null,
+      plan_override_at: null,
+      updated_at: now,
+    })
     .eq('tenant_id', tenantId)
   await adminClient
     .from('tenants')
@@ -588,6 +638,65 @@ export async function cancelSubscription() {
       })
       .eq('tenant_id', tenantId)
   }
+
+  revalidatePath('/dashboard/admin/billing')
+  return { success: true }
+}
+
+/**
+ * Undo a pending cancellation (#546 §1).
+ *
+ * Cancellation was one-way: the only writers of `cancel_at_period_end` were
+ * `cancelSubscription` (sets it) and the Stripe webhook (mirrors Stripe), the
+ * billing UI imported no reactivate action at all, and re-checkout is blocked
+ * while the subscription is still `active` — which a cancel-at-period-end
+ * subscription is until its last day. A school that changed its mind had no way
+ * back short of contacting support.
+ */
+export async function reactivateSubscription() {
+  const { tenantId } = await verifyAdminAccess()
+  const adminClient = await createAdminClient()
+
+  const { data: subscription } = await adminClient
+    .from('platform_subscriptions')
+    .select('stripe_subscription_id, payment_method, status, cancel_at_period_end, current_period_end')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!subscription) throw new Error('No subscription to reactivate')
+  if (!subscription.cancel_at_period_end) {
+    throw new Error('This subscription is not scheduled for cancellation')
+  }
+  // Once the period has lapsed the cron has already downgraded (or is about
+  // to); reactivating would revive a plan nobody is paying for. Those schools
+  // go through checkout / a renewal request instead.
+  if (subscription.status !== 'active') {
+    throw new Error('This subscription has already ended. Please start a new plan instead.')
+  }
+  if (
+    subscription.current_period_end &&
+    new Date(subscription.current_period_end) <= new Date()
+  ) {
+    throw new Error('Your billing period has already ended. Please start a new plan instead.')
+  }
+
+  if (subscription.payment_method === 'stripe' && subscription.stripe_subscription_id) {
+    // Stripe is authoritative for Stripe subs — clear it there first so a
+    // failure leaves both sides still cancelling rather than disagreeing.
+    const { getStripe } = await import('@/lib/stripe')
+    await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
+      cancel_at_period_end: false,
+    })
+  }
+
+  await adminClient
+    .from('platform_subscriptions')
+    .update({
+      cancel_at_period_end: false,
+      canceled_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('tenant_id', tenantId)
 
   revalidatePath('/dashboard/admin/billing')
   return { success: true }
@@ -681,21 +790,22 @@ export async function requestManualRenewal() {
   const now = new Date()
   const daysUntilEnd = Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (daysUntilEnd > 30 && subscription.status === 'active') {
+  // The window guard used to be bypassed entirely for any non-`active` status
+  // (#546 §2), so a canceled or long-lapsed subscription could mint the row
+  // that pauses the downgrade at any time. A school in grace (`past_due`) must
+  // still be able to pay — that is the whole point of the pause — so allow it
+  // explicitly rather than by falling through the guard.
+  const lapsed = daysUntilEnd <= 0 || subscription.status === 'past_due'
+  if (daysUntilEnd > 30 && !lapsed) {
     throw new Error('Renewal can only be requested within 30 days of period end')
   }
 
-  // Check for existing pending renewal request
-  const { data: existingRequest } = await adminClient
-    .from('platform_payment_requests')
-    .select('request_id')
-    .eq('tenant_id', tenantId)
-    .eq('request_type', 'renewal')
-    .in('status', ['pending', 'instructions_sent', 'payment_received'])
-    .single()
-
-  if (existingRequest) {
-    throw new Error('You already have a pending renewal request')
+  // One open request per tenant, whatever its type: the old guard filtered on
+  // `request_type = 'renewal'` while the upgrade guard did not, so creating a
+  // renewal alongside a pending upgrade was the ordinary way to get two rows —
+  // after which `.single()` returned PGRST116 and BOTH guards passed forever.
+  if (await hasOpenPaymentRequest(adminClient, tenantId)) {
+    throw new Error('You already have a pending payment request. Please wait for it to be processed.')
   }
 
   const plan = subscription.platform_plans as { plan_id: string; price_monthly: number; price_yearly: number }
@@ -712,6 +822,7 @@ export async function requestManualRenewal() {
       currency: 'usd',
       status: 'pending',
       request_type: 'renewal',
+      expires_at: requestExpiresAt(),
     })
     .select('request_id')
     .single()

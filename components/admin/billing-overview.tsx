@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from './usage-meter'
 import { LimitReachedBanner } from '@/components/shared/limit-reached-banner'
-import { IconCreditCard, IconCalendar, IconAlertTriangle, IconX } from '@tabler/icons-react'
+import { IconCreditCard, IconCalendar, IconAlertTriangle, IconRefresh, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
@@ -37,6 +37,8 @@ interface BillingOverviewProps {
   accessCutoffAt: string | null
   onManageClick?: () => void
   onCancelClick?: () => void
+  onReactivateClick?: () => void
+  reactivateLoading?: boolean
 }
 
 export function BillingOverview({
@@ -51,6 +53,8 @@ export function BillingOverview({
   accessCutoffAt,
   onManageClick,
   onCancelClick,
+  onReactivateClick,
+  reactivateLoading = false,
 }: BillingOverviewProps) {
   const t = useTranslations('dashboard.admin.billing.overview')
   const isFree = plan === 'free'
@@ -106,6 +110,15 @@ export function BillingOverview({
                 >
                   <IconX className="mr-2 h-4 w-4" />
                   {t('cancelPlan')}
+                </Button>
+              )}
+              {/* Cancelling used to be one-way — there was no reactivate action
+                  anywhere in the UI, and re-checkout is blocked while the sub is
+                  still active (#546 §1). */}
+              {!isFree && onReactivateClick && subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && (
+                <Button size="sm" variant="outline" onClick={onReactivateClick} disabled={reactivateLoading}>
+                  <IconRefresh className="mr-2 h-4 w-4" />
+                  {t('reactivatePlan')}
                 </Button>
               )}
             </div>

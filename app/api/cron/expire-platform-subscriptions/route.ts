@@ -5,6 +5,12 @@ import { renewalReminderTemplate } from '@/lib/email/templates/renewal-reminder'
 import { planDowngradedTemplate } from '@/lib/email/templates/plan-downgraded'
 import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
+import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
+import {
+  OPEN_REQUEST_STATUSES,
+  REQUEST_TTL_DAYS,
+  isRequestOpen,
+} from '@/lib/billing/payment-request-ttl'
 
 export const runtime = 'nodejs'
 
@@ -20,10 +26,12 @@ export const runtime = 'nodejs'
  * webhook-driven; their expiry is handled by /api/stripe/platform-webhook.
  *
  * Phases (all status-gated, so re-running is idempotent):
+ *   0. Request TTL — open payment request past `expires_at` → `expired` + email.
+ *                    Runs first so a lapsed request cannot pause phase 3 below.
  *   1. Reminder    — active sub, period end within GRACE_DAYS, reminder not yet sent → email + stamp.
  *   2. Grace start — active sub, not cancel_at_period_end, period end passed → past_due + grace window + overdue email.
  *   3. Downgrade   — past_due sub, grace window passed → downgrade to free + email,
- *                    UNLESS a renewal payment request is still pending (pauses the downgrade).
+ *                    UNLESS an OPEN renewal payment request pauses it.
  *   4. Cancel      — cancel_at_period_end sub, period end passed → downgrade to free + email (no renewal pause).
  *
  * Secured by CRON_SECRET env var (set the same value in the cron scheduler).
@@ -31,9 +39,6 @@ export const runtime = 'nodejs'
 
 const GRACE_DAYS = 7
 const DAY_MS = 24 * 60 * 60 * 1000
-
-// A renewal in any of these states means the school is mid-renewal; don't downgrade.
-const PENDING_RENEWAL_STATUSES = ['pending', 'instructions_sent', 'payment_received']
 
 function getSupabaseAdmin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -62,6 +67,23 @@ type SubRow = {
 
 const SUB_SELECT = 'tenant_id, current_period_end, tenants(name), platform_plans(name)'
 
+type LapsedRequestRow = {
+  request_id: string
+  tenant_id: string
+  amount: number | string | null
+  currency: string | null
+  expires_at: string | null
+  status: string
+  tenants: { name: string | null } | null
+  platform_plans: { name: string | null } | null
+}
+
+function formatAmount(amount: number | string | null, currency: string | null): string {
+  const value = Number(amount ?? 0)
+  const code = (currency || 'usd').toUpperCase()
+  return `${Number.isFinite(value) ? value.toFixed(2) : '0.00'} ${code}`
+}
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const provided = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -76,7 +98,50 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
   const billingUrl = `${appUrl}/dashboard/admin/billing`
 
-  const result = { reminded: 0, graceStarted: 0, downgraded: 0, canceled: 0, skippedPendingRenewal: 0 }
+  const result = {
+    requestsExpired: 0,
+    reminded: 0,
+    graceStarted: 0,
+    downgraded: 0,
+    canceled: 0,
+    skippedPendingRenewal: 0,
+  }
+
+  // ---- Phase 0: expire lapsed payment requests (#546 §2) ----
+  // Nothing else in the codebase ever moved a request out of an open state, so
+  // an unpaid renewal paused the downgrade forever: click "request renewal",
+  // never pay, keep the paid plan, its limits and its reduced platform fee.
+  // Closing them here first means phase 3 below sees the swept state.
+  const { data: lapsedRequests } = await supabase
+    .from('platform_payment_requests')
+    .select('request_id, tenant_id, amount, currency, expires_at, status, tenants(name), platform_plans(name)')
+    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .not('expires_at', 'is', null)
+    .lt('expires_at', nowIso)
+
+  for (const req of (lapsedRequests as LapsedRequestRow[] | null) || []) {
+    const { error } = await supabase
+      .from('platform_payment_requests')
+      .update({ status: 'expired', updated_at: nowIso })
+      .eq('request_id', req.request_id)
+      // Status-gated so a super admin confirming in the same instant wins.
+      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+
+    if (error) {
+      console.error('expire-platform-subscriptions: failed to expire request', req.request_id, error)
+      continue
+    }
+
+    const emails = await getTenantAdminEmails(supabase, req.tenant_id)
+    await safeEmail(emails, paymentRequestExpiredTemplate({
+      schoolName: req.tenants?.name || 'your school',
+      planName: req.platform_plans?.name || 'your plan',
+      amount: formatAmount(req.amount, req.currency),
+      billingUrl,
+      ttlDays: REQUEST_TTL_DAYS,
+    }))
+    result.requestsExpired++
+  }
 
   // ---- Phase 1: pre-expiry renewal reminder ----
   const { data: reminderSubs } = await supabase
@@ -116,8 +181,21 @@ export async function GET(req: NextRequest) {
     .not('current_period_end', 'is', null)
     .lt('current_period_end', nowIso)
 
+  // Tenants that entered grace in THIS pass. Phase 3 re-queries the table and
+  // would otherwise see them; belt-and-braces alongside the graceEnd fix below,
+  // so "started grace" and "downgraded" can never both happen to one school in
+  // a single run no matter how the arithmetic drifts.
+  const graceStartedNow = new Set<string>()
+
   for (const sub of (lapsedSubs as SubRow[] | null) || []) {
-    const graceEnd = new Date(new Date(sub.current_period_end!).getTime() + GRACE_DAYS * DAY_MS).toISOString()
+    // Grace starts NOW, not at the (possibly long-past) period end (#546 §4).
+    // Computing it from current_period_end meant that after a cron outage of
+    // more than GRACE_DAYS the window was already closed the moment it opened:
+    // the same request sent "your payment is overdue" and "you have been
+    // downgraded", with no opportunity to pay. Both counters incremented, so
+    // the response looked healthy.
+    const periodEndMs = new Date(sub.current_period_end!).getTime()
+    const graceEnd = new Date(Math.max(periodEndMs, now.getTime()) + GRACE_DAYS * DAY_MS).toISOString()
     await supabase
       .from('platform_subscriptions')
       .update({ status: 'past_due', grace_period_end: graceEnd, updated_at: nowIso })
@@ -135,6 +213,7 @@ export async function GET(req: NextRequest) {
       periodEnd: new Date(sub.current_period_end!).toLocaleDateString('en-US', { dateStyle: 'long' }),
       overdue: true,
     }))
+    graceStartedNow.add(sub.tenant_id)
     result.graceStarted++
   }
 
@@ -148,16 +227,24 @@ export async function GET(req: NextRequest) {
     .lt('grace_period_end', nowIso)
 
   for (const sub of (expiredSubs as SubRow[] | null) || []) {
-    // Pause the downgrade if the school has a renewal request in flight.
+    // A school that only just entered grace gets the full window, never a
+    // same-pass downgrade.
+    if (graceStartedNow.has(sub.tenant_id)) continue
+
+    // Pause the downgrade only for a renewal request that is still OPEN — an
+    // unpaid one lapses at its TTL (phase 0 above) and stops holding the plan.
     const { data: pendingRenewal } = await supabase
       .from('platform_payment_requests')
-      .select('request_id')
+      .select('request_id, status, expires_at')
       .eq('tenant_id', sub.tenant_id)
       .eq('request_type', 'renewal')
-      .in('status', PENDING_RENEWAL_STATUSES)
-      .limit(1)
+      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+      .limit(20)
 
-    if (pendingRenewal && pendingRenewal.length > 0) {
+    const stillOpen = ((pendingRenewal as { status: string; expires_at: string | null }[] | null) || [])
+      .some((r) => isRequestOpen(r, now))
+
+    if (stillOpen) {
       result.skippedPendingRenewal++
       continue
     }

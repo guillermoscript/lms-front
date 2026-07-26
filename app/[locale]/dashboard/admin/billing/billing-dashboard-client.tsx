@@ -19,7 +19,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { IconExternalLink, IconRefresh, IconCreditCard, IconPhoto, IconClock, IconLoader2 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
-import { uploadPaymentProof, requestManualRenewal, cancelSubscription } from '@/app/actions/admin/billing'
+import {
+  uploadPaymentProof,
+  requestManualRenewal,
+  cancelSubscription,
+  reactivateSubscription,
+} from '@/app/actions/admin/billing'
 
 interface BillingDashboardClientProps {
   status: {
@@ -75,6 +80,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [reactivateLoading, setReactivateLoading] = useState(false)
 
   const handleManageBilling = async () => {
     setPortalLoading(true)
@@ -134,6 +140,19 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
     }
   }
 
+  const handleReactivate = async () => {
+    setReactivateLoading(true)
+    try {
+      await reactivateSubscription()
+      toast.success(t('reactivateSuccess'))
+      router.refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('reactivateError'))
+    } finally {
+      setReactivateLoading(false)
+    }
+  }
+
   const handleProofUpload = async (requestId: string, file: File) => {
     setUploadingFor(requestId)
     try {
@@ -181,6 +200,8 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         accessCutoffAt={status.accessCutoffAt}
         onManageClick={status.hasStripeCustomer ? handleManageBilling : undefined}
         onCancelClick={() => setCancelOpen(true)}
+        onReactivateClick={handleReactivate}
+        reactivateLoading={reactivateLoading}
       />
 
       {/* Manual Subscription Renewal Section */}

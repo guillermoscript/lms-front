@@ -6,17 +6,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-// Fallback plan limits (used if platform_plans table query fails)
-const PLAN_LIMITS_FALLBACK: Record<string, number> = {
-  free: 5,
-  starter: 15,
-  basic: 20,
-  pro: 100,
-  professional: 100,
-  business: -1,
-  enterprise: -1,
-}
+import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 
 export interface CourseFormData {
   title: string
@@ -61,41 +51,27 @@ export async function checkCourseLimit(): Promise<{
   nextPlan?: string
   nextPlanPrice?: number
 }> {
-  const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
-  // Get tenant's plan and limits from platform_plans
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('plan')
-    .eq('id', tenantId)
-    .single()
+  // Issue #546 §5: creation enforcement used to count ALL courses (archived
+  // included) against a limit resolved through a hardcoded fallback map, while
+  // the downgrade pre-flight, the access-cutoff reconciler and the number shown
+  // on the billing page all counted non-archived courses from
+  // `platform_plans.limits`. A school could be approved for a downgrade and
+  // then be unable to create a single course on the plan it just moved to,
+  // with an error telling it to archive courses that provably did not help.
+  //
+  // Both the count and the limit now come from lib/billing/plan-limits, on the
+  // service-role client so the number does not depend on what the calling
+  // teacher can see through RLS.
+  const adminClient = createAdminClient()
+  const [{ planSlug: plan, limits }, usage] = await Promise.all([
+    getTenantPlanLimits(adminClient, tenantId),
+    countTenantUsage(adminClient, tenantId),
+  ])
 
-  const plan = tenant?.plan || 'free'
-
-  // Try to get limit from platform_plans table
-  let limit: number
-  const { data: platformPlan } = await supabase
-    .from('platform_plans')
-    .select('limits')
-    .eq('slug', plan)
-    .eq('is_active', true)
-    .single()
-
-  if (platformPlan?.limits && typeof platformPlan.limits === 'object') {
-    const limits = platformPlan.limits as { max_courses?: number }
-    limit = limits.max_courses ?? PLAN_LIMITS_FALLBACK[plan] ?? 5
-  } else {
-    limit = PLAN_LIMITS_FALLBACK[plan] ?? 5
-  }
-
-  // Count existing courses for this tenant
-  const { count } = await supabase
-    .from('courses')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-
-  const currentCount = count || 0
+  const limit = limits?.max_courses ?? -1
+  const currentCount = usage.courses
   // -1 means unlimited
   const canCreate = limit === -1 || currentCount < limit
   const approaching = limit !== -1 && currentCount >= limit * 0.8

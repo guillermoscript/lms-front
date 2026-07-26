@@ -22,7 +22,7 @@ interface PlanRow {
 interface FakeConfig {
   newPlan?: PlanRow | null
   oldPlan?: PlanRow | null
-  currentSub?: { plan_id: string; interval: string | null } | null
+  currentSub?: { plan_id: string; interval: string | null; plan_override_at?: string | null } | null
   courseCount?: number
   studentCount?: number
   adminUsers?: string[]
@@ -314,5 +314,76 @@ describe('applyPortalPlanChange', () => {
     expect(result.action).toBe('ignored')
     expect(calls.updates).toHaveLength(0)
     expect(calls.stripeUpdates).toHaveLength(0)
+  })
+})
+
+/**
+ * Issue #546 §3. A super admin comps a school from Starter to Pro with
+ * `forceTenantPlanChange`, which never calls Stripe. Stripe therefore keeps
+ * billing Starter, and the next routine `customer.subscription.updated` carries
+ * the Starter price — which this module read as a Pro→Starter downgrade. The
+ * school is over Starter's limits (that is WHY it was comped), so the enforcement
+ * path "reverted" Stripe onto the PRO price: the school gets billed for the plan
+ * it was given for free, by the code whose stated purpose is protecting an
+ * invariant. #468 item 2 introduced the coupling; the dead webhook (#544) masked
+ * it until that was fixed.
+ */
+describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () => {
+  const comped = (override: string | null) => ({
+    newPlan: STARTER,
+    oldPlan: PRO,
+    currentSub: { plan_id: PRO.plan_id, interval: 'monthly', plan_override_at: override },
+    // Over Starter's 15-course limit — the reason the comp exists.
+    courseCount: 30,
+    adminUsers: ['admin-a'],
+  })
+
+  it('never reprices a comped tenant on Stripe', async () => {
+    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin(comped('2026-07-20T00:00:00.000Z'))
+
+    const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
+      admin,
+      stripe: makeStripe(),
+      sendEmailFn,
+    })
+
+    expect(result).toMatchObject({ action: 'ignored' })
+    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.updates).toHaveLength(0)
+    expect(calls.upserts).toHaveLength(0)
+    expect(calls.emails).toHaveLength(0)
+  })
+
+  it('control: without the override marker the same event reprices Stripe onto the comped plan', async () => {
+    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin(comped(null))
+
+    const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
+      admin,
+      stripe: makeStripe(),
+      sendEmailFn,
+    })
+
+    expect(result.action).toBe('reverted')
+    const items = calls.stripeUpdates[0].params.items as { price: string }[]
+    expect(items[0].price).toBe('price_pro_m')
+  })
+
+  it('clearing the override lets portal changes reconcile again', async () => {
+    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+      newPlan: STARTER,
+      oldPlan: PRO,
+      currentSub: { plan_id: PRO.plan_id, interval: 'monthly', plan_override_at: null },
+      courseCount: 5,
+      studentCount: 10,
+    })
+
+    const result = await applyPortalPlanChange(subscriptionEvent(), {
+      admin,
+      stripe: makeStripe(),
+      sendEmailFn,
+    })
+
+    expect(result.action).toBe('applied')
+    expect(calls.updates.find((u) => u.table === 'tenants')?.values.plan).toBe('starter')
   })
 })
