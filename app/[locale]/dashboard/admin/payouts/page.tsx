@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { formatByCurrency, formatMoney, sumByCurrency } from '@/lib/payments/format-money'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,16 +63,23 @@ export default async function AdminPayoutsPage({
     )
   }
 
-  // Fetch payouts for this tenant
-  const { data: payouts } = await supabase
-    .from('payouts')
-    .select(
-      'payout_id, amount, currency, status, period_start, period_end, stripe_payout_id, paid_at, failure_reason, created_at, note, payout_method'
-    )
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-
-  const rows = payouts || []
+  // Fetch payouts for this tenant. Paged and count-verified (#548): the
+  // summary below sums this list, so a read truncated at the API row cap would
+  // understate the school's own "Total paid" without any error to notice.
+  // `created_at` is not unique, so `payout_id` breaks ties — an unstable sort
+  // makes `.range()` windows overlap or skip.
+  const rows = await fetchAllRows('payouts', (from, to) =>
+    supabase
+      .from('payouts')
+      .select(
+        'payout_id, amount, currency, status, period_start, period_end, stripe_payout_id, paid_at, failure_reason, created_at, note, payout_method',
+        { count: 'exact' }
+      )
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .order('payout_id', { ascending: false })
+      .range(from, to)
+  )
 
   // Summary calculations. Paid payouts are totalled per currency and rendered as
   // one figure each — a school selling in USD and EUR reads two figures, not

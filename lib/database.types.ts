@@ -6420,7 +6420,11 @@ export type Database = {
         Returns: number
       }
       get_daily_digest_candidates: {
-        Args: never
+        Args: {
+          _after_tenant_id?: string | null
+          _after_user_id?: string | null
+          _limit?: number | null
+        }
         Returns: {
           current_streak: number
           due_cards: number

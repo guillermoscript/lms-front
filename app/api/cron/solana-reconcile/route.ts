@@ -28,6 +28,7 @@ import {
   reconcileSolanaOneTimeTransaction,
   type OneTimeSolanaTx,
 } from '@/lib/payments/solana-reconcile'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const runtime = 'nodejs'
 
@@ -79,19 +80,32 @@ export async function GET(req: NextRequest) {
   // wallet + split). solana_subs is intentionally excluded — its initial
   // confirmation needs the server-captured subscriber pubkey and is a separate
   // path from one-time payments.
-  const { data: pending, error } = await admin
-    .from('transactions')
-    .select(
-      'transaction_id, amount, tenant_id, provider_subscription_id, settlement_currency, settlement_base, settlement_mint, status, payment_provider, transaction_date',
+  //
+  // Paged and count-verified (#548). This read IS the reconciler's work queue:
+  // a row silently dropped at the API cap is a student who paid on-chain and
+  // never gets the entitlement, and whose stranded row keeps blocking their
+  // retry. Ordered by primary key so the pages are stable. `fetchAllRows`
+  // throws on an incomplete read, so a short queue can no longer masquerade as
+  // an empty one — hence the try/catch rather than an `error` check.
+  let pending: PendingRow[]
+  try {
+    pending = await fetchAllRows<PendingRow>('transactions', (from, to) =>
+      admin
+        .from('transactions')
+        .select(
+          'transaction_id, amount, tenant_id, provider_subscription_id, settlement_currency, settlement_base, settlement_mint, status, payment_provider, transaction_date',
+          { count: 'exact' },
+        )
+        .eq('payment_provider', 'solana')
+        .eq('status', 'pending')
+        .order('transaction_id')
+        .range(from, to),
     )
-    .eq('payment_provider', 'solana')
-    .eq('status', 'pending')
-
-  if (error) {
-    console.error('[solana-reconcile] query error', error)
+  } catch (err) {
+    console.error('[solana-reconcile] query error', err)
     return NextResponse.json({ error: 'Query failed' }, { status: 500 })
   }
-  if (!pending?.length) {
+  if (!pending.length) {
     return NextResponse.json({ reconciled: 0, expired: 0, errors: 0 })
   }
 
@@ -100,7 +114,7 @@ export async function GET(req: NextRequest) {
   let expired = 0
   const errors: string[] = []
 
-  for (const tx of pending as PendingRow[]) {
+  for (const tx of pending) {
     try {
       const result = await reconcileSolanaOneTimeTransaction(admin, tx)
 
