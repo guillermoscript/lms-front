@@ -16,6 +16,15 @@
  * freely; the decision function's null-check on `currentCutoffAt` makes
  * repeated calls idempotent (no double-scheduling, no duplicate emails).
  *
+ * #550: those call sites were all *plan-change* events, and the cutoff email
+ * asks for a *usage* action ("20 active courses exceed the Free plan's limit
+ * of 15"). A school that did exactly what it was told — archived courses,
+ * removed members — reconciled nothing and stayed locked out until the next
+ * daily sweep, or indefinitely if nothing on the host calls `/api/cron/*`
+ * (#513). Every action that can *reduce* usage now reconciles too, via
+ * `reconcileAccessCutoffSafely`, and the admin billing page carries a manual
+ * re-check so recovery never depends on a scheduler at all.
+ *
  * #517: that idempotence was also the communication bug. Because
  * `decideAccessCutoffAction` returns `'schedule'` exactly once per cutoff,
  * the school got exactly one email, 14 days out, with no retry if it failed
@@ -51,20 +60,34 @@ export interface AccessCutoffDecision {
 /**
  * Pure decision: should a cutoff be scheduled, cleared, or left alone.
  * `now` is injectable so callers/tests don't depend on wall-clock time.
+ *
+ * `limitsKnown: false` says the caller could not resolve the tenant's plan
+ * limits at all (#550 §3). An empty `violations` list then means "we don't
+ * know", not "they comply", and the difference matters in exactly one
+ * direction: scheduling stays fail-open (nothing is enforced off limits we
+ * never read), while an existing cutoff is left standing rather than cleared.
+ *
+ * The asymmetry is deliberate. A `platform_plans` lookup misses because a slug
+ * was renamed or a row deleted — an operator error, not a signal about the
+ * school. Clearing on that miss lifts live enforcement school-wide, and the
+ * only ways back are buying a bigger plan or a super admin editing the row.
+ * Preserving it costs nothing: the next sweep that *can* read the limits
+ * clears the cutoff on its own if the school is genuinely compliant.
  */
 export function decideAccessCutoffAction(input: {
   violations: PlanLimitViolation[]
   currentCutoffAt: string | null
   now: Date
+  limitsKnown?: boolean
 }): AccessCutoffDecision {
-  const { violations, currentCutoffAt, now } = input
+  const { violations, currentCutoffAt, now, limitsKnown = true } = input
 
   if (violations.length > 0 && !currentCutoffAt) {
     const cutoffAt = new Date(now.getTime() + ACCESS_CUTOFF_GRACE_DAYS * DAY_MS).toISOString()
     return { action: 'schedule', cutoffAt }
   }
 
-  if (violations.length === 0 && currentCutoffAt) {
+  if (violations.length === 0 && currentCutoffAt && limitsKnown) {
     return { action: 'clear' }
   }
 
@@ -149,6 +172,17 @@ async function fetchSentStages(
  * error and returns `false`. #494's `try/catch` around the send was therefore
  * near-decorative — a dead mail provider produced a silent no-op that looked
  * exactly like success. Only `true` counts.
+ *
+ * #550: the ledger write is part of delivery, not bookkeeping after it. This
+ * function used to log an upsert error and return `{ delivered: true }`
+ * anyway, which inverted #517's whole point — the rung stayed unrecorded, so
+ * `dueCutoffNotificationStage` re-derived it on the next sweep and every
+ * tenant admin got the identical email daily until the cutoff cleared, while
+ * the cron counted each repeat under `notified` and reported a healthy run.
+ * RLS on `access_cutoff_notifications` is enabled with no policy
+ * (`20260725100000:45`), so any non-service-role caller hit this every time.
+ * Reporting `delivered: false` costs at most one extra send next sweep, which
+ * is strictly better than an unbounded daily repeat that looks like success.
  */
 async function deliverCutoffStage(
   admin: SupabaseClient,
@@ -202,7 +236,10 @@ async function deliverCutoffStage(
       { onConflict: 'tenant_id,cutoff_at,stage', ignoreDuplicates: true }
     )
 
-  if (error) console.error('reconcileAccessCutoff: ledger write failed', error)
+  if (error) {
+    console.error('reconcileAccessCutoff: ledger write failed', error)
+    return { delivered: false }
+  }
 
   return { delivered: true }
 }
@@ -252,6 +289,9 @@ export async function reconcileAccessCutoff(
     violations,
     currentCutoffAt: tenant.access_cutoff_at,
     now,
+    // A missing `platform_plans` row means the limits are unknown, not met
+    // (#550 §3) — enough to skip scheduling, never enough to lift a cutoff.
+    limitsKnown: !!plan,
   })
 
   if (decision.action !== 'none') {
@@ -272,16 +312,20 @@ export async function reconcileAccessCutoff(
 
   if (!effectiveCutoffAt) return decision
 
-  const stage: AccessCutoffStage | null =
-    decision.action === 'schedule'
-      ? 'scheduled'
-      : opts?.notifyDueStages
-        ? dueCutoffNotificationStage({
-            cutoffAt: effectiveCutoffAt,
-            sentStages: await fetchSentStages(admin, tenantId, effectiveCutoffAt),
-            now,
-          })
-        : null
+  // Both paths consult the ledger (#550). The schedule branch used to force
+  // `'scheduled'` outright, so a cron sweep racing a plan change sent the first
+  // rung twice — `ignoreDuplicates` kept the ledger clean but two identical
+  // emails had already left. Going through the ladder costs one indexed read
+  // and needs no special case: on a fresh 14-day cutoff `scheduled` is the only
+  // rung reached, so it is returned when unsent and `null` when already sent.
+  const notifying = decision.action === 'schedule' || opts?.notifyDueStages === true
+  const stage: AccessCutoffStage | null = notifying
+    ? dueCutoffNotificationStage({
+        cutoffAt: effectiveCutoffAt,
+        sentStages: await fetchSentStages(admin, tenantId, effectiveCutoffAt),
+        now,
+      })
+    : null
 
   if (!stage) return decision
 
@@ -294,4 +338,29 @@ export async function reconcileAccessCutoff(
   })
 
   return delivered ? { ...decision, notifiedStage: stage } : { ...decision, notifyFailed: true }
+}
+
+/**
+ * `reconcileAccessCutoff` for callers whose own write has already succeeded
+ * (#550): archiving a course, deleting one, removing a member.
+ *
+ * Those actions are the school doing exactly what the cutoff email asked, and
+ * the reconcile is a follow-up benefit — never a precondition. Failing the
+ * archive because a counting query timed out would punish compliance with the
+ * one thing the school is trying to escape, so every failure is logged and
+ * swallowed. The reconciler is idempotent, so the worst case is that the state
+ * stays as it was until the next reconcile (manual re-check or daily sweep).
+ *
+ * `notifyDueStages` is deliberately left off: user-facing actions must not pay
+ * email latency for a reminder the cron sends anyway.
+ */
+export async function reconcileAccessCutoffSafely(
+  admin: SupabaseClient,
+  tenantId: string
+): Promise<void> {
+  try {
+    await reconcileAccessCutoff(admin, tenantId)
+  } catch (err) {
+    console.error('reconcileAccessCutoffSafely: reconcile failed for tenant', tenantId, err)
+  }
 }

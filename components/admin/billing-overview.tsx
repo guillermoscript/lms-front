@@ -39,6 +39,8 @@ interface BillingOverviewProps {
   onCancelClick?: () => void
   onReactivateClick?: () => void
   reactivateLoading?: boolean
+  onRecheckClick?: () => void
+  recheckLoading?: boolean
 }
 
 export function BillingOverview({
@@ -55,6 +57,8 @@ export function BillingOverview({
   onCancelClick,
   onReactivateClick,
   reactivateLoading = false,
+  onRecheckClick,
+  recheckLoading = false,
 }: BillingOverviewProps) {
   const t = useTranslations('dashboard.admin.billing.overview')
   const isFree = plan === 'free'
@@ -217,6 +221,29 @@ export function BillingOverview({
           )}
 
           <section aria-label={`${t('currentPlan')} usage`} className="border-t pt-5">
+            {/* Only while a cutoff is live: the rest of the time there is
+                nothing to recover from, and a permanent button would invite
+                clicks that can only ever report "no change" (#550). */}
+            {accessCutoffAt && onRecheckClick && (
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-50 p-3 dark:bg-amber-950/20">
+                <p className="min-w-0 flex-1 text-sm text-pretty text-amber-900 dark:text-amber-100">
+                  {t('recheckDescription')}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRecheckClick}
+                  disabled={recheckLoading}
+                  className="shrink-0"
+                >
+                  <IconRefresh
+                    className={`mr-1.5 h-4 w-4 ${recheckLoading ? 'animate-spin' : ''}`}
+                    aria-hidden="true"
+                  />
+                  {recheckLoading ? t('recheckLoading') : t('recheck')}
+                </Button>
+              </div>
+            )}
             <div className="grid gap-5 md:grid-cols-2">
             <div className="space-y-3">
               <UsageMeter

@@ -10,10 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { IconDots, IconSettings, IconBan, IconCheck } from '@tabler/icons-react'
+import { IconDots, IconSettings, IconBan, IconCheck, IconUserMinus } from '@tabler/icons-react'
 import { RoleAssignmentDialog } from './role-assignment-dialog'
 import { ConfirmDialog } from './confirm-dialog'
-import { deactivateUser, reactivateUser } from '@/app/actions/admin/users'
+import { deactivateUser, reactivateUser, removeTenantMember } from '@/app/actions/admin/users'
 import { useTranslations } from 'next-intl'
 
 interface UserActionsProps {
@@ -33,8 +33,33 @@ export function UserActions({
   const [showRoleDialog, setShowRoleDialog] = useState(false)
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
   const [showReactivateDialog, setShowReactivateDialog] = useState(false)
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  /**
+   * Removal is the only one of these three actions that changes what the school
+   * owes (#550): `countTenantUsage` counts active `tenant_users` rows, so this
+   * is what can bring an over-limit school back under its plan and lift an
+   * access cutoff. Deactivation, despite the name, only stamps the profile.
+   */
+  const handleRemove = async () => {
+    setLoading(true)
+    const result = await removeTenantMember(userId)
+
+    if (result.success) {
+      toast.success(t('toasts.removeSuccess', { name: userName }))
+      setShowRemoveDialog(false)
+      // The member no longer appears on the detail page, which requires an
+      // active membership — send the admin back to the list they came from.
+      router.push('/dashboard/admin/users')
+      router.refresh()
+    } else {
+      toast.error(result.error || t('toasts.removeError'))
+    }
+
+    setLoading(false)
+  }
 
   const handleDeactivate = async () => {
     setLoading(true)
@@ -93,6 +118,13 @@ export function UserActions({
               {t('deactivate')}
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem
+            onClick={() => setShowRemoveDialog(true)}
+            className="text-destructive"
+          >
+            <IconUserMinus className="mr-2 h-4 w-4" />
+            {t('removeFromSchool')}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -129,6 +161,18 @@ export function UserActions({
         confirmText={t('dialogs.reactivate.confirm')}
         cancelText={t('dialogs.cancel')}
         onConfirm={handleReactivate}
+      />
+
+      {/* Remove-from-school Confirmation */}
+      <ConfirmDialog
+        open={showRemoveDialog}
+        onOpenChange={setShowRemoveDialog}
+        title={t('dialogs.remove.title')}
+        description={t('dialogs.remove.description', { name: userName })}
+        confirmText={t('dialogs.remove.confirm')}
+        cancelText={t('dialogs.cancel')}
+        variant="destructive"
+        onConfirm={handleRemove}
       />
     </>
   )

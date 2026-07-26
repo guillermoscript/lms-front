@@ -1927,7 +1927,14 @@
           "cancelError": "Error al cancelar la suscripción",
           "reactivatePlan": "Reactivar plan",
           "reactivateSuccess": "Tu suscripción continuará: se eliminó la cancelación programada",
-          "reactivateError": "No se pudo reactivar la suscripción"
+          "reactivateError": "No se pudo reactivar la suscripción",
+          "recheck": "Volver a comprobar",
+          "recheckLoading": "Comprobando…",
+          "recheckDescription": "¿Ya archivaste cursos o eliminaste miembros? Vuelve a comprobar ahora para restaurar el acceso sin esperar a la revisión diaria.",
+          "recheckCleared": "Acceso restaurado: tu escuela vuelve a estar dentro de los límites de su plan.",
+          "recheckStillOverLimit": "Todavía superas el límite del plan. Reduce el uso o mejora tu plan para restaurar el acceso.",
+          "recheckNoCutoff": "Límites comprobados: no hay ninguna restricción de acceso programada.",
+          "recheckError": "No se pudieron comprobar los límites"
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
@@ -2032,7 +2039,9 @@
             "reactivateSuccess": "{name} ha sido reactivado",
             "reactivateError": "Error al reactivar al usuario",
             "rolesSuccess": "Roles actualizados para {name}",
-            "rolesError": "Error al actualizar los roles"
+            "rolesError": "Error al actualizar los roles",
+            "removeSuccess": "{name} ha sido eliminado de esta escuela",
+            "removeError": "No se pudo eliminar al miembro"
           },
           "dialogs": {
             "deactivate": {
@@ -2063,8 +2072,14 @@
               "save": "Guardar Cambios",
               "saving": "Guardando..."
             },
-            "cancel": "Cancelar"
-          }
+            "cancel": "Cancelar",
+            "remove": {
+              "title": "Eliminar de la escuela",
+              "description": "¿Seguro que quieres eliminar a {name} de esta escuela? Perderá el acceso a sus cursos y dejará de contar para el límite de estudiantes de tu plan. Podrá volver a unirse más adelante con el enlace de la escuela.",
+              "confirm": "Eliminar"
+            }
+          },
+          "removeFromSchool": "Eliminar de la escuela"
         },
         "invite": {
           "button": "Invitar Usuario",

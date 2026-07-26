@@ -24,6 +24,7 @@ import {
   requestManualRenewal,
   cancelSubscription,
   reactivateSubscription,
+  recheckPlanLimits,
 } from '@/app/actions/admin/billing'
 
 interface BillingDashboardClientProps {
@@ -81,6 +82,24 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [reactivateLoading, setReactivateLoading] = useState(false)
+  const [recheckLoading, setRecheckLoading] = useState(false)
+
+  const handleRecheck = async () => {
+    setRecheckLoading(true)
+    try {
+      const { cleared, accessCutoffAt } = await recheckPlanLimits()
+      // Three distinct outcomes, three distinct messages: an admin who is still
+      // over the limit must not read "checked" as "fixed" (#550).
+      if (cleared) toast.success(t('recheckCleared'))
+      else if (accessCutoffAt) toast.warning(t('recheckStillOverLimit'))
+      else toast.success(t('recheckNoCutoff'))
+      router.refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('recheckError'))
+    } finally {
+      setRecheckLoading(false)
+    }
+  }
 
   const handleManageBilling = async () => {
     setPortalLoading(true)
@@ -202,6 +221,8 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         onCancelClick={() => setCancelOpen(true)}
         onReactivateClick={handleReactivate}
         reactivateLoading={reactivateLoading}
+        onRecheckClick={handleRecheck}
+        recheckLoading={recheckLoading}
       />
 
       {/* Manual Subscription Renewal Section */}
