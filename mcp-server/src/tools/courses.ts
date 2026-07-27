@@ -69,7 +69,10 @@ export function registerCourseTools(server: MCPServer) {
           return widget({
             props: {
               status: status ?? "all",
-              total: 0,
+              // Report the real count, not 0: an offset past the end returns no
+              // rows while courses still exist, and the widget reads total === 0
+              // as "this teacher has never created a course".
+              total,
               courses: [],
             },
             output: text("No courses found."),

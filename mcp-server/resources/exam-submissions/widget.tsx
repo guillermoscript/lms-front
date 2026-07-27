@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { isNamedStudent, studentDisplayName } from "../shared/student-display";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -15,7 +16,8 @@ import { Markdown } from "../shared/markdown";
 
 const submissionSchema = z.object({
   id: z.number(),
-  student_name: z.string(),
+  // `lms_list_exam_submissions` sends `null` when the profile has no full name.
+  student_name: z.string().nullable(),
   score: z.number().nullable(),
   submission_date: z.string(),
   review_status: z.string().nullable(),
@@ -52,6 +54,7 @@ const STRINGS = {
     colDate: "Date",
     colStatus: "Status",
     empty: "No submissions yet",
+    unnamedStudent: "Unnamed student",
     loadingDetails: "Loading details…",
     detailScore: "Score",
     detailReviewStatus: "Review status",
@@ -75,6 +78,7 @@ const STRINGS = {
     colDate: "Fecha",
     colStatus: "Estado",
     empty: "Todavía no hay entregas",
+    unnamedStudent: "Estudiante sin nombre",
     loadingDetails: "Cargando detalles…",
     detailScore: "Nota",
     detailReviewStatus: "Estado de revisión",
@@ -253,8 +257,14 @@ export default function ExamSubmissions() {
                         : "bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     }`}
                   >
-                    <span className="overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap text-zinc-900 dark:text-zinc-100">
-                      {sub.student_name}
+                    <span
+                      className={`overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap ${
+                        isNamedStudent(sub.student_name)
+                          ? "text-zinc-900 dark:text-zinc-100"
+                          : "text-zinc-400 italic dark:text-zinc-500"
+                      }`}
+                    >
+                      {studentDisplayName(sub.student_name, t.unnamedStudent)}
                     </span>
                     <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
                       {fmt.percent(sub.score)}

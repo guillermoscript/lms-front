@@ -8,6 +8,7 @@ import {
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { NEUTRAL_TEXT, barClass, textClass } from "../shared/severity";
+import { isNamedStudent, studentDisplayName, studentInitials } from "../shared/student-display";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -71,6 +72,11 @@ const STRINGS = {
     lastActive: "last active",
     noAtRisk: "No at-risk students. 🎉",
     noStudents: "No students enrolled.",
+    // Shown when `profiles.full_name` is empty. Never the user id: that names
+    // nobody and reads as corrupted data.
+    unnamedStudent: "Unnamed student",
+    // An exam that was submitted but not yet scored — distinct from "no exam".
+    ungraded: "Ungraded",
   },
   es: {
     loading: "Cargando lista…",
@@ -87,17 +93,32 @@ const STRINGS = {
     lastActive: "última actividad",
     noAtRisk: "Ningún estudiante en riesgo. 🎉",
     noStudents: "No hay estudiantes inscritos.",
+    unnamedStudent: "Estudiante sin nombre",
+    ungraded: "Sin calificar",
   },
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function initials(name: string | null, id: string): string {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    return (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
+/**
+ * The exam column reads as three distinct states. `—` (what `fmt.percent`
+ * renders for null) is this widget's glyph for "no data" everywhere else, so it
+ * may only mean "has not sat an exam" — a submission waiting on a grade has to
+ * say so, or it reads as a student who took an exam and scored nothing.
+ */
+function examCell(
+  avg: number | null,
+  count: number,
+  ungradedLabel: string,
+  fmtPercent: (n: number | null) => string
+): { value: string; valueClass: string } {
+  if (count > 0 && avg == null) {
+    return {
+      value: ungradedLabel,
+      valueClass: "text-[12.5px] font-semibold text-amber-600 dark:text-amber-400",
+    };
   }
-  return id.slice(0, 2).toUpperCase();
+  return { value: fmtPercent(avg), valueClass: `text-sm font-bold ${textClass(avg)}` };
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -195,7 +216,9 @@ export default function StudentProgressRoster() {
           <div className="flex flex-col gap-2">
             {visible.map((s: Student) => {
               const pct = s.progress_pct;
-              const name = s.student_name ?? s.student_id.slice(0, 8);
+              const named = isNamedStudent(s.student_name);
+              const name = studentDisplayName(s.student_name, t.unnamedStudent);
+              const exam = examCell(s.exam_avg, s.exam_count, t.ungraded, fmt.percent);
               return (
                 <div
                   key={s.student_id}
@@ -207,13 +230,19 @@ export default function StudentProgressRoster() {
                 >
                   {/* Avatar */}
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[13px] font-bold text-[var(--brand-600)] uppercase dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
-                    {initials(s.student_name, s.student_id)}
+                    {studentInitials(s.student_name)}
                   </div>
 
                   {/* Name + progress bar */}
                   <div className="min-w-40 flex-1">
                     <div className="mb-1.5 flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      <span
+                        className={`truncate text-sm ${
+                          named
+                            ? "font-semibold text-zinc-900 dark:text-zinc-100"
+                            : "font-medium text-zinc-400 italic dark:text-zinc-500"
+                        }`}
+                      >
                         {name}
                       </span>
                       {s.at_risk && (
@@ -248,10 +277,8 @@ export default function StudentProgressRoster() {
                     </div>
                   </div>
 
-                  <div className="min-w-16 shrink-0 text-right">
-                    <div className={`text-sm font-bold ${textClass(s.exam_avg)}`}>
-                      {fmt.percent(s.exam_avg)}
-                    </div>
+                  <div className="min-w-20 shrink-0 text-right">
+                    <div className={exam.valueClass}>{exam.value}</div>
                     <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
                       {t.exams(s.exam_count, fmt.number(s.exam_count))}
                     </div>
